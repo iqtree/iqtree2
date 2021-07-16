@@ -76,6 +76,8 @@ public:
     */
     virtual void setReversible(bool reversible, bool adapt_tree = true);
 
+		//Supporting function
+		virtual void makeReversible(bool make_tree_unrooted);
 
 	/**
 		init the model and decompose the rate matrix. This function should always be called
@@ -157,6 +159,9 @@ public:
 		@param in input stream
 	*/
 	virtual void readRates(istream &in);
+		//Supporting functions (str is first token read from in)
+		void readRatesReversible   (istream &in, string str);
+		void readRatesNonReversible(istream &in, string str);
 
 	/**
 		Read the rate parameters from a comma-separated string
@@ -364,6 +369,7 @@ public:
 
     /** decompose rate matrix for non-reversible models */
     virtual void decomposeRateMatrixNonrev();
+		//Supporting functions
 
     /** old version of decompose rate matrix for reversible models */
     void decomposeRateMatrixRev();

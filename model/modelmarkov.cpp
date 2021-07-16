@@ -121,83 +121,86 @@ void ModelMarkov::setNumberOfStates(int states) {
     }
 }
 
+void ModelMarkov::makeReversible(bool make_unrooted) {
+    // setup reversible model
+    int nrate = getNumRateEntries();
+
+    delete [] rates;
+    rates = new double[nrate];
+    for (int i=0; i < nrate; i++) {
+        rates[i] = 1.0;
+    }
+    size_t num_states_squared = num_states * num_states;
+    ensure_aligned_allocated(eigenvalues,  num_states);
+    ensure_aligned_allocated(eigenvectors, num_states_squared);
+    ensure_aligned_allocated(inv_eigenvectors, num_states_squared);
+    ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_squared);
+    
+    num_params = nrate - 1;
+
+    if (make_unrooted && phylo_tree!=nullptr && phylo_tree->rooted) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
+            cout << "Converting rooted to unrooted tree..." << endl;
+        }
+        phylo_tree->convertToUnrooted();
+    }    
+}
+
 void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
     bool old_reversible = is_reversible;
     is_reversible       = reversible;
 
     if (reversible) {
-        // setup reversible model
-        int i;
-        int nrate = getNumRateEntries();
+        makeReversible(adapt_tree);
+        return;
+    } 
+    // setup non-reversible model
+    ignore_state_freq = true;
 
-        delete [] rates;
-        rates = new double[nrate];
-        for (i=0; i < nrate; i++) {
-            rates[i] = 1.0;
-        }
-        size_t num_states_squared = num_states * num_states;
-        ensure_aligned_allocated(eigenvalues,  num_states);
-        ensure_aligned_allocated(eigenvectors, num_states_squared);
-        ensure_aligned_allocated(inv_eigenvectors, num_states_squared);
-        ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_squared);
-        
-        num_params = nrate - 1;
-
-        if (adapt_tree && phylo_tree && phylo_tree->rooted) {
-            if (verbose_mode >= VerboseMode::VB_MED) {
-                cout << "Converting rooted to unrooted tree..." << endl;
-            }
-            phylo_tree->convertToUnrooted();
-        }
-    } else {
-        // setup non-reversible model
-        ignore_state_freq = true;
-
-        int num_rates = getNumRateEntries();
-        if (!rate_matrix) {
-            rate_matrix = aligned_alloc<double>(num_states*num_states);
-        }
-        // reallocate the mem spaces
-        if (rates && old_reversible) {
-            // copy old reversible rates into new non-reversible
-            for (int i = 0, k = 0; i < num_states; i++) {
-                for (int j = i+1; j < num_states; j++, k++) {
-                    rate_matrix[i*num_states+j] = rates[k] * state_freq[j];
-                    rate_matrix[j*num_states+i] = rates[k] * state_freq[i];
-                }
-            }
-            delete [] rates;
-            rates = new double[num_rates];
-            int k = 0;
-            int pos = 0;
-            for (int i = 0; i < num_states; i++) {
-                for (int j = 0; j < num_states; j++, pos++) {
-                    if (i!=j) {
-                        rates[k] = rate_matrix[pos];
-                        ++k;
-                    }
-                }
-            }
-            ASSERT(k == num_rates);
-        } else {
-            delete [] rates;
-            rates = new double [num_rates];
-            memset(rates, 0, sizeof(double) * (num_rates));
-        }
-        size_t num_states_squared = num_states * num_states;
-        ensure_aligned_allocated(eigenvalues_imag, num_states);
-        ensure_aligned_allocated(ceval,     num_states);
-        ensure_aligned_allocated(cevec,     num_states_squared);
-        ensure_aligned_allocated(cinv_evec, num_states_squared);
-        if (adapt_tree && phylo_tree && !phylo_tree->rooted
-            && 0 < phylo_tree->leafNum) {
-            if (verbose_mode >= VerboseMode::VB_MED) {
-                cout << "Converting unrooted to rooted tree..." << endl;
-            }
-            phylo_tree->convertToRooted();
-        }
-        num_params = num_rates - 1;
+    int num_rates = getNumRateEntries();
+    if (!rate_matrix) {
+        rate_matrix = aligned_alloc<double>(num_states*num_states);
     }
+    // reallocate the mem spaces
+    if (rates && old_reversible) {
+        // copy old reversible rates into new non-reversible
+        for (int i = 0, k = 0; i < num_states; i++) {
+            for (int j = i+1; j < num_states; j++, k++) {
+                rate_matrix[i*num_states+j] = rates[k] * state_freq[j];
+                rate_matrix[j*num_states+i] = rates[k] * state_freq[i];
+            }
+        }
+        delete [] rates;
+        rates = new double[num_rates];
+        int k = 0;
+        int pos = 0;
+        for (int i = 0; i < num_states; i++) {
+            for (int j = 0; j < num_states; j++, pos++) {
+                if (i!=j) {
+                    rates[k] = rate_matrix[pos];
+                    ++k;
+                }
+            }
+        }
+        ASSERT(k == num_rates);
+    } else {
+        delete [] rates;
+        rates = new double [num_rates];
+        memset(rates, 0, sizeof(double) * (num_rates));
+    }
+    size_t num_states_squared = num_states * num_states;
+    ensure_aligned_allocated(eigenvalues_imag, num_states);
+    ensure_aligned_allocated(ceval,     num_states);
+    ensure_aligned_allocated(cevec,     num_states_squared);
+    ensure_aligned_allocated(cinv_evec, num_states_squared);
+    if (adapt_tree && phylo_tree && !phylo_tree->rooted
+        && 0 < phylo_tree->leafNum) {
+        if (verbose_mode >= VerboseMode::VB_MED) {
+            cout << "Converting unrooted to rooted tree..." << endl;
+        }
+        phylo_tree->convertToRooted();
+    }
+    num_params = num_rates - 1;
 }
 
 int ModelMarkov::getNumRateEntries() const {
@@ -1143,39 +1146,92 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon,
     return score;
 }
 
-void ModelMarkov::decomposeRateMatrixNonrev() {
-    //double m[num_states];
-    double freq = 1.0/num_states;
-    for (int i = 0; i < num_states; i++) {
-        state_freq[i] = freq;
+namespace {
+    void initializeRateMatrixAndFreqVector(double* rates, double* state_freq, 
+                                           double* rate_matrix, int num_states) {
+        double freq = 1.0/num_states;
+        for (int i = 0; i < num_states; i++) {
+            state_freq[i] = freq;
+        }
+        for (int i = 0, k = 0; i < num_states; i++) {
+            double *rate_row = rate_matrix+(i*num_states);
+            double row_sum = 0.0;
+            for (int j = 0; j < num_states; j++) {
+                if (j != i) {
+                    row_sum += (rate_row[j] = rates[k++]);
+                }
+            }
+            rate_row[i] = -row_sum;
+        }
     }
-    for (int i = 0, k = 0; i < num_states; i++) {
-        double *rate_row = rate_matrix+(i*num_states);
-        double row_sum = 0.0;
-        for (int j = 0; j < num_states; j++) {
-            if (j != i) {
-                row_sum += (rate_row[j] = rates[k++]);
+
+    void rescaleRateMatrix(double* state_freq, double* rate_matrix,
+                           int num_states, int total_num_subst) {
+        double sum = 0.0;
+        for (int i = 0; i < num_states; i++) {
+            sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
+        }
+        if (sum == 0.0) {
+            throw "Empty Q matrix";
+        }
+        double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+        
+        for (int i = 0; i < num_states; i++) {
+            double *rate_row = rate_matrix+(i*num_states);
+            for (int j = 0; j < num_states; j++) {
+                rate_row[j] *= delta;
             }
         }
-        rate_row[i] = -row_sum;
+
     }
-    computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
-    
-    double sum = 0.0;
-    for (int i = 0; i < num_states; i++) {
-        sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
-    }
-    if (sum == 0.0) {
-        throw "Empty Q matrix";
-    }
-    double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
-    
-    for (int i = 0; i < num_states; i++) {
-        double *rate_row = rate_matrix+(i*num_states);
-        for (int j = 0; j < num_states; j++) {
-            rate_row[j] *= delta;
+    void calculateQMatrixForNonZeroFrequencies
+            (double* state_freq, double* rate_matrix,
+             int num_states, MatrixXd& Q ) {
+        for (int i = 0, ii = 0; i < num_states; i++) {
+            if (state_freq[i] > ZERO_FREQ) {
+                for (int j = 0, jj = 0; j < num_states; j++) {
+                    if (state_freq[j] > ZERO_FREQ) {
+                        Q(ii,jj) = rate_matrix[i*num_states+j];
+                        jj++;
+                    }
+                }
+                ii++;
+            }
         }
     }
+
+    void copyBackEigenVectors(double* state_freq, int num_states,
+                              MatrixXcd& evec, MatrixXcd& inv_evec,
+                              std::complex<double>* cevec, 
+                              std::complex<double>* cinv_evec ) {
+        for (int i = 0, ii = 0; i < num_states; i++) {
+            auto* eigenvectors_ptr     = cevec     + (i*num_states);
+            auto* inv_eigenvectors_ptr = cinv_evec + (i*num_states);
+            if (state_freq[i] > ZERO_FREQ) {
+                for (int j = 0, jj = 0; j < num_states; j++) {
+                    if (state_freq[j] > ZERO_FREQ) {
+                        eigenvectors_ptr[j] = evec(ii,jj);
+                        inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
+                        jj++;
+                    } else {
+                        eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
+                    }
+                }
+                ii++;
+            } else {
+                for (int j = 0; j < num_states; j++) {
+                    eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
+                }
+            }
+        }
+    }
+}
+
+void ModelMarkov::decomposeRateMatrixNonrev() {
+    //double m[num_states];
+    initializeRateMatrixAndFreqVector(rates, rate_matrix, state_freq, num_states);
+    computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
+    rescaleRateMatrix(rate_matrix, state_freq, num_states, total_num_subst);
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
         eigensystem_nonrev(rate_matrix, state_freq, 
                            eigenvalues, eigenvalues_imag, 
@@ -1209,17 +1265,8 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
         Q = RowMajorAlignedMatrix(rate_matrix, num_states, num_states);
     }
     else {
-        for (int i = 0, ii = 0; i < num_states; i++) {
-            if (state_freq[i] > ZERO_FREQ) {
-                for (int j = 0, jj = 0; j < num_states; j++) {
-                    if (state_freq[j] > ZERO_FREQ) {
-                        Q(ii,jj) = rate_matrix[i*num_states+j];
-                        jj++;
-                    }
-                }
-                ii++;
-            }
-        }
+        calculateQMatrixForNonZeroFrequencies(state_freq, rate_matrix,
+                                              num_states, Q);
     }
     EigenSolver<MatrixXd> eigensolver(Q);
     ASSERT (eigensolver.info() == Eigen::Success);
@@ -1255,28 +1302,11 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
             nondiagonalizable = true;
             outWarning("evec not invertible");
         }
-        for (int i = 0, ii = 0; i < num_states; i++) {
-            auto* eigenvectors_ptr     = cevec     + (i*num_states);
-            auto* inv_eigenvectors_ptr = cinv_evec + (i*num_states);
-            if (state_freq[i] > ZERO_FREQ) {
-                for (int j = 0, jj = 0; j < num_states; j++) {
-                    if (state_freq[j] > ZERO_FREQ) {
-                        eigenvectors_ptr[j] = evec(ii,jj);
-                        inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
-                        jj++;
-                    } else {
-                        eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
-                    }
-                }
-                ii++;
-            } else {
-                for (int j = 0; j < num_states; j++) {
-                    eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
-                }
-            }
-        }
-        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
-                                       , inv_eigenvectors_transposed);
+        copyBackEigenVectors          (state_freq, num_states, 
+                                       evec, inv_evec,
+                                       cevec, cinv_evec);
+        calculateSquareMatrixTranspose(inv_eigenvectors, num_states, 
+                                       inv_eigenvectors_transposed);
     }
     // sanity check
     //    MatrixXcd eval_diag = eval.asDiagonal();
@@ -1545,56 +1575,67 @@ void ModelMarkov::readRates(istream &in) {
             rates[i] = 1.0;
         }
     } else if (is_reversible ){
-        // reversible model
-        try {
-            rates[0] = convert_double(str.c_str());
-        } catch (string &str) {
-            outError(str);
+        readRatesReversible(in, str);
+    } else {
+        readRatesNonReversible(in, str);
+    }
+}
+
+void ModelMarkov::readRatesReversible(istream &in, string str) {
+    // reversible model
+    int nrates = getNumRateEntries();
+    try {
+        rates[0] = convert_double(str.c_str());
+    } catch (string &str) {
+        outError(str);
+    }
+    if (rates[0] < 0.0) {
+        throw "Negative rates not allowed";
+    }
+    for (int i = 1; i < nrates; ++i) {
+        if (!(in >> rates[i])) {
+            throw "Rate entries could not be read";
         }
-        if (rates[0] < 0.0) {
+        if (rates[i] < 0.0) {
             throw "Negative rates not allowed";
         }
-        for (int i = 1; i < nrates; ++i) {
-            if (!(in >> rates[i])) {
-                throw "Rate entries could not be read";
-            }
-            if (rates[i] < 0.0) {
-                throw "Negative rates not allowed";
+    }
+}
+
+void ModelMarkov::readRatesNonReversible(istream &in, string str) {
+    // non-reversible model, read the whole rate matrix
+    int i = 0;
+    for (int row = 0; row < num_states; row++) {
+        double row_sum = 0.0;
+        for (int col = 0; col < num_states; col++) {
+            if (row == 0 && col == 0) {
+                // top-left element was already red
+                try {
+                    row_sum = convert_double(str.c_str());
+                } catch (string &str) {
+                    outError(str);
+                }
+            } else if (row != col) {
+                // non-diagonal element
+                if (!(in >> rates[i])) {
+                    throw name + string(": Rate entries"
+                                        " could not be read");
+                }
+                if (rates[i] < 0.0) {
+                    throw "Negative rates found";
+                }
+                row_sum += rates[i];
+                i++;
+            } else {
+                // diagonal element
+                double d;
+                in >> d;
+                row_sum += d;
             }
         }
-    } else {
-        // non-reversible model, read the whole rate matrix
-        int i = 0;
-        for (int row = 0; row < num_states; row++) {
-            double row_sum = 0.0;
-            for (int col = 0; col < num_states; col++) {
-                if (row == 0 && col == 0) {
-                    // top-left element was already red
-                    try {
-                        row_sum = convert_double(str.c_str());
-                    } catch (string &str) {
-                        outError(str);
-                    }
-                } else if (row != col) {
-                    // non-diagonal element
-                    if (!(in >> rates[i])) {
-                        throw name+string(": Rate entries could not be read");
-                    }
-                    if (rates[i] < 0.0) {
-                        throw "Negative rates found";
-                    }
-                    row_sum += rates[i];
-                    i++;
-                } else {
-                    // diagonal element
-                    double d;
-                    in >> d;
-                    row_sum += d;
-                }
-            }
-            if (fabs(row_sum) > 1e-3) {
-                throw "Row " + convertIntToString(row) + " does not sum to 0";
-            }
+        if (fabs(row_sum) > 1e-3) {
+            throw "Row " + convertIntToString(row) + 
+                  " does not sum to 0";
         }
     }
 }
