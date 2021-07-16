@@ -334,9 +334,7 @@ void executeSimulation(Params params, IQTree *&tree, bool inference_mode)
     generateMultipleAlignmentsFromSingleTree(alisimulator, inference_mode);
     
     // delete alisimulator
-    try {
-        delete alisimulator;
-    } catch(int err_num){}
+    delete alisimulator;
     
     cout << "[Alignment Simulator] Done"<<"\n";
 }
@@ -614,6 +612,12 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, v
     // case 2: with rate heterogeneity or mixture model
     if ((!rate_name.empty()) || is_mixture_model)
     {
+        // if user specifies +I without invariant_rate -> set it to 0
+        if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)) {
+            alisimulator->tree->getRate()->setPInvar(0);
+            outWarning("Invariant rate is now set to Zero since it has not been specified");
+        }
+        
         // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
         if (!rate_name.compare("+I") && !is_mixture_model)
         {
@@ -621,12 +625,6 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, v
         }
         else
         {
-            // if user specifies +I without invariant_rate -> set it to 0
-            if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)) {
-                alisimulator->tree->getRate()->setPInvar(0);
-                outWarning("Invariant rate is now set to Zero since it has not been specified");
-            }
-            
             // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
             if (invariant_proportion > 0)
             {

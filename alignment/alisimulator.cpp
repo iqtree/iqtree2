@@ -6,6 +6,9 @@
 //
 
 #include "alisimulator.h"
+#include "alisimulatorheterogeneity.h"
+#include "alisimulatorheterogeneityinvar.h"
+#include "alisimulatorinvar.h"
 
 AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, double new_partition_rate)
 {
@@ -23,7 +26,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     partition_rate = new_partition_rate;
     
     // check if base frequencies for DNA models are specified correctly
-    checkBaseFrequenciesDNAModels();
+    checkBaseFrequenciesDNAModels(tree, params->model_name);
     
     // extract max length of taxa names
     extractMaxTaxaNameLength();
@@ -61,10 +64,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
 
 AliSimulator::~AliSimulator()
 {
-    if (!tree || !(tree->aln)) return;
-    
-    // delete aln
-    delete tree->aln;
+    if (!tree) return;
     
     // delete tree
     delete tree;
@@ -523,7 +523,7 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
     {
         // get the base frequencies
         double *state_freq = new double[max_num_states];
-        getStateFrequenciesFromModel(state_freq);
+        getStateFrequenciesFromModel(tree, state_freq);
         
         // finding the max probability position
         int max_prob_pos = 0;
@@ -548,9 +548,9 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
     return sequence;
 }
 
-void AliSimulator::getStateFrequenciesFromModel(double *state_freqs){
+void AliSimulator::getStateFrequenciesFromModel(IQTree* tree, double *state_freqs){
     // firstly, initialize state freqs for mixture models (if neccessary)
-    intializeStateFreqsMixtureModel();
+    intializeStateFreqsMixtureModel(tree);
     
     // if a mixture model is used -> get weighted sum of state_freq across classes
     if (tree->getModel()->isMixture())
@@ -679,20 +679,12 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
         
-        // compute the transition probability matrix
-        model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
-        
-        // convert the probability matrix into an accumulated probability matrix
-        convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
-        
-        // estimate the sequence for the current neighbor
-        (*it)->node->sequence.resize(sequence_length);
-        for (int i = 0; i < sequence_length; i++)
-        {
-            // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
-            int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
-        }
+        // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
+        if ((*it)->attributes["model"].length()>0)
+            branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
+        // otherwise, simulate the sequence based on the common model
+        else
+            simulateASequenceFromBranch(model, sequence_length, trans_matrix, max_num_states, node, it);
         
         // permuting selected sites for FunDi model
         if (params->alisim_fundi_taxon_set.size()>0)
@@ -989,8 +981,8 @@ string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, in
 /**
     show warning if base frequencies are set/unset correctly (only check DNA models)
 */
-void AliSimulator::checkBaseFrequenciesDNAModels(){
-    if (tree->aln && tree->aln->seq_type == SEQ_DNA && !params->partition_file && params->model_name.find("MIX") == std::string::npos) {
+void AliSimulator::checkBaseFrequenciesDNAModels(IQTree* tree, string model_name){
+    if (tree->aln && tree->aln->seq_type == SEQ_DNA && !params->partition_file && model_name.find("MIX") == std::string::npos) {
         
         // initializing the list of unequal/equal base frequencies models
         vector<string> unequal_base_frequencies_models = vector<string>{"GTR", "F81", "HKY", "HKY85", "TN", "TN93", "K81u", "TPM2u", "TPM3u", "TIM", "TIM2", "TIM3", "TVM"};
@@ -998,14 +990,14 @@ void AliSimulator::checkBaseFrequenciesDNAModels(){
         
         // check whether base frequencies are not set for unequal base frequenceies models
         for (string model_item: unequal_base_frequencies_models)
-            if (params->model_name.find(model_item) != std::string::npos && params->model_name.find("+F") == std::string::npos) {
+            if (model_name.find(model_item) != std::string::npos && model_name.find("+F") == std::string::npos) {
                 outWarning(model_item+" must have unequal base frequencies. The base frequencies could be randomly generated if users do not provide them. However, we strongly recommend users specify the base frequencies for this model (by using +F{freq1,...,freqN}) for better simulation accuracy.");
                 break;
             }
         
         // check whether base frequencies are set for equal base frequenceies models
         for (string model_item: equal_base_frequencies_models)
-            if (params->model_name.find(model_item) != std::string::npos && params->model_name.find("+F") != std::string::npos) {
+            if (model_name.find(model_item) != std::string::npos && model_name.find("+F") != std::string::npos) {
                 outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model (by removing +F{freq1,...,freqN}).");
                 break;
             }
@@ -1137,4 +1129,126 @@ void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* no
             for (int i = 0; i < fundi_items.size(); i++)
                 node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
         }
+}
+
+/**
+    initialize state freqs for all model components (of a mixture model)
+*/
+void AliSimulator::intializeStateFreqsMixtureModel(IQTree* tree)
+{
+    // get/init variables
+    ModelSubst* model = tree->getModel();
+    
+    // only initialize state freqs if it's a mixture model && the state freqs have not been estimated by an inference process yet
+    if (model->isMixture() && !params->alisim_inference_mode && model->getFreqType() == FREQ_EMPIRICAL)
+    {
+        // get max_num_bases
+        int max_num_states = tree->aln->getMaxNumStates();
+        
+        // initialize state freqs
+        double *state_freq = new double[max_num_states];
+        
+        // get the weights of model components
+        for (int i = 0; i < model->getNMixtures(); i++)
+            if (model->getMixtureClass(i)->getFreqType() == FREQ_EMPIRICAL)
+            {
+                // if sequence_type is dna -> randomly generate base frequencies based on empirical distributions
+                if (tree->aln->seq_type == SEQ_DNA)
+                {
+                    RandomDistribution rd;
+                    rd.random_base_frequencies(state_freq);
+                }
+                // otherwise, randomly generate base frequencies based on uniform distribution
+                else
+                    generateRandomBaseFrequencies(state_freq, max_num_states);
+                
+                model->getMixtureClass(i)->setStateFrequency(state_freq);
+            }
+        
+        // delete state_freq
+        delete [] state_freq;
+    }
+}
+
+/**
+    branch-specific evolution
+*/
+void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+{
+    // initialize a dummy model for this branch
+    string model_full_name = (*it)->attributes["model"];
+    IQTree *tmp_tree = new IQTree();
+    tmp_tree->copyPhyloTree(tree, true);
+    initializeModel(tmp_tree, model_full_name);
+    
+    // initialize state frequencies
+    double *state_freqs = new double[max_num_states];
+    getStateFrequenciesFromModel(tmp_tree, state_freqs);
+    delete[] state_freqs;
+    
+    // check if base frequencies for DNA models are specified correctly
+    checkBaseFrequenciesDNAModels(tmp_tree, model_full_name);
+    
+    // avoid using Heterotachy in branch-specific models
+    if (tmp_tree->getRate()->isHeterotachy())
+        outError("Sorry! Heterotachy (GHOST) model is not allowed in branch-specific model.");
+    
+    // initialize a new dummy alisimulator
+    AliSimulator* tmp_alisimulator = new AliSimulator(params, tmp_tree, expected_num_sites, partition_rate);
+    
+    // convert alisimulator to the correct type of simulator
+    // get variables
+    string rate_name = tmp_alisimulator->tree->getRateName();
+    double invariant_proportion = tmp_alisimulator->tree->getRate()->getPInvar();
+    bool is_mixture_model = tmp_alisimulator->tree->getModel()->isMixture();
+    // case 1: without rate heterogeneity or mixture model -> using the current alisimulator (don't need to re-initialize it)
+    // case 2: with rate heterogeneity or mixture model
+    if ((!rate_name.empty()) || is_mixture_model)
+    {
+        // if user specifies +I without invariant_rate -> set it to 0
+        if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)){
+            tmp_alisimulator->tree->getRate()->setPInvar(0);
+            outWarning("Invariant rate is now set to Zero since it has not been specified");
+        }
+        
+        // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
+        if (!rate_name.compare("+I") && !is_mixture_model)
+            tmp_alisimulator = new AliSimulatorInvar(tmp_alisimulator, invariant_proportion);
+        else
+        {
+            // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
+            if (invariant_proportion > 0)
+                tmp_alisimulator = new AliSimulatorHeterogeneityInvar(tmp_alisimulator, invariant_proportion);
+            // case 2.2: with rate heterogeneity (gamma/freerate model without invariant sites)
+            else
+                tmp_alisimulator = new AliSimulatorHeterogeneity(tmp_alisimulator);
+        }
+    }
+    
+    // simulate the sequence for the current node based on the branch-specific model
+    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it);
+    
+    // delete the dummy alisimulator
+    delete tmp_alisimulator;
+}
+
+/**
+    simulate a sequence for a node from a specific branch
+*/
+void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+{
+    // compute the transition probability matrix
+    model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
+    
+    // convert the probability matrix into an accumulated probability matrix
+    convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
+    
+    // estimate the sequence for the current neighbor
+    (*it)->node->sequence.resize(sequence_length);
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
+        int starting_index = node->sequence[i]*max_num_states;
+        (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+    }
 }

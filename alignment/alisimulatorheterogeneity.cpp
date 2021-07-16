@@ -127,45 +127,6 @@ void AliSimulatorHeterogeneity::regenerateAncestralSequenceMixtureModel(){
 }
 
 /**
-    initialize state freqs for all model components (of a mixture model)
-*/
-void AliSimulatorHeterogeneity::intializeStateFreqsMixtureModel()
-{
-    // get/init variables
-    ModelSubst* model = tree->getModel();
-    
-    // only initialize state freqs if it's a mixture model && the state freqs have not been estimated by an inference process yet
-    if (model->isMixture() && !params->alisim_inference_mode && model->getFreqType() == FREQ_EMPIRICAL)
-    {
-        // get max_num_bases
-        int max_num_states = tree->aln->getMaxNumStates();
-        
-        // initialize state freqs
-        double *state_freq = new double[max_num_states];
-        
-        // get the weights of model components
-        for (int i = 0; i < model->getNMixtures(); i++)
-            if (model->getMixtureClass(i)->getFreqType() == FREQ_EMPIRICAL)
-            {
-                // if sequence_type is dna -> randomly generate base frequencies based on empirical distributions
-                if (tree->aln->seq_type == SEQ_DNA)
-                {
-                    RandomDistribution rd;
-                    rd.random_base_frequencies(state_freq);
-                }
-                // otherwise, randomly generate base frequencies based on uniform distribution
-                else
-                    generateRandomBaseFrequencies(state_freq, max_num_states);
-                
-                model->getMixtureClass(i)->setStateFrequency(state_freq);
-            }
-        
-        // delete state_freq
-        delete [] state_freq;
-    }
-}
-
-/**
     initialize caching accumulated_trans_matrix
 */
 void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, int max_num_states, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model)

@@ -21,6 +21,21 @@ protected:
     */
     virtual void simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping);
     
+    /**
+        simulate a sequence for a node from a specific branch
+    */
+    virtual void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it);
+    
+    /**
+        simulate a sequence for a node from a specific branch after all variables has been initializing
+    */
+    void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it);
+    
+    /**
+        initialize variables (e.g., site-specific rate)
+    */
+    void initVariables(int sequence_length, double *site_specific_rates);
+    
 public:
     
     /**

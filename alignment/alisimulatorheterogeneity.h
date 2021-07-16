@@ -46,11 +46,6 @@ protected:
     void intializeSiteSpecificModelIndex();
     
     /**
-        initialize state freqs for all model components (of a mixture model)
-    */
-    virtual void intializeStateFreqsMixtureModel();
-    
-    /**
         initialize caching accumulated_trans_matrix
     */
     void intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, int max_num_states, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model);

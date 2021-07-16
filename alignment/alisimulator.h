@@ -59,7 +59,7 @@ protected:
     /**
     *  get state frequencies from model
     */
-    void getStateFrequenciesFromModel(double *state_freqs);
+    void getStateFrequenciesFromModel(IQTree* tree, double *state_freqs);
 
     /**
     *  randomly generate the ancestral sequence for the root node
@@ -106,9 +106,7 @@ protected:
     /**
         initialize state freqs for all model components (of a mixture model)
     */
-    virtual void intializeStateFreqsMixtureModel(){
-        // will be override in alisimulatorheterogeneity
-    };
+    void intializeStateFreqsMixtureModel(IQTree* tree);
     
     /**
         create mask for variant states
@@ -133,7 +131,7 @@ protected:
     /**
         show warning if base frequencies are set/unset correctly (only check DNA models)
     */
-    void checkBaseFrequenciesDNAModels();
+    void checkBaseFrequenciesDNAModels(IQTree* tree, string model_name);
     
     /**
         extract the maximum length of taxa names
@@ -154,6 +152,16 @@ protected:
         writing and deleting simulated sequence immediately if possible
     */
     void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, NeighborVec::iterator it, Node* node);
+    
+    /**
+        branch-specific evolution
+    */
+    void branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it);
+    
+    /**
+        simulate a sequence for a node from a specific branch
+    */
+    virtual void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it);
     
 public:
     

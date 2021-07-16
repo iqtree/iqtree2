@@ -37,26 +37,12 @@ void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
         
-        // compute the transition probability matrix
-        model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
-        
-        // convert the probability matrix into an accumulated probability matrix
-        convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
-        
-        // estimate the sequence for the current neighbor
-        (*it)->node->sequence.resize(sequence_length);
-        for (int i = 0; i < sequence_length; i++)
-        {
-            
-            // if this site is invariant -> preserve the dad's state
-            if (site_specific_rates[i] == 0)
-                (*it)->node->sequence[i] = node->sequence[i];
-            else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
-            {
-                int starting_index = node->sequence[i]*max_num_states;
-                (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
-            }
-        }
+        // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
+        if ((*it)->attributes["model"].length()>0)
+            branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
+        // otherwise, simulate the sequence based on the common model
+        else
+            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
         
         // permuting selected sites for FunDi model
         if (params->alisim_fundi_taxon_set.size()>0)
@@ -91,14 +77,7 @@ void AliSimulatorInvar::simulateSeqsForTree(string output_filepath)
     
     // initialize the site-specific rates
     double *site_specific_rates = new double[sequence_length];
-    for (int i = 0; i < sequence_length; i++)
-    {
-        // if this site is invariant -> preserve the dad's state
-        if (random_double() <= invariant_proportion)
-            site_specific_rates[i] = 0;
-        else
-            site_specific_rates[i] = 1;
-    }
+    initVariables(sequence_length, site_specific_rates);
     
     // initialize trans_matrix
     double *trans_matrix = new double[max_num_states*max_num_states];
@@ -157,4 +136,61 @@ void AliSimulatorInvar::simulateSeqsForTree(string output_filepath)
     // removing constant states if it's necessary
     if (length_ratio > 1)
         removeConstantSites();
+}
+
+/**
+    simulate a sequence for a node from a specific branch after all variables has been initializing
+*/
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+{
+    // compute the transition probability matrix
+    model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
+    
+    // convert the probability matrix into an accumulated probability matrix
+    convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
+    
+    // estimate the sequence for the current neighbor
+    (*it)->node->sequence.resize(sequence_length);
+    for (int i = 0; i < sequence_length; i++)
+    {
+        
+        // if this site is invariant -> preserve the dad's state
+        if (site_specific_rates[i] == 0)
+            (*it)->node->sequence[i] = node->sequence[i];
+        else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
+        {
+            int starting_index = node->sequence[i]*max_num_states;
+            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+        }
+    }
+}
+
+/**
+    simulate a sequence for a node from a specific branch
+*/
+void AliSimulatorInvar::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it){
+    // initialize the site-specific rates
+    double *site_specific_rates = new double[sequence_length];
+    initVariables(sequence_length, site_specific_rates);
+    
+    // simulate a sequence for a node from a specific branch after all variables has been initializing
+    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
+    
+    // delete the site-specific rates
+    delete[] site_specific_rates;
+}
+
+/**
+    initialize variables (e.g., site-specific rate)
+*/
+void AliSimulatorInvar::initVariables(int sequence_length, double *site_specific_rates)
+{
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // if this site is invariant -> preserve the dad's state
+        if (random_double() <= invariant_proportion)
+            site_specific_rates[i] = 0;
+        else
+            site_specific_rates[i] = 1;
+    }
 }
