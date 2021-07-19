@@ -167,6 +167,29 @@ bool parseStateFrequencyTypeName(const char* name,
     return parseStateFrequencyTypeName(str, freq);
 }
 
+namespace {
+    struct CanonicalDigitsToFreqType {
+        const char*   digits;
+        StateFreqType freq_type;
+    } canonicalDigitsToFrequencyLookup[] = {
+        { "1111", StateFreqType::FREQ_EQUAL    },
+        { "1112", StateFreqType::FREQ_DNA_1112 },
+        { "1121", StateFreqType::FREQ_DNA_1121 },
+        { "1211", StateFreqType::FREQ_DNA_1211 },
+        { "1222", StateFreqType::FREQ_DNA_2111 },
+        { "1122", StateFreqType::FREQ_DNA_1122 },
+        { "1212", StateFreqType::FREQ_DNA_1212 },
+        { "1221", StateFreqType::FREQ_DNA_1221 },
+        { "1123", StateFreqType::FREQ_DNA_1123 },
+        { "1213", StateFreqType::FREQ_DNA_1213 },
+        { "1231", StateFreqType::FREQ_DNA_1231 },
+        { "1223", StateFreqType::FREQ_DNA_2113 },
+        { "1232", StateFreqType::FREQ_DNA_2131 },
+        { "1233", StateFreqType::FREQ_DNA_2311 },
+        { "1234", StateFreqType::FREQ_ESTIMATE },
+    };
+};
+
 /*
  * Given a string of 4 digits, return a StateFreqType according to
  * equality constraints expressed by those digits.
@@ -185,56 +208,30 @@ StateFreqType parseStateFreqDigits(std::string digits) {
         for (int i=0; i<4; ++i) {
             int digit = digits[i]-'0';
             if (digit<0 || digit>9) {
-    good = false; // found a non-digit
-    break;
+                good = false; // found a non-digit
+                break;
             }
             if (digit_order[digit]==-1) {
-    // haven't seen this digit before
-    digit_order[digit]=++first_found;
+                // haven't seen this digit before
+                digit_order[digit]=++first_found;
             }
             // rewrite digit in canonical form
             digits[i] = '0'+digit_order[digit];
         }
-        // e.g. if digits was "5288", digit_order will end up as {-1,-1,2,-1,-1,1,-1,-1,3,-1}
+        // e.g. if digits was "5288", digit_order 
+        // will end up as {-1,-1,2,-1,-1,1,-1,-1,3,-1}
     }
-    if (!good) throw "Use -f <c | o | u | q | ry | ws | mk | <digit><digit><digit><digit>>";
-    StateFreqType freq_type = StateFreqType::FREQ_UNKNOWN;
-    // Now just exhaustively list all canonical digit possibilities
-    if (digits.compare("1111")==0) {
-        freq_type = StateFreqType::FREQ_EQUAL;
-    } else if (digits.compare("1112")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1112;
-    } else if (digits.compare("1121")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1121;
-    } else if (digits.compare("1211")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1211;
-    } else if (digits.compare("1222")==0) {
-        freq_type = StateFreqType::FREQ_DNA_2111;
-    } else if (digits.compare("1122")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1122;
-    } else if (digits.compare("1212")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1212;
-    } else if (digits.compare("1221")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1221;
-    } else if (digits.compare("1123")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1123;
-    } else if (digits.compare("1213")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1213;
-    } else if (digits.compare("1231")==0) {
-        freq_type = StateFreqType::FREQ_DNA_1231;
-    } else if (digits.compare("1223")==0) {
-        freq_type = StateFreqType::FREQ_DNA_2113;
-    } else if (digits.compare("1232")==0) {
-        freq_type = StateFreqType::FREQ_DNA_2131;
-    } else if (digits.compare("1233")==0) {
-        freq_type = StateFreqType::FREQ_DNA_2311;
-    } else if (digits.compare("1234")==0) {
-        freq_type = StateFreqType::FREQ_ESTIMATE;
-    } else
-        throw ("Unrecognized canonical digits - Can't happen"); // paranoia is good.
-    return freq_type;
+    if (!good) {
+        throw "Use -f <c | o | u | q | ry | ws | mk | <digit><digit><digit><digit>>";
+    }
+    for ( auto mapping : canonicalDigitsToFrequencyLookup ) {
+        if ( digits.compare(mapping.digits) == 0 ) {
+            return mapping.freq_type;
+        }
+    }
+    throw ("Unrecognized canonical digits - Can't happen"); // paranoia is good.
+    return StateFreqType::FREQ_UNKNOWN;
 }
-
 
 /*
  * All params in range [0,1]
