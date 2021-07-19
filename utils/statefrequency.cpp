@@ -610,7 +610,7 @@ int nFreqParams(StateFreqType freq_type) {
         lower_bound[0] = lower_bound[1] = 2*min_freq;
         upper_bound[0] = upper_bound[1] = 1-2*min_freq;
         bound_check[0] = bound_check[1] = true;
-    break;
+        break;
     case StateFreqType::FREQ_DNA_1123:
     case StateFreqType::FREQ_DNA_1213:
     case StateFreqType::FREQ_DNA_1231:
@@ -620,10 +620,10 @@ int nFreqParams(StateFreqType freq_type) {
         // two frequency determining parameters
         lower_bound[0] = 2*min_freq;
         upper_bound[0] = 1-2*min_freq;
-    lower_bound[1] = min_freq/(1-2*min_freq);
+        lower_bound[1] = min_freq/(1-2*min_freq);
         upper_bound[1] = (1-3*min_freq)/(1-2*min_freq);
         bound_check[0] = bound_check[1] = true;
-    break;
+        break;
         /* NOTE:
      * upper_bound[1] and lower_bound[1] are not perfect. Some in-bounds parameters
          * will give base freqs for '2' or '3' base below minimum. This is
@@ -639,6 +639,35 @@ int nFreqParams(StateFreqType freq_type) {
     }
 }
 
+namespace {
+    struct { StateFreqType freq; const char* name; } 
+        freqNameLookup[] = {        
+            { StateFreqType::FREQ_UNKNOWN,    ""       },
+            { StateFreqType::FREQ_EMPIRICAL,  "+F"     },
+            { StateFreqType::FREQ_ESTIMATE,   "+FO"    },
+            { StateFreqType::FREQ_CODON_1x4,  "+F1X4"  },
+            { StateFreqType::FREQ_CODON_3x4,  "+F3X4"  },
+            { StateFreqType::FREQ_CODON_3x4C, "+F3X4C" },
+            { StateFreqType::FREQ_MIXTURE,    ""       }, // no idea what to do here - MDW
+            { StateFreqType::FREQ_DNA_RY,     "+FRY"   },
+            { StateFreqType::FREQ_DNA_WS,     "+FWS"   },
+            { StateFreqType::FREQ_DNA_MK,     "+FMK"   },
+            { StateFreqType::FREQ_DNA_1112,   "+F1112" },
+            { StateFreqType::FREQ_DNA_1121,   "+F1121" },
+            { StateFreqType::FREQ_DNA_1211,   "+F1211" },
+            { StateFreqType::FREQ_DNA_2111,   "+F2111" },
+            { StateFreqType::FREQ_DNA_1122,   "+F1122" },
+            { StateFreqType::FREQ_DNA_1212,   "+F1212" },
+            { StateFreqType::FREQ_DNA_1221,   "+F1221" },
+            { StateFreqType::FREQ_DNA_1123,   "+F1123" },
+            { StateFreqType::FREQ_DNA_1213,   "+F1213" },
+            { StateFreqType::FREQ_DNA_1231,   "+F1231" },
+            { StateFreqType::FREQ_DNA_2113,   "+F2113" },
+            { StateFreqType::FREQ_DNA_2131,   "+F2131" },
+            { StateFreqType::FREQ_DNA_2311,   "+F2311" },
+    };
+}
+
 /*
  * Note: This function came from model/modelmarkov.cpp
  * For freq_type, return a "+F" string specifying that freq_type.
@@ -649,40 +678,27 @@ int nFreqParams(StateFreqType freq_type) {
 string freqTypeString(StateFreqType freq_type,
                       SeqType seq_type, bool full_str) {
     switch(freq_type) {
-    case StateFreqType::FREQ_UNKNOWN:    return("");
     case StateFreqType::FREQ_USER_DEFINED:
-        if (seq_type == SeqType::SEQ_PROTEIN)
+        if (seq_type == SeqType::SEQ_PROTEIN) {
             return "";
-        else
+        }
+        else {
             return "+FU";
+        }
     case StateFreqType::FREQ_EQUAL:
-        if (seq_type == SeqType::SEQ_DNA && !full_str)
+        if (seq_type == SeqType::SEQ_DNA && !full_str) {
             return "";
-        else
+        }
+        else {
             return "+FQ";
-    case StateFreqType::FREQ_EMPIRICAL:  return "+F";
-    case StateFreqType::FREQ_ESTIMATE:
-        return "+FO";
-    case StateFreqType::FREQ_CODON_1x4:  return("+F1X4");
-    case StateFreqType::FREQ_CODON_3x4:  return("+F3X4");
-    case StateFreqType::FREQ_CODON_3x4C: return("+F3X4C");
-    case StateFreqType::FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
-    case StateFreqType::FREQ_DNA_RY:   return("+FRY");
-    case StateFreqType::FREQ_DNA_WS:   return("+FWS");
-    case StateFreqType::FREQ_DNA_MK:   return("+FMK");
-    case StateFreqType::FREQ_DNA_1112: return("+F1112");
-    case StateFreqType::FREQ_DNA_1121: return("+F1121");
-    case StateFreqType::FREQ_DNA_1211: return("+F1211");
-    case StateFreqType::FREQ_DNA_2111: return("+F2111");
-    case StateFreqType::FREQ_DNA_1122: return("+F1122");
-    case StateFreqType::FREQ_DNA_1212: return("+F1212");
-    case StateFreqType::FREQ_DNA_1221: return("+F1221");
-    case StateFreqType::FREQ_DNA_1123: return("+F1123");
-    case StateFreqType::FREQ_DNA_1213: return("+F1213");
-    case StateFreqType::FREQ_DNA_1231: return("+F1231");
-    case StateFreqType::FREQ_DNA_2113: return("+F2113");
-    case StateFreqType::FREQ_DNA_2131: return("+F2131");
-    case StateFreqType::FREQ_DNA_2311: return("+F2311");
-    default: throw("Unrecognized freq_type in freqTypeString - can't happen");
+        }
+
+    default: 
+        for (auto lookup : freqNameLookup ) {
+            if (freq_type==lookup.freq) {
+                return lookup.name;
+            }
+        }
+        throw("Unrecognized freq_type in freqTypeString - can't happen");
     }
 }
