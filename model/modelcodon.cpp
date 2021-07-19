@@ -425,6 +425,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
         }
         size_t pos = model_params.find(delimiter);
         omega = convert_double(model_params.substr(0, pos).c_str());
+        if (!Params::getInstance().optimize_from_given_params)
+            fix_omega = true;
         
         // delete omega from model_params
         if (pos!= std::string::npos)
@@ -444,6 +446,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             
             pos = model_params.find(delimiter);
             kappa = convert_double(model_params.substr(0, pos).c_str());
+            if (!Params::getInstance().optimize_from_given_params)
+                fix_kappa = true;
             
             // delete kappa from model_params
             if (pos!= std::string::npos)
@@ -464,6 +468,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             
             pos = model_params.find(delimiter);
             kappa2 = convert_double(model_params.substr(0, pos).c_str());
+            if (!Params::getInstance().optimize_from_given_params)
+                fix_kappa2 = true;
             
             // delete kappa2 from model_params
             if (pos!= std::string::npos)
