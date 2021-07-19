@@ -151,18 +151,21 @@ void EigenDecomposition::checkEigenValueEquation(int      num_state, double** ev
 												 double** rate_params, 
 												 double*  state_freq) {
 	/* check eigenvalue equation */
-	int error = 0;
-	for (int j = 0; j < num_state; j++) {
-		for (int i = 0, zero = 0.0; i < num_state; i++) {
-			for (int k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
+	bool   is_error = false;
+	double zero     = 0.0;
+	for (int j = 0; j < num_state && !is_error; j++) {
+		for (int i = 0; i < num_state; i++) {
+			for (int k = 0; k < num_state; k++) {
+				zero += b[i][k] * evec[k][j];
+			}
 			zero -= eval[j] * evec[i][j];
 			if (fabs(zero) > 1.0e-5) {
-				error = 1;
+				is_error = true;
 				break;
 			}
 		}
 	}
-	if (error) {
+	if (is_error) {
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
 		cout << "Rate matrix R: " << endl;
 		for (int i = 0; i < num_state; i++) {

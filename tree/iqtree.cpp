@@ -249,14 +249,14 @@ void IQTree::initSettings(Params &params) {
         if (!params.gbo_replicates) {
             intptr_t nseq = aln->getNSeq();
             if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
-                params.min_iterations = nseq * 100;
+                params.min_iterations = static_cast<int>(nseq * 100);
             } else if (aln->getNSeq() < 100) {
                 params.min_iterations = 200;
             } else {
-                params.min_iterations = nseq * 2;
+                params.min_iterations = static_cast<int>(nseq * 2);
             }
             if (params.iteration_multiple > 1) {
-                params.min_iterations = nseq * params.iteration_multiple;
+                params.min_iterations = static_cast<int>(nseq * params.iteration_multiple);
             }
         } else {
             params.min_iterations = 100;
@@ -1575,7 +1575,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     intptr_t num_taxa = aln->getNSeq();
     int num_delete = k_delete;
     if (num_delete > num_taxa - 4) {
-        num_delete = num_taxa - 4;
+        num_delete = static_cast<int>(num_taxa - 4);
     }
     LOG_LINE(VerboseMode::VB_DEBUG, "Deleting " << num_delete << " leaves");
     vector<unsigned int> indices_noncherry(noncherry_taxa.size());

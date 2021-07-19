@@ -190,39 +190,38 @@ protected:
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
 public:
-	virtual string getNameParams() const { return ModelMixture::getNameParams(); }
-	virtual bool isMixture()       const { return ModelMixture::isMixture(); }
-	virtual int getNMixtures()     { return ModelMixture::getNMixtures(); }
-	virtual double getMixtureWeight(int cat)              { return ModelMixture::getMixtureWeight(cat); }	
-	virtual void setMixtureWeight(int cat, double weight) { ModelMixture::setMixtureWeight(cat, weight); }
-	virtual void setFixMixtureWeight(bool fix_weight)     { ModelMixture::setFixMixtureWeight(fix_weight); }
-	virtual ModelSubst* getMixtureClass(int cat)          { return ModelMixture::getMixtureClass(cat); }
-	virtual void setMixtureClass(int cat, ModelSubst* m)  { ModelMixture::setMixtureClass(cat, m); }
-	virtual void getStateFrequency(double* state_freq, int mixture = 0) 
+	virtual string getNameParams() const { return mixture.getNameParams(); }
+	virtual bool isMixture()       const { return mixture.isMixture(); }
+	virtual int getNMixtures()     { return mixture.getNMixtures(); }
+	virtual double getMixtureWeight(int cat)              { return mixture.getMixtureWeight(cat); }
+	virtual void setMixtureWeight(int cat, double weight) { mixture.setMixtureWeight(cat, weight); }
+	virtual void setFixMixtureWeight(bool fix_weight)     { mixture.setFixMixtureWeight(fix_weight); }
+	virtual ModelSubst* getMixtureClass(int cat)          { return mixture.getMixtureClass(cat); }
+	virtual void setMixtureClass(int cat, ModelSubst* m)  { mixture.setMixtureClass(cat, m); }
+	virtual void getStateFrequency(double* state_freq, int mixture_num = 0) 
 	{ 
-		ModelMixture::getStateFrequency(state_freq, mixture); 
+		mixture.getStateFrequency(state_freq, mixture_num);
 	}
 	virtual void computeTransDerv(double time, double* trans_matrix,
-		double* trans_derv1, double* trans_derv2, int mixture = 0) {
-		ModelMixture::computeTransDerv(time, trans_matrix, 
-			trans_derv1, trans_derv2, mixture); 
+		double* trans_derv1, double* trans_derv2, int mixture_num = 0) {
+		mixture.computeTransDerv(time, trans_matrix,
+			trans_derv1, trans_derv2, mixture_num);
 	}
-	virtual void setOptimizeSteps(int steps)   { ModelMixture::setOptimizeSteps(steps); }
-	virtual uint64_t getMemoryRequired()       { return ModelMixture::getMemoryRequired(); }
-	virtual void writeParameters(ostream& out) { ModelMixture::writeParameters(out); }
+	virtual void setOptimizeSteps(int steps)   { mixture.setOptimizeSteps(steps); }
+	virtual uint64_t getMemoryRequired()       { return mixture.getMemoryRequired(); }
+	virtual void writeParameters(ostream& out) { mixture.writeParameters(out); }
 
-    virtual bool isPolymorphismAware()    { return ModelPoMo::isPolymorphismAware(); };
-    virtual int getNumRateEntries() const { return ModelPoMo::getNumRateEntries();  }
+    virtual bool isPolymorphismAware()    { return super::isPolymorphismAware(); };
+    virtual int getNumRateEntries() const { return super::getNumRateEntries();  }
     virtual void computeTipLikelihood(PML::StateType state, double* state_lk) {
-        ModelPoMo::computeTipLikelihood(state, state_lk);
+		super::computeTipLikelihood(state, state_lk);
     }
-    virtual ModelSubst* getMutationModel() { return ModelPoMo::getMutationModel(); }
+    virtual ModelSubst* getMutationModel() { return super::getMutationModel(); }
     virtual void setRates()                { ModelPoMo::setRates(); }
     virtual void computeRateMatrix(double** rate_matrix, double* state_freq, int num_state) {
-        ModelPoMo::computeRateMatrix(rate_matrix, state_freq, num_state);
+		super::computeRateMatrix(rate_matrix, state_freq, num_state);
     }
 #endif
-
 
 };
 

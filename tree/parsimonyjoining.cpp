@@ -532,14 +532,14 @@ public:
 
         int sample_count = 2;
         double total_work = 0;
-        for (int stop_batch=3; stop_batch<nseq; ) {
+        for (intptr_t stop_batch=3; stop_batch<nseq; ) {
             
             sampling.start();
             ++sample_count;
             selectSample(sample_count, (int)branches.size());
             sampling.stop();
             
-            int start_batch = stop_batch;
+            intptr_t start_batch = stop_batch;
             stop_batch += sample_count/4 + 1;
             if (nseq < stop_batch) {
                 stop_batch = nseq;
@@ -549,7 +549,7 @@ public:
             #ifdef _OPENMP
             #pragma omp parallel for
             #endif
-            for (int i=start_batch;i<stop_batch;++i) {
+            for (intptr_t i=start_batch;i<stop_batch;++i) {
                 candidates[i].computeParsimony(&tree);
                 int t = context.getThreadNumber();
                 bestSampleBranch(candidates[i], buffer[t]);
@@ -561,7 +561,7 @@ public:
             std::sort(candidates.begin()+start_batch,
                       candidates.begin()+stop_batch);
             
-            for (int j=start_batch; j<stop_batch; ++j) {
+            for (intptr_t j=start_batch; j<stop_batch; ++j) {
                 insertCandidate(candidates[j], block_allocator, buffer[0]);
             }
             inserting.stop();

@@ -600,14 +600,14 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
             }
             taxaIdsToAdd.push_back((int)seq);
         } else {
-            (*it).second->id = seq;
+            (*it).second->id = static_cast<int>(seq);
             mapNameToNode.erase(it);
         }
     }
     auto rootInMap = mapNameToNode.find(ROOT_NAME);
     if (rootInMap != mapNameToNode.end()) {
         root     = (*rootInMap).second;
-        root->id = nseq;
+        root->id = static_cast<int>(nseq);
         mapNameToNode.erase(rootInMap);
     } else if (root==nullptr && !taxaIdsToAdd.empty()) {
         //Todo: make sure we HAVE a root, since later steps will need one.
@@ -847,8 +847,8 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                     LOG_LINE(VerboseMode::VB_MIN, "Sequence " << new_name
                              << " will be added from " << path);
                 }
-                int merged_seq_id = old_count + static_cast<int>(added_sequences.size());
-                name_to_id[new_name] = merged_seq_id;
+                intptr_t merged_seq_id = old_count + added_sequences.size();
+                name_to_id[new_name] = static_cast<int>(merged_seq_id);
             }
         } else {
             int old_seq_id = find->second;
@@ -918,13 +918,13 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
                         LOG_LINE(VerboseMode::VB_MIN, "Sequence " << new_name
                                  << " will be added from " << path);
                     }
-                    int merged_seq_id = old_count + static_cast<int>(added_sequences.size());
-                    name_to_id[new_name] = merged_seq_id;
+                    intptr_t merged_seq_id = old_count + added_sequences.size();
+                    name_to_id[new_name] = static_cast<int>(merged_seq_id);
                 }
             } else {
                 updated_sequences.emplace_back(old_seq_id, new_seq_id);
                 names_of_updated_sequences.push_back(new_name);
-                name_to_id[new_name] = old_count;
+                name_to_id[new_name] = static_cast<int>(old_count);
             }
         }
     }
@@ -991,7 +991,7 @@ void PhyloTree::mergeAlignment(const Alignment* new_aln) {
             //needs to be added to the tree.
             //added_sequences gives sequence id
             //in the *new* alignment, not the *old*
-            ids_of_sequences_to_place.push_back(old_count);
+            ids_of_sequences_to_place.push_back(static_cast<int>(old_count));
             ++old_count;
         }
         dupe_to_twin.getKeysAndValues(removed_seqs, twin_seqs);
@@ -4262,7 +4262,9 @@ double PhyloTree::computeDistanceMatrix() {
         for (intptr_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
             intptr_t sym_pos = rowStartPos + seq2;
             double d2l = 0;
-            dist_matrix[sym_pos] = processor->recomputeDist(seq1, seq2, dist_matrix[sym_pos], d2l);
+            dist_matrix[sym_pos] = processor->recomputeDist(static_cast<int>(seq1), 
+                                                            static_cast<int>(seq2), 
+                                                            dist_matrix[sym_pos], d2l);
         }
         progress += static_cast<double>(nseqs - seq1 - 1);
     }
@@ -4380,7 +4382,7 @@ double PhyloTree::computeObservedDistanceMatrix() {
             if (seq1 == seq2)
                 dist_matrix[pos] = 0.0;
             else if (seq1 < seq2) {
-                dist_matrix[pos] = aln->computeObsDist(seq1, seq2);
+                dist_matrix[pos] = aln->computeObsDist(static_cast<int>(seq1), static_cast<int>(seq2));
             }
             else {
                 //copy from upper triangle into lower triangle

@@ -205,16 +205,16 @@ void Alignment::checkSeqName() {
         }
     }    
     if (seq_type == SeqType::SEQ_POMO) {
-        cout << "NOTE: The composition test for PoMo"
+        std::cout << "NOTE: The composition test for PoMo"
              << " only tests the proportion of fixed states!" << endl;
     }
     bool   listSequences = !Params::getInstance().suppress_list_of_sequences;
     size_t max_len       = getMaxSeqNameLength()+1;
     if (listSequences) {
-        cout.width(max_len+14);
-        cout << right << "Gap/Ambiguity" 
-             << "  Composition  p-value" << endl;
-        cout.precision(2);
+        std::cout.width(max_len+14);
+        std::cout << right << "Gap/Ambiguity" 
+                  << "  Composition  p-value" << endl;
+        std::cout.precision(2);
     }
 
     AlignmentSummary s(this, true, true);
@@ -239,18 +239,18 @@ void Alignment::checkSeqName() {
     forgetSequenceInfo(seqInfo);
     
     if (num_problem_seq) {
-        cout << "WARNING: " << num_problem_seq
-             << " sequences contain more than 50% gaps/ambiguity" << endl;
+        std::cout << "WARNING: " << num_problem_seq
+                  << " sequences contain more than 50% gaps/ambiguity" << endl;
     }
     if (listSequences) {
-        cout << "**** ";
-        cout.width(max_len+2);
-        cout << left << " TOTAL  ";
-        cout.width(6);
-        cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        cout << " " << num_failed << " sequences failed composition"
-             << " chi2 test (p-value<5%; df=" << df << ")" << endl;
-        cout.precision(3);
+        std::cout << "**** ";
+        std::cout.width(max_len+2);
+        std::cout << left << " TOTAL  ";
+        std::cout.width(6);
+        std::cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
+        std::cout << " " << num_failed << " sequences failed composition"
+                  << " chi2 test (p-value<5%; df=" << df << ")" << endl;
+        std::cout.precision(3);
     }
     delete [] count_per_seq;
 }
@@ -280,7 +280,7 @@ void Alignment::checkSequenceNamesAreDistinct() {
     for (auto it = names.begin(); it != names.end(); it++) {
         if (it+1==names.end()) break;
         if (*it == *(it+1)) {
-            cout << "ERROR: Duplicated sequence name " << *it << endl;
+            std::cout << "ERROR: Duplicated sequence name " << *it << endl;
             ok = false;
         }
     }
@@ -399,21 +399,21 @@ void Alignment::reportSequenceInfo(const SequenceInfo* seqInfo,
                                    size_t max_len) const {
     intptr_t numSequences = seq_names.size();
     for (intptr_t i = 0; i < numSequences; i++) {
-        cout.width(4);
-        cout << right << i + 1 << "  ";
-        cout.width(max_len);
-        cout << left << seq_names[i] << " ";
-        cout.width(6);
-        cout << right << seqInfo[i].percent_gaps << "%";
+        std::cout.width(4);
+        std::cout << right << i + 1 << "  ";
+        std::cout.width(max_len);
+        std::cout << left << seq_names[i] << " ";
+        std::cout.width(6);
+        std::cout << right << seqInfo[i].percent_gaps << "%";
         if (seqInfo[i].failed) {
-            cout << "    failed ";
+            std::cout << "    failed ";
         }
         else {
-            cout << "    passed ";
+            std::cout << "    passed ";
         }
-        cout.width(9);
-        cout << right << (seqInfo[i].pvalue * 100) << "%";
-        cout << endl;
+        std::cout.width(9);
+        std::cout << right << (seqInfo[i].pvalue * 100) << "%";
+        std::cout << endl;
     }
 }
 
@@ -441,16 +441,18 @@ int Alignment::checkIdenticalSeq()
 				}
 			if (equal_seq) {
                 if (first) {
-                    cout << "WARNING: Identical sequences " << getSeqName(seq1);
+                    std::cout << "WARNING: Identical sequences " << getSeqName(seq1);
                 }
-				cout << ", " << getSeqName(seq2);
+                std::cout << ", " << getSeqName(seq2);
 				num_identical++;
 				checked[seq2] = 1;
 				first = false;
 			}
 		}
 		checked[seq1] = 1;
-		if (!first) cout << endl;
+        if (!first) {
+            std::cout << endl;
+        }
 	}
     if (num_identical) {
         outWarning("Some identical sequences found"
@@ -489,8 +491,8 @@ vector<size_t> Alignment::getSequenceHashes(progress_display_ptr progress) const
     
     if (verbose_mode >= VerboseMode::VB_MED && !displaying_progress) {
         auto hashTime = getRealTime() - startHash;
-        cout << "Hashing sequences took " << hashTime
-             << " wall-clock seconds" << endl;
+        std::cout << "Hashing sequences took " << hashTime
+                  << " wall-clock seconds" << endl;
     }
     return hashes;
 }
@@ -588,7 +590,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two,
     }
 }
 
-bool Alignment::shouldRemoveSequence(int seq1, int seq2, 
+bool Alignment::shouldRemoveSequence(intptr_t seq1, intptr_t seq2, 
                                      const string& not_remove,
                                      const BoolVector& isSequenceRemoved,
                                      const vector<size_t>& hashes) const {
@@ -607,15 +609,15 @@ bool Alignment::shouldRemoveSequence(int seq1, int seq2,
     return true;
 }
 
-void Alignment::reportSequenceKept(int seq1, int seq2, bool listIdentical,
+void Alignment::reportSequenceKept(intptr_t seq1, intptr_t seq2, bool listIdentical,
                                    progress_display& progress) const {
     if (listIdentical) {
         #if USE_PROGRESS_DISPLAY
         progress.hide();
         #endif
-        cout << "NOTE: " << getSeqName(seq2)
-                << " is identical to " << getSeqName(seq1)
-                << " but kept for subsequent analysis" << endl;
+        std::cout << "NOTE: " << getSeqName(seq2)
+                  << " is identical to " << getSeqName(seq1)
+                  << " but kept for subsequent analysis" << endl;
         #if USE_PROGRESS_DISPLAY
         progress.show();
         #endif
@@ -631,8 +633,8 @@ void Alignment::doneCheckingForDuplicateSequences(double startCheck,
     #endif
     if (verbose_mode >= VerboseMode::VB_MED && !displaying_progress) {
         auto checkTime = getRealTime() - startCheck;
-        cout << "Checking for duplicate sequences took " << checkTime
-             << " wall-clock seconds" << endl;
+        std::cout << "Checking for duplicate sequences took " << checkTime
+                  << " wall-clock seconds" << endl;
     }
     #if USE_PROGRESS_DISPLAY
         progress.done();
@@ -650,13 +652,13 @@ Alignment* Alignment::removeSpecifiedSequences
     IntVector keep_seqs;
     for (intptr_t seq1 = 0; seq1 < nseq; seq1++) {
         if ( !isSequenceRemoved[seq1] ) {
-            keep_seqs.emplace_back(seq1);
+            keep_seqs.emplace_back(static_cast<int>(seq1));
         }
     }
     Alignment* aln = new Alignment;
     aln->extractSubAlignment(this, keep_seqs, 0);
-    //cout << "NOTE: Identified " << removed_seqs.size()
-    //  << " sequences as duplicates." << endl;
+    //std::cout << "NOTE: Identified " << removed_seqs.size()
+    //          << " sequences as duplicates." << endl;
     if (verbose_mode >= VerboseMode::VB_MED) {
         std::stringstream msg;
         msg.precision(4);
@@ -738,25 +740,25 @@ void Alignment::readAlignmentFile(InputType intype, const char* filename,
                                   const char* requested_sequence_type) {
     try {
         if (intype == InputType::IN_NEXUS) {
-            cout << "Nexus format detected" << endl;
+            std::cout << "Nexus format detected" << endl;
             readNexus(filename);
         } else if (intype == InputType::IN_FASTA) {
-            cout << "Fasta format detected" << endl;
+            std::cout << "Fasta format detected" << endl;
             readFasta(filename, requested_sequence_type);
         } else if (intype == InputType::IN_PHYLIP) {
-            cout << "Phylip format detected" << endl;
+            std::cout << "Phylip format detected" << endl;
             if (Params::getInstance().phylip_sequential_format)
                 readPhylipSequential(filename, requested_sequence_type);
             else
                 readPhylip(filename, requested_sequence_type);
         } else if (intype == InputType::IN_COUNTS) {
-            cout << "Counts format (PoMo) detected" << endl;
+            std::cout << "Counts format (PoMo) detected" << endl;
             readCountsFormat(filename, requested_sequence_type);
         } else if (intype == InputType::IN_CLUSTAL) {
-            cout << "Clustal format detected" << endl;
+            std::cout << "Clustal format detected" << endl;
             readClustal(filename, requested_sequence_type);
         } else if (intype == InputType::IN_MSF) {
-            cout << "MSF format detected" << endl;
+            std::cout << "MSF format detected" << endl;
             readMSF(filename, requested_sequence_type);
         } else {
             outError("Unknown sequence format,"
@@ -788,14 +790,14 @@ Alignment::Alignment(const char *filename,
     STATE_UNKNOWN = 126;
     pars_lower_bound = nullptr;
     double readStart = getRealTime();
-    cout << "Reading alignment file " << filename << " ... ";
+    std::cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
     readAlignmentFile(intype, filename, requested_sequence_type);
 
     if (verbose_mode >= VerboseMode::VB_MED) {
-        cout << "Time to read input file was "
-             << (getRealTime() - readStart) << " sec." << endl;
+        std::cout << "Time to read input file was "
+                  << (getRealTime() - readStart) << " sec." << endl;
     }
     if (getNSeq() < 3)
     {
@@ -804,16 +806,20 @@ Alignment::Alignment(const char *filename,
     double constCountStart = getRealTime();
     countConstSite();
     if (verbose_mode >= VerboseMode::VB_MED) {
-        cout << "Time to count constant sites was "
-             << (getRealTime() - constCountStart) << " sec." << endl;
+        std::cout << "Time to count constant sites was "
+                  << (getRealTime() - constCountStart) << " sec." << endl;
     }
     if (Params::getInstance().compute_seq_composition)
     {
-        cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
-             << " columns, " << getNPattern() << " distinct patterns" << endl
-             << num_informative_sites << " parsimony-informative, "
-             << num_variant_sites-num_informative_sites << " singleton sites, "
-             << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
+        auto singleton_count = num_variant_sites - num_informative_sites;
+        auto constant_sites = (int)floor(frac_const_sites * getNSite() + .5);
+        std::cout << "Alignment has " 
+                  << getNSeq() << " sequences with " 
+                  << getNSite() << " columns, " 
+                  << getNPattern() << " distinct patterns" << endl
+                  << num_informative_sites << " parsimony-informative, "
+                  << singleton_count << " singleton sites, "
+                  << constant_sites << " constant sites" << endl;
     }
     //buildSeqStates();
     checkSeqName();
@@ -1423,10 +1429,18 @@ Alignment::CharacterCountsByType::CharacterCountsByType()
 
 void Alignment::CharacterCountsByType::countCharactersByType
         (StrVector& sequences) {
+    //Visual Studio's open mp implementation won't allow
+    //class members to be used in a data-sharing clause!
     intptr_t sequenceCount = sequences.size();
+    size_t local_num_nuc   = num_nuc;
+    size_t local_num_ungap = num_ungap;
+    size_t local_num_bin   = num_bin;
+    size_t local_num_alpha = num_alpha;
+    size_t local_num_digit = num_digit;
+
 #ifdef _OPENMP
 #pragma omp parallel for \
-    reduction(+:num_nuc,num_ungap,num_bin,num_alpha,num_digit)
+    reduction(+:local_num_nuc,local_num_ungap,local_num_bin,local_num_alpha,local_num_digit)
 #endif
     for (intptr_t seqNum = 0; seqNum < sequenceCount; ++seqNum) {
         auto start = sequences.at(seqNum).data();
@@ -1434,28 +1448,35 @@ void Alignment::CharacterCountsByType::countCharactersByType
         for (auto i = start; i!=stop; ++i) {
             if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' ||
                 (*i) == 'T' || (*i) == 'U') {
-                ++num_nuc;
-                ++num_ungap;
-                ++num_alpha;
+                ++local_num_nuc;
+                ++local_num_ungap;
+                ++local_num_alpha;
                 continue;
             }
             if ((*i)=='?' || (*i)=='-' || (*i) == '.' ) {
                 continue;
             }
             if (*i != 'N' && *i != 'X' &&  (*i) != '~') {
-                num_ungap++;
+                local_num_ungap++;
                 if (isdigit(*i)) {
-                    num_digit++;
+                    local_num_digit++;
                     if ((*i) == '0' || (*i) == '1') {
-                        num_bin++;
+                        local_num_bin++;
                     }
                 }
             }
             if (isalpha(*i)) {
-                num_alpha++;
+                local_num_alpha++;
             }
         }
     }
+    //Copy back from the local variables that Visual Studio
+    //insisted upon(!).
+    num_nuc   = local_num_nuc;
+    num_ungap = local_num_ungap;
+    num_bin   = local_num_bin;
+    num_alpha = local_num_alpha;
+    num_digit = local_num_digit;
 }
 /**
 	detect the data type of the input sequences
@@ -2957,9 +2978,9 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
         err_str << "Counts-File identification line could not be read.";
         throw err_str.str();
     }
-    if ((ftype.compare("COUNTSFILE") ||
-         npop_str.compare("NPOP") ||
-         nsites_str.compare("NSITES")) != 0) {
+    if (ftype.compare("COUNTSFILE") != 0 ||
+         npop_str.compare("NPOP") !=0 ||
+         nsites_str.compare("NSITES") != 0) {
         err_str << "Counts-File identification line could not be read.";
         throw err_str.str();
     }
@@ -5656,9 +5677,9 @@ void Alignment::computeCodonFreq_1x4(double *state_freq,
     }
     if (verbose_mode >= VerboseMode::VB_MED) {
         for (int i = 0; i < 4; i++) {
-            cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
+            std::cout << "  " << symbols_dna[i] << ": " << ntfreq[i];
         }
-        cout << endl;
+        std::cout << endl;
     }
     memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
     memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
@@ -5709,14 +5730,17 @@ void Alignment::computeCodonFreq_3x4(double *state_freq,
     }
     for (int j = 0; j < 12; j+=4) {
         double sum = 0;
-        for (int i = 0; i < 4; i++)
-            sum += ntfreq[i+j];
-        for (int i = 0; i < 4; i++)
-            ntfreq[i+j] /= sum;
+        for (int i = 0; i < 4; i++) {
+            sum += ntfreq[i + j];
+        }
+        for (int i = 0; i < 4; i++) {
+            ntfreq[i + j] /= sum;
+        }
         if (verbose_mode >= VerboseMode::VB_MED) {
-            for (int i = 0; i < 4; i++)
-                cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
-            cout << endl;
+            for (int i = 0; i < 4; i++) {
+                std::cout << "  " << symbols_dna[i] << ": " << ntfreq[i + j];
+            }
+            std::cout << endl;
         }
     }
 

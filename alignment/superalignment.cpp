@@ -1169,7 +1169,7 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two,
     return filterOutSequences(isSequenceRemoved);
 }
 
-bool SuperAlignment::areSequencesIdentical(int seq1, int seq2) {
+bool SuperAlignment::areSequencesIdentical(intptr_t seq1, intptr_t seq2) {
     int part = 0;
     // check if seq1 and seq2 are identical over all partitions
     for (auto ait = partitions.begin(); 
@@ -1220,7 +1220,7 @@ Alignment* SuperAlignment::filterOutSequences
 int SuperAlignment::checkAbsentStates(string msg) {
     int count = 0;
     for (auto it = partitions.begin(); it != partitions.end(); ++it) {
-        int         index = it-partitions.begin();
+        int64_t     index = it-partitions.begin();
         std::string msg   = "partition " 
                           + convertInt64ToString((index)+1);
         count += (*it)->checkAbsentStates(msg);

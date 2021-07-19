@@ -191,7 +191,8 @@ public:
      */
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
     
-        bool areSequencesIdentical(int seq1, int seq2);
+        //Supporting functions
+        bool areSequencesIdentical(intptr_t seq1, intptr_t seq2);
         Alignment* filterOutSequences(BoolVector& isSequenceRemoved);
 
 

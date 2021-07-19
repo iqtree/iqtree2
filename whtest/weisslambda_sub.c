@@ -194,18 +194,24 @@ double ComputeWeissLambdaQ16(double **q_16) {
 	double SSbetween[144];
 	double delta;
 	double **q_12;
-	int i, j, pair_id;
+	intptr_t i;
+	int      j, pair_id;
 
-	int paare = taxa * (taxa-1) / 2;
+	intptr_t paare = taxa * (taxa-1) / 2;
 
 	q_12 = ( double ** ) malloc ( paare * sizeof ( double * ) );
 
-	for ( i = 0; i < paare; i++ )
-		q_12[i] = ( double * ) calloc ( 12, sizeof ( double ) );
+	for (i = 0; i < paare; i++) {
+		q_12[i] = (double*)calloc(12, sizeof(double));
+	}
 
-	for (pair_id = 0; pair_id < paare; pair_id++)
-		for (i = 0, j = 0; i < 16; i++)
-			if (i % 5 != 0) q_12[pair_id][j++] = q_16[pair_id][i];
+	for (pair_id = 0; pair_id < paare; pair_id++) {
+		for (i = 0, j = 0; i < 16; i++) {
+			if (i % 5 != 0) {
+				q_12[pair_id][j++] = q_16[pair_id][i];
+			}
+		}
+	}
 
 	/*
 	for (pair_id = 0; pair_id < paare; pair_id++) {
@@ -214,16 +220,13 @@ double ComputeWeissLambdaQ16(double **q_16) {
 		printf("\n");
 	}*/
 
-
 	Compute_SSbetween_Matrix ( q_12, 0, SSbetween );
 
 	/*printSSbetween(SSbetween);*/
 
-	
-
-
-	for ( i = paare-1; i >= 0; i-- )
+	for (i = paare - 1; i >= 0; i--) {
 		free(q_12[i]);
+	}
 	free(q_12);
 
 	delta = ComputeWeissLambda(SSbetween);
@@ -244,9 +247,9 @@ double ComputeWeissLambdaQ16(double **q_16) {
 
 void Compute_SSbetween_Matrix ( double **data, int s, double SSbetween[] )
 {
-
-	int i, k, l;
-	int paare = taxa*(taxa-1)/2;
+	intptr_t i;
+	int      k, l;
+	intptr_t paare = taxa*(taxa-1)/2;
 
 	double mean[12];
 

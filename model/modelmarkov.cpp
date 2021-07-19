@@ -1166,7 +1166,7 @@ namespace {
     }
 
     void rescaleRateMatrix(double* state_freq, double* rate_matrix,
-                           int num_states, int total_num_subst) {
+                           int num_states,     double  total_num_subst) {
         double sum = 0.0;
         for (int i = 0; i < num_states; i++) {
             sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */

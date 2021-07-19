@@ -316,9 +316,9 @@ void PhyloTree::constructSimilarityTree
          SimilarityTree& sim_tree) {
     intptr_t leaf_count = aln->getNSeq();
     for (intptr_t taxon_id=0; taxon_id<leaf_count; ++taxon_id) {
-        int             interior_node_id = leaf_count+taxon_id;
+        intptr_t        interior_node_id = leaf_count+taxon_id;
         SimilarityNode* taxon_node       = sim_nodes[taxon_id];
-        SimilarityNode* interior_node    = sim_tree.insert(taxon_node, interior_node_id);
+        SimilarityNode* interior_node    = sim_tree.insert(taxon_node, static_cast<int>(interior_node_id));
         sim_nodes[interior_node_id]      = interior_node;
     }
 }
@@ -328,15 +328,15 @@ void PhyloTree::mirrorSimilarityTreeStructure
          std::vector<PhyloNode*>&      tree_nodes) {
     intptr_t leaf_count = aln->getNSeq();
     for (intptr_t node_id=0; node_id<leaf_count; ++node_id) {
-        tree_nodes.push_back(newNode(node_id, aln->getSeqName(node_id).c_str()));
+        tree_nodes.push_back(newNode(static_cast<int>(node_id), aln->getSeqName(node_id).c_str()));
     }
     tree_nodes.push_back(nullptr);
     //sim_nodes[leaf_count] is *not* an interior node, it's an exterior.
-    for (int node_id=leaf_count+1; 
+    for (intptr_t node_id=leaf_count+1; 
          node_id<leaf_count+leaf_count; ++node_id) {
-        tree_nodes.push_back(newNode(node_id));
+        tree_nodes.push_back(newNode(static_cast<int>(node_id)));
     }
-    for (int node_id=leaf_count+1; 
+    for (intptr_t node_id=leaf_count+1; 
          node_id<leaf_count+leaf_count; ++node_id) {
         PhyloNode*      dest   = tree_nodes[node_id];
         SimilarityNode* source = sim_nodes [node_id];

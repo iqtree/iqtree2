@@ -750,7 +750,7 @@ bool ModelFileLoader::parseModelNameAndParameters(const std::string& input,
     size_t len  = input.length();
     for (size_t i = 0 ; i < len ; ++i ) {
         if (input[i]=='{') {
-            int param_start   = i+1;
+            size_t param_start   = i+1;
             int bracket_depth = 0;
             for (size_t pos = param_start; pos < len; ++pos) {
                 if (input[pos] == '{') {

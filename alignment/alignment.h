@@ -546,12 +546,12 @@ public:
                                           StrVector &target_seqs);
 
         //Supporting functions for removeIdenticalSeq...
-        bool shouldRemoveSequence(int seq1, int seq2, 
-                                const string& not_remove,
-                                const BoolVector& isSequenceRemoved,
-                                const vector<size_t>& hashes) const;
+        bool shouldRemoveSequence(intptr_t seq1, intptr_t seq2, 
+                                  const string& not_remove ,
+                                  const BoolVector& isSequenceRemoved,
+                                  const vector<size_t>& hashes) const;
 
-        void reportSequenceKept(int seq1, int seq2, bool listIdentical,
+        void reportSequenceKept(intptr_t seq1, intptr_t seq2, bool listIdentical,
                                 progress_display& progress) const;
 
         void doneCheckingForDuplicateSequences(double startCheck, 
