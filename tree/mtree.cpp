@@ -804,7 +804,7 @@ void MTree::initializeTree(Node *node, Node* dad)
 
 void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
 //    branch_len.push_back(convert_double(lenstr.c_str()));
-    string KEYWORD="&&NHX:";
+    string KEYWORD="&";
     bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                           && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
     
@@ -814,7 +814,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
         return;
     }
     
-    // don't try to parse multiple lengths if in_comment starts with "&&NHX:" (input key=value)
+    // don't try to parse multiple lengths if in_comment starts with "&" (input key=value)
     if (!in_comment_contains_key_value)
         convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
 //    char* str = (char*)in_comment.c_str() + 1;
@@ -863,15 +863,15 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             root->addNeighbor(node, brlen);
             node->addNeighbor(root, brlen);
             
-            // handle [&&NHX:model=GTR+G]
-            string KEYWORD="&&NHX:";
+            // handle [&model=GTR+G]
+            string KEYWORD="&";
             bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                                   && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
             if (in_comment_contains_key_value)
             {
                 string tmp_comment = in_comment;
                 
-                // remove "&&NHX:"
+                // remove "&"
                 tmp_comment.erase(0, KEYWORD.length());
                 
                 // split tmp_comment into multiple key_value_pairs by ","
@@ -892,7 +892,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
                         node->findNeighbor(root)->putAttr(key, value);
                     }
                     else
-                        outError("Error in reading the newick tree. Please use `[&&NHX:<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&&NHX:model=GTR]`)");
+                        outError("Error in reading the newick tree. Please use `[&<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&model=GTR]`)");
                     
                     // remove the current key_value_pair from tmp_comment
                     if (pos_comma != std::string::npos)

@@ -991,14 +991,14 @@ void AliSimulator::checkBaseFrequenciesDNAModels(IQTree* tree, string model_name
         // check whether base frequencies are not set for unequal base frequenceies models
         for (string model_item: unequal_base_frequencies_models)
             if (model_name.find(model_item) != std::string::npos && model_name.find("+F") == std::string::npos) {
-                outWarning(model_item+" must have unequal base frequencies. The base frequencies could be randomly generated if users do not provide them. However, we strongly recommend users specify the base frequencies for this model (by using +F{freq1,...,freqN}) for better simulation accuracy.");
+                outWarning(model_item+" must have unequal base frequencies. The base frequencies could be randomly generated if users do not provide them. However, we strongly recommend users specify the base frequencies (by using +F{freq1,...,freqN} in command-line options or using +F{freq1/.../freqN} when specifying branch-specific models in a treefile) for better simulation accuracy.");
                 break;
             }
         
         // check whether base frequencies are set for equal base frequenceies models
         for (string model_item: equal_base_frequencies_models)
             if (model_name.find(model_item) != std::string::npos && model_name.find("+F") != std::string::npos) {
-                outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model (by removing +F{freq1,...,freqN}).");
+                outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model (by removing +F{freq1,...,freqN} in command-line options or removing +F{freq1/.../freqN} when specifying branch-specific models specified in a treefile).");
                 break;
             }
     }
@@ -1177,6 +1177,8 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 {
     // initialize a dummy model for this branch
     string model_full_name = (*it)->attributes["model"];
+    // convert separator from "/" to ","
+    std::replace(model_full_name.begin(), model_full_name.end(), '/', ',');
     IQTree *tmp_tree = new IQTree();
     tmp_tree->copyPhyloTree(tree, true);
     initializeModel(tmp_tree, model_full_name);

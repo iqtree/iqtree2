@@ -34,7 +34,7 @@ ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType fr
     if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && model_params.length() == 0 && getNParams()>0)
     {
         std::string model_name_str(model_name);
-        outWarning("Without Inference Mode, we strongly recommend users to specify model parameters for more accuracy simulations. Users could use <Model_Name>{<param_0>,...,<param_n>}. For the model "+model_name_str+", users should specify "+convertIntToString(getNParams())+" params (see User Manuals).");
+        outWarning("Without Inference Mode, we strongly recommend users to specify model parameters for more accuracy simulations. Users could use <Model_Name>{<param_0>,...,<param_n>} (or <Model_Name>{<param_0>/.../<param_n>} when using branch-specific models) to specify the model parameters. For the model "+model_name_str+", users should provide "+convertIntToString(getNParams())+" params (see User Manuals).");
     }
 }
 
