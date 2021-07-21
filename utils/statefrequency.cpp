@@ -238,129 +238,163 @@ StateFreqType parseStateFreqDigits(std::string digits) {
  * returns true if base frequencies have changed as a result of this call
  */
 
-bool freqsFromParams(double *freq_vec, const double *params, StateFreqType freq_type) {
-
-    // BQM 2017-05-02: Note that only freq for A, C, G are free parameters and stored
-    // in params, whereas freq_T is not free and should be handled properly
-
+class BaseFrequencies {
+public:
     double pA, pC, pG, pT; // base freqs
-    switch (freq_type) {
-    case StateFreqType::FREQ_EQUAL:
-    case StateFreqType::FREQ_USER_DEFINED:
-    case StateFreqType::FREQ_EMPIRICAL:
-        return false;
-    case StateFreqType::FREQ_ESTIMATE:
-    // Minh: in code review, please pay extra attention to ensure my treadment of FREQ_ESTIMATE is equivalent to old treatment.
-    // BQM: DONE!
-        pA=params[0];
-        pC=params[1];
-        pG=params[2];
-        //pT=1-pA-pC-pG;
-        pT=freq_vec[3];
-        break;
-    case StateFreqType::FREQ_DNA_RY:
-        pA = params[0]/2;
-        pG = 0.5-pA;
-        pC = params[1]/2;
-        pT = 0.5-pC;
-        break;
-    case StateFreqType::FREQ_DNA_WS:
-        pA = params[0]/2;
-        pT = 0.5-pA;
-        pC = params[1]/2;
-        pG = 0.5-pC;
-        break;
-    case StateFreqType::FREQ_DNA_MK:
-        pA = params[0]/2;
-        pC = 0.5-pA;
-        pG = params[1]/2;
-        pT = 0.5-pG;
-        break;
-    case StateFreqType::FREQ_DNA_1112:
-        pA = pC = pG = params[0]/3;
-        pT = 1-3*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1121:
-        pA = pC = pT = params[0]/3;
-        pG = 1-3*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1211:
-        pA = pG = pT = params[0]/3;
-        pC = 1-3*pA;
-        break;
-    case StateFreqType::FREQ_DNA_2111:
-        pC = pG = pT = params[0]/3;
-        pA = 1-3*pC;
-        break;
-    case StateFreqType::FREQ_DNA_1122:
-        pA = params[0]/2;
-        pC = pA;
-        pG = 0.5-pA;
-        pT = pG;
-        break;
-    case StateFreqType::FREQ_DNA_1212:
-        pA = params[0]/2;
-        pG = pA;
-        pC = 0.5-pA;
-        pT = pC;
-        break;
-    case StateFreqType::FREQ_DNA_1221:
-        pA = params[0]/2;
-        pT = pA;
-        pC = 0.5-pA;
-        pG = pC;
-        break;
-    case StateFreqType::FREQ_DNA_1123:
-        pA = params[0]/2;
-        pC = pA;
-        pG = params[1]*(1-2*pA);
-        pT = 1-pG-2*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1213:
-        pA = params[0]/2;
-        pG = pA;
-        pC = params[1]*(1-2*pA);
-        pT = 1-pC-2*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1231:
-        pA = params[0]/2;
-        pT = pA;
-        pC = params[1]*(1-2*pA);
-        pG = 1-pC-2*pA;
-        break;
-    case StateFreqType::FREQ_DNA_2113:
-        pC = params[0]/2;
-        pG = pC;
-        pA = params[1]*(1-2*pC);
-        pT = 1-pA-2*pC;
-        break;
-    case StateFreqType::FREQ_DNA_2131:
-        pC = params[0]/2;
-        pT = pC;
-        pA = params[1]*(1-2*pC);
-        pG = 1-pA-2*pC;
-        break;
-    case StateFreqType::FREQ_DNA_2311:
-        pG = params[0]/2;
-        pT = pG;
-        pA = params[1]*(1-2*pG);
-        pC = 1-pA-2*pG;
-        break;
-    default:
+
+    bool handleOneOrTwoParameters(double *freq_vec, const double *params, 
+                                  StateFreqType freq_type) {
+        switch (freq_type) {
+        case StateFreqType::FREQ_ESTIMATE:
+        // Minh: in code review, please pay extra attention to ensure my treadment of FREQ_ESTIMATE is equivalent to old treatment.
+        // BQM: DONE!
+            pA=params[0];
+            pC=params[1];
+            pG=params[2];
+            //pT=1-pA-pC-pG;
+            pT=freq_vec[3];
+            return true;
+        case StateFreqType::FREQ_DNA_RY:
+            pA = params[0]/2;
+            pG = 0.5-pA;
+            pC = params[1]/2;
+            pT = 0.5-pC;
+            return true;
+        case StateFreqType::FREQ_DNA_WS:
+            pA = params[0]/2;
+            pT = 0.5-pA;
+            pC = params[1]/2;
+            pG = 0.5-pC;
+            return true;
+        case StateFreqType::FREQ_DNA_MK:
+            pA = params[0]/2;
+            pC = 0.5-pA;
+            pG = params[1]/2;
+            pT = 0.5-pG;
+            return true;
+        case StateFreqType::FREQ_DNA_1112:
+            pA = pC = pG = params[0]/3;
+            pT = 1-3*pA;
+            return true;
+        case StateFreqType::FREQ_DNA_1121:
+            pA = pC = pT = params[0]/3;
+            pG = 1-3*pA;
+            return true;
+        case StateFreqType::FREQ_DNA_1211:
+            pA = pG = pT = params[0]/3;
+            pC = 1-3*pA;
+            return true;
+        case StateFreqType::FREQ_DNA_2111:
+            pC = pG = pT = params[0]/3;
+            pA = 1-3*pC;
+            return true;
+        case StateFreqType::FREQ_DNA_1122:
+            pA = params[0]/2;
+            pC = pA;
+            pG = 0.5-pA;
+            pT = pG;
+            return true;
+        case StateFreqType::FREQ_DNA_1212:
+            pA = params[0]/2;
+            pG = pA;
+            pC = 0.5-pA;
+            pT = pC;
+            return true;
+        case StateFreqType::FREQ_DNA_1221:
+            pA = params[0]/2;
+            pT = pA;
+            pC = 0.5-pA;
+            pG = pC;
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    bool handleThreeParameters   (double *freq_vec, const double *params, 
+                                  StateFreqType freq_type) {
+        switch (freq_type) {
+        case StateFreqType::FREQ_DNA_1123:
+            pA = params[0]/2;
+            pC = pA;
+            pG = params[1]*(1-2*pA);
+            pT = 1-pG-2*pA;
+            return true;
+        case StateFreqType::FREQ_DNA_1213:
+            pA = params[0]/2;
+            pG = pA;
+            pC = params[1]*(1-2*pA);
+            pT = 1-pC-2*pA;
+            return true;
+        case StateFreqType::FREQ_DNA_1231:
+            pA = params[0]/2;
+            pT = pA;
+            pC = params[1]*(1-2*pA);
+            pG = 1-pC-2*pA;
+            return true;
+        case StateFreqType::FREQ_DNA_2113:
+            pC = params[0]/2;
+            pG = pC;
+            pA = params[1]*(1-2*pC);
+            pT = 1-pA-2*pC;
+            return true;
+        case StateFreqType::FREQ_DNA_2131:
+            pC = params[0]/2;
+            pT = pC;
+            pA = params[1]*(1-2*pC);
+            pG = 1-pA-2*pC;
+            return true;
+        case StateFreqType::FREQ_DNA_2311:
+            pG = params[0]/2;
+            pT = pG;
+            pA = params[1]*(1-2*pG);
+            pC = 1-pA-2*pG;
+            return true;   
+        default:
+            return false; 
+        }
+    }
+
+    BaseFrequencies(double *freq_vec, const double *params, StateFreqType freq_type) {  
+        if (handleOneOrTwoParameters(freq_vec, params, freq_type)) {
+            return;
+        }
+        if (handleThreeParameters(freq_vec, params, freq_type)) {
+            return ;
+        }
         throw("Unrecognized freq_type in freqsFromParams - can't happen");
     }
 
-    // To MDW, 2017-05-02: please make sure that frequencies are positive!
-    // Otherwise, numerical issues will occur.
-
-    bool changed = freq_vec[0]!=pA || freq_vec[1]!=pC || freq_vec[2]!=pG || freq_vec[3]!=pT;
-    if (changed) {
+    bool recordChange(double* freq_vec) {
+        if ( freq_vec[0]==pA && freq_vec[1]==pC &&
+             freq_vec[2]==pG && freq_vec[3]==pT ) {
+            return false;
+        }
         freq_vec[0]=pA;
         freq_vec[1]=pC;
         freq_vec[2]=pG;
         freq_vec[3]=pT;
+        return true;
     }
-    return(changed);
+};
+
+bool freqsFromParams(double *freq_vec, const double *params, StateFreqType freq_type) {
+
+    if (freq_type == StateFreqType::FREQ_EQUAL ||
+        freq_type == StateFreqType::FREQ_USER_DEFINED ||
+        freq_type == StateFreqType::FREQ_EMPIRICAL ) {
+        return false;
+    }
+
+    // BQM 2017-05-02: Note that only freq for A, C, G are free parameters and stored
+    // in params, whereas freq_T is not free and should be handled properly
+
+    BaseFrequencies bf(freq_vec, params, freq_type);
+
+    // To MDW, 2017-05-02: please make sure that frequencies are positive!
+    // Otherwise, numerical issues will occur.
+
+    return bf.recordChange(freq_vec);
 }
 
 /*
