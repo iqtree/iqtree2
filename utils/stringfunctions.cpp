@@ -164,90 +164,62 @@ std::string convert_time(const double sec) {
     return ss.str();
 }
 
-void convert_range(const char *str, int &lower, int &upper, int &step_size) {
+void parse_range_bound(const char*& str, int& bound) {
     char *endptr;
-
-    // parse the lower bound of the range
-    int d = strtol(str, &endptr, 10);
-    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
+    bound = strtol(str, &endptr, 10);
+    if ((bound == 0 && endptr == str) || abs(bound) == HUGE_VALL || 
+        (*endptr != 0 && *endptr != ':')) {
         std::string err = "Expecting integer, but found \"";
         err += str;
         err += "\" instead";
         throw err;
     }
-    //lower = d;
-    int d_save = d;
-    upper = d;
-    if (*endptr == 0) return;
-
-
-    // parse the upper bound of the range
-    str = endptr + 1;
-    d = strtol(str, &endptr, 10);
-    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
-        std::string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-
-    lower = d_save;
-    upper = d;
-    if (*endptr == 0) return;
-
-    // parse the step size of the range
-    str = endptr + 1;
-    d = strtol(str, &endptr, 10);
-    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || *endptr != 0) {
-        std::string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    step_size = d;
+    str = endptr;
 }
 
-void convert_range(const char *str, double &lower, double &upper, double &step_size) {
+void parse_range_bound(const char*& str, double& bound) {
     char *endptr;
-
-    // parse the lower bound of the range
-    double d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
+    bound = strtod(str, &endptr);
+    if ((bound == 0 && endptr == str) || abs(bound) == HUGE_VALF || 
+        (*endptr != '\0' && *endptr != ':')) {
         std::string err = "Expecting floating-point number, but found \"";
         err += str;
         err += "\" instead";
         throw err;
     }
-    //lower = d;
-    double d_save = d;
-    upper = d;
-    if (*endptr == 0) return;
+    str = endptr;
+}
 
-
-    // parse the upper bound of the range
-    str = endptr + 1;
-    d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
-        std::string err = "Expecting floating-point number, but found \"";
-        err += str;
-        err += "\" instead";
+template <class T> void convert_range_template
+    (const char *str, T &lower, T &upper, T &step_size) {
+    parse_range_bound(str, lower);
+    if (*str=='\0') {
+        upper = lower;
+        return;
+    }
+    ++str;  //skip over the ':' character
+    parse_range_bound(str, upper);
+    if (*str=='\0') {
+        return;
+    }
+    ++str; //skip over the second ':' character
+    parse_range_bound(str, step_size);
+    if (*str!='\0') {
+        //There was another ':' after the step size.  Error out!
+        std::string err = "Expected end of string after step size,"
+                          " but read a ':' instead";
         throw err;
     }
+}
 
-    lower = d_save;
-    upper = d;
-    if (*endptr == 0) return;
+void convert_range(const char *str, int &lower, 
+                   int &upper, int &step_size) {
+    convert_range_template(str, lower, upper, step_size); 
+}
 
-    // parse the step size of the range
-    str = endptr + 1;
-    d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
-        std::string err = "Expecting floating-point number, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    step_size = d;
+void convert_range(const char *str, double &lower, 
+                   double &upper, double &step_size) {
+    convert_range_template(str, lower, upper, step_size); 
 }
 
 void convert_string_vec(const char *str, StrVector &vec, char separator) {
