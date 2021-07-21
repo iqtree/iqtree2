@@ -536,6 +536,31 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     ASSERT(base_freq[0]>=0 && base_freq[1]>=0 && base_freq[2]>=0 && base_freq[3]>=0 && fabs(base_freq[0]+base_freq[1]+base_freq[2]+base_freq[3]-1)<1e-7);
 }
 
+namespace {
+    struct FreqToParamCount {
+        StateFreqType freq_type;
+        int           count;
+    } freq_type_to_param_count[] = {
+        { StateFreqType::FREQ_DNA_1112, 1 },
+        { StateFreqType::FREQ_DNA_1121, 1 },
+        { StateFreqType::FREQ_DNA_1211, 1 },
+        { StateFreqType::FREQ_DNA_2111, 1 },
+        { StateFreqType::FREQ_DNA_1122, 1 },
+        { StateFreqType::FREQ_DNA_1212, 1 },
+        { StateFreqType::FREQ_DNA_1221, 1 },
+
+        { StateFreqType::FREQ_DNA_RY,   2 },
+        { StateFreqType::FREQ_DNA_WS,   2 },
+        { StateFreqType::FREQ_DNA_MK,   2 },
+        { StateFreqType::FREQ_DNA_1123, 2 },
+        { StateFreqType::FREQ_DNA_1213, 2 },
+        { StateFreqType::FREQ_DNA_1231, 2 },
+        { StateFreqType::FREQ_DNA_2113, 2 },
+        { StateFreqType::FREQ_DNA_2131, 2 },
+        { StateFreqType::FREQ_DNA_2311, 2 },
+    };
+};
+
 /*
  * For given freq_type, how many parameters are needed to
  * determine frequenc vector?
@@ -543,28 +568,12 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
  */
 
 int nFreqParams(StateFreqType freq_type) {
-    switch (freq_type) {
-    case StateFreqType::FREQ_DNA_1112:
-    case StateFreqType::FREQ_DNA_1121:
-    case StateFreqType::FREQ_DNA_1211:
-    case StateFreqType::FREQ_DNA_2111:
-    case StateFreqType::FREQ_DNA_1122:
-    case StateFreqType::FREQ_DNA_1212:
-    case StateFreqType::FREQ_DNA_1221:
-        return(1);
-    case StateFreqType::FREQ_DNA_RY:
-    case StateFreqType::FREQ_DNA_WS:
-    case StateFreqType::FREQ_DNA_MK:
-    case StateFreqType::FREQ_DNA_1123:
-    case StateFreqType::FREQ_DNA_1213:
-    case StateFreqType::FREQ_DNA_1231:
-    case StateFreqType::FREQ_DNA_2113:
-    case StateFreqType::FREQ_DNA_2131:
-    case StateFreqType::FREQ_DNA_2311:
-        return(2);
-    default:
-        return 0; // BQM: don't care about other cases
+    for ( auto ft_2_c : freq_type_to_param_count ) {
+        if (ft_2_c.freq_type == freq_type) {
+            return ft_2_c.count;
+        }
     }
+    return 0; // BQM: don't care about other cases
 }
 
 /*
