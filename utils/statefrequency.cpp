@@ -397,85 +397,105 @@ bool freqsFromParams(double *freq_vec, const double *params, StateFreqType freq_
     return bf.recordChange(freq_vec);
 }
 
+bool paramsFromFreqsPart1(double *params, double *freq_vec, 
+                          StateFreqType freq_type) {
+    double pA = freq_vec[0]; // These just improve code readability
+    double pC = freq_vec[1];
+    double pG = freq_vec[2];
+    switch (freq_type) {
+    case StateFreqType::FREQ_EQUAL:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
+        return true; // freq_vec never changes
+    case StateFreqType::FREQ_ESTIMATE:
+        params[0]=pA;
+        params[1]=pC;
+        params[2]=pG;
+        return true;
+    case StateFreqType::FREQ_DNA_RY:
+        params[0]=2*pA;
+        params[1]=2*pC;
+        return true;
+    case StateFreqType::FREQ_DNA_WS:
+        params[0]=2*pA;
+        params[1]=2*pC;
+        return true;
+    case StateFreqType::FREQ_DNA_MK:
+        params[0]=2*pA;
+        params[1]=2*pG;
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool paramsfromFreqsPart2(double *params, double *freq_vec, 
+                          StateFreqType freq_type) {
+    double pA = freq_vec[0]; // These just improve code readability
+    double pC = freq_vec[1];
+    double pG = freq_vec[2];
+    switch (freq_type) {
+    case StateFreqType::FREQ_DNA_1112:
+        params[0]=3*pA;
+        return true;
+    case StateFreqType::FREQ_DNA_1121:
+        params[0]=3*pA;
+        return true;
+    case StateFreqType::FREQ_DNA_1211:
+        params[0]=3*pA;
+        return true;
+    case StateFreqType::FREQ_DNA_2111:
+        params[0]=3*pC;
+        return true;
+    case StateFreqType::FREQ_DNA_1122:
+        params[0]=2*pA;
+        return true;
+    case StateFreqType::FREQ_DNA_1212:
+        params[0]=2*pA;
+        return true;
+    case StateFreqType::FREQ_DNA_1221:
+        params[0]=2*pA;
+        return true;
+    case StateFreqType::FREQ_DNA_1123:
+        params[0]=2*pA;
+        params[1]=pG/(1-params[0]);
+        return true;
+    case StateFreqType::FREQ_DNA_1213:
+        params[0]=2*pA;
+        params[1]=pC/(1-params[0]);
+        return true;
+    case StateFreqType::FREQ_DNA_1231:
+        params[0]=2*pA;
+        params[1]=pC/(1-params[0]);
+        return true;
+    case StateFreqType::FREQ_DNA_2113:
+        params[0]=2*pC;
+        params[1]=pA/(1-params[0]);
+        return true;
+    case StateFreqType::FREQ_DNA_2131:
+        params[0]=2*pC;
+        params[1]=pA/(1-params[0]);
+        return true;
+    case StateFreqType::FREQ_DNA_2311:
+        params[0]=2*pG;
+        params[1]=pA/(1-params[0]);
+        return true;
+    default:
+        return false;
+    }
+}
+
 /*
  * For given freq_type, derives frequency parameters from freq_vec
  * All parameters are in range [0,1] (assuming freq_vec is valid)
  */
 
-void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type) {
-    double pA = freq_vec[0]; // These just improve code readability
-    double pC = freq_vec[1];
-    double pG = freq_vec[2];
-//    double pT = freq_vec[3]; // pT is not used below
-    switch (freq_type) {
-    case StateFreqType::FREQ_EQUAL:
-    case StateFreqType::FREQ_USER_DEFINED:
-    case StateFreqType::FREQ_EMPIRICAL:
-        break; // freq_vec never changes
-    case StateFreqType::FREQ_ESTIMATE:
-        params[0]=pA;
-        params[1]=pC;
-        params[2]=pG;
-        break;
-    case StateFreqType::FREQ_DNA_RY:
-        params[0]=2*pA;
-        params[1]=2*pC;
-        break;
-    case StateFreqType::FREQ_DNA_WS:
-        params[0]=2*pA;
-        params[1]=2*pC;
-        break;
-    case StateFreqType::FREQ_DNA_MK:
-        params[0]=2*pA;
-        params[1]=2*pG;
-        break;
-    case StateFreqType::FREQ_DNA_1112:
-        params[0]=3*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1121:
-        params[0]=3*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1211:
-        params[0]=3*pA;
-        break;
-    case StateFreqType::FREQ_DNA_2111:
-        params[0]=3*pC;
-        break;
-    case StateFreqType::FREQ_DNA_1122:
-        params[0]=2*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1212:
-        params[0]=2*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1221:
-        params[0]=2*pA;
-        break;
-    case StateFreqType::FREQ_DNA_1123:
-        params[0]=2*pA;
-        params[1]=pG/(1-params[0]);
-        break;
-    case StateFreqType::FREQ_DNA_1213:
-        params[0]=2*pA;
-        params[1]=pC/(1-params[0]);
-        break;
-    case StateFreqType::FREQ_DNA_1231:
-        params[0]=2*pA;
-        params[1]=pC/(1-params[0]);
-        break;
-    case StateFreqType::FREQ_DNA_2113:
-        params[0]=2*pC;
-        params[1]=pA/(1-params[0]);
-        break;
-    case StateFreqType::FREQ_DNA_2131:
-        params[0]=2*pC;
-        params[1]=pA/(1-params[0]);
-        break;
-    case StateFreqType::FREQ_DNA_2311:
-        params[0]=2*pG;
-        params[1]=pA/(1-params[0]);
-        break;
-    default:
-        throw("Unrecognized freq_type in paramsFromFreqs - can't happen");
+void paramsFromFreqs(double *params, double *freq_vec, 
+                     StateFreqType freq_type) {
+    if (!paramsFromFreqsPart1(params, freq_vec, freq_type)) {
+        if (!paramsfromFreqsPart2(params, freq_vec, freq_type)) {
+            throw("Unrecognized freq_type in paramsFromFreqs - can't happen");
+        }
     }
 }
 
