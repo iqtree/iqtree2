@@ -173,6 +173,16 @@ protected:
     */
     virtual void initVariables(int sequence_length, double *site_specific_rates);
     
+    /**
+        regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
+    */
+    void regenerateRootSequenceBranchSpecificModel(string freqs, int max_num_states, int sequence_length, Node* root);
+    
+    /**
+        generate a random sequence by state frequencies
+    */
+    vector<short int> generateRandomSequenceFromStateFreqs(int max_num_states, int sequence_length, double* state_freqs, int max_prob_pos);
+    
 public:
     
     IQTree *tree;

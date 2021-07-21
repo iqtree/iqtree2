@@ -534,12 +534,8 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
         // print model's parameters
         tree->getModel()->writeInfo(cout);
         
-        // convert the probability matrix into an accumulated probability matrix
-        convertProMatrixIntoAccumulatedProMatrix(state_freq, 1, max_num_states);
-        
-        // randomly generate each site in the sequence follows the base frequencies defined by the user
-        for (int i = 0; i < sequence_length; i++)
-            sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freq, 0, max_num_states, max_prob_pos);
+        // randomly generate the sequence based on the state frequencies
+        sequence = generateRandomSequenceFromStateFreqs(max_num_states, sequence_length, state_freq, max_prob_pos);
         
         // delete state_freq
         delete []  state_freq;
@@ -1233,6 +1229,10 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
         }
     }
     
+    // print model's parameters
+    cout<<"Simulating a sequence with branch-specific model named "+tmp_tree->getModel()->getName()<<endl;
+    tmp_tree->getModel()->writeInfo(cout);
+    
     // simulate the sequence for the current node based on the branch-specific model
     tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it, lengths);
     
@@ -1248,6 +1248,10 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
     // initialize the site-specific rates
     double *site_specific_rates = new double[sequence_length];
     initVariables(sequence_length, site_specific_rates);
+    
+    // check to regenerate the root sequence if the user has specified specific frequencies for root
+    if (tree->root->id == node->id && ((*it)->attributes["freqs"]).length() > 0)
+        regenerateRootSequenceBranchSpecificModel((*it)->attributes["freqs"], max_num_states, sequence_length, node);
     
     // simulate a sequence for a node from a specific branch after all variables has been initializing
     simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, lengths);
@@ -1283,4 +1287,69 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *mod
 void AliSimulator::initVariables(int sequence_length, double *site_specific_rates)
 {
     // Do nothing, this method will be overrided in AliSimulatorHeterogeneity and AliSimulatorInvar
+}
+
+/**
+    regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
+*/
+void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int max_num_states, int sequence_length, Node* root){
+    // initizlize state_freqs
+    double* state_freqs = new double[max_num_states];
+    
+    // parse state_freqs
+    int i = 0;
+    int max_prob_pos = -1;
+    double total_freq = 0;
+    while (freqs.length() > 0) {
+        // split state_freqs by "/"
+        size_t pos = freqs.find('/');
+        
+        // convert frequency from string to double
+        state_freqs[i] = convert_double(freqs.substr(0, pos).c_str());
+        total_freq += state_freqs[i];
+        
+        // update the position with the highest frequency
+        if (max_prob_pos == -1 || state_freqs[i] > state_freqs[max_prob_pos])
+            max_prob_pos = i;
+        
+        // remove the current frequency from the list freqs
+        if (pos != std::string::npos)
+            freqs.erase(0, pos + 1);
+        else
+            freqs = "";
+        
+        i++;
+    }
+    
+    // make sure the sum of all frequencies is equal to 1
+    if (total_freq < 0.999 || total_freq > 1.001)
+        outError("Sum of all frequencies ("+convertDoubleToString(total_freq)+") is not equal to 1. Please check and try again!");
+    
+    // make sure that the number of user-defined frequencies is equal to the number of states
+    if (i != max_num_states)
+        outError("The number of frequencies ("+convertIntToString(i)+") is different from the number of states ("+convertIntToString(max_num_states)+"). Please check and try again!");
+    
+    // re-generate a new sequence for the root from the state frequencies
+    root->sequence = generateRandomSequenceFromStateFreqs(max_num_states, sequence_length, state_freqs, max_prob_pos);
+    
+    // release the memory of state_freqs
+    delete[] state_freqs;
+}
+
+/**
+    generate a random sequence by state frequencies
+*/
+vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int max_num_states, int sequence_length, double* state_freqs, int max_prob_pos)
+{
+    vector<short int> sequence;
+    sequence.resize(sequence_length);
+    
+    // convert the probability matrix into an accumulated probability matrix
+    convertProMatrixIntoAccumulatedProMatrix(state_freqs, 1, max_num_states);
+    
+    // randomly generate each site in the sequence follows the base frequencies defined by the user
+    for (int i = 0; i < sequence_length; i++)
+        sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freqs, 0, max_num_states, max_prob_pos);
+    
+    return sequence;
 }

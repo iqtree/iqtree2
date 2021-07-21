@@ -746,6 +746,15 @@ void MTree::readTree(istream &in, bool &is_rooted)
             node->addNeighbor(root, branch_len);
             leafNum++;
             rooted = true;
+            
+            // parse key/value from comment
+            string KEYWORD="&";
+            bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
+                                                  && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+            if (in_comment_contains_key_value)
+                parseKeyValueFromComment(in_comment, root, node);
+            
+            
         } else { // assign root to one of the neighbor of node, if any
             FOR_NEIGHBOR_IT(node, NULL, it)
             if ((*it)->node->isLeaf()) {
@@ -868,39 +877,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                                   && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
             if (in_comment_contains_key_value)
-            {
-                string tmp_comment = in_comment;
-                
-                // remove "&"
-                tmp_comment.erase(0, KEYWORD.length());
-                
-                // split tmp_comment into multiple key_value_pairs by ","
-                while (tmp_comment.length() > 0) {
-                    size_t pos_comma = tmp_comment.find(',');
-                    string key_value_pair = tmp_comment.substr(0, pos_comma);
-                    
-                    // parse key/value
-                    size_t pos_equal = key_value_pair.find('=');
-                    if (pos_equal != std::string::npos)
-                    {
-                        // extract key, value
-                        string key = key_value_pair.substr(0, pos_equal);
-                        string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
-                        
-                        // add key/value to attributes
-                        root->findNeighbor(node)->putAttr(key, value);
-                        node->findNeighbor(root)->putAttr(key, value);
-                    }
-                    else
-                        outError("Error in reading the newick tree. Please use `[&<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&model=GTR]`)");
-                    
-                    // remove the current key_value_pair from tmp_comment
-                    if (pos_comma != std::string::npos)
-                        tmp_comment.erase(0, pos_comma + 1);
-                    else
-                        tmp_comment = "";
-                }
-            }
+                parseKeyValueFromComment(in_comment, root, node);
             
             if (infile.eof())
                 throw "Expecting ')', but end of file instead";
@@ -985,7 +962,49 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
     }
 }
 
-
+/**
+        parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
+        @param in_comment the input comment extract from tree file
+        @param node1, node2 the nodes that the branch connects to
+ */
+void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node2)
+{
+    string KEYWORD="&";
+    string tmp_comment = in_comment;
+    
+    // remove "&"
+    tmp_comment.erase(0, KEYWORD.length());
+    
+    // split tmp_comment into multiple key_value_pairs by ","
+    while (tmp_comment.length() > 0) {
+        size_t pos_comma = tmp_comment.find(',');
+        string key_value_pair = tmp_comment.substr(0, pos_comma);
+        
+        // parse key/value
+        size_t pos_equal = key_value_pair.find('=');
+        if (pos_equal != std::string::npos)
+        {
+            // extract key, value
+            string key = key_value_pair.substr(0, pos_equal);
+            string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
+            
+            // add key/value to attributes
+            node1->findNeighbor(node2)->putAttr(key, value);
+            node2->findNeighbor(node1)->putAttr(key, value);
+        }
+        else
+            outError("Error in reading the newick tree. Please use `[&<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&model=GTR]`)");
+        
+        // remove the current key_value_pair from tmp_comment
+        if (pos_comma != std::string::npos)
+            tmp_comment.erase(0, pos_comma + 1);
+        else
+            tmp_comment = "";
+    }
+    
+    // clear the comment
+    in_comment = "";
+}
 
 /**
 	check tree is bifurcating tree (every leaf with level 1 or 3)

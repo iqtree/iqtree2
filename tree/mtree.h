@@ -327,6 +327,13 @@ public:
 		
      */
     void parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len);
+    
+    /**
+            parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
+            @param in_comment the input comment extract from tree file
+            @param node1, node2 the nodes that the branch connects to
+     */
+    void parseKeyValueFromComment(string &in_comment, Node* node1, Node* node2);
 
     /**
         parse the string containing branch length(s)

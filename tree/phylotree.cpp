@@ -5633,6 +5633,9 @@ void PhyloTree::convertToRooted() {
 }
 
 void PhyloTree::convertToUnrooted() {
+    // keep rooted tree if running AliSim without inference mode
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode)
+        return;
     ASSERT(rooted);
     if (aln)
         ASSERT(leafNum == aln->getNSeq()+1);
