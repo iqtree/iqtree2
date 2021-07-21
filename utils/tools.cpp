@@ -4921,41 +4921,60 @@ void quickStartGuide() {
     exit(0);
 }
 
-InputType detectInputFile(const char *input_file) {
-    if (!fileExists(input_file)) {
-        outError("File not found ", input_file);
-    }
-    try {
-        igzstream in;
-        in.exceptions(ios::failbit | ios::badbit);
-        in.open(input_file);
-
-        unsigned char ch, ch2;
-        int count = 0;
-        do {
-            in >> ch;
-        } while (ch <= 32 && !in.eof() && count++ < 20);
-        in >> ch2;
-        in.close();
-        switch (ch) {
-            case '#': return InputType::IN_NEXUS;
-            case '(': return InputType::IN_NEWICK;
-            case '[': return InputType::IN_NEWICK;
-            case '>': return InputType::IN_FASTA;
-            case 'C': if (ch2 == 'L') return InputType::IN_CLUSTAL;
-                      else if (ch2 == 'O') return InputType::IN_COUNTS;
-                      else return InputType::IN_OTHER;
-            case '!': if (ch2 == '!') return InputType::IN_MSF; else return InputType::IN_OTHER;
-            default:
-                if (isdigit(ch)) return InputType::IN_PHYLIP;
-                return InputType::IN_OTHER;
+namespace {
+    void findInterestingCharactersInFirstLine
+            (const char* input_file, 
+            unsigned char& ch, unsigned char& ch2) {
+        if (!fileExists(input_file)) {
+            outError("File not found ", input_file);
         }
-    } catch (ios::failure) {
-        outError("Cannot read file ", input_file);
-    } catch (...) {
-        outError("Cannot read file ", input_file);
+        try {
+            igzstream in;
+            in.exceptions(ios::failbit | ios::badbit);
+            in.open(input_file);
+
+            int count = 0;
+            do {
+                in >> ch;
+            } while (ch <= 32 && !in.eof() && count++ < 20);
+            in >> ch2;
+            in.close();
+        } catch (ios::failure) {
+            outError("Cannot read file ", input_file);
+        } catch (...) {
+            outError("Cannot read file ", input_file);
+        }
     }
-    return InputType::IN_OTHER;
+}
+
+InputType detectInputFile(const char *input_file) {
+    unsigned char ch, ch2;
+    findInterestingCharactersInFirstLine(input_file, ch, ch2);
+
+    switch (ch) {
+        case '#': return InputType::IN_NEXUS;
+        case '(': return InputType::IN_NEWICK;
+        case '[': return InputType::IN_NEWICK;
+        case '>': return InputType::IN_FASTA;
+        case 'C': 
+            if (ch2 == 'L') { 
+                return InputType::IN_CLUSTAL; 
+            }
+            if (ch2 == 'O') {
+                return InputType::IN_COUNTS;
+            }
+            return InputType::IN_OTHER;
+        case '!': 
+            if (ch2 == '!') {
+                return InputType::IN_MSF; 
+            } 
+            return InputType::IN_OTHER;
+        default:
+            if (isdigit(ch)) {
+                return InputType::IN_PHYLIP;
+            }
+            return InputType::IN_OTHER;
+    }
 }
 
 bool overwriteFile(const char *filename) {
