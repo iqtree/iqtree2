@@ -1191,9 +1191,15 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
     // check if base frequencies for DNA models are specified correctly
     checkBaseFrequenciesDNAModels(tmp_tree, model_full_name);
     
-    // avoid using Heterotachy in branch-specific models
+    // handle Heterotachy model in branch-specific models
+    string lengths = "";
     if (tmp_tree->getRate()->isHeterotachy())
-        outError("Sorry! Heterotachy (GHOST) model is not allowed in branch-specific model.");
+    {
+        // make sure that the user has specified multiple lengths for the current branch
+        lengths = (*it)->attributes["lengths"];
+        if (lengths.length() == 0)
+            outError("To use Heterotachy model, please specify multiple lengths for the current branch by [&model=...,lengths=<length_0>/.../<length_n>]");
+    }
     
     // initialize a new dummy alisimulator
     AliSimulator* tmp_alisimulator = new AliSimulator(params, tmp_tree, expected_num_sites, partition_rate);
@@ -1228,7 +1234,7 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
     }
     
     // simulate the sequence for the current node based on the branch-specific model
-    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it);
+    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it, lengths);
     
     // delete the dummy alisimulator
     delete tmp_alisimulator;
@@ -1237,14 +1243,14 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 /**
     simulate a sequence for a node from a specific branch
 */
-void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // initialize the site-specific rates
     double *site_specific_rates = new double[sequence_length];
     initVariables(sequence_length, site_specific_rates);
     
     // simulate a sequence for a node from a specific branch after all variables has been initializing
-    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
+    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, lengths);
     
     // delete the site-specific rates
     delete[] site_specific_rates;
@@ -1253,7 +1259,7 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);

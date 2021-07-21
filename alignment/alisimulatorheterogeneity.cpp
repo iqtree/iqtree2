@@ -422,7 +422,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it){
+void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths){
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if (tree->getRateName().empty()
@@ -434,9 +434,34 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
         
         // initialize a set of branch_lengths
         DoubleVector branch_lengths;
-        branch_lengths.resize(num_rate_categories);
-        for (int i = 0; i < num_rate_categories; i++)
-            branch_lengths[i] = (*it)->getLength(i);
+        // if heterotachy model is used in branch-specific model -> parse multiple lengths from the input string 'lengths'
+        if (rate_heterogeneity->isHeterotachy() && lengths.length() > 0)
+        {
+            // parse lengths
+            while (lengths.length() > 0) {
+                // split lengths by "/"
+                size_t pos = lengths.find('/');
+                
+                // convert length to double
+                branch_lengths.push_back(convert_double(lengths.substr(0, pos).c_str()));
+                
+                // remove the current length from the list lengths
+                if (pos != std::string::npos)
+                    lengths.erase(0, pos + 1);
+                else
+                    lengths = "";
+            }
+            
+            if (num_rate_categories != branch_lengths.size())
+                outError("The number of lengths ("+convertIntToString(branch_lengths.size())+") is different from the number of caterogies ("+convertIntToString(num_rate_categories)+"). Please check and try again!");
+        }
+        // otherwise, get branch-length from the tree
+        else
+        {
+            branch_lengths.resize(num_rate_categories);
+            for (int i = 0; i < num_rate_categories; i++)
+                branch_lengths[i] = (*it)->getLength(i);
+        }
         
         // initialize caching accumulated trans_matrices
         intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);

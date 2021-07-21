@@ -141,7 +141,7 @@ void AliSimulatorInvar::simulateSeqsForTree(string output_filepath)
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);

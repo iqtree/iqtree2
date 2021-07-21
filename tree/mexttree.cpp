@@ -302,12 +302,12 @@ void MExtTree::generateBirthDeath(Params &params)
     {
         i  = 0;
         myleaves.clear();
-        node = newNode(i, i);
+        node = newNode(i);
         
         // create innitial three leaves
         for (int j = 0; j < 3; j++) {
             i++;
-            new_node = newNode(i, i);
+            new_node = newNode(i);
             len = randomLen(params);
             node->addNeighbor(new_node, len);
             new_node->addNeighbor(node, len);
@@ -329,7 +329,7 @@ void MExtTree::generateBirthDeath(Params &params)
                 // create 2 new leaves
                 for (int j = 0; j < 2; j++) {
                     i++;
-                    new_node = newNode(i, i);
+                    new_node = newNode(i);
                     len = randomLen(params);
                     node->addNeighbor(new_node, len);
                     new_node->addNeighbor(node, len);

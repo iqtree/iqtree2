@@ -60,11 +60,6 @@ public:
         the other end of the branch
      */
     Node *node;
-    
-    /**
-        branch-specific model
-     */
-    ModelSubst *model;
 
     /**
         branch length
