@@ -652,6 +652,39 @@ int nFreqParams(StateFreqType freq_type) {
     return 0; // BQM: don't care about other cases
 }
 
+bool setBoundsForFreqTypePart1(double *lower_bound,
+                           double *upper_bound,
+                           bool *bound_check,
+                           double min_freq,
+                           StateFreqType freq_type) {
+    switch (freq_type) {
+    case StateFreqType::FREQ_EQUAL:
+    case StateFreqType::FREQ_USER_DEFINED:
+    case StateFreqType::FREQ_EMPIRICAL:
+        return true; // There are no frequency determining parameters
+        /* NOTE:
+     * upper_bound[1] and lower_bound[1] are not perfect. Some in-bounds parameters
+         * will give base freqs for '2' or '3' base below minimum. This is
+         * the best that can be done without passing min_freq to freqsFromParams
+         */
+    case StateFreqType::FREQ_ESTIMATE:
+        lower_bound[0] = lower_bound[1] = lower_bound[2] = min_freq;
+        upper_bound[0] = upper_bound[1] = upper_bound[2] = 1;
+        bound_check[0] = bound_check[1] = bound_check[2] = false;
+        return true;
+    case StateFreqType::FREQ_DNA_RY:
+    case StateFreqType::FREQ_DNA_WS:
+    case StateFreqType::FREQ_DNA_MK:
+        // two frequency determining parameters
+        lower_bound[0] = lower_bound[1] = 2*min_freq;
+        upper_bound[0] = upper_bound[1] = 1-2*min_freq;
+        bound_check[0] = bound_check[1] = true;
+        return true;
+    default:
+        return false;
+    }
+}
+
 /*
  * For freq_type, and given every base must have frequency >= min_freq, set upper
  * and lower bounds for parameters.
@@ -661,13 +694,15 @@ int nFreqParams(StateFreqType freq_type) {
                            bool *bound_check,
                            double min_freq,
                            StateFreqType freq_type) {
+
+    if (setBoundsForFreqTypePart1(lower_bound, upper_bound, bound_check, 
+                                  min_freq, freq_type)) {
+        return;
+    }
+
     // Sanity check: if min_freq==0, lower_bound=0 and upper_bound=1
     // (except StateFreqType::FREQ_ESTIMATE, which follows legacy code way of doing things.)
     switch (freq_type) {
-    case StateFreqType::FREQ_EQUAL:
-    case StateFreqType::FREQ_USER_DEFINED:
-    case StateFreqType::FREQ_EMPIRICAL:
-        break; // There are no frequency determining parameters
     case StateFreqType::FREQ_DNA_1112:
     case StateFreqType::FREQ_DNA_1121:
     case StateFreqType::FREQ_DNA_1211:
@@ -685,14 +720,6 @@ int nFreqParams(StateFreqType freq_type) {
         upper_bound[0] = 1-2*min_freq;
         bound_check[0] = true;
         break;
-    case StateFreqType::FREQ_DNA_RY:
-    case StateFreqType::FREQ_DNA_WS:
-    case StateFreqType::FREQ_DNA_MK:
-        // two frequency determining parameters
-        lower_bound[0] = lower_bound[1] = 2*min_freq;
-        upper_bound[0] = upper_bound[1] = 1-2*min_freq;
-        bound_check[0] = bound_check[1] = true;
-        break;
     case StateFreqType::FREQ_DNA_1123:
     case StateFreqType::FREQ_DNA_1213:
     case StateFreqType::FREQ_DNA_1231:
@@ -705,16 +732,6 @@ int nFreqParams(StateFreqType freq_type) {
         lower_bound[1] = min_freq/(1-2*min_freq);
         upper_bound[1] = (1-3*min_freq)/(1-2*min_freq);
         bound_check[0] = bound_check[1] = true;
-        break;
-        /* NOTE:
-     * upper_bound[1] and lower_bound[1] are not perfect. Some in-bounds parameters
-         * will give base freqs for '2' or '3' base below minimum. This is
-         * the best that can be done without passing min_freq to freqsFromParams
-         */
-    case StateFreqType::FREQ_ESTIMATE:
-        lower_bound[0] = lower_bound[1] = lower_bound[2] = min_freq;
-        upper_bound[0] = upper_bound[1] = upper_bound[2] = 1;
-        bound_check[0] = bound_check[1] = bound_check[2] = false;
         break;
     default:
         throw("Unrecognized freq_type in setBoundsForFreqType - can't happen");
