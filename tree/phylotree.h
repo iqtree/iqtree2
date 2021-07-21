@@ -994,8 +994,8 @@ public:
      */
     virtual void initializeAllPartialLh(int &index, int &indexlh,
                                         PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-
+        void initializePartialParsimonyForOneNeighbor(PhyloNeighbor* nei, int &index_pars);
+        void initializePartialLikelihoodForOneNeighbor(PhyloNeighbor* nei, int &index_lh);
     /**
             clear all partial likelihood for a clean computation again
             @param set_to_null true to make all partial_lh become NULL

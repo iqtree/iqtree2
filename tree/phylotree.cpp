@@ -2012,38 +2012,21 @@ void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,
         index_pars = 0;
         index_lh   = 0;
     }
-    if (dad) {
+    if (dad!=nullptr) {
         //assign blocks of memory in central_partial_pars and
         //central_partial_lh to both Neighbors (dad->node, and node->dad)
         PhyloNeighbor *nei  = isDummyNode(node) ? nullptr : node->findNeighbor(dad);
         PhyloNeighbor *nei2 = isDummyNode(node) ? nullptr : dad->findNeighbor(node);
         
-        // first initialize partial_pars
-        if (nei!=nullptr && nei->partial_pars==nullptr) {
-            nei->partial_pars = central_partial_pars + (index_pars * pars_block_size);
-            ++index_pars;
-        }
-        if (nei2!=nullptr && nei2->partial_pars==nullptr) {
-            nei2->partial_pars = central_partial_pars + (index_pars * pars_block_size);
-            ++index_pars;
-        }
+        initializePartialParsimonyForOneNeighbor(nei,  index_pars);
+        initializePartialParsimonyForOneNeighbor(nei2, index_pars);
+
         ASSERT(index_pars < nodeNum * 2 - 1);
         
         // now initialize partial_lh and scale_num
         if (params->lh_mem_save == LM_PER_NODE) {
             if (nei2!=nullptr && !node->isLeaf()) {
-                // only allocate memory to internal node
-                if (nei2->partial_lh==nullptr) {
-                    nei2->scale_num  = central_scale_num  + (index_lh * scale_block_size);
-                    nei2->partial_lh = central_partial_lh + (index_lh * lh_block_size);
-#if (0)
-                    LOG_LINE ( VerboseMode::VB_MAX, "allocating partial_lh block " << index_lh
-                        << " " << pointer_to_hex(nei2->partial_lh)
-                        << " to front-neighbour " << pointer_to_hex(nei2)
-                              << " of node " << pointer_to_hex(dad));
-#endif
-                    ++index_lh;
-                }
+                initializePartialLikelihoodForOneNeighbor(nei2, index_lh);
             }
         }
     }
@@ -2052,22 +2035,33 @@ void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,
         if (!isDummyNode(child)) {
             initializeAllPartialLh(index_pars, index_lh, child, node);
         } else {
-            if (nei->partial_pars==nullptr) {
-                nei->partial_pars = central_partial_pars + (index_pars * pars_block_size);
-                ++index_pars;
-            }
-            if (nei->partial_lh==nullptr) {
-                nei->scale_num  = central_scale_num  + (index_lh * scale_block_size);
-                nei->partial_lh = central_partial_lh + (index_lh * lh_block_size);
-#if (0)
-                LOG_LINE( VB_MAX, "allocating partial_lh block " << index_lh
-                    << " " << pointer_to_hex(nei->partial_lh)
-                    << " to root-neighbour " << pointer_to_hex(nei)
-                    << " of node " << pointer_to_hex(node));
-#endif
-                ++index_lh;
-            }
+            initializePartialParsimonyForOneNeighbor(nei, index_pars);
+            initializePartialLikelihoodForOneNeighbor(nei, index_lh);
         }
+    }
+}
+
+void PhyloTree::initializePartialParsimonyForOneNeighbor
+        (PhyloNeighbor* nei, int& index_pars) {
+    if (nei!=nullptr && nei->partial_pars==nullptr) {
+        nei->partial_pars = central_partial_pars + (index_pars * pars_block_size);
+        ++index_pars;
+    }
+}
+
+void PhyloTree::initializePartialLikelihoodForOneNeighbor
+        (PhyloNeighbor* nei, int& index_lh) {
+    // only allocate memory to internal node
+    if (nei->partial_lh==nullptr) {
+        nei->scale_num  = central_scale_num  + (index_lh * scale_block_size);
+        nei->partial_lh = central_partial_lh + (index_lh * lh_block_size);
+#if (0)
+        LOG_LINE ( VerboseMode::VB_MAX, "allocating partial_lh block " << index_lh
+            << " " << pointer_to_hex(nei2->partial_lh)
+            << " to front-neighbour " << pointer_to_hex(nei2)
+                    << " of node " << pointer_to_hex(dad));
+#endif
+        ++index_lh;
     }
 }
 
