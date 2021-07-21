@@ -499,11 +499,7 @@ void paramsFromFreqs(double *params, double *freq_vec,
     }
 }
 
-/*
- * Given a DNA freq_type and a base frequency vector, alter the
- * base freq vector to conform with the constraints of freq_type
- */
-void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
+bool forceFreqsConformPart1(double *base_freq, StateFreqType freq_type) {
     double pA = base_freq[0]; // These just improve code readability
     double pC = base_freq[1];
     double pG = base_freq[2];
@@ -517,7 +513,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     case StateFreqType::FREQ_USER_DEFINED:
     case StateFreqType::FREQ_EMPIRICAL:
     case StateFreqType::FREQ_ESTIMATE:
-        break; // any base_freq is legal
+        return true; // any base_freq is legal
     case StateFreqType::FREQ_DNA_RY:
         scale = 0.5/(pA+pG);
         base_freq[0] = pA*scale;
@@ -525,7 +521,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
         scale = 0.5/(pC+pT);
         base_freq[1] = pC*scale;
         base_freq[3] = pT*scale;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_WS:
         scale = 0.5/(pA+pT);
         base_freq[0] = pA*scale;
@@ -533,7 +529,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
         scale = 0.5/(pC+pG);
         base_freq[1] = pC*scale;
         base_freq[2] = pG*scale;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_MK:
         scale = 0.5/(pA+pC);
         base_freq[0] = pA*scale;
@@ -541,53 +537,79 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
         scale = 0.5/(pG+pT);
         base_freq[2] = pG*scale;
         base_freq[3] = pT*scale;
-        break;
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool forceFreqsConformPart2(double *base_freq, StateFreqType freq_type) {
+    double pA = base_freq[0]; // These just improve code readability
+    double pC = base_freq[1];
+    double pG = base_freq[2];
+    double pT = base_freq[3];
+    switch (freq_type) {
     case StateFreqType::FREQ_DNA_1112:
         base_freq[0]=base_freq[1]=base_freq[2]=(pA+pC+pG)/3;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1121:
         base_freq[0]=base_freq[1]=base_freq[3]=(pA+pC+pT)/3;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1211:
         base_freq[0]=base_freq[2]=base_freq[3]=(pA+pG+pT)/3;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_2111:
         base_freq[1]=base_freq[2]=base_freq[3]=(pC+pG+pT)/3;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1122:
         base_freq[0]=base_freq[1]=(pA+pC)/2;
         base_freq[2]=base_freq[3]=(pG+pT)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1212:
         base_freq[0]=base_freq[2]=(pA+pG)/2;
         base_freq[1]=base_freq[3]=(pC+pT)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1221:
         base_freq[0]=base_freq[3]=(pA+pT)/2;
         base_freq[1]=base_freq[2]=(pC+pG)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1123:
         base_freq[0]=base_freq[1]=(pA+pC)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1213:
         base_freq[0]=base_freq[2]=(pA+pG)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_1231:
         base_freq[0]=base_freq[3]=(pA+pT)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_2113:
         base_freq[1]=base_freq[2]=(pC+pG)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_2131:
         base_freq[1]=base_freq[3]=(pC+pT)/2;
-        break;
+        return true;
     case StateFreqType::FREQ_DNA_2311:
         base_freq[2]=base_freq[3]=(pG+pT)/2;
-        break;
+        return true;
     default:
-        throw("Unrecognized freq_type in forceFreqsConform - can't happen");
+        return false;
     }
-    ASSERT(base_freq[0]>=0 && base_freq[1]>=0 && base_freq[2]>=0 && base_freq[3]>=0 && fabs(base_freq[0]+base_freq[1]+base_freq[2]+base_freq[3]-1)<1e-7);
+}
+
+/*
+ * Given a DNA freq_type and a base frequency vector, alter the
+ * base freq vector to conform with the constraints of freq_type
+ */
+void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
+
+    if (!forceFreqsConformPart1(base_freq, freq_type)) {
+        if (!forceFreqsConformPart2(base_freq, freq_type)) {
+            throw("Unrecognized freq_type in forceFreqsConform - can't happen");
+        }
+    }
+    ASSERT(base_freq[0]>=0 && base_freq[1]>=0 && base_freq[2]>=0 && 
+           base_freq[3]>=0 && 
+           fabs(base_freq[0]+base_freq[1]+base_freq[2]+base_freq[3]-1.0)<1e-7);
 }
 
 namespace {
