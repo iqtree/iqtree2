@@ -317,7 +317,14 @@ struct SPRMove;
 class SPRMoves;
 class SimilarityTree;
 class SimilarityNode;
-        
+class NameToIDMap;
+class NameToNameMap;
+class UniqueSequenceMap;
+
+typedef std::set<std::string>          NameSet;
+typedef std::pair<size_t, NameSet>     CountAndNames;
+typedef std::pair<size_t, std::string> HashedSequence;
+
 /**
 Phylogenetic Tree class
 
@@ -492,6 +499,37 @@ public:
     virtual void mergeAlignments(const StrVector& alignment_paths);
     
     virtual void mergeAlignment(const Alignment* new_aln);
+        //Supporting functions
+        void analyzeAlignmentMerge
+                (const Alignment* new_aln, StrVector& state_strings,
+                 NameToIDMap& name_to_id, NameToNameMap& dupe_to_twin,
+                 UniqueSequenceMap& unique_seq_map, 
+                 vector<size_t>& old_hashes, vector<size_t>& new_hashes,
+                 IntVector& duplicated_sequence_ids, IntVector& added_sequences,
+                 std::vector<std::pair<int,int>>& updated_sequences,
+                 StrVector& names_of_updated_sequences,
+                 size_t& count_the_same);
+        void countMergedSequenceAsIdentical(UniqueSequenceMap& unique_seq_map,
+                                            vector<size_t>& new_hashes,
+                                            const std::string& path, int new_seq_id, 
+                                            const std::string& new_sequence,
+                                            const std::string& new_name,
+                                            IntVector& duplicated_sequence_ids,
+                                            IntVector& added_sequences,
+                                            NameToIDMap& name_to_id);
+        bool areSequencesReallyTheSame(const Alignment* new_aln,
+                                       const std::string& old_sequence,
+                                       const std::string& new_sequence,
+                                       const std::string& new_name,
+                                       size_t& count_the_same);
+        void carryOutAlignmentMerge
+                (const Alignment* new_aln,  StrVector& state_strings,
+                 size_t count_the_same,
+                 std::vector<std::pair<int,int>>& updated_sequences, 
+                 IntVector& added_sequences,  IntVector& duplicated_sequence_ids,
+                 vector<size_t>& new_hashes, UniqueSequenceMap& unique_seq_map,
+                 StrVector& names_of_updated_sequences,
+                 NameToNameMap& dupe_to_twin);
 
     bool shouldPlacementUseSankoffParsimony() const;
 
