@@ -2225,8 +2225,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-reorder_m_only") == 0) {
+            if (strcmp(argv[cnt], "-m_only") == 0) {
                 params.matrix_order = true;
+                params.print_pr_ab_matrix = true;
                 continue;
             }
             

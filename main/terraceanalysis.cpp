@@ -25,7 +25,7 @@ void runterraceanalysis(Params &params){
     cout<<"---------------------------------------------------------\n";
     
     if(params.matrix_order){
-        cout<<"Reordering presence-absence matrix..\n\n";
+        cout<<"Creating presence-absence matrix..\n\n";
         PresenceAbsenceMatrix *matrix = new PresenceAbsenceMatrix();
         if(params.partition_file && params.aln_file){
             matrix->get_from_alignment(params);
@@ -33,7 +33,7 @@ void runterraceanalysis(Params &params){
             assert(params.pr_ab_matrix && "ERROR: no input presence-absence matrix!");
             matrix->read_pr_ab_matrix(params.pr_ab_matrix);
         }
-        matrix->print_pr_ab_matrix();
+        //matrix->print_pr_ab_matrix();
         
         string out_file;
         ofstream out;
@@ -54,7 +54,9 @@ void runterraceanalysis(Params &params){
             matrix->print_overlap_matrix(out);
             out.close();
         }
-        
+        cout<<"---------------------------------------------------------\n";
+        cout<<"Presence-absence matrix was written into "<<out_file<<"\n";
+        cout<<"---------------------------------------------------------\n";
         cout<<"Total wall-clock time used: "<<getRealTime()-Params::getInstance().start_real_time<<" seconds ("<<convert_time(getRealTime()-Params::getInstance().start_real_time)<<")\n";
         cout<<"Total CPU time used: "<< getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")\n\n";
         
