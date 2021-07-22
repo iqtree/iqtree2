@@ -420,6 +420,8 @@ namespace ModelExpression {
         bool        parseNumericConstant     (const std::string& text,
                                               size_t& ix,
                                               Expression*& expr);
+        bool        parseTwoCharacterToken   (const std::string& text,
+                                              size_t& ix, Expression*& expr);                                    
         bool        parseOtherToken          (const std::string& text,
                                               size_t& ix, Expression*& expr);
         void        skipWhiteSpace           (const std::string& text,

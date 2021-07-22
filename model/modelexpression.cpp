@@ -932,6 +932,29 @@ namespace ModelExpression {
         bool topIsFunction() const {
             return (0<size() && back()->isFunction());
         }
+        void handlePrecedence(Expression*     token, 
+                              ExpressionStack& output) {
+            auto prec = token->getPrecedence();
+            bool isRightAssociative = token->isRightAssociative();
+            while (topIsOperator() &&
+                    ( back()->getPrecedence() > prec ||
+                    ( back()->getPrecedence() == prec
+                        && !isRightAssociative )
+                    ) ) {
+                output << pop();
+            }
+        }
+        void handleRightParenthesis(ExpressionStack& output) {
+            while (topIsNotToken('(')) {
+                output << pop();
+            }
+            if (topIsToken('(')) {
+                delete pop();
+            }
+            if (topIsFunction()) {
+                output << pop();
+            }
+        }
     };
 
     namespace {
@@ -970,30 +993,14 @@ namespace ModelExpression {
             } else if (token->isFunction()) {
                 operator_stack << token;
             } else if (token->isOperator()) {
-                auto prec = token->getPrecedence();
-                bool isRightAssociative = token->isRightAssociative();
-                while (operator_stack.topIsOperator() &&
-                       ( operator_stack.back()->getPrecedence() > prec ||
-                        ( operator_stack.back()->getPrecedence() == prec
-                          && !isRightAssociative )
-                       ) ) {
-                    output << operator_stack.pop();
-                }
+                operator_stack.handlePrecedence(token, output);
                 operator_stack << token;
             } else if (token->isVariable()) {
                 output << token;
             } else if (token->isToken('(')) {
                 operator_stack << token;
             } else if (token->isToken(')')) {
-                while (operator_stack.topIsNotToken('(')) {
-                    output << operator_stack.pop();
-                }
-                if (operator_stack.topIsToken('(')) {
-                    delete operator_stack.pop();
-                }
-                if (operator_stack.topIsFunction()) {
-                    output << operator_stack.pop();
-                }
+                operator_stack.handleRightParenthesis(output);
                 delete token;
             }
         } //no more tokens
@@ -1170,19 +1177,57 @@ namespace ModelExpression {
         return parseOtherToken(text,ix,expr);
     }
 
+    bool InterpretedExpression::parseTwoCharacterToken
+            (const std::string& text, size_t&            ix,
+             Expression*&       expr) {
+        char ch     = text[ix];
+        char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
+        switch (ch) {
+            case '!': 
+                throwIfNot(nextch=='=', "unary not (!) operator not supported (yet)");
+                expr = new InequalityOperator(model);
+                ix  += 2;
+                return true;
+            case '=': 
+                if (nextch=='=') {
+                    expr = new EqualityOperator(model);
+                    ix  += 2;
+                } else {
+                    expr = new Assignment(model);
+                    ++ix;
+                }
+                return true;
+            case '&': 
+                throwIfNot(nextch=='&', "bitwise-and & operator not supported");
+                expr = new ShortcutAndOperator(model);
+                ix  += 2;
+                return true;
+            case '|': 
+                throwIfNot(nextch=='|', "bitwise-or | operator not supported");
+                expr = new ShortcutOrOperator(model);
+                ix  += 2;
+                return true;
+            case '.': 
+                throwIfNot(nextch=='.', "period that wasn't part of .." 
+                           " or a number, was not understood");
+                expr = new RangeOperator(model);
+                ix  += 2;
+                return true;
+        }
+        return false;
+    }
+
     bool InterpretedExpression::parseOtherToken(const std::string& text,
                                                 size_t&            ix,
                                                 Expression*&       expr) {
         expr        = nullptr;
+        if (parseTwoCharacterToken(text, ix, expr)) {
+            return true;
+        }
         char ch     = text[ix];
-        char nextch = ((ix+1)<text.length()) ? text[ix+1] : '\0';
         switch (ch) {
             case '(': expr = new Token(model, ch);      break;
             case ')': expr = new Token(model, ch);      break;
-            case '!': throwIfNot(nextch=='=', "unary not (!) operator not supported (yet)");
-                      expr = new InequalityOperator(model);
-                      ++ix;
-                      break;
             case '^': expr = new Exponentiation(model); break;
             case '*': expr = new Multiplication(model); break;
             case '/': expr = new Division(model);       break;
@@ -1190,28 +1235,8 @@ namespace ModelExpression {
             case '-': expr = new Subtraction(model);    break;
             case '<': expr = new LessThanOperator(model);    break;
             case '>': expr = new GreaterThanOperator(model); break;
-            case '=': if (nextch=='=') {
-                          expr = new EqualityOperator(model);
-                          ++ix;
-                      } else {
-                          expr = new Assignment(model);
-                      }
-                      break;
-            case '&': throwIfNot(nextch=='&', "bitwise-and & operator not supported");
-                      expr = new ShortcutAndOperator(model);
-                      ++ix;
-                      break;
-            case '|': throwIfNot(nextch=='|', "bitwise-or | operator not supported");
-                      expr = new ShortcutOrOperator(model);
-                      ++ix;
-                      break;
             case ':': expr = new ListOperator(model);   break;
             case '?': expr = new SelectOperator(model); break;
-            case '.': throwIfNot(nextch=='.', "period that wasn't part of .." 
-                                 " or a number, was not understood");
-                      expr = new RangeOperator(model);
-                      ++ix;
-                      break;
             case ',': expr = new CommaOperator(model); break;
             default:
                 throw ModelException(std::string("unrecognized character '") +
