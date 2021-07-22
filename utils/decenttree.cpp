@@ -108,6 +108,15 @@ void showUsage() {
     std::cout << StartTree::Factory::getInstance().getListOfTreeBuilders();
 }
 
+bool isNucleotideOrMissing(const char c) {
+    return isalnum(c) ||  c == '-' || c == '?'|| 
+           c == '.' || c == '*' || c == '~';
+}
+
+bool isOpeningBracket(const char c) {
+    return c == '(' || c == '{';
+}
+
 bool processSequenceLine(const std::vector<int> &in_alphabet,
                          std::string &sequence,
                          std::string &line, size_t line_num) {
@@ -115,16 +124,17 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
     //(except it returns false rather than throwing exceptions), and writes
     //errors to std::cerr.
     for (auto it = line.begin(); it != line.end(); ++it) {
-        if ((*it) <= ' ') continue;
-        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' 
-            || (*it) == '*' || (*it) == '~') {
-            auto c = toupper(*it);
+        auto c = toupper(*it);
+        if (c  <= ' ') {
+            continue;
+        }
+        if (isNucleotideOrMissing(c)) {
             if (!in_alphabet[c]) {
                 c = unknown_char;
             }
             sequence.append(1, c);
         }
-        else if (*it == '(' || *it == '{') {
+        else if (isOpeningBracket(c)) {
             while (*it != ')' && *it != '}' && it != line.end()) {
                 it++;
             }
@@ -834,17 +844,108 @@ bool prepInput(const std::string& alignmentInputFilePath,
     return true;
 }
 
+class Argument {
+public:
+    std::string name;
+    Argument(const char* arg_name): name(arg_name) {}
+    virtual ~Argument() = default;
+    virtual void accept(const std::string& arg, const std::string& nextArg, 
+                        char* argv[], int argc, int &argNum,
+                        std::stringstream& problems) = 0;
+};
 
-int main(int argc, char* argv[]) {
+class StringArgument: public Argument {
+public:
+    typedef Argument super;
+    std::string  description;
+    std::string& mapped_to;
+    StringArgument(const char* argument_name, 
+                   const char* argument_description, 
+                   std::string& variable) 
+        : super(argument_name), description(argument_description),
+          mapped_to(variable) { }
+    void accept(const std::string& arg, const std::string& nextArg, 
+                char* argv[], int argc, 
+                int &argNum, std::stringstream& problems) {
+        ++argNum;
+        if (argNum==argc) {
+            problems << name << " should be followed by " << description << "\n";
+        }
+        mapped_to = nextArg;
+    }
+};
+
+class IntArgument: public Argument {
+    std::string description;
+    int& int_var;
+public:
+    typedef Argument super;
+    IntArgument(const char* arg_name, const char* desc, int& var) 
+        : super(arg_name), description(desc), int_var(var) { }
+    void accept(const std::string& arg, const std::string& nextArg, 
+                char* argv[], int argc, int &argNum, 
+                std::stringstream& problems) {
+        ++argNum;
+        if (argNum==argc) {
+            problems << name << " should be followed by " << description << ".\n";
+        }
+        int_var = atoi(nextArg.c_str());
+    }
+};
+
+class SwitchArgument: public Argument {
+private:
+    bool& switch_var;
+    bool  switch_setting;
+public:
+    typedef Argument super;
+    SwitchArgument(const char* arg_name, bool& var, bool setting)
+        : super(arg_name), switch_var(var), switch_setting(setting) { }
+    void accept(const std::string& arg, const std::string& nextArg, 
+                char* argv[], int argc, int &argNum,
+                std::stringstream& problems) {
+        switch_var = switch_setting;
+    }
+};
+
+class ArgumentMap: std::map<std::string, Argument*> {
+public:
+    ArgumentMap& operator << (Argument* arg) {
+        insert(value_type(arg->name, arg));
+        return *this;
+    }
+    ~ArgumentMap() {
+        for (auto it=begin(); it!=end(); ++it) {
+            delete it->second;
+        }
+        clear();
+    }
+    Argument* findByName(const std::string name) {
+        auto it = find(name);
+        if (it == end()) {
+            return nullptr;
+        }
+        return it->second;
+    }
+};
+
+template <class T> void range_restrict(const T lo, const T hi, T& restrict_me) {
+    if (restrict_me < lo) {
+        restrict_me = lo;
+    } else if (hi < restrict_me) {
+        restrict_me = hi;
+    }
+}
+
+class DecentTreeOptions {
+public:
     std::stringstream problems;
-    #if USE_PROGRESS_DISPLAY
-    progress_display::setProgressDisplay(true); //Displaying progress bars
-    #endif
-    std::string algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
+    std::string algorithmName;
     std::string alignmentFilePath;      //only .fasta format is supported
     std::string inputFilePath;          //phylip distance matrix formats are supported
     std::string outputFilePath;         //newick tree format
     std::string distanceOutputFilePath; //phylip distance matrix format
+
     bool isOutputZipped            = false;
     bool isOutputSuppressed        = false;
     bool isOutputToStandardOutput  = false; //caller asked for newick tree to go to std::cout
@@ -853,239 +954,204 @@ int main(int argc, char* argv[]) {
     bool beSilent                  = false;
     bool isMatrixToBeLoaded        = true;  //set to false if caller passes -no-matrix
     bool isTreeConstructionSkipped = false;
-    for (int argNum=1; argNum<argc; ++argNum) {
-        std::string arg     = argv[argNum];
-        std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
-        if (arg=="-fasta") {
-            if (nextArg.empty()) {
-                PROBLEM("-fasta should be followed by a file path");
+    bool beVerbose                 = false;
+
+    ArgumentMap arg_map;
+
+    DecentTreeOptions() {
+        algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
+        isOutputZipped            = false;
+        isOutputSuppressed        = false;
+        isOutputToStandardOutput  = false; //caller asked for newick tree to go to std::cout
+        isBannerSuppressed        = false;
+        threadCount               = 0;
+        beSilent                  = false;
+        isMatrixToBeLoaded        = true;  //set to false if caller passes -no-matrix
+        isTreeConstructionSkipped = false;
+        initializeArgumentMap();
+    }
+
+    void initializeArgumentMap() {
+        arg_map << new StringArgument("-fasta", "fasta file path", alignmentFilePath);
+        arg_map << new StringArgument("-in",    "distance matrix file path", inputFilePath);
+        arg_map << new StringArgument("-dist",  "distance matrix file path", inputFilePath);
+        arg_map << new IntArgument   ("-c",     "compression level between 1 and 9", 
+                                    compression_level);
+        arg_map << new IntArgument   ("-f",     "precision level between 4 and 15",
+                                    precision);
+        arg_map << new StringArgument("-out-format", "output format" 
+                                    "(e.g. square, upper, or lower)", format);
+        arg_map << new StringArgument("-msa-out",  "msa format file path", msaOutputPath);
+        arg_map << new StringArgument("-dist-out", "distance matrix file path", distanceOutputFilePath);
+        arg_map << new SwitchArgument("-no-matrix", isMatrixToBeLoaded, false);
+        arg_map << new StringArgument("-strip-name", "list of characters to strip from name",
+                                    stripName);
+        arg_map << new StringArgument("-name-replace", "list of characters to replace"
+                                    " those stripped from names", nameReplace);
+        arg_map << new StringArgument("-out", "output file path", outputFilePath);
+        arg_map << new SwitchArgument("-no-out",      isOutputSuppressed,       true);
+        arg_map << new SwitchArgument("-std-out",     isOutputToStandardOutput, true);
+        arg_map << new SwitchArgument("-gz",          isOutputZipped,           true);
+        arg_map << new SwitchArgument("-no-banner",   isBannerSuppressed,       true);
+        arg_map << new SwitchArgument("-uncorrected", correcting_distances,     false);
+        arg_map << new IntArgument   ("-nt", "thread count", threadCount);
+        arg_map << new SwitchArgument("-q",           beSilent,                 true);
+        arg_map << new SwitchArgument("-filter",      filter_problem_sequences, true);
+        arg_map << new StringArgument("-alphabet", "list of characters", alphabet);
+        arg_map << new StringArgument("-unknown",  "list of characters", unknown_chars);
+        arg_map << new SwitchArgument("-num",         numbered_names,           true);
+        arg_map << new SwitchArgument("-not-dna",     is_DNA,                   false);
+        arg_map << new SwitchArgument("-v",           beVerbose,                true);
+    }
+
+    void processCommandLineOptions(int argc, char* argv[]) {
+        for (int argNum=1; argNum<argc; ++argNum) {
+            std::string arg     = argv[argNum];
+            std::string nextArg = (argNum+1<argc) ? argv[argNum+1] : "";
+            
+            Argument* argument = arg_map.findByName(arg);
+            if (argument!=nullptr) {
+                argument->accept(arg, nextArg, argv, argc, argNum, problems);
             }
-            alignmentFilePath = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-in" || arg=="-dist") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a file path");
+            else if (arg=="-t") {
+                if (START_TREE_RECOGNIZED(nextArg)) {
+                    algorithmName = nextArg;
+                } else if (string_to_lower(nextArg)=="none") {
+                    isTreeConstructionSkipped = true;
+                } else {
+                    PROBLEM("Algorithm name " + nextArg + " not recognized");
+                    PROBLEM("Recognized distance matrix algorithms are:");
+                    PROBLEM(StartTree::Factory::getInstance().getListOfTreeBuilders());
+                }
+                ++argNum;
             }
-            inputFilePath = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-c") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by compression level between 1 and 9");
-            }
-            compression_level = atoi(nextArg.c_str());
-            if (compression_level<0) compression_level = 0;
-            if (9<compression_level) compression_level = 9;
-            ++argNum;
-        }
-        else if (arg=="-f") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by precision level between 4 and 15");
-            }
-            precision = atoi(nextArg.c_str());
-            if (15<precision) precision=15;
-            if (precision<1)  precision=1;
-            ++argNum;
-        }
-        else if (arg=="-out-format") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by an output format (e.g. square, upper, or lower)");
-            }
-            format = string_to_lower(nextArg);
-            ++argNum;
-        }
-        else if (arg=="-msa-out") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a file path");
-            }
-            msaOutputPath = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-dist-out") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a file path");
-            }
-            distanceOutputFilePath = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-no-matrix") {
-            isMatrixToBeLoaded = false;
-        }
-        else if (arg=="-strip-name") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a list of characters" 
-                        " to strip from names");
-            }
-            stripName = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-name-replace") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a list of characters" 
-                        " to replace those stripped from names");
-            }
-            nameReplace = nextArg;
-            ++argNum;            
-        }
-        else if (arg=="-t") {
-            if (START_TREE_RECOGNIZED(nextArg)) {
-                algorithmName = nextArg;
-            } else if (string_to_lower(nextArg)=="none") {
-                isTreeConstructionSkipped = true;
-            } else {
-                PROBLEM("Algorithm name " + nextArg + " not recognized");
-                PROBLEM("Recognized distance matrix algorithms are:");
-                PROBLEM(StartTree::Factory::getInstance().getListOfTreeBuilders());
-            }
-            ++argNum;
-        }
-        else if (arg=="-out") {
-            outputFilePath = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-no-out") {
-            isOutputSuppressed = true;
-        }
-        else if (arg=="-std-out") {
-            //Write output to standard output
-            outputFilePath = "STDOUT";
-            isOutputToStandardOutput = true;
-        }
-        else if (arg=="-gz") {
-            isOutputZipped = true;
-        }
-        else if (arg=="-no-banner") {
-            isBannerSuppressed = true;
-        }
-        else if (arg=="-uncorrected") {
-            correcting_distances = false;
-        }
-        else if (arg=="-nt") {
-            if ( nextArg.empty() || nextArg[0]<'0' || '9'<nextArg[0] ) {
-                PROBLEM("-nt argument should be followed by a numeric thread count");
+            else {
+                PROBLEM("Unrecognized command-line argument, " + arg);
                 break;
             }
-            threadCount = atol(nextArg.c_str());
-            ++argNum;
         }
-        else if (arg=="-q") {
-            isBannerSuppressed = true;
-            beSilent = true;
+        range_restrict(0, 9,  compression_level );
+        range_restrict(1, 15, precision );
+        format = string_to_lower(format);
+        if (isOutputToStandardOutput) {
+            outputFilePath = "STDOUT";
         }
-        else if (arg=="-filter") {
-            filter_problem_sequences = true;
+        isBannerSuppressed |= beSilent;
+        if (alphabet.empty() && is_DNA) {
+            alphabet = "ACGT";
         }
-        else if (arg=="-alphabet") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a list of characters");
-            }
-            alphabet = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-unknown") {
-            if (nextArg.empty()) {
-                PROBLEM(arg + " should be followed by a list of characters");
-            }
-            unknown_chars = nextArg;
-            ++argNum;
-        }
-        else if (arg=="-num") {
-            numbered_names = true;
-        }
-        else if (arg=="-not-dna") {
-            is_DNA = false;
-        }
-        else {
-            PROBLEM("Unrecognized command-line argument, " + arg);
-            break;
+        if (unknown_chars.empty()) {
+            unknown_chars = ".~_-?N";
+            unknown_char  = 'N';
+        } else {
+            unknown_char = unknown_chars[unknown_chars.length()-1];
         }
     }
-    if (argc==1) {
-        if (!isBannerSuppressed) {
-            showBanner();
+
+    bool checkCommandLineOptions() {
+        if (inputFilePath.empty() && alignmentFilePath.empty()) {
+            PROBLEM("Input (mldist) file should be specified via -in [filepath.mldist]");
+            PROBLEM("Or alignment (fasta) file may be specified via -fasta [filepath.fasta]");
         }
+        if (outputFilePath.empty() && !isOutputSuppressed && !isOutputToStandardOutput) {
+            PROBLEM("Ouptut (newick format) filepath should be specified via -out [filepath.newick]");
+            PROBLEM("Or output can be sent to standard output, or suppressed, via -std-out or -no-out");
+        }
+        else if (!inputFilePath.empty() && inputFilePath==outputFilePath) {
+            PROBLEM("Input file and output file paths are the same (" + inputFilePath + ")");
+        }
+        if (alignmentFilePath.empty() && !isMatrixToBeLoaded) {
+            PROBLEM("If distance matrix is not be loaded, an alignment file must be specified");
+        }
+        if (!problems.str().empty()) {
+            std::cerr << problems.str();
+            return false;
+        }
+        return true;
+    }
+    void configureThreading() {
+        if (threadCount!=0) {
+            #ifdef _OPENMP
+                    int maxThreadCount = omp_get_max_threads();
+                    if (maxThreadCount < threadCount ) {
+                        std::cerr << "Warning: Requested number of threads, " << threadCount
+                            << " is greater than the maximum, " << maxThreadCount << "." << std::endl;
+                        std::cerr << "Warning: " << maxThreadCount << " threads will be used." << std::endl;
+                        threadCount = maxThreadCount;
+                    }
+                    omp_set_num_threads(threadCount);
+            #else
+                    std::cerr << "Warning: -nt argument, requesting " << threadCount
+                        << " thread can not be honoured (Open MP is not enabled in this build)." << std::endl;
+                    std::cerr << "Warning: Distance matrix processing will be single-threaded." << std::endl;
+            #endif
+        }
+    }
+};
+
+int obeyCommandLineOptions(DecentTreeOptions& options);
+
+int main(int argc, char* argv[]) {
+    #if USE_PROGRESS_DISPLAY
+    progress_display::setProgressDisplay(true); //Displaying progress bars
+    #endif
+    DecentTreeOptions options;
+
+    options.processCommandLineOptions(argc, argv);
+
+    if (argc==1) {
+        showBanner();
         showUsage();
         return 0;
     }
-    if (inputFilePath.empty() && alignmentFilePath.empty()) {
-        PROBLEM("Input (mldist) file should be specified via -in [filepath.mldist]");
-        PROBLEM("Or alignment (fasta) file may be specified via -fasta [filepath.fasta]");
-    }
-    if (outputFilePath.empty() && !isOutputSuppressed && !isOutputToStandardOutput) {
-        PROBLEM("Ouptut (newick format) filepath should be specified via -out [filepath.newick]");
-        PROBLEM("Or output can be sent to standard output, or suppressed, via -std-out or -no-out");
-    }
-    else if (!inputFilePath.empty() && inputFilePath==outputFilePath) {
-        PROBLEM("Input file and output file paths are the same (" + inputFilePath + ")");
-    }
-    if (alignmentFilePath.empty() && !isMatrixToBeLoaded) {
-        PROBLEM("If distance matrix is not be loaded, an alignment file must be specified");
-    }
-    if (!problems.str().empty()) {
-        std::cerr << problems.str();
+    if (!options.checkCommandLineOptions()) {
         return 1;
     }
-    if (!isBannerSuppressed) {
+    if (!options.isBannerSuppressed) {
         showBanner();
     }
-    if (alphabet.empty() && is_DNA) {
-        alphabet = "ACGT";
-    }
-    if (unknown_chars.empty()) {
-        unknown_chars = ".~_-?N";
-        unknown_char  = 'N';
-    } else {
-        unknown_char = unknown_chars[unknown_chars.length()-1];
-    }
-    if (threadCount!=0) {
-#ifdef _OPENMP
-        int maxThreadCount = omp_get_max_threads();
-        if (maxThreadCount < threadCount ) {
-            std::cerr << "Warning: Requested number of threads, " << threadCount
-                << " is greater than the maximum, " << maxThreadCount << "." << std::endl;
-            std::cerr << "Warning: " << maxThreadCount << " threads will be used." << std::endl;
-            threadCount = maxThreadCount;
-        }
-        omp_set_num_threads(threadCount);
-#else
-        std::cerr << "Warning: -nt argument, requesting " << threadCount
-            << " thread can not be honoured (Open MP is not enabled in this build)." << std::endl;
-        std::cerr << "Warning: Distance matrix processing will be single-threaded." << std::endl;
-#endif
-    }
-    StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algorithmName);
-    if (!isTreeConstructionSkipped) {
+    options.configureThreading();
+    return obeyCommandLineOptions(options);
+}
+
+int obeyCommandLineOptions(DecentTreeOptions& options) {
+    StartTree::BuilderInterface* algorithm = 
+        StartTree::Factory::getTreeBuilderByName(options.algorithmName);
+    if (!options.isTreeConstructionSkipped) {
         if (algorithm==nullptr) {
             std::cerr << "Tree builder algorithm was unexpectedly null"
                 << " (internal logic error)." << std::endl;
             return 1;
         }
-        algorithm->setZippedOutput(isOutputZipped || endsWith(outputFilePath,".gz"));
-        if (beSilent) {
+        algorithm->setZippedOutput(options.isOutputZipped || endsWith(options.outputFilePath,".gz"));
+        if (options.beSilent) {
             algorithm->beSilent();
         }
         algorithm->setPrecision(precision);
     }
     Sequences  sequences;
     FlatMatrix m;
-    bool succeeded = prepInput(alignmentFilePath, inputFilePath,
+    bool succeeded = prepInput(options.alignmentFilePath, options.inputFilePath,
                                !algorithm->isBenchmark(),
-                               distanceOutputFilePath,
-                               sequences, isMatrixToBeLoaded, m);
-    if (isTreeConstructionSkipped) {
+                               options.distanceOutputFilePath,
+                               sequences, options.isMatrixToBeLoaded, m);
+    if (options.isTreeConstructionSkipped) {
         succeeded = true;
     }
-    else if (succeeded && isMatrixToBeLoaded) {
+    else if (succeeded && options.isMatrixToBeLoaded) {
         succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
                                                      m.getDistanceMatrix(),
-                                                     outputFilePath);
+                                                     options.outputFilePath);    
     }
-    else if (!inputFilePath.empty()) {
-        succeeded = algorithm->constructTree(inputFilePath, outputFilePath);
+    else if (!options.inputFilePath.empty()) {
+        succeeded = algorithm->constructTree(options.inputFilePath, 
+                                             options.outputFilePath);
     }
-    else if (!isMatrixToBeLoaded && !alignmentFilePath.empty() && !distanceOutputFilePath.empty() ) {
-        succeeded = algorithm->constructTree(distanceOutputFilePath, outputFilePath);
+    else if (!options.isMatrixToBeLoaded && 
+             !options.alignmentFilePath.empty() && 
+             !options.distanceOutputFilePath.empty() ) {
+        succeeded = algorithm->constructTree(options.distanceOutputFilePath, 
+                                             options.outputFilePath);
     }
     else {
         std::cerr << "Distance matrix calculation failed." << std::endl;

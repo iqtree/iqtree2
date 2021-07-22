@@ -99,13 +99,18 @@ namespace StartTree
             }
             builder.constructTree();
             double buildElapsed = getRealTime() - buildStart;
-            double buildCPU = getCPUTime() - buildStartCPU;
+            double buildCPU     = getCPUTime() - buildStartCPU;
             if (!silent) {
                 std::cout.precision(6);
                 std::cout << "Computing "
-                << name << " tree took " << buildElapsed << " sec"
-                << " (of wall-clock time) " << buildCPU << " sec"
-                << " (of CPU time)" << std::endl;
+                          << name << " tree took " 
+                          << buildElapsed << " sec (of wall-clock time) " 
+                          << buildCPU << " sec (of CPU time)" ;
+                if (0<buildElapsed) {
+                    double percentCPU = (buildCPU/buildElapsed)*100.0;
+                    std::cout << "(" << floor(percentCPU) << "%)";
+                }
+                std::cout << std::endl;
                 std::cout.precision(3);
             }
             return true;
