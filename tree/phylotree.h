@@ -481,6 +481,15 @@ public:
      @return true if the tree had to be updated (nodes added or removed))
      */
     virtual bool updateToMatchAlignment(Alignment *alignment);
+
+            //Supporting functions
+            void identifyAddedTaxa (map<string, Node*>& mapNameToNode, 
+                                    IntVector& taxaIdsToAdd);
+            void ensureRootIsKept  (map<string, Node*>& mapNameToNode, 
+                                    IntVector& taxaIdsToAdd);
+            void removeDeletedNodes(map<string, Node*>& mapNameToNode, 
+                                    bool will_add);
+
     
     /** Prepare to place taxa in the tree.
      */
@@ -974,7 +983,10 @@ public:
                                        size_t extra_lh_block_count);
     
     virtual void determineBlockSizes();
-        
+        //Supporting function
+        virtual void determineLikelihoodBlockSizes();
+        virtual void determineParsimonyBlockSizes();
+
     virtual size_t getLhBlockSize();
     
     //
@@ -2557,7 +2569,9 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
-
+        //Supporting function
+        void getSlotCountRequired(int64_t block_size, bool full_mem, 
+                                  int64_t mem_size, int64_t lh_scale_size);
     /**
      * compute the memory size for top partitions required for storing partial likelihood vectors
      * @return memory size required in bytes

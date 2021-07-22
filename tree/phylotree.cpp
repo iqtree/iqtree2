@@ -568,7 +568,6 @@ void PhyloTree::logTaxaToBeRemoved(const map<string, Node*>& mapNameToNode) {
 bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     PhyloTreeThreadingContext context(*this, false);
     aln           = alignment;
-    intptr_t nseq = aln->getNSeq();
 
     removeSampleTaxaIfRequested();
 
@@ -588,6 +587,33 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
     }
 
     IntVector taxaIdsToAdd; //not found in tree
+    identifyAddedTaxa(mapNameToNode, taxaIdsToAdd);
+    ensureRootIsKept (mapNameToNode, taxaIdsToAdd);
+
+    bool will_delete = !mapNameToNode.empty();
+    bool will_add    = !taxaIdsToAdd.empty();
+    bool modified    = will_delete || will_add;
+    
+    if (!modified) {
+        return false;
+    }
+    prepareForPlacement();
+    
+    if (will_delete) {
+        removeDeletedNodes(mapNameToNode, will_add);
+    }
+    if (will_add) {
+        addNewTaxaToTree(taxaIdsToAdd, "Adding new taxa to tree", "");
+        //Note: If the Sankoff cost matrix isn't wanted after placement, it
+        //      will be deallocated (switching back to regular parsimony)
+        //      in GlobalPlacementOptimizer::optimizeAfterPlacement.
+    }
+    return true;
+}
+
+void PhyloTree::identifyAddedTaxa(map<string, Node*>& mapNameToNode, 
+                                  IntVector& taxaIdsToAdd) {
+    intptr_t nseq = aln->getNSeq();                                    
     for (intptr_t seq = 0; seq < nseq; seq++) {
         string seq_name = aln->getSeqName(seq);
         auto   it       = mapNameToNode.find(seq_name);
@@ -604,6 +630,11 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
             mapNameToNode.erase(it);
         }
     }
+}
+
+void PhyloTree::ensureRootIsKept(map<string, Node*>& mapNameToNode, 
+                                 IntVector& taxaIdsToAdd) {
+    intptr_t nseq = aln->getNSeq();                                    
     auto rootInMap = mapNameToNode.find(ROOT_NAME);
     if (rootInMap != mapNameToNode.end()) {
         root     = (*rootInMap).second;
@@ -613,48 +644,33 @@ bool PhyloTree::updateToMatchAlignment(Alignment* alignment) {
         //Todo: make sure we HAVE a root, since later steps will need one.
         throw "Cannot add new taxa to unrooted tree";
     }
-    bool will_delete = !mapNameToNode.empty();
-    bool will_add    = !taxaIdsToAdd.empty();
-    bool modified    = will_delete || will_add;
+}
+
+void PhyloTree::removeDeletedNodes(map<string, Node*>& mapNameToNode, bool will_add) {
+    //Necessary, if we read in a tree that came out of a
+    //distance matrix algorithm (which might have
+    //negative branch lengths (which would bust the stuff below).
+    //Todo: figure out what happens for PhyloSuperTree here
+    //Todo: What if -fixbr is supplied.  Isn't that problematic?
     
-    if (!modified) {
-        return false;
+    //mapNameToNode now lists leaf nodes to be removed
+    //from the tree.  Remove them.
+    StrVector taxaToRemove;
+    for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
+        taxaToRemove.push_back(it->first);
     }
-    prepareForPlacement();
+    if ( !params->suppress_list_of_sequences ||
+            VerboseMode::VB_MAX <= verbose_mode ) {
+        logTaxaToBeRemoved(mapNameToNode);
+    }
+    mapNameToNode.clear();
     
-    if (will_delete) {
-        //Necessary, if we read in a tree that came out of a
-        //distance matrix algorithm (which might have
-        //negative branch lengths (which would bust the stuff below).
-        //Todo: figure out what happens for PhyloSuperTree here
-        //Todo: What if -fixbr is supplied.  Isn't that problematic?
-        
-        //mapNameToNode now lists leaf nodes to be removed
-        //from the tree.  Remove them.
-        StrVector taxaToRemove;
-        for (auto it=mapNameToNode.begin(); it!=mapNameToNode.end(); ++it) {
-            taxaToRemove.push_back(it->first);
-        }
-        if ( !params->suppress_list_of_sequences ||
-             VerboseMode::VB_MAX <= verbose_mode ) {
-            logTaxaToBeRemoved(mapNameToNode);
-        }
-        mapNameToNode.clear();
-        
-        prepareForDeletes();
-        auto countRemoved = removeTaxa(taxaToRemove, !will_add,
-                                       "Removing deleted taxa from tree");
-        //Todo: Carry out any requested "after-each-delete" local tidy-up of the tree
-        //      (via an extra parameter to removeTaxa, perhaps?)
-        doneDeletes(countRemoved, will_add);
-    }
-    if (will_add) {
-        addNewTaxaToTree(taxaIdsToAdd, "Adding new taxa to tree", "");
-        //Note: If the Sankoff cost matrix isn't wanted after placement, it
-        //      will be deallocated (switching back to regular parsimony)
-        //      in GlobalPlacementOptimizer::optimizeAfterPlacement.
-    }
-    return true;
+    prepareForDeletes();
+    auto countRemoved = removeTaxa(taxaToRemove, !will_add,
+                                    "Removing deleted taxa from tree");
+    //Todo: Carry out any requested "after-each-delete" local tidy-up of the tree
+    //      (via an extra parameter to removeTaxa, perhaps?)
+    doneDeletes(countRemoved, will_add);    
 }
 
 //Mapping names to ids
@@ -1771,7 +1787,15 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     }
 
     int64_t lh_scale_size = block_size * sizeof(double) + scale_block_size * sizeof(UBYTE);
+    getSlotCountRequired(block_size, full_mem, mem_size, lh_scale_size);
 
+    // also count MEM for nni_partial_lh
+    mem_size += (max_lh_slots+2) * lh_scale_size;
+    return mem_size;
+}
+
+void PhyloTree::getSlotCountRequired(int64_t block_size, bool full_mem,
+                                     int64_t mem_size, int64_t lh_scale_size) {
     int64_t max_leaves = leafNum;
     if (aln!=nullptr && max_leaves<static_cast<int64_t>(aln->getNSeq())+1) {
         //If -mlnj-only has been supplied, then it is possible
@@ -1785,16 +1809,18 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 
     if (!full_mem && params->lh_mem_save == LM_MEM_SAVE) {
         int64_t min_lh_slots = static_cast<int64_t>(floor(log2(max_leaves)))+LH_MIN_CONST;
-        double  fraction = (params->max_mem_is_in_bytes)
-                         ? ((double)params->max_mem_size / (double)mem_size)
-                         : params->max_mem_size;
+        double  fraction  = (params->max_mem_is_in_bytes)
+                          ? ((double)params->max_mem_size / (double)mem_size)
+                          : params->max_mem_size;
         int64_t max_bytes = (params->max_mem_is_in_bytes)
-                          ? static_cast<int64_t>(params->max_mem_size) : getMemorySize();
+                          ? static_cast<int64_t>(params->max_mem_size) 
+                          : getMemorySize();
          
         if (params->max_mem_size == 0.0) {
             max_lh_slots = min_lh_slots;
         } else if (fraction<= 1) {
-            max_lh_slots = static_cast<int64_t>(floor(fraction*(max_leaves-2)));
+            double slots_wanted = fraction*(max_leaves-2);
+            max_lh_slots = static_cast<int64_t>(floor(slots_wanted));
         } else {
             int64_t rest_mem = max_bytes - mem_size;
             
@@ -1811,7 +1837,8 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
             }
         }
         if (max_lh_slots < min_lh_slots) {
-            double newSizeInMegabytes = (mem_size + (min_lh_slots+2)*lh_scale_size)/1048576.0 ;
+            double scale_overhead     = (min_lh_slots+2)*lh_scale_size;
+            double newSizeInMegabytes = (mem_size + scale_overhead )/1048576.0 ;
             if (1<newSizeInMegabytes) {
                 hideProgress();
                 cout << "WARNING: Too low -mem, automatically increased to "
@@ -1821,11 +1848,8 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
             max_lh_slots = min_lh_slots;
         }
     }
-
-    // also count MEM for nni_partial_lh
-    mem_size += (max_lh_slots+2) * lh_scale_size;
-    return mem_size;
 }
+
 
 uint64_t PhyloTree::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
     return getMemoryRequired(ncategory, full_mem);
@@ -1870,12 +1894,8 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries,
     partial_pars_entries = (max_leaves - 1) * 4 * pars_block_size + tip_partial_pars_size;
 }
 
-void PhyloTree::determineBlockSizes() {
-
+void PhyloTree::determineParsimonyBlockSizes() {
     size_t old_pars_block_size  = pars_block_size;
-    size_t old_scale_block_size = scale_block_size;
-    size_t old_lh_block_size    = lh_block_size;
-
     // reserve the last entry for parsimony score
     // no longer: pars_block_size = (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
     if (isUsingSankoffParsimony()) {
@@ -1892,6 +1912,15 @@ void PhyloTree::determineBlockSizes() {
         pars_block_size = aln->getMaxNumStates() * uints_per_state + 1;
     }
     pars_block_size = get_safe_upper_limit_float(pars_block_size);
+    if (0 < old_pars_block_size && old_pars_block_size < pars_block_size
+        && this->central_partial_pars != nullptr) {
+        deleteAllPartialParsimony();
+    }
+}
+
+void PhyloTree::determineLikelihoodBlockSizes() {
+    size_t old_scale_block_size = scale_block_size;
+    size_t old_lh_block_size    = lh_block_size;
 
     // +num_states for ascertainment bias correction
     size_t states     = aln->num_states;
@@ -1914,10 +1943,11 @@ void PhyloTree::determineBlockSizes() {
              && this->central_partial_lh != nullptr) {
         deleteAllPartialLh();
     }
-    if (0 < old_pars_block_size && old_pars_block_size < pars_block_size
-        && this->central_partial_pars != nullptr) {
-        deleteAllPartialParsimony();
-    }
+}
+
+void PhyloTree::determineBlockSizes() {
+    determineLikelihoodBlockSizes();
+    determineParsimonyBlockSizes();
 }
 
 size_t PhyloTree::getLhBlockSize() {
