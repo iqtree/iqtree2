@@ -93,6 +93,10 @@ std::string getTreeGenerationDescription(TreeGenType gen_type) {
     }
 }
 
+void writeRandomTreeToFile(Params &params);
+void writeCircularSplitToFile(Params &params);
+void writeTaxaSetToFile(Params &params);
+
 void generateRandomTree(Params &params) {
     if (params.sub_size < 3 && !params.aln_file) {
         outError(ERR_FEW_TAXA);
@@ -102,91 +106,103 @@ void generateRandomTree(Params &params) {
     }
     ////cout << "Random number seed: " << params.ran_seed << endl << endl;
 
-    SplitGraph sg;
+    if (!overwriteFile(params.user_file.c_str())) {
+        return;
+    }
 
     try {
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
-            params.tree_gen == BALANCED || params.tree_gen == UNIFORM || 
+            params.tree_gen == BALANCED     || params.tree_gen == UNIFORM || 
             params.tree_gen == STAR_TREE) {
-            if (!overwriteFile(params.user_file.c_str())) {
-                return;
-            }
-            ofstream out;
-            out.open(params.user_file);
-            MTree itree;
-
-            if (params.second_tree) {
-                cout << "Generating random branch lengths on tree " << params.second_tree << " ..." << endl;
-                itree.readTree(params.second_tree, params.is_rooted);
-            } else {
-                std::string desc = getTreeGenerationDescription(params.tree_gen);
-                if (!desc.empty()) {
-                    cout << "Generating " << desc << "..." << endl;
-                }
-            }
-            ofstream out2;
-            if (params.num_zero_len) {
-                cout << "Setting " << params.num_zero_len << " internal branches to zero length..." << endl;
-                string str = params.user_file;
-                str += ".collapsed";
-                out2.open(str.c_str());
-            }
-            for (int i = 0; i < params.repeated_time; i++) {
-                MExtTree mtree;
-                if (itree.root) {
-                    mtree.copyTree(&itree);
-                    mtree.generateRandomBranchLengths(params);
-                } else {
-                    mtree.generateRandomTree(params.tree_gen, params);
-                }
-                if (params.num_zero_len) {
-                    mtree.setZeroInternalBranches(params.num_zero_len);
-                    MExtTree collapsed_tree;
-                    collapsed_tree.copyTree(&mtree);
-                    collapsed_tree.collapseZeroBranches();
-                    collapsed_tree.printTree(out2);
-                    out2 << endl;
-                }
-                mtree.printTree(out);
-                out << endl;
-            }
-            out.close();
-            cout << params.repeated_time << " tree(s) printed to " << params.user_file << endl;
-            if (params.num_zero_len) {
-                out2.close();
-                cout << params.repeated_time << " collapsed tree(s) printed to " << params.user_file << ".collapsed" << endl;
-            }
+            writeRandomTreeToFile(params);
         }
-        // Generate random trees if optioned
         else if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
-            cout << "Generating random circular split network..." << endl;
-            if (!overwriteFile(params.user_file.c_str())) {
-                return;
-            }
-            sg.generateCircular(params);
-        } else if (params.tree_gen == TAXA_SET) {
-            sg.init(params);
-            cout << "Generating random taxa set of size " << params.sub_size <<
-                " overlap " << params.overlap << " with " << params.repeated_time << " times..." << endl;
-            if (!overwriteFile(params.pdtaxa_file)) return;
-            sg.generateTaxaSet(params.pdtaxa_file, params.sub_size, params.overlap, params.repeated_time);
+            writeCircularSplitToFile(params);
+        }
+        else if (params.tree_gen == TAXA_SET) {
+            writeTaxaSetToFile(params);
+        }
+        else {
+            outError("Unrecognized random tree type");
         }
     } catch (bad_alloc) {
         outError(ERR_NO_MEMORY);
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, params.user_file);
     }
+}
 
-    // calculate the distance
-    if (params.run_mode == CALC_DIST) {
-        if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
-            cout << "Calculating distance matrix..." << endl;
-            sg.calcDistance(params.dist_file);
-            cout << "Distances printed to " << params.dist_file << endl;
-        }// else {
-            //mtree.calcDist(params.dist_file);
-        //}
+void writeRandomTreeToFile(Params &params) {
+    //Note: caller catches exceptions
+    ofstream out;
+    out.open(params.user_file);
+    MTree itree;
+
+    if (params.second_tree) {
+        cout << "Generating random branch lengths on tree " 
+             << params.second_tree << " ..." << endl;
+        itree.readTree(params.second_tree, params.is_rooted);
+    } else {
+        std::string desc = getTreeGenerationDescription(params.tree_gen);
+        if (!desc.empty()) {
+            cout << "Generating " << desc << "..." << endl;
+        }
     }
+    ofstream out2;
+    if (params.num_zero_len) {
+        cout << "Setting " << params.num_zero_len 
+                << " internal branches to zero length..." << endl;
+        string str = params.user_file;
+        str += ".collapsed";
+        out2.open(str.c_str());
+    }
+    for (int i = 0; i < params.repeated_time; i++) {
+        MExtTree mtree;
+        if (itree.root) {
+            mtree.copyTree(&itree);
+            mtree.generateRandomBranchLengths(params);
+        } else {
+            mtree.generateRandomTree(params.tree_gen, params);
+        }
+        if (params.num_zero_len) {
+            mtree.setZeroInternalBranches(params.num_zero_len);
+            MExtTree collapsed_tree;
+            collapsed_tree.copyTree(&mtree);
+            collapsed_tree.collapseZeroBranches();
+            collapsed_tree.printTree(out2);
+            out2 << endl;
+        }
+        mtree.printTree(out);
+        out << endl;
+    }
+    out.close();
+    cout << params.repeated_time << " tree(s) printed to " 
+            << params.user_file << endl;
+    if (params.num_zero_len) {
+        out2.close();
+        cout << params.repeated_time << " collapsed tree(s) printed to " 
+                << params.user_file << ".collapsed" << endl;
+    }
+}
+
+void writeCircularSplitToFile(Params& params) {
+    SplitGraph sg;
+    cout << "Generating random circular split network..." << endl;
+    sg.generateCircular(params);
+    if (params.run_mode == CALC_DIST) {
+        // calculate the distance
+        cout << "Calculating distance matrix..." << endl;
+        sg.calcDistance(params.dist_file);
+        cout << "Distances printed to " << params.dist_file << endl;
+    }
+}
+
+void writeTaxaSetToFile(Params& params) {
+    SplitGraph sg;
+    sg.init(params);
+    cout << "Generating random taxa set of size " << params.sub_size <<
+        " overlap " << params.overlap << " with " << params.repeated_time << " times..." << endl;
+    sg.generateTaxaSet(params.pdtaxa_file, params.sub_size, params.overlap, params.repeated_time);
 }
 
 inline void separator(ostream &out, int type = 0) {
