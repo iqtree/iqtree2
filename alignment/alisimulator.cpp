@@ -564,10 +564,7 @@ void AliSimulator::getStateFrequenciesFromModel(IQTree* tree, double *state_freq
         
         // if sequence_type is dna -> randomly generate base frequencies based on empirical distributions
         if (tree->aln->seq_type == SEQ_DNA)
-        {
-            RandomDistribution rd;
-            rd.random_base_frequencies(state_freqs);
-        }
+            random_frequencies_from_distributions(state_freqs);
         // otherwise, randomly generate base frequencies based on uniform distribution
         else
             generateRandomBaseFrequencies(state_freqs, tree->aln->getMaxNumStates());
@@ -1169,10 +1166,7 @@ void AliSimulator::intializeStateFreqsMixtureModel(IQTree* tree)
             {
                 // if sequence_type is dna -> randomly generate base frequencies based on empirical distributions
                 if (tree->aln->seq_type == SEQ_DNA)
-                {
-                    RandomDistribution rd;
-                    rd.random_base_frequencies(state_freq);
-                }
+                    random_frequencies_from_distributions(state_freq);
                 // otherwise, randomly generate base frequencies based on uniform distribution
                 else
                     generateRandomBaseFrequencies(state_freq, max_num_states);

@@ -4832,10 +4832,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                 }
                 // otherwise, randomly generate ntfreq based on empirical distribution
                 else
-                {
-                    RandomDistribution rd;
-                    rd.random_base_frequencies(ntfreq);
-                }
+                    random_frequencies_from_distributions(ntfreq);
                 
                 // cache ntfreq for using later
                 cache_ntfreq = new double[4];
@@ -4935,8 +4932,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     // repeatively generate a set of frequencies for each codon position
                     for (int i = 0; i<3; i++)
                     {
-                        RandomDistribution rd;
-                        rd.random_base_frequencies(tmp_freqs);
+                        random_frequencies_from_distributions(tmp_freqs);
                         
                         // copy the current set of frequencies to ntfreq
                         for (int j = 0; j < 4; j++)

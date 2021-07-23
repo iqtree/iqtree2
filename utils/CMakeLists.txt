@@ -4,7 +4,6 @@ gzstream.cpp gzstream.h
 optimization.cpp optimization.h
 stoprule.cpp stoprule.h
 tools.cpp tools.h
-randomdistribution.cpp randomdistribution.h
 pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h

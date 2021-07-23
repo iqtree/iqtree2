@@ -2490,6 +2490,13 @@ int main(int argc, char *argv[]) {
     version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
+    
+    // load distributions from built-in file and user-specified file
+    // load distributions from built-in file
+    read_distributions();
+    // load distributions from user-specified file
+    if (Params::getInstance().alisim_distribution_definitions)
+        read_distributions(Params::getInstance().alisim_distribution_definitions);
 
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
         if (Params::getInstance().aln_file || Params::getInstance().partition_file) {

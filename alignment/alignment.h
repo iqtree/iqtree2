@@ -17,7 +17,6 @@
 #include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
-#include "utils/randomdistribution.h"
 
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;

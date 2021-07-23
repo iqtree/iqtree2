@@ -385,8 +385,7 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
         case FREQ_ESTIMATE:
         case FREQ_EMPIRICAL:
         {
-            RandomDistribution rd;
-            rd.random_base_frequencies(state_freq);
+            random_frequencies_from_distributions(state_freq);
             break;
         }
         case FREQ_DNA_1212:

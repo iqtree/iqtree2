@@ -143,6 +143,10 @@ namespace __gnu_cxx {
 } // namespace
 #endif // USE_HASH_MAP
 
+struct Distribution {
+  string random_numbers_str;
+  int pool_size;
+} ;
 
 class Linear {
 public:
@@ -2322,11 +2326,6 @@ public:
     char* alisim_distribution_definitions;
     
     /**
-    *  state-specific distributions
-    */
-    string alisim_state_specific_distributions;
-    
-    /**
     *  TRUE to skip checking the memory capacity for large mixture models
     */
     bool alisim_skip_checking_memory;
@@ -2335,6 +2334,11 @@ public:
     *  TRUE to write sequences of internal nodes
     */
     bool alisim_write_internal_sequences;
+    
+    /**
+    *  list of distributions to generate random numbers
+    */
+    map<string, Distribution> distributions;
 };
 
 /**
@@ -2651,6 +2655,38 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size);
 void convert_range(const char *str, double &lower, double &upper, double &step_size);
 
 void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',');
+
+/**
+        read distributions from built-in string or user-specified file
+ */
+
+void read_distributions(char* filepath = NULL);
+
+/**
+        randomly select a number from the pool of random numbers of a distribution
+        @param distribution_name storing name of distribution
+ */
+double random_number_from_distribution(string distribution_name);
+
+/**
+        initialize a number by converting string to double (if the user supplies a number) or randomly generating it from a distribution (if the user supplies a distribution name)
+        @param input storing a number or a distribution name
+ */
+double initialize_number_from_number_or_distribution(string input);
+
+/**
+       check whether a string is a number
+        @param s storing a string
+ */
+bool is_number(const string& s);
+
+/**
+        randomly generate the (nucleotide) frequencies from empirical (built-in) distributions
+        @param freqs storing the output base frequencies
+        @param list_distribution_names specifying a list of distributions corresponding for each state
+        @param num_states the number of states
+ */
+void random_frequencies_from_distributions(double *freqs, int num_states = 4, string list_distribution_names = "Generalized_logistic,Exponential_normal,Power_log_normal,Exponential_Weibull");
 
 /**
     change unusual character in names into underscore (_)

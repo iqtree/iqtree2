@@ -9,7 +9,6 @@
 #define MODELLIEMARKOV_H_
 
 #include "modelmarkov.h"
-#include "utils/randomdistribution.h"
 
 class ModelLieMarkov: public ModelMarkov {
 public:
