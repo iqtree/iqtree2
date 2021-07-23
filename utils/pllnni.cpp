@@ -429,6 +429,8 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr,
 					<< " / Applying " << numNNI << " NNIs give logl: "
 					<< tr->likelihood << " (worse than best)";
 			cout << " / Roll back tree ... " << endl;
+
+			/* Only apply the best NNI after the tree has been rolled back */
 			//restoreTL(rl, tr, 0, pr->perGeneBranchLengths 
 			//                     ? pr->numberOfPartitions : 1);
 			if (!restoreTree(curTree, tr, pr)) {
@@ -444,8 +446,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr,
 			//cout << "Number of NNIs reduced to " << numNNI 
 			//     << ": " << tr->likelihood << endl;
 
-			/* Only apply the best NNI after the tree has been rolled back */
-			searchinfo.curNumAppliedNNIs = numNNI;
+			searchinfo.curNumAppliedNNIs = 1;
 		}
 	}
 	if (tr->likelihood - initLH < 0.1) {
@@ -533,7 +534,11 @@ void pllOptimizeOneBranch(pllInstance *tr, partitionList *pr, nodeptr p) {
     #endif
 }
 
-double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
+void optimizeOtherFourBranchesAfterNNI(pllInstance *tr, partitionList *pr,
+                                       nodeptr p, nodeptr q, int numBranches);
+
+double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, 
+                int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
 	ASSERT(swap == 0 || swap == 1);
 	nodeptr q;
 	nodeptr tmp;
@@ -579,69 +584,82 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     }
     // Optimize 4 other branches
     if (nni_type == NNI5) {
-        if (numBranches > 1 && !tr->useRecom) {
-            pllUpdatePartials(tr, pr, q, PLL_TRUE);
-        } else {
-            pllUpdatePartials(tr, pr, q, PLL_FALSE);
-        }
-        nodeptr r;
-        r = p->next;
-        if (numBranches > 1 && !tr->useRecom) {
-            pllUpdatePartials(tr, pr, r, PLL_TRUE);
-        } else {
-            pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        }
-        pllOptimizeOneBranch(tr, pr, r);
-//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
-//        if (tr->likelihood > searchinfo->curLogl) {
-//            return tr->likelihood;
-//        }
-        r = p->next->next;
-        if (numBranches > 1 && !tr->useRecom)
-            pllUpdatePartials(tr, pr, r, PLL_TRUE);
-        else
-            pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        pllOptimizeOneBranch(tr, pr, r);
-//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
-//        if (tr->likelihood > searchinfo->curLogl) {
-//            return tr->likelihood;
-//        }
-        if (numBranches > 1 && !tr->useRecom)
-            pllUpdatePartials(tr, pr, p, PLL_TRUE);
-        else
-            pllUpdatePartials(tr, pr, p, PLL_FALSE);
-        pllOptimizeOneBranch(tr, pr, p);
-//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
-//        if (tr->likelihood > searchinfo->curLogl) {
-//            return tr->likelihood;
-//        }
-        // optimize 2 branches at node q
-        r = q->next;
-        if (numBranches > 1 && !tr->useRecom)
-            pllUpdatePartials(tr, pr, r, PLL_TRUE);
-        else
-            pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        pllOptimizeOneBranch(tr, pr, r);
-//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
-//        if (tr->likelihood > searchinfo->curLogl) {
-//            return tr->likelihood;
-//        }
-        r = q->next->next;
-        if (numBranches > 1 && !tr->useRecom)
-            pllUpdatePartials(tr, pr, r, PLL_TRUE);
-        else
-            pllUpdatePartials(tr, pr, r, PLL_FALSE);
-        pllOptimizeOneBranch(tr, pr, r);
-        if((globalParams->online_bootstrap == PLL_TRUE) &&
-                        (globalParams->gbo_replicates > 0)){
-            tr->fastScaling = PLL_FALSE;
-            pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
-            pllSaveCurrentTree(tr, pr, r);
-        }else{
-            pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
-        }
+		optimizeOtherFourBranchesAfterNNI(tr, pr, p, q, numBranches);
     }
 	return tr->likelihood;
+}
+
+void optimizeOtherFourBranchesAfterNNI(pllInstance *tr, partitionList *pr,
+                                       nodeptr p, nodeptr q, int numBranches) {
+	if (numBranches > 1 && !tr->useRecom) {
+		pllUpdatePartials(tr, pr, q, PLL_TRUE);
+	} else {
+		pllUpdatePartials(tr, pr, q, PLL_FALSE);
+	}
+	nodeptr r;
+	r = p->next;
+	if (numBranches > 1 && !tr->useRecom) {
+		pllUpdatePartials(tr, pr, r, PLL_TRUE);
+	} else {
+		pllUpdatePartials(tr, pr, r, PLL_FALSE);
+	}
+	pllOptimizeOneBranch(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
+	r = p->next->next;
+	if (numBranches > 1 && !tr->useRecom) {
+		pllUpdatePartials(tr, pr, r, PLL_TRUE);
+	}
+	else {
+		pllUpdatePartials(tr, pr, r, PLL_FALSE);
+	}
+	pllOptimizeOneBranch(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
+	if (numBranches > 1 && !tr->useRecom) {
+		pllUpdatePartials(tr, pr, p, PLL_TRUE);
+	}
+	else {
+		pllUpdatePartials(tr, pr, p, PLL_FALSE);
+	}
+	pllOptimizeOneBranch(tr, pr, p);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
+	// optimize 2 branches at node q
+	r = q->next;
+	if (numBranches > 1 && !tr->useRecom) {
+		pllUpdatePartials(tr, pr, r, PLL_TRUE);
+	}
+	else {
+		pllUpdatePartials(tr, pr, r, PLL_FALSE);
+	}
+	pllOptimizeOneBranch(tr, pr, r);
+//        pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_FALSE);
+//        if (tr->likelihood > searchinfo->curLogl) {
+//            return tr->likelihood;
+//        }
+	r = q->next->next;
+	if (numBranches > 1 && !tr->useRecom) {
+		pllUpdatePartials(tr, pr, r, PLL_TRUE);
+	}
+	else {
+		pllUpdatePartials(tr, pr, r, PLL_FALSE);
+	}
+	pllOptimizeOneBranch(tr, pr, r);
+	if((globalParams->online_bootstrap == PLL_TRUE) &&
+					(globalParams->gbo_replicates > 0)){
+		tr->fastScaling = PLL_FALSE;
+		pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
+		pllSaveCurrentTree(tr, pr, r);
+	} else {
+		pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_FALSE);
+	}
 }
 
 double estBestLoglImp(SearchInfo* searchinfo) {
