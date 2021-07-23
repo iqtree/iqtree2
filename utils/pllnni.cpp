@@ -939,6 +939,10 @@ public:
 	}
 };
 
+void pllDoOnlineBootstrapAfterSave(double *pattern_lh, pllBoolean& is_stored,
+                                   unsigned int& tree_index,
+						 		   TempStringCopy& tree_str,
+								   TempInstancePointer<pllHashItem>& item_ptr);
 
 /**
 * DTH:
@@ -1023,6 +1027,19 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		free(item_ptr->data); //James B. 23-Jul-2020 (memory leak)
 		return;
 	}
+
+	pllDoOnlineBootstrapAfterSave(pattern_lh, is_stored, 
+	                              tree_index, tree_str, item_ptr);
+
+	free(pattern_lh);
+	free(item_ptr->data); //James B. 14-Jan-2021 (memory leak)
+	pllUFBootDataPtr->treels_ptnlh[tree_index] = nullptr;
+}
+
+void pllDoOnlineBootstrapAfterSave(double *pattern_lh, pllBoolean& is_stored,
+                                   unsigned int& tree_index,
+								   TempStringCopy& tree_str,
+								   TempInstancePointer<pllHashItem>& item_ptr) {
 	// online bootstrap
 	int nptn = pllUFBootDataPtr->n_patterns;
 	int updated = 0;
@@ -1058,10 +1075,8 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 					updated++;
 		}
 	}
-	free(pattern_lh);
-	free(item_ptr->data); //James B. 14-Jan-2021 (memory leak)
-	pllUFBootDataPtr->treels_ptnlh[tree_index] = nullptr;
 }
+
 
 /**
 * DTH:
