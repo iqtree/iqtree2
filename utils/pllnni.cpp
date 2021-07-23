@@ -915,6 +915,31 @@ public:
 	}
 };
 
+class TempStringCopy {
+	char* value;
+public:
+	TempStringCopy() = delete;
+	TempStringCopy(const char* original) {
+		auto len = strlen(original);
+		value    = (char*)malloc(len+1); //+1 for null terminator
+		memcpy(value, original, len+1);
+	}
+	~TempStringCopy() {
+		if (value!=nullptr) {
+			free(value);
+		}
+	} 
+	char* detach() {
+		char* detached_value = value;
+		value = nullptr;
+		return detached_value;
+	}
+	operator const char*() const {
+		return value;
+	}
+};
+
+
 /**
 * DTH:
 * The PLL version of saveCurrentTree function
@@ -923,32 +948,6 @@ public:
 * @param p: root?
 */
 void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
-
-	class TempStringCopy {
-		char* value;
-	public:
-		TempStringCopy() = delete;
-		TempStringCopy(const char* original) {
-			auto len = strlen(original);
-			value    = (char*)malloc(len+1); //+1 for null terminator
-			memcpy(value, original, len+1);
-		}
-		~TempStringCopy() {
-			if (value!=nullptr) {
-				free(value);
-			}
-		} 
-		char* detach() {
-			char* detached_value = value;
-			value = nullptr;
-			return detached_value;
-		}
-		operator const char*() const {
-			return value;
-		}
-	};
-
-
 
     double cur_logl = tr->likelihood;
 	TempInstancePointer<pllHashItem> item_ptr;
@@ -967,14 +966,17 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
         pllUFBootDataPtr->duplication_counter++;
         tree_index = *((int *)item_ptr->data);
         if (cur_logl <= pllUFBootDataPtr->treels_logl[tree_index] + 1e-4) {
-            if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0)
-                if (verbose_mode >= VerboseMode::VB_MED)
+            if (cur_logl < pllUFBootDataPtr->treels_logl[tree_index] - 5.0) {
+                if (verbose_mode >= VerboseMode::VB_MED) {
                     printf("Current lh %f is much worse than expected %f\n",
                             cur_logl, pllUFBootDataPtr->treels_logl[tree_index]);
+				}
+			}
 			return;
         }
 		if (verbose_mode >= VerboseMode::VB_MAX) {
-			printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
+			printf("Updated logl %f to %f\n", 
+			       pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
 		}
         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
@@ -989,11 +991,13 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 		}
 
     } else {
-		if (pllUFBootDataPtr->logl_cutoff != 0.0 && cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
+		if (pllUFBootDataPtr->logl_cutoff != 0.0 && 
+		    cur_logl <= pllUFBootDataPtr->logl_cutoff + 1e-4){
 			free(item_ptr->data); //James B. 23-Jul-2020 (memory leak)
 			return;
 		}
-		if (pllUFBootDataPtr->treels_size == pllUFBootDataPtr->candidate_trees_count) {
+		if (pllUFBootDataPtr->treels_size == 
+		    pllUFBootDataPtr->candidate_trees_count) {
 			pllResizeUFBootData();
 		}
 		tree_index = pllUFBootDataPtr->candidate_trees_count;
@@ -1111,6 +1115,14 @@ void pllResizeUFBootData(){
 }
 
 
+void pllTree2StringLengthAndSupport(pllInstance*   tr, 
+                                    partitionList* pr, nodeptr p,
+									pllBoolean     printBranchLengths,
+                                    pllBoolean     rellTree, 
+									pllBoolean     branchLabelSupport, 
+									pllBoolean     printSHSupport, 
+									char*          treestr);
+
 /**
 * DTH:
 * (Based on function Tree2StringREC of PLL)
@@ -1119,67 +1131,98 @@ void pllResizeUFBootData(){
 * 2014.4.23: REPLACE getBranchLength(tr, pr, perGene, p) BY pllGetBranchLength(tr, p, pr->numberOfPartitions)
 * BECAUSE OF LIB NEW DECLARATION: pllGetBranchLength (pllInstance *tr, nodeptr p, int partition_id);
 */
-char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean  printBranchLengths, pllBoolean  printNames,
-		pllBoolean  printLikelihood, pllBoolean  rellTree, pllBoolean  finalPrint, int perGene, pllBoolean  branchLabelSupport, pllBoolean  printSHSupport)
+char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, 
+                        nodeptr p, pllBoolean printBranchLengths, 
+						pllBoolean  printNames, pllBoolean  printLikelihood, 
+						pllBoolean  rellTree, pllBoolean  finalPrint, 
+						int perGene, pllBoolean  branchLabelSupport, 
+						pllBoolean  printSHSupport)
 {
-	char * result = treestr; // DTH: added this var to be able to remove the '\n' at the end
-	char  *nameptr;
-
 	if(isTip(p->number, tr->mxtips)){
 		if(printNames){
-			nameptr = tr->nameList[p->number];
+			char* nameptr = tr->nameList[p->number];
 			sprintf(treestr, "%s", nameptr);
 		}else
 			sprintf(treestr, "%d", p->number - 1);
 
 		while (*treestr) treestr++;
-	}else{
+	} else {
 		*treestr++ = '(';
-		treestr = pllTree2StringREC(treestr, tr, pr, p->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
-				finalPrint, perGene, branchLabelSupport, printSHSupport);
+		treestr = pllTree2StringREC(treestr, tr, pr, p->next->back, 
+		                            printBranchLengths, printNames, 
+									printLikelihood, rellTree,
+				                    finalPrint, perGene, 
+									branchLabelSupport, printSHSupport);
 		*treestr++ = ',';
-		treestr = pllTree2StringREC(treestr, tr, pr, p->next->next->back, printBranchLengths, printNames, printLikelihood, rellTree,
-				finalPrint, perGene, branchLabelSupport, printSHSupport);
+		treestr = pllTree2StringREC(treestr, tr, pr, p->next->next->back, 
+		                            printBranchLengths, printNames, 
+									printLikelihood, rellTree,
+									finalPrint, perGene, 
+									branchLabelSupport, printSHSupport);
 		if(p == tr->start->back){
 			*treestr++ = ',';
-			treestr = pllTree2StringREC(treestr, tr, pr, p->back, printBranchLengths, printNames, printLikelihood, rellTree,
-				finalPrint, perGene, branchLabelSupport, printSHSupport);
+			treestr = pllTree2StringREC(treestr, tr, pr, p->back, 
+			                            printBranchLengths, printNames, 
+										printLikelihood, rellTree,
+										finalPrint, perGene, 
+										branchLabelSupport, printSHSupport);
 		}
 		*treestr++ = ')';
 	}
 
 	if(p == tr->start->back){
-		if(printBranchLengths && !rellTree)
-			sprintf(treestr, ":0.0;\n");
-		else
-			sprintf(treestr, ";\n");
-	}else{
-		if(rellTree || branchLabelSupport || printSHSupport){
-			if(( !isTip(p->number, tr->mxtips)) &&
-					( !isTip(p->back->number, tr->mxtips)))
-			{
-				ASSERT(p->bInf != (branchInfo *)NULL);
-				if(rellTree)
-					sprintf(treestr, "%d:%8.20f", p->bInf->support, p->z[0]);
-				if(branchLabelSupport)
-					sprintf(treestr, ":%8.20f[%d]", p->z[0], p->bInf->support);
-				if(printSHSupport)
-					sprintf(treestr, ":%8.20f[%d]", pllGetBranchLength(tr, p, pr->numberOfPartitions), p->bInf->support);
-			}else{
-				if(rellTree || branchLabelSupport)
-					sprintf(treestr, ":%8.20f", p->z[0]);
-				if(printSHSupport)
-					sprintf(treestr, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
-			}
-		}else{
-			if(printBranchLengths)
-				sprintf(treestr, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
-			else
-				sprintf(treestr, "%s", "\0");
+		//The dummy branch from the root node
+		if(printBranchLengths && !rellTree) {
+			sprintf(treestr, ":0.0;");
+		}
+		else {
+			sprintf(treestr, ";");
 		}
 	}
+	else {
+		//Some other branch
+		pllTree2StringLengthAndSupport(tr, pr, p, printBranchLengths, 
+					   				   rellTree, branchLabelSupport, 
+									   printSHSupport, treestr);
+	}
+	return treestr + strlen(treestr);
+}
 
-	if(result[strlen(result) - 1] == '\n') result[strlen(result) - 1] = '\0';
-	while (*treestr) treestr++;
-	return  treestr;
+void pllTree2StringLengthAndSupport(pllInstance*   tr, 
+                                    partitionList* pr, nodeptr p,
+									pllBoolean     printBranchLengths,
+                                    pllBoolean     rellTree, 
+									pllBoolean     branchLabelSupport, 
+									pllBoolean     printSHSupport, 
+									char*          treestr) {
+	if(rellTree || branchLabelSupport || printSHSupport) {
+		if(( !isTip(p->number, tr->mxtips)) &&
+				( !isTip(p->back->number, tr->mxtips)))
+		{
+			ASSERT(p->bInf != (branchInfo *)NULL);
+			if(rellTree)
+				sprintf(treestr, "%d:%8.20f", p->bInf->support, p->z[0]);
+			if(branchLabelSupport)
+				sprintf(treestr, ":%8.20f[%d]", p->z[0], p->bInf->support);
+			if(printSHSupport)
+				sprintf(treestr, ":%8.20f[%d]", 
+						pllGetBranchLength(tr, p, pr->numberOfPartitions), 
+						p->bInf->support);
+		} else {
+			if(rellTree || branchLabelSupport) {
+				sprintf(treestr, ":%8.20f", p->z[0]);
+			}
+			if(printSHSupport) {
+				sprintf(treestr, ":%8.20f", 
+						pllGetBranchLength(tr, p, pr->numberOfPartitions));
+			}
+		}
+	} 
+	else if (printBranchLengths) {
+		sprintf(treestr, ":%8.20f", 
+				pllGetBranchLength(tr, p, pr->numberOfPartitions));
+	}
+	else {
+		*treestr = '\0';
+	}
 }
