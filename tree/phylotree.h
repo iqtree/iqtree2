@@ -2150,6 +2150,11 @@ public:
         convert from rooted to unrooted tree
     */
     void convertToUnrooted();
+    
+    /**
+        force converting from rooted to unrooted tree
+    */
+    void forceConvertingToUnrooted();
 
 
 	/**

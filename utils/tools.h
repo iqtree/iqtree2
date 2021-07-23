@@ -2330,6 +2330,11 @@ public:
     *  TRUE to skip checking the memory capacity for large mixture models
     */
     bool alisim_skip_checking_memory;
+    
+    /**
+    *  TRUE to write sequences of internal nodes
+    */
+    bool alisim_write_internal_sequences;
 };
 
 /**

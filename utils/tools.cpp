@@ -1127,6 +1127,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_distribution_definitions = NULL;
     params.alisim_state_specific_distributions = "Generalized_logistic,Exponential_normal,Power_log_normal,Exponential_Weibull";
     params.alisim_skip_checking_memory = false;
+    params.alisim_write_internal_sequences = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2188,6 +2189,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "--skip-checking-memory") == 0) {
                 params.alisim_skip_checking_memory = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--write-all") == 0) {
+                params.alisim_write_internal_sequences = true;
                 continue;
             }
 			if (strcmp(argv[cnt], "-st") == 0 || strcmp(argv[cnt], "--seqtype") == 0) {

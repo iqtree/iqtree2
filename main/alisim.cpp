@@ -464,6 +464,16 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
         ancestral_sequence = retrieveAncestralSequenceFromInputFile(super_alisimulator);
     
+    // show a warning if the user wants to write internal sequences in not-supported cases
+    if (super_alisimulator->params->alisim_write_internal_sequences
+        &&(inference_mode
+           || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+           || super_alisimulator->tree->isSuperTree()))
+    {
+        outWarning("Could not write out the internal sequences when using partition models, or inference mode, or ASC. Only sequences at tips will be written to the output file.");
+        super_alisimulator->params->alisim_write_internal_sequences = false;
+    }
+    
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
@@ -838,6 +848,8 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vec
             {
                 // add padding to node_name
                 string name_with_padding = node->name;
+                // write node's id if node's name is empty
+                if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
                 ASSERT(max_length_taxa_name >= name_with_padding.length());
                 std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
                 name_with_padding += padding;
@@ -845,7 +857,12 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vec
             }
             // in FASTA format
             else
-                output = ">" + node->name + "\n" + output;
+            {
+                string node_name = node->name;
+                // write node's id if node's name is empty
+                if (node_name.length() == 0) node_name = convertIntToString(node->id);
+                output = ">" + node_name + "\n" + output;
+            }
             output[output.length()-1] = '\n';
             
             // convert non-empty sequence
@@ -889,6 +906,8 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
             {
                 // add padding to node_name
                 string name_with_padding = node->name;
+                // write node's id if node's name is empty
+                if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
                 ASSERT(max_length_taxa_name >= name_with_padding.length());
                 std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
                 name_with_padding += padding;
@@ -898,8 +917,11 @@ void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<st
             // in FASTA format
             else
             {
-                output = ">" + node->name + "\n" + output;
-                start_index = node->name.length() + 2;
+                string node_name = node->name;
+                // write node's id if node's name is empty
+                if (node_name.length() == 0) node_name = convertIntToString(node->id);
+                output = ">" + node_name + "\n" + output;
+                start_index = node_name.length() + 2;
             }
             output[output.length()-1] = '\n';
             

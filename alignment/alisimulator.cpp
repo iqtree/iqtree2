@@ -732,7 +732,14 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     node->num_children_done_simulation++;
     // remove the sequence of the current node to release the memory
     if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
+    {
+        // convert numerical states into readable characters and write internal sequences to file if the user want to do so
+        if (params->alisim_write_internal_sequences && state_mapping.size() > 0)
+            out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+        
+        // release the memory
         vector<short int>().swap(node->sequence);
+    }
 }
 
 /**
@@ -866,6 +873,13 @@ void AliSimulator::estimateLengthRatio()
                 for (int j = 0; j < num_sites_per_state; j++)
                     all_characters[i*num_sites_per_state+j] = characters_from_state[j];
             }
+            
+            // convert tree to unrooted tree if it's now rooted
+            if (tree->rooted)
+            {
+                outWarning("The input tree is now converting into unrooted tree.");
+                tree->PhyloTree::forceConvertingToUnrooted();
+            }
            
             // initialize sequences (a dummy alignment with all sequences are set to all_characters)
             StrVector sequences;
@@ -874,7 +888,7 @@ void AliSimulator::estimateLengthRatio()
             for (int i = 0; i < nseq; i++)
                 sequences[i] = all_characters;
             
-            // build al constant site patterns
+            // build all constant site patterns
             char *sequence_type = strcpy(new char[tree->aln->sequence_type.length() + 1], tree->aln->sequence_type.c_str());
             tree->aln->buildPattern(sequences, sequence_type, nseq, nsite*num_sites_per_state);
             
@@ -943,6 +957,8 @@ string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, in
     {
         // add padding to node_name
         string name_with_padding = node->name;
+        // write node's id if node's name is empty
+        if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
         ASSERT(max_length_taxa_name >= name_with_padding.length());
         std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
         name_with_padding += padding;
@@ -952,8 +968,11 @@ string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, in
     // in FASTA format
     else
     {
-        output = ">" + node->name + "\n" + output;
-        start_index = node->name.length() + 2;
+        string node_name = node->name;
+        // write node's id if node's name is empty
+        if (node_name.length() == 0) node_name = convertIntToString(node->id);
+        output = ">" + node_name + "\n" + output;
+        start_index = node_name.length() + 2;
     }
     output[output.length()-1] = '\n';
     
