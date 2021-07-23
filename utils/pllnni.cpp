@@ -304,14 +304,84 @@ void pllSaveAllQuartet(pllInstance *tr, SearchInfo &searchinfo) {
 }
 */
 
-double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo) {
-	double initLH = tr->likelihood;
-	double finalLH = initLH;
-	vector<pllNNIMove> selectedNNIs;
-	unordered_set<int> selectedNodes;
-    int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
-	/* data structure to store the initial tree topology + branch length */
+void identifyNonConflictingNNIMoves(SearchInfo &searchinfo,
+                                    vector<pllNNIMove>& selectedNNIs) {
+	unordered_set<int> selectedNodes;
+	sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), 
+	     comparePLLNNIMove);
+	if (verbose_mode >= VerboseMode::VB_DEBUG) {
+		cout << "curScore: "  << searchinfo.curLogl << endl;
+		for (int i = 0; i < searchinfo.posNNIList.size(); i++) {
+			cout << "Logl of positive NNI " << i << " : "
+			     << searchinfo.posNNIList[i].likelihood << endl;
+		}
+	}
+	for (auto rit = searchinfo.posNNIList.rbegin(); 
+	     rit != searchinfo.posNNIList.rend(); ++rit) {
+		if (selectedNodes.find((*rit).p->number) == selectedNodes.end() && 
+			selectedNodes.find((*rit).p->back->number) == selectedNodes.end()) {
+			selectedNNIs.push_back((*rit));
+			selectedNodes.insert((*rit).p->number);
+			selectedNodes.insert((*rit).p->back->number);
+		} else {
+			continue;
+		}
+	}
+}
+
+void applyNNIMoves(vector<pllNNIMove>& selectedNNIs,
+                   pllInstance* tr, partitionList *pr,
+				   SearchInfo &searchinfo, int numBranches) {
+	for (auto it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
+		/* do the topological change */
+		doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
+		if (globalParams->speednni) {
+			StrVector aBranches = getAffectedBranches(tr, (*it).p);
+			searchinfo.aBranches.insert(aBranches.begin(), aBranches.end());
+		}
+		updateBranchLengthForNNI(tr, pr, (*it));
+		if (numBranches > 1 && !tr->useRecom) {
+			pllUpdatePartials(tr, pr, (*it).p, PLL_TRUE);
+			pllUpdatePartials(tr, pr, (*it).p->back, PLL_TRUE);
+		} else {
+			pllUpdatePartials(tr, pr, (*it).p, PLL_FALSE);
+			pllUpdatePartials(tr, pr, (*it).p->back, PLL_FALSE);
+		}
+	}
+}
+
+void applyOnlyTheLastNNI(vector<pllNNIMove>& selectedNNIs,
+                         pllInstance* tr, partitionList *pr,
+						 int numBranches) {
+	int count = 1;
+	for (auto rit = selectedNNIs.rbegin(); 
+			  rit != selectedNNIs.rend(); ++rit) {
+		doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
+		updateBranchLengthForNNI(tr, pr, (*rit));
+		if (numBranches > 1 && !tr->useRecom) {
+			pllUpdatePartials(tr, pr, (*rit).p, PLL_TRUE);
+			pllUpdatePartials(tr, pr, (*rit).p->back, PLL_TRUE);
+		} else {
+			pllUpdatePartials(tr, pr, (*rit).p, PLL_FALSE);
+			pllUpdatePartials(tr, pr, (*rit).p->back, PLL_FALSE);
+		}
+		--count;
+		if (count == 0) {
+			break;
+		}
+	}
+}
+
+double pllDoNNISearch(pllInstance* tr, partitionList *pr, 
+                      SearchInfo &searchinfo) {
+	double initLH   = tr->likelihood;
+	double finalLH  = initLH;
+    int numBranches = pr->perGeneBranchLengths 
+	                ? pr->numberOfPartitions : 1;
+
+	/* data structure to store the initial tree topology
+	   + branch length */
 	topol* curTree = _setupTopol(tr);
 	saveTree(tr, curTree, numBranches);
 
@@ -323,98 +393,65 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	}
 
 	/* apply non-conflicting positive NNIs */
-	if (searchinfo.posNNIList.size() != 0) {
-		sort(searchinfo.posNNIList.begin(), searchinfo.posNNIList.end(), comparePLLNNIMove);
-        if (verbose_mode >= VerboseMode::VB_DEBUG) {
-        	cout << "curScore: "  << searchinfo.curLogl << endl;
-            for (int i = 0; i < searchinfo.posNNIList.size(); i++) {
-                cout << "Logl of positive NNI " << i << " : " << searchinfo.posNNIList[i].likelihood << endl;
-            }
-        }
-		for (vector<pllNNIMove>::reverse_iterator rit = searchinfo.posNNIList.rbegin(); rit != searchinfo.posNNIList.rend(); ++rit) {
-			if (selectedNodes.find((*rit).p->number) == selectedNodes.end() && selectedNodes.find((*rit).p->back->number) == selectedNodes.end()) {
-				selectedNNIs.push_back((*rit));
-				selectedNodes.insert((*rit).p->number);
-				selectedNodes.insert((*rit).p->back->number);
-			} else {
-				continue;
-			}
-		}
+	if (searchinfo.posNNIList.size() == 0) {
+		searchinfo.curNumAppliedNNIs = 0;
+		return finalLH;
+	}
 
-		/* Applying all independent NNI moves */
-		searchinfo.curNumAppliedNNIs = static_cast<int>(selectedNNIs.size());
-		for (auto it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
-			/* do the topological change */
-			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
-			if (globalParams->speednni) {
-				StrVector aBranches = getAffectedBranches(tr, (*it).p);
-				searchinfo.aBranches.insert(aBranches.begin(), aBranches.end());
+	vector<pllNNIMove> selectedNNIs;
+	identifyNonConflictingNNIMoves(searchinfo, selectedNNIs);
+
+	/* Applying all independent NNI moves */
+	searchinfo.curNumAppliedNNIs = static_cast<int>(selectedNNIs.size());
+	applyNNIMoves(selectedNNIs, tr, pr, searchinfo, numBranches);
+
+	int numNNI = static_cast<int>(selectedNNIs.size());
+	if (numNNI == 0) {
+		return finalLH;
+	}
+
+	//pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
+	pllOptimizeBranchLengths(tr, pr, 1);
+	if (globalParams->count_trees) {
+		countDistinctTrees(tr, pr);
+	}
+	/* new tree likelihood should not be smaller than the likelihood 
+		of the computed best NNI */
+	while (tr->likelihood < selectedNNIs.back().likelihood) {
+		if (numNNI == 1) {
+			printf("ERROR: new logl=%10.4f after applying only"
+					" the best NNI < best NNI logl=%10.4f\n",
+					tr->likelihood, selectedNNIs[0].likelihood);
+			ASSERT(0);
+		} else {
+			cout << "Best logl: " << selectedNNIs.back().likelihood 
+					<< " / " << "NNI step " << searchinfo.curNumNNISteps
+					<< " / Applying " << numNNI << " NNIs give logl: "
+					<< tr->likelihood << " (worse than best)";
+			cout << " / Roll back tree ... " << endl;
+			//restoreTL(rl, tr, 0, pr->perGeneBranchLengths 
+			//                     ? pr->numberOfPartitions : 1);
+			if (!restoreTree(curTree, tr, pr)) {
+				printf("ERROR: failed to roll back tree \n");
+				ASSERT(0);
 			}
-			updateBranchLengthForNNI(tr, pr, (*it));
-            if (numBranches > 1 && !tr->useRecom) {
-                pllUpdatePartials(tr, pr, (*it).p, PLL_TRUE);
-                pllUpdatePartials(tr, pr, (*it).p->back, PLL_TRUE);
-            } else {
-                pllUpdatePartials(tr, pr, (*it).p, PLL_FALSE);
-                pllUpdatePartials(tr, pr, (*it).p->back, PLL_FALSE);
-            }
-		}
-		if (selectedNNIs.size() != 0) {
+
+			// If tree log-likelihood decreases only apply the best NNI
+			applyOnlyTheLastNNI(selectedNNIs, tr, pr, numBranches);
+
 			//pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 			pllOptimizeBranchLengths(tr, pr, 1);
-			if (globalParams->count_trees) {
-	            countDistinctTrees(tr, pr);
-			}
-			int numNNI = static_cast<int>(selectedNNIs.size());
-			/* new tree likelihood should not be smaller the likelihood of the computed best NNI */
-			while (tr->likelihood < selectedNNIs.back().likelihood) {
-				if (numNNI == 1) {
-					printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
-							tr->likelihood, selectedNNIs[0].likelihood);
-					ASSERT(0);
-				} else {
-					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "NNI step " << searchinfo.curNumNNISteps<< " / Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
-					cout << " / Roll back tree ... " << endl;
-			        //restoreTL(rl, tr, 0, pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
-				    if (!restoreTree(curTree, tr, pr)) {
-				        printf("ERROR: failed to roll back tree \n");
-				        ASSERT(0);
-				    }
-				    // If tree log-likelihood decreases only apply the best NNI
-					numNNI = 1;
-					int count = numNNI;
-					for (vector<pllNNIMove>::reverse_iterator rit = selectedNNIs.rbegin(); rit != selectedNNIs.rend(); ++rit) {
-						doOneNNI(tr, pr, (*rit).p, (*rit).nniType, TOPO_ONLY);
-						updateBranchLengthForNNI(tr, pr, (*rit));
-			            if (numBranches > 1 && !tr->useRecom) {
-			                pllUpdatePartials(tr, pr, (*rit).p, PLL_TRUE);
-			                pllUpdatePartials(tr, pr, (*rit).p->back, PLL_TRUE);
-			            } else {
-			                pllUpdatePartials(tr, pr, (*rit).p, PLL_FALSE);
-			                pllUpdatePartials(tr, pr, (*rit).p->back, PLL_FALSE);
-			            }
-						count--;
-						if (count == 0) {
-							break;
-						}
-					}
-		            //pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
-					pllOptimizeBranchLengths(tr, pr, 1);
-					//cout << "Number of NNIs reduced to " << numNNI << ": " << tr->likelihood << endl;
+			//cout << "Number of NNIs reduced to " << numNNI 
+			//     << ": " << tr->likelihood << endl;
 
-					/* Only apply the best NNI after the tree has been rolled back */
-					searchinfo.curNumAppliedNNIs = numNNI;
-				}
-			}
-			if (tr->likelihood - initLH < 0.1) {
-				searchinfo.curNumAppliedNNIs = 0;
-			}
-			finalLH = tr->likelihood;
+			/* Only apply the best NNI after the tree has been rolled back */
+			searchinfo.curNumAppliedNNIs = numNNI;
 		}
-	} else {
+	}
+	if (tr->likelihood - initLH < 0.1) {
 		searchinfo.curNumAppliedNNIs = 0;
 	}
-	//freeTopol(curTree);
+	finalLH = tr->likelihood;
 	return finalLH;
 }
 
