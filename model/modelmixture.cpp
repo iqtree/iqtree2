@@ -1070,6 +1070,20 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
+void getPomoRateAndModel(ModelInfoFromName& model_info, std::string& model_str,
+                         std::string& pomo_heterozygosity, std::string& pomo_rate_str);
+void getSequencingErrorModel(PhyloTree* tree, std::string& model_str, 
+                             std::string& seqerr);
+void getModelParameters(std::string& model_str, std::string& model_params);
+ModelMarkov* createPomoModel(const std::string& model_str, 
+                             const std::string& model_params,
+                             const std::string& pomo_rate_str,
+                             const std::string& pomo_heterozygosity,
+                             PhyloTree*         tree,
+                             StateFreqType      freq_type,
+                             const std::string& freq_params,
+                             PhyloTree* report_to_tree) ;
+
 ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
                         PhyloTree* tree, PhyloTree* report_to_tree)
@@ -1087,75 +1101,25 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
     bool   pomo = model_info.isPolymorphismAware();
 
     if (pomo) {
-        pomo_heterozygosity = model_info.extractPolymorphicHeterozygosity(model_str);
-        model_info.updateName(model_str);
-
-        size_t pomo_rate_start_pos = model_str.find("+G");
-        if (pomo_rate_start_pos != string::npos) {
-            size_t pomo_rate_end_pos = model_str.find_first_of("+*", pomo_rate_start_pos+1);
-            if (pomo_rate_end_pos == string::npos) {
-                auto rate_len = model_str.length() - pomo_rate_start_pos;
-                pomo_rate_str = model_str.substr(pomo_rate_start_pos, rate_len);
-                model_str     = model_str.substr(0, pomo_rate_start_pos);
-            } else {
-                auto rate_len = pomo_rate_end_pos - pomo_rate_start_pos;
-                pomo_rate_str = model_str.substr(pomo_rate_start_pos, rate_len);
-                model_str     = model_str.substr(0, pomo_rate_start_pos) 
-                              + model_str.substr(pomo_rate_end_pos);
-            }
-            model_info.updateName(model_str);
-        }
+        getPomoRateAndModel(model_info, model_str, 
+                            pomo_heterozygosity, pomo_rate_str);
     }
-
-    // sequencing error model
-    string seqerr = "";
-    string::size_type spec_pos;
-    while ((spec_pos = model_str.find("+E")) != string::npos) {
-        string::size_type end_pos = model_str.find_first_of("+*", spec_pos+1);
-        if (end_pos == string::npos) {
-            seqerr    = model_str.substr(spec_pos);
-            model_str = model_str.substr(0, spec_pos);
-        } else {
-            seqerr    = model_str.substr(spec_pos, end_pos - spec_pos);
-            model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
-        }
-    }
-    
-    if (!seqerr.empty() && tree->aln->seq_type != SeqType::SEQ_DNA) {
-        outError("Sequencing error model " + seqerr +
-                 " is only supported for DNA");
-    }
-    // Now that PoMo stuff has been removed, check for model parameters.
-    size_t pos = model_str.find(OPEN_BRACKET);
-    if (pos != string::npos) {
-        if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1) {
-            outError("Close bracket not found at the end of ", model_str);
-        }
-        model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-        model_str = model_str.substr(0, pos);
-    }
+    std::string seqerr;
+    getSequencingErrorModel(tree, model_str, seqerr);
+    getModelParameters     (model_str, model_params);
     
     auto yaml_path = tree->params->yaml_model_file;
     ModelListFromYAMLFile yaml_list;
     if (!yaml_path.empty()) {
+        //Todo: what if !seqerr.empty() here.  Want to use the
+        //      sepcified error model!
         yaml_list.loadFromFile(*tree->params, yaml_path.c_str(), report_to_tree);
     }
     if (pomo || tree->aln->seq_type == SeqType::SEQ_POMO) {
-        if (pomo_rate_str == "") {
-            model = new ModelPoMo(model_str.c_str(), model_params,
-                                  freq_type, freq_params, tree,
-                                  pomo_heterozygosity, report_to_tree);
-        }
-        else {
-            model = new ModelPoMoMixture(model_str.c_str(), model_params,
-                                         freq_type, freq_params, tree,
-                                         pomo_heterozygosity, pomo_rate_str,
-                                         report_to_tree);
-        }
-        if (model->isMixture() && verbose_mode >= VerboseMode::VB_MED) {
-            report_to_tree->logLine("PoMo mixture model"
-                                    " for Gamma rate heterogeneity.");
-        }
+        model = createPomoModel(model_str, model_params,
+                                pomo_rate_str, pomo_heterozygosity,
+                                tree, freq_type, freq_params,
+                                report_to_tree);
     } else if (yaml_list.isSubstitutionModelNameRecognized(model_str.c_str())) {
         model = yaml_list.getModelByName(model_str.c_str(),    tree,
                                          model_params.c_str(), freq_type,
@@ -1189,6 +1153,89 @@ ModelMarkov* createModel(string model_str, ModelsBlock *models_block,
                                     freq_params, tree, report_to_tree);
     } else {
         outError("Unsupported model type");
+    }
+    return model;
+}
+
+void getPomoRateAndModel(ModelInfoFromName& model_info, std::string& model_str,
+                         std::string& pomo_heterozygosity, std::string& pomo_rate_str) {
+    pomo_heterozygosity = model_info.extractPolymorphicHeterozygosity(model_str);
+    model_info.updateName(model_str);
+
+    size_t pomo_rate_start_pos = model_str.find("+G");
+    if (pomo_rate_start_pos != string::npos) {
+        size_t pomo_rate_end_pos = model_str.find_first_of("+*", pomo_rate_start_pos+1);
+        if (pomo_rate_end_pos == string::npos) {
+            auto rate_len = model_str.length() - pomo_rate_start_pos;
+            pomo_rate_str = model_str.substr(pomo_rate_start_pos, rate_len);
+            model_str     = model_str.substr(0, pomo_rate_start_pos);
+        } else {
+            auto rate_len = pomo_rate_end_pos - pomo_rate_start_pos;
+            pomo_rate_str = model_str.substr(pomo_rate_start_pos, rate_len);
+            model_str     = model_str.substr(0, pomo_rate_start_pos) 
+                            + model_str.substr(pomo_rate_end_pos);
+        }
+        model_info.updateName(model_str);
+    }
+}
+
+void getSequencingErrorModel(PhyloTree* tree, std::string& model_str, 
+                             std::string& seqerr) {
+    // sequencing error model
+    string::size_type spec_pos;
+    while ((spec_pos = model_str.find("+E")) != string::npos) {
+        string::size_type end_pos = model_str.find_first_of("+*", spec_pos+1);
+        if (end_pos == string::npos) {
+            seqerr    = model_str.substr(spec_pos);
+            model_str = model_str.substr(0, spec_pos);
+        } else {
+            seqerr    = model_str.substr(spec_pos, end_pos - spec_pos);
+            model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+        }
+    }
+    if (!seqerr.empty() && tree->aln->seq_type != SeqType::SEQ_DNA) {
+        outError("Sequencing error model " + seqerr +
+                 " is only supported for DNA");
+        //Todo: Problem. If sequencing error models are alowed for
+        //      non-DNA YAML models, this check will have to be moved.
+    }
+}
+
+void getModelParameters(std::string& model_str, std::string& model_params) {
+    // Now that PoMo stuff has been removed, check for model parameters.
+    size_t pos = model_str.find(OPEN_BRACKET);
+    if (pos != string::npos) {
+        if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1) {
+            outError("Close bracket not found at the end of ", model_str);
+        }
+        model_params = model_str.substr(pos+1, model_str.length()-pos-2);
+        model_str = model_str.substr(0, pos);
+    }
+}
+
+ModelMarkov* createPomoModel(const std::string& model_str, 
+                             const std::string& model_params,
+                             const std::string& pomo_rate_str,
+                             const std::string& pomo_heterozygosity,
+                             PhyloTree* tree,
+                             StateFreqType freq_type,
+                             const std::string& freq_params,
+                             PhyloTree* report_to_tree) {
+    ModelMarkov* model;
+    if (pomo_rate_str == "") {
+        model = new ModelPoMo(model_str.c_str(), model_params,
+                                freq_type, freq_params, tree,
+                                pomo_heterozygosity, report_to_tree);
+    }
+    else {
+        model = new ModelPoMoMixture(model_str.c_str(), model_params,
+                                        freq_type, freq_params, tree,
+                                        pomo_heterozygosity, pomo_rate_str,
+                                        report_to_tree);
+    }
+    if (model->isMixture() && verbose_mode >= VerboseMode::VB_MED) {
+        report_to_tree->logLine("PoMo mixture model"
+                                " for Gamma rate heterogeneity.");
     }
     return model;
 }
