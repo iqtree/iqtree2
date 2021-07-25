@@ -504,6 +504,30 @@ StateFreqType ModelCodon::initGY94(bool should_fix_kappa,
     return StateFreqType::FREQ_EMPIRICAL;
 }
 
+void countNucleotideChange(int nuc1, int nuc2, int transitionFlag,
+                           int transversionFlag, 
+                           int& attr, int& ts, int& tv ) {
+    if (nuc1!=nuc2) {
+        if (abs(nuc1-nuc2)==2) { 
+            attr |= transitionFlag;
+            ts++;
+        } else { 
+            attr |= transversionFlag;
+            tv++;
+        }
+    }
+}
+
+void calculateMultiNucleotideAttributes(int ts, int tv, int& attr) {
+    if (ts+tv>1) {
+        attr |= CA_MULTI_NT;
+    } else if (ts==1) {
+        attr |= CA_TRANSITION;
+    } else if (tv==1) {
+        attr |= CA_TRANSVERSION;
+    }
+}
+
 void ModelCodon::computeRateAttributes() {
     char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
     int nrates = getNumRateEntries();
@@ -526,7 +550,6 @@ void ModelCodon::computeRateAttributes() {
                 rate_attr_row[j] = CA_STOP_CODON;
                 continue;
             }
-            int nuc1, nuc2;
             int attr = 0;
             int codoni = phylo_tree->aln->codon_table[i];
             int codonj = phylo_tree->aln->codon_table[j];
@@ -546,81 +569,64 @@ void ModelCodon::computeRateAttributes() {
             auto aa2  = strchr(symbols_protein, code[codonj]) - symbols_protein;
             ASSERT(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
             if (nt_changes < aa_cost_change[aa1*20+aa2]) {
-                aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
+                aa_cost_change[aa1*20+aa2] = nt_changes;
+                aa_cost_change[aa2*20+aa1] = nt_changes;
             }
 
             int ts = 0;
             int tv = 0;
-            
-            if ((nuc1=codoni/16) != (nuc2=codonj/16)) {
-                if (abs(nuc1-nuc2)==2) { // transition 
-                    attr |= CA_TRANSITION_1NT;
-                    ts++;
-                } else { // transversion
-                    attr |= CA_TRANSVERSION_1NT;
-                    tv++;
-                }
-            }
-            if ((nuc1=(codoni%16)/4) != (nuc2=(codonj%16)/4)) {
-                if (abs(nuc1-nuc2)==2) { // transition
-                    attr |= CA_TRANSITION_2NT;
-                    ts++;
-                } else { // transversion
-                    attr |= CA_TRANSVERSION_2NT;
-                    tv++;
-                }
-            }
-            if ((nuc1=codoni%4) != (nuc2=codonj%4)) {
-                if (abs(nuc1-nuc2)==2) { // transition
-                    attr |= CA_TRANSITION_3NT;
-                    ts++;
-                } else { // transversion
-                    attr |= CA_TRANSVERSION_3NT;
-                    tv++;
-                }
-            }
-            if (ts+tv>1) {
-                attr |= CA_MULTI_NT;
-            } else if (ts==1) {
-                attr |= CA_TRANSITION;
-            } else if (tv==1) {
-                attr |= CA_TRANSVERSION;
-            }
+
+            countNucleotideChange(codoni/16, codonj/16, 
+                                  CA_TRANSITION_1NT, CA_TRANSVERSION_1NT, 
+                                  attr, ts, tv);
+            countNucleotideChange((codoni&15)/4, (codonj&15)/4, 
+                                  CA_TRANSITION_2NT, CA_TRANSVERSION_2NT,
+                                  attr, ts, tv);
+            countNucleotideChange(codoni&3, codonj&3,
+                                  CA_TRANSITION_3NT, CA_TRANSVERSION_3NT,
+                                  attr, ts, tv);
+            calculateMultiNucleotideAttributes(ts, tv, attr);
+                             
             rate_attr_row[j] = attr;
         }
     }
-    
-    if (verbose_mode >= VerboseMode::VB_MAX) {
-        char* cc = aa_cost_change; //shorter name
-        // make cost matrix fulfill triangular inequality
-        for (int k = 0; k < 20; k++) {
-            for (int i = 0; i < 20; i++) {
-                for (int j = 0; j < 20; j++) {
-                    if (cc[i*20+j] > cc[i*20+k] + cc[k*20+j]) {
-                        cc[i*20+j] = cc[i*20+k] + cc[k*20+j];
-                    }
+    reportRateAttributes(aa_cost_change, &symbols_protein[0]);
+}
+
+void ModelCodon::reportRateAttributes(char* aa_cost_change,
+                                      const char* symbols_protein) {
+    if (verbose_mode < VerboseMode::VB_MAX) {
+        return; 
+    }
+    char* cc = aa_cost_change; //shorter name
+    // make cost matrix fulfill triangular inequality
+    for (int k = 0; k < 20; k++) {
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < 20; j++) {
+                if (cc[i*20+j] > cc[i*20+k] + cc[k*20+j]) {
+                    cc[i*20+j] = cc[i*20+k] + cc[k*20+j];
                 }
             }
         }
-        cout << "cost matrix by number of nt changes"
-             << " for TNT use" << endl;
-        cout << "smatrix =1 (aa_nt_changes)";
-        for (int i = 0; i < 19; i++) {
-            for (int j = i+1; j < 20; j++) {
-                cout << " " << symbols_protein[i]
-                     << "/" << symbols_protein[j] 
-                     << " " << (int)aa_cost_change[i*20+j];
-            }
+    }
+    cout << "cost matrix by number of nt changes"
+            << " for TNT use" << endl;
+    cout << "smatrix =1 (aa_nt_changes)";
+    for (int i = 0; i < 19; i++) {
+        for (int j = i+1; j < 20; j++) {
+            cout << " " << symbols_protein[i]
+                    << "/" << symbols_protein[j] 
+                    << " " << (int)aa_cost_change[i*20+j];
         }
-        cout << ";" << endl;
-        cout << 20 << endl;
-        for (int i = 0; i < 20; i++) {
-            aa_cost_change[i*20+i] = 0;
-            for (int j = 0; j < 20; j++) {
-                cout << (int)aa_cost_change[i*20+j] << " ";
-            }
-            cout << endl;
+    }
+    cout << ";" << endl;
+    cout << 20 << endl;
+    for (int i = 0; i < 20; i++) {
+        aa_cost_change[i*20+i] = 0;
+        for (int j = 0; j < 20; j++) {
+            cout << (int)aa_cost_change[i*20+j] << " ";
         }
+        cout << endl;
     }
 }
 

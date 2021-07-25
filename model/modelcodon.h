@@ -146,6 +146,9 @@ public:
 
     /** compute rate_attr for all codoni->codoni substitution */
     void computeRateAttributes();
+		//Supporting function
+		void reportRateAttributes(char*       aa_cost_change,
+		                          const char* symbols_protein);
     
     /** combine rates with target nucleotide frequency (ntfreq) for MG-style model */
     void combineRateNTFreq();
