@@ -651,12 +651,8 @@ void ModelCodon::combineRateNTFreq() {
     }
 }
 
-void ModelCodon::readCodonModel(istream &in, bool reset_params) {
-	int nrates   = getNumRateEntries();
-	int nscodons = phylo_tree->aln->getNumNonstopCodons();
-
+double* ModelCodon::readCodonQMatrix(istream& in, int nscodons) {
 	double *q = new double[nscodons*nscodons];
-	double *f = new double[nscodons];
 	for (int i = 1; i < nscodons; i++) {
 		for (int j = 0; j < i; j++) {
 			in >> q[i*nscodons+j];
@@ -669,12 +665,20 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
             cout << endl;
         }
 	}
+    return q;
+}
+
+double* ModelCodon::readFrequencyVector(istream& in, int nscodons) {
+	double *f = new double[nscodons];
     for (int i = 0; i < nscodons; i++) {
         in >> f[i];
     }
-	StrVector codons;
+    return f;
+}
+
+void ModelCodon::readCodons(istream& in, int nscodons,
+                StrVector& codons, IntVector& state_map) {
 	codons.resize(nscodons);
-	IntVector state_map;
 	state_map.resize(nscodons);
 	for (int i = 0; i < nscodons; i++) {
 		in >> codons[i];
@@ -700,7 +704,11 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
     if (verbose_mode >= VerboseMode::VB_MAX) {
         cout << endl;
     }
+}
 
+void ModelCodon::calculateCodonRates(int nrates, int nscodons,
+                                     IntVector& state_map, 
+                                     const double* q) {
 	// since rates for codons is stored in lower-triangle, 
     // special treatment is needed
     memset(empirical_rates, 0, nrates*sizeof(double));
@@ -723,6 +731,10 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 			empirical_rates[id] = rates[id] = qentry;
 		}
 	}
+}
+
+void ModelCodon::calculateStateFrequencies(int nscodons, IntVector& state_map,  
+                                           const double* f) {
 	memset(state_freq, 0, num_states*sizeof(double));
     auto min_freq = Params::getInstance().min_state_freq;
     for (int i = 0; i < num_states; i++) {
@@ -732,12 +744,38 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
         auto delta = (num_states-nscodons)*min_freq/nscodons;
 		state_freq[state_map[i]] = f[i] - delta;
     }
+}
+
+void ModelCodon::freeFrequencyVector(double*& f) {
+    delete [] f;
+    f = nullptr;
+}
+
+void ModelCodon::freeCodonQMatrix(double*& q) {
+    delete [] q;
+    q = nullptr;
+}
+
+void ModelCodon::readCodonModel(istream &in, bool reset_params) {
+    int     nrates   = getNumRateEntries();
+    int     nscodons = phylo_tree->aln->getNumNonstopCodons();
+    double* q        = readCodonQMatrix(in, nscodons);
+    double* f        = readFrequencyVector(in, nscodons);
+
+	StrVector codons;
+	IntVector state_map;
+    readCodons(in, nscodons, codons, state_map);
+
+    calculateCodonRates(nrates, nscodons, state_map, q);
+    calculateStateFrequencies(nscodons, state_map, f);
+
     if (reset_params) {
         fix_omega = fix_kappa = fix_kappa2 = true;
         omega = kappa = kappa2 = 1.0;
     }
-	delete [] f;
-	delete [] q;
+
+    freeFrequencyVector(f);
+    freeCodonQMatrix(q);
 }
 
 void ModelCodon::readCodonModel(string &str, 

@@ -111,6 +111,18 @@ public:
      * @reset_params true to reset parameters, false otherwise
 	 */
 	void readCodonModel(istream &in, bool reset_params);
+		//Supporting functions
+		double* readCodonQMatrix   (istream& in, int nscodons);
+		double* readFrequencyVector(istream& in, int nscodons);
+		void    readCodons         (istream& in, int nscodons,
+                                    StrVector& codons, IntVector& state_map);
+		void    calculateCodonRates(int nrates, int nscodons,
+                                    IntVector& state_map, 
+                                    const double* q);
+		void    calculateStateFrequencies(int nscodons, IntVector& state_map, 
+                                          const double* f);
+		void    freeFrequencyVector(double*& f);
+		void    freeCodonQMatrix   (double*& f);
 
 	/**
 	 * read codon model from a string, modying rates and state_freq accordingly
