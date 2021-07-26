@@ -26,7 +26,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint);
 /**
 *  execute AliSim Simulation
 */
-void executeSimulation(Params params, IQTree *&tree, bool inference_mode);
+void executeSimulation(Params params, IQTree *&tree);
 
 /**
 *  inferring input parameters for AliSim
@@ -51,12 +51,12 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
 /**
 *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, bool inference_mode);
+void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, map<string,string> input_msa);
 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, string output_filepath = "");
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
 
 /**
 *  compute the total sequence length of all partitions
@@ -71,7 +71,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  write all sequences of a tree to an output file
 */
-void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator, bool inference_mode);
+void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator);
 
 /**
 *  write a sequence of a node to an output file
@@ -79,19 +79,20 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad);
 
 /**
-*  write a sequence of a node to an output file with gaps copied from the input sequence
-*/
-void writeASequenceToFileWithGaps(Alignment *aln, int sequence_length, vector<string> seq_names, vector<string> sequences, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad);
-
-/**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, bool inference_mode);
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator);
 
 /**
 *  clear out all sequences in the super_tree
 *
 */
 void clearoutSequencesSuperTree(Node *node, Node *dad);
+
+/**
+*  load input MSA if the user wants to copy gaps from the input MSA
+*
+*/
+map<string,string> loadInputMSA(AliSimulator *alisimulator);
 
 #endif /* alisim_h */

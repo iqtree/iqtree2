@@ -94,7 +94,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping);
+    virtual void simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa);
     
     /**
     *  validate sequence length of codon
@@ -150,7 +150,7 @@ protected:
     /**
         writing and deleting simulated sequence immediately if possible
     */
-    void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, NeighborVec::iterator it, Node* node);
+    void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         branch-specific evolution
@@ -181,6 +181,11 @@ protected:
         generate a random sequence by state frequencies
     */
     vector<short int> generateRandomSequenceFromStateFreqs(int max_num_states, int sequence_length, double* state_freqs, int max_prob_pos);
+    
+    /**
+    *  write a sequence of a node to an output file with gaps copied from the input sequence
+    */
+    string writeASequenceToFileWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
     
 public:
     
@@ -216,12 +221,12 @@ public:
     /**
     *  simulate sequences for all nodes in the tree
     */
-    virtual void simulateSeqsForTree(string output_filepath = "");
+    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "");
     
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(vector<short int> ancestral_sequence, string output_filepath = "");
+    void generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length

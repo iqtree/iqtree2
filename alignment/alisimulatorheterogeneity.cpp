@@ -160,7 +160,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping)
+void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -186,10 +186,10 @@ void AliSimulatorHeterogeneity::simulateSeqs(int sequence_length, double *site_s
         }
         
         // writing and deleting simulated sequence immediately if possible
-        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, it, node);
+        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, input_msa);
     }
 }
 
@@ -341,7 +341,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(double *site_specific_rates
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
+void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa, string output_filepath){
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
@@ -393,7 +393,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(string output_filepath){
     }
     
     // simulate sequences
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
     
     // close the file if neccessary
     if (output_filepath.length() > 0)

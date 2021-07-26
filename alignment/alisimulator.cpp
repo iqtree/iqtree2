@@ -432,7 +432,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, string output_filepath)
+void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
 {
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
@@ -457,7 +457,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
     validataSeqLengthCodon();
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSeqsForTree(output_filepath);
+    simulateSeqsForTree(input_msa, output_filepath);
 }
 
 /**
@@ -591,7 +591,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies, int m
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulator::simulateSeqsForTree(string output_filepath)
+void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath)
 {
     // get variables
     int sequence_length = expected_num_sites;
@@ -633,7 +633,7 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
     }
     
     // simulate Sequences
-    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping);
+    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -660,7 +660,7 @@ void AliSimulator::simulateSeqsForTree(string output_filepath)
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping)
+void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -686,25 +686,31 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         }
         
         // writing and deleting simulated sequence immediately if possible
-        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, it, node);
+        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping);
+        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, input_msa);
     }
 }
 
 /**
     writing and deleting simulated sequence immediately if possible
 */
-void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, NeighborVec::iterator it, Node* node)
+void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
     // write sequence of leaf nodes to file if possible
     if (state_mapping.size() > 0)
     {
         if ((*it)->node->isLeaf())
         {
+            string input_sequence = input_msa[(*it)->node->name];
             // convert numerical states into readable characters and write output to file
-            out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+            if (input_sequence.length()>0)
+                // write and copying gaps from the input sequences to the output.
+                out<<writeASequenceToFileWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping, params->aln_output_format, max_length_taxa_name);
+            else
+                // write without copying gaps from the input sequences to the output.
+                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
             
             // remove the sequence to release the memory after extracting the sequence
             vector<short int>().swap((*it)->node->sequence);
@@ -714,8 +720,16 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
         {
             // avoid writing sequence of __root__
             if (node->name!=ROOT_NAME)
+            {
+                string input_sequence = input_msa[node->name];
                 // convert numerical states into readable characters and write output to file
-                out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+                if (input_sequence.length()>0)
+                    // write and copying gaps from the input sequences to the output.
+                    out<<writeASequenceToFileWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping, params->aln_output_format, max_length_taxa_name);
+                else
+                    // write without copying gaps from the input sequences to the output.
+                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+            }
             
             // remove the sequence to release the memory after extracting the sequence
             vector<short int>().swap(node->sequence);
@@ -1365,4 +1379,83 @@ vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int max_num
         sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freqs, 0, max_num_states, max_prob_pos);
     
     return sequence;
+}
+
+/**
+*  write a sequence of a node to an output file with gaps copied from the input sequence
+*/
+string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
+{
+    // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
+    string output (sequence_length * num_sites_per_state+1, '-');
+    int start_index;
+    
+    // add node's name
+    // in PHYLIP format
+    if (output_format != IN_FASTA)
+    {
+        // add padding to node_name
+        string name_with_padding = node->name;
+        // write node's id if node's name is empty
+        if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
+        ASSERT(max_length_taxa_name >= name_with_padding.length());
+        std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
+        name_with_padding += padding;
+        output = name_with_padding + output;
+        start_index = name_with_padding.length();
+    }
+    // in FASTA format
+    else
+    {
+        string node_name = node->name;
+        // write node's id if node's name is empty
+        if (node_name.length() == 0) node_name = convertIntToString(node->id);
+        output = ">" + node_name + "\n" + output;
+        start_index = node_name.length() + 2;
+    }
+    output[output.length()-1] = '\n';
+    
+    // convert non-empty sequence
+    if (node->sequence.size() >= sequence_length)
+    {
+        // convert normal data
+        if (num_sites_per_state == 1)
+        {
+            for (int i = 0; i < sequence_length; i++){
+                // handle gaps
+                if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
+                    && input_sequence[i] == '-')
+                {
+                    // insert gaps
+                    output[start_index+i*num_sites_per_state] = '-';
+                }
+                // if it's not a gap
+                else
+                    output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+            }
+        }
+        // convert CODON
+        else {
+            for (int i = 0; i < sequence_length; i++){
+                // handle gaps
+                if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
+                    && (input_sequence[i*num_sites_per_state] == '-'
+                            || input_sequence[i*num_sites_per_state+1] == '-'
+                            || input_sequence[i*num_sites_per_state+2] == '-')){
+                    // insert gaps
+                    output[start_index+i*num_sites_per_state] =  input_sequence[i*num_sites_per_state];
+                    output[start_index+i*num_sites_per_state + 1] =  input_sequence[i*num_sites_per_state+1];
+                    output[start_index+i*num_sites_per_state + 2] =  input_sequence[i*num_sites_per_state+2];
+                }
+                else
+                {
+                        output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+                        output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
+                        output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
+                }
+            }
+        }
+    }
+    
+    return output;
 }
