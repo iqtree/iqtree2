@@ -557,23 +557,15 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
                     lh_epsilon, grad_epsilon, report_to_tree);
             }
             tree_lh += score;
-            if (write_info)
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-            {
-                report_to_tree->hideProgress();
-                cout << "Partition " << tree->at(part)->aln->name
-                     << " / Model: " << tree->at(part)->getModelName()
-                     << " / df: " << fac->getNParameters(fixed_len)
-                << " / LogL: " << score << endl;
-                report_to_tree->showProgress();
-            }
+            reportPartitionOptimizationProgress(write_info, tree, part,
+                                                fac,  fixed_len,  score, 
+                                                report_to_tree);
         }
         //return ModelFactory::optimizeParameters(fixed_len, write_info, report_to_tree);
 
-        if (!isLinkedModel())
+        if (!isLinkedModel()) {
             break;
+        }
 
         if (verbose_mode >= VerboseMode::VB_MED || write_info) {
             report_to_tree->hideProgress();
@@ -600,18 +592,8 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
         prev_tree_lh = tree_lh;
     }
     
-    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
-        report_to_tree->hideProgress();
-        cout << "Optimal log-likelihood: " << tree_lh << endl;
-        report_to_tree->showProgress();
-    }
-    // write linked_models
-    if (verbose_mode <= VerboseMode::VB_MIN && write_info) {
-        for (auto it = linked_models.begin();
-             it != linked_models.end(); it++) {
-            it->second->writeInfo(cout);
-        }
-    }
+    reportParametersOptimized(write_info, tree_lh, report_to_tree);
+
     return tree_lh;
 }
 
@@ -624,6 +606,43 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
                                         gradient_epsilon, report_to_tree);
     opt_gamma_invar = false;
     return tree_lh;
+}
+
+void PartitionModel::reportPartitionOptimizationProgress
+        (bool write_info, PhyloSuperTree* tree, int part,
+         ModelFactory* fac, double fixed_len, double score,
+         PhyloTree* report_to_tree) const
+{
+    if (!write_info) {
+        return;
+    }
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    {
+        report_to_tree->hideProgress();
+        cout << "Partition " << tree->at(part)->aln->name
+                << " / Model: " << tree->at(part)->getModelName()
+                << " / df: " << fac->getNParameters(fixed_len)
+        << " / LogL: " << score << endl;
+        report_to_tree->showProgress();
+    }
+}
+
+void PartitionModel::reportParametersOptimized
+        (bool write_info, double tree_lh, PhyloTree* report_to_tree) {
+    if (verbose_mode >= VerboseMode::VB_MED || write_info) {
+        report_to_tree->hideProgress();
+        cout << "Optimal log-likelihood: " << tree_lh << endl;
+        report_to_tree->showProgress();
+    }
+    // write linked_models
+    if (verbose_mode <= VerboseMode::VB_MIN && write_info) {
+        for (auto it = linked_models.begin();
+             it != linked_models.end(); it++) {
+            it->second->writeInfo(cout);
+        }
+    }
 }
 
 

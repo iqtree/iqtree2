@@ -93,6 +93,13 @@ public:
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
                                       PhyloTree* report_to_tree = nullptr);
+        //supporting functions
+        void reportPartitionOptimizationProgress(bool write_info, PhyloSuperTree* tree, 
+                                                 int part, ModelFactory* fac, 
+                                                 double fixed_len, double score,
+                                                 PhyloTree* report_to_tree) const;
+        void reportParametersOptimized(bool write_info, double tree_lh, 
+                                       PhyloTree* report_to_tree);
 
 	/**
 	 *  optimize model parameters and tree branch lengths for the +I+G model
