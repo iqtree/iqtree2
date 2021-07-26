@@ -426,71 +426,78 @@ void ModelLieMarkov::writeInfo(ostream &out) {
     // Special case, just because it is confusing
     if (model_name == "2.2a" || model_name == "RY2.2a" ||
         model_name == "WS2.2a" || model_name == "MK2.2a") {
-      cerr << "Model 2.2a does not exist, do you mean 2.2b?\n";
+		cerr << "Model 2.2a does not exist, do you mean 2.2b?\n";
     }
     if (model_num<0) {
         // model not found
-	name = "";
+		name = "";
         full_name = "";
-	model_num = -1;
-	symmetry = -1;
-	def_freq = StateFreqType::FREQ_UNKNOWN;
-	return;
+		model_num = -1;
+		symmetry = -1;
+		def_freq = StateFreqType::FREQ_UNKNOWN;
+		return;
     }
 
     // name and full_name:
     // Special case for strand symmetric model.
     if (model_num == STR_SYM_INDEX) {
-      name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] 
-	  //as this is all lowercase, as it must be for parseModelName to work.
-      full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
+		name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] 
+		                 // as this is all lowercase, as it must be
+						 // for parseModelName to work.
+		full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
     } else {
-      name = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
-      full_name = "Lie Markov model "+SYMMETRY[symmetry]+MODEL_NAMES[model_num]
-	+ (TIME_REVERSIBLE[model_num] ? "" : " (non reversible)");
+		name      = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
+		full_name = "Lie Markov model "+SYMMETRY[symmetry]+MODEL_NAMES[model_num]
+		          + (TIME_REVERSIBLE[model_num] ? "" : " (non reversible)");
     }
 
+	def_freq = getDefaultFrequencyType(model_num, symmetry);
+}
+
+/*static*/ StateFreqType ModelLieMarkov::getDefaultFrequencyType
+				(int model_num, int symmetry) {
     // def_freq
     int bdf = BDF[model_num];
     if (bdf==0) {
-      def_freq = StateFreqType::FREQ_EQUAL;
-    } else if (bdf==1) {
+      return StateFreqType::FREQ_EQUAL;
+    } 
+	if (bdf==1) {
       switch(symmetry) {
       case 0:
-		def_freq = StateFreqType::FREQ_DNA_1212;
-		break;
+		return StateFreqType::FREQ_DNA_1212;
       case 1:
-		def_freq = StateFreqType::FREQ_DNA_1221;
-		break;
+		return StateFreqType::FREQ_DNA_1221;
       case 2:
-		def_freq = StateFreqType::FREQ_DNA_1122;
-		break;
+		return StateFreqType::FREQ_DNA_1122;
       case 3:
       default:
 		cerr << "Can't happen" << endl;
 		abort();
+		return StateFreqType::FREQ_UNKNOWN;	
       }
-    } else if (bdf==2) {
+    }
+	if (bdf==2) {
       switch(symmetry) {
       case 0:
-		def_freq = StateFreqType::FREQ_DNA_RY;
-		break;
+		return StateFreqType::FREQ_DNA_RY;
       case 1:
-		def_freq = StateFreqType::FREQ_DNA_WS;
-		break;
+		return StateFreqType::FREQ_DNA_WS;
       case 2:
-		def_freq = StateFreqType::FREQ_DNA_MK;
-		break;
+		return StateFreqType::FREQ_DNA_MK;
       case 3: /* fall-through */
       default:
 		cerr << "Can't happen" << endl;
         abort();
+		return StateFreqType::FREQ_UNKNOWN;	
       }
-    } else if (bdf==3) {
-      def_freq = StateFreqType::FREQ_ESTIMATE;
-    }
 
-    return;
+    }
+	if (bdf==3) {
+		return StateFreqType::FREQ_ESTIMATE;
+    }
+	cerr << "Can't happen" << endl;
+	abort();
+	return StateFreqType::FREQ_UNKNOWN;	
 }
 
 
@@ -543,17 +550,17 @@ bool  ModelLieMarkov::validFreqType() {
         return false;
     case StateFreqType::FREQ_EQUAL:
         return (bdf==0);
-    case StateFreqType::FREQ_DNA_RY:   return("+FRY");
+    case StateFreqType::FREQ_DNA_RY:   
         return (bdf==2 && symmetry==0);
-    case StateFreqType::FREQ_DNA_WS:   return("+FWS");
+    case StateFreqType::FREQ_DNA_WS:   
         return (bdf==2 && symmetry==1);
-    case StateFreqType::FREQ_DNA_MK:   return("+FMK");
+    case StateFreqType::FREQ_DNA_MK:   
         return (bdf==2 && symmetry==2);
-    case StateFreqType::FREQ_DNA_1122: return("+F1122");
+    case StateFreqType::FREQ_DNA_1122: 
         return (bdf==1 && symmetry==2);
-    case StateFreqType::FREQ_DNA_1212: return("+F1212");
+    case StateFreqType::FREQ_DNA_1212: 
         return (bdf==1 && symmetry==0);
-    case StateFreqType::FREQ_DNA_1221: return("+F1221");
+    case StateFreqType::FREQ_DNA_1221: 
         return (bdf==1 && symmetry==1);
     default: throw("Unrecognized freq_type in validFreqType - can't happen");
     }

@@ -52,6 +52,8 @@ public:
 
 	static void getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
 
+	static StateFreqType getDefaultFrequencyType(int model_num, int symmetry);
+
 	static string getModelInfo(string model_name, string &full_name, StateFreqType &def_freq);
 
 	// DO NOT override this function, because
