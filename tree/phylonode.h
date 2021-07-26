@@ -478,7 +478,7 @@ struct PhyloBranch: public pair<PhyloNode*, PhyloNode*> {
     typedef pair<PhyloNode*, PhyloNode*> super;
     PhyloBranch();
     PhyloBranch(PhyloNode* left, PhyloNode* right);
-    PhyloBranch(const Branch &copyMe );
+    PhyloBranch(const Branch& copyMe );
     int getBranchID() const;
     PhyloNeighbor* getLeftNeighbor()  const;
     PhyloNeighbor* getRightNeighbor() const;

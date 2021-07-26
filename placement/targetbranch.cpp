@@ -257,6 +257,9 @@ ReplacementBranchList* TargetBranch::getReplacements() const {
     return replacements;
 }
 
+TargetBranchRange::TargetBranchRange() {
+}
+
 TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
                                      PlacementCostCalculator* calculator,
                                      bool match_branch_numbers): super() {
@@ -270,7 +273,8 @@ TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
     reserve(v1.size());
     if ( verbose_mode >= VerboseMode::VB_DEBUG ) {
         std::stringstream s1;
-        s1 << "TargetBranchRange will have " << v1.size() << " entries";
+        s1 << "TargetBranchRange will have " 
+           << v1.size() << " entries";
         phylo_tree.logLine(s1.str());
     }
     for (int i=0; i<v1.size(); ++i) {
@@ -280,8 +284,14 @@ TargetBranchRange::TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
     }
 }
 
-TargetBranchRange::TargetBranchRange(const TargetBranchRange& tbr,
+TargetBranchRange::TargetBranchRange(const TargetBranchRange&   tbr,
                                      const std::vector<size_t>& indicesOfSubset) {
+    loadSubset(tbr, indicesOfSubset);
+}
+
+
+void TargetBranchRange::loadSubset(const TargetBranchRange&   tbr,
+                                   const std::vector<size_t>& indicesOfSubset) {
     for (size_t i : indicesOfSubset) {
         emplace_back(tbr.at(i));
     }
@@ -299,7 +309,6 @@ TargetBranchRange::TargetBranchRange(const TargetBranchRange& tbr,
         b.used = false;
     }
 }
-
 
 void TargetBranchRange::getNodes(NodeVector& vec) const {
     std::set<PhyloNode*> seen;

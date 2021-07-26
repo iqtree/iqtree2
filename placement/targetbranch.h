@@ -186,7 +186,10 @@ class TargetBranchRef;
 class TargetBranchRange : public vector<TargetBranch> {
 public:
     typedef  vector<TargetBranch> super;
+    TargetBranchRange();
     TargetBranchRange(const TargetBranchRange& tbr,
+                      const std::vector<size_t>& indicesOfSubset);
+    void loadSubset  (const TargetBranchRange& tbr,
                       const std::vector<size_t>& indicesOfSubset);
     TargetBranchRange(PhyloTree& phylo_tree, BlockAllocator* b,
                       PlacementCostCalculator* calculator,
@@ -194,6 +197,7 @@ public:
     TargetBranch* getTargetBranch(size_t i) {
         return &at(i);
     }
+
     void getNodes(NodeVector& vec) const;
     void removeUsed();
     TargetBranchRef addNewRef(BlockAllocator& allocator,

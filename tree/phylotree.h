@@ -1829,8 +1829,28 @@ public:
                                 ParsimonyPathVector& per_thread_path_parsimony,
                                 PhyloTreeThreadingContext& context,
                                 LikelihoodBlockPairs &blocks);
+        //Supporting class, and functions
+        class LocalCopyOfRegion {
+            public:
+                std::vector<size_t>       fake_to_real_branch_id; 
+                NodeVector                real_nodes;
+                std::map<int, PhyloNode*> map_to_real_node;
+                std::map<int, PhyloNode*> map_to_fake_node;
+                std::vector<PhyloNode>    fake_nodes;
+                TargetBranchRange&        local_targets;
+                explicit LocalCopyOfRegion(TargetBranchRange& locals);
+        };
+        void constructLocalCopyOfRegion(TargetBranchRange& targets,
+                                        size_t region_target_index,
+                                        LocalCopyOfRegion& copy);
+        void doPlacementOnRegionCopy   (ParsimonySearchParameters& s,
+                                        ParsimonyPathVector&       per_thread_path_parsimony,
+                                        PhyloTreeThreadingContext& context,
+                                        LocalCopyOfRegion& copy);
+        void updateRegionFromLocalCopy (PhyloTreeThreadingContext& context,
+                                        LocalCopyOfRegion& copy,
+                                        TargetBranchRange& targets) ;
 
-    
     
     /****************************************************************************
             Branch length optimization by maximum likelihood
