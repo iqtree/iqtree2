@@ -58,9 +58,11 @@
 class AlignmentPairwise;
 
 //Classes passed to PhyloTree::optimizeSubtreeParsimony
-//(need to be forward declared before that member
-// function).
+//(or other functions such as constructLocalCopyOfRegion)
+//need to be forward declared before that member
+//function.
 class ParsimonySearchParameters;
+class TargetBranch;
 class TargetBranchRange;
 class ParsimonyPathVector;
 class PhyloTreeThreadingContext;
@@ -314,12 +316,12 @@ public:
 // ********************************************
 
 struct SPRMove;
-class SPRMoves;
-class SimilarityTree;
-class SimilarityNode;
-class NameToIDMap;
-class NameToNameMap;
-class UniqueSequenceMap;
+class  SPRMoves;
+class  SimilarityTree;
+class  SimilarityNode;
+class  NameToIDMap;
+class  NameToNameMap;
+class  UniqueSequenceMap;
 
 typedef std::set<std::string>          NameSet;
 typedef std::pair<size_t, NameSet>     CountAndNames;
@@ -1842,6 +1844,9 @@ public:
         };
         void constructLocalCopyOfRegion(TargetBranchRange& targets,
                                         size_t region_target_index,
+                                        LocalCopyOfRegion& copy);
+        void mirrorTreeStructureInLocalCopyOfRegion
+                                       (TargetBranch&      tb, 
                                         LocalCopyOfRegion& copy);
         void doPlacementOnRegionCopy   (ParsimonySearchParameters& s,
                                         ParsimonyPathVector&       per_thread_path_parsimony,

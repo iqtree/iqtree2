@@ -300,7 +300,11 @@ void PhyloTree::constructLocalCopyOfRegion(TargetBranchRange& targets,
             }
         }
     }
-    
+    mirrorTreeStructureInLocalCopyOfRegion(tb, copy);
+}                                        
+
+void PhyloTree::mirrorTreeStructureInLocalCopyOfRegion
+        (TargetBranch&  tb, LocalCopyOfRegion& copy) {
     //5. Remap node references from local_targets to fake nodes
     //   And, remap all branch numbers, between fake nodes,
     //   so that they are now mapped back to branch ids in
