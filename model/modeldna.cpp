@@ -274,7 +274,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	            param_fixed[id] = true;
 	        }
 			try {
-				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+				rate = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos);
 			} catch (string str) {
 				outError(str);
 			}

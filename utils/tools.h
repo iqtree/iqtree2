@@ -2621,12 +2621,44 @@ double convert_double(const char *str);
 double convert_double(const char *str, int &end_pos);
 
 /**
+        convert string to double, or generate it from a distribution
+        @param str original string
+        @param end_pos end position
+        @return the double
+ */
+double convert_double_with_distribution(const char *str, int &end_pos);
+
+/**
         convert comma-separated string to integer vector, with error checking
         @param str original string with integers separated by comma
         @param vec (OUT) integer vector
         @param separator char separating elements
  */
 void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',');
+
+/**
+        convert comma-separated string to double vector or generate double vector from distributions
+        @param str original string with integers separated by comma
+        @param vec (OUT) integer vector
+        @param separator char separating elements
+ */
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator = ',');
+
+/**
+        normalize state frequencies so that sum of them is equal to 1
+        @param freqs original state frequencies
+        @param num_states the number of states
+        @param total_freq sum of all original state frequencies
+ */
+void normalize_frequencies_from_index(double* freqs, int num_states, int starting_index);
+
+/**
+        normalize state frequencies so that sum of them is equal to 1
+        @param freqs original state frequencies
+        @param num_states the number of states
+        @param total_freq sum of all original state frequencies
+ */
+void normalize_frequencies(double* freqs, int num_states, double total_freqs = -1);
 
 /**
  * Convert seconds to hour, minute, second
@@ -2672,7 +2704,7 @@ double random_number_from_distribution(string distribution_name);
         initialize a number by converting string to double (if the user supplies a number) or randomly generating it from a distribution (if the user supplies a distribution name)
         @param input storing a number or a distribution name
  */
-double initialize_number_from_number_or_distribution(string input);
+double convert_double_with_distribution(const char *str);
 
 /**
        check whether a string is a number

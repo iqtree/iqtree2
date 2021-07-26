@@ -531,9 +531,6 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
             if (state_freq[i] > state_freq[max_prob_pos])
                 max_prob_pos = i;
         
-        // print model's parameters
-        tree->getModel()->writeInfo(cout);
-        
         // randomly generate the sequence based on the state frequencies
         sequence = generateRandomSequenceFromStateFreqs(max_num_states, sequence_length, state_freq, max_prob_pos);
         
@@ -1318,7 +1315,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int m
         size_t pos = freqs.find('/');
         
         // convert frequency from string to double
-        state_freqs[i] = convert_double(freqs.substr(0, pos).c_str());
+        state_freqs[i] = convert_double_with_distribution(freqs.substr(0, pos).c_str());
         total_freq += state_freqs[i];
         
         // update the position with the highest frequency
@@ -1334,13 +1331,16 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int m
         i++;
     }
     
-    // make sure the sum of all frequencies is equal to 1
-    if (total_freq < 0.999 || total_freq > 1.001)
-        outError("Sum of all frequencies ("+convertDoubleToString(total_freq)+") is not equal to 1. Please check and try again!");
-    
     // make sure that the number of user-defined frequencies is equal to the number of states
     if (i != max_num_states)
         outError("The number of frequencies ("+convertIntToString(i)+") is different from the number of states ("+convertIntToString(max_num_states)+"). Please check and try again!");
+    
+    // make sure the sum of all frequencies is equal to 1
+    if (fabs(total_freq-1.0) > 1e-5)
+    {
+        outWarning("Normalizing state frequencies so that sum of them is equal to 1.");
+        normalize_frequencies(state_freqs, max_num_states, total_freq);
+    }
     
     // re-generate a new sequence for the root from the state frequencies
     root->sequence = generateRandomSequenceFromStateFreqs(max_num_states, sequence_length, state_freqs, max_prob_pos);

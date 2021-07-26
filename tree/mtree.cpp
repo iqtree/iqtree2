@@ -817,7 +817,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                           && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
     
-    double len = convert_double(lenstr.c_str());
+    double len = convert_double_with_distribution(lenstr.c_str());
     if (in_comment.empty() || in_comment_contains_key_value) {
         branch_len.push_back(len);
         return;
@@ -825,7 +825,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     
     // don't try to parse multiple lengths if in_comment starts with "&" (input key=value)
     if (!in_comment_contains_key_value)
-        convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+        convert_double_vec_with_distributions(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
 //    char* str = (char*)in_comment.c_str() + 1;
 //    int pos;
 //    for (int i = 1; str[0] == 'L'; i++) {

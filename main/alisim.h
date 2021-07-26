@@ -16,6 +16,7 @@
 #include "utils/gzstream.h"
 #include <regex>
 #include <string.h>
+#include "phyloanalysis.h"
 
 /**
 *  execute Alignment Simulator (AliSim)

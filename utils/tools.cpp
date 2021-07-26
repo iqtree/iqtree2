@@ -377,6 +377,28 @@ double convert_double(const char *str, int &end_pos) {
 	return d;
 }
 
+double convert_double_with_distribution(const char *str, int &end_pos)
+{
+    // convert normal double
+    char *endptr;
+    double d = strtod(str, &endptr);
+    
+    // generate a double from a distribution
+    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF) {
+        string tmp_str(str);
+        size_t pos = tmp_str.find(',');
+        if (pos!= std::string::npos)
+            end_pos = pos;
+        else
+            end_pos = tmp_str.length();
+            
+        d = random_number_from_distribution(tmp_str.substr(0, end_pos));
+    }
+    else
+        end_pos = endptr - str;
+    return d;
+}
+
 void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
@@ -393,6 +415,29 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
 		if (*endptr == separator) endptr++;
 		beginptr = endptr;
     } while (*endptr != 0);
+}
+
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator)
+{
+    string tmp_str(str);
+    vec.clear();
+    
+    // extract/generate double numbers one by one
+    while (tmp_str.length() > 0) {
+        // extract sub-string by separator
+        size_t pos = tmp_str.find(separator);
+        string token = tmp_str.substr(0, pos);
+        
+        // convert/generate a double
+        double d = convert_double_with_distribution(token.c_str());
+        vec.push_back(d);
+        
+        // remove the current double/distribution name from tmp_str
+        if(pos != std::string::npos)
+            tmp_str.erase(0, pos + 1);
+        else
+            tmp_str = "";
+    }
 }
 
 string convert_time(const double sec) {
@@ -585,6 +630,11 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
                 if (filepath)
                 {
                     size_t num_space = std::count(random_numbers.begin(), random_numbers.end(), ' ');
+                    
+                    // ignore the space if it's in the last character
+                    if (random_numbers[random_numbers.length()-1] == ' ')
+                        num_space--;
+                    
                     if (num_space + 1 != num_rand_numbers)
                         outError("The number of random numbers of the distribution "+distribution_name+" ("+convertIntToString((num_space+1))+") is different from the specified number ("+convertIntToString(num_rand_numbers)+"). Please check and try again!");
                 }
@@ -605,12 +655,21 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
 
 double random_number_from_distribution(string distribution_name)
 {
+    // randomly generate a number from a uniform distribution
+    if (distribution_name.compare("uniform") == 0)
+        return random_double();
+        
     Distribution distribution = Params::getInstance().distributions[distribution_name];
     string random_numbers_str = distribution.random_numbers_str;
     
     // check whether distribution_name could be found
     if (random_numbers_str.length() == 0)
-        outError("Could not found the distribution named " + distribution_name);
+    {
+        if (distribution_name.length()>0)
+            outError("Expecting a double or a distribution name, but found "+distribution_name+". Could not found the distribution named " + distribution_name);
+        else
+            outError("Expecting a double or a distribution name, but found an empty string");
+    }
     
     // convert random_numbers_str to istringstream
     istringstream iss_random_numbers(random_numbers_str);
@@ -626,14 +685,41 @@ double random_number_from_distribution(string distribution_name)
     return random_number;
 }
 
-double initialize_number_from_number_or_distribution(string input)
+double convert_double_with_distribution(const char *str)
 {
+    string input(str);
     // convert the number from the input string if possible
     if (is_number(input))
-        return convert_double(input.c_str());
+        return convert_double(str);
     // if a distribution is specified -> randomly generate a number from that distribution
     else
         return random_number_from_distribution(input);
+}
+
+void normalize_frequencies(double* freqs, int num_states, double total_freqs)
+{
+    ASSERT(num_states > 0);
+    // calculate the total_freqs if it's not provided
+    if (total_freqs == -1)
+        for (int i = 0; i < num_states; i++)
+            total_freqs += freqs[i];
+    
+    // normalize the freqs
+    for (int i = 0; i < num_states; i++)
+        freqs[i] /= total_freqs;
+}
+
+void normalize_frequencies_from_index(double* freqs, int num_states, int starting_index)
+{
+    ASSERT(num_states > 0);
+    // calculate the total_freqs
+    double total_freqs = 0;
+    for (int i = starting_index; i < starting_index+num_states; i++)
+        total_freqs += freqs[i];
+    
+    // normalize the freqs
+    for (int i = starting_index; i < starting_index+num_states; i++)
+        freqs[i] /= total_freqs;
 }
 
 bool is_number(const std::string& s)
@@ -1275,6 +1361,22 @@ void parseArg(int argc, char *argv[], Params &params) {
         params.original_params = params.original_params + argv[cnt] + " ";
     }
     
+    // load distributions from built-in file
+    read_distributions();
+    // try to parse distribution path file first
+    for (cnt = 1; cnt < argc; cnt++) {
+        if (strcmp(argv[cnt], "--distribution") == 0) {
+            cnt++;
+            if (cnt >= argc || argv[cnt][0] == '-')
+                throw "Use --distribution <distribution_file>";
+            
+            params.alisim_distribution_definitions = argv[cnt];
+            read_distributions(params.alisim_distribution_definitions);
+            
+            break;
+        }
+    }
+    
     for (cnt = 1; cnt < argc; cnt++) {
         try {
 
@@ -1586,6 +1688,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.death_rate = convert_double(bd_params.substr(0, bd_params.length()-1).c_str());
                 if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
                     throw "<death_rate> must be non-negative and less than <birth_rate>";
+                
+                // normalize birth_rate & death_rate
+                double sum_rate = params.death_rate + params.birth_rate;
+                if (fabs(sum_rate-1.0) > 1e-5)
+                {
+                    outWarning("Normalizing birth rate and death rate so that sum of them is equal to 1.");
+                    params.death_rate /= sum_rate;
+                    params.birth_rate /= sum_rate;
+                }
                 
                 // get #taxa
                 cnt++;
@@ -4341,6 +4452,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                                 params.death_rate = convert_double(model_name.c_str());
                                 if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
                                     throw "<death_rate> must be non-negative and less than <birth_rate>";
+                                
+                                // normalize birth_rate & death_rate
+                                double sum_rate = params.death_rate + params.birth_rate;
+                                if (fabs(sum_rate-1.0) > 1e-5)
+                                {
+                                    outWarning("Normalizing birth rate and death rate so that sum of them is equal to 1.");
+                                    params.death_rate /= sum_rate;
+                                    params.birth_rate /= sum_rate;
+                                }
                             }
                             else
                                 throw ERR_MSG;
@@ -4639,13 +4759,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--state-distribution") == 0) {
+            if (strcmp(argv[cnt], "--distribution") == 0) {
+                // skip this since it has been already parsed
                 cnt++;
-                if (cnt >= argc || argv[cnt][0] == '-')
-                    throw "Use --state-distribution <distribution_file>";
-                
-                params.alisim_distribution_definitions = argv[cnt];
-                
                 continue;
             }
             

@@ -34,7 +34,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
 	if (params.empty()) return;
 	DoubleVector params_vec;
 	try {
-		convert_double_vec(params.c_str(), params_vec);
+        convert_double_vec_with_distributions(params.c_str(), params_vec);
 		int i;
 		double sum, sum_prop;
         if (params_vec.size() == ncategory) {
@@ -59,7 +59,17 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
             fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 2;
         }
 		if (fabs(sum_prop-1.0) > 1e-5)
-			outError("Sum of category proportions not equal to 1");
+        {
+            outWarning("Normalizing category proportions so that sum of them not equal to 1");
+            normalize_frequencies(prop, ncategory, sum_prop);
+            
+            // normalize rates
+            sum = 0;
+            for (i = 0; i < ncategory; i++)
+                sum += prop[i]*rates[i];
+            for (i = 0; i < ncategory; i++)
+                rates[i] /= sum;
+        }
 	} catch (string &str) {
 		outError(str);
 	}

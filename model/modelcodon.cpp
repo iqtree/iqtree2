@@ -424,7 +424,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             outError("Sorry! Omega is not existed or unable to be set in the model "+model_name_str);
         }
         size_t pos = model_params.find(delimiter);
-        omega = convert_double(model_params.substr(0, pos).c_str());
+        omega = convert_double_with_distribution(model_params.substr(0, pos).c_str());
         if (!Params::getInstance().optimize_from_given_params)
             fix_omega = true;
         
@@ -445,7 +445,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             }
             
             pos = model_params.find(delimiter);
-            kappa = convert_double(model_params.substr(0, pos).c_str());
+            kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str());
             if (!Params::getInstance().optimize_from_given_params)
                 fix_kappa = true;
             
@@ -467,7 +467,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             }
             
             pos = model_params.find(delimiter);
-            kappa2 = convert_double(model_params.substr(0, pos).c_str());
+            kappa2 = convert_double_with_distribution(model_params.substr(0, pos).c_str());
             if (!Params::getInstance().optimize_from_given_params)
                 fix_kappa2 = true;
             

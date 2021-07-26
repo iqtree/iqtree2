@@ -1575,7 +1575,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	} else if (is_reversible ){
         // reversible model
 		try {
-			rates[0] = convert_double(str.c_str());
+			rates[0] = convert_double_with_distribution(str.c_str());
 		} catch (string &str) {
 			outError(str);
 		}
@@ -1596,7 +1596,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
                 if (row == 0 && col == 0) {
                     // top-left element was already red
                     try {
-                        row_sum = convert_double(str.c_str());
+                        row_sum = convert_double_with_distribution(str.c_str());
                     } catch (string &str) {
                         outError(str);
                     }
@@ -1630,7 +1630,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 	} else for (int i = 0; i < nrates; i++) {
 		int new_end_pos;
 		try {
-			rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+			rates[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos);
 		} catch (string &str) {
 			outError(str);
 		}
@@ -1644,6 +1644,8 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 		if (end_pos < str.length() && str[end_pos] != ',')
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
+        if (i < nrates - 1 && end_pos >= str.length())
+            outError("The number of input rates ("+convertIntToString(i+1)+") is less than the number of expected rates ("+convertIntToString(nrates)+"). Please check and try again.");
 	}
 	num_params = 0;
 
@@ -1671,7 +1673,7 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	int end_pos = 0;
 	for (i = 0; i < num_states; i++) {
 		int new_end_pos;
-		state_freq[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos);
 		end_pos += new_end_pos;
 		//cout << i << " " << state_freq[i] << endl;
 		if (state_freq[i] < 0.0 || state_freq[i] > 1)
@@ -1681,11 +1683,13 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ')
 			outError("Comma/Space to separate state frequencies not found in ", str);
 		end_pos++;
+        if (i < num_states - 1 && end_pos >= str.length())
+            outError("The number of frequencies ("+convertIntToString(i+1)+") is less than the number of states ("+convertIntToString(num_states)+"). Please check and try again.");
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
-		outError("State frequencies do not sum up to 1.0 in ", str);
+        outWarning("Normalizing State frequencies so that sum of them not equal to 1");
     sum = 1.0/sum;
     for (i = 0; i < num_states; i++)
         state_freq[i] *= sum;
@@ -1744,7 +1748,7 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
     // if detect if reading full matrix or half matrix by the first entry
     int end_pos;
     double d = 0.0;
-    d = convert_double(model_str.c_str(), end_pos);
+    d = convert_double_with_distribution(model_str.c_str(), end_pos);
     if (d < 0) {
         setReversible(false, adapt_tree);
     }

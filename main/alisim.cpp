@@ -330,6 +330,9 @@ void executeSimulation(Params params, IQTree *&tree, bool inference_mode)
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
+    // report model's parameters
+    reportSubstitutionProcess(cout, *(alisimulator->params), *(alisimulator->tree));
+    
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, inference_mode);
     

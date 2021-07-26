@@ -105,4 +105,6 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 		int weight_summary, double weight_threshold,
 	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
 
+void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree);
+
 #endif

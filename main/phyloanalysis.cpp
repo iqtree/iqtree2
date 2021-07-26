@@ -289,7 +289,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
-void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
+void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
     ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
@@ -436,7 +436,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
     }
 }
 
-void reportModel(ofstream &out, PhyloTree &tree) {
+void reportModel(ostream &out, PhyloTree &tree) {
 //    int i, j, k;
     int i;
 
@@ -901,6 +901,71 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
 
 }
 
+void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
+{
+    out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
+            << endl;
+    if (tree.isSuperTree()) {
+        if(params.partition_type == BRLEN_SCALE)
+            out << "Edge-linked-proportional partition model with ";
+        else if(params.partition_type == BRLEN_FIX)
+            out << "Edge-linked-equal partition model with ";
+        else if (params.partition_type == BRLEN_OPTIMIZE)
+            out << "Edge-unlinked partition model with ";
+        else
+            out << "Topology-unlinked partition model with ";
+        
+        if (params.model_joint)
+            out << "joint substitution model ";
+        else
+            out << "separate substitution models ";
+        if (params.link_alpha)
+            out << "and joint gamma shape";
+        else
+            out << "and separate rates across sites";
+        out << endl << endl;
+
+        PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+        PhyloSuperTree::iterator it;
+        int part;
+        if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
+            out << "  ID  Model         TreeLen  Parameters" << endl;
+        else
+            out << "  ID  Model           Speed  Parameters" << endl;
+        //out << "-------------------------------------" << endl;
+        for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
+            out.width(4);
+            out << right << (part+1) << "  ";
+            out.width(14);
+            if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
+                out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
+            else
+                out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
+        }
+        out << endl;
+        /*
+        for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
+            reportModel(out, *(*it));
+            reportRate(out, *(*it));
+        }*/
+        PartitionModel *part_model = (PartitionModel*)tree.getModelFactory();
+        if (part_model)
+            for (auto itm = part_model->linked_models.begin(); itm != part_model->linked_models.end(); itm++) {
+                for (it = stree->begin(); it != stree->end(); it++)
+                    if ((*it)->getModel() == itm->second) {
+                        out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
+                        bool fixed = (*it)->getModel()->fixParameters(false);
+                        reportModel(out, (*it)->aln, (*it)->getModel());
+                        (*it)->getModel()->fixParameters(fixed);
+                        break;
+                    }
+            }
+    } else {
+        reportModel(out, tree);
+        reportRate(out, tree);
+    }
+}
+
 void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_info) {
     if (!MPIHelper::getInstance().isMaster()) {
         return;
@@ -1023,66 +1088,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             reportModelSelection(out, params, &model_info, &tree);
         }
 
-        out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
-                << endl;
-        if (tree.isSuperTree()) {
-            if(params.partition_type == BRLEN_SCALE)
-                out << "Edge-linked-proportional partition model with ";
-            else if(params.partition_type == BRLEN_FIX)
-                out << "Edge-linked-equal partition model with ";
-            else if (params.partition_type == BRLEN_OPTIMIZE)
-                out << "Edge-unlinked partition model with ";
-            else
-                out << "Topology-unlinked partition model with ";
-            
-            if (params.model_joint)
-                out << "joint substitution model ";
-            else
-                out << "separate substitution models ";
-            if (params.link_alpha)
-                out << "and joint gamma shape";
-            else
-                out << "and separate rates across sites";
-            out << endl << endl;
-
-            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-            PhyloSuperTree::iterator it;
-            int part;
-            if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
-                out << "  ID  Model         TreeLen  Parameters" << endl;
-            else
-                out << "  ID  Model           Speed  Parameters" << endl;
-            //out << "-------------------------------------" << endl;
-            for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-                out.width(4);
-                out << right << (part+1) << "  ";
-                out.width(14);
-                if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
-                    out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
-                else
-                    out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
-            }
-            out << endl;
-            /*
-            for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-                reportModel(out, *(*it));
-                reportRate(out, *(*it));
-            }*/
-            PartitionModel *part_model = (PartitionModel*)tree.getModelFactory();
-            for (auto itm = part_model->linked_models.begin(); itm != part_model->linked_models.end(); itm++) {
-                for (it = stree->begin(); it != stree->end(); it++)
-                    if ((*it)->getModel() == itm->second) {
-                        out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
-                        bool fixed = (*it)->getModel()->fixParameters(false);
-                        reportModel(out, (*it)->aln, (*it)->getModel());
-                        (*it)->getModel()->fixParameters(fixed);
-                        break;
-                    }
-            }
-        } else {
-            reportModel(out, tree);
-            reportRate(out, tree);
-        }
+        reportSubstitutionProcess(out, params, tree);
 
             if (params.lmap_num_quartets >= 0) {
             tree.reportLikelihoodMapping(out);
