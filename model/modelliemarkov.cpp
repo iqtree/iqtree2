@@ -776,54 +776,60 @@ bool ModelLieMarkov::getVariables(const double* variables) {
  */
 const int MAX_ITER = 5;
 bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
-                                       double upper[], bool bound_check[], int iteration) {
-    int i;
-    bool restart = false;
-    if (iteration <= MAX_ITER) {
-        for (i = 1; i <= ndim; i++) {
-            if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
-	        restart = true; break;
-	    } // if (fabs...
-        } // for
-    } // if iteration <= MAX_ITER
-    if (restart) {
-        if (iteration == 1) {
-            unsigned int signbits = 0;
-            for (i = ndim; i>0; i--) {
-	         if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
-                     guess[i] *= -0.5;
-	         } // if (fabs...
-		 signbits = (signbits << 1) + ((guess[i]>0) ? 1 : 0);
-	    } // for
-        } else {
-            int halfN = ndim/2;
-            double sign1 = (iteration==2 || iteration==4) ? -1 : 1;
-            double sign2 = (iteration==2 || iteration==5) ? -1 : 1;
-            for (i=1; i<=halfN; i++) {
-                guess[i] = sign1 * upper[i]/2;
-            }
-            for (i=halfN+1; i<=ndim; i++) {
-                guess[i] = sign2 * upper[i]/2;
-            }
-	}
-	if (verbose_mode >= VerboseMode::VB_MED) {
-            cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
-            if (verbose_mode >= VerboseMode::VB_MAX) {
-                cout << ", new start point:" << std::endl << guess[1] ;
-				for (i = 2; i <= ndim; i++) {
-					cout << "," << guess[i];
-				}
-            }
-            cout << std::endl;
-	}
-    } else {
+                                       double upper[], bool bound_check[], 
+									   int iteration) {
+    if (iteration <= MAX_ITER || 
+	    !isGuessNearBoundary(guess, ndim, lower, upper)) {
 		if (iteration > 1 && verbose_mode >= VerboseMode::VB_MAX) {
-			cout << "Lie Markov restarts ended at iteration " << iteration - 1 << std::endl;
+			cout << "Lie Markov restarts ended at iteration " 
+			     << iteration - 1 << std::endl;
 		}    
-    } // if restart else
-    return (restart);
+		return false;
+	}
+	if (iteration == 1) {
+		//unsigned int signbits = 0;
+		for (int i = ndim; i>0; i--) {
+			if (fabs(guess[i]-lower[i]) < 1e-4 || 
+				fabs(guess[i]-upper[i]) < 1e-4) {
+				guess[i] *= -0.5;
+			} 
+			//signbits = (signbits << 1) + ((guess[i]>0) ? 1 : 0);
+		} 
+	} else {
+		int halfN = ndim/2;
+		double sign1 = (iteration==2 || iteration==4) ? -1 : 1;
+		double sign2 = (iteration==2 || iteration==5) ? -1 : 1;
+		for (int i=1; i<=ndim; i++) {
+			guess[i] = ((i<=halfN) ? sign1 : sign2) * upper[i]/2;
+		}
+	}
+	logParameterRestart(guess, ndim, iteration);
+	return true;
 }
 
+bool ModelLieMarkov::isGuessNearBoundary(double guess[], int    ndim,
+                                         double lower[], double upper[]) {
+	for (int i = 1; i <= ndim; i++) {
+		if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+			return true;
+		} 
+	} 
+	return false;
+}
+
+void ModelLieMarkov::logParameterRestart(double guess[], int ndim, int iteration) {
+	if (verbose_mode >= VerboseMode::VB_MED) {
+		cout << "Lie Markov Restart estimation at the boundary"
+				<< ", iteration " << iteration;
+		if (verbose_mode >= VerboseMode::VB_MAX) {
+			cout << ", new start point:" << std::endl << guess[1] ;
+			for (int i = 2; i <= ndim; i++) {
+				cout << "," << guess[i];
+			}
+		}
+		cout << std::endl;
+	}
+}
 
 /*
  * tau[0] = pi_R-pi_Y = pi_A+pi_G-pi_C-pi_T (for RY pairing)

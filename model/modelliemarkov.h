@@ -93,7 +93,10 @@ public:
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 	// overrides Optimization::restartParameters
 	bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
-
+		//Supporting functions
+		bool isGuessNearBoundary(double guess[], int    ndim,
+                                 double lower[], double upper[]);
+		void logParameterRestart(double guess[], int ndim, int iteration);
 protected:
 	/**
 	    Model parameters - cached so we know when they change, and thus when
