@@ -9,7 +9,7 @@
 #include "placementcostcalculator.h"
 #include <utils/timeutil.h>                 //for getRealTime()
 #include <tree/phylotreethreadingcontext.h> //
-
+#include <tree/parsimonymove.h>             //for ParsimonyPathVector
 TaxonPlacement::TaxonPlacement(): candidate_index(0),
     target_index(0), placement(nullptr) {
 }
@@ -62,6 +62,20 @@ void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
         phylo_tree.ensureCentralPartialParsimonyIsAllocated(extra_parsimony_blocks);
         phylo_tree.initializeAllPartialPars(index_parsimony);
         block_allocator = new BlockAllocator(phylo_tree, index_parsimony);
+    }
+}
+
+void PlacementRun::allocateParsimonyBlockVectors(intptr_t blocksPerThread,
+                                                 ParsimonyPathVector& pv) {
+    //TimeKeeper optimizing("optimizing");
+    //Allocate per-thread parsimony vector work areas used to calculate
+    //modified parsimony scores along the path between the
+    //pruning and regrafting points.
+    auto num_path_vectors = pv.getNumberOfPathsRequired();
+    pv.resize(num_path_vectors);
+    for (int vector=0; vector<num_path_vectors; ++vector) {
+        block_allocator->allocateVectorOfParsimonyBlocks
+            (blocksPerThread, pv[vector]);
     }
 }
                      
@@ -412,7 +426,13 @@ void PlacementRun::donePlacement() {
     optoTime.stop();
 }
 
-void PlacementRun::reportActivity() const {
+void PlacementRun::reportActivity(bool be_quiet) const {
+    if (verbose_mode < VerboseMode::VB_MIN) {
+        return;  
+    }
+    if (be_quiet) {
+        return;
+    }
     phylo_tree.hideProgress();
     std::cout.precision(4);
     refreshTime.report();
@@ -420,6 +440,39 @@ void PlacementRun::reportActivity() const {
     insertTime.report();
     optoTime.report();
     phylo_tree.showProgress();
+}
+
+void PlacementRun::placeCandidatesInBatches
+        (intptr_t newTaxaCount,
+         TypedTaxaToPlace<TaxonTypeInUse>& candidates,
+         TargetBranchRange& targets, double estimate_per_placement,
+         ParsimonySearchParameters& s,
+         ParsimonyPathVector& pv) {
+    LikelihoodBlockPairs spare_blocks(2);
+    for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
+        if (newTaxaCount<static_cast<intptr_t>(taxa_per_batch)) {
+            taxa_per_batch = newTaxaCount;
+        }
+        size_t batchStart=0;
+        for (; static_cast<intptr_t>(batchStart+taxa_per_batch) <= newTaxaCount
+             ; batchStart+=taxa_per_batch) {
+            prepareForBatch();
+
+            size_t batchStop  = batchStart + taxa_per_batch;
+            doBatchPlacementCosting(candidates, batchStart, batchStop, targets);
+
+            size_t insertStop = batchStart;
+            selectPlacementsForInsertion(candidates, batchStart, batchStop,
+                                         insertStop);
+
+            startBatchInsert();
+            doBatchInsert(candidates, batchStart, insertStop, spare_blocks,
+                          estimate_per_placement, targets,
+                          s, pv);
+            doneBatch(candidates, batchStart, batchStop, targets);
+        } //batches of items
+        donePass(candidates, batchStart, targets);
+    }
 }
                      
 PlacementRun::~PlacementRun() {

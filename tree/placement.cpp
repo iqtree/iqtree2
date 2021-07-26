@@ -216,8 +216,6 @@ void PhyloTree::reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd) 
              << " (recalculation cost " << (getRealTime() - parsimonyStart) << " sec)" );
 }
 
-typedef TaxonToPlace TaxonTypeInUse;
-//typedef LessFussyTaxon TaxonTypeInUse;
 
 void PhyloTree::optimizePlacementRegion(ParsimonySearchParameters& s,
                                         TargetBranchRange& targets,
@@ -539,17 +537,7 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     pr.initializing.start();
     pr.prepareForPlacementRun();
     pr.setUpAllocator(extra_parsimony_blocks, trackLikelihood, extra_lh_blocks);
-    
-    //TimeKeeper optimizing("optimizing");
-    //Allocate per-thread parsimony vector work areas used to calculate
-    //modified parsimony scores along the path between the
-    //pruning and regrafting points.
-    auto num_path_vectors = pv.getNumberOfPathsRequired();
-    pv.resize(num_path_vectors);
-    for (int vector=0; vector<num_path_vectors; ++vector) {
-        pr.block_allocator->allocateVectorOfParsimonyBlocks
-            (blocksPerThread, pv[vector]);
-    }
+    pr.allocateParsimonyBlockVectors(blocksPerThread, pv);
     pr.initializing.stop();
 
     double setUpStartTime = getRealTime();
@@ -599,32 +587,9 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
     s.calculate_connection_costs = true;
     s.be_quiet                   = true;
 
-    LikelihoodBlockPairs spare_blocks(2);
-    for (; 0<newTaxaCount; newTaxaCount = candidates.size() ) {
-        if (newTaxaCount<static_cast<intptr_t>(pr.taxa_per_batch)) {
-            pr.taxa_per_batch = newTaxaCount;
-        }
-        size_t batchStart=0;
-        for (; static_cast<intptr_t>(batchStart+pr.taxa_per_batch) <= newTaxaCount
-             ; batchStart+=pr.taxa_per_batch) {
-            pr.prepareForBatch();
 
-            size_t batchStop  = batchStart + pr.taxa_per_batch;
-            pr.doBatchPlacementCosting(candidates, batchStart, batchStop, targets);
-
-            size_t insertStop = batchStart;
-            pr.selectPlacementsForInsertion(candidates, batchStart, batchStop,
-                                            insertStop);
-
-            pr.startBatchInsert();
-            pr.doBatchInsert(candidates, batchStart, insertStop, spare_blocks,
-                             estimate_per_placement, targets,
-                             s, pv);
-            pr.doneBatch(candidates, batchStart, batchStop, targets);
-        } //batches of items
-        
-        pr.donePass(candidates, batchStart, targets);
-    }
+    pr.placeCandidatesInBatches(newTaxaCount, candidates, targets, 
+                                estimate_per_placement, s, pv);
     doneProgress();
     
     if (!be_quiet) {
@@ -633,15 +598,10 @@ void PhyloTree::addNewTaxaToTree(const IntVector& taxaIdsToAdd,
                   << pr.block_allocator->getLikelihoodBlockCount() << ", index_pars was "
                   << pr.block_allocator->getParsimonyBlockCount() << ".");
     }
-    
     pr.refreshTime.start();
     clearAllPartialParsimony(false);
     clearAllPartialLH();
-    pr.refreshTime.stop();
-        
+    pr.refreshTime.stop();        
     pr.donePlacement();
-    
-    if (VerboseMode::VB_MIN <= verbose_mode && !be_quiet) {
-        pr.reportActivity();
-    }
+    pr.reportActivity(be_quiet);
 }

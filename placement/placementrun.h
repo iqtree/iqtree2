@@ -34,6 +34,8 @@ public:
     TaxonPlacement(const TaxonPlacement& rhs) = default;
 };
 
+typedef TaxonToPlace TaxonTypeInUse;
+//typedef LessFussyTaxon TaxonTypeInUse;
 
 struct PlacementRun {
 public:
@@ -70,6 +72,10 @@ public:
     
     void setUpAllocator(int extra_parsimony_blocks, bool trackLikelihood=false,
                         int extra_lh_blocks=0) ;
+
+    void allocateParsimonyBlockVectors(intptr_t blocksPerThread,
+                                       ParsimonyPathVector& pv);
+
     void prepareForPlacementRun();
     
     /** called before each batch */
@@ -182,7 +188,14 @@ public:
     void logSubtreesNearAddedTaxa() const;
 
     void donePlacement();
-    void reportActivity() const;
+    void reportActivity(bool be_quiet) const;
+
+    void placeCandidatesInBatches(intptr_t newTaxaCount,
+                                  TypedTaxaToPlace<TaxonTypeInUse>& candidates,
+                                  TargetBranchRange& targets, 
+                                  double estimate_per_placement,
+                                  ParsimonySearchParameters& s,
+                                  ParsimonyPathVector& pv);
 
     ~PlacementRun();
 };
