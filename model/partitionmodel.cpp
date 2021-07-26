@@ -51,8 +51,6 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
     site_rate->setTree(tree);
 
     //string model_name = params.model_name;
-    PhyloSuperTree::iterator it;
-    int part;
     if (params.link_alpha) {
         params.gamma_shape = fabs(params.gamma_shape);
         linked_alpha = params.gamma_shape;
@@ -63,8 +61,21 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         init_by_divmat = true;
         params.model_name_init = "";
     }
-    for (it = tree->begin(), part = 0;
-         it != tree->end(); it++, part++) {
+    assignModelsToPartitions(params, tree, models_block, report_to_tree);
+
+    if (init_by_divmat) {
+        initializeByDivMat(tree);
+    } else {
+        linkModelsAcrossPartitions(params,tree);
+    }
+}
+
+void PartitionModel::assignModelsToPartitions
+        (Params &params, PhyloSuperTree *tree,
+         ModelsBlock *models_block, PhyloTree* report_to_tree) {
+    int part = 0;
+    for (auto it = tree->begin();
+         it != tree->end(); ++it, ++part) {
         ASSERT(!((*it)->getModelFactory()));
         string model_name = (*it)->aln->model_name;
         if (model_name == "") {
@@ -99,44 +110,45 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }
-    if (init_by_divmat) {
-        ASSERT(0 && "init_by_div_mat not working");
-        int nstates = linked_models.begin()->second->num_states;
-        double *pair_freq = new double[nstates * nstates];
-        double *state_freq = new double[nstates];
-        tree->aln->computeDivergenceMatrix(pair_freq, state_freq, true);
-        /*
-        MatrixXd divmat = Map<Matrix<double,Dynamic, Dynamic, RowMajor> > (pair_freq, nstates, nstates);
-        cout << "DivMat: " << endl << divmat << endl;
-        auto pi = Map<VectorXd>(state_freq, nstates);
-        MatrixXd Q = (pi.asDiagonal() * divmat).log();
-        cout << "Q: " << endl << Q << endl;
-        cout << "rowsum: " << Q.rowwise().sum() << endl;
-        Map<Matrix<double,Dynamic, Dynamic, RowMajor> >(pair_freq, nstates, nstates) = Q;
-         */
-        ((ModelMarkov*)linked_models.begin()->second)->setFullRateMatrix(pair_freq, state_freq);
-        ((ModelMarkov*)linked_models.begin()->second)->decomposeRateMatrix();
-        delete [] state_freq;
-        delete [] pair_freq;
+}
 
-    } else
-    for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
+void PartitionModel::initializeByDivMat(PhyloSuperTree *tree) {
+    ASSERT(0 && "init_by_div_mat not working");
+    int nstates = linked_models.begin()->second->num_states;
+    double *pair_freq = new double[nstates * nstates];
+    double *state_freq = new double[nstates];
+    tree->aln->computeDivergenceMatrix(pair_freq, state_freq, true);
+    /*
+    MatrixXd divmat = Map<Matrix<double,Dynamic, Dynamic, RowMajor> > (pair_freq, nstates, nstates);
+    cout << "DivMat: " << endl << divmat << endl;
+    auto pi = Map<VectorXd>(state_freq, nstates);
+    MatrixXd Q = (pi.asDiagonal() * divmat).log();
+    cout << "Q: " << endl << Q << endl;
+    cout << "rowsum: " << Q.rowwise().sum() << endl;
+    Map<Matrix<double,Dynamic, Dynamic, RowMajor> >(pair_freq, nstates, nstates) = Q;
+        */
+    ((ModelMarkov*)linked_models.begin()->second)->setFullRateMatrix(pair_freq, state_freq);
+    ((ModelMarkov*)linked_models.begin()->second)->decomposeRateMatrix();
+    delete [] state_freq;
+    delete [] pair_freq;
+}
+
+void PartitionModel::linkModelsAcrossPartitions
+        (Params &params, PhyloSuperTree *tree) {
+    for (auto mit = linked_models.begin(); 
+         mit != linked_models.end(); ++mit) {
         PhyloSuperTree *stree = (PhyloSuperTree*)site_rate->phylo_tree;
         if (mit->second->freq_type != StateFreqType::FREQ_ESTIMATE && 
-            mit->second->freq_type != StateFreqType::FREQ_EMPIRICAL)
+            mit->second->freq_type != StateFreqType::FREQ_EMPIRICAL) {
             continue;
+        }
         // count state occurrences
         size_t *sum_state_counts = NULL;
         int num_parts = 0;
-        for (it = stree->begin(); it != stree->end(); it++) {
+        for (auto it = stree->begin(); it != stree->end(); ++it) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 num_parts++;
-                if ((*it)->aln->seq_type == SeqType::SEQ_CODON) {
-                    outError("Linking codon models not supported");
-                }
-                if ((*it)->aln->seq_type == SeqType::SEQ_POMO) {
-                    outError("Linking POMO models not supported");
-                }
+                disallowIfUnsupportedSequenceType((*it)->aln->seq_type);
 #ifndef _MSC_VER
                 size_t state_counts[(*it)->aln->STATE_UNKNOWN+1];
 #else
@@ -165,7 +177,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         boost::scoped_array<double> sum_state_freq(new double[nstates]);
 #endif
         // convert counts to frequencies
-        for (it = stree->begin(); it != stree->end(); it++) {
+        for (auto it = stree->begin(); it != stree->end(); ++it) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 (*it)->aln->convertCountToFreq(sum_state_counts, &sum_state_freq[0]);
                 break;
@@ -180,13 +192,22 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree,
         cout << endl;
         cout.precision(prec);
 
-        for (it = stree->begin(); it != stree->end(); it++) {
+        for (auto it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(&sum_state_freq[0]);
                 (*it)->getModel()->decomposeRateMatrix();
             }
         }
         delete [] sum_state_counts;
+    }
+}
+
+void PartitionModel::disallowIfUnsupportedSequenceType(SeqType seqType) const {
+    if (seqType == SeqType::SEQ_CODON) {
+        outError("Linking codon models not supported");
+    }
+    if (seqType == SeqType::SEQ_POMO) {
+        outError("Linking POMO models not supported");
     }
 }
 
@@ -248,7 +269,6 @@ void PartitionModel::restoreCheckpoint() {
             }
         checkpoint->endStruct();
     }
-    
     endCheckpoint();
 }
 
@@ -258,9 +278,10 @@ int PartitionModel::getNParameters(int brlen_type) const {
     for (auto it = tree->begin(); it != tree->end(); it++) {
     	df += (*it)->getModelFactory()->getNParameters(brlen_type);
     }
-    if (linked_alpha > 0)
+    if (linked_alpha > 0) {
         df ++;
-    for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
+    }
+    for (auto it = linked_models.begin(); it != linked_models.end(); ++it) {
         bool fixed = it->second->fixParameters(false);
         df += it->second->getNDim() + it->second->getNDimFreq();
         it->second->fixParameters(fixed);
@@ -270,9 +291,9 @@ int PartitionModel::getNParameters(int brlen_type) const {
 
 double PartitionModel::computeFunction(double shape) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    double res = 0.0;
-    int ntrees = static_cast<int>(tree->size());
-    linked_alpha = shape;
+    double res    = 0.0;
+    int    ntrees = static_cast<int>(tree->size());
+    linked_alpha  = shape;
     if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)

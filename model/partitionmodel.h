@@ -43,6 +43,13 @@ public:
 	PartitionModel(Params &params, PhyloSuperTree *tree,
                    ModelsBlock *models_block,
                    PhyloTree* report_to_tree);
+        //Supporting functions
+        void assignModelsToPartitions  (Params &params, PhyloSuperTree *tree,
+                                        ModelsBlock *models_block, 
+                                        PhyloTree* report_to);
+        void initializeByDivMat        (PhyloSuperTree *tree);
+        void linkModelsAcrossPartitions(Params &params, PhyloSuperTree *tree);
+        void disallowIfUnsupportedSequenceType(SeqType seqType) const;
 
     ~PartitionModel();
 
