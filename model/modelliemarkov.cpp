@@ -924,7 +924,14 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
 
   if (getFreqType() == StateFreqType::FREQ_EMPIRICAL ||
       getFreqType() == StateFreqType::FREQ_USER_DEFINED) {
-    int bdf = BDF[model_num];
+	setBasisEmpirical(report_to_tree);
+  } else {
+	setBasisEstimate(report_to_tree);
+  } // if getFreqType() ... else ...
+}
+
+void ModelLieMarkov::setBasisEmpirical(PhyloTree* report_to_tree) {
+	    int bdf = BDF[model_num];
     // There are no free parameters for base frequencies:
     num_params = MODEL_PARAMS[model_num]-bdf;
     // This populates field state_freq. (TODO: this call might be redundant - check)
@@ -953,6 +960,7 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
       break;
     default: outError("Can't happen");
     } // switch
+
     if (!canMatchFreq) {
       // MDW to Minh: I suspect there is a better way, please recode if there is.
       double eqbm[4];
@@ -989,21 +997,21 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
       }
       basis[i] = permuted_rates;
     } // for i
-  } else {
-      ASSERT(getFreqType() == StateFreqType::FREQ_ESTIMATE); // only other legal possibility
-      num_params = MODEL_PARAMS[model_num];
-      basis = new double*[num_params+1];
-      for (int i=0;i<=num_params;i++) {
-        const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
-        double* permuted_rates = new double[NUM_RATES];
-        for (int rate=0; rate<NUM_RATES; rate++) {
-	      permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
-        } // for rate
-        basis[i] = permuted_rates;
-      } // for i
-  } // if getFreqType() ... else ...
 }
 
+void ModelLieMarkov::setBasisEstimate(PhyloTree* report_to_tree) {
+	ASSERT(getFreqType() == StateFreqType::FREQ_ESTIMATE); // only other legal possibility
+	num_params = MODEL_PARAMS[model_num];
+	basis = new double*[num_params+1];
+	for (int i=0;i<=num_params;i++) {
+		const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
+		double* permuted_rates = new double[NUM_RATES];
+		for (int rate=0; rate<NUM_RATES; rate++) {
+			permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
+		} // for rate
+		basis[i] = permuted_rates;
+	} // for i
+}
 
 /*
  * Set rates from model_parameters

@@ -107,6 +107,9 @@ protected:
 	int symmetry; // RY->0, WS->1, MK->2
 	int model_num; // 0->1.1, etc to 36->12.12
 	void setBasis(PhyloTree* report_to_tree);
+		//Supporting functions
+		void setBasisEmpirical(PhyloTree* report_to_tree);
+		void setBasisEstimate (PhyloTree* report_to_tree);
 	virtual void setRates();
 
     /**
