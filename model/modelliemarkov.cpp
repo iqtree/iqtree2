@@ -335,8 +335,10 @@ void ModelLieMarkov::init(const char *model_name, string model_params,
     // TODO: why is freq_params not handled here?
 
     ASSERT(NUM_RATES==getNumRateEntries());
-    StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
-    getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
+    StateFreqType expected_freq_type; //returned by getLieMarkovModelInfo 
+	                                  //but not used here
+    getLieMarkovModelInfo((string)model_name, name, full_name, 
+	                      model_num, symmetry, expected_freq_type);
 
     if (model_num<0) {
         // should never happen - model_name should have been accepted 
@@ -360,21 +362,20 @@ void ModelLieMarkov::init(const char *model_name, string model_params,
             outError("String '"+ model_params + "' does not have exactly " + 
 				     convertIntToString(num_params) + " parameters");
         for (int i = 0; i < num_params; i++) {
-            if (vec[i] <= MIN_LIE_WEIGHT || vec[i] >= MAX_LIE_WEIGHT)
+            if (vec[i] <= MIN_LIE_WEIGHT || vec[i] >= MAX_LIE_WEIGHT) {
                 outError("Weights for Lie Markov model must be between " + 
 					     convertDoubleToString(MIN_LIE_WEIGHT) + " and " +
 					     convertDoubleToString(MAX_LIE_WEIGHT));
+			}
             model_parameters[i] = vec[i];
             fixed_parameters = !Params::getInstance().optimize_from_given_params;
         }
         setRates();
     }
-
 	if (freq_type == StateFreqType::FREQ_UNKNOWN || 
 		expected_freq_type == StateFreqType::FREQ_EQUAL) { 
 		freq_type = expected_freq_type; 
 	}
-
     super::init(freq_type, report_to_tree);
 }
 
@@ -420,8 +421,9 @@ void ModelLieMarkov::writeInfo(ostream &out) {
     out << endl;
 }
 
-/*static*/ void ModelLieMarkov::getLieMarkovModelInfo(string model_name, string &name, string &full_name, 
-	                                                  int &model_num, int &symmetry, StateFreqType &def_freq) {
+/*static*/ void ModelLieMarkov::getLieMarkovModelInfo
+				(string model_name, string &name, string &full_name, 
+	             int &model_num, int &symmetry, StateFreqType &def_freq) {
     parseModelName(model_name,&model_num,&symmetry);
     // Special case, just because it is confusing
     if (model_name == "2.2a" || model_name == "RY2.2a" ||
@@ -437,7 +439,6 @@ void ModelLieMarkov::writeInfo(ostream &out) {
 		def_freq = StateFreqType::FREQ_UNKNOWN;
 		return;
     }
-
     // name and full_name:
     // Special case for strand symmetric model.
     if (model_num == STR_SYM_INDEX) {
@@ -447,10 +448,10 @@ void ModelLieMarkov::writeInfo(ostream &out) {
 		full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
     } else {
 		name      = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
-		full_name = "Lie Markov model "+SYMMETRY[symmetry]+MODEL_NAMES[model_num]
+		full_name = "Lie Markov model "
+		          + SYMMETRY[symmetry]+MODEL_NAMES[model_num]
 		          + (TIME_REVERSIBLE[model_num] ? "" : " (non reversible)");
     }
-
 	def_freq = getDefaultFrequencyType(model_num, symmetry);
 }
 
@@ -490,7 +491,6 @@ void ModelLieMarkov::writeInfo(ostream &out) {
         abort();
 		return StateFreqType::FREQ_UNKNOWN;	
       }
-
     }
 	if (bdf==3) {
 		return StateFreqType::FREQ_ESTIMATE;
@@ -502,13 +502,73 @@ void ModelLieMarkov::writeInfo(ostream &out) {
 
 
 ModelLieMarkov::~ModelLieMarkov() {
-  // Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
-  
-  // BQM: Do something now
-    if (model_parameters)
+	// Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
+	// BQM: Do something now
+    if (model_parameters) {
         delete [] model_parameters;
+	}
 }
 
+namespace {
+	bool isValidFreqType(StateFreqType freq_type) {
+		switch(freq_type) {
+			case StateFreqType::FREQ_USER_DEFINED:
+			case StateFreqType::FREQ_EMPIRICAL:
+			case StateFreqType::FREQ_ESTIMATE:
+				return true;
+			default:
+				return false;
+		}
+	}
+	StateFreqType invalidFreqTypes[] = {
+		StateFreqType::FREQ_UNKNOWN,
+		StateFreqType::FREQ_CODON_1x4,
+		StateFreqType::FREQ_CODON_3x4,
+		StateFreqType::FREQ_CODON_3x4C,
+		StateFreqType::FREQ_MIXTURE,
+		StateFreqType::FREQ_DNA_1112,
+		StateFreqType::FREQ_DNA_1121,
+		StateFreqType::FREQ_DNA_1211,
+		StateFreqType::FREQ_DNA_2111,
+		StateFreqType::FREQ_DNA_1123,
+		StateFreqType::FREQ_DNA_1213,
+		StateFreqType::FREQ_DNA_1231,
+		StateFreqType::FREQ_DNA_2113,
+		StateFreqType::FREQ_DNA_2131,
+		StateFreqType::FREQ_DNA_2311,
+	};
+
+	bool isInvalidFreqType(StateFreqType freq_type) {
+		for (auto f : invalidFreqTypes) {
+			if (freq_type==f) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool isValidFreqTypeForBDFAndSymmetry(StateFreqType freq_type, 
+	                                      int bdf, int symmetry) {
+		switch(freq_type) { 
+			case StateFreqType::FREQ_EQUAL:
+				return (bdf==0);
+			case StateFreqType::FREQ_DNA_RY:   
+				return (bdf==2 && symmetry==0);
+			case StateFreqType::FREQ_DNA_WS:   
+				return (bdf==2 && symmetry==1);
+			case StateFreqType::FREQ_DNA_MK:   
+				return (bdf==2 && symmetry==2);
+			case StateFreqType::FREQ_DNA_1122: 
+				return (bdf==1 && symmetry==2);
+			case StateFreqType::FREQ_DNA_1212: 
+				return (bdf==1 && symmetry==0);
+			case StateFreqType::FREQ_DNA_1221: 
+				return (bdf==1 && symmetry==1);
+			default: 
+				throw("Unrecognized freq_type in validFreqType - can't happen");
+		}
+	}
+}
 /*
  * Return 'true' if freq type is compatible with this Lie-Markov model.
  * NOTE: Any freq_type exept FREQ_USER_DEFINED, FREQ_EMPIRICAL or
@@ -526,44 +586,16 @@ ModelLieMarkov::~ModelLieMarkov() {
  * (update - this code is now unused, but left in for possible future use.)
  */
 bool  ModelLieMarkov::validFreqType() {
-  int bdf=BDF[model_num];
-  switch(getFreqType()) {
-    case StateFreqType::FREQ_USER_DEFINED:
-    case StateFreqType::FREQ_EMPIRICAL:
-    case StateFreqType::FREQ_ESTIMATE:
-        return true;
-    case StateFreqType::FREQ_UNKNOWN:
-    case StateFreqType::FREQ_CODON_1x4:
-    case StateFreqType::FREQ_CODON_3x4:
-    case StateFreqType::FREQ_CODON_3x4C:
-    case StateFreqType::FREQ_MIXTURE:
-    case StateFreqType::FREQ_DNA_1112:
-    case StateFreqType::FREQ_DNA_1121:
-    case StateFreqType::FREQ_DNA_1211:
-    case StateFreqType::FREQ_DNA_2111:
-    case StateFreqType::FREQ_DNA_1123:
-    case StateFreqType::FREQ_DNA_1213:
-    case StateFreqType::FREQ_DNA_1231:
-    case StateFreqType::FREQ_DNA_2113:
-    case StateFreqType::FREQ_DNA_2131:
-    case StateFreqType::FREQ_DNA_2311:
-        return false;
-    case StateFreqType::FREQ_EQUAL:
-        return (bdf==0);
-    case StateFreqType::FREQ_DNA_RY:   
-        return (bdf==2 && symmetry==0);
-    case StateFreqType::FREQ_DNA_WS:   
-        return (bdf==2 && symmetry==1);
-    case StateFreqType::FREQ_DNA_MK:   
-        return (bdf==2 && symmetry==2);
-    case StateFreqType::FREQ_DNA_1122: 
-        return (bdf==1 && symmetry==2);
-    case StateFreqType::FREQ_DNA_1212: 
-        return (bdf==1 && symmetry==0);
-    case StateFreqType::FREQ_DNA_1221: 
-        return (bdf==1 && symmetry==1);
-    default: throw("Unrecognized freq_type in validFreqType - can't happen");
-    }
+	StateFreqType freq_type = getFreqType();
+	if (isValidFreqType(freq_type)) {
+		return true;
+	}
+	if (isInvalidFreqType(freq_type)) {
+		return false;
+	}
+	int bdf=BDF[model_num];
+	return isValidFreqTypeForBDFAndSymmetry
+	       (freq_type, bdf, symmetry);
 }
 
 /*
@@ -612,13 +644,16 @@ bool ModelLieMarkov::isReversible() {
  * be accepted as prefixes to StrSym (e.g. "ryStrsym" is an alias for StrSym) 
  */
 
-
-/* static */ void ModelLieMarkov::parseModelName(string model_name, int* model_num, int* symmetry) {
+/* static */ void ModelLieMarkov::parseModelName
+					(string model_name, int* model_num, 
+					 int* symmetry) {
     auto len = model_name.length();
     string base_name;
     string name_lower = model_name;
-    for (string::iterator it = name_lower.begin(); it != name_lower.end(); it++)
-	(*it) = tolower(*it);
+    for (auto it = name_lower.begin(); 
+		it != name_lower.end(); it++) {
+		(*it) = tolower(*it);
+	}
     if (name_lower.find("ry")==0) {
       // found "RY" at start of model name
       *symmetry = 0;
@@ -670,7 +705,8 @@ string ModelLieMarkov::getName() const {
     case StateFreqType::FREQ_EQUAL:
 		return name;
     default:
-       	cerr << "Bad freq_type for a Lie-Markov model. Can't happen" << endl;
+       	cerr << "Bad freq_type for a Lie-Markov model."
+		     << " Can't happen" << endl;
         abort();
     }
 }
@@ -699,7 +735,8 @@ void ModelLieMarkov::setVariables(double *variables) {
     // non-reversible case
     if (!is_reversible) {
         if (nrate > 0)
-            memcpy(variables+1, model_parameters, nrate*sizeof(double));
+            memcpy(variables+1, model_parameters, 
+			       nrate*sizeof(double));
         return;
     }
 
@@ -725,10 +762,12 @@ bool ModelLieMarkov::getVariables(const double* variables) {
 
 	// non-reversible case
 	if (!is_reversible) {
-		for (i = 0; i < nrate && !changed; i++)
+		for (i = 0; i < nrate && !changed; i++) {
 			changed = (model_parameters[i] != variables[i + 1]);
+		}
 		if (changed) {
-			memcpy(model_parameters, variables + 1, nrate * sizeof(double));
+			memcpy(model_parameters, variables + 1, 
+			       nrate * sizeof(double));
 			setRates();
 		}
 		return changed;
@@ -749,12 +788,11 @@ bool ModelLieMarkov::getVariables(const double* variables) {
         // 2015-09-07: relax the sum of state_freq to be 1,
         //             this will be done at the end of optimization
 		int ndim = getNDim();
-		for (i = 0; i < num_states-1; i++)
+		for (i = 0; i < num_states-1; i++) {
 			changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
+		}
 		memcpy(state_freq, variables+(ndim-num_states+2),
                (num_states-1)*sizeof(double));
-
-
 	}
 	return changed;
 }
@@ -807,7 +845,8 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
 		double sign1 = (iteration==2 || iteration==4) ? -1 : 1;
 		double sign2 = (iteration==2 || iteration==5) ? -1 : 1;
 		for (int i=1; i<=ndim; i++) {
-			guess[i] = ((i<=halfN) ? sign1 : sign2) * upper[i]/2;
+			guess[i] = ((i<=halfN) 
+			         ? sign1 : sign2) * upper[i]/2;
 		}
 	}
 	logParameterRestart(guess, ndim, iteration);
@@ -817,14 +856,16 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
 bool ModelLieMarkov::isGuessNearBoundary(double guess[], int    ndim,
                                          double lower[], double upper[]) {
 	for (int i = 1; i <= ndim; i++) {
-		if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+		if (fabs(guess[i]-lower[i]) < 1e-4 || 
+		    fabs(guess[i]-upper[i]) < 1e-4) {
 			return true;
 		} 
 	} 
 	return false;
 }
 
-void ModelLieMarkov::logParameterRestart(double guess[], int ndim, int iteration) {
+void ModelLieMarkov::logParameterRestart
+		(double guess[], int ndim, int iteration) {
 	if (verbose_mode >= VerboseMode::VB_MED) {
 		cout << "Lie Markov Restart estimation at the boundary"
 				<< ", iteration " << iteration;
@@ -867,7 +908,8 @@ static void piToTau(double* pi, double* tau, int sym) {
   } // switch
 }
 
-// Writes into a length 4 pi vector calculated from given tau, for given pairing/symmetry.
+// Writes into a length 4 pi vector calculated
+// from given tau, for given pairing/symmetry.
 static void tauToPi(double* tau, double* pi, int sym) {
   switch (sym) {
   case 0: // RY
@@ -923,8 +965,6 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
   if (getFreqType() != StateFreqType::FREQ_EMPIRICAL &&
       getFreqType() != StateFreqType::FREQ_USER_DEFINED &&
       getFreqType() != StateFreqType::FREQ_ESTIMATE) {
-      // Note to Minh: this is formatted horribly - one hugely long line - if you know how to tidily output 
-      // multiline throw, please fix.
       throw("Lie-Markov models can only have base frequencies specified as\n" 
 		  "empirical (-f c, <model>+FC or default), user defined (<model>+F{<freqs>})\n"
 		  "or estimated/optimized (-f o, <model>+FO).\n"
@@ -932,7 +972,6 @@ void ModelLieMarkov::setBasis(PhyloTree* report_to_tree) {
 		  "to one of +FQ, +F1122,+F1212, +F1221, +FRY, +FWS, +FMK or unconstrained).\n"
 		  "Imposing extra constraints is either redundant, makes the model no longer\n"
 		  "Lie-Markov, or makes it a lower dimensioned Lie-Markov model.\n");
-      //throw("Invalid base frequency constraints for a Lie-Markov model");
   }
 
   if (getFreqType() == StateFreqType::FREQ_EMPIRICAL ||
@@ -958,7 +997,8 @@ void ModelLieMarkov::setBasisEmpirical(PhyloTree* report_to_tree) {
     bool canMatchFreq = true;
     switch (bdf) {
     case 0:
-      canMatchFreq = ((fabs(tau[0])<0.001 && fabs(tau[1])<0.001) || fabs(tau[2])<0.001);
+      canMatchFreq = ((fabs(tau[0])<0.001 && fabs(tau[1])<0.001) || 
+	                   fabs(tau[2])<0.001);
       tau[0] = 0; tau[1] = 0; tau[2] = 0;
       break;
     case 1:
@@ -1013,7 +1053,9 @@ void ModelLieMarkov::setBasisEmpirical(PhyloTree* report_to_tree) {
 }
 
 void ModelLieMarkov::setBasisEstimate(PhyloTree* report_to_tree) {
-	ASSERT(getFreqType() == StateFreqType::FREQ_ESTIMATE); // only other legal possibility
+	ASSERT(getFreqType() == StateFreqType::FREQ_ESTIMATE); 
+	// only other legal possibility
+
 	num_params = MODEL_PARAMS[model_num];
 	basis = new double*[num_params+1];
 	for (int i=0;i<=num_params;i++) {
@@ -1035,7 +1077,6 @@ void ModelLieMarkov::setRates() {
                                // non-negative, and trace non-zero
     double max_abs = 0;
     for (int param=0; param<num_params; param++) {
-        // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
         max_abs = (fabs(model_parameters[param])>max_abs
 			    ? fabs(model_parameters[param]) : max_abs);
         for (int rate=0; rate<NUM_RATES; rate++) 
@@ -1064,14 +1105,17 @@ void ModelLieMarkov::setRates() {
 void ModelLieMarkov::decomposeRateMatrix() {
     return super::decomposeRateMatrix();
     /*
-    if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
+    if (phylo_tree->params->matrix_exp_technique == 
+	    MET_SCALING_SQUARING) 
         return;
-    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    if (phylo_tree->params->matrix_exp_technique == 
+	    MET_EIGEN3LIB_DECOMPOSITION) {
         // using Eigen library
         decomposeRateMatrixEigen3lib();
         return;
     }
-    if (phylo_tree->params->matrix_exp_technique == MET_LIE_MARKOV_DECOMPOSITION) {
+    if (phylo_tree->params->matrix_exp_technique == 
+	    MET_LIE_MARKOV_DECOMPOSITION) {
         decomposeRateMatrixClosedForm();
         return;
     }
@@ -1096,7 +1140,8 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     }
     Map<Matrix4cd,Aligned> inv_evec(cinv_evec);
     inv_evec = evec.inverse();
-//    cout << "det(evecs): " << setprecision(25) << evec.determinant() << endl;
+//    cout << "det(evecs): " << setprecision(25) 
+//         << evec.determinant() << endl;
 //    int i, j;
 //    for (i = 0; i < 4; i++) {
 //        ceval[i] = eval(i);
@@ -1137,7 +1182,8 @@ const static int g2index[] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 3,-1,-1
 void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     // Lie Markov eigen decomposition with closed formula
     int i, j;
-    double a = 1., a2 = 0, b = 0, c = 0, d = 0, d1 = 0, e1 = 0, e2 = 0, f1 = 0, f2 = 0, g1 = 0, g2 = 0;
+    double a = 1., a2 = 0, b = 0, c = 0, d = 0, d1 = 0;
+	double e1 = 0, e2 = 0, f1 = 0, f2 = 0, g1 = 0, g2 = 0;
 
     if (a2index[model_num] >= 0) a2 = model_parameters[a2index[model_num]];
     if ( bindex[model_num] >= 0)  b = model_parameters[ bindex[model_num]];
@@ -1152,7 +1198,6 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     if (g2index[model_num] >= 0) g2 = model_parameters[g2index[model_num]];
     
     // following code is from Cassius
-    
     
     if (name.find("1.1") != string::npos) {
     	a = 1./3.;
@@ -1179,16 +1224,19 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cevec[15] =  0.0;
 
 		/*Inverses*/
-		cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = cinv_evec[5] = cinv_evec[6] = cinv_evec[9] = cinv_evec[11] = cinv_evec[14] = cinv_evec[15] = -0.25;
-		cinv_evec[0] = cinv_evec[4] = cinv_evec[8] = cinv_evec[12] = 0.25;
-		cinv_evec[7] = cinv_evec[10] = cinv_evec[13] = 0.75;
+		cinv_evec[1]  = cinv_evec[2]  = cinv_evec[3]  = -0.25;
+	    cinv_evec[5]  = cinv_evec[6]  = cinv_evec[9]  = -0.25;
+		cinv_evec[11] = cinv_evec[14] = cinv_evec[15] = -0.25;
+		cinv_evec[0]  = cinv_evec[4]  = cinv_evec[8]  = cinv_evec[12] = 0.25;
+		cinv_evec[7]  = cinv_evec[10] = cinv_evec[13] = 0.75;
 
     } else if (name.find("2.2b") != string::npos) {
         /******** eigenvalues *********/
         //Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
     	a = 1./3.;
         a2 = -rate_matrix[1] + a;
-        ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
+        ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); 
+		ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
 
         /******** right eigenvectors *********/
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
@@ -1213,9 +1261,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 		/*INVERSES*/
 
-		cinv_evec[0] = cinv_evec[4] = cinv_evec[5] = cinv_evec[8] = cinv_evec[12] = cinv_evec[13] = 0.25;
+		cinv_evec[0] = cinv_evec[4]  = cinv_evec[5]  = 0.25;
+		cinv_evec[8] = cinv_evec[12] = cinv_evec[13] = 0.25;
 		cinv_evec[1] = cinv_evec[9] = -0.25;
-		cinv_evec[2] = cinv_evec[10] = cinv_evec[15] = 0.;
+		cinv_evec[2] = cinv_evec[10] = cinv_evec[15] = 0.0;
 		cinv_evec[3] = cinv_evec[6] = -0.5;
 		cinv_evec[14] = cinv_evec[11] = 0.5;
 
@@ -1252,8 +1301,12 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cevec[15] = 1.0;
 
 		/******** INVERSE *********/
-		cinv_evec[0] =cinv_evec[3] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[10] =cinv_evec[12] =cinv_evec[13] =cinv_evec[14] =cinv_evec[15] = 0.25;
-		cinv_evec[1] =cinv_evec[2] =cinv_evec[6] =cinv_evec[7] =cinv_evec[9] =cinv_evec[11] = -0.25;
+		cinv_evec[0]  = cinv_evec[3]  = cinv_evec[4]  = 0.25;
+		cinv_evec[5]  = cinv_evec[8]  = cinv_evec[10] = 0.25;
+		cinv_evec[12] = cinv_evec[13] = cinv_evec[14] = 0.25;
+		cinv_evec[15] = 0.25;
+		cinv_evec[1]  = cinv_evec[2]  = cinv_evec[6]  = -0.25;
+		cinv_evec[7]  = cinv_evec[9]  = cinv_evec[11] = -0.25;
 
      }else if (name.find("3.3b") != string::npos) {
 
@@ -1261,7 +1314,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		a2 = (rate_matrix[2] - a)/2.;
 		c = -rate_matrix[1] - a2 + a;
 
-		/* cout <<"Los parametros son a = " << a << " a2 =  " << a2 << " c = " << c << endl;*/
+		/* cout << "Los parametros son a = " << a << " a2 =  "
+		        << a2 << " c = " << c << endl;*/
 
 		/******** eigenvalues *********/
 		//{0, -4 (a - a2), -2 (2 a + a2 - I c), -2 (2 a + a2 + I c)} std::sqrt()
@@ -1290,10 +1344,13 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cevec[14] = complex<double> (0., 1.);
 		cevec[15] = 1.0;
 		/******** INVERSE *********/
-		cinv_evec[0] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[12] =cinv_evec[13] =cinv_evec[14] =cinv_evec[15] = 0.25;
-		cinv_evec[1] =cinv_evec[6] =cinv_evec[7] =cinv_evec[9] = -0.25;
-		cinv_evec[2] =cinv_evec[11] =complex<double> (0., -0.25);
-		cinv_evec[3] =cinv_evec[10] = complex<double> (0., 0.25);
+		cinv_evec[0]  = cinv_evec[4]  = cinv_evec[5] = 0.25;
+		cinv_evec[8]  = cinv_evec[12] = cinv_evec[13] = 0.25;
+		cinv_evec[14] = cinv_evec[15] = 0.25;
+		cinv_evec[1]  = cinv_evec[6]  = -0.25;
+		cinv_evec[7]  = cinv_evec[9]  = -0.25;
+		cinv_evec[2]  = cinv_evec[11] = complex<double> (0., -0.25);
+		cinv_evec[3]  = cinv_evec[10] = complex<double> (0., 0.25);
 
      } else if (name.find("3.3c") != string::npos) {
 		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
@@ -1329,11 +1386,13 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 		 /*INVERSE*/
 
-		cinv_evec[0] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[12] =cinv_evec[13] = 0.25;
-		cinv_evec[1] =cinv_evec[9] = -0.25;
-		cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.;
-		cinv_evec[3] =cinv_evec[6] = -0.5;
-		cinv_evec[11] =cinv_evec[14] = 0.5;
+		cinv_evec[0]  = cinv_evec[4]  = cinv_evec[5]  = 0.25;
+		cinv_evec[8]  = cinv_evec[12] = cinv_evec[13] = 0.25;
+		cinv_evec[1]  = cinv_evec[9]  = -0.25;
+		cinv_evec[2]  = cinv_evec[7]  = 0.0;
+		cinv_evec[10] = cinv_evec[15] = 0.0;
+		cinv_evec[3]  = cinv_evec[6]  = -0.5;
+		cinv_evec[11] = cinv_evec[14] = 0.5;
 
      } else if (name.find("3.4") != string::npos) {
 		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
@@ -1373,12 +1432,12 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[14] = 1.0;
 			cevec[15] = 0.0;
 			/*INVERSE*/
-			cinv_evec[0] =cinv_evec[5] =cinv_evec[8] =cinv_evec[13] = 0.25 + 0.25*d/deno2;
-			cinv_evec[1] =cinv_evec[9] = -cinv_evec[0];
-			cinv_evec[4] =cinv_evec[12] = -cinv_evec[0] + 0.5;
-			cinv_evec[14] =cinv_evec[11] = 0.5;
-			cinv_evec[3] =cinv_evec[6] = -0.5;
-			cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.;
+			cinv_evec[0]  = cinv_evec[5]  = cinv_evec[8] = cinv_evec[13] = 0.25 + 0.25*d/deno2;
+			cinv_evec[1]  = cinv_evec[9]  = -cinv_evec[0];
+			cinv_evec[4]  = cinv_evec[12] = -cinv_evec[0] + 0.5;
+			cinv_evec[14] = cinv_evec[11] = 0.5;
+			cinv_evec[3]  = cinv_evec[6]  = -0.5;
+			cinv_evec[2]  = cinv_evec[7]  = cinv_evec[10] =cinv_evec[15] = 0.;
 		}
 
     } else if (name.find("4.4a") != string::npos) {
@@ -1423,7 +1482,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[15] = 0.0;
 			/******** INVERSE *********/
 
-			double auxd = d*deno2; double auxe1 = e1*deno2; double auxe2 = e2*deno2;
+			double auxd  = d*deno2; 
+			double auxe1 = e1*deno2; 
+			double auxe2 = e2*deno2;
 
 			cinv_evec[0] = 0.25 + auxd + auxe1;
 			cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = -cinv_evec[0];
@@ -1454,7 +1515,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
-			ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] = -2.0*(2.0*a + a2 -d1); ceval[3] = ceval[2]-4.0*d1;
+			ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); 
+			ceval[2] = -2.0*(2.0*a + a2 -d1); 
+			ceval[3] = ceval[2]-4.0*d1;
 
 			/******** right eigenvectors *********/
 			// {{1, 1, 1, 1}, {(-a + a2 + d)/(a - a2 + d), 1, (-a + a2 + d)/(a - a2 + d), 1},
@@ -1502,7 +1565,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
             nondiagonalizable = false;
             /******** eigenvalues *********/
             //Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-            ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] =-2.0*(2.0*a + a2 - b); ceval[3] = ceval[2]- 4.0*b;
+            ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); 
+			ceval[2] =-2.0*(2.0*a + a2 - b); 
+			ceval[3] = ceval[2]- 4.0*b;
 
             /******** right eigenvectors *********/
             // {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
@@ -1527,10 +1592,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
             cevec[15] = 1.0;
              /*INVERSE */
             double auxd = 0.25*d/(a-a2);
-            cinv_evec[0] = cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = 0.25 + auxd;
-            cinv_evec[2] = cinv_evec[11] = cinv_evec[6] = cinv_evec[7] = -0.25;
+            cinv_evec[0] = cinv_evec[8]  = cinv_evec[5]  = cinv_evec[13] = 0.25 + auxd;
+            cinv_evec[2] = cinv_evec[11] = cinv_evec[6]  = cinv_evec[7]  = -0.25;
             cinv_evec[3] = cinv_evec[10] = cinv_evec[14] = cinv_evec[15] = 0.25;
-            cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
+            cinv_evec[1] = cinv_evec[9]  = -cinv_evec[0];
             cinv_evec[4] = cinv_evec[12] = 0.25 - auxd;
         }
 	} else if (name.find("4.5b") != string::npos) {
@@ -1574,13 +1639,13 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[15] = 1.0;
 			/*INVERSE*/
 			double auxd = 0.25*d/(a-a2);
-			cinv_evec[0] =cinv_evec[8] =cinv_evec[5] =cinv_evec[13] = 0.25 + auxd;
-			cinv_evec[1] =cinv_evec[9] =-cinv_evec[0];
-			cinv_evec[4] =cinv_evec[12] = 0.25 - auxd;
-			cinv_evec[10] =cinv_evec[3] = complex<double> (0, 0.25);
-			cinv_evec[2] =cinv_evec[11] = complex<double> (0, -0.25);
-			cinv_evec[6] =cinv_evec[7] = -0.25;
-			cinv_evec[14] =cinv_evec[15] = 0.25;
+			cinv_evec[0]  = cinv_evec[8]  = cinv_evec[5] = cinv_evec[13] = 0.25 + auxd;
+			cinv_evec[1]  = cinv_evec[9]  = -cinv_evec[0];
+			cinv_evec[4]  = cinv_evec[12] = 0.25 - auxd;
+			cinv_evec[10] = cinv_evec[3]  = complex<double> (0, 0.25);
+			cinv_evec[2]  = cinv_evec[11] = complex<double> (0, -0.25);
+			cinv_evec[6]  = cinv_evec[7]  = -0.25;
+			cinv_evec[14] = cinv_evec[15] = 0.25;
 		}
 
     } else if (name.find("5.6a") != string::npos) {
@@ -1594,7 +1659,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
         d = rate_matrix[0] + 3.*a - e1;
         a2 = -rate_matrix[1] + a - d + e2;
         double deno56b = (2.0* a + a2 + e1 + e2);
-        if (abs(deno56b) < 1.0e-7 || abs(a - a2 + d) < 1.0e-7 || abs(2.*a + a2) < 1.0e-7 || abs(a - a2) < 1.0e-7) {
+        if (abs(deno56b) < 1.0e-7 || abs(a - a2 + d) < 1.0e-7 || 
+		    abs(2.*a + a2) < 1.0e-7 || abs(a - a2) < 1.0e-7) {
         	nondiagonalizable = true;
         } else {
 			nondiagonalizable = false;
@@ -1660,7 +1726,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		double deno2 = 2.0* a + a2 + b - e1 + e2;
 		double deno3 = 2.*a + a2 - b;
 		double deno4 = 2.*a + a2 + b;
-		if (abs(deno1) < 1.0e-7 || abs(deno2) < 1.0e-7|| abs(deno3) < 1.0e-7 || abs(deno4) < 1.0e-7) {
+		if (abs(deno1) < 1.0e-7 || abs(deno2) < 1.0e-7|| 
+		    abs(deno3) < 1.0e-7 || abs(deno4) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
 			nondiagonalizable = false;
@@ -1696,7 +1763,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[14] = cevec[13];
 			cevec[15] = 1.0;
 			/******** INVERSE ****** There is a sum zero property ***/
-			double auxs = 0.25*(e1 + e2)/deno3; double auxr = 0.25*(-e1 + e2)/deno4;
+			double auxs = 0.25*(e1 + e2)/deno3; 
+			double auxr = 0.25*(-e1 + e2)/deno4;
 			cinv_evec[2] = cinv_evec[6] =-0.25 - auxs;
 			cinv_evec[10] = cinv_evec[14] = - cinv_evec[2];
 			cinv_evec[3] = cinv_evec[15] = 0.25 + auxr;
@@ -1718,7 +1786,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		double deno57br2 = (3.0*a2 + b + f1 - f2);
 		double deno3 = 3.*a2 - b;
 		double deno4 = 3.*a2 + b;
-		if (abs(deno57br1) < 1.0e-7 || abs(deno57br2) < 1.0e-7 || abs(deno3) < 1.0e-7 || abs(deno4) < 1.0e-7) {
+		if (abs(deno57br1) < 1.0e-7 || abs(deno57br2) < 1.0e-7 || 
+		    abs(deno3) < 1.0e-7 || abs(deno4) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
 			nondiagonalizable = false;
@@ -1758,14 +1827,14 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[15] = 1.0;
 			/*INVERSE : They satisfy a sumzero property*/
 
-			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
-			cinv_evec[2] =cinv_evec[6] = -0.25 + 0.25*(f1 + f2)/(3.*a2 - b);
-			cinv_evec[10] =cinv_evec[14] = - cinv_evec[2];
-			cinv_evec[3] =cinv_evec[15] = 0.25 + 0.25*(f1 - f2)/(3.*a2 + b);
-			cinv_evec[11] =cinv_evec[7] = -cinv_evec[3];
-			cinv_evec[1] = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
-			cinv_evec[5] = -cinv_evec[4]-cinv_evec[6] - cinv_evec[7];
-			cinv_evec[9] = -cinv_evec[1] - 0.5;
+			cinv_evec[0]  = cinv_evec[4]  = cinv_evec[8] =cinv_evec[12] = 0.25;
+			cinv_evec[2]  = cinv_evec[6]  = -0.25 + 0.25*(f1 + f2)/(3.*a2 - b);
+			cinv_evec[10] = cinv_evec[14] = -cinv_evec[2];
+			cinv_evec[3]  = cinv_evec[15] = 0.25 + 0.25*(f1 - f2)/(3.*a2 + b);
+			cinv_evec[11] = cinv_evec[7]  = -cinv_evec[3];
+			cinv_evec[1]  = -cinv_evec[0] - cinv_evec[2]-cinv_evec[3];
+			cinv_evec[5]  = -cinv_evec[4] - cinv_evec[6] - cinv_evec[7];
+			cinv_evec[9]  = -cinv_evec[1] - 0.5;
 			cinv_evec[13] = -cinv_evec[5] +0.5;
 		}
 
@@ -1782,7 +1851,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		double deno2 = 3.*a2 - b;
 		double deno3 = 3.*a2 + b;
 
-		if (abs(deno57bl) < 1.0e-7 || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7) {
+		if (abs(deno57bl) < 1.0e-7 || abs(deno2) < 1.0e-7 || 
+		    abs(deno3) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
 			nondiagonalizable = false;
@@ -1805,9 +1875,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			//v0
 			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 			//v1
-			cevec[4] = -(aux57b1 + aux57b2 )* deno57bl;
-			cevec[5] = -(-aux57b1 + aux57b3)* deno57bl;
-			cevec[6] = -(aux57b1 - aux57b2)* deno57bl;
+			cevec[4] = -(aux57b1  + aux57b2 ) * deno57bl;
+			cevec[5] = -(-aux57b1 + aux57b3 ) * deno57bl;
+			cevec[6] = -(aux57b1  - aux57b2 ) * deno57bl;
 			cevec[7] = 1.0;
 			//v2
 			cevec[8] = -1.0;
@@ -1820,20 +1890,20 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[14] = -1.0;
 			cevec[15] = 1.0;
 			/*INVERSE*/
-			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+			cinv_evec[0] = cinv_evec[4] = cinv_evec[8] = cinv_evec[12] = 0.25;
 
-			cinv_evec[2] = -0.25 + 0.25*(g1 + g2)/deno2;
-			cinv_evec[6] =-0.5 - cinv_evec[2];
-			cinv_evec[10] =-cinv_evec[6];
+			cinv_evec[2]  = -0.25 + 0.25*(g1 + g2)/deno2;
+			cinv_evec[6]  = -0.5 - cinv_evec[2];
+			cinv_evec[10] = -cinv_evec[6];
 			cinv_evec[14] = -cinv_evec[2];
 
-			cinv_evec[3] = 0.25 - 0.25*(g1 - g2)/deno3;
-			cinv_evec[7] =-cinv_evec[3];
-			cinv_evec[11] =cinv_evec[3] - 0.5;
-			cinv_evec[15] = - cinv_evec[11];
+			cinv_evec[3]  = 0.25 - 0.25*(g1 - g2)/deno3;
+			cinv_evec[7]  = -cinv_evec[3];
+			cinv_evec[11] = cinv_evec[3] - 0.5;
+			cinv_evec[15] = -cinv_evec[11];
 
-			cinv_evec[1] = cinv_evec[9] = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
-			cinv_evec[5] = cinv_evec[13] = -cinv_evec[1];
+			cinv_evec[1]  = cinv_evec[9]  = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
+			cinv_evec[5]  = cinv_evec[13] = -cinv_evec[1];
 		}
 
 	} else if (name.find("5.11a") != string::npos) {
@@ -1847,7 +1917,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		double deno2 = 2.*a + a2 +d1;
 		double deno3 = 2.*a + a2 - d1;
 
-		if (abs(deno511a) < 1.0e-7 || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7 || abs(e1) < 1.0e-7) {
+		if (abs(deno511a) < 1.0e-7 || abs(deno2) < 1.0e-7 || 
+		    abs(deno3) < 1.0e-7 || abs(e1) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
 			nondiagonalizable = false;
@@ -1904,7 +1975,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		d1 = -rate_matrix[0] - 3.*a + f1;
 		double deno1 = 3.* a2 - d1 - f2;
 
-		if (abs(deno1) < 1.0e-7 || abs(f1) < 1.0e-7|| abs(3.*a2 -d1) < 1.0e-7 || abs(3.*a2 + d1) < 1.0e-7) {
+		if (abs(deno1) < 1.0e-7 || abs(f1) < 1.0e-7|| 
+		    abs(3.*a2 -d1) < 1.0e-7 || abs(3.*a2 + d1) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
 			nondiagonalizable = false;
@@ -1939,17 +2011,17 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[14] = -cevec[12]-2.;
 			cevec[15] = 1.0;
 			/*INVERSE*/
-			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
-			cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.0;
+			cinv_evec[0] = cinv_evec[4] = cinv_evec[8]  = cinv_evec[12] = 0.25;
+			cinv_evec[2] = cinv_evec[7] = cinv_evec[10] = cinv_evec[15] = 0.0;
 
-			cinv_evec[3] = 0.5*f1/(3.*a2 + d1);
-			cinv_evec[1] = - cinv_evec[3] - 0.25;
-			cinv_evec[11] =-cinv_evec[3];
-			cinv_evec[9] =cinv_evec[3] - 0.25;
+			cinv_evec[3]  = 0.5*f1/(3.*a2 + d1);
+			cinv_evec[1]  = -cinv_evec[3] - 0.25;
+			cinv_evec[11] = -cinv_evec[3];
+			cinv_evec[9]  = cinv_evec[3] - 0.25;
 
-			double auxf2 = 0.5*f2/(3.*a2 -d1);
-			cinv_evec[5] = 0.25 - auxf2;
-			cinv_evec[6] = -0.5 + auxf2;
+			double auxf2  = 0.5*f2/(3.*a2 -d1);
+			cinv_evec[5]  = 0.25 - auxf2;
+			cinv_evec[6]  = -0.5 + auxf2;
 			cinv_evec[13] = 0.25 + auxf2;
 			cinv_evec[14] = 0.5 - auxf2;
 		}
@@ -1960,10 +2032,10 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		a = (-rate_matrix[0] - d1 + g1)/3.;
 		a2 = -rate_matrix[1] + a -g1;
 		double auxdeno1 = 3.*a2 + d1;
-		double auxnum1 = auxdeno1 - 2.*d1;
+		double auxnum1  = auxdeno1 - 2.*d1;
 		double auxdeno2 = auxnum1 + 2.*g2;
-		double deno2 = 3.*a2 - d1;
-		double deno3 = 3.*a2 + d1;
+		double deno2    = 3.*a2 - d1;
+		double deno3    = 3.*a2 + d1;
 		if (abs(auxdeno1) < 1.0e-7 || abs(auxdeno2) < 1.0e-7
             || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7) {
 			nondiagonalizable = true;
@@ -2005,14 +2077,14 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[14] = 1.0;
 			cevec[15] = 0.0;
 			/*INVERSE*/
-			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
-			cinv_evec[2] =cinv_evec[10] = 0.5*g2 /deno2;
-			cinv_evec[7] =cinv_evec[15] = -0.5*g1 /deno3;
-			cinv_evec[1] = cinv_evec[9] = -0.25 - cinv_evec[2];
-			cinv_evec[3] = -0.5 -cinv_evec[7];
+			cinv_evec[0]  = cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+			cinv_evec[2]  = cinv_evec[10] = 0.5*g2 /deno2;
+			cinv_evec[7]  = cinv_evec[15] = -0.5*g1 /deno3;
+			cinv_evec[1]  = cinv_evec[9] = -0.25 - cinv_evec[2];
+			cinv_evec[3]  = -0.5 -cinv_evec[7];
 			cinv_evec[11] = 0.5 - cinv_evec[7];
-			cinv_evec[5] = cinv_evec[13] = 0.25 + cinv_evec[2];
-			cinv_evec[6] = -0.5 -cinv_evec[2];
+			cinv_evec[5]  = cinv_evec[13] = 0.25 + cinv_evec[2];
+			cinv_evec[6]  = -0.5 -cinv_evec[2];
 			cinv_evec[14] = 0.5 - cinv_evec[2];
 		}
 	} 
@@ -2027,10 +2099,13 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		double aux516r3 = 2.*g2*(a -a2);
 		double aux513r4 = 3.*a2*d;
 		double deno516r = aux516r1 + aux513r4 + aux516r3;
-		if (abs(deno516r) < 1.0e-7 || abs(a2) < 1.0e-7 || abs(a-a2) < 1.0e-7) {
+		if (abs(deno516r) < 1.0e-7 || abs(a2) < 1.0e-7 || 
+		    abs(a-a2) < 1.0e-7) {
 			nondiagonalizable = true;
 		} else {
-			/*cout <<"The parameters are a = " << a << " a2 =  " << a2 << " d = " << d << " g1 = " << g1 << "  g2 = " << g2 << endl;*/
+			/*cout <<"The parameters are a = " << a 
+			       << " a2 =  " << a2 << " d = " << d 
+				   << " g1 = " << g1 << "  g2 = " << g2 << endl;*/
 			/******** eigenvalues *********/
 			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
             ceval[0] = 0.0;
@@ -2048,16 +2123,16 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			// {-1, 0, 1, 0}}
 
 			//v0
-			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			cevec[0]  = cevec[1] = cevec[2] = cevec[3] = 1.0;
 			//v1
 
-			cevec[4] = -(aux516r1 - aux513r4 + aux516r2)/deno516r;
-			cevec[5] = (aux516r1 + aux513r4  - aux516r3)/deno516r;
-			cevec[6] = -(aux516r1 - aux513r4 - aux516r2)/deno516r;
-			cevec[7] = 1.0;
+			cevec[4]  = -(aux516r1 - aux513r4 + aux516r2)/deno516r;
+			cevec[5]  = (aux516r1  + aux513r4 - aux516r3)/deno516r;
+			cevec[6]  = -(aux516r1 - aux513r4 - aux516r2)/deno516r;
+			cevec[7]  = 1.0;
 			//v2
-			cevec[8] = 0.0;
-			cevec[9] = -1.0;
+			cevec[8]  = 0.0;
+			cevec[9]  = -1.0;
 			cevec[10] = 0.0;
 			cevec[11] = 1.0;
 			//v3
@@ -2067,17 +2142,17 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cevec[15] = 0.0;
 
 			/***INVERSE***/
-			double auxg1 = g1/(6.*a2); double auxg2 = g2/(6.*a2);
-			cinv_evec[0] =cinv_evec[8] = 0.25 + 0.25*d/(a-a2);
-			cinv_evec[4] =cinv_evec[12] = 0.5 - cinv_evec[0];
-			cinv_evec[2] =cinv_evec[10] =auxg2;
-			cinv_evec[6] = -0.5 - auxg2;
+			double auxg1  = g1/(6.*a2); double auxg2 = g2/(6.*a2);
+			cinv_evec[0]  = cinv_evec[8] = 0.25 + 0.25*d/(a-a2);
+			cinv_evec[4]  = cinv_evec[12] = 0.5 - cinv_evec[0];
+			cinv_evec[2]  = cinv_evec[10] =auxg2;
+			cinv_evec[6]  = -0.5 - auxg2;
 			cinv_evec[14] = 0.5 - auxg2;
-			cinv_evec[3] = -0.5 + auxg1;
+			cinv_evec[3]  = -0.5 + auxg1;
 			cinv_evec[11] = 0.5 + auxg1;
-			cinv_evec[7] =cinv_evec[15] = - auxg1;
-			cinv_evec[1] =cinv_evec[9] = -cinv_evec[0] -cinv_evec[2];
-			cinv_evec[13] =cinv_evec[5] =-cinv_evec[1];
+			cinv_evec[7]  = cinv_evec[15] = - auxg1;
+			cinv_evec[1]  = cinv_evec[9] = -cinv_evec[0] -cinv_evec[2];
+			cinv_evec[13] = cinv_evec[5] =-cinv_evec[1];
 		}
 	}
 	else {
@@ -2089,65 +2164,74 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		int error = 0;
 		for (j = 0; j < num_states; j++) {
 			for (i = 0, zero = 0.0; i < num_states; i++) {
-				for (int k = 0; k < num_states; k++)
+				for (int k = 0; k < num_states; k++) {
 					zero += rate_matrix[i*num_states+k] * cevec[j*num_states+k];
+				}
 				zero -= ceval[j] * cevec[j*num_states+i];
 				if (abs(zero) > 1.0e-5) {
-					cout << "too large error[" << i << "," << j << "]: " << zero << endl;
+					cout << "too large error[" << i 
+					     << "," << j << "]: " << zero << endl;
 					error = 1;
 					break;
 				}
 			}
 		}
-
 		for (i = 0; i < num_states; i++) {
 			for (j = 0, zero = 0.0; j < num_states; j++) {
-
-				for (int k = 0; k < num_states; k++)
+				for (int k = 0; k < num_states; k++) {
 					zero += cinv_evec[i*num_states+k] * cevec[k*num_states+j];
+				}
 				double deltaij = 0;
 				if (i == j) deltaij = 1;
 				zero -= deltaij;
 				if (abs(zero) > 1.0e-5) {
-					cout << "too large inv_error[" << i << "," << j << "]: " << zero << endl;
+					cout << "too large inv_error[" << i << "," << j << "]: "
+					     << zero << endl;
 					error = 1;
 					break;
 				}
 			}
 		}
-		 if (error) {
-			cerr << "\nERROR: Eigensystem doesn't satisfy eigenvalue equation!\n";
+		if (error) {
+			cerr << "\nERROR: Eigensystem doesn't satisfy" 
+			     << " eigenvalue equation!\n";
 			cerr << "Rate matrix Q: " << endl;
 			for (i = 0; i < num_states; i++) {
-				for (j = 0; j < num_states; j++) cout << rate_matrix[i*num_states+j] << " ";
+				for (j = 0; j < num_states; j++) {
+					cout << rate_matrix[i*num_states+j] << " ";
+				}
 				cerr << endl;
 			}
 			cout << "State frequencies: " << endl;
-			for (i = 0; i < num_states; i++) cout << state_freq[i] << " ";
+			for (i = 0; i < num_states; i++) {
+				cout << state_freq[i] << " ";
+			}
 			cout << endl;
-			  cout << "Here we start: complex eigenvalues:";
-				for (i = 0; i < 4; i++)
-					cout << " " << ceval[i];
+			cout << "Here we start: complex eigenvalues:";
+			for (i = 0; i < 4; i++) {
+				cout << " " << ceval[i];
+			}
+			cout << endl;
+			cout << "complex eigenvectors: " << endl;
+			for (i = 0; i < 4; i++) {
+				for (j = 0; j < 4; j++) {
+					cout << " " << cevec[i*4+j];
+				}
 				cout << endl;
-
-			   cout << "complex eigenvectors: " << endl;
-				for (i = 0; i < 4; i++) {
-					for (j = 0; j < 4; j++)
-						cout << " " << cevec[i*4+j];
-					cout << endl;
+			}
+			cout << "complex inv_eigenvectors: " << endl;
+			for (i = 0; i < 4; i++) {
+				for (j = 0; j < 4; j++) {
+					cout << " " << cinv_evec[i*4+j];
 				}
-
-				cout << "complex inv_eigenvectors: " << endl;
-				for (i = 0; i < 4; i++) {
-					for (j = 0; j < 4; j++)
-						cout << " " << cinv_evec[i*4+j];
-					cout << endl;
-				}
+				cout << endl;
+			}
 		}
-    }
+	}
 }
 
-void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelLieMarkov::computeTransMatrix
+		(double time, double *trans_matrix, int mixture) {
     return super::computeTransMatrix(time, trans_matrix, mixture);
     /*
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
@@ -2210,4 +2294,3 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
         ModelMarkov::computeTransMatrix(time, trans_matrix);
      */
 }
-
