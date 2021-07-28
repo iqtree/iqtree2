@@ -708,76 +708,29 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
-
-void runModelFinder(Params &params, IQTree &iqtree,
-                    ModelCheckpoint &model_checkpoint) {
-    ModelInfoFromName model_info(params.model_name);
-    bool test_only = model_info.isModelFinderOnly();
-    
+bool isModelNameEmpty(Params& params, IQTree& iqtree) {
     bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
     
     if (params.model_name.empty() && iqtree.isSuperTree()) {
         // check whether any partition has empty model_name
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        for (auto i = stree->begin(); i != stree->end(); i++)
+        for (auto i = stree->begin(); i != stree->end(); i++) {
             if ((*i)->aln->model_name.empty()) {
                 empty_model_found = true;
                 break;
             }
+        }
     }
-    
     if (params.model_joint) {
         empty_model_found = false;
     }
+    return empty_model_found;
+}
 
-    // Model already specifed, nothing to do here
-    if (!model_info.isModelFinder()) {
-        return;
-    }
-    
-    if (MPIHelper::getInstance().getNumProcesses() > 1)
-        outError("Please use only 1 MPI process!" 
-                 " We are currently working on" 
-                 " the MPI parallelization of model selection.");
-    // TODO: check if necessary
-    //        if (iqtree.isSuperTree())
-    //            ((PhyloSuperTree*) &iqtree)->mapTrees();
-    double cpu_time = getCPUTime();
-    double real_time = getRealTime();
-    model_checkpoint.setFileName((string)params.out_prefix + ".model.gz");
-    model_checkpoint.setDumpInterval(params.checkpoint_dump_interval);
-    
-    bool ok_model_file = false;
-    if (!params.model_test_again) {
-        ok_model_file = model_checkpoint.load();
-    }
-    
-    cout << endl;
-    
-    ok_model_file &= model_checkpoint.size() > 0;
-    if (ok_model_file) {
-        cout << "NOTE: Restoring information"
-             << " from model checkpoint file "
-             << model_checkpoint.getFileName() << endl;
-    }
-    
-    Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
-    iqtree.setCheckpoint(&model_checkpoint);
-    iqtree.restoreCheckpoint();
-    
-    int partition_type;
-    if (CKP_RESTORE2((&model_checkpoint), partition_type)) {
-        if (partition_type != params.partition_type)
-            outError("Mismatch partition type between checkpoint"
-                     " and partition file command option\n"
-                     "Rerun with -mredo to ignore .model.gz checkpoint file");
-    } else {
-        partition_type = params.partition_type;
-        CKP_SAVE2((&model_checkpoint), partition_type);
-    }
-    
-    ModelsBlock *models_block = readModelsDefinition(params);
-    
+
+void computeInitialPhyloTree(Params& params, IQTree& iqtree,
+                             ModelCheckpoint& model_checkpoint, 
+                             ModelsBlock*     models_block) {
     // compute initial tree
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
@@ -800,12 +753,110 @@ void runModelFinder(Params &params, IQTree &iqtree,
         } else {
             iqtree.saveCheckpoint();
         }
-        
         if (!params.additional_alignment_files.empty()) {
             iqtree.mergeAlignments(params.additional_alignment_files);
         }
-
     }
+}
+
+void selectPartitionModel(Params &params, IQTree &iqtree,
+                          ModelCheckpoint& model_checkpoint, 
+                          ModelsBlock*     models_block) {
+    // partition model selection
+    PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+    testPartitionModel(params, stree, model_checkpoint, 
+                        models_block, params.num_threads);
+    stree->mapTrees();
+    string res_models = "";
+    for (auto it = stree->begin(); it != stree->end(); it++) {
+        if (it != stree->begin()) res_models += ",";
+        res_models += (*it)->aln->model_name;
+    }
+    iqtree.aln->model_name = res_models;
+}
+
+void selectSingleModel(Params &params, IQTree &iqtree,
+                       ModelCheckpoint& model_checkpoint, 
+                       ModelsBlock*     models_block) {
+    // single model selection
+    CandidateModel best_model;
+    if (params.openmp_by_model) {
+        best_model = CandidateModelSet().evaluateAll(params, &iqtree,
+                                                     model_checkpoint, models_block,
+                                                     params.num_threads, BRLEN_OPTIMIZE);
+    }
+    else {
+        best_model = CandidateModelSet().test(params, &iqtree,
+            model_checkpoint, models_block,
+            params.num_threads, BRLEN_OPTIMIZE);
+    }
+    iqtree.aln->model_name = best_model.getName();
+    
+    Checkpoint *checkpoint = &model_checkpoint;
+    string best_model_AIC, best_model_AICc, best_model_BIC;
+    CKP_RESTORE(best_model_AIC);
+    CKP_RESTORE(best_model_AICc);
+    CKP_RESTORE(best_model_BIC);
+    cout << "Akaike Information Criterion:           " << best_model_AIC << endl;
+    cout << "Corrected Akaike Information Criterion: " << best_model_AICc << endl;
+    cout << "Bayesian Information Criterion:         " << best_model_BIC << endl;
+    cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
+        << criterionName(params.model_test_criterion) << endl;
+}
+
+void runModelFinder(Params &params, IQTree &iqtree,
+                    ModelCheckpoint &model_checkpoint) {
+    ModelInfoFromName model_info(params.model_name);
+    bool test_only         = model_info.isModelFinderOnly();
+    bool empty_model_found = isModelNameEmpty(params, iqtree);
+
+    // Model already specifed, nothing to do here
+    if (!model_info.isModelFinder()) {
+        return;
+    }
+    
+    if (MPIHelper::getInstance().getNumProcesses() > 1)
+        outError("Please use only 1 MPI process!" 
+                 " We are currently working on" 
+                 " the MPI parallelization of model selection.");
+    // TODO: check if necessary
+    //        if (iqtree.isSuperTree())
+    //            ((PhyloSuperTree*) &iqtree)->mapTrees();
+    double cpu_time = getCPUTime();
+    double real_time = getRealTime();
+    model_checkpoint.setFileName((string)params.out_prefix + ".model.gz");
+    model_checkpoint.setDumpInterval(params.checkpoint_dump_interval);
+    
+    bool ok_model_file = false;
+    if (!params.model_test_again) {
+        ok_model_file = model_checkpoint.load();
+    }
+    cout << endl;
+    
+    ok_model_file &= model_checkpoint.size() > 0;
+    if (ok_model_file) {
+        cout << "NOTE: Restoring information"
+             << " from model checkpoint file "
+             << model_checkpoint.getFileName() << endl;
+    }
+    
+    Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
+    iqtree.setCheckpoint(&model_checkpoint);
+    iqtree.restoreCheckpoint();
+    
+    int partition_type;
+    if (CKP_RESTORE2((&model_checkpoint), partition_type)) {
+        if (partition_type != params.partition_type) {
+            outError("Mismatch partition type between checkpoint"
+                     " and partition file command option\n"
+                     "Rerun with -mredo to ignore .model.gz checkpoint file");
+        }
+    } else {
+        partition_type = params.partition_type;
+        CKP_SAVE2((&model_checkpoint), partition_type);
+    }
+    ModelsBlock *models_block = readModelsDefinition(params);
+    computeInitialPhyloTree(params, iqtree, model_checkpoint, models_block);
     
     // also save initial tree to the original .ckp.gz checkpoint
     //        string initTree = iqtree.getTreeString();
@@ -830,44 +881,12 @@ void runModelFinder(Params &params, IQTree &iqtree,
 #endif
     
     if (iqtree.isSuperTree()) {
-        // partition model selection
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        testPartitionModel(params, stree, model_checkpoint, 
-                           models_block, params.num_threads);
-        stree->mapTrees();
-        string res_models = "";
-        for (auto it = stree->begin(); it != stree->end(); it++) {
-            if (it != stree->begin()) res_models += ",";
-            res_models += (*it)->aln->model_name;
-        }
-        iqtree.aln->model_name = res_models;
+        selectPartitionModel(params, iqtree, 
+                             model_checkpoint, models_block);
     } else {
-        // single model selection
-        CandidateModel best_model;
-        if (params.openmp_by_model) {
-            best_model = CandidateModelSet().evaluateAll(params, &iqtree,
-                model_checkpoint, models_block,
-                params.num_threads, BRLEN_OPTIMIZE);
-        }
-        else {
-            best_model = CandidateModelSet().test(params, &iqtree,
-                model_checkpoint, models_block,
-                params.num_threads, BRLEN_OPTIMIZE);
-        }
-        iqtree.aln->model_name = best_model.getName();
-        
-        Checkpoint *checkpoint = &model_checkpoint;
-        string best_model_AIC, best_model_AICc, best_model_BIC;
-        CKP_RESTORE(best_model_AIC);
-        CKP_RESTORE(best_model_AICc);
-        CKP_RESTORE(best_model_BIC);
-        cout << "Akaike Information Criterion:           " << best_model_AIC << endl;
-        cout << "Corrected Akaike Information Criterion: " << best_model_AICc << endl;
-        cout << "Bayesian Information Criterion:         " << best_model_BIC << endl;
-        cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
-            << criterionName(params.model_test_criterion) << endl;
+        selectSingleModel   (params, iqtree,
+                             model_checkpoint, models_block);
     }
-
     delete models_block;
     
     // force to dump all checkpointing information
@@ -894,6 +913,7 @@ void runModelFinder(Params &params, IQTree &iqtree,
         params.min_iterations = 0;
     }
 }
+
 
 /**
  * get the list of substitution models
