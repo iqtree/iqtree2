@@ -76,7 +76,9 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, D
             double logl = 0.0;
             for (i = 0; i < aln->getNSite(); i++) {
                 double ll;
-                if (!(inFile >> ll)) throw "Wrong logLL entry";
+                if (!(inFile >> ll)) {
+                    throw "Wrong logLL entry";
+                }
                 _logllVec.push_back(ll);
                 logl += ll;
             }
@@ -1266,14 +1268,18 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
     			boot_aln->at(ptn).frequency *= partitions.size();
     		start_site = end_site;
         } else {
-    		if (alignment->isSuperAlignment())
+    		if (alignment->isSuperAlignment()) {
     			boot_aln = new SuperAlignment;
-    		else
+            }
+    		else {
     			boot_aln = new Alignment;
-        	boot_aln->createBootstrapAlignment(alignment, &boot_freq, params.bootstrap_spec);
+            }
+        	boot_aln->createBootstrapAlignment(alignment, &boot_freq, 
+                                               params.bootstrap_spec);
         }
-        for ( ptn = 0; ptn < boot_freq.size(); ptn++)
+        for ( ptn = 0; ptn < boot_freq.size(); ptn++) {
         	outfreq << "\t" << boot_freq[ptn];
+        }
         outfreq << endl;
         // computing Kullback-Leibler distance
         double dist = 0.0;
@@ -1290,12 +1296,14 @@ void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
         	vector<TreeInfo> info;
         	IntVector distinct_ids;
         	evaluateTrees(params, &boot_tree, info, distinct_ids);
-            for (int i = 0; i < info.size(); i++)
+            for (int i = 0; i < info.size(); i++) {
             	out << " " << info[i].logl;
+            }
         }
         out << endl;
-        if (id != 0)
+        if (id != 0) {
         	delete boot_aln;
+        }
     }
     out.close();
     outfreq.close();

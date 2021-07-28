@@ -3648,16 +3648,10 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         int *saved_randstream = randstream;
         init_random(params.ran_seed + sample);
 
-        Alignment* bootstrap_alignment;
         cout << "Creating " << RESAMPLE_NAME << " alignment (seed: "
              << params.ran_seed+sample << ")..." << endl;
-
-        if (alignment->isSuperAlignment())
-            bootstrap_alignment = new SuperAlignment;
-        else
-            bootstrap_alignment = new Alignment;
-        bootstrap_alignment->createBootstrapAlignment(alignment, NULL,
-                                                      params.bootstrap_spec);
+        Alignment* bootstrap_alignment 
+            = tree->createBootstrapAlignment(nullptr, params.bootstrap_spec);
 
         // restore randstream
         finish_random();
@@ -3875,37 +3869,35 @@ void convertAlignment(Params &params, IQTree *iqtree) {
     Alignment *alignment = iqtree->aln;
     if (params.num_bootstrap_samples || params.print_bootaln) {
         // create bootstrap alignment
-        Alignment* bootstrap_alignment;
         cout << "Creating " << RESAMPLE_NAME << " alignment..." << endl;
-        if (alignment->isSuperAlignment())
-            bootstrap_alignment = new SuperAlignment;
-        else
-            bootstrap_alignment = new Alignment;
-        bootstrap_alignment->createBootstrapAlignment(alignment, nullptr,
-                                                      params.bootstrap_spec);
+        Alignment* bootstrap_alignment
+            = iqtree->createBootstrapAlignment(nullptr,
+                                               params.bootstrap_spec);
         delete alignment;
         alignment = bootstrap_alignment;
         iqtree->aln = alignment;
     }
-
     int exclude_sites = 0;
-    if (params.aln_nogaps)
+    if (params.aln_nogaps) {
         exclude_sites += EXCLUDE_GAP;
-    if (params.aln_no_const_sites)
+    }
+    if (params.aln_no_const_sites) {
         exclude_sites += EXCLUDE_INVAR;
-
+    }
     if (alignment->isSuperAlignment()) {
         alignment->printAlignment(params.aln_output_format,
                                   params.aln_output, false, params.aln_site_list,
                                   exclude_sites, params.ref_seq_name);
-        if (params.print_subaln)
-            ((SuperAlignment*)alignment)->printSubAlignments(params);
+        auto super_aln = (SuperAlignment*)alignment;
+        if (params.print_subaln) {
+            super_aln->printSubAlignments(params);
+        }
         if (params.aln_output_format != InputType::IN_NEXUS) {
             string partition_info = string(params.aln_output) + ".nex";
-            ((SuperAlignment*)alignment)->printPartition(partition_info.c_str(),
+            super_aln->printPartition(partition_info.c_str(),
                                                          params.aln_output);
             partition_info = (string)params.aln_output + ".partitions";
-            ((SuperAlignment*)alignment)->printPartitionRaxml(partition_info.c_str());
+            super_aln->printPartitionRaxml(partition_info.c_str());
         }
     } else if (params.gap_masked_aln) {
         Alignment out_aln;

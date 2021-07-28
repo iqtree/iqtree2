@@ -235,7 +235,8 @@ void IQTree::restoreCheckpoint() {
 void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
-    optimize_by_newton = params.optimize_by_newton;
+    optimize_by_newton  = params.optimize_by_newton;
+
     setLikelihoodKernel(params.SSE);
     if (num_threads > 0) {
         setNumThreads(num_threads);
@@ -245,6 +246,65 @@ void IQTree::initSettings(Params &params) {
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
+    initIterationSettings(params);
+    initDeletionSettings (params);
+
+    k_represent = params.k_representative;
+
+    //tree.setIQPIterations(params.stop_condition, params.stop_confidence,
+    //                      params.min_iterations, params.max_iterations);
+
+    stop_rule.initialize(params);
+
+    //tree.setIQPAssessQuartet(params.iqp_assess_quartet);
+    iqp_assess_quartet  = params.iqp_assess_quartet;
+    estimate_nni_cutoff = params.estimate_nni_cutoff;
+    nni_cutoff          = params.nni_cutoff;
+    nni_sort            = params.nni_sort;
+    testNNI             = params.testNNI;
+    globalParams        = &params;
+    globalAlignment     = aln;
+
+    //write_intermediate_trees = params.write_intermediate_trees;
+    if (Params::getInstance().write_intermediate_trees > 2 ||
+        params.gbo_replicates > 0) {
+        save_all_trees = 1;
+    }
+    if (params.gbo_replicates > 0) {
+        if (params.iqp_assess_quartet != IQP_BOOTSTRAP) {
+            save_all_trees = 2;
+        }
+    }
+//    if (params.gbo_replicates > 0 && params.do_compression)
+//        save_all_br_lens = true;
+//    print_tree_lh = params.print_tree_lh;
+//    max_candidate_trees = params.max_candidate_trees;
+//    if (max_candidate_trees == 0)
+//        max_candidate_trees = aln->getNSeq() * params.step_iterations;
+    if (!params.compute_ml_tree_only) {
+        setRootNode(params.root);
+    }
+
+    if (params.online_bootstrap && params.gbo_replicates > 0 &&
+        !isSuperTreeUnlinked()) {
+        if (aln->getNSeq() < 4) {
+            outError("It makes no sense to perform bootstrap"
+                     " with less than 4 sequences.");
+        }
+        initBootstrapSettings(params);
+    }
+    if (params.root_state) {
+        if (strlen(params.root_state) != 1) {
+            outError("Root state must have exactly 1 character");
+        }
+        root_state = aln->convertState(params.root_state[0]);
+        if (root_state < 0 || root_state >= aln->num_states) {
+            outError("Invalid root state");
+        }
+    }
+}
+
+void IQTree::initIterationSettings(Params& params) {
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
             intptr_t nseq = aln->getNSeq();
@@ -271,9 +331,9 @@ void IQTree::initSettings(Params &params) {
         auto iterations = max(params.min_iterations, params.step_iterations);
         params.max_iterations = max(params.max_iterations, iterations);
     }
+}
 
-    k_represent = params.k_representative;
-
+void IQTree::initDeletionSettings(Params& params) {
     if (params.p_delete == -1.0) {
         if (aln->getNSeq() < 4)
             params.p_delete = 0.0; // delete nothing
@@ -305,162 +365,109 @@ void IQTree::initSettings(Params &params) {
             k_delete_max = 20;
         k_delete_stay = static_cast<int>(ceil(leafNum / k_delete));
     }
+}
 
-    //tree.setIQPIterations(params.stop_condition, params.stop_confidence,
-    //                      params.min_iterations, params.max_iterations);
-
-    stop_rule.initialize(params);
-
-    //tree.setIQPAssessQuartet(params.iqp_assess_quartet);
-    iqp_assess_quartet = params.iqp_assess_quartet;
-    estimate_nni_cutoff = params.estimate_nni_cutoff;
-    nni_cutoff = params.nni_cutoff;
-    nni_sort = params.nni_sort;
-    testNNI = params.testNNI;
-
-    globalParams = &params;
-    globalAlignment = aln;
-
-    //write_intermediate_trees = params.write_intermediate_trees;
-
-    if (Params::getInstance().write_intermediate_trees > 2 ||
-        params.gbo_replicates > 0) {
-        save_all_trees = 1;
-    }
-    if (params.gbo_replicates > 0) {
-        if (params.iqp_assess_quartet != IQP_BOOTSTRAP) {
-            save_all_trees = 2;
-        }
-    }
-//    if (params.gbo_replicates > 0 && params.do_compression)
-//        save_all_br_lens = true;
-//    print_tree_lh = params.print_tree_lh;
-//    max_candidate_trees = params.max_candidate_trees;
-//    if (max_candidate_trees == 0)
-//        max_candidate_trees = aln->getNSeq() * params.step_iterations;
-    if (!params.compute_ml_tree_only) {
-        setRootNode(params.root);
+void IQTree::initBootstrapSettings(Params& params) {
+    string bootaln_name = params.out_prefix;
+    bootaln_name += ".bootaln";
+    if (params.print_bootaln) {
+        ofstream bootalnout;
+        bootalnout.open(bootaln_name.c_str());
+        bootalnout.close();
     }
 
-    if (params.online_bootstrap && params.gbo_replicates > 0 &&
-        !isSuperTreeUnlinked()) {
-        if (aln->getNSeq() < 4)
-            outError("It makes no sense to perform bootstrap"
-                     " with less than 4 sequences.");
+    // 2015-12-17: initialize random stream for
+    // creating bootstrap samples mainly so that
+    // checkpointing does not need to save bootstrap samples
+    int *saved_randstream = randstream;
+    init_random(params.ran_seed);
+    
+    // LOG_LINE(VerboseMode::VB_QUIET, "Generating "
+    // << params.gbo_replicates << " samples for ultrafast "
+    // << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")...");
+    // allocate memory for boot_samples
+    boot_samples.resize(params.gbo_replicates);
+    sample_start = 0;
+    sample_end = static_cast<int>(boot_samples.size());
 
-        string bootaln_name = params.out_prefix;
-        bootaln_name += ".bootaln";
-        if (params.print_bootaln) {
-            ofstream bootalnout;
-            bootalnout.open(bootaln_name.c_str());
-            bootalnout.close();
+    // compute the sample_start and sample_end
+    int num_processes = MPIHelper::getInstance().getNumProcesses();
+    if ( num_processes > 1) {
+        int num_samples = static_cast<int>(boot_samples.size()) / num_processes;
+        if (boot_samples.size() % num_processes != 0) {
+            ++num_samples;
         }
-
-        // 2015-12-17: initialize random stream for
-        // creating bootstrap samples mainly so that
-        // checkpointing does not need to save bootstrap samples
-        int *saved_randstream = randstream;
-        init_random(params.ran_seed);
-        
-        // LOG_LINE(VerboseMode::VB_QUIET, "Generating "
-        // << params.gbo_replicates << " samples for ultrafast "
-        // << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")...");
-        // allocate memory for boot_samples
-        boot_samples.resize(params.gbo_replicates);
-        sample_start = 0;
-        sample_end = static_cast<int>(boot_samples.size());
-
-        // compute the sample_start and sample_end
-        int num_processes = MPIHelper::getInstance().getNumProcesses();
-        if ( num_processes > 1) {
-            int num_samples = static_cast<int>(boot_samples.size()) / num_processes;
-            if (boot_samples.size() % num_processes != 0) {
-                ++num_samples;
-            }
-            sample_start = MPIHelper::getInstance().getProcessID() * num_samples;
-            sample_end = sample_start + num_samples;
-            if (sample_end > boot_samples.size()) {
-                sample_end = static_cast<int>(boot_samples.size());
-            }
+        sample_start = MPIHelper::getInstance().getProcessID() * num_samples;
+        sample_end = sample_start + num_samples;
+        if (sample_end > boot_samples.size()) {
+            sample_end = static_cast<int>(boot_samples.size());
         }
+    }
 
-        intptr_t orig_nptn = getAlnNPattern();
+    intptr_t orig_nptn   = getAlnNPattern();
 #ifdef BOOT_VAL_FLOAT
-        intptr_t nptn = get_safe_upper_limit_float(orig_nptn);
+    intptr_t nptn        = get_safe_upper_limit_float(orig_nptn);
 #else
-        intptr_t nptn = get_safe_upper_limit(orig_nptn);
+    intptr_t nptn        = get_safe_upper_limit(orig_nptn);
 #endif
-        size_t bootval_count = nptn * (size_t)(params.gbo_replicates);
-        BootValType *mem = aligned_alloc<BootValType>(bootval_count);
-        memset(mem, 0, bootval_count * sizeof(BootValType));
-        for (size_t i = 0; i < params.gbo_replicates; i++) {
-            boot_samples[i] = mem + i*nptn;
-        }
-        if (boot_trees.empty()) {
-            boot_logl.resize(params.gbo_replicates, -DBL_MAX);
-            boot_orig_logl.resize(params.gbo_replicates, -DBL_MAX);
-            boot_trees.resize(params.gbo_replicates, "");
-            boot_counts.resize(params.gbo_replicates, 0);
-        } else {
-            LOG_LINE(VerboseMode::VB_QUIET, "CHECKPOINT: " << boot_trees.size()
-                     << " UFBoot trees and " << boot_splits.size()
-                     << " UFBootSplits restored");
-        }
-        VerboseMode saved_mode = verbose_mode;
-        verbose_mode = VerboseMode::VB_QUIET;
-        for (size_t i = 0; i < params.gbo_replicates; i++) {
-            if (params.print_bootaln) {
-                Alignment* bootstrap_alignment;
-                if (aln->isSuperAlignment())
-                    bootstrap_alignment = new SuperAlignment;
-                else
-                    bootstrap_alignment = new Alignment;
-                IntVector this_sample;
-                bootstrap_alignment->createBootstrapAlignment(aln, &this_sample,
-                                                              params.bootstrap_spec);
-                for (intptr_t j = 0; j < orig_nptn; j++) {
-                    boot_samples[i][j] = static_cast<float>(this_sample[j]);
-                }
-                bootstrap_alignment->printAlignment(params.aln_output_format,
-                                                    bootaln_name.c_str(), true);
-                delete bootstrap_alignment;
-            } else {
-                IntVector this_sample;
-                aln->createBootstrapAlignment(this_sample, params.bootstrap_spec);
-                for (intptr_t j = 0; j < orig_nptn; j++) {
-                    boot_samples[i][j] = static_cast<float>(this_sample[j]);
-                }
-            }
-        }
-        verbose_mode = saved_mode;
+    size_t bootval_count = nptn * (size_t)(params.gbo_replicates);
+    BootValType* mem     = aligned_alloc<BootValType>(bootval_count);
+    memset(mem, 0, bootval_count * sizeof(BootValType));
+    for (size_t i = 0; i < params.gbo_replicates; i++) {
+        boot_samples[i] = mem + i*nptn;
+    }
+    if (boot_trees.empty()) {
+        boot_logl.resize(params.gbo_replicates, -DBL_MAX);
+        boot_orig_logl.resize(params.gbo_replicates, -DBL_MAX);
+        boot_trees.resize(params.gbo_replicates, "");
+        boot_counts.resize(params.gbo_replicates, 0);
+    } else {
+        LOG_LINE(VerboseMode::VB_QUIET, "CHECKPOINT: " << boot_trees.size()
+                    << " UFBoot trees and " << boot_splits.size()
+                    << " UFBootSplits restored");
+    }
+    VerboseMode saved_mode = verbose_mode;
+    verbose_mode = VerboseMode::VB_QUIET;
+    for (size_t i = 0; i < params.gbo_replicates; i++) {
+        IntVector  this_sample;
         if (params.print_bootaln) {
-            LOG_LINE(VerboseMode::VB_QUIET, "Bootstrap alignments printed to " << bootaln_name);
-        }
-
-        // restore randstream
-        finish_random();
-        randstream = saved_randstream;
-
-        // Diep: initialize data members to be used in the Refinement Step
-        on_refine_btree = false;
-        saved_aln_on_refine_btree = NULL;
-        if(params.ufboot2corr){
-            boot_samples_int.resize(params.gbo_replicates);
-            for (size_t i = 0; i < params.gbo_replicates; i++) {
-                boot_samples_int[i].resize(nptn, 0);
-                for (intptr_t j = 0; j < orig_nptn; j++)
-                    boot_samples_int[i][j] = static_cast<int>(boot_samples[i][j]);
-               }
+            Alignment* bootstrap_alignment = 
+                createBootstrapAlignment(&this_sample, params.bootstrap_spec);
+            copySample(this_sample, orig_nptn, boot_samples[i]);
+            bootstrap_alignment->printAlignment(params.aln_output_format,
+                                                bootaln_name.c_str(), true);
+            delete bootstrap_alignment;
+        } else {
+            aln->createBootstrapAlignment(this_sample, params.bootstrap_spec);
+            copySample(this_sample, orig_nptn, boot_samples[i] );
         }
     }
-    if (params.root_state) {
-        if (strlen(params.root_state) != 1) {
-            outError("Root state must have exactly 1 character");
+    verbose_mode = saved_mode;
+    if (params.print_bootaln) {
+        LOG_LINE(VerboseMode::VB_QUIET, "Bootstrap alignments printed to " << bootaln_name);
+    }
+
+    // restore randstream
+    finish_random();
+    randstream = saved_randstream;
+
+    // Diep: initialize data members to be used in the Refinement Step
+    on_refine_btree = false;
+    saved_aln_on_refine_btree = NULL;
+    if(params.ufboot2corr) {
+        boot_samples_int.resize(params.gbo_replicates);
+        for (size_t i = 0; i < params.gbo_replicates; i++) {
+            boot_samples_int[i].resize(nptn, 0);
+            for (intptr_t j = 0; j < orig_nptn; j++) {
+                boot_samples_int[i][j] = static_cast<int>(boot_samples[i][j]);
+            }
         }
-        root_state = aln->convertState(params.root_state[0]);
-        if (root_state < 0 || root_state >= aln->num_states) {
-            outError("Invalid root state");
-        }
+    }
+}
+
+void IQTree::copySample(IntVector& sample, int n, float* copy_it_here) {
+    for (intptr_t j = 0; j < n; j++) {
+        copy_it_here[j] = static_cast<float>(sample[j]);
     }
 }
 
@@ -3030,9 +3037,10 @@ void IQTree::refineBootTrees() {
 	for (int sample = refined_samples;
          sample < boot_trees.size(); sample++) {
 
-        Alignment* bootstrap_alignment = createBootstrapAlignment();
-        IQTree*    boot_tree           = createBootstrapTree(bootstrap_alignment,
-                                                             models_block);
+        Alignment* bootstrap_alignment 
+            = createBootstrapAlignment(nullptr, params->bootstrap_spec);
+        IQTree*    boot_tree          
+            = createBootstrapTree(bootstrap_alignment, models_block);
 
         // set likelihood kernel
         boot_tree->setParams(params);
@@ -3123,7 +3131,8 @@ void IQTree::refineBootTrees() {
     initializeAllPartialLh();
 }
 
-Alignment* IQTree::createBootstrapAlignment() {
+Alignment* IQTree::createBootstrapAlignment(IntVector* sample, 
+                                            const char* bootstrap_spec) {
     // create bootstrap alignment
     Alignment* bootstrap_alignment;
     if (aln->isSuperAlignment()) {
@@ -3132,8 +3141,8 @@ Alignment* IQTree::createBootstrapAlignment() {
     else {
         bootstrap_alignment = new Alignment;
     }
-    bootstrap_alignment->createBootstrapAlignment(aln, NULL,
-                                                    params->bootstrap_spec);
+    bootstrap_alignment->createBootstrapAlignment(aln, sample,
+                                                  bootstrap_spec);
     return bootstrap_alignment;
 }
 
@@ -3275,13 +3284,8 @@ void IQTree::estimateLoglCutoffBS() {
 double IQTree::doTreePerturbation() {
     if (iqp_assess_quartet == IQP_BOOTSTRAP) {
         // create bootstrap sample
-        Alignment *bootstrap_alignment;
-        if (aln->isSuperAlignment())
-            bootstrap_alignment = new SuperAlignment;
-        else
-            bootstrap_alignment = new Alignment;
-        bootstrap_alignment->createBootstrapAlignment(aln, NULL,
-                                                      params->bootstrap_spec);
+        Alignment *bootstrap_alignment 
+            = createBootstrapAlignment(nullptr, params->bootstrap_spec);
         setAlignment(bootstrap_alignment);
         initializeAllPartialLh();
         clearAllPartialLH();

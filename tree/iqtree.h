@@ -130,6 +130,11 @@ public:
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
     virtual void initSettings(Params& params);
+        //Supporting functions
+        void initIterationSettings(Params& params);
+        void initDeletionSettings (Params& params);
+        void initBootstrapSettings(Params& params);
+        void copySample(IntVector& sample, int n, float* copy_it_here);
 
     void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
 
@@ -1029,11 +1034,12 @@ public:
     // Diep added for UFBoot2-Corr
     void refineBootTrees();
         //Supporting functions
-        Alignment* createBootstrapAlignment();
-        IQTree*    createBootstrapTree(Alignment* bootstrap_alignment,
-                                       ModelsBlock* models_block);
-        void       loadBootstrapTree  (const std::string& tree_string,
-                                       IQTree* boot_tree);
+        Alignment* createBootstrapAlignment(IntVector* sample,  
+                                            const char* bootstrap_spec);
+        IQTree*    createBootstrapTree     (Alignment* bootstrap_alignment,
+                                            ModelsBlock* models_block);
+        void       loadBootstrapTree       (const std::string& tree_string,
+                                            IQTree* boot_tree);
 
     bool on_refine_btree;
     Alignment* saved_aln_on_refine_btree;
