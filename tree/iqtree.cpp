@@ -2987,12 +2987,10 @@ double IQTree::doTreeSearch() {
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
 void IQTree::refineBootTrees() {
-
     int *saved_randstream = randstream;
     init_random(params->ran_seed);
 
-    params->gbo_replicates = 0;
-
+    params->gbo_replicates  = 0;
     NNI_Type saved_nni_type = params->nni_type;
     // TODO: A bug in PhyloSuperTreePlen::swapNNIBranch by nni1
     // Thus always turn on -nni5 by PhyloSuperTreePlen
@@ -3000,19 +2998,20 @@ void IQTree::refineBootTrees() {
        (!isSuperTree() || params->partition_type == BRLEN_OPTIMIZE)) {
         params->nni5 = false;
         params->nni_type = NNI1;
-    }else{
+    } else {
         params->nni5 = true;
         params->nni_type = NNI5;
     }
 
     const char* refining = "Refining ufboot trees with NNI ";
-    if (params->nni5)
+    if (params->nni5) {
         LOG_LINE(VerboseMode::VB_QUIET, refining << "5 branches...");
-    else
+    }
+    else {
         LOG_LINE(VerboseMode::VB_QUIET, refining << "1 branch...");
+    }
 
-    int refined_trees = 0;
-
+    int refined_trees   = 0;
     int refined_samples = 0;
 
     checkpoint->startStruct("UFBoot");
@@ -3030,97 +3029,31 @@ void IQTree::refineBootTrees() {
 	// do bootstrap analysis
 	for (int sample = refined_samples;
          sample < boot_trees.size(); sample++) {
-        // create bootstrap alignment
-        Alignment* bootstrap_alignment;
-        if (aln->isSuperAlignment())
-            bootstrap_alignment = new SuperAlignment;
-        else
-            bootstrap_alignment = new Alignment;
-        bootstrap_alignment->createBootstrapAlignment(aln, NULL,
-                                                      params->bootstrap_spec);
 
-        // create bootstrap tree
-        IQTree *boot_tree;
-        if (aln->isSuperAlignment()){
-            auto super_aln  = (SuperAlignment*) bootstrap_alignment;
-            auto super_tree = (PhyloSuperTree*) this;
-            if(params->partition_type != BRLEN_OPTIMIZE){
-                boot_tree = new PhyloSuperTreePlen(super_aln, super_tree);
-            } else {
-                boot_tree = new PhyloSuperTree(super_aln, super_tree);
-            }
-        } else {
-            // allocate heterotachy tree if neccessary
-            ModelInfoFromName model_info(aln->model_name);
-            if (params->num_mixlen > 1) {
-                boot_tree = new PhyloTreeMixlen(bootstrap_alignment,
-                                                params->num_mixlen);
-            } else if (model_info.hasRateHeterotachy()) {
-                boot_tree = new PhyloTreeMixlen(bootstrap_alignment, 0);
-            } else
-                boot_tree = new IQTree(bootstrap_alignment);
-        }
+        Alignment* bootstrap_alignment = createBootstrapAlignment();
+        IQTree*    boot_tree           = createBootstrapTree(bootstrap_alignment,
+                                                             models_block);
 
-        boot_tree->on_refine_btree = true;
-        boot_tree->save_all_trees = 0;
-
-        // initialize constraint tree
-        if (!constraintTree.empty()) {
-            boot_tree->constraintTree.readConstraint(constraintTree);
-        }
-        boot_tree->setParams(params);
-
-        // 2019-06-03: bug fix setting part_info properly
-        if (boot_tree->isSuperTree()) {
-            ((PhyloSuperTree*)boot_tree)->setPartInfo((PhyloSuperTree*)this);
-        }
-        // copy model
-        // BQM 2019-05-31: bug fix with -bsam option
-        boot_tree->initializeModel(*params, aln->model_name, models_block, this);
-        boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
-        if (isSuperTree()) {
-            auto mf = ((PartitionModel*)boot_tree->getModelFactory());
-            mf->PartitionModel::restoreCheckpoint();
-        }
-        else {
-            boot_tree->getModelFactory()->restoreCheckpoint();
-        }
         // set likelihood kernel
         boot_tree->setParams(params);
         boot_tree->setLikelihoodKernel(sse);
         boot_tree->setNumThreads(num_threads);
 
-        // load the current ufboot tree
-        // 2019-02-06: fix crash with -sp and -bnni
-        if (isSuperTree())
-            boot_tree->PhyloTree::readTreeString(boot_trees[sample]);
-        else
-            boot_tree->readTreeString(boot_trees[sample]);
-        
-        if (boot_tree->isSuperTree() &&
-            params->partition_type == BRLEN_OPTIMIZE) {
-            if (((PhyloSuperTree*)boot_tree)->size() > 1) {
-                // re-initialize branch lengths for unlinked model
-                boot_tree->wrapperFixNegativeBranch(true);
-            }
-        }
-        
-        // TODO: check if this resolves the crash in reorientPartialLh()
-        boot_tree->initializeAllPartialLh();
+        loadBootstrapTree(boot_trees[sample], boot_tree);
 
         // just in case some branch lengths are negative
-        if (int num_neg = boot_tree->wrapperFixNegativeBranch(false))
+        if (int num_neg = boot_tree->wrapperFixNegativeBranch(false)) {
             outWarning("Bootstrap tree " + convertIntToString(sample+1) +
                        " has " + convertIntToString(num_neg) +
                        " non-positive branch lengths");
-
+        }
         // REMARK: branch lengths were estimated from original alignments
         // for bootstrap_alignment, they still thus need to be reoptimized a bit
         boot_tree->optimizeBranches(2);
 
         stringstream sampleDescription;
         sampleDescription << "bootstrap tree " << sample
-            << "( of " << boot_trees.size() << ")";
+                          << "( of " << boot_trees.size() << ")";
         string context = sampleDescription.str();
         auto num_nnis = boot_tree->doNNISearch(true, context.c_str(), boot_tree);
         if (num_nnis.second != 0) {
@@ -3131,35 +3064,32 @@ void IQTree::refineBootTrees() {
                  << " -> " << boot_tree->getCurScore());
 
         stringstream ostr;
-        if (params->print_ufboot_trees == 2)
+        if (params->print_ufboot_trees == 2) {
             boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA |
                                  WT_BR_LEN | WT_BR_LEN_SHORT);
-        else
+        }
+        else {
             boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+        }
         boot_trees[sample] = ostr.str();
-        boot_logl[sample] = boot_tree->curScore;
-
+        boot_logl[sample]  = boot_tree->curScore;
 
         // delete memory
         //boot_tree->setModelFactory(NULL);
         boot_tree->save_all_trees = 2;
-
-        bootstrap_alignment = boot_tree->aln;
+        bootstrap_alignment       = boot_tree->aln;
         delete boot_tree;
         // fix bug: bootstrap_alignment might be changed
         delete bootstrap_alignment;
 
-
         if ((sample+1) % 100 == 0) {
             LOG_LINE(VerboseMode::VB_QUIET, sample+1 << " samples done");
         }
-
         saveCheckpoint();
         checkpoint->startStruct("UFBoot");
         refined_samples = sample;
         CKP_SAVE(refined_samples);
         checkpoint->endStruct();
-
         checkpoint->dump();
     }
     
@@ -3193,6 +3123,91 @@ void IQTree::refineBootTrees() {
     initializeAllPartialLh();
 }
 
+Alignment* IQTree::createBootstrapAlignment() {
+    // create bootstrap alignment
+    Alignment* bootstrap_alignment;
+    if (aln->isSuperAlignment()) {
+        bootstrap_alignment = new SuperAlignment;
+    }
+    else {
+        bootstrap_alignment = new Alignment;
+    }
+    bootstrap_alignment->createBootstrapAlignment(aln, NULL,
+                                                    params->bootstrap_spec);
+    return bootstrap_alignment;
+}
+
+IQTree* IQTree::createBootstrapTree(Alignment* bootstrap_alignment,
+                                    ModelsBlock* models_block) {
+    // create bootstrap tree
+    IQTree *boot_tree = nullptr;
+    if (aln->isSuperAlignment()){
+        auto super_aln  = (SuperAlignment*) bootstrap_alignment;
+        auto super_tree = (PhyloSuperTree*) this;
+        if(params->partition_type != BRLEN_OPTIMIZE){
+            boot_tree = new PhyloSuperTreePlen(super_aln, super_tree);
+        } else {
+            boot_tree = new PhyloSuperTree(super_aln, super_tree);
+        }
+    } else {
+        // allocate heterotachy tree if neccessary
+        ModelInfoFromName model_info(aln->model_name);
+        if (params->num_mixlen > 1) {
+            boot_tree = new PhyloTreeMixlen(bootstrap_alignment,
+                                            params->num_mixlen);
+        } else if (model_info.hasRateHeterotachy()) {
+            boot_tree = new PhyloTreeMixlen(bootstrap_alignment, 0);
+        } else
+            boot_tree = new IQTree(bootstrap_alignment);
+    }
+    boot_tree->on_refine_btree = true;
+    boot_tree->save_all_trees = 0;
+
+    // initialize constraint tree
+    if (!constraintTree.empty()) {
+        boot_tree->constraintTree.readConstraint(constraintTree);
+    }
+    boot_tree->setParams(params);
+
+    // 2019-06-03: bug fix setting part_info properly
+    if (boot_tree->isSuperTree()) {
+        ((PhyloSuperTree*)boot_tree)->setPartInfo((PhyloSuperTree*)this);
+    }
+    // copy model
+    // BQM 2019-05-31: bug fix with -bsam option
+    boot_tree->initializeModel(*params, aln->model_name, models_block, this);
+    boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
+    if (isSuperTree()) {
+        auto mf = ((PartitionModel*)boot_tree->getModelFactory());
+        mf->PartitionModel::restoreCheckpoint();
+    }
+    else {
+        boot_tree->getModelFactory()->restoreCheckpoint();
+    }
+    return boot_tree;
+}
+
+void IQTree::loadBootstrapTree(const std::string& tree_string,  
+                               IQTree* boot_tree) {
+    // load the current ufboot tree
+    // 2019-02-06: fix crash with -sp and -bnni
+    if (isSuperTree()) {
+        boot_tree->PhyloTree::readTreeString(tree_string);
+    }
+    else {
+        boot_tree->readTreeString(tree_string);
+    }
+    
+    if (boot_tree->isSuperTree() &&
+        params->partition_type == BRLEN_OPTIMIZE) {
+        if (((PhyloSuperTree*)boot_tree)->size() > 1) {
+            // re-initialize branch lengths for unlinked model
+            boot_tree->wrapperFixNegativeBranch(true);
+        }
+    }
+    // TODO: check if this resolves the crash in reorientPartialLh()
+    boot_tree->initializeAllPartialLh();
+}
 
 void IQTree::printIterationInfo(int sourceProcID) {
     double realtime_remaining = stop_rule.getRemainingTime(stop_rule.getCurIt());

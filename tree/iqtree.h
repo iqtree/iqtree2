@@ -1028,6 +1028,13 @@ public:
 
     // Diep added for UFBoot2-Corr
     void refineBootTrees();
+        //Supporting functions
+        Alignment* createBootstrapAlignment();
+        IQTree*    createBootstrapTree(Alignment* bootstrap_alignment,
+                                       ModelsBlock* models_block);
+        void       loadBootstrapTree  (const std::string& tree_string,
+                                       IQTree* boot_tree);
+
     bool on_refine_btree;
     Alignment* saved_aln_on_refine_btree;
     vector<IntVector> boot_samples_int;
