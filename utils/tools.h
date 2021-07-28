@@ -2629,9 +2629,10 @@ double convert_double(const char *str, int &end_pos);
         convert string to double, or generate it from a distribution
         @param str original string
         @param end_pos end position
+        @param separator char separating elements
         @return the double
  */
-double convert_double_with_distribution(const char *str, int &end_pos);
+double convert_double_with_distribution(const char *str, int &end_pos, char separator = ',');
 
 /**
         convert comma-separated string to integer vector, with error checking

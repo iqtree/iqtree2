@@ -250,6 +250,12 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	int nrates = *max_element(param_spec.begin(), param_spec.end());
 	int end_pos = 0;
 	int i, j;
+    
+    // detect the seperator
+    char separator = ',';
+    if (str.find('/') != std::string::npos)
+        separator = '/';
+    
 	for (j = 0; j < param_spec.length(); j++)
 		rates[j] = 1.0;
 	num_params = 0;
@@ -274,7 +280,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	            param_fixed[id] = true;
 	        }
 			try {
-				rate = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos);
+				rate = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
 			} catch (string str) {
 				outError(str);
 			}
@@ -286,7 +292,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 			outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != '/')
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
 		for (j = 0; j < param_spec.length(); j++)

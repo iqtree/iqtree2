@@ -341,6 +341,9 @@ void executeSimulation(Params params, IQTree *&tree)
     
     // report model's parameters
     reportSubstitutionProcess(cout, *(alisimulator->params), *(alisimulator->tree));
+    // show omega/kappa/kappa2 when using codon models
+    if (alisimulator->tree->aln->seq_type == SEQ_CODON)
+        alisimulator->tree->getModel()->writeInfo(cout);
     
     // load input MSA if any
     map<string,string> input_msa = loadInputMSA(alisimulator);

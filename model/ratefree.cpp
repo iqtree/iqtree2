@@ -34,7 +34,12 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
 	if (params.empty()) return;
 	DoubleVector params_vec;
 	try {
-        convert_double_vec_with_distributions(params.c_str(), params_vec);
+        // detect the seperator
+        char separator = ',';
+        if (params.find('/') != std::string::npos)
+            separator = '/';
+        
+        convert_double_vec_with_distributions(params.c_str(), params_vec, separator);
 		int i;
 		double sum, sum_prop;
         if (params_vec.size() == ncategory) {

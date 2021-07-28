@@ -19,7 +19,12 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
 	if (params.empty()) return;
 	DoubleVector params_vec;
 	try {
-		convert_double_vec_with_distributions(params.c_str(), params_vec);
+        // detect the seperator
+        char separator = ',';
+        if (params.find('/') != std::string::npos)
+            separator = '/';
+        
+		convert_double_vec_with_distributions(params.c_str(), params_vec, separator);
 		if (params_vec.size() != ncategory)
 			outError("Number of parameters for rate heterotachy model must equal number of categories");
 		int i;

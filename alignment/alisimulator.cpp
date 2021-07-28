@@ -267,9 +267,22 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                 if ((model_fullname.length() > KEYWORD.length())
                     && (!model_fullname.substr(0, KEYWORD.length()).compare(KEYWORD)))
                 {
-                    // only get the model name, removing additional params (+G,+F,*G,*F,etc)
-                    model_fullname = model_fullname.substr(0, model_fullname.find("+"));
-                    model_fullname = model_fullname.substr(0, model_fullname.find("*"));
+                    // detect the position of the close_bracket in MIX{...}
+                    size_t close_bracket_pos = 0;
+                    int num_open_brackets = 0;
+                    for (close_bracket_pos = KEYWORD.length(); close_bracket_pos < model_fullname.length(); close_bracket_pos++)
+                    {
+                        if (model_fullname[close_bracket_pos] == '{')
+                            num_open_brackets++;
+                        else if (model_fullname[close_bracket_pos] == '}')
+                        {
+                            num_open_brackets--;
+                            if (num_open_brackets == 0)
+                                break;
+                        }
+                    }
+                    // only get the model name inside MIX{...}
+                    model_fullname = model_fullname.substr(0, close_bracket_pos+1);
                     
                     // validate the input
                     if ((model_fullname[KEYWORD.length()]!='{')

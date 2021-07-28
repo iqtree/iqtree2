@@ -414,7 +414,10 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
     // make sure model_params are used to set omega, kappa, kappa2
     if (model_params.length()>0 && num_commas <= 2 && num_spaces == 0)
     {
-        string delimiter = ",";
+        // detect the seperator
+        char delimiter = ',';
+        if (model_params.find('/') != std::string::npos)
+            delimiter = '/';
         
         // parse omega
         // check if the model allow users to specify this parameter or not?
@@ -430,7 +433,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
         
         // delete omega from model_params
         if (pos!= std::string::npos)
-            model_params.erase(0, pos + delimiter.length());
+            model_params.erase(0, pos + 1);
         else
             model_params = "";
         
@@ -451,7 +454,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             
             // delete kappa from model_params
             if (pos!= std::string::npos)
-                model_params.erase(0, pos + delimiter.length());
+                model_params.erase(0, pos + 1);
             else
                 model_params = "";
         }
@@ -473,7 +476,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             
             // delete kappa2 from model_params
             if (pos!= std::string::npos)
-                model_params.erase(0, pos + delimiter.length());
+                model_params.erase(0, pos + 1);
             else
                 model_params = "";
         }

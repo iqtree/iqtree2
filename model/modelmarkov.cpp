@@ -1623,6 +1623,12 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 void ModelMarkov::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
+    
+    // detect the seperator
+    char separator = ',';
+    if (str.find('/') != std::string::npos)
+        separator = '/';
+    
 	cout << __func__ << " " << str << endl;
 	if (str.find("equalrate") != string::npos) {
 		for (int i = 0; i < nrates; i++)
@@ -1630,7 +1636,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 	} else for (int i = 0; i < nrates; i++) {
 		int new_end_pos;
 		try {
-			rates[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos);
+			rates[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
 		} catch (string &str) {
 			outError(str);
 		}
@@ -1641,7 +1647,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 			outError("String too long ", str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != '/')
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
         if (i < nrates - 1 && end_pos >= str.length())
@@ -1671,17 +1677,23 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	int i;
 	int end_pos = 0;
+    
+    // detect the seperator
+    char separator = ',';
+    if (str.find('/') != std::string::npos)
+        separator = '/';
+    
 	for (i = 0; i < num_states; i++) {
 		int new_end_pos;
-		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos);
+		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
 		end_pos += new_end_pos;
 		//cout << i << " " << state_freq[i] << endl;
 		if (state_freq[i] < 0.0 || state_freq[i] > 1)
 			outError("State frequency must be in [0,1] in ", str);
 		if (i == num_states-1 && end_pos < str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ')
-			outError("Comma/Space to separate state frequencies not found in ", str);
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ' && str[end_pos] != '/')
+			outError("Comma/Space/Forward slash to separate state frequencies not found in ", str);
 		end_pos++;
         if (i < num_states - 1 && end_pos >= str.length())
             outError("The number of frequencies ("+convertIntToString(i+1)+") is less than the number of states ("+convertIntToString(num_states)+"). Please check and try again.");

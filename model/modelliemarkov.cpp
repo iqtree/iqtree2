@@ -353,7 +353,13 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     // param optfromgiven only has effect if model_params != ""
     if (model_params != "") {
         DoubleVector vec;
-        convert_double_vec_with_distributions(model_params.c_str(), vec);
+        
+        // detect the seperator
+        char separator = ',';
+        if (model_params.find('/') != std::string::npos)
+            separator = '/';
+        
+        convert_double_vec_with_distributions(model_params.c_str(), vec, separator);
         if (vec.size() != num_params) 
             outError("String '"+ model_params + "' does not have exactly " + convertIntToString(num_params) + " parameters");
         for (int i = 0; i < num_params; i++) {

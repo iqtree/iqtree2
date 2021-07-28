@@ -377,7 +377,7 @@ double convert_double(const char *str, int &end_pos) {
 	return d;
 }
 
-double convert_double_with_distribution(const char *str, int &end_pos)
+double convert_double_with_distribution(const char *str, int &end_pos, char separator)
 {
     // convert normal double
     char *endptr;
@@ -386,7 +386,7 @@ double convert_double_with_distribution(const char *str, int &end_pos)
     // generate a double from a distribution
     if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF) {
         string tmp_str(str);
-        size_t pos = tmp_str.find(',');
+        size_t pos = tmp_str.find(separator);
         if (pos!= std::string::npos)
             end_pos = pos;
         else
@@ -1677,7 +1677,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -rbd {<birth_rate>,<death_rate>} <num_taxa>";
                 string bd_params = argv[cnt];
-                string delimiter = ",";
+                
+                // detect the seperator
+                char delimiter = ',';
+                if (bd_params.find('/') != std::string::npos)
+                    delimiter = '/';
+                
                 if ((bd_params[0]!='{')
                     || (bd_params[bd_params.length()-1]!='}')
                     || (bd_params.find(delimiter) == std::string::npos))
@@ -1685,7 +1690,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.birth_rate = convert_double(bd_params.substr(1, bd_params.find(delimiter) - 1).c_str());
                 if (params.birth_rate <= 0)
                     throw "<birth_rate> must be positive";
-                bd_params.erase(0, bd_params.find(delimiter) + delimiter.length());
+                bd_params.erase(0, bd_params.find(delimiter) + 1);
                 params.death_rate = convert_double(bd_params.substr(0, bd_params.length()-1).c_str());
                 if (params.death_rate < 0 || params.death_rate >= params.birth_rate)
                     throw "<death_rate> must be non-negative and less than <birth_rate>";
@@ -2420,10 +2425,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 
                 // parse input taxon set
                 size_t pos = 0;
-                string delimiter = ",";
+
+                // detect the seperator
+                char delimiter = ',';
+                if (fundi_input.find('/') != std::string::npos)
+                    delimiter = '/';
+                
                 while ((pos = fundi_input.find(delimiter)) != std::string::npos) {
                     params.alisim_fundi_taxon_set.push_back(fundi_input.substr(0, pos));
-                    fundi_input.erase(0, pos + delimiter.length());
+                    fundi_input.erase(0, pos + 1);
                 }
                 if (params.alisim_fundi_taxon_set.size() == 0 || fundi_input.length() == 0)
                     throw "Use --fundi taxa_1,...,taxa_n,proportion";
@@ -4348,7 +4358,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                             // handle the case with a list (<NUM_1>,<NUM_2>,...,<NUM_N>)
                             if (num_taxa[0] == '{')
                             {
+                                // detect the seperator
                                 delimiter = ",";
+                                if (num_taxa.find('/') != std::string::npos)
+                                    delimiter = "/";
+                                
                                 // validate the input
                                 if ((num_taxa[0]!='{')
                                     ||(num_taxa[num_taxa.length()-1]!='}'))
@@ -4379,7 +4393,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                             // handle the case with a Uniform Distribution U(<LOWER_BOUND>,<UPPER_BOUND>)
                             else if (num_taxa[0] == 'U')
                             {
+                                // detect the seperator
                                 delimiter = ",";
+                                if (num_taxa.find('/') != std::string::npos)
+                                    delimiter = "/";
+                                
                                 // validate the input
                                 if ((num_taxa[1]!='{')
                                     ||(num_taxa[num_taxa.length()-1]!='}')
@@ -4432,7 +4450,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                             {
                                 params.tree_gen = BIRTH_DEATH;
                                 
+                                // detect the seperator
                                 delimiter = ",";
+                                if (model_name.find('/') != std::string::npos)
+                                    delimiter = "/";
+                                
                                 // validate the input
                                 if ((model_name[KEYWORD.length()]!='{')
                                     ||(model_name[model_name.length()-1]!='}')
