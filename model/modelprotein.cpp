@@ -904,8 +904,13 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
                 cout << row << " " << col << endl;
             }
             ASSERT(id < nrates && id >= 0); // make sure that the conversion is correct
-            if (!(in >> rates[id]))
+            
+            string tmp_value;
+            in >> tmp_value;
+            if (tmp_value.length() == 0)
                 throw name+string(": Rate entries could not be read");
+            rates[id] = convert_double_with_distribution(tmp_value.c_str());
+
             if (rates[id] < 0.0)
                 throw "Negative rates found";
         }
@@ -916,8 +921,12 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
             double row_sum = 0.0;
             for (col = 0; col < num_states; col++) {
                 if (row != col) {
-                    if (!(in >> rates[i]))
+                    string tmp_value;
+                    in >> tmp_value;
+                    if (tmp_value.length() == 0)
                         throw name+string(": Rate entries could not be read");
+                    rates[i] = convert_double_with_distribution(tmp_value.c_str());
+                    
                     if (rates[i] < 0.0)
                         throw "Negative rates found";
                     row_sum += rates[i];

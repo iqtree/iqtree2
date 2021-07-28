@@ -698,14 +698,26 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 	double *f = new double[nscodons];
 	for (i = 1; i < nscodons; i++) {
 		for (j = 0; j < i; j++) {
-			in >> q[i*nscodons+j];
+            
+            string tmp_value;
+            in >> tmp_value;
+            if (tmp_value.length() == 0)
+                throw "Error in reading codon model from file";
+            q[i*nscodons+j] = convert_double_with_distribution(tmp_value.c_str());
+            
 			//q[j*num_states+i] = q[i*num_states+j];
 			if (verbose_mode >= VB_MAX) cout << " " << q[i*nscodons+j];
 		}
 		if (verbose_mode >= VB_MAX) cout << endl;
 	}
 	for (i = 0; i < nscodons; i++)
-		in >> f[i];
+    {
+        string tmp_value;
+        in >> tmp_value;
+        if (tmp_value.length() == 0)
+            throw "Error in reading frequencies for codon models";
+        f[i] = convert_double_with_distribution(tmp_value.c_str());
+    }
 	StrVector codons;
 	codons.resize(nscodons);
 	IntVector state_map;

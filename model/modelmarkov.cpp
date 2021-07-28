@@ -1582,8 +1582,12 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 		if (rates[0] < 0.0)
 			throw "Negative rates not allowed";
 		for (int i = 1; i < nrates; i++) {
-			if (!(in >> rates[i]))
-				throw "Rate entries could not be read";
+            string tmp_value;
+            in >> tmp_value;
+            if (tmp_value.length() == 0)
+                throw "Rate entries could not be read";
+            rates[i] = convert_double_with_distribution(tmp_value.c_str());
+            
 			if (rates[i] < 0.0)
 				throw "Negative rates not allowed";
 		}
@@ -1602,8 +1606,12 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
                     }
                 } else if (row != col) {
                     // non-diagonal element
-                    if (!(in >> rates[i]))
+                    string tmp_value;
+                    in >> tmp_value;
+                    if (tmp_value.length() == 0)
                         throw name+string(": Rate entries could not be read");
+                    rates[i] = convert_double_with_distribution(tmp_value.c_str());
+                    
                     if (rates[i] < 0.0)
                         throw "Negative rates found";
                     row_sum += rates[i];
@@ -1660,15 +1668,18 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
-		if (!(in >> state_freq[i])) 
-			throw "State frequencies could not be read";
+        string tmp_value;
+        in >> tmp_value;
+        if (tmp_value.length() == 0)
+            throw "State frequencies could not be read";
+        state_freq[i] = convert_double_with_distribution(tmp_value.c_str());
 		if (state_freq[i] < 0.0)
 			throw "Negative state frequencies found";
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
-		throw "State frequencies do not sum up to 1.0";
+		outWarning("Normalizing state frequencies so that they sum up to 1.0");
     sum = 1.0/sum;
     for (i = 0; i < num_states; i++)
         state_freq[i] *= sum;
