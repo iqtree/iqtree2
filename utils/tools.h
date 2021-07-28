@@ -2339,6 +2339,11 @@ public:
     *  list of distributions to generate random numbers
     */
     map<string, Distribution> distributions;
+    
+    /**
+    *  TRUE to convert tree from rooted to unrooted and stop
+    */
+    bool alisim_only_unroot_tree;
 };
 
 /**

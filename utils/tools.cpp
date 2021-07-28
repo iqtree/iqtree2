@@ -1355,6 +1355,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_distribution_definitions = NULL;
     params.alisim_skip_checking_memory = false;
     params.alisim_write_internal_sequences = false;
+    params.alisim_only_unroot_tree = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2445,6 +2446,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--write-all") == 0) {
                 params.alisim_write_internal_sequences = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--only-unroot-tree") == 0) {
+                params.alisim_only_unroot_tree = true;
                 continue;
             }
 			if (strcmp(argv[cnt], "-st") == 0 || strcmp(argv[cnt], "--seqtype") == 0) {

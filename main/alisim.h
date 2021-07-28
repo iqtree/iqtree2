@@ -95,4 +95,10 @@ void clearoutSequencesSuperTree(Node *node, Node *dad);
 */
 map<string,string> loadInputMSA(AliSimulator *alisimulator);
 
+/**
+*  only unroot tree and stop if the user wants to do so
+*
+*/
+void unrootTree(AliSimulator *alisimulator);
+
 #endif /* alisim_h */

@@ -327,6 +327,15 @@ void executeSimulation(Params params, IQTree *&tree)
     else
         alisimulator = new AliSimulator(&params);
     
+    // only unroot tree and stop if the user just wants to do so
+    if (alisimulator->params->alisim_only_unroot_tree)
+    {
+        unrootTree(alisimulator);
+        
+        // stop the program after unrooting the tree
+        return;
+    }
+    
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
@@ -907,4 +916,34 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
         return input_msa;
     }
     return input_msa;
+}
+
+/**
+*  only unroot tree and stop if the user wants to do so
+*
+*/
+void unrootTree(AliSimulator *alisimulator)
+{
+    if (alisimulator->tree->rooted)
+    {
+        cout<<"Unrooting the input tree"<<endl;
+        alisimulator->tree->PhyloTree::forceConvertingToUnrooted();
+        // initialize output_filepath
+        string output_filepath(alisimulator->params->user_file);
+        output_filepath = output_filepath.substr(0, output_filepath.find_last_of(".") + 1);
+        output_filepath = output_filepath + "unrooted.treefile";
+        
+        ofstream *out = new ofstream(output_filepath.c_str());
+        
+        alisimulator->tree->PhyloTree::printTree(*out);
+        
+        ((ofstream*)out)->close();
+        
+        delete out;
+        
+        cout<<"An unrooted tree has been writen to "+output_filepath<<endl;
+        return 0;
+    }
+    else
+        outError("The input tree is unrooted, thus, doesn't need to unroot it.");
 }
