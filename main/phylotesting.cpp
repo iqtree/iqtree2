@@ -1628,15 +1628,8 @@ void fixPartitions(PhyloSuperTree* super_tree) {
     super_tree->deleteAllPartialLhAndParsimony();
 }
 
-string CandidateModel::evaluate(Params &params,
-                                ModelCheckpoint &in_model_info, 
-                                ModelCheckpoint &out_model_info,
-                                ModelsBlock *models_block,
-                                int &num_threads, int brlen_type,
-                                PhyloTree* report_to_tree)
-{
-    //string model_name = name;
-    Alignment* in_aln = aln;
+IQTree* CandidateModel::createEvaluationTree
+            (Params& params, Alignment* in_aln, int brlen_type) {
     IQTree*    iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
         SuperAlignment *saln = (SuperAlignment*)in_aln;
@@ -1660,12 +1653,19 @@ string CandidateModel::evaluate(Params &params,
     else {
         iqtree = new IQTree(in_aln);
     }
+    return iqtree;
+}
+
+void CandidateModel::configureEvaluationTree
+        (Params& params,  ModelCheckpoint& in_model_info,
+         int num_threads, ModelsBlock*     models_block,
+         Alignment* in_aln,
+         IQTree* iqtree,  PhyloTree*       report_to_tree) {
     iqtree->setParams(&params);
     iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
     iqtree->setNumThreads(num_threads);
     iqtree->showNoProgress();
-
     iqtree->setCheckpoint(&in_model_info);
 #ifdef _OPENMP
 #pragma omp critical
@@ -1679,6 +1679,63 @@ string CandidateModel::evaluate(Params &params,
         subst_name = iqtree->getSubstName();
         rate_name = iqtree->getRateName();
     }
+}
+
+void CandidateModel::performFullTreeSearchPerModel
+        (Params& params, IQTree* iqtree, double& new_logl) {
+    //--- PERFORM FULL TREE SEARCH PER MODEL ----//
+
+    // BQM 2017-03-29: disable bootstrap
+    int orig_num_bootstrap_samples = params.num_bootstrap_samples;
+    int orig_gbo_replicates = params.gbo_replicates;
+    params.num_bootstrap_samples = 0;
+    params.gbo_replicates = 0;
+    STOP_CONDITION orig_stop_condition = params.stop_condition;
+    if (params.stop_condition == SC_BOOTSTRAP_CORRELATION) {
+        params.stop_condition = SC_UNSUCCESS_ITERATION;
+    }
+    iqtree->aln->model_name = getName();
+    
+    cout << endl << "===> Testing model " << getName() << endl;
+
+    if (iqtree->root) {
+        // start from previous tree
+        string initTree = iqtree->getTreeString();
+        iqtree->getCheckpoint()->put("initTree", initTree);
+        iqtree->saveCheckpoint();
+    }
+    iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
+
+    runTreeReconstruction(params, iqtree);
+    new_logl = iqtree->computeLikelihood();
+    tree_len = iqtree->treeLength();
+    tree = iqtree->getTreeString();
+
+    // restore original parameters
+    // 2017-03-29: restore bootstrap replicates
+    params.num_bootstrap_samples = orig_num_bootstrap_samples;
+    params.gbo_replicates = orig_gbo_replicates;
+    params.stop_condition = orig_stop_condition;
+
+    int count = iqtree->getCheckpoint()->eraseKeyPrefix("finished");
+    cout << count << " finished checkpoint entries erased" << endl;
+    iqtree->getCheckpoint()->eraseKeyPrefix("CandidateSet");
+}
+
+string CandidateModel::evaluate(Params &params,
+                                ModelCheckpoint &in_model_info, 
+                                ModelCheckpoint &out_model_info,
+                                ModelsBlock *models_block,
+                                int &num_threads, int brlen_type,
+                                PhyloTree* report_to_tree)
+{
+    //string model_name = name;
+    Alignment* in_aln = aln;
+    IQTree*    iqtree = createEvaluationTree(params, in_aln, brlen_type);
+    configureEvaluationTree(params, in_model_info, num_threads, 
+                            models_block, in_aln, iqtree, report_to_tree);
+
+
     if (restoreCheckpoint(&in_model_info)) {
         delete iqtree;
         return "";
@@ -1696,44 +1753,7 @@ string CandidateModel::evaluate(Params &params,
     double new_logl;
     
     if (params.model_test_and_tree) {
-        //--- PERFORM FULL TREE SEARCH PER MODEL ----//
-
-        // BQM 2017-03-29: disable bootstrap
-        int orig_num_bootstrap_samples = params.num_bootstrap_samples;
-        int orig_gbo_replicates = params.gbo_replicates;
-        params.num_bootstrap_samples = 0;
-        params.gbo_replicates = 0;
-        STOP_CONDITION orig_stop_condition = params.stop_condition;
-        if (params.stop_condition == SC_BOOTSTRAP_CORRELATION) {
-            params.stop_condition = SC_UNSUCCESS_ITERATION;
-        }
-        iqtree->aln->model_name = getName();
-        
-        cout << endl << "===> Testing model " << getName() << endl;
-
-        if (iqtree->root) {
-            // start from previous tree
-            string initTree = iqtree->getTreeString();
-            iqtree->getCheckpoint()->put("initTree", initTree);
-            iqtree->saveCheckpoint();
-        }
-        iqtree->ensureNumberOfThreadsIsSet(nullptr, true);
-
-        runTreeReconstruction(params, iqtree);
-        new_logl = iqtree->computeLikelihood();
-        tree_len = iqtree->treeLength();
-        tree = iqtree->getTreeString();
-
-        // restore original parameters
-        // 2017-03-29: restore bootstrap replicates
-        params.num_bootstrap_samples = orig_num_bootstrap_samples;
-        params.gbo_replicates = orig_gbo_replicates;
-        params.stop_condition = orig_stop_condition;
-
-        int count = iqtree->getCheckpoint()->eraseKeyPrefix("finished");
-        cout << count << " finished checkpoint entries erased" << endl;
-        iqtree->getCheckpoint()->eraseKeyPrefix("CandidateSet");
-
+        performFullTreeSearchPerModel(params, iqtree, new_logl);
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
         TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MED, "Optimizing model " << getName());
@@ -1762,9 +1782,7 @@ string CandidateModel::evaluate(Params &params,
                            " " + convertDoubleToString(prev_info.logl));
             }
         }
-
     }
-
     // sum in case of adjusted df and logl already stored
     df += iqtree->getModelFactory()->getNParameters(brlen_type);
     logl += new_logl;

@@ -83,7 +83,15 @@ public:
                     ModelCheckpoint &in_model_info, ModelCheckpoint &out_model_info,
                     ModelsBlock *models_block, int &num_threads, int brlen_type,
                     PhyloTree* report_to_tree);
-    
+        //Supporting functions
+        IQTree* createEvaluationTree   (Params& params, Alignment* in_aln, 
+                                        int     brlen_type);
+        void    configureEvaluationTree(Params& params,  ModelCheckpoint& in_model_info,
+                                        int     num_threads, ModelsBlock* models_block,
+                                        Alignment* in_aln,
+                                        IQTree* iqtree,  PhyloTree*       report_to_tree);
+        void    performFullTreeSearchPerModel(Params& params, IQTree* iqtree,
+                                              double& new_logl);
     /**
      evaluate concatenated alignment
      */
