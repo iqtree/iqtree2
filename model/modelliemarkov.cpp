@@ -373,7 +373,6 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
 
     if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
-    ModelMarkov::init(freq_type);
     
     // read user-specified frequencies
     if (freq_params.length() > 0)
@@ -385,8 +384,11 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         else
             readFreqs(expected_freq_type, freq_params);
     }
+    
+    ModelMarkov::init(freq_type);
+    
     // initialize random state frequencies if AliSim is running without inference mode
-    else if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && (freq_type == FREQ_ESTIMATE || freq_type == FREQ_EMPIRICAL)){
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && (freq_type == FREQ_ESTIMATE || freq_type == FREQ_EMPIRICAL)){
         // initializing state_freqs from expected_freq_type
         initStateFreqsAliSim(expected_freq_type);
     }

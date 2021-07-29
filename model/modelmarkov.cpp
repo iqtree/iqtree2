@@ -1193,8 +1193,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     //double m[num_states];
     double freq = 1.0/num_states;
     
-    for (i = 0; i < num_states; i++)
-        state_freq[i] = freq;
+    if (freq_type!=FREQ_USER_DEFINED || Params::getInstance().optimize_from_given_params)
+        for (i = 0; i < num_states; i++)
+            state_freq[i] = freq;
     
     for (i = 0, k = 0; i < num_states; i++) {
         double *rate_row = rate_matrix+(i*num_states);
@@ -1205,8 +1206,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
             }
         rate_row[i] = -row_sum;
     }
-    computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
     
+    if (freq_type!=FREQ_USER_DEFINED || Params::getInstance().optimize_from_given_params)
+        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
     
     for (i = 0, sum = 0.0; i < num_states; i++) {
         sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
