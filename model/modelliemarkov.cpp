@@ -375,8 +375,18 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
     ModelMarkov::init(freq_type);
     
+    // read user-specified frequencies
+    if (freq_params.length() > 0)
+    {
+        // ignore user-specified frequencies if the model has equal state frequencies
+        if (expected_freq_type == FREQ_EQUAL)
+            outWarning("The model "+(string)model_name+" has equal state frequencies. Therefore, user-specified frequencies will be ignored.");
+        // otherwise, read user-specified frequencies
+        else
+            readFreqs(expected_freq_type, freq_params);
+    }
     // initialize random state frequencies if AliSim is running without inference mode
-    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && (freq_type == FREQ_ESTIMATE || freq_type == FREQ_EMPIRICAL)){
+    else if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && (freq_type == FREQ_ESTIMATE || freq_type == FREQ_EMPIRICAL)){
         // initializing state_freqs from expected_freq_type
         initStateFreqsAliSim(expected_freq_type);
     }
@@ -399,29 +409,17 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
         case FREQ_DNA_1122:
         {
             // randomly generate two frequencies
-            double freq1 = random_double();
-            double freq2 = random_double();
+            int num_freqs = 2;
+            double* freqs = new double[num_freqs];
+            for (int i = 0; i < num_freqs; i++)
+                freqs[i] = random_double();
             
             // set state freqs
-            if (expected_freq_type == FREQ_DNA_1212)
-            {
-                state_freq[0] = state_freq[2] = freq1;
-                state_freq[1] = state_freq[3] = freq2;
-            }
-            else if (expected_freq_type == FREQ_DNA_1221)
-            {
-                state_freq[0] = state_freq[3] = freq1;
-                state_freq[1] = state_freq[2] = freq2;
-            } else if (expected_freq_type == FREQ_DNA_1122)
-            {
-                state_freq[0] = state_freq[1] = freq1;
-                state_freq[2] = state_freq[3] = freq2;
-            }
+            mappingFreqs(expected_freq_type, freqs);
             
-            // normalize state frequencies so that sum of them are 1
-            double total = (freq1+freq2)*2;
-            for (int i = 0; i < 4; i++)
-                state_freq[i] /= total;
+            // delete freqs
+            delete[] freqs;
+            
             break;
         }
         case FREQ_DNA_RY:
@@ -429,45 +427,159 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
         case FREQ_DNA_MK:
         {
             // randomly generate two pairs of frequencies
-            double pair1_freq1 = random_double();
-            double pair1_freq2 = random_double();
-            double pair2_freq1 = random_double();
-            double pair2_freq2 = random_double();
+            int num_freqs = 4;
+            double* freqs = new double[num_freqs];
+            for (int i = 0; i < num_freqs; i++)
+                freqs[i] = random_double();
             
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+/**
+     mapping state frequencies from user-specified/random frequencies
+*/
+void ModelLieMarkov::mappingFreqs(StateFreqType expected_freq_type, double *freqs)
+{
+    switch (expected_freq_type) {
+        case FREQ_DNA_1212:
+        case FREQ_DNA_1221:
+        case FREQ_DNA_1122:
+        {
+            // set state freqs
+            if (expected_freq_type == FREQ_DNA_1212)
+            {
+                state_freq[0] = state_freq[2] = freqs[0];
+                state_freq[1] = state_freq[3] = freqs[1];
+            }
+            else if (expected_freq_type == FREQ_DNA_1221)
+            {
+                state_freq[0] = state_freq[3] = freqs[0];
+                state_freq[1] = state_freq[2] = freqs[1];
+            } else if (expected_freq_type == FREQ_DNA_1122)
+            {
+                state_freq[0] = state_freq[1] = freqs[0];
+                state_freq[2] = state_freq[3] = freqs[1];
+            }
+            
+            // normalize state frequencies so that sum of them are 1
+            normalize_frequencies(state_freq, num_states, -1, true);
+            
+            break;
+        }
+        case FREQ_DNA_RY:
+        case FREQ_DNA_WS:
+        case FREQ_DNA_MK:
+        {
             // normalize state frequencies of each pair so that sum of them are 0.5
-            double total = pair1_freq1 + pair1_freq2;
-            pair1_freq1 = pair1_freq1/total/2;
-            pair1_freq2 = pair1_freq2/total/2;
-            total = pair2_freq1 + pair2_freq2;
-            pair2_freq1 = pair2_freq1/total/2;
-            pair2_freq2 = pair2_freq2/total/2;
+            outWarning("Normalizing state frequencies of each pair so that sum of them are 0.5");
+            double total = freqs[0] + freqs[1];
+            freqs[0] = freqs[0]/total/2;
+            freqs[1] = freqs[1]/total/2;
+            total = freqs[2] + freqs[3];
+            freqs[2] = freqs[2]/total/2;
+            freqs[3] = freqs[3]/total/2;
             
             // set state freqs
             if (expected_freq_type == FREQ_DNA_RY)
             {
-                state_freq[0] = pair1_freq1;
-                state_freq[1] = pair2_freq1;
-                state_freq[2] = pair1_freq2;
-                state_freq[3] = pair2_freq2;
+                state_freq[0] = freqs[0];
+                state_freq[1] = freqs[2];
+                state_freq[2] = freqs[1];
+                state_freq[3] = freqs[3];
             }
             else if (expected_freq_type == FREQ_DNA_WS)
             {
-                state_freq[0] = pair1_freq1;
-                state_freq[1] = pair2_freq1;
-                state_freq[2] = pair2_freq2;
-                state_freq[3] = pair1_freq2;
+                state_freq[0] = freqs[0];
+                state_freq[1] = freqs[2];
+                state_freq[2] = freqs[3];
+                state_freq[3] = freqs[1];
             } else if (expected_freq_type == FREQ_DNA_MK)
             {
-                state_freq[0] = pair1_freq1;
-                state_freq[1] = pair1_freq2;
-                state_freq[2] = pair2_freq1;
-                state_freq[3] = pair2_freq2;
+                state_freq[0] = freqs[0];
+                state_freq[1] = freqs[1];
+                state_freq[2] = freqs[2];
+                state_freq[3] = freqs[3];
             }
             break;
         }
         default:
             break;
     }
+}
+
+/**
+     read user-specified state frequencies
+*/
+void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_params)
+{
+    // detect the seperator
+    char separator = ',';
+    if (freq_params.find('/') != std::string::npos)
+        separator = '/';
+    
+    switch (expected_freq_type) {
+        case FREQ_ESTIMATE:
+        case FREQ_EMPIRICAL:
+        {
+            // extract/generate freqs one by one
+            convert_double_array_with_distributions(freq_params, state_freq, num_states, separator);
+            
+            // normalize state freqs
+            normalize_frequencies(state_freq, num_states, -1, true);
+            
+            break;
+        }
+        case FREQ_DNA_1212:
+        case FREQ_DNA_1221:
+        case FREQ_DNA_1122:
+        {
+            // extract/generate two freqs one by one
+            int num_freqs = 2;
+            double* freqs = new double[num_freqs];
+            convert_double_array_with_distributions(freq_params, freqs, num_freqs, separator);
+            
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        case FREQ_DNA_RY:
+        case FREQ_DNA_WS:
+        case FREQ_DNA_MK:
+        {
+            // randomly generate two pairs of frequencies
+            // extract/generate two freqs one by one
+            int num_freqs = 4;
+            double* freqs = new double[num_freqs];
+            convert_double_array_with_distributions(freq_params, freqs, num_freqs, separator);
+            
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        default:
+            break;
+    }
+    
+    // update freq_type
+    freq_type = FREQ_USER_DEFINED;
 }
 
 // Note to Minh: I see ModelUnrest also lacks checkpointing.

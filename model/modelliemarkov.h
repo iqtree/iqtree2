@@ -65,6 +65,16 @@ public:
          initialize random state frequencies when running AliSim without inference mode
     */
     void initStateFreqsAliSim(StateFreqType expected_freq_type);
+    
+    /**
+         read user-specified state frequencies
+    */
+    void readFreqs(StateFreqType expected_freq_type, string freq_params);
+    
+    /**
+         mapping state frequencies from user-specified/random frequencies
+    */
+    void mappingFreqs(StateFreqType expected_freq_type, double *freqs);
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);

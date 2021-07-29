@@ -2649,11 +2649,20 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator = ','
 
 /**
         convert comma-separated string to double vector or generate double vector from distributions
-        @param str original string with integers separated by comma
-        @param vec (OUT) integer vector
+        @param str original string with doubles separated by comma
+        @param vec (OUT) double vector
         @param separator char separating elements
  */
 void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator = ',');
+
+/**
+        convert separated string to an array of double number (double*) or generate them from distributions
+        @param tmp_str original string with doubles separated by separator
+        @param array an array of double number (double*)
+        @param num_items the number of items in the array
+        @param separator char separating elements
+ */
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, char separator);
 
 /**
         normalize state frequencies so that sum of them is equal to 1
@@ -2669,7 +2678,7 @@ void normalize_frequencies_from_index(double* freqs, int num_states, int startin
         @param num_states the number of states
         @param total_freq sum of all original state frequencies
  */
-void normalize_frequencies(double* freqs, int num_states, double total_freqs = -1);
+void normalize_frequencies(double* freqs, int num_states, double total_freqs = -1, bool show_warning = false);
 
 /**
  * Convert seconds to hour, minute, second

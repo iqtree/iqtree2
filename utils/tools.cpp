@@ -448,6 +448,27 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
     }
 }
 
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, char separator)
+{
+    // validate the number of items
+    size_t num_separators = std::count(tmp_str.begin(), tmp_str.end(), separator);
+    if (num_separators != num_items - 1)
+        outError("The number of items in "+tmp_str+" is "+convertIntToString(num_separators+1)+", which is different from the expected number of items ("+convertIntToString(num_items)+"). Please check and try again!");
+
+    // extract/generate double numbers one by one
+    for (int i = 0; i < num_items; i++) {
+        // extract sub-string by separator
+        size_t pos = tmp_str.find(separator);
+        string token = tmp_str.substr(0, pos);
+        
+        // convert/generate a double
+        array[i] = convert_double_with_distribution(token.c_str());
+        
+        // remove the current double/distribution name from tmp_str
+        tmp_str.erase(0, pos + 1);
+    }
+}
+
 string convert_time(const double sec) {
     int sec_int = (int) floor(sec);
     int secs = sec_int % 60;
@@ -704,17 +725,25 @@ double convert_double_with_distribution(const char *str)
         return random_number_from_distribution(input);
 }
 
-void normalize_frequencies(double* freqs, int num_states, double total_freqs)
+void normalize_frequencies(double* freqs, int num_states, double total_freqs, bool show_warning)
 {
     ASSERT(num_states > 0);
     // calculate the total_freqs if it's not provided
     if (total_freqs == -1)
+    {
+        total_freqs = 0;
         for (int i = 0; i < num_states; i++)
             total_freqs += freqs[i];
+    }
     
     // normalize the freqs
-    for (int i = 0; i < num_states; i++)
-        freqs[i] /= total_freqs;
+    if (fabs(total_freqs-1.0) > 1e-5)
+    {
+        if (show_warning)
+            outWarning("Normalizing state frequencies so that sum of them equals to 1");
+        for (int i = 0; i < num_states; i++)
+            freqs[i] /= total_freqs;
+    }
 }
 
 void normalize_frequencies_from_index(double* freqs, int num_states, int starting_index)

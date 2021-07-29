@@ -65,7 +65,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
         }
 		if (fabs(sum_prop-1.0) > 1e-5)
         {
-            outWarning("Normalizing category proportions so that sum of them not equal to 1");
+            outWarning("Normalizing category proportions so that sum of them equals to 1");
             normalize_frequencies(prop, ncategory, sum_prop);
             
             // normalize rates
