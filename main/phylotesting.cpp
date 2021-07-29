@@ -1259,43 +1259,18 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     }
 }
 
-int CandidateModelSet::generate(Params &params, Alignment *aln,
-                                bool separate_rate, bool merge_phase) {
-	StrVector model_names;
-    StrVector freq_names;
-	SeqType alignment_seq_type = aln->seq_type;
-    
-	int i, j;
-    string model_set;
-    
-    if (merge_phase) {
-        model_set = params.merge_models;
-    } else {
-        model_set = params.model_set;
-    }
-
-    bool auto_model = iEquals(model_set, "AUTO");
-    
-    getModelSubst(alignment_seq_type, aln->isStandardGeneticCode(), 
-                  params.model_name, model_set, 
-                  params.model_subset, model_names);
-
-    if (model_names.empty()) {
-        return 1;
-    }
-    
-    getStateFreqs(alignment_seq_type, params.state_freq_set, freq_names);
-    
+void CandidateModelSet::combineModelNamesWithFrequencyNames
+        (Alignment* aln, const StrVector& freq_names, StrVector& model_names) {
     // combine model_names with freq_names
     if (freq_names.size() > 0) {
         StrVector orig_model_names = model_names;
         model_names.clear();
-        for (j = 0; j < orig_model_names.size(); j++) {
+        for (int j = 0; j < orig_model_names.size(); j++) {
             if (aln->seq_type == SeqType::SEQ_CODON) {
                 SeqType seq_type;
                 int model_type = detectSeqType(orig_model_names[j].c_str(), seq_type);
                 bool hasMG = orig_model_names[j].find("MG") != string::npos;
-                for (i = 0; i < freq_names.size(); i++) {
+                for (int i = 0; i < freq_names.size(); i++) {
                     // disallow MG+F
                     if (freq_names[i] == "+F" && hasMG)
                         continue;
@@ -1304,41 +1279,29 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
                 }
             } else {
-                for (i = 0; i < freq_names.size(); i++)
+                for (int i = 0; i < freq_names.size(); i++)
                     model_names.push_back(orig_model_names[j] + freq_names[i]);
             }
         }
     }
+}
 
-    StrVector ratehet;
-    int max_cats = params.num_rate_cats;
-    string ratehet_set;
-    if (merge_phase) {
-        ratehet_set = params.merge_rates;
-    } else
-        ratehet_set = params.ratehet_set;
-
-    //bool auto_rate = iEquals(ratehet_set, "AUTO");
-    
-    getRateHet(alignment_seq_type, params.model_name, 
-               aln->frac_invariant_sites, ratehet_set, ratehet);
-
+void CandidateModelSet::getRateHetorotachyCategories
+        (Params& params, StrVector& ratehet, 
+         int& max_cats, vector<int>& flags) {
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
-
-    for (i = 0; i < element_count(rates); i++) {
+    for (int i = 0; i < element_count(rates); i++) {
         if (params.model_name.find(rates[i]) != string::npos) {
             ratehet.push_back(rates[i]);
         }
     }
 
-    size_t pos;
-
-    vector<int> flags;
+    size_t      pos;
     flags.resize(ratehet.size(), 0);
     
-    for (i = 0; i < element_count(rates); i++) {
-        for (j = 0; j < ratehet.size(); j++) {
+    for (int i = 0; i < element_count(rates); i++) {
+        for (int j = 0; j < ratehet.size(); j++) {
             if ((pos = ratehet[j].find(rates[i])) != string::npos &&
                 (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
             {
@@ -1353,18 +1316,19 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
             }
         }
     }
-
     ASSERT(ratehet.size() == flags.size());
-    
-    string pomo_suffix = (alignment_seq_type == SeqType::SEQ_POMO) ? "+P" : "";
-    // TODO DS: should we allow virtual population size?
+}
 
+void CandidateModelSet::combineSubstitutionModelsWithRateHeterogeneity
+        (Alignment* aln, bool separate_rate, const StrVector& model_names,
+         const StrVector& ratehet, const std::string& pomo_suffix,
+         bool auto_model, const vector<int>& flags) {
     // combine substitution models with rate heterogeneity
     if (separate_rate) {
-        for (i = 0; i < model_names.size(); i++) {
+        for (int i = 0; i < model_names.size(); i++) {
             push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln));
         }
-        for (j = 0; j < ratehet.size(); j++) {
+        for (int j = 0; j < ratehet.size(); j++) {
             if (ratehet[j] != "") {
                 push_back(CandidateModel("", ratehet[j] + pomo_suffix, aln));
             }
@@ -1372,35 +1336,32 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
     } else {
         if (auto_model) {
             // all rate heterogeneity for the first model
-            for (j = 0; j < ratehet.size(); j++) {
+            for (int j = 0; j < ratehet.size(); j++) {
                 push_back(CandidateModel(model_names[0], ratehet[j] + pomo_suffix, aln, flags[j]));
             }
             // now all models the first RHAS
-            for (i = 1; i < model_names.size(); i++) {
+            for (int i = 1; i < model_names.size(); i++) {
                 push_back(CandidateModel(model_names[i], ratehet[0] + pomo_suffix, aln, flags[0]));
             }
             // all remaining models
-            for (i = 1; i < model_names.size(); i++) {
-                for (j = 1; j < ratehet.size(); j++) {
+            for (int i = 1; i < model_names.size(); i++) {
+                for (int j = 1; j < ratehet.size(); j++) {
                     push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln, flags[j]));
                 }
             }
         } else {
             // testing all models
-            for (i = 0; i < model_names.size(); i++) {
-                for (j = 0; j < ratehet.size(); j++) {
+            for (int i = 0; i < model_names.size(); i++) {
+                for (int j = 0; j < ratehet.size(); j++) {
                     push_back(CandidateModel(model_names[i], ratehet[j] + pomo_suffix, aln, flags[j]));
                 }
             }
         }
     }
-    if (params.model_extra_set) {
-        StrVector extra_model_names;
-        convert_string_vec(params.model_extra_set, extra_model_names);
-        for (auto s : extra_model_names) {
-            push_back(CandidateModel(s, "", aln));
-        }
-    }
+}
+
+void CandidateModelSet::getNamesOfModelsFromYAMLModelFile
+        (Params& params, Alignment* aln) {
     auto yaml_path = params.yaml_model_file;
     if (!yaml_path.empty()) {
         //Get names of models from the model file
@@ -1426,7 +1387,68 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
             outError(e.what());
         }
     }
+}  
 
+int CandidateModelSet::generate(Params &params, Alignment *aln,
+                                bool separate_rate, bool merge_phase) {
+	StrVector model_names;
+    StrVector freq_names;
+	SeqType   alignment_seq_type = aln->seq_type;    
+    string    model_set;
+    
+    if (merge_phase) {
+        model_set = params.merge_models;
+    } else {
+        model_set = params.model_set;
+    }
+
+    bool auto_model = iEquals(model_set, "AUTO");
+    
+    getModelSubst(alignment_seq_type, aln->isStandardGeneticCode(), 
+                  params.model_name, model_set, 
+                  params.model_subset, model_names);
+
+    if (model_names.empty()) {
+        return 1;
+    }
+    
+    getStateFreqs(alignment_seq_type, params.state_freq_set, freq_names);
+    
+    combineModelNamesWithFrequencyNames(aln, freq_names, model_names);
+
+    StrVector ratehet;
+    int max_cats = params.num_rate_cats;
+    string ratehet_set;
+    if (merge_phase) {
+        ratehet_set = params.merge_rates;
+    } else {
+        ratehet_set = params.ratehet_set;
+    }
+
+    //bool auto_rate = iEquals(ratehet_set, "AUTO");
+    
+    getRateHet(alignment_seq_type, params.model_name, 
+               aln->frac_invariant_sites, ratehet_set, ratehet);
+
+    vector<int> flags;
+    getRateHetorotachyCategories(params, ratehet, max_cats, flags);
+
+    string pomo_suffix = (alignment_seq_type == SeqType::SEQ_POMO) ? "+P" : "";
+    // TODO DS: should we allow virtual population size?
+
+    combineSubstitutionModelsWithRateHeterogeneity
+        ( aln, separate_rate, model_names, ratehet, pomo_suffix, 
+          auto_model, flags);
+
+    if (params.model_extra_set) {
+        StrVector extra_model_names;
+        convert_string_vec(params.model_extra_set, extra_model_names);
+        for (auto s : extra_model_names) {
+            push_back(CandidateModel(s, "", aln));
+        }
+    }
+
+    getNamesOfModelsFromYAMLModelFile(params, aln);
     return max_cats;
 }
 

@@ -213,6 +213,20 @@ public:
      */
     int generate(Params &params, Alignment *aln, bool separate_rate, bool merge_phase);
 
+        //Supporting functions
+        void combineModelNamesWithFrequencyNames(Alignment* aln, 
+                                                 const StrVector& freq_names,
+                                                 StrVector& model_names);
+        void getRateHetorotachyCategories(Params& params, StrVector& ratehet, 
+                                          int& max_cats, vector<int>& flags);
+        void combineSubstitutionModelsWithRateHeterogeneity
+                (Alignment* aln, bool separate_rate, 
+                 const StrVector& model_names,
+                 const StrVector& ratehet, 
+                 const std::string& pomo_suffix, bool auto_model,
+                 const vector<int>& flags);
+        void getNamesOfModelsFromYAMLModelFile(Params& params, Alignment* aln);
+
     /**
      Filter out all "non-promising" rate models
                 @return the number of "non-promising" models that were filtered out.
