@@ -817,7 +817,14 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                           && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
     
-    double len = convert_double_with_distribution(lenstr.c_str());
+    double len;
+    // randomly generate branch length based on a user-defined distribution
+    if (Params::getInstance().branch_distribution)
+        len = random_number_from_distribution(Params::getInstance().branch_distribution);
+    // or parse it from tree file
+    else
+        len = convert_double_with_distribution(lenstr.c_str());
+    
     if (in_comment.empty() || in_comment_contains_key_value) {
         branch_len.push_back(len);
         return;
@@ -825,7 +832,20 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     
     // don't try to parse multiple lengths if in_comment starts with "&" (input key=value)
     if (!in_comment_contains_key_value)
-        convert_double_vec_with_distributions(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+    {
+        // randomly generate a set of branch lengths based on a user-defined distribution
+        if (Params::getInstance().branch_distribution)
+        {
+            size_t num_separators = std::count(in_comment.begin(), in_comment.end(), BRANCH_LENGTH_SEPARATOR);
+            
+            branch_len.clear();
+            for (int i = 0; i < (num_separators + 1); i++)
+                branch_len.push_back(random_number_from_distribution(Params::getInstance().branch_distribution));
+        }
+        // or parse them from tree file
+        else
+            convert_double_vec_with_distributions(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+    }
 //    char* str = (char*)in_comment.c_str() + 1;
 //    int pos;
 //    for (int i = 1; str[0] == 'L'; i++) {
@@ -869,6 +889,11 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             //throw "Found branch with no length.";
             //if (brlen < 0.0)
             //throw ERR_NEG_BRANCH;
+            
+            // randomly generate branch lengths if users supply a distribution name and a tree topology without branch lengths.
+            if (Params::getInstance().branch_distribution && brlen.size() == 0)
+                brlen.push_back(random_number_from_distribution(Params::getInstance().branch_distribution));
+            
             root->addNeighbor(node, brlen);
             node->addNeighbor(root, brlen);
             

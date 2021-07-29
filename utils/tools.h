@@ -2344,6 +2344,11 @@ public:
     *  TRUE to convert tree from rooted to unrooted and stop
     */
     bool alisim_only_unroot_tree;
+    
+    /**
+    *  distribution to randomly generate branch lengths
+    */
+    char* branch_distribution;
 };
 
 /**

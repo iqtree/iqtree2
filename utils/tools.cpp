@@ -109,21 +109,29 @@ void outWarning(string warn) {
 }
 
 double randomLen(Params &params) {
-    double ran = static_cast<double> (random_int(999) + 1) / 1000;
-    double len = -params.mean_len * log(ran);
+    // randomly generate branch lengths based on
+    // a user-specified distribution
+    if (params.branch_distribution)
+        return random_number_from_distribution(params.branch_distribution);
+    // or an exponential distribution (by default)
+    else
+    {
+        double ran = static_cast<double> (random_int(999) + 1) / 1000;
+        double len = -params.mean_len * log(ran);
 
-    if (len < params.min_len) {
-        int fac = random_int(1000);
-        double delta = static_cast<double> (fac) / 1000.0; //delta < 1.0
-        len = params.min_len + delta / 1000.0;
-    }
+        if (len < params.min_len) {
+            int fac = random_int(1000);
+            double delta = static_cast<double> (fac) / 1000.0; //delta < 1.0
+            len = params.min_len + delta / 1000.0;
+        }
 
-    if (len > params.max_len) {
-        int fac = random_int(1000);
-        double delta = static_cast<double> (fac) / 1000.0; //delta < 1.0
-        len = params.max_len - delta / 1000.0;
+        if (len > params.max_len) {
+            int fac = random_int(1000);
+            double delta = static_cast<double> (fac) / 1000.0; //delta < 1.0
+            len = params.max_len - delta / 1000.0;
+        }
+        return len;
     }
-    return len;
 }
 
 std::istream& safeGetline(std::istream& is, std::string& t)
@@ -1356,6 +1364,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_skip_checking_memory = false;
     params.alisim_write_internal_sequences = false;
     params.alisim_only_unroot_tree = false;
+    params.branch_distribution = NULL;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2460,6 +2469,13 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--only-unroot-tree") == 0) {
                 params.alisim_only_unroot_tree = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--branch-distribution") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --branch-distribution <distribution_name> to specify a distribution, from which branch lengths will be randomly generated.";
+                params.branch_distribution = argv[cnt];
                 continue;
             }
 			if (strcmp(argv[cnt], "-st") == 0 || strcmp(argv[cnt], "--seqtype") == 0) {
@@ -5337,6 +5353,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                            Edge-linked proportional partition model" << endl
     << "  -q FILE                   Like -p but edge-linked equal partition model " << endl
     << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
+    << "  --distribution FILE       Supply the distribution definition file" << endl
+    << "  --branch-distribution DIS Specify the distribution for randomly generating branch lengths" << endl
+    << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
     << "                            users should specify the seed number" << endl
