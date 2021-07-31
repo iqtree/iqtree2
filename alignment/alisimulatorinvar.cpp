@@ -69,10 +69,9 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
 {
     // get variables
     int sequence_length = expected_num_sites;
-    double invariant_proportion = tree->getRate()->getPInvar();
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
-    ostream *out;
+    ostream *out = NULL;
     vector<string> state_mapping;
     
     // initialize the site-specific rates

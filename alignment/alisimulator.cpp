@@ -610,7 +610,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
-    ostream *out;
+    ostream *out = NULL;
     vector<string> state_mapping;
         
     // initialize trans_matrix

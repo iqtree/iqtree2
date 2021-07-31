@@ -346,7 +346,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     int max_num_states = tree->aln->getMaxNumStates();
-    ostream *out;
+    ostream *out = NULL;
     vector<string> state_mapping;
     
     // initialize site specific model index based on its weights (in the mixture model)
