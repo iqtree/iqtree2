@@ -312,7 +312,26 @@ public:
     CandidateModel evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
                      ModelsBlock *models_block, int num_threads, int brlen_type,
                      string in_model_name = "", bool merge_phase = false, bool write_info = true);
-    
+        //Supporting functions
+        void generateProteinModels(Params& params,      PhyloTree* in_tree,
+                                   bool    write_info,  bool       merge_phase, 
+                                   Alignment*& prot_aln);
+        void generateDNAModels    (Params& params,      PhyloTree*  in_tree,
+                                   bool merge_phase,    Alignment*& dna_aln);
+        void writeModelListHeader (PhyloTree* in_tree, bool write_info, 
+                                   bool do_modelomatic);
+        int  getRateBlock             (bool auto_rate);
+        int  getSubstitutionModelBlock(bool auto_subst);
+        bool modelWithFewerCategoriesHasLowerScore(int64_t model, int& lower_model);
+        void markModelWithMoreCategoriesAsIgnored (int64_t model);
+        void applyAutoFilters                     (int model, int rate_block, 
+                                                   int subst_block);
+        void storeBestModel                       (ModelCheckpoint &model_info);
+        void sortModelsByScore                    (ModelCheckpoint &model_info,
+                                                   int64_t num_models);
+        int  updateAlignmentIfDataTypeChanged(Params&    params,   PhyloTree* in_tree,
+                                              Alignment* prot_aln, Alignment* dna_aln);
+
 private:
     
     /** current model */

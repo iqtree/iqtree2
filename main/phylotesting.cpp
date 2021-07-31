@@ -3085,6 +3085,13 @@ int64_t CandidateModelSet::getNextModel() {
         return -1;
 }
 
+template <class T> void deleteAndSetToNull(T*& delete_me) {
+    if (delete_me!=nullptr) {
+        delete delete_me;
+        delete_me = nullptr;
+    }
+}
+
 CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree,
                                               ModelCheckpoint &model_info,
                                               ModelsBlock *models_block, int num_threads,
@@ -3092,89 +3099,37 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
                                               bool merge_phase, bool write_info)
 {
     //ModelCheckpoint *checkpoint = &model_info;
-
     in_tree->params = &params;
     
     Alignment *prot_aln = nullptr;
     Alignment *dna_aln  = nullptr;
-    bool do_modelomatic = params.modelomatic &&
-                          in_tree->aln->seq_type == SeqType::SEQ_CODON;
     
+    bool do_modelomatic = params.modelomatic &&
+                        in_tree->aln->seq_type == SeqType::SEQ_CODON;
     if (in_model_name.empty()) {
         generate(params, in_tree->aln,
                  params.model_test_separate_rate,
                  merge_phase);
         if (do_modelomatic) {
-            // generate models for protein
-            // adapter coefficient according to Whelan et al. 2015
-            prot_aln = in_tree->aln->convertCodonToAA();
-            int adjusted_df;
-            double adjusted_logl = computeAdapter(in_tree->aln,
-                                                  prot_aln, adjusted_df);
-            if (write_info) {
-                cout << "Adjusted LnL: " << adjusted_logl
-                     << "  df: " << adjusted_df << endl;
-            }
-            size_t start = size();
-            generate(params, prot_aln, params.model_test_separate_rate,
-                     merge_phase);
-            size_t i;
-            for (i = start; i < size(); i++) {
-                at(i).logl = adjusted_logl;
-                at(i).df = adjusted_df;
-            }
-            
-            // generate models for DNA
-            dna_aln = in_tree->aln->convertCodonToDNA();
-            start = size();
-            generate(params, dna_aln, params.model_test_separate_rate,
-                     merge_phase);
-            for (i = start; i < size(); i++) {
-                at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
-            }
+            generateProteinModels(params, in_tree, write_info, merge_phase, prot_aln);
+            generateDNAModels    (params, in_tree, merge_phase, dna_aln);
         }
     } else {
         push_back(CandidateModel(in_model_name, "", in_tree->aln));
     }
-
-    if (write_info) {
-        cout << "ModelFinder will test " << size() << " ";
-        if (do_modelomatic) {
-            cout << "codon/AA/DNA";
-        }
-        else {
-            cout << getSeqTypeName(in_tree->aln->seq_type);
-        }
-        cout << " models (sample size: "
-             << in_tree->aln->getNSite() << ") ..." << endl;
-        cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
-    }
-
-    double best_score = DBL_MAX;
+    writeModelListHeader(in_tree, write_info, do_modelomatic);
 
     // detect rate hetegeneity automatically or not
-    bool auto_rate = merge_phase
-                   ? iEquals(params.merge_rates, "AUTO")
-                   : iEquals(params.ratehet_set, "AUTO");
+    bool auto_rate  = merge_phase
+                    ? iEquals(params.merge_rates, "AUTO")
+                    : iEquals(params.ratehet_set, "AUTO");
     bool auto_subst = merge_phase
                     ? iEquals(params.merge_models, "AUTO")
                     : iEquals(params.model_set, "AUTO");
-    int rate_block = static_cast<int>(size());
-    if (auto_rate) {
-        for (rate_block = 0; rate_block + 1 < static_cast<int>(size()); rate_block++) {
-            if (at(rate_block+1).subst_name != at(rate_block).subst_name) {
-                break;
-            }
-        }
-    }
-    int subst_block = static_cast<int>(size());
-    if (auto_subst) {
-        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--) {
-            if (at(subst_block).rate_name == at(0).rate_name) {
-                break;
-            }
-        }
-    }
+    int rate_block  = getRateBlock(auto_rate);
+    int subst_block = getSubstitutionModelBlock(auto_subst);
+    
+    double best_score = DBL_MAX;
     int64_t num_models = size();
 #ifdef _OPENMP
 #pragma omp parallel num_threads(num_threads)
@@ -3183,8 +3138,9 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     int64_t model;
     do {
         model = getNextModel();
-        if (model == -1)
+        if (model == -1) {
             break;
+        }
 
         // optimize model parameters
         string orig_model_name = at(model).getName();
@@ -3200,15 +3156,12 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
                                          in_tree);
         at(model).computeICScores();
         at(model).setFlag(MF_DONE);
-        
-        int lower_model = getLowerKModel(static_cast<int>(model));
-        if (lower_model >= 0 && at(lower_model).getScore() < at(model).getScore()) {
-            // ignore all +R_k model with higher category
-            for (auto higher_model = model; higher_model != -1;
-                higher_model = getHigherKModel(static_cast<int>(higher_model))) {
-                at(higher_model).setFlag(MF_IGNORED);
-            }
+
+        int lower_model;
+        if (modelWithFewerCategoriesHasLowerScore(model, lower_model)) {
+            markModelWithMoreCategoriesAsIgnored(model);
         }
+        
 #ifdef _OPENMP
 #pragma omp critical
         {
@@ -3241,18 +3194,126 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             cout << at(model).AICc_score << " " << at(model).BIC_score;
             cout << endl;
         }
-        if (model >= rate_block) {
-            filterRates(static_cast<int>(model)); // auto filter rate models
-        }
-        if (model >= subst_block) {
-            filterSubst(static_cast<int>(model)); // auto filter substitution model
-        }
+        applyAutoFilters(static_cast<int>(model), rate_block, subst_block);
+
 #ifdef _OPENMP
         }
 #endif
     } while (model != -1);
     }
     
+    storeBestModel(model_info);
+    sortModelsByScore(model_info, num_models);
+    int best_model = updateAlignmentIfDataTypeChanged(params, in_tree, prot_aln, dna_aln);
+    deleteAndSetToNull<Alignment>(dna_aln);
+    deleteAndSetToNull<Alignment>(prot_aln);
+    
+    return at(best_model);
+}
+
+void CandidateModelSet::generateProteinModels(Params& params,  PhyloTree* in_tree,
+                                              bool write_info, bool merge_phase, 
+                                              Alignment*& prot_aln) {
+    // generate models for protein
+    // adapter coefficient according to Whelan et al. 2015
+    prot_aln = in_tree->aln->convertCodonToAA();
+    int adjusted_df;
+    double adjusted_logl = computeAdapter(in_tree->aln,
+                                            prot_aln, adjusted_df);
+    if (write_info) {
+        cout << "Adjusted LnL: " << adjusted_logl
+                << "  df: " << adjusted_df << endl;
+    }
+    size_t start = size();
+    generate(params, prot_aln, params.model_test_separate_rate,
+                merge_phase);
+    size_t i;
+    for (i = start; i < size(); i++) {
+        at(i).logl = adjusted_logl;
+        at(i).df = adjusted_df;
+    }
+}
+
+void CandidateModelSet::generateDNAModels(Params& params,   PhyloTree* in_tree,
+                                          bool merge_phase, Alignment*& dna_aln) {
+    // generate models for DNA
+    dna_aln = in_tree->aln->convertCodonToDNA();
+    size_t start = size();
+    generate(params, dna_aln, params.model_test_separate_rate,
+             merge_phase);
+    for (size_t i = start; i < size(); i++) {
+        at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
+    }
+}
+
+void CandidateModelSet::writeModelListHeader
+        (PhyloTree* in_tree, bool write_info, bool do_modelomatic) {
+    if (write_info) {
+        cout << "ModelFinder will test " << size() << " ";
+        if (do_modelomatic) {
+            cout << "codon/AA/DNA";
+        }
+        else {
+            cout << getSeqTypeName(in_tree->aln->seq_type);
+        }
+        cout << " models (sample size: "
+             << in_tree->aln->getNSite() << ") ..." << endl;
+        cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
+    }
+}
+
+int CandidateModelSet::getRateBlock(bool auto_rate) {
+    int rate_block = static_cast<int>(size());
+    if (auto_rate) {
+        for (rate_block = 0; rate_block + 1 < static_cast<int>(size()); rate_block++) {
+            if (at(rate_block+1).subst_name != at(rate_block).subst_name) {
+                break;
+            }
+        }
+    }
+    return rate_block;
+}
+
+int CandidateModelSet::getSubstitutionModelBlock(bool auto_subst) {
+    int subst_block = static_cast<int>(size());
+    if (auto_subst) {
+        for (subst_block = static_cast<int>(size())-1; subst_block >= 0; subst_block--) {
+            if (at(subst_block).rate_name == at(0).rate_name) {
+                break;
+            }
+        }
+    }
+    return subst_block;
+}
+
+bool CandidateModelSet::modelWithFewerCategoriesHasLowerScore
+        (int64_t model, int& lower_model) {
+    lower_model = getLowerKModel(static_cast<int>(model));
+    if (lower_model >= 0 && at(lower_model).getScore() < at(model).getScore()) {
+        return true;
+    }
+    return false;
+}
+
+void CandidateModelSet::markModelWithMoreCategoriesAsIgnored(int64_t model) {        
+    // ignore all +R_k model with higher category
+    for (auto higher_model = model; higher_model != -1;
+        higher_model = getHigherKModel(static_cast<int>(higher_model))) {
+        at(higher_model).setFlag(MF_IGNORED);
+    }
+}
+
+void CandidateModelSet::applyAutoFilters
+        (int model, int rate_block, int subst_block) {
+    if (model >= rate_block) {
+        filterRates(model); // auto filter rate models
+    }
+    if (model >= subst_block) {
+        filterSubst(model); // auto filter substitution model
+    }
+}
+
+void CandidateModelSet::storeBestModel(ModelCheckpoint &model_info) {    
     // store the best model
     ModelTestCriterion criteria[] = {MTC_AIC, MTC_AICC, MTC_BIC};
     for (auto mtc : criteria) {
@@ -3260,7 +3321,10 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         model_info.put("best_score_" + criterionName(mtc), at(best_model).getScore(mtc));
         model_info.put("best_model_" + criterionName(mtc), at(best_model).getName());
     }
-    
+}
+
+void CandidateModelSet::sortModelsByScore
+        (ModelCheckpoint &model_info, int64_t num_models) {
     {
         /* sort models by their scores */   
         typedef multimap<double,int64_t> MapType;
@@ -3286,7 +3350,10 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         model_info.putBestModelList(model_list);
         model_info.dump();
     }
+}
 
+int CandidateModelSet::updateAlignmentIfDataTypeChanged
+        (Params& params, PhyloTree* in_tree, Alignment* prot_aln, Alignment* dna_aln) {
     // update alignment if best data type changed
     int best_model = getBestModelID(params.model_test_criterion);
     if (at(best_model).aln != in_tree->aln) {
@@ -3299,15 +3366,5 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             dna_aln = nullptr;
         }
     }
-    
-    if (dna_aln!=nullptr) {
-        delete dna_aln;
-        dna_aln=nullptr;
-    }
-    if (prot_aln!=nullptr) {
-        delete prot_aln;
-        prot_aln=nullptr;
-    }
-
-    return at(best_model);
+    return best_model;
 }
