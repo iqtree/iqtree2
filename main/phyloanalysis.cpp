@@ -473,6 +473,21 @@ void reportModel(ostream &out, PhyloTree &tree) {
         }
         out << endl;
     } else {
+        // Update rate name if continuous gamma is used.
+        if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)
+        {
+            if (tree.getRate()->getPInvar()>0)
+            {
+                tree.getRate()->name = "+I+GC";
+                tree.getRate()->full_name = "Invar+Continuous Gamma";
+            }
+            else
+            {
+                tree.getRate()->name = "+GC";
+                tree.getRate()->full_name = "Continuous Gamma";
+            }
+        }
+
         out << "Model of substitution: " << tree.getModelName() << endl << endl;
         reportModel(out, tree.aln, tree.getModel());
     }
@@ -513,12 +528,13 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 prop[i] /= tree.aln->getNSite();
             }
         }
-        for (size_t i = 0; i < cats; i++) {
-            out << "  " << i + 1 << "         ";
-            out.width(14);
-            out << left << rate_model->getRate(i) << " " << prop[i];
-            out << endl;
-        }
+        if (tree.getModelFactory() && !tree.getModelFactory()->is_continuous_gamma)
+            for (size_t i = 0; i < cats; i++) {
+                out << "  " << i + 1 << "         ";
+                out.width(14);
+                out << left << rate_model->getRate(i) << " " << prop[i];
+                out << endl;
+            }
         if (rate_model->isGammaRate()) {
             out << "Relative rates are computed as " << ((rate_model->isGammaRate() == GAMMA_CUT_MEDIAN) ? "MEDIAN" : "MEAN") <<
                 " of the portion of the Gamma distribution falling in the category." << endl;
