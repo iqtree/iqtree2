@@ -2192,7 +2192,9 @@ extern "C" void getintargv(int *argc, char **argv[])
                     }
                     break;
                 case 'l': 
-                    if (n>1) n--;
+                    if (n>1) {
+                        n--;
+                    }
                     break;
                 case 'a': 
                     n=1;
@@ -2214,6 +2216,14 @@ extern "C" void getintargv(int *argc, char **argv[])
     *argv = argstr;
 } /* getintargv */
 
+void processECOpdTree        (Params& params,   const std::string& model_file,
+                              double startTime, const std::string& outFile,
+                              const std::string& subFoodWeb);
+void processECOpdSplitNetwork(Params& params,   const std::string& model_file,
+                              double startTime, const std::string& outFile,
+                              const std::string& subFoodWeb);
+
+
 /*********************************************************************************************************************************
     Olga: ECOpd - phylogenetic diversity with ecological constraint: choosing a viable subset of species which maximizes PD/SD
 *********************************************************************************************************************************/
@@ -2222,10 +2232,6 @@ void processECOpd(Params &params) {
     double startTime = getCPUTime();
     params.detected_mode = LINEAR_PROGRAMMING;
     cout<<"----------------------------------------------------------------------------------------"<<endl;
-    int i;
-    double score;
-    double *variables;
-    int threads = params.gurobi_threads;
     params.gurobi_format=true;
 
     string model_file,subFoodWeb,outFile;
@@ -2260,122 +2266,146 @@ void processECOpd(Params &params) {
     }
 
     if(strcmp(params.eco_type,"t")==0){
-    /*--------------------------------- EcoPD Trees ---------------------------------*/
-        ECOpd tree(params.user_file.c_str(),params.is_rooted);
-
-        // Setting all the information-----------------
-        tree.phyloType = "t";
-        tree.TaxaNUM = tree.leafNum;
-        if(verbose_mode == VerboseMode::VB_MAX){
-            cout<<"TaxaNUM = "<<tree.TaxaNUM<<endl;
-            cout<<"LeafNUM = "<<tree.leafNum<<endl;
-            cout<<"root_id = "<<tree.root->id<<" root_name = "<<tree.root->name<<endl;
-
-            for(i=0; i<static_cast<int>(tree.leafNum); ++i){
-                cout<<i<<" "<<tree.findNodeID(i)->name <<endl;
-            }
-        }
-
-        //Getting Species Names from tree
-        for(i = 0; i < tree.TaxaNUM; i++)
-            (tree.phyloNames).push_back(tree.findNodeID(i)->name);
-        //for(i=0;i<tree.phyloNames.size();i++)
-        //    cout<<"["<<i<<"] "<<tree.phyloNames[i]<<endl;
-
-        // Full species list including info from tree and food web. Here adding names from phyloInput.
-        for(i=0; i<tree.TaxaNUM; i++)
-            tree.names.push_back(&(tree.phyloNames[i]));
-
-        // Read the taxa to be included in the final optimal subset
-        if(params.initial_file)
-            tree.readInitialTaxa(params.initial_file);
-
-        // Read the DAG file, Synchronize species on the Tree and in the Food Web
-        tree.weighted = params.eco_weighted;
-        tree.T = params.diet_max*0.01;
-        tree.readDAG(params.eco_dag_file);
-        tree.defineK(params);
-
-        // IP formulation
-        cout<<"Formulating an IP problem..."<<endl;
-        if(tree.rooted){
-            tree.printECOlpRooted(model_file.c_str(),tree);
-        } else {
-            tree.printECOlpUnrooted(model_file.c_str(),tree);
-        }
-
-        // Solve IP problem
-        cout<<"Solving the problem..."<<endl;
-        variables = new double[tree.nvar];
-        int g_return = gurobi_solve(model_file.c_str(), tree.nvar, &score, variables, 
-                                    static_cast<int>(verbose_mode), threads);
-        if(verbose_mode == VerboseMode::VB_MAX){
-            cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
-            for(i=0; i<tree.nvar; i++)
-                cout<<"x"<<i<<" = "<<variables[i]<<endl;
-            cout<<"score = "<<score<<endl;
-        }
-        tree.dietConserved(variables);
-        params.run_time = getCPUTime() - startTime;
-        tree.printResults(outFile.c_str(),variables,score,params);
-        tree.printSubFoodWeb(subFoodWeb.c_str(),variables);
-        delete[] variables;
-
-    } else if(strcmp(params.eco_type,"n")==0){
-    /*----------------------------- EcoPD SplitNetwork ------------------------------*/
-        params.intype=detectInputFile(params.user_file.c_str());
-        PDNetwork splitSYS(params);
-        ECOpd ecoInfDAG;
-
-        // Get the species names from SplitNetwork
-        splitSYS.speciesList(&(ecoInfDAG.phyloNames));
-        //for(i=0;i<ecoInfDAG.phyloNames.size();i++)
-        //    cout<<"["<<i<<"] "<<ecoInfDAG.phyloNames[i]<<endl;
-
-        ecoInfDAG.phyloType = "n";
-        ecoInfDAG.TaxaNUM = splitSYS.getNTaxa();
-
-        // Full species list including info from tree and food web
-        for(i=0; i<ecoInfDAG.TaxaNUM; i++)
-            ecoInfDAG.names.push_back(&(ecoInfDAG.phyloNames[i]));
-
-        ecoInfDAG.weighted = params.eco_weighted;
-        // Read the taxa to be included in the final optimal subset
-        if(params.initial_file)
-            ecoInfDAG.readInitialTaxa(params.initial_file);
-        ecoInfDAG.T = params.diet_max*0.01;
-        ecoInfDAG.readDAG(params.eco_dag_file);
-        ecoInfDAG.defineK(params);
-
-        cout<<"Formulating an IP problem..."<<endl;
-        splitSYS.transformEcoLP(params, model_file.c_str(), 0);
-        /**
-         * (subset_size-4) - influences constraints for conserved splits.
-         * should be less than taxaNUM in the split system.
-         * With 0 prints all the constraints.
-         * Values different of 0 reduce the # of constraints.
-         **/
-
-        ecoInfDAG.printInfDAG(model_file.c_str(),splitSYS,params);
-        cout<<"Solving the problem..."<<endl;
-        variables = new double[ecoInfDAG.nvar];
-        int g_return = gurobi_solve(model_file.c_str(), ecoInfDAG.nvar, 
-                                    &score, variables, 
-                                    static_cast<int>(verbose_mode), threads);
-        if(verbose_mode == VerboseMode::VB_MAX){
-            cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
-            for(i=0; i<ecoInfDAG.nvar; i++)
-                cout<<"x"<<i<<" = "<<variables[i]<<endl;
-            cout<<"score = "<<score<<endl;
-        }
-        ecoInfDAG.splitsNUM = static_cast<int>(splitSYS.getNSplits());
-        ecoInfDAG.totalSD   = static_cast<int>(splitSYS.calcWeight());
-        ecoInfDAG.dietConserved(variables);
-        params.run_time = getCPUTime() - startTime;
-        ecoInfDAG.printResults(outFile.c_str(),variables, score,params);
-        ecoInfDAG.printSubFoodWeb(subFoodWeb.c_str(),variables);
-        delete[] variables;
+        processECOpdTree(params, model_file, startTime, outFile, subFoodWeb);
+    } else if(strcmp(params.eco_type,"n")==0) {
+        processECOpdSplitNetwork(params, model_file, startTime, outFile, subFoodWeb);
     }
+}
+
+void processECOpdTree(Params& params,    const std::string& model_file,
+                      double  startTime, const std::string& outFile,
+                      const std::string& subFoodWeb) {
+    /*--------------------------------- EcoPD Trees ---------------------------------*/
+    ECOpd tree(params.user_file.c_str(),params.is_rooted);
+
+    // Setting all the information-----------------
+    tree.phyloType = "t";
+    tree.TaxaNUM = tree.leafNum;
+    if(verbose_mode == VerboseMode::VB_MAX){
+        cout<<"TaxaNUM = "<<tree.TaxaNUM<<endl;
+        cout<<"LeafNUM = "<<tree.leafNum<<endl;
+        cout<<"root_id = "<<tree.root->id<<" root_name = "<<tree.root->name<<endl;
+
+        for(int i=0; i<static_cast<int>(tree.leafNum); ++i){
+            cout<<i<<" "<<tree.findNodeID(i)->name <<endl;
+        }
+    }
+
+    //Getting Species Names from tree
+    for(int i = 0; i < tree.TaxaNUM; i++) {
+        (tree.phyloNames).push_back(tree.findNodeID(i)->name);
+    }
+    //for(i=0;i<tree.phyloNames.size();i++)
+    //    cout<<"["<<i<<"] "<<tree.phyloNames[i]<<endl;
+
+    // Full species list including info from tree and food web. Here adding names from phyloInput.
+    for(int i=0; i<tree.TaxaNUM; i++) {
+        tree.names.push_back(&(tree.phyloNames[i]));
+    }
+
+    // Read the taxa to be included in the final optimal subset
+    if(params.initial_file) {
+        tree.readInitialTaxa(params.initial_file);
+    }
+
+    // Read the DAG file, Synchronize species on the Tree and in the Food Web
+    tree.weighted = params.eco_weighted;
+    tree.T = params.diet_max*0.01;
+    tree.readDAG(params.eco_dag_file);
+    tree.defineK(params);
+
+    // IP formulation
+    cout<<"Formulating an IP problem..."<<endl;
+    if(tree.rooted){
+        tree.printECOlpRooted(model_file.c_str(),tree);
+    } else {
+        tree.printECOlpUnrooted(model_file.c_str(),tree);
+    }
+
+    // Solve IP problem
+    cout<<"Solving the problem..."<<endl;
+    double* variables = new double[tree.nvar];
+    double  score;
+    int     threads = params.gurobi_threads;
+    int    g_return = gurobi_solve(model_file.c_str(), tree.nvar, &score, variables, 
+                                   static_cast<int>(verbose_mode), threads);
+    if(verbose_mode == VerboseMode::VB_MAX){
+        cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
+        for(int i=0; i<tree.nvar; i++) {
+            cout<<"x"<<i<<" = "<<variables[i]<<endl;
+        }
+        cout<<"score = "<<score<<endl;
+    }
+    tree.dietConserved(variables);
+    params.run_time = getCPUTime() - startTime;
+    tree.printResults(outFile.c_str(),variables,score,params);
+    tree.printSubFoodWeb(subFoodWeb.c_str(),variables);
+    delete[] variables;
+}
+
+void processECOpdSplitNetwork(Params& params,    const std::string& model_file,
+                              double  startTime, const std::string& outFile,
+                              const std::string& subFoodWeb) {
+    /*----------------------------- EcoPD SplitNetwork ------------------------------*/
+    params.intype=detectInputFile(params.user_file.c_str());
+    PDNetwork splitSYS(params);
+    ECOpd ecoInfDAG;
+
+    // Get the species names from SplitNetwork
+    splitSYS.speciesList(&(ecoInfDAG.phyloNames));
+    //for(i=0;i<ecoInfDAG.phyloNames.size();i++)
+    //    cout<<"["<<i<<"] "<<ecoInfDAG.phyloNames[i]<<endl;
+
+    ecoInfDAG.phyloType = "n";
+    ecoInfDAG.TaxaNUM = splitSYS.getNTaxa();
+
+    // Full species list including info from tree and food web
+    for(int i=0; i<ecoInfDAG.TaxaNUM; i++) {
+        ecoInfDAG.names.push_back(&(ecoInfDAG.phyloNames[i]));
+    }
+
+    ecoInfDAG.weighted = params.eco_weighted;
+    // Read the taxa to be included in the final optimal subset
+    if(params.initial_file) {
+        ecoInfDAG.readInitialTaxa(params.initial_file);
+    }
+    ecoInfDAG.T = params.diet_max*0.01;
+    ecoInfDAG.readDAG(params.eco_dag_file);
+    ecoInfDAG.defineK(params);
+
+    cout<<"Formulating an IP problem..."<<endl;
+    splitSYS.transformEcoLP(params, model_file.c_str(), 0);
+    /**
+        * (subset_size-4) - influences constraints for conserved splits.
+        * should be less than taxaNUM in the split system.
+        * With 0 prints all the constraints.
+        * Values different of 0 reduce the # of constraints.
+        **/
+
+
+    ecoInfDAG.printInfDAG(model_file.c_str(),splitSYS,params);
+    cout<<"Solving the problem..."<<endl;
+    double  score;
+    int     threads = params.gurobi_threads;
+    double* variables = new double[ecoInfDAG.nvar];
+    int g_return = gurobi_solve(model_file.c_str(), ecoInfDAG.nvar, 
+                                &score, variables, 
+                                static_cast<int>(verbose_mode), threads);
+    if(verbose_mode == VerboseMode::VB_MAX){
+        cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
+        for(int i=0; i<ecoInfDAG.nvar; i++) {
+            cout<<"x"<<i<<" = "<<variables[i]<<endl;
+        }
+        cout<<"score = "<<score<<endl;
+    }
+    ecoInfDAG.splitsNUM = static_cast<int>(splitSYS.getNSplits());
+    ecoInfDAG.totalSD   = static_cast<int>(splitSYS.calcWeight());
+    ecoInfDAG.dietConserved(variables);
+    params.run_time = getCPUTime() - startTime;
+    ecoInfDAG.printResults(outFile.c_str(),variables, score,params);
+    ecoInfDAG.printSubFoodWeb(subFoodWeb.c_str(),variables);
+    delete[] variables;
+
 }
 
 void collapseLowBranchSupport(const char *user_file, char *split_threshold_str) {
