@@ -945,7 +945,6 @@ void unrootTree(AliSimulator *alisimulator)
         delete out;
         
         cout<<"An unrooted tree has been writen to "+output_filepath<<endl;
-        return 0;
     }
     else
         outError("The input tree is unrooted, thus, doesn't need to unroot it.");
