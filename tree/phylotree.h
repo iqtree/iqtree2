@@ -1144,6 +1144,10 @@ public:
     void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hypergeometric=false);
     void computeTipPartialLikelihood();
     void computeTipPartialParsimony();
+        //Supporting functions
+        void computeDNATipPartialParsimony();
+        void computeProteinTipPartialParsimony();
+
     void computePtnInvar();
     void computePtnFreq();
     

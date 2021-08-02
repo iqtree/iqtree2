@@ -820,9 +820,9 @@ void PhyloTree::computeTipPartialParsimony() {
     }
     tip_partial_lh_computed |= 2;
     
-    const int    nstates = aln->num_states;
-    const intptr_t nptn = aln->ordered_pattern.size();
-    const intptr_t maxptn = get_safe_upper_limit_float(nptn);
+    const int      nstates = aln->num_states;
+    const intptr_t nptn    = aln->ordered_pattern.size();
+    const intptr_t maxptn  = get_safe_upper_limit_float(nptn);
 
     if (ptn_freq_pars == nullptr) {
         ptn_freq_pars = aligned_alloc<UINT>(get_safe_upper_limit_float(getAlnNPattern()));
@@ -840,53 +840,13 @@ void PhyloTree::computeTipPartialParsimony() {
     // initialize real states with cost_matrix
     memcpy(tip_partial_pars, cost_matrix, nstates*nstates*sizeof(UINT));
 
-    UINT *this_tip_partial_pars;
     
     switch (aln->seq_type) {
         case SeqType::SEQ_DNA:
-            for (int state = 4; state < 18; state++) {
-                int cstate = state-nstates+1;
-                this_tip_partial_pars = &tip_partial_pars[state*nstates];
-                for (int i = 0; i < nstates; i++) {
-                    if ((cstate) & (1 << i))
-                        this_tip_partial_pars[i] = 0;
-                    else {
-                        this_tip_partial_pars[i] = UINT_MAX;
-                        for (int j = 0; j < nstates; j++) {
-                            if ((cstate) & (1 << j)) {
-                                this_tip_partial_pars[i] = min(this_tip_partial_pars[i], cost_matrix[i*nstates+j]);
-                            }
-                        }
-                    }
-                }
-            }
+            computeDNATipPartialParsimony();
             break;
         case SeqType::SEQ_PROTEIN:
-            {
-                // ambiguous characters
-                int ambi_aa[] = {
-                    4+8, // B = N or D
-                    32+64, // Z = Q or E
-                    512+1024 // U = I or L
-                };
-                for (int state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
-                    this_tip_partial_pars = &tip_partial_pars[(state+20)*nstates];
-                    for (int i = 0; i < nstates; i++) {
-                        if (ambi_aa[state] & (1 << i)) {
-                            this_tip_partial_pars[i] = 0;
-                        }
-                        else {
-                            this_tip_partial_pars[i] = UINT_MAX;
-                            for (int j = 0; j < nstates; j++) {
-                                if (ambi_aa[state] & (1 << j)) {
-                                    this_tip_partial_pars[i] = min(this_tip_partial_pars[i],
-                                                                   cost_matrix[i*nstates+j]);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            computeProteinTipPartialParsimony();
             break;
         case SeqType::SEQ_POMO:
             ASSERT(0 && "POMO not handled with Sankoff parsimony");
@@ -895,6 +855,54 @@ void PhyloTree::computeTipPartialParsimony() {
             break;
     }
 }
+
+void PhyloTree::computeDNATipPartialParsimony() {
+    const int nstates = aln->num_states;
+    for (int state = 4; state < 18; state++) {
+        int cstate = state-nstates+1;
+        UINT* this_tip_partial_pars = &tip_partial_pars[state*nstates];
+        for (int i = 0; i < nstates; i++) {
+            if ((cstate) & (1 << i))
+                this_tip_partial_pars[i] = 0;
+            else {
+                this_tip_partial_pars[i] = UINT_MAX;
+                for (int j = 0; j < nstates; j++) {
+                    if ((cstate) & (1 << j)) {
+                        this_tip_partial_pars[i] = min(this_tip_partial_pars[i], cost_matrix[i*nstates+j]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PhyloTree::computeProteinTipPartialParsimony() {
+    const int nstates = aln->num_states;
+    // ambiguous characters
+    int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+    };
+    for (int state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
+        UINT* this_tip_partial_pars = &tip_partial_pars[(state+20)*nstates];
+        for (int i = 0; i < nstates; i++) {
+            if (ambi_aa[state] & (1 << i)) {
+                this_tip_partial_pars[i] = 0;
+            }
+            else {
+                this_tip_partial_pars[i] = UINT_MAX;
+                for (int j = 0; j < nstates; j++) {
+                    if (ambi_aa[state] & (1 << j)) {
+                        this_tip_partial_pars[i] = min(this_tip_partial_pars[i],
+                                                        cost_matrix[i*nstates+j]);
+                    }
+                }
+            }
+        }
+    }
+}
+
 /**
  compute partial parsimony score of the subtree rooted at dad
  @param dad_branch the branch leading to the subtree
