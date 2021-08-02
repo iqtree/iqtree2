@@ -811,6 +811,20 @@ public:
     virtual void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
 //    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+        //Supporting functions
+        int computeDNAPartialParsimonyFast
+                (Alignment* sub_aln, int leafid, int start_pos, int end_pos,
+                 PhyloNeighbor* dad_branch, int site);
+        int computeProteinPartialParsimonyFast
+                (Alignment* sub_aln, int leafid, int start_pos, int end_pos,
+                 PhyloNeighbor* dad_branch, int site);
+        int computeOtherPartialParsimonyFast
+                (Alignment* sub_aln, int leafid, int start_pos, int end_pos,
+                 PhyloNeighbor* dad_branch, int site);
+        void computeInternalNodePartialParsimonyFast
+                (PhyloNode* node, PhyloNode* dad, PhyloNeighbor* dad_branch);
+
+
     int  computeMarginalParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     double computePartialParsimonyOutOfTreeFast(const UINT* left_partial_pars,

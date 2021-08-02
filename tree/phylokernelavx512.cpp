@@ -48,7 +48,7 @@ void PhyloTree::setLikelihoodKernelAVX512() {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec8d, SAFE_LH, 4, true, true>;
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec8d, SAFE_LH, 4, true, true>;
-            computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec8d, SAFE_LH, 4, true, true>;
+            computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec8d, SAFE_LH, 4, true, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec8d, 4, true, true>;
             break;
         case 20:
