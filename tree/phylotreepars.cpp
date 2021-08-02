@@ -1544,7 +1544,14 @@ int PhyloTree::computeParsimonyTreeNew(int *rand_stream) {
     for (size_t i=0; i<leafNum; ++i) {
         LOG_LINE(VerboseMode::VB_DEBUG, "Initial node " << aln->getSeqName(taxon_order[i]));
     }
-    
+    computeParsimonyTreeNewPart2(taxon_order);
+    int parsimony_score = computeParsimony("Computing parsimony score after stepwise addition");
+    return parsimony_score; 
+}
+
+void PhyloTree::computeParsimonyTreeNewPart2(const IntVector& taxon_order) {
+    size_t nseq = aln->getNSeq();
+
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     setParsimonyKernel(params->SSE);
     ensureCentralPartialParsimonyIsAllocated(num_threads);
@@ -1594,6 +1601,7 @@ int PhyloTree::computeParsimonyTreeNew(int *rand_stream) {
         LOG_LINE(VerboseMode::VB_DEBUG, "Parsimony score for first "
                  << leafNum << " taxa is " << parsimony_score);
     }
+
     IntVector scores;
     scores.resize(nseq * 2 - 3);
     PhyloBranchVector branches;
@@ -1684,8 +1692,6 @@ int PhyloTree::computeParsimonyTreeNew(int *rand_stream) {
         parsimony_score = (int)floor(bestScore);
     }
     doneProgress();
-    parsimony_score = computeParsimony("Computing parsimony score after stepwise addition");
-    return parsimony_score; 
 }
 
 int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {

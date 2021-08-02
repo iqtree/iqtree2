@@ -1771,7 +1771,10 @@ public:
      * @return parsimony score
      */
     virtual int computeParsimonyTreeNew(int *rand_stream);
-    
+
+        //Supporting function
+        void computeParsimonyTreeNewPart2(const IntVector& taxon_order);
+
     /**
      * EVEN FASTER VERSION: compute parsimony tree by step-wise addition
      * @param rand_stream random stream
