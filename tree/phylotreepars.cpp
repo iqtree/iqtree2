@@ -252,13 +252,70 @@ int PhyloTree::computeOtherPartialParsimonyFast
     return site;
 }
 
+class ParsimonyToDoList: public std::vector< std::pair< PhyloNeighbor*, PhyloNode* > > {
+    intptr_t start_of_layer;
+    std::vector<intptr_t> layers;
+public:
+    ParsimonyToDoList(): start_of_layer(0) {}
+    ~ParsimonyToDoList() = default;
+    void findMoreToDo() {
+        while (start_of_layer < static_cast<intptr_t>(size())) {
+            layers.push_back(start_of_layer);
+            intptr_t start_of_last_layer = start_of_layer;
+            start_of_layer = size();
+            for (intptr_t i = size()-1; start_of_last_layer<=i; --i ) {
+                PhyloNode* node_below = at(i).first->getNode();
+                PhyloNode* node_here  = at(i).second;
+                FOR_EACH_PHYLO_NEIGHBOR(node_below, node_here, it, nei_below) {
+                    if (nei_below->node->name != ROOT_NAME && !nei_below->isParsimonyComputed()) {
+                        //LOG_LINE(VerboseMode::VB_MIN, "To do " << things_to_do.size()
+                        //         << " is child of to do " << i);
+                        emplace_back(nei_below, node_below);
+                    }
+                }
+            }
+        }
+    }
+    //
+    //Note: it would also be possible to declare doEverything, like so:
+    // void doEverything (const std::function <void (PhyloNeighbor*, PhyloNode*)>& 
+    //                    computeParsimonyFunction) {
+    //but that's a bit wordy.
+    //The template version is a lot clearer.
+    //
+    template<typename F>
+    void doEverything(F computeParsimonyFunction) {
+        if (layers.empty()) {
+            return;
+        }
+        //Work up from the bottom layer, computing all the
+        //partial parsimonies in each layer, in parallel
+        layers.push_back(size());
+        for (intptr_t layer_no = layers.size()-2; 0<=layer_no; --layer_no) {
+            intptr_t start_index = layers[layer_no];
+            intptr_t stop_index  = layers[layer_no+1];
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
+            for (intptr_t i=start_index; i<stop_index; ++i) {
+                PhyloNeighbor* stack_nei  = at(i).first;
+                PhyloNode*     stack_node = at(i).second;
+                computeParsimonyFunction(stack_nei, stack_node);
+                //LOG_LINE(VerboseMode::VB_MIN, "To do " << i
+                //         << " set score " << getSubTreeParsimonyFast(stack_nei));
+            }
+            resize(start_index);
+        }
+    }
+};
+
 void PhyloTree::computeInternalNodePartialParsimonyFast
         (PhyloNode* node, PhyloNode* dad, PhyloNeighbor* dad_branch) {
     // internal node
     ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  );  // it works only for strictly bifurcating tree
     PhyloNeighbor *left  = nullptr;
     PhyloNeighbor *right = nullptr; // left & right are two neighbors leading to 2 subtrees
-    
+    ParsimonyToDoList todo;
     //
     //Note: This was running out of stack, in deep trees. So it has
     //      been rewritten to use a vector of things to do, and a
@@ -267,12 +324,9 @@ void PhyloTree::computeInternalNodePartialParsimonyFast
     //      The content of things_to_do is calculated breadth-first
     //      to make the parallelization easier.
     //
-    intptr_t start_of_layer = 0;
-    std::vector< std::pair< PhyloNeighbor*, PhyloNode* > > things_to_do;
-    std::vector< intptr_t> layers;
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, node_nei) {
         if (node_nei->node->name != ROOT_NAME && !node_nei->isParsimonyComputed()) {
-            things_to_do.emplace_back(node_nei, node);
+            todo.emplace_back(node_nei, node);
         }
         if (!left) {
             left = node_nei; 
@@ -281,42 +335,10 @@ void PhyloTree::computeInternalNodePartialParsimonyFast
             right = node_nei;
         }
     }
-    while (start_of_layer<static_cast<intptr_t>(things_to_do.size())) {
-        layers.push_back(start_of_layer);
-        intptr_t start_of_last_layer = start_of_layer;
-        start_of_layer = things_to_do.size();
-        for (intptr_t i = things_to_do.size()-1; start_of_last_layer<=i; --i ) {
-            PhyloNode* node_below = things_to_do[i].first->getNode();
-            PhyloNode* node_here  = things_to_do[i].second;
-            FOR_EACH_PHYLO_NEIGHBOR(node_below, node_here, it, nei_below) {
-                if (nei_below->node->name != ROOT_NAME && !nei_below->isParsimonyComputed()) {
-                    //LOG_LINE(VerboseMode::VB_MIN, "To do " << things_to_do.size()
-                    //         << " is child of to do " << i);
-                    things_to_do.emplace_back(nei_below, node_below);
-                }
-            }
-        }
-    }
-    if (!layers.empty()) {
-        //Work up from the bottom layer, computing all the
-        //partial parsimonies in each layer, in parallel
-        layers.push_back(things_to_do.size());
-        for (intptr_t layer_no = layers.size()-2; 0<=layer_no; --layer_no) {
-            intptr_t start_index = layers[layer_no];
-            intptr_t stop_index  = layers[layer_no+1];
-            #ifdef _OPENMP
-            #pragma omp parallel for
-            #endif
-            for (intptr_t i=start_index; i<stop_index; ++i) {
-                PhyloNeighbor* stack_nei  = things_to_do[i].first;
-                PhyloNode*     stack_node = things_to_do[i].second;
-                computePartialParsimonyFast(stack_nei, stack_node);
-                //LOG_LINE(VerboseMode::VB_MIN, "To do " << i
-                //         << " set score " << getSubTreeParsimonyFast(stack_nei));
-            }
-            things_to_do.resize(start_index);
-        }
-    }
+    todo.findMoreToDo();
+    todo.doEverything( [this] (PhyloNeighbor* nei, PhyloNode* node) 
+                       { computePartialParsimonyFast(nei, node);});
+
     ASSERT(left!=nullptr && right!=nullptr);
     if (left!=nullptr && right!=nullptr) {
         computePartialParsimonyOutOfTreeFast(left->partial_pars,
