@@ -947,6 +947,27 @@ void PhyloTree::computeProteinTipPartialParsimony() {
     }
 }
 
+//Note: It might be worth using this in *other* functions
+//      that compute partial parsimony.
+void getLeftAndRightNodes
+        (PhyloNode* node, PhyloNode* dad,
+         const std::function <void (PhyloNeighbor*, PhyloNode*)>& compute,
+         PhyloNeighbor*& left, PhyloNeighbor*& right) {
+    FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+        if (nei->node->name != ROOT_NAME) {
+            if (!nei->node->isLeaf()) {
+                compute(nei, node);
+            }
+            if (left==nullptr) {
+                left = nei;
+            }
+            else {
+                right = nei;
+            }
+        }
+    }
+}
+
 /**
  compute partial parsimony score of the subtree rooted at dad
  @param dad_branch the branch leading to the subtree
@@ -958,124 +979,29 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch,
     if (dad_branch->isParsimonyComputed()) {
         return;
     }
-    PhyloNode* node        = dad_branch->getNode();
-    intptr_t   ptnCount    = aln->ordered_pattern.size();
-    int        nstates     = aln->num_states;
-    intptr_t   total_index = ptnCount*nstates;
+    PhyloNode* node = dad_branch->getNode();
     assert(dad_branch->partial_pars);
         
     // internal node
-    UINT min_child_ptn_pars;
     UINT * partial_pars = dad_branch->partial_pars;
     
     computeTipPartialParsimony();
     PhyloNeighbor* left  = nullptr;
     PhyloNeighbor* right = nullptr;
-    FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-        if (nei->node->name != ROOT_NAME) {
-            if (!nei->node->isLeaf())
-                computePartialParsimonySankoff(nei, node);
-            if (!left) {
-                left = nei;
-            }
-            else {
-                right = nei;
-            }
-        }
-    }
+
+    getLeftAndRightNodes(node, dad,  
+                         [this](PhyloNeighbor* nei, PhyloNode* node) 
+                             { computePartialParsimonySankoff(nei, node); },
+                         left, right);
+
     dad_branch->setParsimonyComputed(true);
-    UINT score = 0;
     if (left==nullptr && right==nullptr && 0<=node->id && node->id<aln->getNSeq() ) {
-        //
-        //James B. This calculates a partial parsimony vector oriented
-        //         at a leaf (as these are needed during parsimony placement,
-        //         when TaxonToPlace's constructor is calculating parsimony
-        //         for new_interior->findNeighbor(new_leaf).
-        //
-        #ifdef _OPENMP
-        #pragma omp parallel for reduction(+:score)
-        #endif
-        for (intptr_t ptn = 0; ptn < ptnCount; ++ptn){
-            // ignore const ptn because it does not affect pars score
-            //if (aln->at(ptn).isConst()) continue;
-            intptr_t    ptn_start_index  = ptn*nstates;
-            const UINT* leaf_ptr         = &tip_partial_pars[aln->ordered_pattern[ptn][node->id]*nstates];
-            UINT*       partial_pars_ptr = &partial_pars[ptn_start_index];
-            for (int i = 0; i < nstates; i++){
-                // min(j->i) from child_branch
-                partial_pars_ptr[i] = leaf_ptr[i];
-            }
-            UINT here = partial_pars_ptr[0];
-            for ( int i = 0; i < nstates; ++i ){
-                UINT there = partial_pars_ptr[i] ;
-                here = ( here < there ) ? here : there;
-            }
-            score += here;
-        }
-        if (params->count_uninformative_sites_for_parsimony) {
-            //Count sites where the taxon, indicated by leafid, is the
-            //taxon that has a "singleton" state (is the only one in the
-            //pattern with this state, when all of the others that have
-            //known states have the one known state).
-            //
-            //(Such sites are parsimony-uninformative but tracking how
-            // many of them there are, per taxon, potentially makes
-            // parsimony branch lengths more accurate).
-            //
-            if ( 0 <= node->id && node->id < aln->singleton_parsimony_states.size() ) {
-                UINT onesuch_site_count = aln->singleton_parsimony_states[node->id];
-                score += onesuch_site_count;
-            }
-        }
-        partial_pars[total_index] = score;
+        computeLeafPartialParsimonySankoff(node, partial_pars);
         return;
     }
     ASSERT(node->degree() >= 3);
     if (node->degree() > 3) {
-        memset(partial_pars, 0, sizeof(UINT)*pars_block_size);
-        // multifurcating node
-        #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
-        #pragma omp parallel for reduction(+:score)
-        #endif
-        for (intptr_t ptn = 0; ptn < ptnCount; ptn++) {
-            intptr_t ptn_start_index  = ptn*nstates;
-            UINT* partial_pars_ptr = &partial_pars[ptn_start_index];
-            FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-                if (nei->node->name != ROOT_NAME) {
-                    PhyloNode* child = nei->getNode();
-                    if (child->isLeaf()) {
-                        // leaf node
-                        const UINT *partial_pars_child_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][child->id]*nstates];
-                        
-                        for (int i = 0; i < nstates; i++) {
-                            partial_pars_ptr[i] += partial_pars_child_ptr[i];
-                        }
-                    } else {
-                        // internal node
-                        const UINT* partial_pars_child_ptr = & nei->partial_pars[ptn_start_index];
-                        const UINT* cost_matrix_ptr        = cost_matrix;
-                        
-                        for (int i = 0; i < nstates; i++){
-                            // min(j->i) from child_branch
-                            min_child_ptn_pars = partial_pars_child_ptr[0] + cost_matrix_ptr[0];
-                            for(int j = 1; j < nstates; j++) {
-                                UINT value         = partial_pars_child_ptr[j] + cost_matrix_ptr[j];
-                                min_child_ptn_pars = min(value, min_child_ptn_pars);
-                            }
-                            partial_pars_ptr[i] += min_child_ptn_pars;
-                            cost_matrix_ptr     += nstates;
-                        }
-                    }
-                }
-            }
-            UINT here = partial_pars_ptr[0];
-            for ( int i = 0; i < nstates; ++i ){
-                UINT there = partial_pars_ptr[i] ;
-                here = ( here < there ) ? here : there;
-            }
-            score += here;
-        }
-        partial_pars[total_index] = score;
+        computeMultifurcatedParsimonySankoff(dad, node, partial_pars);
         return;
     }
     ASSERT(left!=nullptr);
@@ -1087,72 +1013,196 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch,
         std::swap(left, right);
     }
     if (left->node->isLeaf() && right->node->isLeaf()) {
-        // tip-tip case
-        #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
-        #pragma omp parallel for reduction(+:score)
-        #endif
-        for (intptr_t ptn = 0; ptn < ptnCount; ++ptn){
-            intptr_t    ptn_start_index  = ptn*nstates;
-            const UINT* left_ptr         = &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
-            const UINT* right_ptr        = &tip_partial_pars[aln->ordered_pattern[ptn][right->node->id]*nstates];
-            UINT*       partial_pars_ptr = &partial_pars[ptn_start_index];
-            
-            for (int i = 0; i < nstates; i++){
-                // min(j->i) from child_branch
-                UINT sum            = left_ptr[i] + right_ptr[i];
-                partial_pars_ptr[i] = sum;
-            }
-            UINT here = partial_pars_ptr[0];
-            for (int i = 0; i < nstates; ++i ){
-                UINT there = partial_pars_ptr[i] ;
-                here = ( here < there ) ? here : there;
-            }
-            score += here;
-        }
-        partial_pars[total_index] = score;
+        computeTipTipPartialParsimonySankoff(left, right, partial_pars);
         return;
     }
     if (left->node->isLeaf() && !right->node->isLeaf()) {
-        // tip-inner case
-        // Can't use computePartialParsimonyOutOfTreeSankoff, because
-        // reading left state from...
-        //   &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
-        // ...rather than from...
-        //   &some_partial_pars[ptn_start_index].
-        
-        #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
-        #pragma omp parallel for reduction(+:score)
-        #endif
-        for (intptr_t ptn = 0; ptn < ptnCount; ptn++){
-            intptr_t    ptn_start_index  = ptn*nstates;
-            const UINT* left_ptr         = &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
-            const UINT* right_ptr        = &right->partial_pars[ptn_start_index];
-            UINT*       partial_pars_ptr = &partial_pars[ptn_start_index];
-            const UINT* cost_matrix_ptr  = cost_matrix;
-            UINT        right_contrib;
-            
-            for (int i = 0; i < nstates; i++){
-                // min(j->i) from child_branch
-                right_contrib = right_ptr[0] + cost_matrix_ptr[0];
-                for (int j = 1; j < nstates; j++) {
-                    right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
-                }
-                UINT sum = left_ptr[i] + right_contrib;
-                partial_pars_ptr[i] = sum;
-                cost_matrix_ptr += nstates;
-            }
-            UINT here = partial_pars_ptr[0];
-            for (int i = 1; i < nstates; ++i) {
-                UINT there = partial_pars_ptr[i];
-                here = (here<there) ? here : there;
-            }
-            score += here;
-        }
-        partial_pars[total_index] = score;
+        computeTipInnerPartialParsimonySankoff(left, right, partial_pars);
         return;
     }
     // inner-inner case
     computePartialParsimonyOutOfTreeSankoff(left->partial_pars, right->partial_pars, partial_pars );
+}
+
+void PhyloTree::computeLeafPartialParsimonySankoff
+        (PhyloNode* node, UINT * partial_pars) {
+    intptr_t   ptnCount    = aln->ordered_pattern.size();
+    int        nstates     = aln->num_states;
+    intptr_t   total_index = ptnCount*nstates;
+    UINT       score       = 0;
+
+    //
+    //James B. This calculates a partial parsimony vector oriented
+    //         at a leaf (as these are needed during parsimony placement,
+    //         when TaxonToPlace's constructor is calculating parsimony
+    //         for new_interior->findNeighbor(new_leaf).
+    //
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+:score)
+    #endif
+    for (intptr_t ptn = 0; ptn < ptnCount; ++ptn){
+        // ignore const ptn because it does not affect pars score
+        //if (aln->at(ptn).isConst()) continue;
+        intptr_t    ptn_start_index  = ptn*nstates;
+        const UINT* leaf_ptr         = &tip_partial_pars[aln->ordered_pattern[ptn][node->id]*nstates];
+        UINT*       partial_pars_ptr = &partial_pars[ptn_start_index];
+        for (int i = 0; i < nstates; i++){
+            // min(j->i) from child_branch
+            partial_pars_ptr[i] = leaf_ptr[i];
+        }
+        UINT here = partial_pars_ptr[0];
+        for ( int i = 0; i < nstates; ++i ){
+            UINT there = partial_pars_ptr[i] ;
+            here = ( here < there ) ? here : there;
+        }
+        score += here;
+    }
+    if (params->count_uninformative_sites_for_parsimony) {
+        //Count sites where the taxon, indicated by leafid, is the
+        //taxon that has a "singleton" state (is the only one in the
+        //pattern with this state, when all of the others that have
+        //known states have the one known state).
+        //
+        //(Such sites are parsimony-uninformative but tracking how
+        // many of them there are, per taxon, potentially makes
+        // parsimony branch lengths more accurate).
+        //
+        if ( 0 <= node->id && node->id < aln->singleton_parsimony_states.size() ) {
+            UINT onesuch_site_count = aln->singleton_parsimony_states[node->id];
+            score += onesuch_site_count;
+        }
+    }
+    partial_pars[total_index] = score;
+}
+
+void PhyloTree::computeMultifurcatedParsimonySankoff
+        (PhyloNode* dad, PhyloNode* node, UINT * partial_pars) {
+    intptr_t   ptnCount    = aln->ordered_pattern.size();
+    int        nstates     = aln->num_states;
+    intptr_t   total_index = ptnCount*nstates;
+    UINT       score       = 0;
+
+    memset(partial_pars, 0, sizeof(UINT)*pars_block_size);
+    // multifurcating node
+    #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
+    #pragma omp parallel for reduction(+:score)
+    #endif
+    for (intptr_t ptn = 0; ptn < ptnCount; ptn++) {
+        intptr_t ptn_start_index  = ptn*nstates;
+        UINT* partial_pars_ptr = &partial_pars[ptn_start_index];
+        FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
+            if (nei->node->name != ROOT_NAME) {
+                PhyloNode* child = nei->getNode();
+                if (child->isLeaf()) {
+                    // leaf node
+                    const UINT *partial_pars_child_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][child->id]*nstates];
+                    
+                    for (int i = 0; i < nstates; i++) {
+                        partial_pars_ptr[i] += partial_pars_child_ptr[i];
+                    }
+                } else {
+                    // internal node
+                    const UINT* partial_pars_child_ptr = & nei->partial_pars[ptn_start_index];
+                    const UINT* cost_matrix_ptr        = cost_matrix;
+                    
+                    for (int i = 0; i < nstates; i++){
+                        // min(j->i) from child_branch
+                        UINT min_child_ptn_pars = partial_pars_child_ptr[0] + cost_matrix_ptr[0];
+                        for(int j = 1; j < nstates; j++) {
+                            UINT value         = partial_pars_child_ptr[j] + cost_matrix_ptr[j];
+                            min_child_ptn_pars = min(value, min_child_ptn_pars);
+                        }
+                        partial_pars_ptr[i] += min_child_ptn_pars;
+                        cost_matrix_ptr     += nstates;
+                    }
+                }
+            }
+        }
+        UINT here = partial_pars_ptr[0];
+        for ( int i = 0; i < nstates; ++i ){
+            UINT there = partial_pars_ptr[i] ;
+            here = ( here < there ) ? here : there;
+        }
+        score += here;
+    }
+    partial_pars[total_index] = score;
+}
+
+void PhyloTree::computeTipTipPartialParsimonySankoff
+        (PhyloNeighbor* left, PhyloNeighbor* right, UINT* partial_pars) {
+    // tip-tip case
+    intptr_t   ptnCount    = aln->ordered_pattern.size();
+    int        nstates     = aln->num_states;
+    intptr_t   total_index = ptnCount*nstates;
+    UINT       score       = 0;
+
+    #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
+    #pragma omp parallel for reduction(+:score)
+    #endif
+    for (intptr_t ptn = 0; ptn < ptnCount; ++ptn){
+        intptr_t    ptn_start_index  = ptn*nstates;
+        const UINT* left_ptr         = &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
+        const UINT* right_ptr        = &tip_partial_pars[aln->ordered_pattern[ptn][right->node->id]*nstates];
+        UINT*       partial_pars_ptr = &partial_pars[ptn_start_index];
+        
+        for (int i = 0; i < nstates; i++){
+            // min(j->i) from child_branch
+            UINT sum            = left_ptr[i] + right_ptr[i];
+            partial_pars_ptr[i] = sum;
+        }
+        UINT here = partial_pars_ptr[0];
+        for (int i = 0; i < nstates; ++i ){
+            UINT there = partial_pars_ptr[i] ;
+            here = ( here < there ) ? here : there;
+        }
+        score += here;
+    }
+    partial_pars[total_index] = score;
+}
+
+void PhyloTree::computeTipInnerPartialParsimonySankoff
+        (PhyloNeighbor* left, PhyloNeighbor* right, UINT* partial_pars) {
+    intptr_t   ptnCount    = aln->ordered_pattern.size();
+    int        nstates     = aln->num_states;
+    intptr_t   total_index = ptnCount*nstates;
+    UINT       score       = 0;
+
+    // tip-inner case
+    // Can't use computePartialParsimonyOutOfTreeSankoff, because
+    // reading left state from...
+    //   &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
+    // ...rather than from...
+    //   &some_partial_pars[ptn_start_index].
+    
+    #ifdef _OPENMP //James B. This for-loop parallelized, 18-Sep-2020.
+    #pragma omp parallel for reduction(+:score)
+    #endif
+    for (intptr_t ptn = 0; ptn < ptnCount; ptn++){
+        intptr_t    ptn_start_index  = ptn*nstates;
+        const UINT* left_ptr         = &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
+        const UINT* right_ptr        = &right->partial_pars[ptn_start_index];
+        UINT*       partial_pars_ptr = &partial_pars[ptn_start_index];
+        const UINT* cost_matrix_ptr  = cost_matrix;
+        UINT        right_contrib;
+        
+        for (int i = 0; i < nstates; i++){
+            // min(j->i) from child_branch
+            right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+            for (int j = 1; j < nstates; j++) {
+                right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
+            }
+            UINT sum = left_ptr[i] + right_contrib;
+            partial_pars_ptr[i] = sum;
+            cost_matrix_ptr += nstates;
+        }
+        UINT here = partial_pars_ptr[0];
+        for (int i = 1; i < nstates; ++i) {
+            UINT there = partial_pars_ptr[i];
+            here = (here<there) ? here : there;
+        }
+        score += here;
+    }
+    partial_pars[total_index] = score;
 }
 
 double PhyloTree::computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,

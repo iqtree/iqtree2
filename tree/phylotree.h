@@ -947,7 +947,16 @@ public:
      @param dad its dad, used to direct the traversal
      */
     void   computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    
+        //Supporting functions
+        void computeLeafPartialParsimonySankoff
+                (PhyloNode* node, UINT * partial_pars);
+        void computeMultifurcatedParsimonySankoff
+                (PhyloNode* dad, PhyloNode* node, UINT * partial_pars);
+        void computeTipTipPartialParsimonySankoff
+                (PhyloNeighbor* left, PhyloNeighbor* right, UINT* partial_pars);
+        void computeTipInnerPartialParsimonySankoff
+                (PhyloNeighbor* left, PhyloNeighbor* right, UINT* partial_pars);
+
     double computePartialParsimonyOutOfTreeSankoff(const UINT* left_partial_pars,
                                                    const UINT* right_partial_pars,
                                                    UINT* dad_partial_pars) const;
