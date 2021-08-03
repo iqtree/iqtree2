@@ -547,7 +547,6 @@ int PhyloTree::setParsimonyBranchLengths() {
     clearAllPartialLH();
     clearAllPartialParsimony(false);
     
-    int    sum_score = 0;
     double persite   = 1.0/getAlnNSite();
 
     PhyloNode*     dad         = nodes1[0];
@@ -556,70 +555,30 @@ int PhyloTree::setParsimonyBranchLengths() {
     PhyloNeighbor* node_branch = node->findNeighbor(nodes1[0]);
 
     // determine state of the root
-    int branch_subst = 0;
-    int pars_score   = computeParsimonyBranchFast(dad_branch, dad, &branch_subst);
-    int nsites       = (aln->num_parsimony_sites + UINT_BITS-1) / UINT_BITS;
-    int nstates      = aln->getMaxNumStates();
+    int      branch_subst = 0;
+    int      pars_score   = computeParsimonyBranchFast(dad_branch, dad, &branch_subst);
+    intptr_t nsites       = (aln->num_parsimony_sites + UINT_BITS-1) / UINT_BITS;
 
     vector<vector<StateType> > sequences;
     sequences.resize(nodeNum, vector<StateType>(aln->num_parsimony_sites, aln->STATE_UNKNOWN));
     BoolVector done(nodeNum, false);
     done[node->id] = done[dad->id]  = true;
 
-    int subst = 0; //count of substitutions
-    
-    for (int site = 0, real_site = 0; site < nsites; site++) {
-        size_t offset = nstates*site;
-        UINT *x = dad_branch->partial_pars  + offset;
-        UINT *y = node_branch->partial_pars + offset;
-        UINT w  = x[0] & y[0];
-        for (int state = 1; state < nstates; state++) {
-            w |= x[state] & y[state];
-        }
-        UINT bit = 1;
-        StateType* dadSeq  = sequences[dad->id].data();
-        StateType* nodeSeq = sequences[node->id].data();
-
-        for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites;
-             s++, bit = bit << 1, real_site++)
-        if (w & bit) {
-            // intersection is non-empty
-            for (int state = 0; state < nstates; state++) {
-                if ((x[state] & bit) && (y[state] & bit)) {
-                    // assign the first state in the intersection
-                    nodeSeq[real_site] = dadSeq[real_site] = state;
-                    break;
-                }
-            }
-        } else {
-            // intersection is empty
-            subst++;
-            for (int state = 0; state < nstates; state++) {
-                if (x[state] & bit) {
-                    // assign the first admissible state
-                    nodeSeq[real_site] = state;
-                    break;
-                }
-            }
-            for (int state = 0; state < nstates; state++) {
-                if (y[state] & bit) {
-                    // assign the first admissible state
-                    dadSeq[real_site] = state;
-                    break;
-                }
-            }
-        }
-    }
-    ASSERT(subst == branch_subst);
-    sum_score += subst;
+    intptr_t sum_score = assignStatesForFirstTwoNodes(nsites, dad_branch->partial_pars,
+                                                      node_branch->partial_pars,
+                                                      dad->id, node->id,
+                                                      sequences);
+    ASSERT(sum_score == branch_subst);
 
     int adjustment = 0;
     adjustParsimonyBranchSubstitutionCount(dad, node, adjustment);
 
-    double branch_length = static_cast<double>(subst+adjustment) * persite;
+    double branch_length = static_cast<double>(sum_score+adjustment) * persite;
     correctBranchLengthIfNeedBe(branch_length);
     fixOneNegativeBranch(branch_length, dad_branch, dad);
     
+    PhyloTreeThreadingContext context(*this, true);
+
     // walking down the tree to assign node states
     for (int id = 1; id < nodes1.size(); id++) {
         // arrange such that states of dad are known
@@ -635,33 +594,11 @@ int PhyloTree::setParsimonyBranchLengths() {
         // now determine states of node
         dad_branch  = dad->findNeighbor(node);
         node_branch = node->findNeighbor(dad);
-        const StateType* dadSeq  = sequences[dad->id].data();
-        StateType*       nodeSeq = sequences[node->id].data();
-        subst = 0;
-        for (int site = 0, real_site = 0; site < nsites; site++) {
-            size_t offset = nstates*site;
-            UINT*  x      = dad_branch->partial_pars + offset;
-            UINT   bit    = 1;
-            for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites;
-                 s++, bit = bit << 1, real_site++) {
-                StateType dad_state = dadSeq[real_site];
-                ASSERT(static_cast<int>(dad_state) < nstates);
-                if (x[dad_state] & bit) {
-                    // same state as dad
-                    nodeSeq[real_site] = dad_state;
-                } else {
-                    // different state from dad
-                    subst++;
-                    for (int state = 0; state < nstates; state++) {
-                        if (x[state] & bit) {
-                            // assign the first admissible state
-                            nodeSeq[real_site] = state;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+
+        int subst = assignStatesForOneNode(nsites, dad_branch->partial_pars,
+                                           node_branch->partial_pars,
+                                           dad->id, node->id, sequences );
+
         int adjustment = 0;
         adjustParsimonyBranchSubstitutionCount(dad, node, adjustment);
 
@@ -675,11 +612,118 @@ int PhyloTree::setParsimonyBranchLengths() {
     }
     if (pars_score!=sum_score ) {
         hideProgress();
-        LOG_LINE(VerboseMode::VB_MIN, "pars_score " << pars_score << " but sum_score " << sum_score);
+        LOG_LINE(VerboseMode::VB_MIN, "pars_score " << pars_score
+                 << " but sum_score " << sum_score);
         showProgress();
     }
     ASSERT(pars_score == sum_score);
     return static_cast<int>(nodes1.size());
+}
+
+intptr_t PhyloTree::assignStatesForFirstTwoNodes
+        (intptr_t nsites, UINT* dad_partial_pars, UINT* node_partial_pars,
+         int dad_id, int node_id, vector<vector<StateType> > &sequences) {
+    int      nstates = aln->getMaxNumStates();
+    intptr_t subst   = 0; //count of substitutions
+
+    //This could be parallelized but it would not be worth it.
+    //See the comments for assignStatesForOneNode().
+    //#ifdef _OPENMP
+    //#pragma omp parallel for reduction(+:subst)
+    //#endif
+    for (intptr_t site = 0; site < nsites; ++site) {
+        intptr_t real_site = site*UINT_BITS;
+        size_t   offset = nstates*site;
+        UINT*    x      = dad_partial_pars  + offset;
+        UINT*    y      = node_partial_pars + offset;
+        UINT     w      = x[0] & y[0];
+        for (int state = 1; state < nstates; state++) {
+            w |= x[state] & y[state];
+        }
+        UINT       bit     = 1;
+        StateType* dadSeq  = sequences[dad_id].data();
+        StateType* nodeSeq = sequences[node_id].data();
+
+        for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites;
+             s++, bit = bit << 1, real_site++) {
+            if (w & bit) {
+                // intersection is non-empty
+                for (int state = 0; state < nstates; state++) {
+                    if ((x[state] & bit) && (y[state] & bit)) {
+                        // assign the first state in the intersection
+                        nodeSeq[real_site] = dadSeq[real_site] = state;
+                        break;
+                    }
+                }
+            } else {
+                // intersection is empty
+                subst++;
+                for (int state = 0; state < nstates; state++) {
+                    if (x[state] & bit) {
+                        // assign the first admissible state
+                        nodeSeq[real_site] = state;
+                        break;
+                    }
+                }
+                for (int state = 0; state < nstates; state++) {
+                    if (y[state] & bit) {
+                        // assign the first admissible state
+                        dadSeq[real_site] = state;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return subst;
+}
+
+intptr_t PhyloTree::assignStatesForOneNode(intptr_t nsites, UINT* dad_partial_pars, 
+                                           UINT* node_partial_pars,
+                                           int dad_id, int node_id,
+                                           vector<vector<StateType> >& sequences) {
+    const StateType* dadSeq  = sequences[dad_id].data();
+    StateType*       nodeSeq = sequences[node_id].data();
+    int              nstates = aln->getMaxNumStates();
+    intptr_t         subst   = 0; //count of substitutions
+
+    //Running in parallel WOULD work, but unless you had a 
+    //*very* long alignment, *and* long branch lengths
+    //(nsites in the thousands), it wouldn't be worth doing!  
+    //You'd also need to have a...
+    //            PhyloTreeThreadingContext context(*this, true);
+    //declaration
+    //in setParsimonyBranchLengths().
+
+    //#ifdef _OPENMP
+    //#pragma omp parallel for reduction(+:subst)
+    //#endif
+    for (intptr_t site = 0; site < nsites; site++) {
+        intptr_t real_site = site*UINT_BITS;
+        size_t   offset    = nstates*site;
+        UINT*    x         = dad_partial_pars + offset;
+        UINT     bit       = 1;
+        for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites;
+                s++, bit = bit << 1, real_site++) {
+            StateType dad_state = dadSeq[real_site];
+            ASSERT(static_cast<int>(dad_state) < nstates);
+            if (x[dad_state] & bit) {
+                // same state as dad
+                nodeSeq[real_site] = dad_state;
+            } else {
+                // different state from dad
+                subst++;
+                for (int state = 0; state < nstates; state++) {
+                    if (x[state] & bit) {
+                        // assign the first admissible state
+                        nodeSeq[real_site] = state;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return subst;
 }
 
 /****************************************************************************

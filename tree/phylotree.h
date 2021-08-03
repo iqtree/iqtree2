@@ -2266,7 +2266,15 @@ public:
      set all branch lengths using parsimony
      */
     int setParsimonyBranchLengths();
-
+        //Supporting functions
+        intptr_t assignStatesForFirstTwoNodes(intptr_t nsites, UINT* dad_partial_pars, 
+                                              UINT* node_partial_pars,
+                                              int dad_id, int node_id, 
+                                              vector<vector<StateType> >& sequences);
+        intptr_t assignStatesForOneNode      (intptr_t nsites, UINT* dad_partial_pars, 
+                                              UINT* node_partial_pars,
+                                              int dad_id, int node_id,
+                                              vector<vector<StateType> >& sequences);
     /**
         set negative branch to a new len
     */
