@@ -2496,7 +2496,10 @@ int main(int argc, char *argv[]) {
     read_distributions();
     // load distributions from user-specified file
     if (Params::getInstance().alisim_distribution_definitions)
+    {
+        cout<<"Reading user-specified distributions/lists of random numbers."<<endl;
         read_distributions(Params::getInstance().alisim_distribution_definitions);
+    }
 
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
         if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
