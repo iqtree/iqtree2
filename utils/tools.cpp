@@ -713,6 +713,39 @@ double convert_double_with_distribution(const char *str)
         return random_number_from_distribution(input);
 }
 
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound)
+{
+    double random_double = 0;
+    if (is_number(input))
+    {
+        random_double = convert_double(input.c_str());
+        if (random_double >= upper_bound)
+            outError("The input number ("+input+") must be less than "+convertDoubleToString(upper_bound)+". Please check and try again!");
+    }
+    else
+        random_double = random_number_from_distribution_with_upperbound(input, upper_bound);
+    
+    return random_double;
+}
+
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound)
+{
+    double random_double;
+    
+    // limit 1000 attempts to generate a random number from user-specified distribution
+    for (int i = 0; i < 1000; i++)
+    {
+        random_double = random_number_from_distribution(distribution_name);
+        if (random_double < upper_bound)
+            break;
+    }
+    
+    if (random_double >= upper_bound)
+        outError("Unfortunately, could not generate a random number less than "+convertDoubleToString(upper_bound)+" using the list/distribution "+distribution_name+" after 1000 attempts.");
+    
+    return random_double;
+}
+
 void normalize_frequencies(double* freqs, int num_states, double total_freqs, bool show_warning)
 {
     ASSERT(num_states > 0);

@@ -410,11 +410,10 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
         case FREQ_DNA_1221:
         case FREQ_DNA_1122:
         {
-            // randomly generate two frequencies
-            int num_freqs = 2;
+            // randomly generate an input frequency which is less than 0.5
+            int num_freqs = 1;
             double* freqs = new double[num_freqs];
-            for (int i = 0; i < num_freqs; i++)
-                freqs[i] = random_double();
+            freqs[0] = random_number_from_distribution_with_upperbound("uniform", 0.5);
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);
@@ -429,10 +428,10 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
         case FREQ_DNA_MK:
         {
             // randomly generate two pairs of frequencies
-            int num_freqs = 4;
+            int num_freqs = 2;
             double* freqs = new double[num_freqs];
             for (int i = 0; i < num_freqs; i++)
-                freqs[i] = random_double();
+                freqs[i] = random_number_from_distribution_with_upperbound("uniform", 0.5);
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);
@@ -457,24 +456,25 @@ void ModelLieMarkov::mappingFreqs(StateFreqType expected_freq_type, double *freq
         case FREQ_DNA_1221:
         case FREQ_DNA_1122:
         {
+            // validate the input freqs[0], it must be less than 0.5
+            if (freqs[0] >= 0.5)
+                outError("The input base frequency must be less than 0.5. Please check and try again!");
+                
             // set state freqs
             if (expected_freq_type == FREQ_DNA_1212)
             {
                 state_freq[0] = state_freq[2] = freqs[0];
-                state_freq[1] = state_freq[3] = freqs[1];
+                state_freq[1] = state_freq[3] = 0.5 - freqs[0];
             }
             else if (expected_freq_type == FREQ_DNA_1221)
             {
                 state_freq[0] = state_freq[3] = freqs[0];
-                state_freq[1] = state_freq[2] = freqs[1];
+                state_freq[1] = state_freq[2] = 0.5 - freqs[0];
             } else if (expected_freq_type == FREQ_DNA_1122)
             {
                 state_freq[0] = state_freq[1] = freqs[0];
-                state_freq[2] = state_freq[3] = freqs[1];
+                state_freq[2] = state_freq[3] = 0.5 - freqs[0];
             }
-            
-            // normalize state frequencies so that sum of them are 1
-            normalize_frequencies(state_freq, num_states, -1, true);
             
             break;
         }
@@ -482,35 +482,30 @@ void ModelLieMarkov::mappingFreqs(StateFreqType expected_freq_type, double *freq
         case FREQ_DNA_WS:
         case FREQ_DNA_MK:
         {
-            // normalize state frequencies of each pair so that sum of them are 0.5
-            outWarning("Normalizing state frequencies of each pair so that sum of them are 0.5");
-            double total = freqs[0] + freqs[1];
-            freqs[0] = freqs[0]/total/2;
-            freqs[1] = freqs[1]/total/2;
-            total = freqs[2] + freqs[3];
-            freqs[2] = freqs[2]/total/2;
-            freqs[3] = freqs[3]/total/2;
+            // validate the input freqs[0], and freqs[1], they must be less than 0.5
+            if (freqs[0] >= 0.5 || freqs[1] >= 0.5)
+                outError("The input base frequencies must be less than 0.5. Please check and try again!");
             
             // set state freqs
             if (expected_freq_type == FREQ_DNA_RY)
             {
                 state_freq[0] = freqs[0];
-                state_freq[1] = freqs[2];
-                state_freq[2] = freqs[1];
-                state_freq[3] = freqs[3];
+                state_freq[1] = freqs[1];
+                state_freq[2] = 0.5 - freqs[0];
+                state_freq[3] = 0.5 - freqs[1];
             }
             else if (expected_freq_type == FREQ_DNA_WS)
             {
                 state_freq[0] = freqs[0];
-                state_freq[1] = freqs[2];
-                state_freq[2] = freqs[3];
-                state_freq[3] = freqs[1];
+                state_freq[1] = freqs[1];
+                state_freq[2] = 0.5 - freqs[1];
+                state_freq[3] = 0.5 - freqs[0];
             } else if (expected_freq_type == FREQ_DNA_MK)
             {
                 state_freq[0] = freqs[0];
-                state_freq[1] = freqs[1];
-                state_freq[2] = freqs[2];
-                state_freq[3] = freqs[3];
+                state_freq[1] = 0.5 - freqs[0];
+                state_freq[2] = freqs[1];
+                state_freq[3] = 0.5 - freqs[1];
             }
             break;
         }
@@ -545,10 +540,10 @@ void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_par
         case FREQ_DNA_1221:
         case FREQ_DNA_1122:
         {
-            // extract/generate two freqs one by one
-            int num_freqs = 2;
+            // extract/generate input base frequency
+            int num_freqs = 1;
             double* freqs = new double[num_freqs];
-            convert_double_array_with_distributions(freq_params, freqs, num_freqs, separator);
+            freqs[0] = convert_double_with_distribution_and_upperbound(freq_params, 0.5);
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);
@@ -562,11 +557,26 @@ void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_par
         case FREQ_DNA_WS:
         case FREQ_DNA_MK:
         {
-            // randomly generate two pairs of frequencies
-            // extract/generate two freqs one by one
-            int num_freqs = 4;
+            // extract/generate two freqs
+            int num_freqs = 2;
             double* freqs = new double[num_freqs];
-            convert_double_array_with_distributions(freq_params, freqs, num_freqs, separator);
+            // validate the number of items
+            size_t num_separators = std::count(freq_params.begin(), freq_params.end(), separator);
+            if (num_separators != num_freqs - 1)
+                outError("The number of frequencies in "+freq_params+" is "+convertIntToString(num_separators+1)+", which is different from the expected number of frequencies ("+convertIntToString(num_freqs)+") for this model. Please check and try again!");
+
+            // extract/generate double numbers one by one
+            for (int i = 0; i < num_freqs; i++) {
+                // extract sub-string by separator
+                size_t pos = freq_params.find(separator);
+                string token = freq_params.substr(0, pos);
+                
+                // convert/generate a double
+                freqs[i] = convert_double_with_distribution_and_upperbound(token, 0.5);
+                
+                // remove the current double/distribution name from tmp_str
+                freq_params.erase(0, pos + 1);
+            }
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);

@@ -2727,6 +2727,20 @@ double random_number_from_distribution(string distribution_name);
 double convert_double_with_distribution(const char *str);
 
 /**
+        initialize a number (with an upper bound constraint) by converting string to double (if the user supplies a number) or randomly generating it (with up to 1000 attempts) from a distribution (if the user supplies a distribution name)
+        @param input storing a number or a distribution name
+        @param upper_bound storing the upper bound value
+ */
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound);
+
+/**
+        randomly generating a double (with up to 1000 attempts) from a distribution with an upper bound constraint
+        @param input storing a distribution name
+        @param upper_bound storing the upper bound value
+ */
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound);
+
+/**
        check whether a string is a number
         @param s storing a string
  */
