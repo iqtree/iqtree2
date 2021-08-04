@@ -1530,6 +1530,7 @@ void IQTreeMix::showLhProb(ofstream& out) {
         curr_ptn_lh = pattern_lh_tree;
         for (t=0; t<ntree; t++) {
             out << "," << curr_ptn_lh[idx]; // log-likelihood of the site for tree t
+            curr_ptn_lh += nptn;
         }
         for (t=0; t<ntree; t++) {
             post_prob[t] = post_prob[t] / sum;
