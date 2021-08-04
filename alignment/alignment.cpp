@@ -2785,81 +2785,404 @@ void Alignment::parseMSFSequenceNameLine(std::string line, int line_num,
     }
 }
 
-// TODO: Use outWarning to print warnings.
-int Alignment::readCountsFormat(const char* filename, const char* sequence_type) {
-    int npop = 0;                // Number of populations.
-    int nsites = 0;              // Number of sites.
-    int N = 9;                   // Virtual population size; defaults
-                                 // to 9.  If `-st CFXX` is given, it
-                                 // will be set to XX below.
-    int nnuc = 4;                // Number of nucleotides (base states).
-    ostringstream err_str;
-    igzstream in;
+namespace {
+    class CountFile {
+        igzstream         in;
+        std::string       line;
+        int               line_num;
+        std::string       field;
+        std::stringstream err_str;
 
-    // Variables to stream the data.
-    string line;
-    string field;
-    string val_str;             // String of counts value.
-    int value;                  // Actual int value.
-    int line_num = 0;           // Line number counter.
-    int field_num;              // Field number counter.
-    int site_count = 0;         // Site / base counter.
-    // Delimiters
-//    char const field_delim = '\t';
-    char const value_delim = ',';
+public:
+        CountFile(const char* filename) : line_num(0) {
+            // Open counts file.
+            // Set the failbit and badbit.
+            in.exceptions(ios::failbit | ios::badbit);
+            in.open(filename);
+            // Remove the failbit.
+            in.exceptions(ios::badbit);
+        }
+        void skipCommentLines() {
+            // Skip comments.
+            do {
+                getline(in, line);
+                line_num++;
+            }
+            while (line[0] == '#');
+        }
+        void parseIdentificationLine(int& npop, int& nsites) {
+            // Strings to check counts-file identification line.
+            string ftype, npop_str, nsites_str;
+            // Read in npop and nsites;
+            istringstream ss1(line);
+            // Read and check counts file headerline.
+            if (!(ss1 >> ftype >> npop_str >> npop >> nsites_str >> nsites)) {
+                err_str << "Counts-File identification line could not be read.";
+                throw err_str.str();
+            }
+            if (ftype.compare("COUNTSFILE") != 0 ||
+                npop_str.compare("NPOP") !=0 ||
+                nsites_str.compare("NSITES") != 0) {
+                err_str << "Counts-File identification line could not be read.";
+                throw err_str.str();
+            }
+        }
+        void parseHeaderLine(int npop, StrVector& seq_names) {
+            // Headerline.
+            istringstream ss2(line);
 
-    // Vector of nucleotide base counts in order A, C, G, T.
-    IntVector values;
-    // Sampled vector of nucleotide base counts (N individuals are
-    // sampled out of =values=).
-    IntVector sampled_values;
+            for (int field_num = 0; (ss2 >> field); field_num++) {
+                if (field_num == 0) {
+                    if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
+                        err_str << "Unrecognized header field " << field << ".";
+                        throw err_str.str();
+                    }
+                }
+                else if (field_num == 1) {
+                    if ((field.compare("Pos") != 0) && (field.compare("POS") != 0)) {
+                        err_str << "Unrecognized header field " << field << ".";
+                        throw err_str.str();
+                    }
+                }
+                else {
+                    //Read in sequence names.
+                    seq_names.push_back(field);
+                }
+            }
+            if (seq_names.size() != static_cast<size_t>(npop)) {
+                err_str << "Number of populations in headerline doesn't match NPOP.";
+                throw err_str.str();
+            }
+        }
+        void readValuesFromField(const std::string& field, int nnuc, 
+                                 IntVector& values) {
+            // Delimiters
+            //    char const field_delim = '\t';
+            char const value_delim = ',';
+            // Variables to stream the data.
+            std::string val_str;  // String of counts value.
+            int         value;    // Actual int value.
 
-    // Variables to convert sampled_values to a state in the pattern.
-    int sum;
-    int count;
-    int id1;
-    int id2;
-    int r_int;
-    // Index of polymorphism type; ranges from 0 to 5: [AC], [AG],
-    // [AT], [CG], [CT], [GT].
-    int j;
-    // String with states.  Each character represents an integer state
-    // value ranging from 0 to 4+(4 choose 2)*(N-1)-1.  E.g., 0 to 57
-    // if N is 10.
-    Pattern pattern;
-    // The state a population is in at a specific site.
-    // 0 ... 3 = fixed A,C,G,T
-    // 4 + j*(N-2)+j ... 4 + (j+1)*(N-2)+j = polymorphism of type j
-    // E.g., 4 = [1A,9C]; 5 = [2A,8C]; 12 = [9A,1C]; 13 = [1A,9G]
-    int state;
+            values.clear();
+            istringstream valuestream(field);
+            // Loop over bases within one population.
+            for (; getline(valuestream, val_str, value_delim);) {
+                try {
+                    value = convert_int(val_str.c_str());
+                } catch(string &) {
+                    err_str << "Could not read value "
+                            << val_str << " on line " << line_num << ".";
+                    throw err_str.str();
+                }
+                values.push_back(value);
+            }
+            if (values.size() != nnuc) {
+                err_str << "Number of bases does not match"
+                        << " on line " << line_num << ".";
+                throw err_str.str();
+            }
+        }
 
-    // Strings to check counts-file identification line.
-    string ftype, npop_str, nsites_str;
+        void countNonZeroElements(const IntVector& values, int& id1, int& id2, 
+                                  int &sum, int &count) {
+            // Read in the data.
+            sum = 0;
+            count = 0;
+            id1 = -1;
+            id2 = -1;
+            // Sum over elements and count non-zero elements.
+            for(auto it = values.begin(); it != values.end(); ++it) {
+                // `i` is an iterator object that points to some
+                // element of `value`.
+                if (*it != 0) {
+                    // `i - values.begin()` ranges from 0 to 3 and
+                    // determines the nucleotide or allele type.
+                    if (id1 == -1) {
+                        id1 = static_cast<int>(it - values.begin());
+                    }
+                    else {
+                        id2 = static_cast<int>(it - values.begin());
+                    }
+                    count++;
+                    sum += *it;
+                }
+            }
+        }
 
-    bool everything_ok = true;
-    int fails = 0;
+        int handleOneNonZeroElement(const SamplingType pomo_sampling_method,
+                                    const int num_states, 
+                                    const IntVector& values, int id1,
+                                    vector<uint32_t>& pomo_sampled_states, 
+                                    IntIntMap& pomo_sampled_states_index,
+                                    bool &everything_ok) {
+            int state;
+            if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) {
+                // Fixed state, state ID is just id1.
+                state = id1;
+            } else {
+                if (values[id1] >= 16384) {
+                    cout << "WARNING: Pattern on line "
+                         << line_num << " exceeds count limit of 16384." 
+                         << std::endl;
+                    everything_ok = false;
+                }
+                uint32_t pomo_state = (id1 | (values[id1]) << 2);
+                IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
+                if (pit == pomo_sampled_states_index.end()) { // not found
+                    state = static_cast<int>(pomo_sampled_states.size());
+                    pomo_sampled_states_index[pomo_state] = state;
+                    pomo_sampled_states.push_back(pomo_state);
+                } else {
+                    state = pit->second;
+                }
+                state += num_states; // make the state larger than num_states
+            }      
+            return state;      
+        }
 
-    // Access model_name in global parameters; needed to get N and
-    // sampling method.
-    Params params = Params::getInstance();
-    // TODO DS: Do not temper with params; use another way to set PoMo
-    // flag.
-    params.pomo = true;
+        int doBinomialSampling(int nnuc, int N, const IntVector& values, 
+                               int sum,  int id1, int id2,
+                               IntVector& sampled_values) {
+            // Binomial sampling.  2 bases are present.
+            for(int k = 0; k < N; k++) {
+                int r_int = random_int(sum);
+                if (r_int < values[id1]) {
+                    sampled_values[id1]++;
+                }
+                else { 
+                    sampled_values[id2]++;
+                }
+            }
+            if (sampled_values[id1] == 0) {
+                return id2;
+            }
+            else if (sampled_values[id2] == 0) {
+                return id1;
+            }
+            else {
+                // Index of polymorphism type; ranges from 0 to 5: [AC], [AG],
+                // [AT], [CG], [CT], [GT].
+                int j;
+                if (id1 == 0) {
+                    j = id2 - 1;
+                }
+                else {
+                    j = id1 + id2;
+                }
+                return nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+            }
+        }
 
-    // Initialize sampling method.
-    pomo_sampling_method = SamplingType::SAMPLING_WEIGHTED_BINOM;
+        int handleTwoNonZeroElements(int num_states, const IntVector& values, 
+                                     int id1, int id2, 
+                                     vector<uint32_t>& pomo_sampled_states, 
+                                     IntIntMap& pomo_sampled_states_index,
+                                     bool &everything_ok) {
+            int state;
+            /* BQM 2015-07: store both states now */
+            if (values[id1] >= 16384 || values[id2] >= 16384) {
+                // Cannot add sites where more than 16384
+                // individuals have the same base within one
+                // population.
+                everything_ok = false;
+            }
+            uint32_t pomo_state = (id1 | (values[id1]) << 2)
+                                | ((id2 | (values[id2]<<2))<<16);
+            IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
+            if (pit == pomo_sampled_states_index.end()) { // not found
+                uint32_t s = static_cast<uint32_t>(pomo_sampled_states.size());
+                state = pomo_sampled_states_index[pomo_state] = s;
+                pomo_sampled_states.push_back(pomo_state);
+            } else {
+                state = pit->second;
+            }
+            state += num_states; // make the state larger than num_states
+            return state;
+        }
 
+        bool buildPatternFromCurrentLine(int nnuc, const SamplingType pomo_sampling_method,
+                                         const int N, int num_states, int STATE_UNKNOWN,
+                                         bool& includes_state_unknown,
+                                         int&  n_samples_sum,  int &n_sites_sum, 
+                                         vector<uint32_t>& pomo_sampled_states, 
+                                         IntIntMap& pomo_sampled_states_index,
+                                         Pattern& pattern) {
+            // Vector of nucleotide base counts in order A, C, G, T.
+            IntVector values;
+            // Sampled vector of nucleotide base counts (N individuals are
+            // sampled out of =values=).
+            IntVector sampled_values;
+
+            // The state a population is in at a specific site.
+            // 0 ... 3 = fixed A,C,G,T
+            // 4 + j*(N-2)+j ... 4 + (j+1)*(N-2)+j = polymorphism of type j
+            // E.g., 4 = [1A,9C]; 5 = [2A,8C]; 12 = [9A,1C]; 13 = [1A,9G]
+            int state;
+
+            int su_number = 0;
+
+            pattern.clear();
+            bool everything_ok = true;
+            istringstream fieldstream(line);
+            // Loop over populations / individuals.
+            int field_num = 0;
+            for ( ; (fieldstream >> field); ) {
+                // Skip Chrom and Pos columns.
+                if ( (field_num == 0) || (field_num == 1)) {
+                    field_num++;
+                    continue;
+                }
+                // Clear value vectors.
+                sampled_values.clear();
+                sampled_values.resize(nnuc,0);
+
+                readValuesFromField(field, nnuc, values);
+
+                // Variables to convert sampled_values to a state in the pattern.
+                int id1;
+                int id2;
+                int sum;
+                int count;
+                
+                countNonZeroElements(values, id1, id2, sum, count);
+
+                // Determine state (cf. above).
+                if (count == 1) {
+                    n_samples_sum += values[id1];
+                    n_sites_sum++;
+                    state = handleOneNonZeroElement(pomo_sampling_method,
+                                                    num_states, values, id1,
+                                                    pomo_sampled_states, 
+                                                    pomo_sampled_states_index,
+                                                    everything_ok);
+                }
+                else if (count == 0) {
+                    state = STATE_UNKNOWN;
+                    su_number++;
+                    includes_state_unknown = true;
+                }
+                else if (count > 2) {
+                    if (verbose_mode >= VerboseMode::VB_MAX) {
+                        std::cout << "WARNING: More than two bases are present on line ";
+                        std::cout << line_num << "." << std::endl;
+                    }
+                    everything_ok = false;
+                    // err_str << "More than 2 bases are present on line " << line_num << ".";
+                    // throw err_str.str();
+                }
+                // Now we deal with the important polymorphic states with two alleles.
+                else if (count == 2) {
+                    n_samples_sum += values[id1];
+                    n_samples_sum += values[id2];
+                    n_sites_sum++;
+                    if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) {
+                        state = doBinomialSampling(nnuc, N, values, sum, 
+                                                   id1, id2, sampled_values);
+                    } else {
+                        state = handleTwoNonZeroElements(num_states, values, 
+                                                         id1, id2, 
+                                                         pomo_sampled_states, 
+                                                         pomo_sampled_states_index,
+                                                         everything_ok);
+                    }
+                }
+                else {
+                    err_str << "Unexpected error on line number " << line_num << ".";
+                    throw err_str.str();
+                }
+                // Now we have the state to build a pattern ;-).
+                pattern.push_back(state);
+            }
+            return everything_ok;
+        }
+
+        void parseData(int npop, int nnuc, const SamplingType pomo_sampling_method,
+                       const int N, int num_states, int STATE_UNKNOWN,
+                       int& n_samples_sum, int &n_sites_sum,
+                       int& site_count, int& fails,
+                       vector<uint32_t>& pomo_sampled_states, 
+                       IntIntMap& pomo_sampled_states_index,
+                       vector<Pattern>& su_buffer, IntVector& su_site_counts,
+                       const std::function <void (Pattern& pat, int site)>& addPattern ) {
+
+
+            // String with states.  Each character represents an integer state
+            // value ranging from 0 to 4+(4 choose 2)*(N-1)-1.  E.g., 0 to 57
+            // if N is 10.
+            Pattern pattern;
+
+            for ( ; getline(in, line); ) {
+                line_num++;
+                // BQM: not neccessary, su_site_count will be equal to su_site_counts.size()
+                //    int su_site_count = 0;
+                bool includes_state_unknown = false;
+                bool everything_ok = buildPatternFromCurrentLine(nnuc, pomo_sampling_method, 
+                                                                 N,  num_states, STATE_UNKNOWN,
+                                                                 includes_state_unknown,
+                                                                 n_samples_sum, n_sites_sum, 
+                                                                 pomo_sampled_states, 
+                                                                 pomo_sampled_states_index, 
+                                                                 pattern);
+                if ((int) pattern.size() != npop) {
+                    err_str << "Number of species does not match on line " << line_num << ".";
+                    throw err_str.str();
+                }
+                // Pattern has been built and is now added to the vector of
+                // patterns.
+                if (everything_ok == true) {
+                    if (includes_state_unknown) {
+        //                su_site_count++;
+                        if (pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_BINOM ||
+                            pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_HYPER) {
+                            su_buffer.push_back(pattern);
+                            su_site_counts.push_back(site_count);
+                        }
+                        // Add pattern if we use random sampling because then,
+                        // STATE_UNKNOWN = num_states is well defined already at
+                        // this stage.
+                        else {
+                            addPattern(pattern, site_count);
+                        }
+                        // BQM: it is neccessary to always increase site_count
+                        site_count++;
+                    }
+                    else {
+                        addPattern(pattern, site_count);
+                        site_count++;
+                    }
+                }
+                else {
+                    fails++;
+                    if (verbose_mode >= VerboseMode::VB_MAX) {
+                        std::cout << "WARNING: Pattern on line "
+                                  << line_num << " was not added." 
+                                  << std::endl;
+                    }
+                }
+            }
+        }
+        ~CountFile() {
+            in.clear();
+            // set the failbit again
+            in.exceptions(ios::failbit | ios::badbit);
+            in.close();
+        }
+    };
+};
+
+void Alignment::checkForCustomVirtualPopulationSize
+        (const std::string& model_name, int& N) {
     // Check for custom virtual population size or sampling method.
-    size_t n_pos_start = params.model_name.find("+N");
-    size_t n_pos_end   = params.model_name.find_first_of("+", n_pos_start+1);
+    size_t n_pos_start = model_name.find("+N");
+    size_t n_pos_end   = model_name.find_first_of("+", n_pos_start+1);
     if (n_pos_start != string::npos) {
         intptr_t length;
         if (n_pos_end != string::npos)
             length = n_pos_end - n_pos_start - 2;
         else
-            length = params.model_name.length() - n_pos_start - 2;
+            length = model_name.length() - n_pos_start - 2;
         try {
-            N = convert_int(params.model_name.substr(n_pos_start+2,length).c_str());
+            N = convert_int(model_name.substr(n_pos_start+2,length).c_str());
         }
         catch (string str) {
             cout << "The model string is faulty." << endl;
@@ -2869,18 +3192,21 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
             cout << "For each run, N can only be set once." << endl;
             outError(str);
         }
-
-        if (((N != 10) && (N != 2) && (N % 2 == 0)) || (N < 2) || (N > 19))
+        if (((N != 10) && (N != 2) && (N % 2 == 0)) || (N < 2) || (N > 19)) {
             outError("Custom virtual population size of PoMo"
                      " not 2, 10 or any other odd number between 3 and 19.");
+        }
     }
-    // TODO: probably remove virtual_pop_size and use N only.
-    params.pomo_pop_size = N;
-    virtual_pop_size = N;
+}
 
-    size_t w_pos = params.model_name.find("+WB");
-    size_t h_pos = params.model_name.find("+WH");
-    size_t s_pos = params.model_name.find("+S");
+void Alignment::checkForCustomSamplingMethod
+        (const std::string& model_name, int& N) {
+    // TODO: probably remove virtual_pop_size and use N only.
+    virtual_pop_size     = N;
+
+    size_t w_pos = model_name.find("+WB");
+    size_t h_pos = model_name.find("+WH");
+    size_t s_pos = model_name.find("+S");
     int count_sampling_methods = 0;
     if (w_pos != string::npos) {
       pomo_sampling_method = SamplingType::SAMPLING_WEIGHTED_BINOM;
@@ -2894,9 +3220,31 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
       pomo_sampling_method = SamplingType::SAMPLING_SAMPLED;
       count_sampling_methods += 1;
     }
-
-    if (count_sampling_methods > 1)
+    if (count_sampling_methods > 1) {
       outError("Multiple sampling methods specified.");
+    }
+}
+
+// TODO: Use outWarning to print warnings.
+int Alignment::readCountsFormat(const char* filename, const char* sequence_type) {
+    int N = 9;                   // Virtual population size; defaults
+                                 // to 9.  If `-st CFXX` is given, it
+                                 // will be set to XX below.
+    int nnuc = 4;                // Number of nucleotides (base states).
+    ostringstream err_str;
+
+    // Access model_name in global parameters; needed to get N and
+    // sampling method.
+    Params params = Params::getInstance();
+    // TODO DS: Do not temper with params; use another way to set PoMo flag.
+    params.pomo  = true;
+
+    // Initialize sampling method.
+    pomo_sampling_method = SamplingType::SAMPLING_WEIGHTED_BINOM;
+
+    checkForCustomVirtualPopulationSize(model_name, N);
+    params.pomo_pop_size = N;
+    checkForCustomSamplingMethod(model_name, N);
 
     // Print error if sequence type is given (not supported anymore).
     if (sequence_type) {
@@ -2926,7 +3274,7 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
-    seq_type = SeqType::SEQ_POMO;
+    seq_type   = SeqType::SEQ_POMO;
 
     // Set UNKNOWN_STATE.  This state is set if no information is in
     // the alignment.  If we use partial likelihood we do not know the
@@ -2943,11 +3291,6 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
     vector<Pattern> su_buffer;
     // The site numbers of the patterns that include unknown states.
     IntVector su_site_counts;
-    int su_number = 0;
-
-    // BQM: not neccessary, su_site_count will be equal to su_site_counts.size()
-    //    int su_site_count = 0;
-    bool includes_state_unknown = false;
 
     // Variables to calculate mean number of samples per population.
     // If N is way above the average number of samples, PoMo has been
@@ -2957,33 +3300,13 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
     // Average number of samples.
     double n_samples_bar = 0;
 
-    // Open counts file.
-    // Set the failbit and badbit.
-    in.exceptions(ios::failbit | ios::badbit);
-    in.open(filename);
-    // Remove the failbit.
-    in.exceptions(ios::badbit);
+    CountFile countfile(filename);
+    countfile.skipCommentLines();
 
-    // Skip comments.
-    do {
-        getline(in, line);
-        line_num++;
-    }
-    while (line[0] == '#');
+    int npop   = 0;              // Number of populations.
+    int nsites = 0;              // Number of sites.
+    countfile.parseIdentificationLine(npop, nsites);
 
-    // Read in npop and nsites;
-    istringstream ss1(line);
-    // Read and check counts file headerline.
-    if (!(ss1 >> ftype >> npop_str >> npop >> nsites_str >> nsites)) {
-        err_str << "Counts-File identification line could not be read.";
-        throw err_str.str();
-    }
-    if (ftype.compare("COUNTSFILE") != 0 ||
-         npop_str.compare("NPOP") !=0 ||
-         nsites_str.compare("NSITES") != 0) {
-        err_str << "Counts-File identification line could not be read.";
-        throw err_str.str();
-    }
     cout << endl;
     cout << "----------------------------------------------------------------------" << endl;
     cout << "Number of populations:     " << npop << endl;
@@ -2996,223 +3319,18 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
         throw err_str.str();
     }
 
-    // Skip comments.
-    do {
-        getline(in, line);
-        line_num++;
-    }
-    while (line[0] == '#');
+    countfile.skipCommentLines();
+    countfile.parseHeaderLine(npop, seq_names);
 
-    // Headerline.
-    istringstream ss2(line);
+    int site_count = 0;         // Site / base counter.
+    int fails      = 0;
 
-    for (field_num = 0; (ss2 >> field); field_num++) {
-        if (field_num == 0) {
-            if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
-                err_str << "Unrecognized header field " << field << ".";
-                throw err_str.str();
-            }
-        }
-        else if (field_num == 1) {
-            if ((field.compare("Pos") != 0) && (field.compare("POS") != 0)) {
-                err_str << "Unrecognized header field " << field << ".";
-                throw err_str.str();
-            }
-        }
-        else {
-            //Read in sequence names.
-            seq_names.push_back(field);
-        }
-    }
-    if ((int) seq_names.size() != npop) {
-                err_str << "Number of populations in headerline doesn't match NPOP.";
-                throw err_str.str();
-    }
-
-    // Data.
-    // Loop over sites.
-    for ( ; getline(in, line); ) {
-        line_num++;
-    	field_num = 0;
-        pattern.clear();
-        everything_ok = true;
-        includes_state_unknown = false;
-        istringstream fieldstream(line);
-        // Loop over populations / individuals.
-        for ( ; (fieldstream >> field); ) {
-            // Skip Chrom and Pos columns.
-            if ( (field_num == 0) || (field_num == 1)) {
-                field_num++;
-                continue;
-            }
-            // Clear value vectors.
-            values.clear();
-            sampled_values.clear();
-            sampled_values.resize(nnuc,0);
-            istringstream valuestream(field);
-            // Loop over bases within one population.
-            for (; getline(valuestream, val_str, value_delim);) {
-            	try {
-            		value = convert_int(val_str.c_str());
-            	} catch(string &) {
-            		err_str << "Could not read value "
-                            << val_str << " on line " << line_num << ".";
-            		throw err_str.str();
-            	}
-            	values.push_back(value);
-            }
-            if (values.size() != nnuc) {
-                err_str << "Number of bases does not match"
-                        << " on line " << line_num << ".";
-                throw err_str.str();
-            }
-
-            // Read in the data.
-            sum = 0;
-            count = 0;
-            id1 = -1;
-            id2 = -1;
-            // Sum over elements and count non-zero elements.
-            for(auto it = values.begin(); it != values.end(); ++it) {
-                // `i` is an iterator object that points to some
-                // element of `value`.
-            	if (*it != 0) {
-                    // `i - values.begin()` ranges from 0 to 3 and
-                    // determines the nucleotide or allele type.
-                    if (id1 == -1) {
-                        id1 = static_cast<int>(it - values.begin());
-                    }
-                    else {
-                        id2 = static_cast<int>(it - values.begin());
-                    }
-            		count++;
-                	sum += *it;
-            	}
-            }
-            // Determine state (cf. above).
-            if (count == 1) {
-                n_samples_sum += values[id1];
-                n_sites_sum++;
-                if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) {
-                    // Fixed state, state ID is just id1.
-                    state = id1;
-                } else {
-                    if (values[id1] >= 16384) {
-                        cout << "WARNING: Pattern on line " <<
-                            line_num << " exceeds count limit of 16384." << endl;
-                        everything_ok = false;
-                    }
-                    uint32_t pomo_state = (id1 | (values[id1]) << 2);
-                    IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
-                    if (pit == pomo_sampled_states_index.end()) { // not found
-                        state = static_cast<int>(pomo_sampled_states.size());
-                        pomo_sampled_states_index[pomo_state] = state;
-                        pomo_sampled_states.push_back(pomo_state);
-                    } else {
-                        state = pit->second;
-                    }
-                    state += num_states; // make the state larger than num_states
-                }
-            }
-            else if (count == 0) {
-                state = STATE_UNKNOWN;
-                su_number++;
-                includes_state_unknown = true;
-            }
-            else if (count > 2) {
-                if (verbose_mode >= VerboseMode::VB_MAX) {
-                    std::cout << "WARNING: More than two bases are present on line ";
-                    std::cout << line_num << "." << std::endl;
-                }
-                everything_ok = false;
-            	// err_str << "More than 2 bases are present on line " << line_num << ".";
-            	// throw err_str.str();
-            }
-            // Now we deal with the important polymorphic states with two alleles.
-            else if (count == 2) {
-                n_samples_sum += values[id1];
-                n_samples_sum += values[id2];
-                n_sites_sum++;
-                if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) {
-                     // Binomial sampling.  2 bases are present.
-                    for(int k = 0; k < N; k++) {
-                        r_int = random_int(sum);
-                        if (r_int < values[id1]) sampled_values[id1]++;
-                        else sampled_values[id2]++;
-                    }
-                    if (sampled_values[id1] == 0) {
-                        state = id2;
-                    }
-                    else if (sampled_values[id2] == 0) state = id1;
-                    else {
-                        if (id1 == 0) j = id2 - 1;
-                        else j = id1 + id2;
-                        state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
-                    }
-                } else {
-                    /* BQM 2015-07: store both states now */
-                    if (values[id1] >= 16384 || values[id2] >= 16384)
-                        // Cannot add sites where more than 16384
-                        // individuals have the same base within one
-                        // population.
-                        everything_ok = false;
-                    uint32_t pomo_state = (id1 | (values[id1]) << 2)
-                                        | ((id2 | (values[id2]<<2))<<16);
-                    IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
-                    if (pit == pomo_sampled_states_index.end()) { // not found
-                        uint32_t s = static_cast<uint32_t>(pomo_sampled_states.size());
-                        state = pomo_sampled_states_index[pomo_state] = s;
-                        pomo_sampled_states.push_back(pomo_state);
-                    } else {
-                        state = pit->second;
-                    }
-                    state += num_states; // make the state larger than num_states
-                }
-            }
-            else {
-                err_str << "Unexpected error on line number " << line_num << ".";
-                throw err_str.str();
-            }
-
-            // Now we have the state to build a pattern ;-).
-            pattern.push_back(state);
-        }
-        if ((int) pattern.size() != npop) {
-            err_str << "Number of species does not match on line " << line_num << ".";
-            throw err_str.str();
-        }
-        // Pattern has been built and is now added to the vector of
-        // patterns.
-        if (everything_ok == true) {
-            if (includes_state_unknown) {
-//                su_site_count++;
-                if (pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_BINOM ||
-                    pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_HYPER) {
-                    su_buffer.push_back(pattern);
-                    su_site_counts.push_back(site_count);
-                }
-                // Add pattern if we use random sampling because then,
-                // STATE_UNKNOWN = num_states is well defined already at
-                // this stage.
-                else
-                    addPattern(pattern, site_count);
-
-                // BQM: it is neccessary to always increase site_count
-                site_count++;
-            }
-            else {
-                addPattern(pattern, site_count);
-                site_count++;
-            }
-        }
-        else {
-            fails++;
-            if (verbose_mode >= VerboseMode::VB_MAX) {
-                cout << "WARNING: Pattern on line " <<
-                    line_num << " was not added." << endl;
-            }
-        }
-    }
+    countfile.parseData(npop, nnuc, pomo_sampling_method, N,
+                        num_states, STATE_UNKNOWN,
+                        n_samples_sum, n_sites_sum, site_count, fails,
+                        pomo_sampled_states, pomo_sampled_states_index,
+                        su_buffer, su_site_counts,
+                        [this](Pattern& pat, int site) { addPattern(pat, site); });
 
     if (site_count + fails != nsites) {
         err_str << "Number of sites does not match NSITES.";
@@ -3231,8 +3349,9 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
                 if (*sp_it == 0xffffffff) *sp_it = STATE_UNKNOWN;
         }
 
-        for (unsigned int i = 0; i < su_buffer.size(); i++)
-                addPattern(su_buffer[i], su_site_counts[i]);
+        for (unsigned int i = 0; i < su_buffer.size(); i++) {
+            addPattern(su_buffer[i], su_site_counts[i]);
+        }
     }
 
     cout << "---" << endl;
@@ -3259,13 +3378,7 @@ int Alignment::readCountsFormat(const char* filename, const char* sequence_type)
         cout << "may be numerically unstable." << endl << endl;
         cout << "----------------------------------------------------------------------" << endl;
     }
-
     site_pattern.resize(site_count);
-
-    in.clear();
-    // set the failbit again
-    in.exceptions(ios::failbit | ios::badbit);
-    in.close();
 
     return 1;
 }
@@ -3283,8 +3396,10 @@ bool Alignment::getSiteFromResidue(int seq_id, int &residue_left,
             site_right = i + 1;
         }
     }
-    if (site_left < 0 || site_right < 0)
-        cout << "Out of range: Maxmimal residue number is " << j+1 << endl;
+    if (site_left < 0 || site_right < 0) {
+        cout << "Out of range: Maxmimal residue number is " 
+             << j+1 << endl;
+    }
     if (site_left == -1) {
         outError("Left residue range is too high");
     }
@@ -3357,22 +3472,25 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
             }
     }
     if (exclude_sites & EXCLUDE_INVAR) {
-        for (j = 0; j < kept_sites.size(); j++)
-        	if (at(site_pattern[j]).isInvariant())
+        for (j = 0; j < kept_sites.size(); j++) {
+        	if (at(site_pattern[j]).isInvariant()) {
         		kept_sites[j] = 0;
-
+            }
+        }
     }
-
     if (exclude_sites & EXCLUDE_UNINF) {
-        for (j = 0; j < kept_sites.size(); j++)
-            if (!at(site_pattern[j]).isInformative())
+        for (j = 0; j < kept_sites.size(); j++) {
+            if (!at(site_pattern[j]).isInformative()) {
                 kept_sites[j] = 0;
-        
+            }
+        }
     }
-
     int final_length = 0;
-    for (j = 0; j < kept_sites.size(); j++)
-        if (kept_sites[j]) final_length++;
+    for (j = 0; j < kept_sites.size(); j++) {
+        if (kept_sites[j]) {
+            final_length++;
+        }
+    }
     return final_length;
 }
 
@@ -4138,7 +4256,9 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
 void Alignment::createBootstrapAlignment(Alignment *aln,
                                          IntVector* pattern_freq,
                                          const char *spec) {
-    if (aln->isSuperAlignment()) outError("Internal error: ", __func__);
+    if (aln->isSuperAlignment()) {
+        outError("Internal error: ", __func__);
+    }
     name = aln->name;
     model_name = aln->model_name;
     position_spec = aln->position_spec;
@@ -4199,8 +4319,9 @@ void Alignment::createBootstrapAlignment(Alignment *aln,
                 added_sites++;
             }
         }
-        if (added_sites < nsite)
+        if (added_sites < nsite) {
             site_pattern.resize(added_sites);
+        }
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);
@@ -4214,7 +4335,6 @@ void Alignment::createBootstrapAlignment(Alignment *aln,
         if ( site > nsite ) {
             outError("Sum of lengths exceeded alignment length");
         }
-
 		for (int i = 0; i < static_cast<int>(site_vec.size()); ++i) {
 			int part = random_int(static_cast<int>(site_vec.size()));
 			for (int j = 0; j < site_vec[part]; ++j) {
@@ -4251,22 +4371,27 @@ void Alignment::createBootstrapAlignment(Alignment *aln,
     } else {
     	// special bootstrap
     	convert_int_vec(spec, site_vec);
-    	if (site_vec.size() % 2 != 0)
+    	if (site_vec.size() % 2 != 0) {
     		outError("Bootstrap specification length is not divisible by 2");
+        }
     	nsite = 0;
     	int begin_site = 0, out_site = 0;
-    	for (size_t part = 0; part < site_vec.size(); part+=2)
+    	for (size_t part = 0; part < site_vec.size(); part+=2) {
     		nsite += site_vec[part+1];
+        }
     	site_pattern.resize(nsite, -1);
     	for (size_t part = 0; part < site_vec.size(); part+=2) {
-    		if (begin_site + site_vec[part] > aln->getNSite())
+    		if (begin_site + site_vec[part] > aln->getNSite()) {
     			outError("Sum of lengths exceeded alignment length");
+            }
     		for (size_t site = 0; site < site_vec[part+1]; ++site) {
     			int site_id = random_int(site_vec[part]) + begin_site;
     			int ptn_id = aln->getPatternID(site_id);
     			Pattern pat = aln->at(ptn_id);
     			addPattern(pat, static_cast<int>(site + out_site));
-    			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+    			if (pattern_freq) {
+                    ((*pattern_freq)[ptn_id])++;
+                }
     		}
     		begin_site += site_vec[part];
     		out_site += site_vec[part+1];
@@ -4299,8 +4424,9 @@ void Alignment::createBootstrapAlignment(int *pattern_freq,
     intptr_t nsite = getNSite();
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
 	IntVector site_vec;
-    if (Params::getInstance().jackknife_prop > 0.0 && spec)
+    if (Params::getInstance().jackknife_prop > 0.0 && spec) {
         outError((string)"Unsupported jackknife with " + spec);
+    }
 
     if (spec && strncmp(spec, "SCALE=", 6) == 0) {
         // multi-scale bootstrapping called by AU test
@@ -4309,7 +4435,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq,
         nsite = (size_t)round(scale * nsite);
         for (intptr_t site = 0; site < nsite; site++) {
             int site_id = random_int(static_cast<int>(orig_nsite), rstream);
-            int ptn_id = getPatternID(site_id);
+            int ptn_id  = getPatternID(site_id);
             pattern_freq[ptn_id]++;
         }
     } else if (!spec) {
@@ -4394,12 +4520,14 @@ void Alignment::createBootstrapAlignment(int *pattern_freq,
         } catch (...) {
             outError("-bsam not allowed for non-partition model");
         }
-		if (site_vec.size() % 2 != 0)
+		if (site_vec.size() % 2 != 0) {
 			outError("Bootstrap specification length is not divisible by 2");
+        }
 		int begin_site = 0, out_site = 0;
 		for (size_t part = 0; part < site_vec.size(); part += 2) {
-			if (begin_site + site_vec[part] > getNSite())
+			if (begin_site + site_vec[part] > getNSite()) {
 				outError("Sum of lengths exceeded alignment length");
+            }
 			for (size_t site = 0; site < site_vec[part+1]; ++site) {
 				int site_id = random_int(site_vec[part], rstream) + begin_site;
 				int ptn_id = getPatternID(site_id);
@@ -4439,8 +4567,9 @@ void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freq
     	if(new_pattern_freqs[p] > 0){
 	    	Pattern pat = *it;
 			addPattern(pat, site, new_pattern_freqs[p]);
-			for (int j = 0; j < new_pattern_freqs[p]; j++)
+			for (int j = 0; j < new_pattern_freqs[p]; j++) {
 				site_pattern[site++] = static_cast<int>(size())-1;
+            }
     	}
     }
     if (!aln.site_state_freq.empty()) {

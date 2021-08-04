@@ -258,6 +258,9 @@ public:
      * @return 1 on success, 0 on failure
      */
     int readCountsFormat(const char *filename, const char *sequence_type);
+        //Supporting functions
+        void checkForCustomVirtualPopulationSize(const std::string& model_name, int& N);
+        void checkForCustomSamplingMethod(const std::string& model_name, int& N);
 
     /**
             read the alignment in CLUSTAL format
