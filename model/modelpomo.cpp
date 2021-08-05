@@ -1229,7 +1229,8 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
     }
     state = state - num_states;
 
-  bool hypergeometric = (aln->pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_HYPER);
+  bool hypergeometric = (aln->pomo_sampling_method == 
+                         SamplingType::SAMPLING_WEIGHTED_HYPER);
   int nstates = aln->num_states;
   int N       = aln->virtual_pop_size;
 
@@ -1241,7 +1242,8 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
   int j   = (aln->pomo_sampled_states[state] >> 2) & 16383;
   int M   = j + (aln->pomo_sampled_states[state] >> 18);
 
-  // Number of alleles is hard coded here, change if generalization is needed.
+  // Number of alleles is hard coded here, 
+  // change if generalization is needed.
   int nnuc = 4;
 
   // TODO DS: Implement down sampling or a better approach.
@@ -1253,6 +1255,37 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
   // PoMo states can lead to this data.  E.g., even (2A,8T)
   // can lead to a sampled data of 7A.
   if (j == M) {
+    computeTipLikelihoodForFixedState(lh, nnuc, nstates, id1, 
+                                      j, hypergeometric);
+  }
+  // Observed state is polymorphic.  We only need to set the
+  // partial likelihoods for states that are also
+  // polymorphic for the same alleles.  E.g., states of type
+  // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
+  else {
+    computeTipLikelihoodForPolymorphicState(lh, nnuc, nstates, id1, id2, 
+                                            j, M, hypergeometric);
+  }
+
+  // cout << "Sample M,j,id1,id2: " << M << ", " << j << ", " << id1 << ", " << id2 << endl;
+  // cout << "Real partial likelihood vector: ";
+  // for (i=0; i<4; i++)
+  //   cout << real_partial_lh[i] << " ";
+  // cout << endl;
+  // for (i=4; i<nstates; i++) {
+  //   cout << real_partial_lh[i] << " ";
+  //   if ((i-3)%(N-1) == 0)
+  //     cout << endl;
+  // }
+  // double sum = 0.0;
+  // for (i=0; i<nstates; i++)
+  //   sum += real_partial_lh[i];
+  // cout << sum << endl;
+}
+
+void ModelPoMo::computeTipLikelihoodForFixedState
+        (double* lh, int nnuc, int nstates, int id1, int j,
+         bool hypergeometric) {
     lh[id1] = 1.0;
     // Second: Polymorphic states.
     for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
@@ -1298,12 +1331,11 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
         }
       }
     }
-  }
-  // Observed state is polymorphic.  We only need to set the
-  // partial likelihoods for states that are also
-  // polymorphic for the same alleles.  E.g., states of type
-  // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
-  else {
+}
+
+void ModelPoMo::computeTipLikelihoodForPolymorphicState
+        (double* lh, int nnuc, int nstates, int id1, int id2, 
+         int j, int M, bool hypergeometric) {
     int k;
     if (id1 == 0) k = id2 - 1;
     else k = id1 + id2;
@@ -1317,20 +1349,4 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
           lh[real_state] = binomial_dist(j, M, (double)i / (double)N);
       }
     }
-  }
-
-  // cout << "Sample M,j,id1,id2: " << M << ", " << j << ", " << id1 << ", " << id2 << endl;
-  // cout << "Real partial likelihood vector: ";
-  // for (i=0; i<4; i++)
-  //   cout << real_partial_lh[i] << " ";
-  // cout << endl;
-  // for (i=4; i<nstates; i++) {
-  //   cout << real_partial_lh[i] << " ";
-  //   if ((i-3)%(N-1) == 0)
-  //     cout << endl;
-  // }
-  // double sum = 0.0;
-  // for (i=0; i<nstates; i++)
-  //   sum += real_partial_lh[i];
-  // cout << sum << endl;
 }

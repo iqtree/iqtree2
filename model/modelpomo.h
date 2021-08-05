@@ -314,6 +314,13 @@ class ModelPoMo : public ModelMarkov
      @param[out] state_lk state likehood vector of size num_states
      */
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+        //Supporting functions
+        void computeTipLikelihoodForFixedState
+                (double* lh, int nnuc, int nstates, int id1,
+                 int j, bool hypergeometric);
+        void computeTipLikelihoodForPolymorphicState
+                (double* lh, int nnuc, int nstates, int id1, int id2, 
+                 int j, int M, bool hypergeometric);
 
  protected:
 
