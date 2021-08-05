@@ -1005,12 +1005,14 @@ void IQTreeMix::initializeTreeWeights() {
     vector<int> tree_with_min_pars;
     double weight_sum;
     
+    deleteAllPartialLh();
+    
     // compute the parsimony scores along patterns for each tree
     for (i=0; i<ntree; i++) {
         curr_ptn_scores = ptn_scores + i * nptn;
-
         at(i)->initCostMatrix(CM_UNIFORM);
         at(i)->setParsimonyKernel(params->SSE);
+        at(i)->initializeAllPartialPars();
         at(i)->computeTipPartialParsimony();
         at(i)->computeParsimonyOutOfTreeSankoff(curr_ptn_scores);
     }
@@ -1046,16 +1048,25 @@ void IQTreeMix::initializeTreeWeights() {
     for (i=0; i<ntree; i++) {
         weight_sum += weights[i];
     }
-    for (i=0; i<ntree; i++) {
-        weights[i] = weights[i] / weight_sum;
+    if (weight_sum > 0.0) {
+        // there are parsimony informative sites
+        for (i=0; i<ntree; i++) {
+            weights[i] = weights[i] / weight_sum;
+        }
+    } else {
+        // there is no parsimony informative sites
+        for (i=0; i<ntree; i++) {
+            weights[i] = 1.0/ntree;
+        }
     }
-    
+
     // If there are multiple tree weights belonging to the same group
     // set all the tree weights of the same group to their average
     checkWeightGrp();
     
     // show the initial tree weights
     cout << "According to the parsimony scores along the sites, the tree weights are initialized to:";
+
     for (i=0; i<ntree; i++) {
         cout << " " << weights[i];
     }
