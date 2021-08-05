@@ -23,6 +23,16 @@
 #include "tools.h"
 #include "checkpoint.h"
 
+
+class SquareDoubleMatrix: public DoubleMatrix
+{
+public:
+	typedef DoubleMatrix super;
+	SquareDoubleMatrix(int rank);
+	SquareDoubleMatrix(const DoubleMatrix &originalMatrix, int rank);
+	void getPerRowMaximumAbsoluteValues(DoubleVector& rowMaxima) const;
+};
+
 /**
 Stopping rule
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
@@ -171,7 +181,14 @@ private:
 //	int nTime_;
 	DoubleVector time_vec;
 
-	void cmpInvMat (DoubleMatrix &oriMat, DoubleMatrix &invMat, int size);
+	void computeInverseMatrix (const DoubleMatrix &oriMat, DoubleMatrix &invMat, int size);
+		//Supporting functions
+		void computeInverseMatrixPart1(int size, SquareDoubleMatrix& omtrx,
+		                               DoubleVector& wk, IntVector& index);
+		void computeInverseMatrixPart2(int size, const SquareDoubleMatrix& omtrx,
+		                               DoubleVector& wk, IntVector& index,
+									   DoubleMatrix& invMat);
+
 
 	void readMat (char *fileName, DoubleMatrix &oriMat, int &size);
 
