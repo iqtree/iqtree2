@@ -628,6 +628,10 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 */
 void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
 {
+    // show an error if continuous gamma is used in inference mode.
+    if (alisimulator->params->alisim_inference_mode && alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->is_continuous_gamma)
+        outError("Unfortunately, IQ-Tree has not yet supported Continuous Gamma in phylogeny inference. Therefore, users can only use Continuous Gamma in AliSim without Inference Mode.");
+    
     // get variables
     string rate_name = alisimulator->tree->getRateName();
     double invariant_proportion = alisimulator->tree->getRate()->getPInvar();

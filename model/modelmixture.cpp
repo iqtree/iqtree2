@@ -1505,9 +1505,9 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     // cout << endl;
 }
 
-void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
     ASSERT(mixture < getNMixtures());
-    at(mixture)->computeTransMatrix(time, trans_matrix);
+    at(mixture)->computeTransMatrix(time, trans_matrix, 0, selected_row);
 }
 
 void ModelMixture::computeTransDerv(double time, double *trans_matrix,

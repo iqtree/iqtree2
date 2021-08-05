@@ -124,10 +124,11 @@ public:
 		that stores matrix computed before for effiency purpose.
 		@param time time between two events
         @param mixture (optional) class for mixture model
+        @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
 
 	/**
 		Wrapper for computing the transition probability between two states.

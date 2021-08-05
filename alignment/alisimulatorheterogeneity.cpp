@@ -214,7 +214,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
 {    
     // compute the transition matrix
-    model->computeTransMatrix(partition_rate*branch_length*rate, trans_matrix, model_component_index);
+    model->computeTransMatrix(partition_rate*branch_length*rate, trans_matrix, model_component_index, dad_state);
     
     // iteratively select the state, considering it's dad states, and the transition_probability_matrix
     int starting_index = dad_state*max_num_states;

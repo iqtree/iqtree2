@@ -1402,7 +1402,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_dataset_num = 1;
     params.alisim_ancestral_sequence_aln_filepath = NULL;
     params.alisim_ancestral_sequence_name = "";
-    params.alisim_max_rate_categories_for_applying_caching = 5;
+    params.alisim_max_rate_categories_for_applying_caching = 100;
     params.alisim_num_states_morph = 32;
     params.alisim_num_taxa_uniform_start = -1;
     params.alisim_num_taxa_uniform_end = -1;

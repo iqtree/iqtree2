@@ -1468,9 +1468,9 @@ double ModelFactory::computeTrans(double time, int state1, int state2, double &d
     return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
-void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
     if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-        model->computeTransMatrix(time, trans_matrix, mixture);
+        model->computeTransMatrix(time, trans_matrix, mixture, selected_row);
         return;
     }
     int mat_size = model->num_states * model->num_states;
@@ -1479,7 +1479,7 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mix
         // allocate memory for 3 matricies
         double *trans_entry = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-        model->computeTransMatrix(time, trans_entry, mixture);
+        model->computeTransMatrix(time, trans_entry, mixture, selected_row);
         ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
     } else {
         //if (verbose_mode >= VB_MAX)

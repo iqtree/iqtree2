@@ -136,10 +136,11 @@ public:
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
 		@param time time between two events
         @param mixture (optional) class for mixture model
+        @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
 
 
 	/**

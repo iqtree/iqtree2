@@ -468,7 +468,7 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
 
 }
 
-void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
 
     if (!is_reversible) {
         computeTransMatrixNonrev(time, trans_matrix, mixture);
@@ -482,7 +482,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
         double eval_exp[num_states];
         calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
         aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
-                              , inv_eigenvectors_transposed, num_states, trans_matrix);
+                              , inv_eigenvectors_transposed, num_states, trans_matrix, selected_row);
         return;
     } else {
         VectorXd eval_exp(num_states);
@@ -662,9 +662,23 @@ void ModelMarkov::calculateSquareMatrixTranspose(const double* original, int ran
 }
 
 void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const double* rowB
-                                      , const double* matrixCTranspose, int rank,double* dest) {
+                                      , const double* matrixCTranspose, int rank,double* dest, int selected_row) {
     double scratch[rank];
     for (int i=0; i<rank; ++i, matrixA+=rank) {
+        // skip other rows if only a row needs to be computed
+        if (selected_row != -1 && selected_row!=i)
+        {
+            // skip the current row if its index is less than the selected_row
+            if (i < selected_row)
+            {
+                dest += rank;
+                continue;
+            }
+            // otherwise, selected_row > i then break because the selected_row has been already computed
+            else
+                break;
+        }
+        // otherwise, compute all rows
         calculateHadamardProduct(matrixA, rowB, rank, scratch);
         auto rowC = matrixCTranspose;
         for (int j=0; j<rank; ++j, rowC+=rank) {
