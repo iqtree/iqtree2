@@ -230,7 +230,12 @@ class ModelPoMo : public ModelMarkov
      *
      * @param out Output file stream.
      */
-    void report_model_params(ostream &out, bool reset_scale = true);
+    void reportModelParameters(ostream &out, bool reset_scale = true);
+        //Supporting functions
+        void reportRateMatrix             (ostream& out);
+        void reportMutationRateMatrix     (ostream& out);
+        void reportExchangeabilityMatrices(ostream& out);
+        void reportRateHeterozygosity     (ostream& out);
 
     /**
      * Report the state frequencies to the output file stream 'out'.

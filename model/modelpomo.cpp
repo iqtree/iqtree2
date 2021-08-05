@@ -786,8 +786,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
     }
 }
 
-double
-ModelPoMo::estimateEmpiricalWattersonTheta()
+double ModelPoMo::estimateEmpiricalWattersonTheta()
 {
     double theta_p = 0.0;
     int sum_pol = 0;
@@ -858,7 +857,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     return theta_p;
 }
 
-void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
+void ModelPoMo::reportModelParameters(ostream &out, bool reset_scale) {
     if (fixed_model_params) {
         out << "User-defined model parameters." << endl;
     }
@@ -876,124 +875,132 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
 
     // TODO: If verbose, output rate matrix.
     if (verbose_mode >= VerboseMode::VB_MED) {
-        out << "Rate matrix: " << endl;
-        for (int i = 0; i < num_states; i++) {
-            for (int j = 0; j < num_states; j++) {
-                out << setprecision(8);
-                out << setw(8) << rates[i*num_states+j] << " ";
-            }
-            out << endl;
-        }
+        reportRateMatrix(out);
     }
 
-    // Report rates.
-    // Mutation rates.
-    double *rs = NULL;
-    // Exchangeabilities.
-    double *es = NULL;
-    if (is_reversible) {
-        rs = new double[n_connections];
-        es = new double[n_connections];
-    }
-    else if (!is_reversible) {
-        rs = new double[2*n_connections];
-        es = new double[2*n_connections];
-    }
-    else outError("Model has to be either reversible or non-reversible.");
-    rate_matrix_to_rates(mutation_rate_matrix, rs);
-    rate_matrix_to_exchangeabilities(mutation_rate_matrix, es);
+    int vector_size = n_connections * ( is_reversible ? 2 : 1 );
+    DoubleVector rs(vector_size, 0.0); //Mutation Rates
+    DoubleVector es(vector_size, 0.0); //Exchangeabilities
+
+    rate_matrix_to_rates(mutation_rate_matrix, rs.data());
+    rate_matrix_to_exchangeabilities(mutation_rate_matrix, es.data());
     // mutation_model->writeInfo(out);
-    mutation_model->report_rates(out, "Mutation    rates", rs);
-    mutation_model->report_rates(out, "Exchangeabilities", es);
-    delete [] rs;
+    mutation_model->report_rates(out, "Mutation    rates", rs.data());
+    mutation_model->report_rates(out, "Exchangeabilities", es.data());
     // Report stationary frequencies.
     mutation_model->report_state_freqs(out);
 
-  int n = n_alleles;
-  if (!is_reversible) {
-    out << setprecision(5);
-    out << "Mutation rate matrix: " << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            out << setw(8) << mutation_rate_matrix[i*n+j] << " ";
-        }
-      out << endl;
+    if (!is_reversible) {
+        reportMutationRateMatrix( out);
+        reportExchangeabilityMatrices( out);
     }
 
+    reportRateHeterozygosity(out);
+}
+
+void ModelPoMo::reportRateMatrix(ostream &out) {
+    out << "Rate matrix: " << endl;
+    for (int i = 0; i < num_states; i++) {
+        for (int j = 0; j < num_states; j++) {
+            out << setprecision(8);
+            out << setw(8) << rates[i*num_states+j] << " ";
+        }
+        out << endl;
+    }
+}
+
+void ModelPoMo::reportMutationRateMatrix(ostream& out) {
+    out << setprecision(5);
+    out << "Mutation rate matrix: " << endl;
+    for (int i = 0; i < n_alleles; i++) {
+        for (int j = 0; j < n_alleles; j++) {
+            out << setw(8) << mutation_rate_matrix[i*n_alleles+j] << " ";
+        }
+        out << endl;
+    }
+}
+
+void ModelPoMo::reportExchangeabilityMatrices(ostream& out) {
+    int n = n_alleles;
     // Exchangeability matrix.
-    double * e = new double[n_alleles*n_alleles];
-    memcpy(e, mutation_rate_matrix, n_alleles*n_alleles * sizeof (double));
+    DoubleVector e(n*n);     
+    // Reversible part of exchangeability matrix (Q^GTR or Q^REV / PI).
+    DoubleVector r(n*n, 0.0);
+    // Non-reversible part of mutation rate matrix (Q^FLUX / PI).
+    DoubleVector f(n*n, 0.0);
+
+    memcpy(e.data(), mutation_rate_matrix, 
+            n_alleles*n_alleles * sizeof (double));
     double * pi = freq_boundary_states;
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        e[i*n+j] /= pi[j];
-      }
-    }
-    // Reversible part of exchangeability matrix (Q^GTR or Q^REV / PI).
-    double * r = new double[n_alleles*n_alleles];
-    // Non-reversible part of mutation rate matrix (Q^FLUX / PI).
-    double * f = new double[n_alleles*n_alleles];
-    memset(r, 0, n_alleles*n_alleles*sizeof(double));
-    memset(f, 0, n_alleles*n_alleles*sizeof(double));
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        r[i*n+j] = e[i*n+j] + e[j*n+i];
-        r[i*n+j] /= 2.0;
-      }
-    }
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        if (i==j)
-          f[i*n+j] = 0;
-        else {
-          f[i*n+j] = e[i*n+j] - e[j*n+i];
-          f[i*n+j] /= 2.0;
+        for (int j = 0; j < n; j++) {
+            e[i*n+j] /= pi[j];
         }
-      }
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            r[i*n+j] = e[i*n+j] + e[j*n+i];
+            r[i*n+j] /= 2.0;
+        }
+    }
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i==j) {
+                f[i*n+j] = 0;
+            }
+            else {
+                f[i*n+j] = e[i*n+j] - e[j*n+i];
+                f[i*n+j] /= 2.0;
+            }
+        }
     }
 
     out << "Reversible part of the exchangeability matrix:" << endl;
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++)
-        out << setw(8) << r[i*n+j] << " ";
-      out << endl;
+        for (int j = 0; j < n; j++) {
+            out << setw(8) << r[i*n+j] << " ";
+        }
+        out << endl;
     }
+
     out << "Non-reversible part of the exchangeability rate matrix:" << endl;
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++)
-        out << setw(8) << f[i*n+j] << " ";
-      out << endl;
+        for (int j = 0; j < n; j++) {
+            out << setw(8) << f[i*n+j] << " ";
+        }
+        out << endl;
     }
 
     out << setprecision(4);
     out << "Comparison of Frobenius norms." << endl;
-    double frob_norm_e = frob_norm(e, n);
-    double frob_norm_f = frob_norm(f, n);
+    double frob_norm_e = frob_norm(e.data(), n);
+    double frob_norm_f = frob_norm(f.data(), n);
     out << "Exchangeability matrix: " << setw(6) << frob_norm_e << endl;
     out << "Non-reversible part:    " << setw(6) << frob_norm_f << endl;
     out << "Ratio:                  " << setw(6) << frob_norm_f / frob_norm_e << endl;
+}
 
-    delete [] r;
-    delete [] f;
-    delete [] e;
-  }
-
-  // Report heterozygosity.
-  out << setprecision(4);
-  if (!fixed_heterozygosity) {
-    out << "Estimated heterozygosity: " << heterozygosity << endl;
-    if (sampling_method == SamplingType::SAMPLING_WEIGHTED_BINOM)
-      out << "A slight overestimation is expected"
-          << " and an effect of weighted binomial sampling; see manual." << endl;
-  }
-  else if (fixed_heterozygosity_emp)
-    out << "Empirical heterozygosity: " << heterozygosity << endl;
-  else if (fixed_heterozygosity_usr)
-    out << "User-defined heterozygosity: " << heterozygosity << endl;
-  else
-    outError("It is undefined how the heterozygosity was determined.");
-
-  return;
+void ModelPoMo::reportRateHeterozygosity(ostream& out) {
+    // Report heterozygosity.
+    out << setprecision(4);
+    if (!fixed_heterozygosity) {
+        out << "Estimated heterozygosity: " << heterozygosity << endl;
+        if (sampling_method == SamplingType::SAMPLING_WEIGHTED_BINOM) {
+            out << "A slight overestimation is expected"
+                << " and an effect of weighted binomial sampling;"
+                << " see manual." << endl;
+        }
+    }
+    else if (fixed_heterozygosity_emp) {
+        out << "Empirical heterozygosity: " << heterozygosity << endl;
+    } 
+    else if (fixed_heterozygosity_usr) {
+        out << "User-defined heterozygosity: " << heterozygosity << endl;
+    }
+    else {
+        outError("It is undefined how the heterozygosity was determined.");
+    }
 }
 
 void ModelPoMo::rate_matrix_to_exchangeabilities(double *m, double *r) {
@@ -1039,7 +1046,7 @@ void ModelPoMo::report(ostream &out) {
 
   // Model parameters.
   out << "--" << endl;
-  report_model_params(out);
+  reportModelParameters(out);
 
   // Empirical quantities.
   out << "--" << endl;
@@ -1224,22 +1231,23 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
 
   bool hypergeometric = (aln->pomo_sampling_method == SamplingType::SAMPLING_WEIGHTED_HYPER);
   int nstates = aln->num_states;
-  int N = aln->virtual_pop_size;
+  int N       = aln->virtual_pop_size;
 
   memset(lh, 0, sizeof(double)*nstates);
 
   // decode the id and value
   int id1 = aln->pomo_sampled_states[state] & 3;
   int id2 = (aln->pomo_sampled_states[state] >> 16) & 3;
-  int j = (aln->pomo_sampled_states[state] >> 2) & 16383;
-  int M = j + (aln->pomo_sampled_states[state] >> 18);
+  int j   = (aln->pomo_sampled_states[state] >> 2) & 16383;
+  int M   = j + (aln->pomo_sampled_states[state] >> 18);
 
   // Number of alleles is hard coded here, change if generalization is needed.
   int nnuc = 4;
 
   // TODO DS: Implement down sampling or a better approach.
-  if (hypergeometric && M > N)
+  if (hypergeometric && M > N) {
     outError("Down sampling not yet supported.");
+  }
 
   // Check if observed state is a fixed one.  If so, many
   // PoMo states can lead to this data.  E.g., even (2A,8T)
