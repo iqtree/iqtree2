@@ -13,6 +13,7 @@
 #include <map>
 #include <algorithm>
 #include <fstream>
+#include <cmath>
 #include "iqtree.h"
 #include "utils/MPIHelper.h"
 #include "model/modelmarkov.h"
@@ -238,6 +239,11 @@ public:
     vector<double> tmp_weights; // for optimization
     
     /**
+            ratios of parsimony informative sites with max posterior probability for each tree
+     */
+    vector<double> max_posterior_ratio;
+    
+    /**
             pattern likelihoods for all trees
      */
     double* ptn_like_cat;
@@ -277,6 +283,11 @@ private:
             get posterior probabilities along each site for each tree
      */
     void getPostProb(double* pattern_mix_lh, bool need_computeLike);
+    
+    /**
+            compute the ratios of parsimony informative sites with max posterior probability for each tree
+     */
+    void computeMaxPosteriorRatio(double* pattern_mix_lh, bool need_computePostProb, bool need_computeLike);
     
     /**
             optimize each tree separately
@@ -350,8 +361,18 @@ private:
     /**
             number of trees
      */
-    int ntree;
+    size_t ntree;
     
+    /**
+            number of patterns
+     */
+    size_t nptn;
+    
+    /**
+            number of parsimony informative sites
+     */
+    size_t ninformsite;
+
     /**
             initial models
      */
