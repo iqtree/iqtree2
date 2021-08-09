@@ -75,8 +75,9 @@ std::ostream& operator<< (std::ostream& stream, const SymTestResult& res);
 struct hashPattern {
     size_t operator()(const vector<StateType> &sp) const {
         size_t sum = 0;
-        for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
-            sum = (*it) + (sum << 6) + (sum << 16) - sum;
+        for (StateType state : sp ) {
+            sum = state + (sum << 6) + (sum << 16) - sum;
+        }
         return sum;
     }
 };
@@ -123,7 +124,8 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @param intype (OUT) input format of the file
      */
-    Alignment(const char *filename, const char *sequence_type, InputType &intype, string model);
+    Alignment(const char *filename, const char *sequence_type, 
+              InputType& intype, const string& model);
 
     /**
      constructor
@@ -283,6 +285,10 @@ public:
             @param data_block data block of nexus file
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
+        //Supporting function
+        void determineSeqTypeStatesAndSymbols
+                (NxsCharactersBlock::DataTypesEnum data_type, 
+                 NxsCharactersBlock *data_block, char*& symbols);
 
     vector<Pattern> ordered_pattern;
     
@@ -483,7 +489,7 @@ public:
      *            it does not duplicate the name of another sequence; it
      *            is up to the caller to ensure that it does not).
      */
-    void  setSeqName(intptr_t i, string name_to_use);
+    void  setSeqName(intptr_t i, const string& name_to_use);
 
     /**
      *  Get a vector containing all the sequence names
