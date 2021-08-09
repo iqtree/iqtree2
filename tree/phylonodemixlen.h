@@ -111,7 +111,7 @@ public:
         constructor
         @param aid id of this node
      */
-    PhyloNodeMixlen(int aid);
+    explicit PhyloNodeMixlen(int aid);
 
     /**
         constructor

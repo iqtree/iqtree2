@@ -68,7 +68,7 @@ public:
     /**
      constructor
      */
-    PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree = false);
+    explicit PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree = false);
 
     /**
 		constructor

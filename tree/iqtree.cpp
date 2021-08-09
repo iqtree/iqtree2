@@ -147,7 +147,7 @@ void IQTree::saveCheckpoint() {
         // boot_splits
         int id = 0;
         for (vector<SplitGraph*>::iterator sit = boot_splits.begin();
-             sit != boot_splits.end(); sit++, id++) {
+             sit != boot_splits.end(); ++sit, ++id) {
             checkpoint->startStruct("UFBootSplit" + convertIntToString(id));
             (*sit)->saveCheckpoint();
             checkpoint->endStruct();
@@ -544,10 +544,10 @@ void IQTree::createPLLPartition(Params &params,
             SeqType datatype[] = {SeqType::SEQ_DNA, SeqType::SEQ_CODON, SeqType::SEQ_PROTEIN};
             PhyloSuperTree::iterator it;
             
-            for (int i = 0; i < sizeof(datatype)/sizeof(SeqType); i++) {
+            for (int i = 0; i < sizeof(datatype)/sizeof(SeqType); ++i) {
                 bool first = true;
                 intptr_t startPos = 1;
-                for (it = siqtree->begin(); it != siqtree->end(); it++) 
+                for (it = siqtree->begin(); it != siqtree->end(); ++it) 
                     if ((*it)->aln->seq_type == datatype[i]) {
                         if (first) {
                             if (datatype[i] == SeqType::SEQ_DNA ||
@@ -788,8 +788,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         } else {
             setAlignment(aln);
         }
-        if ( params->parsimony_spr_iterations != 0 ||
-             params->parsimony_tbr_iterations != 0 ||
+        if ( params->parsimony_nni_iterations != 0 ||
+             params->parsimony_spr_iterations != 0 ||
              params->parsimony_tbr_iterations != 0 ||
              params->parsimony_hybrid_iterations != 0) {
             optimizeConstructedTree(false, VerboseMode::VB_MIN);
@@ -1160,7 +1160,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.clear();
     
     size_t candidateCount = initTreeStrings.size();
-    bool   sayHowLong     = init_size < initTreeStrings.size() && noisy;
+    bool   sayHowLong     = (init_size < initTreeStrings.size()) && noisy;
     if (sayHowLong) {
         size_t treeCount = initTreeStrings.size() - init_size;
         if (params->compute_likelihood) {
@@ -1399,21 +1399,21 @@ void IQTree::initializeModel(Params &params, string model_name,
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
+                PhyloSuperTree *super_tree = dynamic_cast<PhyloSuperTree*>(this);
                 PartitionModel* new_model;
                 if (params.partition_type == BRLEN_OPTIMIZE ||
                     params.partition_type == TOPO_UNLINKED) {
-                    PhyloSuperTree *tree = (PhyloSuperTree*) this;
-                    new_model = new PartitionModel(params, tree,
+                    new_model = new PartitionModel(params, super_tree,
                                                    models_block, report_to_tree);
                 } else {
-                    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*) this;
+                    PhyloSuperTreePlen *tree = dynamic_cast<PhyloSuperTreePlen*>(this);
                     new_model = new PartitionModelPlen(params, tree,
                                                        models_block, report_to_tree);
                 }
                 setModelFactory(new_model);
                 // mapTrees again in case of different rooting
                 if (root) {
-                    ((PhyloSuperTree*)this)->mapTrees();
+                    super_tree->mapTrees();
                 }
             } else {
                 setModelFactory(new ModelFactory(params, model_name,
@@ -1496,9 +1496,6 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
     RepresentLeafSet* leaves = new RepresentLeafSet;
     RepresentLeafSet* leaves_it[2] = { NULL, NULL };
     leaves_vec[set_id] = leaves;
-    RepresentLeafSet::iterator last;
-    RepresentLeafSet::iterator cur_it;
-    int i, j;
     //double admit_height = 1000000;
 
     leaves->clear();
@@ -1507,7 +1504,8 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
         //node->height = 0.0;
         leaves->insert(new RepLeaf(node, 0));
     } else {
-        for (i = 0, j = 0; i < node->neighbors.size(); i++)
+        int j = 0;
+        for (int i = 0; i < node->neighbors.size(); i++)
             if (node->neighbors[i]->node != dad) {
                 leaves_it[j++] = findRepresentLeaves(leaves_vec, i, node);
             }
@@ -1678,7 +1676,7 @@ int IQTree::assessQuartet(Node *leaf0, Node *leaf1,
 int IQTree::assessQuartetParsimony(Node *leaf0, Node *leaf1,
                                    Node *leaf2, Node *del_leaf) {
     int score[3] = { 0, 0, 0 };
-    for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
+    for (Alignment::iterator it = aln->begin(); it != aln->end(); ++it) {
         char ch0 = (*it)[leaf0->id];
         char ch1 = (*it)[leaf1->id];
         char ch2 = (*it)[leaf2->id];
@@ -1743,14 +1741,13 @@ double IQTree::computePartialBonus(PhyloNode *node, PhyloNode* dad) {
 void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes,
                            NodeVector &best_dads, PhyloNode *node,
                            PhyloNode *dad) {
-    double score;
     if (!node)
         node = getRoot();
     if (!dad) {
         best_score = 0;
     } else {
-        score = computePartialBonus(node, dad)
-              + computePartialBonus(dad, node);
+        double score = computePartialBonus(node, dad)
+                     + computePartialBonus(dad, node);
         if (score >= best_score) {
             if (score > best_score) {
                 best_score = score;
@@ -1780,12 +1777,12 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec,
     // find the representative leaf set for three subtrees
 
     FOR_NEIGHBOR_IT(cur_root, NULL, it){
-    leaves[cnt] = findRepresentLeaves(leaves_vec, cnt, cur_root);
-    ++cnt;
-}
-    for (auto i0 = leaves[0]->begin(); i0 != leaves[0]->end(); i0++) {
-        for (auto i1 = leaves[1]->begin(); i1 != leaves[1]->end(); i1++) {
-            for (auto i2 = leaves[2]->begin(); i2 != leaves[2]->end(); i2++) {
+        leaves[cnt] = findRepresentLeaves(leaves_vec, cnt, cur_root);
+        ++cnt;
+    }
+    for (auto i0 = leaves[0]->begin(); i0 != leaves[0]->end(); ++i0) {
+        for (auto i1 = leaves[1]->begin(); i1 != leaves[1]->end(); ++i1) {
+            for (auto i2 = leaves[2]->begin(); i2 != leaves[2]->end(); ++i2) {
                 int best_id;
                 if (iqp_assess_quartet == IQP_DISTANCE) {
                     best_id = assessQuartet((*i0)->leaf, (*i1)->leaf,
@@ -1828,7 +1825,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         }
         //printTree(cout, WT_BR_LEN | WT_INT_NODE |
         //          WT_TAXON_ID | WT_NEWLINE);
-        for (auto it = nodes.begin(); it != nodes.end(); it++) {
+        for (auto it = nodes.begin(); it != nodes.end(); ++it) {
             assessQuartets(leaves_vec, *it, *it_leaf);
         }
         NodeVector best_nodes, best_dads;
@@ -2057,7 +2054,8 @@ string IQTree::perturbStableSplits(double suppValue) {
     clearAllPartialLH();
 
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        PhyloSuperTree* super_tree = dynamic_cast<PhyloSuperTree*>(this);
+        super_tree->mapTrees();
     }
     if (params->pll) {
         pllReadNewick(getTreeString());
@@ -2122,7 +2120,8 @@ string IQTree::doRandomNNIs(bool storeTabu) {
     setRootNode(params->root);
 
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        PhyloSuperTree* super_tree = dynamic_cast<PhyloSuperTree*>(this);
+        super_tree->mapTrees();
     }
     if (params->pll) {
         pllReadNewick(getTreeString());
@@ -2155,7 +2154,8 @@ void IQTree::doIQP() {
     resetCurScore();
 
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        PhyloSuperTree* super_tree = dynamic_cast<PhyloSuperTree*>(this);
+        super_tree->mapTrees();
     }
 }
 
@@ -2291,9 +2291,8 @@ void IQTree::pllBuildIQTreePatternIndex(){
     for(int i = 0; i < pllAlignment->sequenceCount; i++) {
         pll_aln[i] = new char[pllAlignment->sequenceLength];
     }
-    int pos;
     for(int i = 0; i < pllAlignment->sequenceCount; i++){
-        pos = 0;
+        int pos = 0;
         int num_partitions = pllPartitions->numberOfPartitions;
         for(int model = 0; model < num_partitions; model++){
             auto model_pd = pllPartitions->partitionData[model];
@@ -2574,7 +2573,8 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon,
                            logl_epsilon, 0.0001, this);
         }
         if (isSuperTree()) {
-            ((PhyloSuperTree*) this)->computeBranchLengths();
+            PhyloSuperTree* super_tree = dynamic_cast<PhyloSuperTree*>(this);
+            super_tree->computeBranchLengths();
         }
         if (getModelFactory()->isUnstableParameters() &&
             aln->seq_type != SeqType::SEQ_CODON) {
@@ -2860,7 +2860,8 @@ double IQTree::doTreeSearch() {
             clearAllPartialLH();
         }
         if (isSuperTree()) {
-            ((PhyloSuperTree *) this)->computeBranchLengths();
+            PhyloSuperTree* super_tree = dynamic_cast<PhyloSuperTree*>(this);
+            super_tree->computeBranchLengths();
         }
         /*----------------------------------------
          * Print information
@@ -3180,7 +3181,9 @@ IQTree* IQTree::createBootstrapTree(Alignment* bootstrap_alignment,
 
     // 2019-06-03: bug fix setting part_info properly
     if (boot_tree->isSuperTree()) {
-        ((PhyloSuperTree*)boot_tree)->setPartInfo((PhyloSuperTree*)this);
+        PhyloSuperTree* super_tree      = dynamic_cast<PhyloSuperTree*>(this);
+        PhyloSuperTree* super_boot_tree = dynamic_cast<PhyloSuperTree*>(boot_tree);
+        super_boot_tree->setPartInfo(super_tree);
     }
     // copy model
     // BQM 2019-05-31: bug fix with -bsam option
@@ -3209,7 +3212,9 @@ void IQTree::loadBootstrapTree(const std::string& tree_string,
     
     if (boot_tree->isSuperTree() &&
         params->partition_type == BRLEN_OPTIMIZE) {
-        if (((PhyloSuperTree*)boot_tree)->size() > 1) {
+        PhyloSuperTree* super_boot_tree = dynamic_cast<PhyloSuperTree*>(boot_tree);
+
+        if (super_boot_tree->size() > 1) {
             // re-initialize branch lengths for unlinked model
             boot_tree->wrapperFixNegativeBranch(true);
         }
@@ -3431,7 +3436,8 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         if ( noisy && verbose_mode >= VerboseMode::VB_DEBUG ) {
             LOG_LINE(VerboseMode::VB_DEBUG, "Doing NNI round " << numSteps);
             if (isSuperTree()) {
-                ((PhyloSuperTree*) this)->printMapInfo();
+                PhyloSuperTree* super_tree = dynamic_cast<PhyloSuperTree*>(this);
+                super_tree->printMapInfo();
             }
         }
 
@@ -3907,8 +3913,9 @@ void IQTree::evaluateNNIs(Branches &nniBranches,
     double previous_score = curScore;
     for (auto it = nniBranches.begin();
          it != nniBranches.end(); it++) {
-        PhyloNode* node1 = (PhyloNode*)it->second.first;
-        PhyloNode* node2 = (PhyloNode*)it->second.second;
+        PhyloBranch b(it->second);
+        PhyloNode* node1 = b.first;
+        PhyloNode* node2 = b.second;
         NNIMove    nni   = getBestNNIForBran(node1, node2, nullptr);
         if (nni.newloglh > previous_score) {
             positiveNNIs.push_back(nni);

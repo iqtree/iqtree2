@@ -372,7 +372,7 @@ public:
      * Constructor with given alignment
      * @param alignment
      */
-    PhyloTree(Alignment *aln);
+    explicit PhyloTree(Alignment *aln);
 
     /**
      *  Create a phylotree from the tree string and assign alignment.
