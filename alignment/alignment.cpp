@@ -4862,55 +4862,18 @@ void Alignment::generateUninfPatterns(StateType repeat,
 }
 
 void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
-                                           vector<Pattern> &unobserved_ptns) {
+                                           vector<Pattern>& unobserved_ptns) {
     switch (ASC_type) {
         case ASCType::ASC_NONE: 
             break;
         case ASCType::ASC_VARIANT: 
-            // Lewis's correction for variant sites
-            unobserved_ptns.reserve(num_states);
-            for (StateType state = 0; state < (StateType)num_states; state++) {
-                if (!isStopCodon(state)) {
-                    Pattern pat;
-                    pat.resize(getNSeq(), state);
-                    if (pattern_index.find(pat) == pattern_index.end()) {
-                        // constant pattern is unobserved
-                        unobserved_ptns.push_back(pat);
-                    }
-                }
-            }
+            getUnobservedConstPatternsLewis(unobserved_ptns);
             break;
         case ASCType::ASC_VARIANT_MISSING:
-            {
-                // Holder's correction for variant sites with missing data
-                intptr_t orig_nptn     = getNPattern();
-                intptr_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
-                unobserved_ptns.reserve(max_orig_nptn*num_states);
-                intptr_t nseq = getNSeq();
-                for (StateType state = 0; static_cast<int>(state) < num_states; state++) {
-                    for (intptr_t ptn = 0; ptn < max_orig_nptn; ptn++) {
-                        Pattern new_ptn;
-                        if (ptn < orig_nptn) {
-                            new_ptn.reserve(nseq);
-                            for (auto state_ptn: at(ptn)) {
-                                if (static_cast<int>(state_ptn) < num_states) {
-                                    new_ptn.push_back(state);
-                                }
-                                else {
-                                    new_ptn.push_back(STATE_UNKNOWN);
-                                }
-                            }
-                        } 
-                        else {
-                            new_ptn.resize(nseq, STATE_UNKNOWN);
-                        }
-                        unobserved_ptns.push_back(new_ptn);
-                    }
-                }
-            }
+            getUnobservedConstPatternsHolder(unobserved_ptns);
             break;
-
         case ASCType::ASC_INFORMATIVE: 
+            getUnobservedConstPatternsHolderForInformativeSites(unobserved_ptns);
             // Holder correction for informative sites
             for (StateType repeat = 0; static_cast<int>(repeat) < num_states; repeat++) {
                 vector<StateType> rest;
@@ -4939,6 +4902,53 @@ void Alignment::getUnobservedConstPatterns(ASCType ASC_type,
             ASSERT(0 && "Not supported yet");
             break;
     }
+}
+
+void Alignment::getUnobservedConstPatternsLewis(vector<Pattern>& unobserved_ptns) {
+    // Lewis's correction for variant sites
+    unobserved_ptns.reserve(num_states);
+    for (StateType state = 0; state < (StateType)num_states; state++) {
+        if (!isStopCodon(state)) {
+            Pattern pat;
+            pat.resize(getNSeq(), state);
+            if (pattern_index.find(pat) == pattern_index.end()) {
+                // constant pattern is unobserved
+                unobserved_ptns.push_back(pat);
+            }
+        }
+    }    
+}
+
+void Alignment::getUnobservedConstPatternsHolder(vector<Pattern>& unobserved_ptns) {
+    // Holder's correction for variant sites with missing data
+    intptr_t orig_nptn     = getNPattern();
+    intptr_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+    unobserved_ptns.reserve(max_orig_nptn*num_states);
+    intptr_t nseq = getNSeq();
+    for (StateType state = 0; static_cast<int>(state) < num_states; state++) {
+        for (intptr_t ptn = 0; ptn < max_orig_nptn; ptn++) {
+            Pattern new_ptn;
+            if (ptn < orig_nptn) {
+                new_ptn.reserve(nseq);
+                for (auto state_ptn: at(ptn)) {
+                    if (static_cast<int>(state_ptn) < num_states) {
+                        new_ptn.push_back(state);
+                    }
+                    else {
+                        new_ptn.push_back(STATE_UNKNOWN);
+                    }
+                }
+            } 
+            else {
+                new_ptn.resize(nseq, STATE_UNKNOWN);
+            }
+            unobserved_ptns.push_back(new_ptn);
+        }
+    }
+}
+
+void Alignment::getUnobservedConstPatternsHolderForInformativeSites
+        (vector<Pattern>& unobserved_ptns) {
 }
 
 int Alignment::countProperChar(int seq_id) const {

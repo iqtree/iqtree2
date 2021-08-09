@@ -948,6 +948,10 @@ public:
      * @param[out] unobserved_ptns unobserved constant patterns, each entry encoding for one constant character
      */
     void getUnobservedConstPatterns(ASCType ASC_type, vector<Pattern> &unobserved_ptns);
+        //Supporting functions
+        void getUnobservedConstPatternsLewis(vector<Pattern> &unobserved_ptns);
+        void getUnobservedConstPatternsHolder(vector<Pattern> &unobserved_ptns);
+        void getUnobservedConstPatternsHolderForInformativeSites(vector<Pattern> &unobserved_ptns);
 
     /**
             @return the number of ungappy and unambiguous characters from a sequence
