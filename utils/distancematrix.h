@@ -394,8 +394,9 @@ template <class F=std::stringstream, class M> intptr_t loadPartialRowFromLine
     return c;
 }
 
-template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFile
-    (F& in, bool reportProgress, M& matrix) {
+template <class F=std::stringstream, class M> 
+    void loadDistanceMatrixFromOpenFile
+        (F& in, bool reportProgress, M& matrix) {
     intptr_t rank;
     bool lower  = false;
     bool upper  = false;
@@ -472,7 +473,7 @@ template <class F=std::stringstream, class M> void loadDistanceMatrixFromOpenFil
 }
 
 template <class M> bool loadDistanceMatrixInto
-    (const std::string distanceMatrixFilePath, 
+    (const std::string& distanceMatrixFilePath, 
      bool reportProgress, M& matrix) {        
     #if USE_GZSTREAM
     igzstream     in;

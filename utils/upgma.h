@@ -114,8 +114,8 @@ public:
     T        value;
     size_t   imbalance;
     Position() : row(0), column(0), value(0), imbalance(0) {}
-    Position(size_t r, size_t c, T v, size_t imbalance)
-        : row(r), column(c), value(v) {}
+    Position(size_t r, size_t c, T v, size_t imbalance_val)
+        : row(r), column(c), value(v), imbalance(imbalance_val) {}
     Position& operator = (const Position &rhs) {
         row       = rhs.row;
         column    = rhs.column;

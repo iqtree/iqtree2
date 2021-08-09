@@ -42,9 +42,8 @@ template <class T=double> struct Link {
 public:
     size_t  clusterIndex;
     T       linkDistance;
-    Link(size_t index, T distance) {
-        clusterIndex = index;
-        linkDistance = distance;
+    Link(size_t index, T distance) 
+        : clusterIndex(index), linkDistance(distance) {
     }
 };
 
@@ -62,9 +61,8 @@ public:
     std::vector<Link<T>> links;
     Cluster(): countOfExteriorNodes(0) {
     }
-    explicit Cluster(const std::string &taxon_name) {
-        countOfExteriorNodes = 1;
-        name = taxon_name;
+    explicit Cluster(const std::string &taxon_name)
+        : countOfExteriorNodes(1), name(taxon_name) {
     }
 };
 

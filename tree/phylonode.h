@@ -52,7 +52,7 @@ template <class T> class track_nulled_ptr {
     public:
         template <class T2> friend void aligned_free(track_nulled_ptr<T2>&);
         track_nulled_ptr()           { value = nullptr; }
-        track_nulled_ptr(const T* v) { value = v; }
+        explicit track_nulled_ptr(const T* v) { value = v; }
         operator T*     ()           { return value; }
         track_nulled_ptr& operator=(T* v) {
             if (v==nullptr && value!=nullptr) {
@@ -95,7 +95,7 @@ public:
         constructor
         @param aid id of this node
      */
-    PhyloNode(int aid);
+    explicit PhyloNode(int aid);
 
     /**
         constructor
@@ -438,19 +438,19 @@ public:
         public:
             typedef typename super::iterator::difference_type step;
             iterator() : super::iterator() {}
-            iterator( typename super::iterator i) : super::iterator(i) {}
+            explicit iterator( typename super::iterator i) : super::iterator(i) {}
             T* operator*()  { return dynamic_cast<T*> ( super::iterator::operator*() ); }
-            iterator& operator+=(step move) { super::iterator::operator+=(move); return *this; }
-            iterator  operator+(step move)  { return super::iterator::operator+(move);}
+            iterator& operator+=(step move) { super::iterator::operator+=(move); return *this;   }
+            iterator  operator+(step move)  { return iterator(super::iterator::operator+(move)); }
     };
     class const_iterator: public super::const_iterator {
         public:
             typedef typename super::const_iterator::difference_type step;
             const_iterator() : super::const_iterator() {}
-            const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
+            explicit const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
             T* operator*() { return dynamic_cast<T*>( super::const_iterator::operator*() ); }
             const_iterator& operator+=(step move) { super::const_iterator::operator+=(move); return *this; }
-            const_iterator  operator+(step move) { return super::iterator::operator+(move);  }
+            const_iterator  operator+(step move) { return iterator(super::iterator::operator+(move));  }
     };
     iterator begin() { return iterator( super::begin() ); }
     iterator end()   { return iterator( super::end() ); }
@@ -478,7 +478,7 @@ struct PhyloBranch: public pair<PhyloNode*, PhyloNode*> {
     typedef pair<PhyloNode*, PhyloNode*> super;
     PhyloBranch();
     PhyloBranch(PhyloNode* left, PhyloNode* right);
-    PhyloBranch(const Branch& copyMe );
+    explicit PhyloBranch(const Branch& copyMe );
     int getBranchID() const;
     PhyloNeighbor* getLeftNeighbor()  const;
     PhyloNeighbor* getRightNeighbor() const;

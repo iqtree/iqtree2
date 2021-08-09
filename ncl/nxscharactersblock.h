@@ -386,7 +386,6 @@ inline unsigned NxsCharactersBlock::GetCharPos(
   unsigned origCharIndex)	/* original index of character in range [0..`ncharTotal' - 1) */
 	{
 	assert(charPos);
-	assert(origCharIndex >= 0);
 	assert(origCharIndex < ncharTotal);
 
 	return charPos[origCharIndex];
@@ -587,12 +586,11 @@ inline char NxsCharactersBlock::GetState(
   unsigned k)	/* the 0-offset index of the state to return */
 	{
 	assert(symbols);
-	char state_char = '\0';
 
 	//unsigned symbolsLen = strlen(symbols);
 	unsigned p = matrix->GetState(i, j, k);
 	assert(p < strlen(symbols));
-	state_char = *(symbols + p);
+	char state_char = *(symbols + p);
 
 	return state_char;
 	}
@@ -631,7 +629,6 @@ inline void NxsCharactersBlock::IncludeCharacter(
 inline bool NxsCharactersBlock::IsActiveChar(
   unsigned j)	/* the character in question, in the range [0..`nchar') */
 	{
-	assert(j >= 0);
 	assert(j < nchar);
 
 	return activeChar[j];
@@ -644,7 +641,6 @@ inline bool NxsCharactersBlock::IsActiveChar(
 inline bool NxsCharactersBlock::IsActiveTaxon(
   unsigned i)	/* the taxon in question, in the range [0..`ntax') */
 	{
-	assert(i >= 0);
 	assert(i < ntax);
 
 	return activeTaxon[i];
@@ -765,9 +761,7 @@ inline void NxsCharactersBlock::ShowStates(
   unsigned i,	/* the (0-offset) index of the taxon in question */
   unsigned j)	/* the (0-offset) index of the character in question */
 	{
-	assert(i >= 0);
 	assert(i < ntax);
-	assert(j >= 0);
 	assert(j < nchar);
 	assert(matrix);
 

@@ -31,7 +31,9 @@
 #include "tree/parstree.h"
 
 void doParsMultiState(Params &params) {
-    Alignment alignment(params.aln_file, params.sequence_type, params.intype, "");
+    std::string dummy_model;
+    Alignment alignment(params.aln_file, params.sequence_type, 
+                        params.intype, dummy_model);
     alignment.orderPatternByNumChars(PAT_VARIANT);
     ParsTree pars_tree;
     pars_tree.readTree(params.user_file.c_str(), params.is_rooted);

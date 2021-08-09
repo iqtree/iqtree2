@@ -152,7 +152,7 @@ void pllGetAllInBranForSubtree(pllInstance *tr, nodeptr p, vector<nodeptr> &bran
 
 double pllPerturbTree(pllInstance *tr, partitionList *pr, vector<pllNNIMove> &nnis) {
 	//printf("Perturbing %d NNIs \n", numNNI);
-	for (vector<pllNNIMove>::iterator it = nnis.begin(); it != nnis.end(); it++) {
+	for (vector<pllNNIMove>::iterator it = nnis.begin(); it != nnis.end(); ++it) {
 		printf("Do pertubing NNI (%d - %d) with logl = %10.4f \n", (*it).p->number, (*it).p->back->number, (*it).likelihood);
 		doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
 		updateBranchLengthForNNI(tr, pr, (*it));

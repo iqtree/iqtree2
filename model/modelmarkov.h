@@ -60,7 +60,7 @@ public:
         @param reversible TRUE (default) for reversible model, FALSE for non-reversible
         @param adapt_tree TRUE (default) to convert rooted<->unrooted tree
 	*/
-    ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
+    explicit ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
 
 	void setNumberOfStates(int states);
 

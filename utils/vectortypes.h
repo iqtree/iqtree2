@@ -56,14 +56,16 @@ public:
     
     class const_iterator: public super::const_iterator {
         public:
-            const_iterator( typename super::const_iterator i) : super::const_iterator(i) {};
+            explicit const_iterator( typename super::const_iterator i) 
+                : super::const_iterator(i) {};
             inline T operator*() { return super::const_iterator::operator*(); }
     };
 
     class iterator : public super::iterator {
         public:
-            iterator( typename super::iterator i) : super::iterator(i) {};
-            inline T operator*() { return super::iterator::operator*(); }
+            explicit iterator( typename super::iterator i) 
+                : super::iterator(i) {};
+            inline T operator*() { return T(super::iterator::operator*()); }
     };
     
     const_iterator begin() const { return const_iterator ( super::begin() ); }
@@ -71,7 +73,7 @@ public:
     const_iterator end()   const { return const_iterator ( super::end() ); }
     iterator       end()         { return iterator( super::end() ); }
     inline T operator[] (typename super::size_type i) const {
-        return super::operator[] (i);
+        return T(super::at(i));
     }
     
     class reference {
@@ -81,7 +83,7 @@ public:
         public:
             reference(S& vector, size_type index):
                 to_vector(vector), at_index(index) {}
-            operator T() { return to_vector[at_index]; }
+            operator T() { return T(to_vector[at_index]); }
             reference& operator= (const T new_value) {
                 to_vector[at_index] = new_value;
                 return *this;
@@ -114,8 +116,8 @@ class StrVector: public std::vector<std::string> {
 public:
     typedef std::vector<std::string> super;
     StrVector() = default;
-    StrVector(size_t size);
     StrVector(const StrVector&) = default;
+    explicit StrVector(size_t size);
     ~StrVector() = default;
 
     template <int COUNT> StrVector& appendLiterals(const char* (&literals)[COUNT], 

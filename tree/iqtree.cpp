@@ -3464,7 +3464,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
             filterNNIBranches(appliedNNIs, filteredNNIBranches);
             for (auto it = filteredNNIBranches.begin();
                  it != filteredNNIBranches.end(); ++it) {
-                PhyloBranch    curBranch = it->second;
+                PhyloBranch    curBranch(it->second);
                 PhyloNeighbor* nei       = curBranch.getLeftNeighbor();
                 Split*         curSplit  = nei->split;
                 bool           tabu      = false;
