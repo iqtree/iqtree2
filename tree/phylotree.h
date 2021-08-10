@@ -158,8 +158,8 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 typedef std::map< string, double > StringDoubleMap;
 typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
-#define DUMMY_NODE_1 ((PhyloNode*)1)
-#define DUMMY_NODE_2 ((PhyloNode*)2)
+#define DUMMY_NODE_1 (reinterpret_cast<PhyloNode*>(intptr_t(1)))
+#define DUMMY_NODE_2 (reinterpret_cast<PhyloNode*>(intptr_t(2)))
 
 /*
 #define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES> >

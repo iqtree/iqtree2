@@ -117,7 +117,7 @@ public:
         constructor
         @param aid id of this node
     */
-    SuperNode(int aid);
+    explicit SuperNode(int aid);
 
     /**
         constructor
@@ -165,7 +165,8 @@ typedef SubclassPointerVector<SuperNeighbor, NeighborVec> SuperNeighborVec;
 class SuperBranch : public pair<SuperNode*, SuperNode*> {
 public:
     typedef pair<SuperNode*, SuperNode*> super;
-    SuperBranch(Node* a, Node* b) : super( (SuperNode*)a, (SuperNode*)b ) {
+    SuperBranch(Node* a, Node* b) : 
+        super( dynamic_cast<SuperNode*>(a), dynamic_cast<SuperNode*>(b) ) {
     }
     inline SuperNeighbor* lookingLeft()  const { return second->findNeighbor(first); }
     inline SuperNeighbor* lookingRight() const { return first->findNeighbor(second); }

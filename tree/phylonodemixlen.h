@@ -29,7 +29,7 @@ public:
      */
     PhyloNeighborMixlen(Node *anode, double alength, int aid = -1);
 
-    PhyloNeighborMixlen(Node *anode, DoubleVector &alength, int aid = -1);
+    PhyloNeighborMixlen(Node *anode, const DoubleVector& alength, int aid = -1);
 
     PhyloNeighborMixlen(const PhyloNeighborMixlen &nei);
     

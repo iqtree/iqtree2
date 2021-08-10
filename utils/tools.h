@@ -2800,13 +2800,12 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
 
   uint32_t bitCount = 0;
   uint32_t i, j;
-  uint64_t count1, count2, half1, half2, acc;
-  uint64_t x;
+  uint64_t count1, count2, half1, half2;
   uint32_t limit30 = size - size % 30;
 
   // 64-bit tree merging (merging3)
   for (i = 0; i < limit30; i += 30, data += 30) {
-    acc = 0;
+    uint64_t acc = 0;
     for (j = 0; j < 30; j += 3) {
       count1  =  data[j];
       count2  =  data[j+1];
@@ -2833,7 +2832,7 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
   // the code uses wikipedia's 64-bit popcount_3() implementation:
   // http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
   for (i = 0; i < size - limit30; ++i) {
-    x = data[i];
+    uint64_t x = data[i];
     x =  x       - ((x >> 1)  & m1);
     x = (x & m2) + ((x >> 2)  & m2);
     x = (x       +  (x >> 4)) & m4;

@@ -43,7 +43,7 @@ public:
     Node *leaf;
     int height;
 
-    RepLeaf(Node *aleaf, int aheight = 0) {
+    explicit RepLeaf(Node *aleaf, int aheight = 0) {
         leaf = aleaf;
         height = aheight;
     }
@@ -65,7 +65,7 @@ struct IntBranchInfo {
     double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
 };
 
-inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
+inline int int_branch_cmp(const IntBranchInfo &a, const IntBranchInfo &b) {
     return (a.lh_contribution < b.lh_contribution);
 }
 
@@ -85,7 +85,7 @@ public:
      */
     IQTree();
 
-    IQTree(Alignment *aln);
+    explicit IQTree(Alignment *aln);
 
 //    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

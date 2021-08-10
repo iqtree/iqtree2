@@ -61,7 +61,7 @@ int PhyloTree::doParsimonySearch(ParsimonySearchParameters& s) {
     //     costs is surprisingly expensive).
     //
     
-    initProgress(work_estimate, task_name.c_str(), "", "");
+    initProgress(work_estimate, task_name, "", "");
 
     s.overall.start();
     s.initializing.start();
@@ -138,7 +138,8 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                 LOG_LINE(VerboseMode::VB_MIN, "Before doing (up to) "
                          << s.iterations << " rounds of parsimony " << s.name << ","
                          << " parsimony score was " << parsimony_score);
-            } else if (!s.be_quiet) {
+            } 
+            else {
                 LOG_LINE(VerboseMode::VB_MIN, 
                          "Applied " << moves_applied << " move"
                          << ((1==moves_applied) ? "" : "s")

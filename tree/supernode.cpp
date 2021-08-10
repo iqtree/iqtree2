@@ -31,30 +31,30 @@ SuperNeighbor::SuperNeighbor(const SuperNeighbor &nei) : PhyloNeighbor(nei) {
 }
 
 SuperNode* SuperNeighbor::getNode() const {
-    return (SuperNode*)node;
+    return dynamic_cast<SuperNode*>(node);
 }
 
 SuperNeighbor* SuperNode::findNeighbor(Node* node) {
-	return (SuperNeighbor*)Node::findNeighbor(node);
+	return dynamic_cast<SuperNeighbor*>(Node::findNeighbor(node));
 }
 
 SuperNeighbor* SuperNode::firstNeighbor() const {
     if (neighbors.size() == 0) {
         return nullptr;
     }
-    return (SuperNeighbor*)neighbors[0];
+    return dynamic_cast<SuperNeighbor*>(neighbors[0]);
 }
 
 SuperNeighbor* SuperNode::lastNeighbor() const {
     if (neighbors.size() == 0) {
         return nullptr;
     }
-    return (SuperNeighbor*) neighbors[neighbors.size()-1];
+    return dynamic_cast<SuperNeighbor*>(neighbors[neighbors.size()-1]);
 }
 
 SuperNeighbor* SuperNode::getNeighborByIndex(size_t index) {
 	ASSERT(index < neighbors.size());
-	return (SuperNeighbor*)neighbors[index];
+	return dynamic_cast<SuperNeighbor*>(neighbors[index]);
 }
 
 

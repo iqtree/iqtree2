@@ -14,9 +14,8 @@ PhyloNeighborMixlen::PhyloNeighborMixlen
 }
 
 PhyloNeighborMixlen::PhyloNeighborMixlen
-	( Node *anode, DoubleVector &alength, int aid) 
-	: PhyloNeighbor(anode, -1.0, aid) {
-	lengths = alength;
+	( Node *anode, const DoubleVector& alength, int aid) 
+	: PhyloNeighbor(anode, -1.0, aid), lengths(alength) {
 	if (!lengths.empty()) {
 		length = 0.0;
 		for (int i = 0; i < lengths.size(); i++) {
@@ -27,8 +26,8 @@ PhyloNeighborMixlen::PhyloNeighborMixlen
 }
 
 PhyloNeighborMixlen::PhyloNeighborMixlen
-	( const PhyloNeighborMixlen &nei ) : PhyloNeighbor(nei) {
-	lengths = nei.lengths;
+	( const PhyloNeighborMixlen &nei ) 
+		: PhyloNeighbor(nei), lengths(nei.lengths) {
 }
     
 PhyloNeighborMixlen* PhyloNeighborMixlen::newNeighbor() const {
@@ -85,7 +84,7 @@ void PhyloNeighborMixlen::setLength
 }
 
 PhyloNodeMixlen* PhyloNeighborMixlen::getNode() const {
-	return (PhyloNodeMixlen*)node;
+	return dynamic_cast<PhyloNodeMixlen*>(node);
 }
     
 PhyloNodeMixlen::PhyloNodeMixlen() 
@@ -124,7 +123,7 @@ PhyloNeighborMixlen* PhyloNodeMixlen::firstNeighbor() const {
 	if (neighbors.empty()) {
 		return nullptr;
 	}
-	return (PhyloNeighborMixlen*)neighbors[0];
+	return dynamic_cast<PhyloNeighborMixlen*>(neighbors[0]);
 }
 
  PhyloNeighborMixlen* PhyloNodeMixlen::findNeighbor(PhyloNodeMixlen* node) const {

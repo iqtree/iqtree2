@@ -68,7 +68,7 @@ public:
 
     CandidateSet();
 
-	CandidateSet(int maxSize);
+	explicit CandidateSet(int maxSize);
 
     /**
      *  Replace the current candidate trees by those in another candidate set

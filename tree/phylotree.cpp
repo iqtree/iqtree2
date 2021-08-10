@@ -6308,7 +6308,7 @@ void PhyloTree::showNoProgress() {
     
 PhyloNode* PhyloTree::findFarthestLeaf(PhyloNode *node,
                                        PhyloNode *dad) {
-    return (PhyloNode*) super::findFarthestLeaf(node, dad);
+    return dynamic_cast<PhyloNode*>(super::findFarthestLeaf(node, dad));
 }
 
 void PhyloTree::computePatternPacketBounds(int v_size, int threads, int packets,

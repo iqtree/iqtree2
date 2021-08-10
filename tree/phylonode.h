@@ -17,13 +17,13 @@
 
 #define FOR_EACH_ADJACENT_PHYLO_NODE(mynode, mydad, it, mychild) \
     for (PhyloNode* mychild=nullptr, *child2x=(mynode); child2x!=nullptr; child2x=nullptr) \
-        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-            if ((mychild = (PhyloNode*)(*it)->node ) && mychild != (mydad) )
+        for (auto it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+            if ((mychild = dynamic_cast<PhyloNode*>((*it)->node)) && mychild != (mydad) )
 
 #define FOR_EACH_PHYLO_NEIGHBOR(mynode, mydad, it, nei) \
-    for (PhyloNeighbor* nei=nullptr, *nei2x=((PhyloNode*)(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
-        for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-                if ((nei = (PhyloNeighbor*)(*it)) && nei->getNode() != (mydad) )
+    for (PhyloNeighbor* nei=nullptr, *nei2x=(dynamic_cast<PhyloNode*>(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
+        for (auto it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
+                if ((nei = dynamic_cast<PhyloNeighbor*>(*it)) && nei->getNode() != (mydad) )
 
 #define GET_OTHER_ADJACENT_PHYLO_NODES(node, dad, child_one, child_two) \
 if (1) { \
@@ -318,7 +318,7 @@ public:
     }
     
     PhyloNode* getNode() const {
-        return (PhyloNode*)node;
+        return dynamic_cast<PhyloNode*>(node);
     }
     
     bool isLikelihoodComputed() const;

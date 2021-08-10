@@ -311,7 +311,7 @@ public:
         constructor
         @param aid id of this node
      */
-    Node(int aid);
+    explicit Node(int aid);
 
     /**
         constructor
@@ -504,16 +504,16 @@ public:
     some macros to transverse neighbors of a node
  */
 #define FOR_NEIGHBOR(mynode, mydad, it) \
-	for (it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); it++) \
+	for (it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
 		if ((*it)->node != (mydad))
 
 #define FOR_NEIGHBOR_IT(mynode, mydad, it) \
-	for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); it++) \
+	for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
 		if ((*it)->node != (mydad))
 
 #define FOR_NEIGHBOR_DECLARE(mynode, mydad, it) \
 	NeighborVec::iterator it; \
-	for (it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); it++) \
+	for (it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
 		if ((*it)->node != (mydad))
 
 #define FOR_EACH_ADJACENT_NODE(mynode, mydad, it, mychild) \
