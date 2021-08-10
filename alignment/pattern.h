@@ -74,7 +74,7 @@ public:
     /**
      constructor
      */
-    Pattern(int nseq, int freq = 1);
+    explicit Pattern(int nseq, int freq = 1);
 
     Pattern(const Pattern &pat);
 

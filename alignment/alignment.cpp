@@ -2427,7 +2427,6 @@ int Alignment::readPhylipSequential(const char *filename,
                                     const char *sequence_type) {
 
     StrVector sequences;
-    ostringstream err_str;
     igzstream in;
     int line_num = 1;
     // set the failbit and badbit
@@ -2492,7 +2491,6 @@ int Alignment::readPhylipSequential(const char *filename,
 
 int Alignment::readFasta(const char *filename, const char *sequence_type) {
     StrVector sequences;
-    ostringstream err_str;
     igzstream in;
 
     // PoMo with Fasta files is not supported yet.
@@ -3198,7 +3196,7 @@ void Alignment::checkForCustomVirtualPopulationSize
         try {
             N = convert_int(model_name.substr(n_pos_start+2,length).c_str());
         }
-        catch (string str) {
+        catch (string& str) {
             cout << "The model string is faulty." << endl;
             cout << "The virtual population size N";
             cout << " is not clear when reading in data." << endl;
@@ -6260,14 +6258,13 @@ void Alignment::convfreq(double *stateFrqArr) {
         return;
     }
 	int i, maxi=0;
-	double freq, maxfreq, sum;
+	double maxfreq, sum;
 	int zero_states = 0;
 
 	sum = 0.0;
 	maxfreq = 0.0;
-	for (i = 0; i < num_states; ++i)
-	{
-		freq = stateFrqArr[i];
+	for (i = 0; i < num_states; ++i) {
+		double freq = stateFrqArr[i];
         // Do not check for a minimum frequency with PoMo because very
         // low frequencies are expected for polymorphic sites.
 		if ((freq < Params::getInstance().min_state_freq) &&
@@ -6278,7 +6275,6 @@ void Alignment::convfreq(double *stateFrqArr) {
 			maxfreq = freq;
 			maxi = i;
 		}
-
 		sum += stateFrqArr[i];
 	}
 	stateFrqArr[maxi] += 1.0 - sum;
@@ -6360,7 +6356,6 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob) {
     double sumFac  = 0;
     double sumProb = 0;
     double fac     = logFac(nsite);
-    int index;
     for ( iterator it = begin(); it != end() ; it++) {
         PatternIntMap::iterator pat_it = refAlign.pattern_index.find((*it));
         if ( pat_it == refAlign.pattern_index.end() ) { //not found ==> error
@@ -6368,7 +6363,7 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob) {
                      " is not found in the reference alignment!");
     }
         sumFac += logFac((*it).frequency);
-        index = pat_it->second;
+        int index = pat_it->second;
         sumProb += (double)(*it).frequency*log((double)refAlign.at(index).frequency/(double)nsite);
     }
     prob = fac - sumFac + sumProb;
