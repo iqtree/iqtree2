@@ -664,26 +664,30 @@ void ModelMarkov::calculateSquareMatrixTranspose(const double* original, int ran
 void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const double* rowB
                                       , const double* matrixCTranspose, int rank,double* dest, int selected_row) {
     double scratch[rank];
-    for (int i=0; i<rank; ++i, matrixA+=rank) {
-        // skip other rows if only a row needs to be computed
-        if (selected_row != -1 && selected_row!=i)
-        {
-            // skip the current row if its index is less than the selected_row
-            if (i < selected_row)
-            {
-                dest += rank;
-                continue;
-            }
-            // otherwise, selected_row > i then break because the selected_row has been already computed
-            else
-                break;
-        }
-        // otherwise, compute all rows
+    // only compute one row (selected_row) if selected_row is different from the default value (-1)
+    if (selected_row != -1)
+    {
+        // move pointers to the correct position
+        matrixA += selected_row * rank;
+        dest += selected_row * rank;
+        
+        // compute entries of the selected row
         calculateHadamardProduct(matrixA, rowB, rank, scratch);
         auto rowC = matrixCTranspose;
         for (int j=0; j<rank; ++j, rowC+=rank) {
             *dest = dotProduct(scratch, rowC, rank );
             ++dest;
+        }
+    }
+    // otherwise, compute the whole transition matrix
+    else {
+        for (int i=0; i<rank; ++i, matrixA+=rank) {
+            calculateHadamardProduct(matrixA, rowB, rank, scratch);
+            auto rowC = matrixCTranspose;
+            for (int j=0; j<rank; ++j, rowC+=rank) {
+                *dest = dotProduct(scratch, rowC, rank );
+                ++dest;
+            }
         }
     }
 }

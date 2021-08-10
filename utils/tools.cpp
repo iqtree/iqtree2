@@ -5393,6 +5393,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
     << "  --distribution FILE       Supply the distribution definition file" << endl
     << "  --branch-distribution DIS Specify the distribution for randomly generating branch lengths" << endl
+    << "  --write-all               Enable writing internal sequences" << endl
     << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
