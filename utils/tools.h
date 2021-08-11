@@ -2349,6 +2349,16 @@ public:
     *  distribution to randomly generate branch lengths
     */
     char* branch_distribution;
+    
+    /**
+    *  the ratio of insertion rate to substitution rate
+    */
+    double alisim_insertion_ratio;
+    
+    /**
+    *  the ratio of deletion rate to substitution rate
+    */
+    double alisim_deletion_ratio;
 };
 
 /**

@@ -646,7 +646,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     }
     
     // simulate Sequences
-    simulateSeqs(sequence_length, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
+    simulateSeqs(sequence_length, NULL, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -673,7 +673,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
+void AliSimulator::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -687,7 +687,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
             branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
         // otherwise, simulate the sequence based on the common model
         else
-            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, NULL, trans_matrix, max_num_states, node, it);
+            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
         
         // permuting selected sites for FunDi model
         if (params->alisim_fundi_taxon_set.size()>0)
@@ -702,7 +702,7 @@ void AliSimulator::simulateSeqs(int sequence_length, ModelSubst *model, double *
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, input_msa);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, input_msa);
     }
 }
 

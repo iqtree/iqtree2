@@ -14,12 +14,6 @@ class AliSimulatorInvar : public AliSimulator
 {
 protected:
     double invariant_proportion;
-
-    /**
-    *  simulate sequences for all nodes in the tree by DFS
-    *
-    */
-    virtual void simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa);
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing

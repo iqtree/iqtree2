@@ -25,44 +25,6 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 }
 
 /**
-*  simulate sequences for all nodes in the tree by DFS
-*
-*/
-void AliSimulatorInvar::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
-{
-    // process its neighbors/children
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        // reset the num_children_done_simulation
-        if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
-            node->num_children_done_simulation = 0;
-        
-        // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
-        if ((*it)->attributes["model"].length()>0)
-            branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
-        // otherwise, simulate the sequence based on the common model
-        else
-            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
-        
-        // permuting selected sites for FunDi model
-        if (params->alisim_fundi_taxon_set.size()>0)
-        {
-            if (node->isLeaf())
-                permuteSelectedSites(fundi_items, node);
-            if ((*it)->node->isLeaf())
-                permuteSelectedSites(fundi_items, (*it)->node);
-        }
-        
-        // writing and deleting simulated sequence immediately if possible
-        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
-        
-        // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, input_msa);
-    }
-}
-
-
-/**
 *  simulate sequences for all nodes in the tree
 */
 void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string output_filepath)

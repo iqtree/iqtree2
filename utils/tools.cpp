@@ -1415,6 +1415,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_write_internal_sequences = false;
     params.alisim_only_unroot_tree = false;
     params.branch_distribution = NULL;
+    params.alisim_insertion_ratio = -1;
+    params.alisim_deletion_ratio = -1;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2495,6 +2497,37 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "--skip-checking-memory") == 0) {
                 params.alisim_skip_checking_memory = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--indel") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --indel <INSERTION_RATIO>,<DELETION_RATIO>";
+                
+                string arg = argv[cnt];
+                // detect the seperator
+                char delimiter = ',';
+                if (arg.find('/') != std::string::npos)
+                    delimiter = '/';
+                
+                // validate the input
+                size_t pos = arg.find(delimiter);
+                if (pos == std::string::npos)
+                    throw "Use --indel <INSERTION_RATIO>,<DELETION_RATIO>";
+                
+                // get INSERTION_RATIO
+                params.alisim_insertion_ratio = convert_double(arg.substr(0, pos).c_str());
+                if (params.alisim_insertion_ratio < 0)
+                    throw "<INSERTION_RATIO> must not be negative.";
+                
+                // remove "<INSERTION_RATIO>,"
+                arg.erase(0, pos + 1);
+                
+                // get DELETION_RATIO
+                params.alisim_deletion_ratio = convert_double(arg.c_str());
+                if (params.alisim_deletion_ratio < 0)
+                    throw "<DELETION_RATIO> must not be negative.";
+                
                 continue;
             }
             if (strcmp(argv[cnt], "--write-all") == 0) {
@@ -5378,6 +5411,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                            sequences without constant sites" << endl
     << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
     << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
+    << "  --indel <INS>,<DEL>       Specify the ratio of insertion rate <INS>,"<< endl
+    << "                            and deletion rate <DEL>, respectively to substitution rate" << endl
     << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
     << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
     << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl
