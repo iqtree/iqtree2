@@ -122,7 +122,7 @@ public:
         @param length branch length
         @param id branch ID
      */
-    virtual void addNeighbor(Node *node, double length, int id = -1);
+    virtual void addNeighbor(Node *node, double length, int id = -1) override;
 
     /**
         tell that all partial likelihood vectors below this node are not computed
@@ -251,7 +251,7 @@ public:
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual PhyloNeighbor* newNeighbor() const {
+    virtual PhyloNeighbor* newNeighbor() const override {
         return (new PhyloNeighbor(*this));
     }
 

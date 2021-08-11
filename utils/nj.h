@@ -94,7 +94,7 @@ protected:
     mutable std::vector<T> scaledRowTotals; //used in getRowMinima
 public:
     NJMatrix(): super() { }
-    virtual std::string getAlgorithmName() const {
+    virtual std::string getAlgorithmName() const override {
         return "NJ";
     }
 protected:
@@ -115,11 +115,11 @@ protected:
             scaledRowTotals[r] = rowTotals[r] * tMultiplier;
         }
     }
-    virtual void calculateRowTotals() const {
+    virtual void calculateRowTotals() const override {
         super::calculateRowTotals();
         calculateScaledRowTotals();
     }
-    virtual void getRowMinima() const {
+    virtual void getRowMinima() const override {
         calculateScaledRowTotals();
         rowMinima.resize(row_count);
         rowMinima[0].value = infiniteDistance;
@@ -144,7 +144,7 @@ protected:
                                          , getImbalance(row, bestColumn));
         }
     }
-    virtual void cluster(intptr_t a, intptr_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) override {
         //Cluster two active rows, identified by row indices a and b).
         //Assumed 0<=a<b<n
         T nless2        = (T)(row_count-2);
@@ -181,7 +181,7 @@ protected:
         rowToCluster[b] = rowToCluster[row_count-1];
         removeRowAndColumn(b);
     }
-    virtual void finishClustering() {
+    virtual void finishClustering() override {
         ASSERT( row_count == 3);
         T halfD01 = (T)0.5 * rows[0][1];
         T halfD02 = (T)0.5 * rows[0][2];
@@ -200,10 +200,10 @@ protected:
 public:
     typedef NJMatrix<T> super;
     UNJMatrix(): super(), original_n(0) { }
-    virtual std::string getAlgorithmName() const {
+    virtual std::string getAlgorithmName() const override {
         return "UNJ";
     }
-    virtual void setSize(intptr_t rank) {
+    virtual void setSize(intptr_t rank) override {
         super::setSize(rank);
         original_n = rank;
     }
@@ -216,7 +216,7 @@ protected:
     using super::rowToCluster;
     using super::removeRowAndColumn;
     
-    virtual void cluster(intptr_t a, intptr_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) override {
         //Cluster two active rows, identified by row indices a and b).
         //Assumes: 0<=a<b<n
         //
@@ -299,17 +299,17 @@ public:
 protected:
     SquareMatrix<T>  variance;       //The V matrix
 public:
-    virtual std::string getAlgorithmName() const {
+    virtual std::string getAlgorithmName() const override {
         return "BIONJ";
     }
-    virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath)
+    virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) override
     {
         bool rc = super::loadMatrixFromFile(distanceMatrixFilePath);
         variance = *this;
         return rc;
     }
     virtual bool loadMatrix(const StrVector& names, 
-                            const double* matrix) {
+                            const double* matrix) override {
         bool rc = super::loadMatrix(names, matrix);
         variance = *this;
         return rc;
@@ -336,7 +336,7 @@ public:
         if (lambda<0.0) lambda=(T)0.0;
         return lambda;
     }
-    virtual void cluster(intptr_t a, intptr_t b) {
+    virtual void cluster(intptr_t a, intptr_t b) override {
         //Assumed 0<=a<b<n
         //Bits that differ from super::cluster tagged BIO
         T nless2          = (T)(row_count - 2);

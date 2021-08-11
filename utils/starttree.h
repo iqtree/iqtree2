@@ -120,24 +120,24 @@ namespace StartTree
         : name(nameToUse), description(descriptionToGive), silent(false)
         , isOutputToBeZipped(false), precision(6) {
         }
-        virtual void beSilent() {
+        virtual void beSilent() override {
             silent = true;
         }
-        virtual const std::string& getName() const {
+        virtual const std::string& getName() const override{
             return name;
         }
-        virtual const std::string& getDescription() {
+        virtual const std::string& getDescription() override {
             return description;
         }
-        virtual bool isBenchmark() const {
+        virtual bool isBenchmark() const override {
             return false;
         }
-        virtual void setZippedOutput(bool zipIt) {
+        virtual void setZippedOutput(bool zipIt) override {
             isOutputToBeZipped = zipIt;
         }
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
-             , const std::string & newickTreeFilePath) {
+             , const std::string & newickTreeFilePath) override {
             B builder;
             if (silent) {
                 builder.beSilent();
@@ -155,7 +155,7 @@ namespace StartTree
         virtual bool constructTreeInMemory
             ( const StrVector &sequenceNames
             , const double *distanceMatrix
-            , const std::string & newickTreeFilePath) {
+            , const std::string & newickTreeFilePath) override {
             B builder;
             if (silent) {
                 builder.beSilent();
@@ -170,7 +170,7 @@ namespace StartTree
             }
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
-        virtual void setPrecision(int precision_to_use) {
+        virtual void setPrecision(int precision_to_use) override {
             precision = precision_to_use;
         }
     };
@@ -185,20 +185,21 @@ namespace StartTree
         bool silent;
         int  precision;
     public:
-        BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, const char *descriptionToGive);
-        virtual const std::string& getName() const;
-        virtual const std::string& getDescription();
-        virtual bool isBenchmark() const;
+        BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, 
+                                const char *descriptionToGive);
+        virtual const std::string& getName() const override;
+        virtual const std::string& getDescription() override;
+        virtual bool isBenchmark() const override;
         virtual bool constructTree
             ( const std::string& distanceMatrixFilePath
-            , const std::string& newickTreeFilePath);
+            , const std::string& newickTreeFilePath) override;
         virtual bool constructTreeInMemory
             ( const StrVector &sequenceNames
             , const double *distanceMatrix
-            , const std::string& newickTreeFilePath);
-        virtual void setZippedOutput(bool zipIt);
-        virtual void beSilent();
-        virtual void setPrecision(int precisionToUse);
+            , const std::string& newickTreeFilePath) override;
+        virtual void setZippedOutput(bool zipIt) override;
+        virtual void beSilent() override;
+        virtual void setPrecision(int precisionToUse) override;
     };
 }
 

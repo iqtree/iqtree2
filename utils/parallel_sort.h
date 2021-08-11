@@ -57,12 +57,12 @@ public:
     typedef S super;
     using super::parallel_sort;
     using super::single_thread_sort;
-    virtual void parallel_mirror_sort(T* data, intptr_t count, U* auxiliary) {
+    virtual void parallel_mirror_sort(T* data, intptr_t count, U* auxiliary) override {
         loadCopy(data, count, auxiliary);
         super::parallel_sort(copy.data(), count);
         unloadCopy(data, count, auxiliary);
     }
-    virtual void single_thread_mirror_sort(T* data, intptr_t count, U* auxiliary) {
+    virtual void single_thread_mirror_sort(T* data, intptr_t count, U* auxiliary) override {
         loadCopy(data, count, auxiliary);
         super::single_thread_sort(copy.data(), count);
         unloadCopy(data, count, auxiliary);

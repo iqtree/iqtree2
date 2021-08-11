@@ -157,11 +157,11 @@ protected:
         buffer.resize(count);
     }
 public:
-    void parallel_sort(T* data, intptr_t count) {
+    void parallel_sort(T* data, intptr_t count) override {
         allocateBuffer(count);
         parallel_mergesort(data, buffer.data(), count);
     }
-    void single_thread_sort(T* data, intptr_t count) {
+    void single_thread_sort(T* data, intptr_t count) override {
         allocateBuffer(count);
         single_thread_mergesort(data, buffer.data(), count);
     }

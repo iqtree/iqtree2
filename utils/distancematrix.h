@@ -292,7 +292,7 @@ public:
     virtual ~SquareMatrix() {
         clear();
     }
-    virtual void clear() {
+    virtual void clear() override {
         super::clear();
         delete [] rowTotals;
         rowTotals = nullptr;

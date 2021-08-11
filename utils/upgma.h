@@ -408,7 +408,7 @@ protected:
         }
     }
     size_t joinUpDuplicateClusters(std::vector< std::vector< intptr_t > >& vvc,
-                                 progress_display& show_progress) {
+                                   progress_display& show_progress) {
         if (vvc.empty()) {
             show_progress += (double)row_count;
             return 0; //Nothing to do!
