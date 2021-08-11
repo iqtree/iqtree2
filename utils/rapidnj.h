@@ -205,9 +205,9 @@ public:
         clusterDuplicates();
         {
             size_t nextPurge = (row_count+row_count)/3;
-            std::string taskName = "Constructing " + getAlgorithmName() + " tree";
-            if (silent) {
-                taskName = "";
+            std::string taskName;
+            if (!silent) {
+                taskName = "Constructing " + getAlgorithmName() + " tree";
             }
             #if USE_PROGRESS_DISPLAY
             double triangle = row_count * (row_count + 1.0) * 0.5;
@@ -327,8 +327,8 @@ public:
             //"live" (have corresponding rows in the D matrix).
         }
         for (intptr_t r = 0; r<row_count; ++r) {
-            size_t cluster = rowToCluster[r];
-            clusterTotals[cluster] = rowTotals[r];
+            size_t cluster_num = rowToCluster[r];
+            clusterTotals[cluster_num] = rowTotals[r];
         }
         sortRow(a, clusterC, true, sorters[0]);
     }
@@ -484,8 +484,8 @@ public:
         #endif
         for (intptr_t  r=0; r<row_count ; ++r) {
             size_t row             = rowScanOrder[r];
-            size_t cluster         = rowToCluster[row];
-            T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster];
+            size_t cluster_num     = rowToCluster[row];
+            T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster_num];
             //Note: Older versions of RapidNJ used maxTot rather than
             //      maxEarlierTotal here...
             rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBest);
@@ -509,12 +509,12 @@ public:
             if (rowBound<Drc && 0<i) {
                 break;
             }
-            size_t  cluster = toCluster[i];
+            size_t  cluster_num = toCluster[i];
                 //The cluster associated with this distance
                 //The c in Qrc and Drc.
-            T Qrc = Drc - tot[cluster] - rowTotal;
+            T Qrc = Drc - tot[cluster_num] - rowTotal;
             if (Qrc < pos.value) {
-                intptr_t otherRow = clusterToRow[cluster];
+                intptr_t otherRow = clusterToRow[cluster_num];
                 if (otherRow != notMappedToRow) {
                     pos.column = (otherRow < row ) ? otherRow : row;
                     pos.row    = (otherRow < row ) ? row : otherRow;
