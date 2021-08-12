@@ -45,7 +45,7 @@ public:
 		constructor, get from another tree
 		@param tree another MTree
 	*/
-	MaTree(MTree &tree) : MTree(tree) {};
+	explicit MaTree(MTree &tree) : MTree(tree) {};
 
 	/**
 		constructor
