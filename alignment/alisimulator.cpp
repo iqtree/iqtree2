@@ -698,6 +698,10 @@ void AliSimulator::simulateSeqs(int sequence_length, double *site_specific_rates
                 permuteSelectedSites(fundi_items, (*it)->node);
         }
         
+        // handle indels
+        if (params->alisim_insertion_ratio != -1)
+            handle_indels(model, site_specific_rates, sequence_length, max_num_states, node, it);
+        
         // writing and deleting simulated sequence immediately if possible
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
         
@@ -1312,9 +1316,15 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *mod
     (*it)->node->sequence.resize(sequence_length);
     for (int i = 0; i < sequence_length; i++)
     {
-        // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
-        int starting_index = node->sequence[i]*max_num_states;
-        (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+        // if the parent's state is a gap -> the children's state should also be a gap
+        if (node->sequence[i] == max_num_states)
+            (*it)->node->sequence[i] = max_num_states;
+        else
+        {
+            // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
+            int starting_index = node->sequence[i]*max_num_states;
+            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+        }
     }
 }
 
@@ -1471,4 +1481,179 @@ string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_lengt
     }
     
     return output;
+}
+
+/**
+    compute the total substitution rate
+*/
+double AliSimulator::compute_total_sub_rate(ModelSubst *model, double *site_specific_rates, int max_num_states, vector<short int> sequence)
+{
+    // initialize variables
+    double total_sub_rate = 0;
+    int sequence_length = sequence.size();
+    double* q_matrix = new double[max_num_states*max_num_states];
+    
+    // get the Rate (Q) Matrix
+    model->getQMatrix(q_matrix);
+    
+    // extract sub rate for each state from q_matrix
+    double max_sub_rate = 0;
+    double* sub_rate_on_state = new double[max_num_states];
+    for (int i = 0; i < max_num_states; i++)
+    {
+        sub_rate_on_state[i] = - q_matrix[i * (max_num_states + 1)];
+        
+        // record the maximum sub rate
+        if (max_sub_rate < sub_rate_on_state[i])
+            max_sub_rate = sub_rate_on_state[i];
+    }
+    
+    // normalize the sub_rate_on_state (if neccessary)
+    if (fabs(max_sub_rate-1.0) > 1e-5)
+        for (int i = 0; i < max_num_states; i++)
+            sub_rate_on_state[i] /= max_sub_rate;
+    
+    // delete q_matrix;
+    delete[] q_matrix;
+    
+    // compute the total sub rate (Notes: this method could be further optimized to reduce the running time)
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // not compute the substitution rate for gaps/deleted sites
+        if (sequence[i] != max_num_states)
+        {
+            // if site_specific_rates is NULL, the relative site rate should be 1
+            if (site_specific_rates)
+                total_sub_rate += sub_rate_on_state[sequence[i]]*site_specific_rates[i];
+            else
+                total_sub_rate += sub_rate_on_state[sequence[i]];
+        }
+    }
+    
+    // delete sub_rate_on_state;
+    delete[] sub_rate_on_state;
+    
+    return total_sub_rate;
+}
+
+/**
+    handle indels
+*/
+void AliSimulator::handle_indels(ModelSubst *model, double *site_specific_rates, int sequence_length, int max_num_states, Node *node, NeighborVec::iterator it)
+{
+    double total_sub_rate = compute_total_sub_rate(model, site_specific_rates, max_num_states, node->sequence);
+    double total_event_rate = total_sub_rate * (1 + params->alisim_insertion_ratio + params->alisim_deletion_ratio);
+    
+    double branch_length = (*it)->length;
+    while (branch_length > 0)
+    {
+        // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
+        double waiting_time = random_double_exponential_distribution(1/total_event_rate);
+        
+        if (waiting_time > branch_length)
+            break;
+        else
+        {
+            // update the remaining length of the current branch
+            branch_length -=  waiting_time;
+            
+            // Determine the event type (insertion, deletion, substitution) occurs
+            double random_num = random_double();
+            EVENT_TYPE event_type = SUBSTITUTION;
+            if (random_num < params->alisim_insertion_ratio/(1+params->alisim_insertion_ratio+params->alisim_deletion_ratio))
+                event_type = INSERTION;
+            else if (random_num < (params->alisim_insertion_ratio+params->alisim_deletion_ratio)/(1+params->alisim_insertion_ratio+params->alisim_deletion_ratio))
+                event_type = DELETION;
+            
+            // Randomly select the position/site (from the set of all sites) where the event occurs based on a uniform distribution between 0 and the current length of the sequence
+            int position = 0;
+            for (int i = 0; i < 1000; i++)
+            {
+                position = random_int(sequence_length);
+                
+                // cannot insert/delete from a deleted site
+                if ((*it)->node->sequence[position] != max_num_states)
+                    break;
+            }
+            // validate the selected position
+            if ((*it)->node->sequence[position] == max_num_states && event_type != SUBSTITUTION)
+                outError("Sorry! Could not select an appropriate position for insertion/deletion events within 1000 attempts. You may set the deletion ratio too high. Please reduce it and try again!");
+            
+            // process event
+            switch (event_type)
+            {
+                case INSERTION:
+                {
+                    handle_insertion(position, max_num_states, it);
+                    break;
+                }
+                case DELETION:
+                {
+                    handle_deletion(position, max_num_states, it);
+                    break;
+                }
+                default:
+                    // ignore substitution event as it has already processed
+                    break;
+            }
+        }
+
+    }
+}
+
+/**
+    handle insertion events
+*/
+void AliSimulator::handle_insertion(int position, int max_num_states, NeighborVec::iterator it)
+{
+    // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
+    int length = -1;
+    for (int i = 0; i < 1000; i++)
+    {
+        length = (int) random_number_from_distribution(params->alisim_insertion_distribution);
+        
+        // a valid length must be greater than 0
+        if (length > 0)
+            break;
+    }
+    // validate the length
+    if (length <= 0)
+        outError("Sorry! Could not generate a positive length (for insertion events) based on the insertion-distribution named "+params->alisim_insertion_distribution+" within 1000 attempts.");
+    
+    // Randomly generate length_I sites based on the state frequencies, then inserting them into the sequence at the selected location, and put length_I gaps into all other sequences. -> not efficient now (think about masking, a position must be a ‘-’ or a proper state).
+    cout << "An insertion event occurs +++++++"<<endl;
+}
+
+/**
+    handle deletion events
+*/
+void AliSimulator::handle_deletion(int position, int max_num_states, NeighborVec::iterator it)
+{
+    // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
+    int length = -1;
+    for (int i = 0; i < 1000; i++)
+    {
+        length = (int) random_number_from_distribution(params->alisim_deletion_distribution);
+        
+        // a valid length must be greater than 0
+        if (length > 0)
+            break;
+    }
+    // validate the length
+    if (length <= 0)
+        outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution named "+params->alisim_deletion_distribution+" within 1000 attempts.");
+    
+    // Replace up to length_D sites by gaps from the sequence starting at the selected location
+    for (int i = 0; i < length && (position + i) < (*it)->node->sequence.size(); i++)
+    {
+        // if the current site is not a gap (has not been deleted) -> replacing it by a gap
+        if ((*it)->node->sequence[position + i ] != max_num_states)
+            (*it)->node->sequence[position + i ] = max_num_states;
+        // otherwise, ignore the current site, moving forward to find a valid site (not a gap)
+        else
+        {
+            i--;
+            position++;
+        }
+    }
 }

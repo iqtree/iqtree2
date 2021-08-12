@@ -32,6 +32,15 @@ struct FunDi_Item {
   int new_position;
 } ;
 
+/**
+ *  Specify 3 event types.
+ */
+enum EVENT_TYPE {
+    INSERTION,
+    DELETION,
+    SUBSTITUTION
+};
+
 class AliSimulator{
 protected:
     
@@ -186,6 +195,26 @@ protected:
     *  write a sequence of a node to an output file with gaps copied from the input sequence
     */
     string writeASequenceToFileWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
+    
+    /**
+        handle indels
+    */
+    void handle_indels(ModelSubst *model, double *site_specific_rates, int sequence_length, int max_num_states, Node *node, NeighborVec::iterator it);
+    
+    /**
+        handle insertion events
+    */
+    void handle_insertion(int position, int max_num_states, NeighborVec::iterator it);
+    
+    /**
+        handle deletion events
+    */
+    void handle_deletion(int position, int max_num_states, NeighborVec::iterator it);
+    
+    /**
+        compute the total substitution rate
+    */
+    double compute_total_sub_rate(ModelSubst *model, double *site_specific_rates, int max_num_states, vector<short int> sequence);
     
 public:
     

@@ -2359,6 +2359,16 @@ public:
     *  the ratio of deletion rate to substitution rate
     */
     double alisim_deletion_ratio;
+    
+    /**
+    *  the insertion-distribution for drawing the number of inserted sites
+    */
+    string alisim_insertion_distribution;
+    
+    /**
+    *  the deletion-distribution for drawing the number of deleted sites
+    */
+    string alisim_deletion_distribution;
 };
 
 /**
@@ -2746,7 +2756,7 @@ double convert_double_with_distribution_and_upperbound(string input, double uppe
 /**
         randomly generating a double (with up to 1000 attempts) from a distribution with an upper bound constraint
         @param input storing a distribution name
-        @param upper_bound storing the upper bound value
+        @param upper_bound storing the upper bound value, lower_bound is 0 (implicitly)
  */
 double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound);
 
@@ -2947,6 +2957,12 @@ int random_int(int n, int *rstream = NULL);
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double(int *rstream = NULL);
+
+/**
+ * returns a random double based on an exponential distribution
+ * @param mean the mean of exponential distribution
+ */
+double random_double_exponential_distribution(double mean);
 
 template <class T>
 void my_random_shuffle (T first, T last, int *rstream = NULL)

@@ -115,8 +115,8 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
     for (int i = 0; i < sequence_length; i++)
     {
         
-        // if this site is invariant -> preserve the dad's state
-        if (site_specific_rates[i] == 0)
+        // if this site is invariant or the parent's state is a gap -> preserve the dad's state
+        if (site_specific_rates[i] == 0 || node->sequence[i] == max_num_states)
             (*it)->node->sequence[i] = node->sequence[i];
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {
