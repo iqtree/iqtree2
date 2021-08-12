@@ -72,15 +72,67 @@ namespace ModelExpression {
                 return RateGamma::cmpPointChi2(p1, p2);
             } 
         } chi2_body;
+        class GammaRateFn: public MultiFunctionImplementation {
+        public:
+            typedef MultiFunctionImplementation super;
+            GammaRateFn(): super(2,3) {}
+            double callFunction(ModelInfoFromYAMLFile& mf,
+                                ModelExpression::ListOperator* parameter_list) const {
+                double gamma_shape = parameter_list->evaluateEntry(0);
+                double subscript   = parameter_list->evaluateEntry(1); //
+                double categories;
+                if (2 < parameter_list->getEntryCount()) {
+                    categories = parameter_list->evaluateEntry(2); //Number of categories
+                } else {
+                    //If not supplied, ask the model info how many categories
+                    std::string categories_varname("categories");
+                    InterpretedExpression cats(mf, categories_varname);
+                    categories = cats.evaluate();
+                }
+                std::stringstream complaint;
+                if (gamma_shape<=0.0) {
+                    complaint << "gamma_shape parameter to gammarate() (" 
+                              << " (" << gamma_shape << ")"
+                              << " is invalid (it must be positive). ";
+                }
+                if (subscript<1.0) {
+                    complaint << "Subscript parameter to gammarate() (" 
+                              << " (" << subscript << ")"
+                              << " is invalid (it may not be less than 1). ";
+                }
+                if (categories<1.0) {
+                    complaint << "Categories parameter to gammarate()" 
+                              << " (" << categories << ")"
+                              << " is invalid (it may not be less than 1). ";
+                } else if (categories<subscript) {
+                    complaint << "Subscript paramteter to gammrate()"
+                              << " (" << subscript << ")"
+                              << " is invalid; it cannot be more than"
+                              << " the number of categories"
+                              << " (" << categories << "). ";
+                }
+                std::string complaint_string = complaint.str();
+                if (!complaint_string.empty()) {
+                    throw ModelException(complaint_string);
+                }
+                if (floor(categories)==1.0) {
+                    return 1.0;
+                }
+                double chi2_param_one = (2.0*floor(subscript)-1.0)/floor(categories)/2.0;
+                double chi2_param_two = 2.0*gamma_shape;
+                return RateGamma::cmpPointChi2(chi2_param_one, chi2_param_two) / chi2_param_two;
+            } 
+        } gammarate_body;
 
         std::map<std::string, UnaryFunctionImplementation*> unary_functions;
         std::map<std::string, MultiFunctionImplementation*> multi_functions;
         
         BuiltIns() {
-            multi_functions["chi2"] = &chi2_body;
-            unary_functions["exp"]  = &exp_body;
-            unary_functions["ln"]   = &ln_body;
-            unary_functions["rand"] = &rand_body;
+            multi_functions["chi2"]      = &chi2_body;
+            unary_functions["exp"]       = &exp_body;
+            multi_functions["gammarate"] = &gammarate_body;
+            unary_functions["ln"]        = &ln_body;
+            unary_functions["rand"]      = &rand_body;
         }
 
         bool isUnaryFunction(const std::string &name) {

@@ -22,7 +22,7 @@ PhyloTreeThreadingContext::PhyloTreeThreadingContext(PhyloTree& phylo_tree,
             if (force_use_of_all_threads) {
                 #ifdef _OPENMP
                     if (old_thread_count < max_cores) {
-                        TREE_LOG_LINE(tree, VerboseMode::VB_MIN, "Temporarily elevating number of threads to " << max_cores);
+                        TREE_LOG_LINE(tree, VerboseMode::VB_MED, "Temporarily elevating number of threads to " << max_cores);
                         omp_set_num_threads(max_cores);
                         was_omp_thread_count_set = true;
                     }
@@ -42,14 +42,14 @@ PhyloTreeThreadingContext::PhyloTreeThreadingContext(PhyloTree& phylo_tree,
     if (!force_use_of_all_threads) {
         return;
     }
-    TREE_LOG_LINE(tree, VerboseMode::VB_MIN, 
+    TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, 
                   "Maximum number of cores is " << max_cores);
     if (max_cores <= tree.num_threads) {
         return;
     }
     old_thread_count = omp_get_num_threads();
     if (old_thread_count < max_cores) {
-        TREE_LOG_LINE(tree, VerboseMode::VB_MIN, 
+        TREE_LOG_LINE(tree, VerboseMode::VB_MED, 
                       "Temporarily elevating number of threads to " << max_cores);
         omp_set_num_threads(max_cores);
         was_omp_thread_count_set = true;
@@ -79,10 +79,16 @@ int PhyloTreeThreadingContext::getThreadCount() const {
 }
 
 PhyloTreeThreadingContext::~PhyloTreeThreadingContext() {
+    bool changed_thread_count = false;
     if (old_num_threads != tree.num_threads) {
+        changed_thread_count = true;
         tree.num_threads = old_num_threads;
     }
     if (was_omp_thread_count_set) {
         omp_set_num_threads(old_thread_count);
+        if (changed_thread_count) {
+            TREE_LOG_LINE(tree, VerboseMode::VB_MED, 
+                "Restoring previous number of threads (" << old_thread_count << ")");
+        }
     }
 }

@@ -250,7 +250,10 @@
     tolerance:      0.001
   - name:           rate(1..categories)
     type:           calculated rate
-    initValue:      "(categories==1) ? 1.0 : chi2((2.0*subscript-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
+    initValue:      gammarate(gamma_shape, subscript)
+                    #formerly: "(categories==1) ? 1.0 
+                    #  : chi2((2.0*subscript-1)/categories/2.0, 2.0*gamma_shape) / (2.0*gamma_shape))"
+                    #but calling gammarate() is much clearer
     tolerance:      0.001
   - name:           proportion(1..categories)
     type:           proportion
@@ -262,7 +265,7 @@
   parameters:
   - name:           proportion(1..categories)
     type:           proportion
-    range:          0.0001 .. 1 #Allow ranges to be specified as... ranges too
+    range:          0.0001 .. 1
     initValue:      1/categories
     tolerance:      0.001
 
