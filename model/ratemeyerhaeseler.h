@@ -53,7 +53,7 @@ public:
 	/**
 		@return true 
 	*/
-	virtual bool isSiteSpecificRate() const { return true; }
+	virtual bool isSiteSpecificRate() const override { return true; }
 
 	/**
 		get the number of rate categories. 
@@ -65,7 +65,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		get the rate of a specified category
@@ -79,14 +79,15 @@ public:
 		@param ptn pattern ID 
 		@return the rate of the specified site-pattern
 	*/
-	virtual double getPtnRate(int ptn);
+	virtual double getPtnRate(int ptn) override;
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int computePatternRates(DoubleVector &pattern_rates, 
+	                                IntVector &pattern_cat) override;
 
 	void getRates(DoubleVector &rates) const;
 
@@ -99,7 +100,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(double epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 	/**
 		optimize rate of site
@@ -146,7 +147,7 @@ public:
 		@param value x-value of the function
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFunction(double value);
+	virtual double computeFunction(double value) override;
 
 	/**
 		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
@@ -155,7 +156,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual void computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
 
 	void runIterativeProc(Params &params, IQTree &tree);
@@ -175,7 +176,7 @@ public:
 
 	virtual void   setFixRates(bool fixed);
 
-	virtual void   setRateTolerance(double tol);
+	virtual void   setRateTolerance(double tol) override;
 
 	/**
 	    sort updated/re-normalized rates

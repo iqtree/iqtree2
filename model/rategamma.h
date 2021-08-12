@@ -63,34 +63,34 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual int isGammaRate() const { 
+    virtual int isGammaRate() const override { 
         if (cut_median) return GAMMA_CUT_MEDIAN; 
         return GAMMA_CUT_MEAN;
     }
 
-	virtual double getGammaShape() const { return gamma_shape; }
+	virtual double getGammaShape() const override { return gamma_shape; }
 
-	virtual void setGammaShape(double gs);
+	virtual void setGammaShape(double gs) override;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual std::string getNameParams() const;
+	virtual std::string getNameParams() const override;
 
 	/**
 		@return TRUE to use median rate for discrete categories, FALSE to use mean rate instead
@@ -101,33 +101,33 @@ public:
 	/**
 		@return the number of rate categories
 	*/
-	virtual int getNRate() const { return ncategory; }
+	virtual int getNRate() const override { return ncategory; }
 
 	/**
 		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate() const { return ncategory; }
+	virtual int getNDiscreteRate() const override { return ncategory; }
 
 	/**
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) const { return rates[category]; }
+	virtual double getRate(int category) const override { return rates[category]; }
 
 	/**
 		set the rate of a specified category.
 		@param category category ID from 0 to #category-1
 		@param value the rate of the specified category
 	*/
-	virtual void setRate(int category, double value) { rates[category] = value; }
+	virtual void setRate(int category, double value) override { rates[category] = value; }
 
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) const { return 1.0/ncategory; }
+	virtual double getProp(int category) const override { return 1.0/ncategory; }
 
 	/**
 	 * 	return pointer to the rate array
@@ -149,26 +149,28 @@ public:
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int computePatternRates(DoubleVector &pattern_rates, 
+	                                IntVector &pattern_cat) override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check) override;
 
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 	/**
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
     /**
      *  Same as above but add parameters to control gamma bounds
@@ -180,31 +182,31 @@ public:
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
 		gamma shape parameter
 	*/
-	virtual double computeFunction(double shape);
+	virtual double computeFunction(double shape) override;
 
 
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const { return !fix_gamma_shape; }
+	virtual int getNDim() const override { return !fix_gamma_shape; }
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
-	virtual bool isFixGammaShape() const {
+	virtual bool isFixGammaShape() const override {
 		return fix_gamma_shape;
 	}
 
-	virtual void setFixGammaShape(bool fixGammaShape) {
+	virtual void setFixGammaShape(bool fixGammaShape) override {
 		fix_gamma_shape = fixGammaShape;
 	}
 
@@ -212,7 +214,7 @@ public:
         set number of rate categories
         @param ncat #categories
     */
-	virtual void setNCategory(int ncat);
+	virtual void setNCategory(int ncat) override;
 
 protected:
 
@@ -227,7 +229,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -235,7 +237,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 	/**
 		number of rate categories

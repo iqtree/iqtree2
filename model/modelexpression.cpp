@@ -815,7 +815,7 @@ namespace ModelExpression {
     MultiFunction::MultiFunction(ModelInfoFromYAMLFile& for_model,
                       const char* name,
                       const MultiFunctionImplementation* implementation)
-        : super(for_model, name), body(implementation) {
+        : super(for_model, name), body(implementation), parameter_list(nullptr) {
     }
 
     MultiFunction::~MultiFunction() {
@@ -1344,7 +1344,7 @@ namespace ModelExpression {
             for_what = "upper bound";
             range.second = expr->getIntegerMaximum();
         }
-        catch (ModelException x) {
+        catch (ModelException& x) {
             throw ModelException("Error evaluating" + std::string(for_what) + 
                                  " " + x.getMessage());
         }

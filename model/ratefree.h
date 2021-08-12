@@ -36,27 +36,27 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual int isGammaRate() const { return 0; }
+    virtual int isGammaRate() const override { return 0; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() const;
+	virtual string getNameParams() const override;
 
 	virtual const string& getOptimizationAlgorithm() const;
 
@@ -65,13 +65,13 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) const { return prop[category]; }
+	virtual double getProp(int category) const override { return prop[category]; }
 
 	virtual void   setFixProportions(bool fixed);
 
 	virtual void   setFixRates(bool fixed);
 
-	virtual void   setGammaShape(double shape);
+	virtual void   setGammaShape(double shape) override;
 
 	virtual void   setOptimizationAlgorithm(const std::string& algorithm);
 
@@ -79,7 +79,7 @@ public:
 
 	virtual bool   isOptimizingRates() const;
 
-	virtual bool   isOptimizingShapes() const;
+	virtual bool   isOptimizingShapes() const override;
 
 	virtual bool   areProportionsFixed() const;
 
@@ -88,19 +88,20 @@ public:
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check)  override;
 
 	/**
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
     /** 
         optimize rate parameters using EM algorithm 
@@ -121,42 +122,42 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
     /**
         set number of rate categories
         @param ncat #categories
     */
-	virtual void setNCategory(int ncat);
+	virtual void setNCategory(int ncat) override;
 
     /**
         initialize from checkpoint rates and prop from rate model with #category-1
     */
-    virtual void initFromCatMinusOne();
+    virtual void initFromCatMinusOne() override;
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
 	 * @return mean rate, default = 1
 	 */
-	virtual double meanRates() const;
+	virtual double meanRates() const override;
 
 	/**
 	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
 	 * @return rescaling factor
 	 */
-	virtual double rescaleRates();
+	virtual double rescaleRates() override;
 
 protected:
 
@@ -165,7 +166,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -173,7 +174,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 	/**
 	    sort updated/re-normalized rates
@@ -199,8 +200,8 @@ protected:
 	double proportion_tolerance;
 	double rate_tolerance;
 	
-	virtual void setProportionTolerance(double tol);
-	virtual void setRateTolerance(double tol);
+	virtual void setProportionTolerance(double tol) override;
+	virtual void setRateTolerance(double tol) override;
 };
 
 #endif /* RATEFREE_H_ */

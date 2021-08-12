@@ -433,7 +433,7 @@ double ModelInfoFromYAMLFile::evaluateExpression(std::string& expr,
         verb = "evaluating";
         return interpreter.evaluate();
     }
-    catch (ModelExpression::ModelException x) {
+    catch (ModelExpression::ModelException& x) {
         std::stringstream msg;
         msg << "Error " << verb << " " << context
             << " for " << model_name << ":\n"
@@ -675,7 +675,7 @@ void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p,
                 Interpreter ix(*this, p.init_expression);
                 v = ix.evaluate();
             }
-            catch (Exception x) {
+            catch (Exception& x) {
                 std::stringstream complaint;
                 complaint << "Error initializing " << p.name
                             << "(" << i <<")=(" << p.init_expression << ")"
@@ -732,7 +732,7 @@ double ModelInfoFromYAMLFile::getModelWeight() {
         ModelExpression::InterpretedExpression expr(*this, weight_formula);
         model_weight = expr.evaluate();
     }
-    catch (ModelExpression::ModelException x) {
+    catch (ModelExpression::ModelException& x) {
         std::stringstream complaint;
         complaint << "Error determining weight of model " << getName()
                   << ": " << x.getMessage();
@@ -943,8 +943,8 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
             const char* sub_model_var_name = nullptr;
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
-            auto it = findMixedModel(sub_model_name);
-            return (*it)->assign(std::string(sub_model_var_name),
+            auto it_model = findMixedModel(sub_model_name);
+            return (*it_model)->assign(std::string(sub_model_var_name),
                                  value_to_set);
         }
         std::stringstream complaint;
@@ -967,8 +967,8 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
             const char* sub_model_var_name = nullptr;
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
-            auto it = findMixedModel(sub_model_name);
-            return (*it)->forceAssign(std::string(sub_model_var_name),
+            auto it_model = findMixedModel(sub_model_name);
+            return (*it_model)->forceAssign(std::string(sub_model_var_name),
                                           value_to_set);
         }
         ModelVariable var(ModelParameterType::OTHER,
@@ -1248,7 +1248,7 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) 
 
     if (false) {
         return new YAMLRateMeyerDiscrete(tree, tree, *this);
-        return new YAMLRateMeyerHaeseler(tree, tree, *this);
+        //return new YAMLRateMeyerHaeseler(tree, tree, *this);
     }
     if (isKategoryModel()) {
         return new YAMLRateKategory(tree, tree, *this);
@@ -1718,7 +1718,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
     int  position = 0;
     getVariableNamesByPosition();
     try {
-        for (size_t i=0; i<expr_list.size(); ++i) {
+        for (i=0; i<expr_list.size(); ++i) {
             Interpreter* ix = expr_list[i];
             Expression*  ex = ix->expression();
             if (ex->isAssignment()) {
@@ -1751,7 +1751,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
     return !expr_list.empty();
 }
 
-size_t ModelInfoFromYAMLFile::findEndOfParameter(const std::string parameter_list,
+size_t ModelInfoFromYAMLFile::findEndOfParameter(const std::string& parameter_list,
                                                  size_t param_list_length,
                                                  size_t i) const {
     int    bracket_depth = 0;

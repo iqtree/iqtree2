@@ -58,23 +58,23 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		@return the number of rate entries, equal to the number of non-diagonal elements of the rate matrix
         since we store full matrix here
 	*/
-	virtual int getNumRateEntries() const { return num_states*(num_states); }
+	virtual int getNumRateEntries() const override { return num_states*(num_states); }
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
@@ -83,7 +83,7 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree);
+                      PhyloTree* report_to_tree) override;
 
 	/** supporting function
 	*/
@@ -95,7 +95,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual std::string getNameParams() const { return name; }
+	virtual std::string getNameParams() const override { return name; }
 
     /** main function to compute rate matrix */
     void computeCodonRateMatrix();
@@ -103,7 +103,7 @@ public:
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
 	/**
 	 * read codon model from a stream, modying rates and state_freq accordingly
@@ -142,7 +142,7 @@ public:
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
     /** compute rate_attr for all codoni->codoni substitution */
     void computeRateAttributes();
@@ -159,13 +159,15 @@ public:
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check) override;
 
 	/**
 		optimize model parameters
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double gradient_epsilon, PhyloTree* report_to_tree);
+	virtual double optimizeParameters(double gradient_epsilon, 
+	                                  PhyloTree* report_to_tree) override;
 
 	/** 3x4 matrix of nucleotide frequencies at 1st,2nd,3rd codon position */
 	double *ntfreq;
@@ -228,7 +230,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -236,7 +238,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 };
 

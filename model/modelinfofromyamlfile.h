@@ -530,7 +530,7 @@ public:
                                 LoggingTarget* logging_target);
 
         //Support functions for acceptParameterList
-        size_t findEndOfParameter(const std::string parameter_list,
+        size_t findEndOfParameter(const std::string& parameter_list,
                                   size_t param_list_length,
                                   size_t i) const;
         void changeSubscriptRangesOfParameters(LoggingTarget* logging_target);

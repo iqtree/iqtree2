@@ -38,51 +38,52 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
      * @return model name
      */
-    virtual string getName() const;
+    virtual string getName() const override;
 
     /**
      * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
      */
-    virtual std::string getNameParams() const;
+    virtual std::string getNameParams() const override;
 
     /**
         write information
         @param out output stream
     */
-    virtual void writeInfo(ostream &out);
+    virtual void writeInfo(ostream &out) override;
 
 
     /**
         return the number of dimensions
     */
-    virtual int getNDim() const;
+    virtual int getNDim() const override;
 
     /**
      * setup the bounds for joint optimization with BFGS
      */
-    virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+    virtual void setBounds(double *lower_bound, double *upper_bound, 
+                           bool *bound_check) override;
 
 
     /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) override;
 
         //Supporting function
         int getErrorNucleotideState() const;
@@ -103,7 +104,7 @@ protected:
         into a vector that is index from 1 (NOTE: not from 0)
         @param variables (OUT) vector of variables, indexed from 1
     */
-    virtual void setVariables(double *variables);
+    virtual void setVariables(double *variables) override;
 
     /**
         this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -111,7 +112,7 @@ protected:
         @param variables vector of variables, indexed from 1
         @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
     */
-    virtual bool getVariables(const double *variables);
+    virtual bool getVariables(const double *variables) override;
     
 protected:
     

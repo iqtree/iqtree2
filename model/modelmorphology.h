@@ -39,50 +39,50 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree);
+                      PhyloTree* report_to_tree) override;
 
     /**
      return the number of dimensions
      */
-    virtual int getNDim() const;
+    virtual int getNDim() const override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
     
     /**
      save object into the checkpoint
      */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
     
     /**
      restore object from the checkpoint
      */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
      * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
      */
-    virtual string getNameParams() const;
+    virtual string getNameParams() const override;
 
     /**
      write information
      @param out output stream
      */
-    virtual void writeInfo(ostream &out);
+    virtual void writeInfo(ostream &out) override;
 
     /**
      write parameters, used with modeltest
      @param out output stream
      */
-    virtual void writeParameters(ostream &out);
+    virtual void writeParameters(ostream &out) override;
 
 	/**
 		read the rates from an input stream. it will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in);
+	virtual void readRates(istream &in) override;
 
     virtual ~ModelMorphology();
 };

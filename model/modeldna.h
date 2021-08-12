@@ -67,40 +67,40 @@ public:
 	*/
     virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree);
+                      PhyloTree* report_to_tree) override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual std::string getNameParams() const;
+	virtual std::string getNameParams() const override;
 
     /**
      @return the number of rate entries, equal to the number of elements
      in the upper-diagonal of the rate matrix (since model is reversible)
      */
-    virtual int getNumberOfRates() const;
+    virtual int getNumberOfRates() const override;
     
 	/**
 		Read the rate parameters from a comma-separated string
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(string str);
+	virtual void readRates(string str) override;
 		//Supporting function
 		double readSingleRate(const std::string& str,
                               int id /*rate number*/,
@@ -116,19 +116,19 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
     /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) override;
 
 protected:
 
@@ -137,7 +137,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters 
@@ -145,7 +145,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 	/**
 		rate parameter specification, a string of 6 characters

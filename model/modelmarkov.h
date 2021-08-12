@@ -67,7 +67,7 @@ public:
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
-	virtual bool isReversible() { return is_reversible; };
+	virtual bool isReversible() override { return is_reversible; };
 
     /**
         set the reversibility of the model
@@ -109,27 +109,27 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /** 
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /** 
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
     
 	/**
 	 * @return model name
 	 */
-	virtual std::string getName() const;
+	virtual std::string getName() const override;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual std::string getNameParams() const;
+	virtual std::string getNameParams() const override;
 
     /**
         internal function: return string for frequency
@@ -142,7 +142,7 @@ public:
      the number of non-diagonal elements
      of the rate matrix (if the model is NOT reversible)
      */
-	virtual int getNumRateEntries() const;
+	virtual int getNumRateEntries() const override;
 
     virtual int getNumberOfRates() const;
     
@@ -205,7 +205,8 @@ public:
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, 
+	                                int mixture = 0) override;
 
     /**
      compute the transition probability matrix for non-reversible model
@@ -222,7 +223,7 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int state1, int state2);
+	virtual double computeTrans(double time, int state1, int state2) override;
 
 	/**
 		compute the transition probability between two states
@@ -232,13 +233,14 @@ public:
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2);
+	virtual double computeTrans(double time, int state1, int state2, 
+	                            double &derv1, double &derv2) override;
 
 	/**
 		Get the rate matrix.
 		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
-	virtual void getRateMatrix(double *rate_mat);
+	virtual void getRateMatrix(double *rate_mat) override;
 
 	/**
 		Set the rate matrix.
@@ -258,7 +260,7 @@ public:
         @param mixture (optional) class for mixture model
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
-	virtual void getStateFrequency(double *state_freq, int mixture = 0);
+	virtual void getStateFrequency(double *state_freq, int mixture = 0) override;
 
     /**
      set the state frequency vector
@@ -270,7 +272,7 @@ public:
 	 * compute Q matrix 
 	 * @param q_mat (OUT) Q matrix, assuming of size num_states * num_states
 	 */
-	virtual void getQMatrix(double *q_mat);
+	virtual void getQMatrix(double *q_mat) override;
 
     /**
      identify the highest frequency in the state_freq vector of frequencies
@@ -294,7 +296,7 @@ public:
 		get frequency type
 		@return frequency type
 	*/
-	virtual StateFreqType getFreqType() const { return freq_type; }
+	virtual StateFreqType getFreqType() const override { return freq_type; }
 
 
 	/**
@@ -307,18 +309,18 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0);
+		double *trans_derv1, double *trans_derv2, int mixture = 0) override;
 
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies, which is 
             not counted in getNDim(). This serves e.g. for computing AIC, BIC score
 	*/
-	virtual int getNDimFreq() const;
+	virtual int getNDimFreq() const override;
 	
 
 	/**
@@ -326,7 +328,7 @@ public:
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
@@ -338,12 +340,12 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters();
+	virtual bool isUnstableParameters() override;
 
   // A simple helper function that prints the rates in a nice way and can be
   // reused by children. The title is necessary, because, e.g., for PoMo, the
@@ -359,7 +361,7 @@ public:
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
@@ -377,7 +379,7 @@ public:
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
 		/**  supporting function, called from decomposeRateMatrix, when
 		     (num_params == -1)
@@ -386,11 +388,11 @@ public:
 
 //	double *getEigenCoeff() const;
 
-	virtual double *getEigenvalues() const;
+	virtual double *getEigenvalues() const override;
 
-	virtual double *getEigenvectors() const;
-	virtual double *getInverseEigenvectors() const;
-    virtual double *getInverseEigenvectorsTransposed() const;
+	virtual double *getEigenvectors() const override;
+	virtual double *getInverseEigenvectors() const override;
+    virtual double *getInverseEigenvectorsTransposed() const override;
 
 //	void setEigenCoeff(double *eigenCoeff);
 
@@ -421,7 +423,7 @@ public:
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired();
+    virtual uint64_t getMemoryRequired() override;
 
     /** default TRUE: store only upper half of the rate matrix */
     bool half_matrix;
@@ -465,14 +467,14 @@ public:
     /**
         set num_params variable
      */
-    virtual void setNParams(int number_of_parameters) {
+    virtual void setNParams(int number_of_parameters) override {
         this->num_params = number_of_parameters;
     }
     
     /**
         get num_params variable
      */
-    virtual int getNParams() {
+    virtual int getNParams() override {
         return num_params;
     }
     
@@ -495,7 +497,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters 
@@ -503,7 +505,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 
 	/**

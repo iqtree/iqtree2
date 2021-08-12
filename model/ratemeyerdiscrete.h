@@ -53,41 +53,42 @@ public:
 		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate() const;
+	virtual int getNDiscreteRate() const override;
 
 	/**
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) const;
+	virtual double getRate(int category) const override;
 
 	/**
 		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model
 		@param ptn pattern ID 
 		@return the rate of the specified site-pattern
 	*/
-	virtual double getPtnRate(int ptn);
+	virtual double getPtnRate(int ptn) override;
 
 	/**
 		get rate category of a specified site-pattern. 
 		@param ptn pattern ID 
 		@return the rate category of the specified site-pattern
 	*/
-	virtual int getPtnCat(int ptn);
+	virtual int getPtnCat(int ptn) override;
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories        
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int computePatternRates(DoubleVector &pattern_rates, 
+	                                IntVector &pattern_cat) override;
 
-	virtual bool isSiteSpecificRate() const;
+	virtual bool isSiteSpecificRate() const override;
 
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const { return ncategory; }
+	virtual int getNDim() const override { return ncategory; }
 
 	/**
 		optimize rates of all site-patterns
@@ -95,14 +96,14 @@ public:
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
 	virtual double optimizeParameters(double epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 	/**
 		classify rates into categories.
 		@param tree_lh the current tree log-likelihood
 	*/
 	virtual double classifyRates(double tree_lh,
-                                 PhyloTree* report_to_tree);
+                                 PhyloTree* report_to_tree) override;
 
 	/**
 		classify rates into categories using k-means++ method.
@@ -115,7 +116,7 @@ public:
 		@param value x-value of the function
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFunction(double value);
+	virtual double computeFunction(double value) override;
 
 	/**
 		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
@@ -124,7 +125,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual void computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
 	double optimizeCatRate(int cat);
 
@@ -134,14 +135,14 @@ public:
 		write information
 		@param out output stream
 	*/
-	virtual void   writeInfo(ostream &out);
+	virtual void   writeInfo(ostream &out) override;
 
-	virtual void   setNCategory(int ncat);
+	virtual void   setNCategory(int ncat) override;
 
 	/**
 	    sort updated/re-normalized rates
 	 */
-	virtual void   sortUpdatedRates();
+	virtual void   sortUpdatedRates() override;
 
 protected:
 

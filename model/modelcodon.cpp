@@ -790,8 +790,8 @@ void ModelCodon::readCodonModel(string &str,
 		istringstream in(str);
 		readCodonModel(in, reset_params);
 	}
-	catch (const char *str) {
-		outError(str);
+	catch (const char *error_str) {
+		outError(error_str);
 	}
 }
 
@@ -1016,10 +1016,9 @@ double ModelCodon::computeEmpiricalOmega() {
 }
 
 bool ModelCodon::getVariables(const double *variables) {
-	int j;
     bool changed = false;
     if (num_params > 0) {
-        j = 1;
+        int j = 1;
         if (!fix_omega) {
             changed |= (omega != variables[j]);
             omega = variables[j++];
@@ -1063,9 +1062,8 @@ bool ModelCodon::getVariables(const double *variables) {
 }
 
 void ModelCodon::setVariables(double *variables) {
-	int j;
 	if (num_params > 0) {
-        j = 1;
+        int j = 1;
         if (!fix_omega)
             variables[j++] = omega;
         if (!fix_kappa)

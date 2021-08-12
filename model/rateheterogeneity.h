@@ -59,17 +59,17 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		set phylogenetic tree
@@ -248,7 +248,7 @@ public:
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS

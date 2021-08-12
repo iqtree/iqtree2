@@ -51,17 +51,17 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree);
+                      PhyloTree* report_to_tree) override;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-    virtual std::string getNameParams() const;
+    virtual std::string getNameParams() const override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
 };
 

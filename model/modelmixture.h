@@ -99,64 +99,64 @@ public:
         set checkpoint object
         @param checkpoint
     */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint) override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
-	virtual bool isMixture() const { return true; }
+	virtual bool isMixture() const override { return true; }
 
 
 	/**
 	 * @return the number of mixture model components
 	 */
-	virtual int getNMixtures() {return static_cast<int>(models.size()); }
+	virtual int getNMixtures() override {return static_cast<int>(models.size()); }
 
  	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual double getMixtureWeight(int cat) { return prop[cat]; }
+	virtual double getMixtureWeight(int cat) override { return prop[cat]; }
 
 	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual void setMixtureWeight(int cat, double weight) { prop[cat] = weight; }
+	virtual void setMixtureWeight(int cat, double weight) override { prop[cat] = weight; }
 
 	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual void setFixMixtureWeight(bool fix_weight) { this->fix_prop = fix_weight; }
+	virtual void setFixMixtureWeight(bool fix_weight) override { this->fix_prop = fix_weight; }
 
 	/**
 	 * @param cat mixture class ID
 	 * @return corresponding mixture model component
 	 */
-    virtual ModelSubst* getMixtureClass(int cat) { return models.at(cat); }
+    virtual ModelSubst* getMixtureClass(int cat) override { return models.at(cat); }
 
 	/**
 	 * @param cat mixture class ID
 	 * @param m mixture model class to set
 	 */
-    virtual void setMixtureClass(int cat, ModelSubst* m) { 
+    virtual void setMixtureClass(int cat, ModelSubst* m) override { 
 		models.at(cat) = dynamic_cast<ModelMarkov*>(m); 
 	}
 
@@ -166,7 +166,7 @@ public:
             -1 to get weighted sum of class state frequency vector
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
-	virtual void getStateFrequency(double *state_freq, int mixture = 0);
+	virtual void getStateFrequency(double *state_freq, int mixture = 0) override;
 
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
@@ -176,7 +176,7 @@ public:
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0) override;
 
 
 	/**
@@ -189,24 +189,24 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0);
+		double *trans_derv1, double *trans_derv2, int mixture = 0) override;
 
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq() const;
+	virtual int getNDimFreq() const override;
 	
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
     /** 
         optimize mixture weights using EM algorithm 
@@ -225,7 +225,7 @@ public:
         set number of optimization steps
         @param opt_steps number of optimization steps
     */
-    virtual void setOptimizeSteps(int steps) { this->optimize_steps = steps; }
+    virtual void setOptimizeSteps(int steps) override { this->optimize_steps = steps; }
 
     /** @return true if model is fused with site_rate */
     bool isFused();
@@ -235,7 +235,7 @@ public:
 		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 		/**
 			supporting function (called by optimizeParameters).
@@ -245,45 +245,46 @@ public:
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters();
+	virtual bool isUnstableParameters() override;
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check) override;
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
 	/**
 	 * @return model name
 	 */
-	virtual string getName() const;
+	virtual string getName() const override;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() const;
+	virtual string getNameParams() const override;
 
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired();
+    virtual uint64_t getMemoryRequired() override;
 
 	/**
 		rates of mixture components
@@ -312,7 +313,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -320,7 +321,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 
 	/**

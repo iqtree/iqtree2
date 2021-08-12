@@ -47,63 +47,63 @@ public:
     /**
         @return TRUE if this is a heterotachy model, default: FALSE
     */
-    virtual bool isHeterotachy() const { return true; }
+    virtual bool isHeterotachy() const override { return true; }
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual std::string getNameParams() const;
+	virtual std::string getNameParams() const override;
 
 
     /**
         fix parameters, so that no optimization done
         @param mode some input mode
     */
-    virtual int getFixParams() const { return fix_params; }
+    virtual int getFixParams() const override { return fix_params; }
 
     /**
         fix parameters, so that no optimization done
         @param mode some input mode
     */
-    virtual void setFixParams(int mode) { fix_params = mode; }
+    virtual void setFixParams(int mode) override { fix_params = mode; }
 
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		@return the number of rate categories
 	*/
-	virtual int getNRate() const { return ncategory; }
+	virtual int getNRate() const override { return ncategory; }
 
 	/**
 		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate() const { return ncategory; }
+	virtual int getNDiscreteRate() const override { return ncategory; }
 
 	/**
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) const {
+	virtual double getRate(int category) const override {
         return 1.0;
     }
 
@@ -112,28 +112,28 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) const { return prop[category]; }
+	virtual double getProp(int category) const override { return prop[category]; }
 
 	/**
 		set the proportion of a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual void setProp(int category, double value) { prop[category] = value; }
+	virtual void setProp(int category, double value) override { prop[category] = value; }
 
 
     /** 
         set number of optimization steps
         @param opt_steps number of optimization steps
     */
-    virtual void setOptimizeSteps(int steps) { this->optimize_steps = steps; }
+    virtual void setOptimizeSteps(int steps) override { this->optimize_steps = steps; }
 
 	/**
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
     /** 
         optimize rate parameters using EM algorithm 
@@ -145,19 +145,19 @@ public:
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
     /**
         set number of rate categories
         @param ncat #categories
     */
-	virtual void setNCategory           (int ncat);
+	virtual void setNCategory           (int ncat) override;
 
 	virtual bool isOptimizingProportions() const;
 	virtual bool isOptimizingRates      () const;
@@ -166,8 +166,8 @@ public:
 
 	virtual void setFixProportions      (bool   fix);
 	virtual void setFixRates            (bool   fix);
-	virtual void setProportionTolerance (double tol);
-	virtual void setRateTolerance       (double tol);
+	virtual void setProportionTolerance (double tol) override;
+	virtual void setRateTolerance       (double tol) override;
 
 protected:
 

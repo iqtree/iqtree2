@@ -54,39 +54,40 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree);
+                      PhyloTree* report_to_tree) override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		read the rates from an input stream. it will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(istream &in);
+	virtual void readRates(istream &in) override;
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-    virtual std::string getNameParams() const;
+    virtual std::string getNameParams() const override;
 
     /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    virtual void computeTipLikelihood(PML::StateType state, 
+                                      double *state_lk) override;
 
 private:
     ModelsBlock *models_block;

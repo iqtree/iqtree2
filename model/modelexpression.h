@@ -140,7 +140,6 @@ namespace ModelExpression {
                       const char* name);
         virtual ~Function() = default;
 
-        virtual bool   isFixed()    const = 0;
         virtual bool   isFunction() const override;
         virtual void   setParameter(Expression* param) = 0; //takes ownership
     };

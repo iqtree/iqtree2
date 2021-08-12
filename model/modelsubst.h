@@ -42,7 +42,7 @@ public:
 		constructor
 		@param nstates number of states, e.g. 4 for DNA, 20 for proteins.
 	*/
-    ModelSubst(int nstates);
+    explicit ModelSubst(int nstates);
 
 	void setTree(PhyloTree *tree);
 

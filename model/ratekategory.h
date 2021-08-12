@@ -56,39 +56,39 @@ public:
 	/**
 		@return the number of rate categories
 	*/
-	virtual int getNRate() const { return ncategory; }
+	virtual int getNRate() const override { return ncategory; }
 
 	/**
 		get the number of rate categories for site-specific category model
 		@return the number of rate categories
 	*/
-	virtual int getNDiscreteRate() const { return ncategory; }
+	virtual int getNDiscreteRate() const override { return ncategory; }
 
 	/**
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) const { return rates[category]; }
+	virtual double getRate(int category) const override { return rates[category]; }
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int  computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int  computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
 	virtual void setBounds(double* lower_bound, double* upper_bound, 
-                           bool*   bound_check);
+                           bool*   bound_check) override;
 
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 
 	/**
@@ -96,7 +96,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(double epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 	/**
 		return the number of dimensions
@@ -107,13 +107,13 @@ public:
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
 	virtual bool   isOptimizingProportions() const;
 
@@ -125,9 +125,9 @@ public:
 
 	virtual void   setFixRates(bool fixed);
 
-	virtual void   setRateTolerance(double tol);
+	virtual void   setRateTolerance(double tol) override;
 
-	virtual void   setNCategory(int cat);
+	virtual void   setNCategory(int cat) override;
 
 protected:
 
@@ -150,7 +150,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters 
@@ -158,7 +158,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 	/**
 	    sort updated/re-normalized rates

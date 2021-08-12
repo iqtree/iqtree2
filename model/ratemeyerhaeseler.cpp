@@ -62,8 +62,6 @@ void RateMeyerHaeseler::readRateFile(char *rate_file_to_read) {
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(rate_file_to_read);
 		char   line[256];
-		int    site;
-		double rate;
 		size_t nsites = phylo_tree->aln->getNSite();
 		pat_rates.resize(phylo_tree->aln->getNPattern(), -1.0);
 		int    saturated_sites = 0;
@@ -77,12 +75,14 @@ void RateMeyerHaeseler::readRateFile(char *rate_file_to_read) {
 			stringstream ss(line);
 			string tmp;
 			ss >> tmp;
+			int site;
 			site = convert_int(tmp.c_str());
             if (site <= 0 || site > nsites) {
                 throw "Wrong site number (must be between 1 and #sites)";
             }
 			site--;
 			ss >> tmp;
+			double rate;
 			rate = convert_double(tmp.c_str());
 			if (rate < 0.0) throw "Negative rate not allowed";
 			if (rate <= 0.0) rate = rate_minimum;
@@ -178,7 +178,7 @@ void RateMeyerHaeseler::initializeRates() {
 	pat_rates.resize(phylo_tree->aln->getNPattern(), 1.0);
 
 	for (Alignment::iterator pat = phylo_tree->aln->begin();
-         pat != phylo_tree->aln->end(); pat++, rate_id++) {
+         pat != phylo_tree->aln->end(); ++pat, ++rate_id) {
 		int diff = 0, total = 0;
         for (size_t i = 0; i+1 < nseq; ++i) {
             int state1 = pat->at(i);

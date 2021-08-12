@@ -98,13 +98,13 @@ public:
         }
     }
     
-	virtual std::string getName() const {
+	virtual std::string getName() const override {
         ASSERT(model_info!=nullptr);
         return model_info->getName();
     }
 
     virtual void setBounds(double *lower_bound, double *upper_bound,
-                            bool *bound_check) {
+                            bool *bound_check) override {
         ASSERT(model_info!=nullptr);
         if (isMixtureModel()) {
             super::setBounds(lower_bound, upper_bound, bound_check);
@@ -130,11 +130,11 @@ public:
                               phylo_tree);
     }
 
-    virtual void afterVariablesChanged() {
+    virtual void afterVariablesChanged() override {
         //Overridden in YAMLModelMixture
     }
 
-    virtual bool getVariables(const double *variables) {
+    virtual bool getVariables(const double *variables) override {
         bool changed = false;
         if (isMixtureModel()) {
             changed = super::getVariables(variables);
@@ -206,7 +206,7 @@ public:
     virtual void afterWeightsChanged() {
     }
     
-    virtual bool scaleStateFreq() {
+    virtual bool scaleStateFreq() override {
         // make the frequencies sum to 1.0
         bool   changed = false;
         double sum     = 0.0;
@@ -231,11 +231,11 @@ public:
         return changed;
     }
 
-    virtual int getNumberOfRates() const {
+    virtual int getNumberOfRates() const override {
         return model_info->getNumberOfVariableRates();
     }
 
-    virtual void setVariables(double *variables) {
+    virtual void setVariables(double *variables) override {
         if (isMixtureModel()) {
             super::setVariables(variables);
             return;
@@ -283,7 +283,7 @@ public:
                       trace.str());
     }
     
-    void setRateMatrixFromModel() {
+    void setRateMatrixFromModel() override {
         auto rank = model_info->getRateMatrixRank();
         ASSERT( rank == num_states );
         
@@ -359,7 +359,7 @@ public:
         setRateMatrix(rates.data());
     }
     
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) {
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) override {
         int state_num = static_cast<int>(state);
         if ( state_num < model_info->getTipLikelihoodMatrixRank()) {
             model_info->computeTipLikelihoodsForState(state, num_states, state_lk);
@@ -375,7 +375,7 @@ public:
         }
     }
     
-    virtual void writeInfo(ostream &out) {
+    virtual void writeInfo(ostream &out) override {
         model_info->writeInfo("Weight parameters    ", ModelParameterType::WEIGHT,     out);
         model_info->writeInfo("Proportion parameters", ModelParameterType::PROPORTION, out);
         model_info->writeInfo("Invariant proportion parameters",
@@ -400,7 +400,7 @@ public:
 		@return true if an ascertainment bias correction has been
 		        specified for this model (if one was).  
 	*/
-	virtual bool getSpecifiedAscertainmentBiasCorrection(ASCType& asc_type) { 
+	virtual bool getSpecifiedAscertainmentBiasCorrection(ASCType& asc_type) override { 
         return model_info->checkAscertainmentBiasCorrection(false, asc_type);
     }
 
@@ -408,7 +408,7 @@ public:
 		@return a newly allocated Rate Model that was specified, for this
 		        model (if one was).
 	*/
-	virtual RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree) { 
+	virtual RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree) override { 
         return model_info->getSpecifiedRateModel(tree);
     }
 };
@@ -431,7 +431,7 @@ public:
                       std::string model_params, StateFreqType freq, 
                       std::string freq_params,  PhyloTree*    tree, 
                       PhyloTree* report_to_tree);
-    bool getVariables(const double *variables);
+    bool getVariables(const double *variables) override;
 };
 
 class YAMLModelProtein: public YAMLModelWrapper<ModelProtein> {
@@ -484,10 +484,10 @@ public:
                      ModelsBlock* models_block, PhyloTree *tree, 
                      PhyloTree* report_to_tree);
 
-    virtual bool isMixtureModel() const;
-    virtual void setRateMatrixFromModel();
-    virtual void afterVariablesChanged();
-    virtual void afterWeightsChanged();
+    virtual bool isMixtureModel() const override;
+    virtual void setRateMatrixFromModel() override;
+    virtual void afterVariablesChanged() override;
+    virtual void afterWeightsChanged() override;
 };
 
 template <class R> class YAMLRateModelWrapper: public R {
@@ -546,7 +546,7 @@ public:
         return model_info.getName();
     }
 
-    virtual int getNDim() const {
+    virtual int getNDim() const override {
         number_of_variables   
             = (isOptimizingShapes()      ? number_of_variable_shapes      : 0)
             + (isOptimizingProportions() ? number_of_variable_proportions : 0)
@@ -555,7 +555,7 @@ public:
     }
 
     virtual void setBounds(double* lower_bound, double* upper_bound,
-                            bool*  bound_check) {
+                            bool*  bound_check) override {
         int ndim = getNDim();
         std::vector<ModelParameterType> types;
         if (isOptimizingShapes()) {
@@ -598,7 +598,7 @@ public:
 
     virtual void updateRateClassFromModelVariables() = 0 ;
 
-    virtual bool getVariables(const double* variables) {
+    virtual bool getVariables(const double* variables) override {
         int  index = 1;
         int  ndim  = getNDim();
         bool rc    = false;
@@ -637,7 +637,7 @@ public:
         return rc;
     }
 
-    virtual void setVariables(double *variables) {
+    virtual void setVariables(double *variables) override {
         int index = 1;
         int ndim  = getNDim();
         if (isOptimizingShapes()) {
@@ -660,19 +660,19 @@ public:
         }
     }
 
-    virtual void saveCheckpoint() {
+    virtual void saveCheckpoint() override {
         startCheckpoint();
         model_info.saveToCheckpoint(checkpoint);
         endCheckpoint();
     }
 
-    virtual void restoreCheckpoint() {
+    virtual void restoreCheckpoint() override {
         startCheckpoint();
         model_info.restoreFromCheckpoint(checkpoint);
         endCheckpoint();
     }
 
-    virtual void writeInfo(ostream &out) {
+    virtual void writeInfo(ostream &out) override {
         model_info.writeInfo("Shapes               ", 
                              ModelParameterType::SHAPE,      out);
         model_info.writeInfo("Proportions          ", 
@@ -689,8 +689,8 @@ public:
     typedef YAMLRateModelWrapper<RateFree> super;
     YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
                  ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;
 };
 
 class YAMLRateFreeInvar:public YAMLRateModelWrapper<RateFreeInvar> {
@@ -698,8 +698,8 @@ public:
     typedef YAMLRateModelWrapper<RateFreeInvar> super;
     YAMLRateFreeInvar(PhyloTree *tree, PhyloTree* report_to_tree,
                       ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;
 };
 
 class YAMLRateHeterotachy: public YAMLRateModelWrapper<RateHeterotachy> {
@@ -707,8 +707,8 @@ public:
     typedef YAMLRateModelWrapper<RateHeterotachy> super;
     YAMLRateHeterotachy(PhyloTree *tree, PhyloTree* report_to_tree,
                         ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;
 };
 
 class YAMLRateHeterotachyInvar:public YAMLRateModelWrapper<RateHeterotachyInvar> {
@@ -716,8 +716,8 @@ public:
     typedef YAMLRateModelWrapper<RateHeterotachyInvar> super;
     YAMLRateHeterotachyInvar(PhyloTree *tree, PhyloTree* report_to_tree,
                             ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;
 };
 
 class YAMLRateInvar:public YAMLRateModelWrapper<RateInvar> {
@@ -725,8 +725,8 @@ public:
     typedef YAMLRateModelWrapper<RateInvar> super;
     YAMLRateInvar(PhyloTree *tree, PhyloTree* report_to_tree,
                   ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;
 };
 
 class YAMLRateMeyerDiscrete:public YAMLRateModelWrapper<RateMeyerDiscrete> {
@@ -734,8 +734,8 @@ public:
     typedef YAMLRateModelWrapper<RateMeyerDiscrete> super;
     YAMLRateMeyerDiscrete(PhyloTree *tree, PhyloTree* report_to_tree,
                      ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();    
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;    
 };
 
 class YAMLRateMeyerHaeseler:public YAMLRateModelWrapper<RateMeyerHaeseler> {
@@ -743,8 +743,8 @@ public:
     typedef YAMLRateModelWrapper<RateMeyerHaeseler> super;
     YAMLRateMeyerHaeseler(PhyloTree *tree, PhyloTree* report_to_tree,
                      ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();    
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;    
 };
 
 class YAMLRateKategory:public YAMLRateModelWrapper<RateKategory> {
@@ -752,8 +752,8 @@ public:
     typedef YAMLRateModelWrapper<RateKategory> super;
     YAMLRateKategory(PhyloTree *tree, PhyloTree* report_to_tree,
                      ModelInfoFromYAMLFile& info);
-    virtual void updateRateClassFromModelVariables();
-    virtual void sortUpdatedRates();    
+    virtual void updateRateClassFromModelVariables() override;
+    virtual void sortUpdatedRates() override;    
 };
 
 #endif //yaml_model_wrapper_h
