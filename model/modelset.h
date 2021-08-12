@@ -34,13 +34,13 @@ public:
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
-	virtual bool isSiteSpecificModel() { return true; }
+	virtual bool isSiteSpecificModel() override { return true; }
 
 	/**
 	 * get the size of transition matrix, default is num_states*num_states.
 	 * can be changed for e.g. site-specific model
 	 */
-	virtual int getTransMatrixSize() { 
+	virtual int getTransMatrixSize() override { 
 		return num_states * num_states 
 	           * static_cast<int>(models.size()); 
 	}
@@ -52,7 +52,7 @@ public:
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0) override;
 
 	
 	/**
@@ -65,7 +65,7 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0);
+		double *trans_derv1, double *trans_derv2, int mixture = 0) override;
 
 	/**
 		To AVOID 'hides overloaded virtual functions
@@ -74,7 +74,7 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int state1, int state2) { return 0; }
+	virtual double computeTrans(double time, int state1, int state2) override { return 0; }
 
 	/**
 		To AVOID 'hides overloaded virtual functions
@@ -85,7 +85,8 @@ public:
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2) { return 0; }
+	virtual double computeTrans(double time, int state1, int state2, 
+	                            double &derv1, double &derv2) override { return 0; }
 
 
 
@@ -98,7 +99,7 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int model_id, int state1, int state2);
+	virtual double computeTrans(double time, int model_id, int state1, int state2) override;
 
 	/**
 		compute the transition probability and its 1st and 2nd derivatives between two states at a specific site
@@ -111,30 +112,31 @@ public:
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2);
+	virtual double computeTrans(double time, int model_id, int state1, int state2, 
+	                            double &derv1, double &derv2) override;
 
 	/**
 	 * @return pattern ID to model ID map, useful for e.g., partition model
 	 * @param ptn pattern ID of the alignment
 	 */
-	virtual int getPtnModelID(int ptn);
+	virtual int getPtnModelID(int ptn) override;
 	
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 	
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
     virtual ~ModelSet();
 
@@ -142,7 +144,7 @@ public:
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired() {
+    virtual uint64_t getMemoryRequired() override {
     	uint64_t mem = ModelMarkov::getMemoryRequired();
     	for (auto it = models.begin(); it != models.end(); ++it)
     		mem += (*it)->getMemoryRequired();
@@ -169,7 +171,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters 
@@ -177,7 +179,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 	
 };

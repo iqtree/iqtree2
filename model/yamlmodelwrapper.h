@@ -312,7 +312,7 @@ public:
                         }
                         trace << separator << entry;
                     }
-                    catch (ModelExpression::ModelException x) {
+                    catch (ModelExpression::ModelException& x) {
                         std::stringstream msg;
                         msg << "Error parsing expression"
                             << " for " << model_info->getName()
@@ -517,7 +517,8 @@ public:
     YAMLRateModelWrapper(const ModelInfoFromYAMLFile& info,
                      PhyloTree* tree)
         : super(info.getNumberOfRateCategories(), tree, tree)
-        , model_info(info), report_tree(tree) {
+        , model_info(info), report_tree(tree)
+        , only_optimizing_rates(false) {
         calculateNDim();
     }
 

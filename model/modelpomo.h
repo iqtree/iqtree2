@@ -137,17 +137,17 @@ class ModelPoMo : public ModelMarkov
 	/**
 	 * @return model name
 	 */
-	virtual string getName() const;
+	virtual string getName() const override;
 
     /**
      *  @return Number of free parameters.
      */
-    virtual int getNDim() const;
+    virtual int getNDim() const override;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq() const;
+	virtual int getNDimFreq() const override;
 
 
     /**
@@ -155,33 +155,33 @@ class ModelPoMo : public ModelMarkov
      */
     virtual void setBounds(double *lower_bound,
                            double *upper_bound,
-                           bool *bound_check);
+                           bool *bound_check) override;
 
     /**
      *  Write information to output stream (only with -vv).
      *  @param out Output stream.
      */
-    virtual void writeInfo(ostream &out);
+    virtual void writeInfo(ostream &out) override;
 
     /**
      *  The target function which needs to be optimized
      *  @param x the input vector x
      *  @return the function value at x
     */
-    virtual double targetFunk(double x[]);
+    virtual double targetFunk(double x[]) override;
 
     /**
      *  @return TRUE if parameters are at the boundary that may cause
      *  numerical unstability
      */
-    virtual bool isUnstableParameters();
+    virtual bool isUnstableParameters() override;
 
-    virtual bool isPolymorphismAware() { return true; };
+    virtual bool isPolymorphismAware() override { return true; };
 
     /**
      *  @return the number of rate entries
      */
-    virtual int getNumRateEntries() const { return n_alleles*(n_alleles-1)/2; };
+    virtual int getNumRateEntries() const override { return n_alleles*(n_alleles-1)/2; };
 
     /**
      *  \brief Normalize boundary frequencies so that they sum to 1.0.
@@ -242,7 +242,7 @@ class ModelPoMo : public ModelMarkov
      *
      * @param out Output file stream.
      */
-    virtual void report(ostream &out);
+    virtual void report(ostream &out) override;
 
     /**
      * Normalize the mutation probabilities such that the given heterozygosity
@@ -255,22 +255,22 @@ class ModelPoMo : public ModelMarkov
         set checkpoint object
         @param checkpoint
     */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint) override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         Restore object from the checkpoint.
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
        Decompose the rate matrix into eigenvalues and eigenvectors.
@@ -278,7 +278,7 @@ class ModelPoMo : public ModelMarkov
        non-reversible models differs in ModelMarkov, but should not
        differ for ModelPoMo.
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
   // I had serious problems with numerical instabilities because of fixed
   // boundaries for the heterozygosity. However, it is easy to get an empirical
@@ -295,7 +295,8 @@ class ModelPoMo : public ModelMarkov
      @param trans_matrix (OUT) the transition matrix between all pairs of states.
      Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, 
+                                    int mixture = 0) override;
 
     /**
      *  Set the scale factor of the mutation rates to NEW_SCALE.
@@ -307,13 +308,13 @@ class ModelPoMo : public ModelMarkov
   /**
    * get the underlying mutation model, used with PoMo model
    */
-  virtual ModelSubst *getMutationModel() { return mutation_model; }
+  virtual ModelSubst *getMutationModel() override { return mutation_model; }
 
     /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk)  override;
         //Supporting functions
         void computeTipLikelihoodForFixedState
                 (double* lh, int nnuc, int nstates, int id1,
@@ -332,7 +333,8 @@ class ModelPoMo : public ModelMarkov
         @param state_freq state frequencies
         @param num_state number of states
     */
-    virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
+    virtual void computeRateMatrix(double **rate_matrix, double *state_freq, 
+                                   int num_state) override;
 
   // Get the current scale factor of the mutation rates.
   double getScale();
@@ -343,7 +345,7 @@ class ModelPoMo : public ModelMarkov
      *
      * @param variables (OUT) Vector of variables, indexed from 1.
      */
-    virtual void setVariables(double *variables);
+    virtual void setVariables(double *variables) override;
 
     /**
      * This function is served for the multi-dimension
@@ -353,7 +355,7 @@ class ModelPoMo : public ModelMarkov
      * @param variables Vector of variables, indexed from 1.
      * @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
      */
-    virtual bool getVariables(const double *variables);
+    virtual bool getVariables(const double *variables) override;
 
     /**
 	 * Called from getVariables() to update the rate matrix for the
@@ -362,7 +364,7 @@ class ModelPoMo : public ModelMarkov
 	 * restoreCheckpoint() calls the ModelMarkov::setRates() which in
 	 * turn throws an error.
 	 */
-	virtual void setRates();
+	virtual void setRates() override;
 
  protected:
     /*!<  Virtual population size of the PoMo model. */

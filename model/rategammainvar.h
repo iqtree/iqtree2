@@ -43,81 +43,82 @@ public:
     /**
      *  check whether +I+G is used
      */
-    virtual bool isGammai() const {
+    virtual bool isGammai() const override {
         return true;
     }
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) const { return (1.0-invar.getPInvar())/ncategory; }
+	virtual double getProp(int category) const override { return (1.0-invar.getPInvar())/ncategory; }
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) const { return super::getRate(category); }
+	virtual double getRate(int category) const override { return super::getRate(category); }
 
 	/**
 		set the proportion of invariable sites. Default: do nothing
 		@param pinv the proportion of invariable sites
 	*/
-	virtual void setPInvar(double pInvar);
+	virtual void setPInvar(double pInvar) override;
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
 	 * @return mean rate, default = 1
 	 */
-	virtual double meanRates() const;
+	virtual double meanRates() const override;
 
 	/**
 	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
 	 * @return rescaling factor
 	 */
-	virtual double rescaleRates();
+	virtual double rescaleRates() override;
 
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() const;
+	virtual string getNameParams() const override;
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
 		p_invar or gamma shape parameter.
 		@param value value of p_invar (if cur_optimize == 1) or gamma shape (if cur_optimize == 0).
 	*/
-	virtual double computeFunction(double value);
+	virtual double computeFunction(double value) override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check) override;
 
 	/**
 		optimize parameters
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 	/**
         optimize rate parameters using EM algorithm
@@ -128,38 +129,39 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const { return invar.getNDim() + super::getNDim(); }
+	virtual int getNDim() const override { return invar.getNDim() + super::getNDim(); }
 
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		write parameters, used with modeltest
 		@param out output stream
 	*/
-	virtual void writeParameters(ostream &out);
+	virtual void writeParameters(ostream &out) override;
 
 	/** TRUE to jointly optimize gamma shape and p_invar using BFGS, default: FALSE */
 	//bool joint_optimize;
 
-	virtual void setNCategory(int ncat);
+	virtual void setNCategory(int ncat) override;
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int computePatternRates(DoubleVector &pattern_rates, 
+	                                IntVector &pattern_cat) override;
 
 protected:
 	RateInvar invar;
@@ -169,7 +171,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -177,7 +179,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 private:
     /**
@@ -206,18 +208,18 @@ private:
 	//Explicitly say, for member functions otherwise inherited via dominance
 	//which superclass they are to be inherited from (to silence... 11 warnings).
 	//The "dominance" warning messages basically result from a MSVC compiler bug.
-	virtual int    getNRate()         const { return super::getNRate(); }
-	virtual int    getNDiscreteRate() const { return super::getNDiscreteRate(); }
-	virtual void   setRate(int category, double value) { super::setRate(category, value); }
-	virtual double getGammaShape()    const { return super::getGammaShape(); }
-	virtual void   setGammaShape(double gs) { super::setGammaShape(gs); }
-	virtual bool   isFixGammaShape()  const { return super::isFixGammaShape(); }
-	virtual void   setFixGammaShape(bool fixGammaShape) { super::setFixGammaShape(fixGammaShape); }
-	virtual int    isGammaRate()      const { return super::isGammaRate(); }
+	virtual int    getNRate()         const override { return super::getNRate(); }
+	virtual int    getNDiscreteRate() const override { return super::getNDiscreteRate(); }
+	virtual void   setRate(int category, double value) override { super::setRate(category, value); }
+	virtual double getGammaShape()    const override { return super::getGammaShape(); }
+	virtual void   setGammaShape(double gs) override { super::setGammaShape(gs); }
+	virtual bool   isFixGammaShape()  const override { return super::isFixGammaShape(); }
+	virtual void   setFixGammaShape(bool fixGammaShape) override { super::setFixGammaShape(fixGammaShape); }
+	virtual int    isGammaRate()      const override { return super::isGammaRate(); }
 
-	virtual double getPInvar()        const { return invar.getPInvar(); }
-	virtual bool isFixPInvar()        const { return invar.isFixPInvar(); }
-	void    setFixPInvar(bool fixPInvar)    { invar.setFixPInvar(fixPInvar); }
+	virtual double getPInvar()        const override { return invar.getPInvar(); }
+	virtual bool isFixPInvar()        const override { return invar.isFixPInvar(); }
+	void    setFixPInvar(bool fixPInvar)    override { invar.setFixPInvar(fixPInvar); }
 #endif
 };
 

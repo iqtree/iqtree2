@@ -26,29 +26,29 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params,
                       StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree);
+                      PhyloTree* report_to_tree) override;
 
         /**
              start structure for checkpointing
         */
-        virtual void startCheckpoint();
+        virtual void startCheckpoint() override;
 
         /**
             save object into the checkpoint
         */
-        virtual void saveCheckpoint();
+        virtual void saveCheckpoint() override;
 
         /**
             restore object from the checkpoint
         */
-        virtual void restoreCheckpoint();
+        virtual void restoreCheckpoint() override;
 
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	static void getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
 
@@ -67,17 +67,16 @@ public:
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
-	virtual bool isReversible();
-
-
+	virtual bool isReversible() override;
 
 	static bool validModelName(string model_name);
-	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	void setBounds(double *lower_bound, double *upper_bound, 
+	               bool *bound_check) override;
 	
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
     /** decompose rate matrix using closed formula derived by Michael Woodhams */
     void decomposeRateMatrixClosedForm();
@@ -92,9 +91,11 @@ public:
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, 
+	                                int mixture = 0) override;
 	// overrides Optimization::restartParameters
-	bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
+	bool restartParameters(double guess[], int ndim, double lower[], double upper[], 
+	                       bool bound_check[], int iteration) override;
 		//Supporting functions
 		bool isGuessNearBoundary(double guess[], int    ndim,
                                  double lower[], double upper[]);
@@ -115,14 +116,14 @@ protected:
 		//Supporting functions
 		void setBasisEmpirical(PhyloTree* report_to_tree);
 		void setBasisEstimate (PhyloTree* report_to_tree);
-	virtual void setRates();
+	virtual void setRates() override;
 
     /**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters 
@@ -130,7 +131,7 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
 	/*
@@ -140,7 +141,7 @@ protected:
          * Minh: you might chose to remove this override, if you like "+FO"
 	 * to be on LM model names.
          */
-	string getName() const;
+	string getName() const override;
 
 	/*
 	const static double ***BASES;

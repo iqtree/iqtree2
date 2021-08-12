@@ -101,7 +101,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const { return (ncategory-1); }
+	virtual int getNDim() const override { return (ncategory-1); }
 
 	/**
 		write information
