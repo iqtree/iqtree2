@@ -85,39 +85,39 @@ public:
     virtual ~ModelInfoFromName() = default;
     
     virtual std::string getFreeRateParameters(int& num_rate_cats,
-                                              bool &fused_mix_rate) const;
-    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const;
+                                              bool &fused_mix_rate) const override;
+    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const override;
     virtual void        getFrequencyOptions(std::string& freq_str,
                                             StateFreqType& freq_type,
                                             std::string& freq_params,
-                                            bool& optimize_mixmodel_weight) const;
+                                            bool& optimize_mixmodel_weight) const override;
     virtual void        getGammaParameters(int& num_rate_cats,
-                                           double& gamma_shape) const;
+                                           double& gamma_shape) const override;
     virtual std::string getHeterotachyParameters(bool is_mixture_model,
                                                  int& num_rate_cats,
-                                                 bool& fused_mix_rate) const;
-    virtual double getProportionOfInvariantSites() const;
+                                                 bool& fused_mix_rate) const override;
+    virtual double getProportionOfInvariantSites() const override;
 
-    virtual bool hasAscertainmentBiasCorrection()  const;
-    virtual bool hasRateHeterotachy()              const;
+    virtual bool hasAscertainmentBiasCorrection()  const override;
+    virtual bool hasRateHeterotachy()              const override;
     
-    virtual bool isFreeRate()                      const;
-    virtual bool isFrequencyMixture()              const;
-    virtual bool isGammaModel()                    const;
-    virtual bool isInvariantModel()                const;
-    virtual bool isKategoryModel()                 const;
-    virtual bool isMixtureModel()                  const;
-    virtual bool isModelFinder()                   const;
-    virtual bool isModelFinderOnly()               const;
-    virtual bool isPolymorphismAware()             const;
-    virtual bool isWeissAndVonHaeselerTest()       const;
+    virtual bool isFreeRate()                      const override;
+    virtual bool isFrequencyMixture()              const override;
+    virtual bool isGammaModel()                    const override;
+    virtual bool isInvariantModel()                const override;
+    virtual bool isKategoryModel()                 const override;
+    virtual bool isMixtureModel()                  const override;
+    virtual bool isModelFinder()                   const override;
+    virtual bool isModelFinderOnly()               const override;
+    virtual bool isPolymorphismAware()             const override;
+    virtual bool isWeissAndVonHaeselerTest()       const override;
 
-    virtual int  getKategoryRateCount(int rate_count, int min_count) const;
+    virtual int  getKategoryRateCount(int rate_count, int min_count) const override;
 
-    ASCType     extractASCType(std::string& leftover_name) const;
-    std::string extractMixtureModelList(std::string& leftover_name) const;
-    std::string extractPolymorphicHeterozygosity(std::string& leftover_name) const;
-    void        updateName(const std::string& name);
+    ASCType     extractASCType(std::string& leftover_name) const override;
+    std::string extractMixtureModelList(std::string& leftover_name) const override;
+    std::string extractPolymorphicHeterozygosity(std::string& leftover_name) const override;
+    void        updateName(const std::string& name) override;
 };
 
 

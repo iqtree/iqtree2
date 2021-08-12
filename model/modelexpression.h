@@ -39,7 +39,7 @@ namespace ModelExpression {
         ModelInfoFromYAMLFile& model;
     public:
         Expression(const Expression& rhs) = delete;
-        Expression(ModelInfoFromYAMLFile& for_model);
+        explicit Expression(ModelInfoFromYAMLFile& for_model);
         virtual ~Expression() = default;
         virtual double evaluate()           const;
         virtual bool   isAssignment()       const;
@@ -67,9 +67,9 @@ namespace ModelExpression {
         typedef Expression super;
         Token(ModelInfoFromYAMLFile& for_model, char c);
         virtual ~Token() = default;
-        virtual void writeTextTo(std::stringstream &text) const;
-        virtual bool isFixed() const;
-        virtual bool isToken(char c) const;
+        virtual void writeTextTo(std::stringstream &text) const override;
+        virtual bool isFixed() const override;
+        virtual bool isToken(char c) const override;
     };
 
     class Variable: public Expression {
@@ -83,10 +83,10 @@ namespace ModelExpression {
         Variable(ModelInfoFromYAMLFile& for_model,
                  const std::string& name);
         virtual ~Variable() = default;
-        virtual double evaluate()    const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual bool   isFixed()     const;
-        virtual bool   isVariable()  const;
+        virtual double evaluate()    const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual bool   isFixed()     const override;
+        virtual bool   isVariable()  const override;
         const std::string& getName() const;
     };
 
@@ -104,8 +104,8 @@ namespace ModelExpression {
                             const YAMLFileParameter* param,
                             Expression* subscript_expr);
         virtual ~ParameterSubscript();
-        virtual double evaluate()   const;
-        virtual bool   isFixed()    const;
+        virtual double evaluate()   const override;
+        virtual bool   isFixed()    const override;
         std::string    getName()    const;
     };
 
@@ -116,10 +116,10 @@ namespace ModelExpression {
         Constant(ModelInfoFromYAMLFile& for_model,
                  double v);
         virtual ~Constant() = default;
-        virtual double evaluate()   const;
-        virtual bool   isConstant() const;
-        virtual bool   isFixed()    const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual double evaluate()   const override;
+        virtual bool   isConstant() const override;
+        virtual bool   isFixed()    const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
  
@@ -141,7 +141,7 @@ namespace ModelExpression {
         virtual ~Function() = default;
 
         virtual bool   isFixed()    const = 0;
-        virtual bool   isFunction() const;
+        virtual bool   isFunction() const override;
         virtual void   setParameter(Expression* param) = 0; //takes ownership
     };
 
@@ -150,14 +150,14 @@ namespace ModelExpression {
         Expression* expression;
     public:
         typedef Function super;
-        Estimate(ModelInfoFromYAMLFile& for_model);
+        explicit Estimate(ModelInfoFromYAMLFile& for_model);
         virtual ~Estimate();
-        virtual double evaluate() const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual bool   isConstant() const;
-        virtual bool   isEstimate() const;
-        virtual bool   isFixed()    const;
-        virtual void   setParameter(Expression* param); //takes ownership
+        virtual double evaluate() const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual bool   isConstant() const override;
+        virtual bool   isEstimate() const override;
+        virtual bool   isFixed()    const override;
+        virtual void   setParameter(Expression* param) override; //takes ownership
     };
 
     class UnaryFunction: public Function {
@@ -170,10 +170,10 @@ namespace ModelExpression {
                       const UnaryFunctionImplementation* implementation);
         virtual ~UnaryFunction();
 
-        virtual void   setParameter(Expression* param); //takes ownership
-        virtual double evaluate() const;
-        virtual bool   isFixed()  const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual void   setParameter(Expression* param) override; //takes ownership
+        virtual double evaluate() const override;
+        virtual bool   isFixed()  const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class InfixOperator: public Expression {
@@ -182,10 +182,10 @@ namespace ModelExpression {
         Expression* rhs;
     public:
         typedef Expression super;
-        InfixOperator(ModelInfoFromYAMLFile& for_model);
+        explicit InfixOperator(ModelInfoFromYAMLFile& for_model);
         virtual ~InfixOperator();
-        virtual bool   isFixed()    const;
-        virtual bool   isOperator() const;
+        virtual bool   isFixed()    const override;
+        virtual bool   isOperator() const override;
         virtual void   setOperands(Expression* left, 
                                    Expression* right); //takes ownership
         virtual void   writeInfixTextTo(const char* operator_text, 
@@ -195,66 +195,66 @@ namespace ModelExpression {
     class Exponentiation: public InfixOperator {
         public:
             typedef InfixOperator super;
-            Exponentiation(ModelInfoFromYAMLFile& for_model);
+            explicit Exponentiation(ModelInfoFromYAMLFile& for_model);
             virtual ~Exponentiation() = default;
-            virtual double evaluate() const;
-            virtual void   writeTextTo(std::stringstream &text) const;
-            virtual int    getPrecedence() const;
+            virtual double evaluate() const override;
+            virtual void   writeTextTo(std::stringstream &text) const override;
+            virtual int    getPrecedence() const override;
     };
 
     class Multiplication: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Multiplication(ModelInfoFromYAMLFile& for_model);
+        explicit Multiplication(ModelInfoFromYAMLFile& for_model);
         virtual ~Multiplication() = default;
-        virtual double evaluate() const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual int    getPrecedence() const;
+        virtual double evaluate() const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual int    getPrecedence() const override;
     };
 
     class Division: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Division(ModelInfoFromYAMLFile& for_model);
+        explicit Division(ModelInfoFromYAMLFile& for_model);
         virtual ~Division() = default;
-        virtual double evaluate() const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual int    getPrecedence() const;
+        virtual double evaluate() const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual int    getPrecedence() const override;
     };
 
     class Addition: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Addition(ModelInfoFromYAMLFile& for_model );
+        explicit Addition(ModelInfoFromYAMLFile& for_model );
         virtual ~Addition() = default;
-        virtual double evaluate() const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual int    getPrecedence() const;
+        virtual double evaluate() const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual int    getPrecedence() const override;
     };
 
     class Subtraction: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Subtraction(ModelInfoFromYAMLFile& for_model);
+        explicit Subtraction(ModelInfoFromYAMLFile& for_model);
         virtual ~Subtraction() = default;
-        virtual double evaluate() const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual int    getPrecedence() const;
+        virtual double evaluate() const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual int    getPrecedence() const override;
     };
 
     class Assignment: public InfixOperator {
     public:
         typedef InfixOperator super;
-        Assignment(ModelInfoFromYAMLFile& for_model);
+        explicit Assignment(ModelInfoFromYAMLFile& for_model);
         virtual ~Assignment() = default;
         virtual void   setOperands(Expression* left, 
-                                   Expression* right); //takes ownership
-        virtual double evaluate()           const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual bool   isAssignment()       const;
-        virtual bool   isFixed()            const;
-        virtual bool   isRightAssociative() const;
-        virtual int    getPrecedence()      const;
+                                   Expression* right) override; //takes ownership
+        virtual double evaluate()           const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual bool   isAssignment()       const override;
+        virtual bool   isFixed()            const override;
+        virtual bool   isRightAssociative() const override;
+        virtual int    getPrecedence()      const override;
         Expression*    getTarget()          const;
         Variable*      getTargetVariable()  const;
         Expression*    getExpression()      const;
@@ -263,62 +263,62 @@ namespace ModelExpression {
     class BooleanOperator: public InfixOperator {
     public:
         typedef InfixOperator super;
-        BooleanOperator(ModelInfoFromYAMLFile& for_model);
-        virtual bool isBoolean() const;
+        explicit BooleanOperator(ModelInfoFromYAMLFile& for_model);
+        virtual bool isBoolean() const override;
     };
 
     class LessThanOperator: public BooleanOperator {
     public:
         typedef BooleanOperator super;
-        LessThanOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit LessThanOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class GreaterThanOperator: public BooleanOperator {
     public:
         typedef BooleanOperator super;
-        GreaterThanOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit GreaterThanOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class EqualityOperator: public BooleanOperator {
     public:
         typedef BooleanOperator super;
-        EqualityOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit EqualityOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class InequalityOperator: public BooleanOperator {
     public:
         typedef BooleanOperator super;
-        InequalityOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit InequalityOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class ShortcutAndOperator: public BooleanOperator {
     public:
         typedef BooleanOperator super;
-        ShortcutAndOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit ShortcutAndOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class ShortcutOrOperator: public BooleanOperator {
     public:
         typedef BooleanOperator super;
-        ShortcutOrOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit ShortcutOrOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class ListOperator: public InfixOperator {
@@ -326,16 +326,16 @@ namespace ModelExpression {
         std::vector<Expression*> list_entries;
     public:
         typedef InfixOperator super;
-        ListOperator(ModelInfoFromYAMLFile& for_model);
+        explicit ListOperator(ModelInfoFromYAMLFile& for_model);
         ListOperator(ModelInfoFromYAMLFile& for_model, 
                      Expression* only); //1-entry list (takes ownership)
         virtual ~ListOperator();
-        virtual int    getPrecedence()   const;
-        virtual double evaluate()        const;
-        virtual void   writeTextTo(std::stringstream &text) const;
-        virtual void   setOperands(Expression* left, Expression* right); //takes ownership
-        virtual bool   isFixed()         const;
-        virtual bool   isList()          const;
+        virtual int    getPrecedence()   const override;
+        virtual double evaluate()        const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
+        virtual void   setOperands(Expression* left, Expression* right) override; //takes ownership
+        virtual bool   isFixed()         const override;
+        virtual bool   isList()          const override;
         virtual int    getEntryCount()   const;
         virtual double evaluateEntry(int index) const;
     };
@@ -343,9 +343,9 @@ namespace ModelExpression {
     class CommaOperator: public ListOperator {
     public:
         typedef ListOperator super;
-        CommaOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence()   const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit CommaOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class MultiFunction; //So it can be friend of MultiFunctionImplementation
@@ -372,32 +372,32 @@ namespace ModelExpression {
                       const char* name,
                       const MultiFunctionImplementation* implementation);
         virtual ~MultiFunction();
-        virtual void   setParameter(Expression* param); //takes ownership
-        virtual double evaluate() const;
-        virtual bool   isFixed()  const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual void   setParameter(Expression* param) override; //takes ownership
+        virtual double evaluate() const override;
+        virtual bool   isFixed()  const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class SelectOperator: public InfixOperator {
     public:
         typedef InfixOperator super;
-        SelectOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence() const;
-        virtual double evaluate()      const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        explicit SelectOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence() const override;
+        virtual double evaluate()      const  override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class RangeOperator: public InfixOperator {
     public:
         typedef InfixOperator super;
-        RangeOperator(ModelInfoFromYAMLFile& for_model);
-        virtual int    getPrecedence()     const;
-        virtual bool   isRange()           const;
+        explicit RangeOperator(ModelInfoFromYAMLFile& for_model);
+        virtual int    getPrecedence()     const override;
+        virtual bool   isRange()           const override;
         virtual int    getIntegerMinimum() const;
         virtual int    getIntegerMaximum() const;
         virtual double getMinimum()        const;
         virtual double getMaximum()        const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        virtual void   writeTextTo(std::stringstream &text) const override;
     };
 
     class ExpressionStack;
@@ -434,9 +434,9 @@ namespace ModelExpression {
                               const std::string& expression_text);
         virtual ~InterpretedExpression();
         bool           isSet()      const;
-        bool           isFixed()    const;
-        virtual double evaluate()   const;
-        virtual void   writeTextTo(std::stringstream &text) const;
+        bool           isFixed()    const override;
+        virtual double evaluate()   const override;
+        virtual void   writeTextTo(std::stringstream &text) const override;
         Expression*    expression() const; //Does *not* yield ownership
         Expression* detatchExpression(); //*Does* yield ownership
         bool evaluateIntegerRange(std::pair<int,int>& range) const;

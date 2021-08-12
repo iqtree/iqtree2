@@ -390,44 +390,44 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /** 
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /** 
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
             read the tree from the input file in newick format
             @param infile the input file file.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    virtual void readTree(const char *infile, bool &is_rooted);
+    virtual void readTree(const char *infile, bool &is_rooted) override;
 
     /**
             read the tree from the ifstream in newick format
             @param in the input stream.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    virtual void readTree(istream &in, bool &is_rooted);
+    virtual void readTree(istream &in, bool &is_rooted) override;
 
     /**
             copy the phylogenetic tree structure into this tree, override to take sequence names
             in the alignment into account
             @param tree the tree to copy
      */
-    virtual void copyTree(MTree *tree);
+    virtual void copyTree(MTree *tree) override;
     /**
             copy the sub-tree structure into this tree
             @param tree the tree to copy
             @param taxa_set 0-1 string of length leafNum (1 to keep the leaf)
      */
-    virtual void copyTree(MTree *tree, string &taxa_set);
+    virtual void copyTree(MTree *tree, string &taxa_set) override;
 
     /**
      copy the constraint tree structure into this tree and reindex node IDs accordingly
@@ -667,7 +667,7 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual PhyloNode* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual PhyloNode* newNode(int node_id = -1, const char* node_name = NULL) override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -675,7 +675,7 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual PhyloNode* newNode(int node_id, int node_name);
+    virtual PhyloNode* newNode(int node_id, int node_name) override;
 
     /**
             indicates whether a given node is a dummy "place-holder" node,
@@ -1967,7 +1967,7 @@ public:
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
-    virtual double computeFunction(double value);
+    virtual double computeFunction(double value) override;
 
     /**
             Inherited from Optimization class.
@@ -1978,7 +1978,7 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual void computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
     /**
         optimize the scaling factor for tree length, given all branch lengths fixed
@@ -2739,19 +2739,20 @@ public:
      @param noun the noun used (e.g. "candidate tree")
      @param isUpperBound true if (size) was only an upper bound on how big the task might be
      */
-    virtual void initProgress(double size, std::string name, const char* verb, const char* noun, bool isUpperBound = false);
+    virtual void initProgress(double size, std::string name, const char* verb, 
+                              const char* noun, bool isUpperBound = false)  override;
 
     /** track progress made on a task*/
-    virtual void trackProgress(double amount);
+    virtual void trackProgress(double amount) override;
     
     /** hide the progress made on a task (e.g. before writing to cout)*/
-    virtual void hideProgress() const;
+    virtual void hideProgress() const override;
     
     /** hide the progress made on a task (e.g. after writing to cout)*/
-    virtual void showProgress() const;
+    virtual void showProgress() const override;
     
     /** report that a task is complete*/
-    virtual void doneProgress();
+    virtual void doneProgress() override;
     
 protected:
     /**

@@ -325,12 +325,12 @@ public:
                           LoggingTarget* logging_target);
 
     virtual std::string getFreeRateParameters(int& num_rate_cats,
-        bool& fused_mix_rate) const {
+        bool& fused_mix_rate) const override{
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
 
-    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const {
+    virtual std::string getFrequencyMixtureParams(std::string& freq_str) const override {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
@@ -338,55 +338,55 @@ public:
     virtual void        getFrequencyOptions(std::string& freq_str,
         StateFreqType& freq_type,
         std::string& freq_params,
-        bool& optimize_mixmodel_weight) const {
+        bool& optimize_mixmodel_weight) const override {
         FUNCTION_NOT_IMPLEMENTED;
     }
 
     virtual void        getGammaParameters(int& num_rate_cats,
-        double& gamma_shape) const {
+        double& gamma_shape) const  override {
         FUNCTION_NOT_IMPLEMENTED;
     }
 
     virtual std::string getHeterotachyParameters(bool is_mixture_model,
         int& num_rate_cats,
-        bool& fused_mix_rate) const {
+        bool& fused_mix_rate) const override {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
 
-    virtual double getProportionOfInvariantSites() const { return 0.0; /*stub*/ }
+    virtual double getProportionOfInvariantSites() const override { return 0.0; /*stub*/ }
 
-    virtual bool hasRateHeterotachy()              const;
+    virtual bool hasRateHeterotachy()              const override;
     virtual bool hasSpecifiedRateModel()           const;
 
-    virtual bool isFreeRate()                      const { return false; /*stub*/ }
-    virtual bool isFrequencyMixture()              const { return false; /*stub*/ }
-    virtual bool isGammaModel()                    const;
-    virtual bool isInvariantModel()                const;
-    virtual bool isKategoryModel()                 const;
-    virtual bool isMixtureModel()                  const;
-    virtual bool isModelFinder()                   const;
-    virtual bool isModelFinderOnly()               const;
-    virtual bool isPolymorphismAware()             const { return false; /*stub*/ }
+    virtual bool isFreeRate()                      const override { return false; /*stub*/ }
+    virtual bool isFrequencyMixture()              const override { return false; /*stub*/ }
+    virtual bool isGammaModel()                    const override;
+    virtual bool isInvariantModel()                const override;
+    virtual bool isKategoryModel()                 const override;
+    virtual bool isMixtureModel()                  const override;
+    virtual bool isModelFinder()                   const override;
+    virtual bool isModelFinderOnly()               const override;
+    virtual bool isPolymorphismAware()             const override { return false; /*stub*/ }
     virtual bool isReversible()                    const;
-    virtual bool isWeissAndVonHaeselerTest()       const { return false; /*stub*/ }
+    virtual bool isWeissAndVonHaeselerTest()       const override { return false; /*stub*/ }
 
-    virtual int  getKategoryRateCount               (int rate_count, int min_count)     const;
-    virtual ASCType extractASCType                  (std::string& leftover_name)        const;
+    virtual int  getKategoryRateCount               (int rate_count, int min_count)     const override;
+    virtual ASCType extractASCType                  (std::string& leftover_name)        const override;
     bool            checkAscertainmentBiasCorrection(bool warnIfInvalid, ASCType &type) const;
-    virtual bool    hasAscertainmentBiasCorrection  ()                                  const;
+    virtual bool    hasAscertainmentBiasCorrection  ()                                  const override;
 
     std::string extractMixtureModelList
-    (std::string& leftover_name) const {
+    (std::string& leftover_name) const override {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
     std::string extractPolymorphicHeterozygosity
-    (std::string& leftover_name) const {
+    (std::string& leftover_name) const override {
         FUNCTION_NOT_IMPLEMENTED;
         return "";
     }
-    void updateName  (const std::string& name);
+    void updateName  (const std::string& name) override;
     void addParameter(const YAMLFileParameter& p, 
                       LoggingTarget* logging_target);
 
