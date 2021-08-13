@@ -63,7 +63,7 @@ public:
 		construct split graph from the parameters by calling init(params).
 		@param params program parameters
 	*/
-    SplitGraph(Params &params);
+ 	explicit SplitGraph(Params &params);
 
 	/**
 		init split graph from the parameters

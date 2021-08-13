@@ -82,7 +82,8 @@ PDNetwork::PDNetwork(Params &params) : SplitGraph(params) {
 void PDNetwork::readRootNode(const char *root_name) {
 	int id = -1;
 	try {
-		id = taxa->FindTaxon(root_name);
+		NxsString root_name_str(root_name);
+		id = taxa->FindTaxon(root_name_str);
 	} catch (NxsTaxaBlock::NxsX_NoSuchTaxon) {
 		outError(ERR_NO_TAXON, root_name);
 	}
@@ -121,12 +122,13 @@ void PDNetwork::readParams(Params &params) {
 		cout << "Rescaling split weights with " << params.scaling_factor << 
 			" and taxa weights with " << 1 - params.scaling_factor << endl;
 		scale = params.scaling_factor;
-		for (DoubleVector::iterator it = tax_weight.begin(); it != tax_weight.end(); it++)
+		for (DoubleVector::iterator it = tax_weight.begin(); 
+		     it != tax_weight.end(); ++it)
 			(*it) *= (1 - scale);
 	}
 
 	// incoporate into the split system
-	for (iterator it = begin(); it != end(); it++) {
+	for (iterator it = begin(); it != end(); ++it) {
 		int id = (*it)->trivial();
 		// first, multiply split weight with the coefficient
 		(*it)->weight *= scale;		
@@ -149,7 +151,8 @@ void PDNetwork::readInitialSet(Params &params) {
 	readInitTaxaFile(params, ntaxa, tax_name);
 	if (tax_name.empty()) 
 		outError("No taxa found");
-	for (StrVector::iterator it = tax_name.begin(); it != tax_name.end(); it++) {
+	for (StrVector::iterator it = tax_name.begin(); 
+	     it != tax_name.end(); ++it) {
 		int id = -1;
 		try {
 			string name = "";
@@ -178,10 +181,11 @@ void PDNetwork::proceedInitialSet() {
 	double total_w = trunc(abs(calcWeight())+1);
 	// get the set of initial taxa
 	set<int> iset;
-	for (IntVector::iterator it2 = initialset.begin(); it2 != initialset.end(); it2++)
+	for (IntVector::iterator it2 = initialset.begin(); 
+		 it2 != initialset.end(); ++it2)
 		iset.insert(*it2);
 	// now modifying the split weights
-	for (iterator it = begin(); it != end(); it++) {
+	for (iterator it = begin(); it != end(); ++it) {
 
 		// get the taxa id of trivial split
 		int id = (*it)->trivial();
@@ -204,7 +208,7 @@ void PDNetwork::readInitialAreas(Params &params) {
 	readInitAreaFile(params, nareas, area_name);
 	if (area_name.empty()) 
 		outError("No area found");
-	for (StrVector::iterator it = area_name.begin(); it != area_name.end(); it++) {
+	for (StrVector::iterator it = area_name.begin(); it != area_name.end(); ++it) {
 		int id = -1;
 		id = sets->findArea(*it);
 		if (id < 0)
@@ -226,7 +230,7 @@ void PDNetwork::readInitialAreas(Params &params) {
 
 void PDNetwork::initPDMin() {
 	min_pd = true;
-	for (iterator it = begin(); it != end(); it++) {
+	for (iterator it = begin(); it != end(); ++it) {
 		(*it)->weight = -(*it)->weight;
 	}
 }
@@ -239,7 +243,7 @@ void PDNetwork::initPDMin() {
 */
 int PDNetwork::calcCost(IntVector &taxset) {
 	int sum = 0;
-	for (IntVector::iterator it = taxset.begin(); it != taxset.end(); it++)
+	for (IntVector::iterator it = taxset.begin(); it != taxset.end(); ++it)
 		sum += static_cast<int>(pda->costs[*it]);
 	return sum;
 }
@@ -269,7 +273,8 @@ void PDNetwork::calcPD(Split &id_set) {
 		return;
 	}
 	Split id(id_set);
-	for (IntVector::iterator it = initialset.begin(); it != initialset.end(); it++)
+	for (IntVector::iterator it = initialset.begin(); 
+	     it != initialset.end(); ++it)
 		id.addTaxon(*it);
 	id_set.weight = calcWeight(id);
 }
@@ -290,13 +295,14 @@ void PDNetwork::computePD(Params &params, SplitSet &pd_set, PDRelatedMeasures &p
 	//sets->Report(cout);
 	TaxaSetNameVector *allsets = sets->getSets();
 	TaxaSetNameVector::iterator i;
-	for (i = allsets->begin(); i != allsets->end(); i++) {
+	for (i = allsets->begin(); i != allsets->end(); ++i) {
 		Split *id_set = new Split(getNTaxa());
 		/*
-		for (IntVector::iterator it = initialset.begin(); it != initialset.end(); it++)
+		for (IntVector::iterator it = initialset.begin(); it != initialset.end(); ++it)
 			id_set->addTaxon(*it);
 		*/
-		for (vector<string>::iterator it2 = (*i)->taxlist.begin(); it2 != (*i)->taxlist.end(); it2++) {
+		for (vector<string>::iterator it2 = (*i)->taxlist.begin(); 
+		     it2 != (*i)->taxlist.end(); ++it2) {
 			int id = -1;
 			try {
 				id = taxa->FindTaxon(NxsString(it2->c_str()));
@@ -346,19 +352,22 @@ double PDNetwork::calcRaisedWeight(Split &taxa_set,
 		if ((*this)[*it]->preserved(taxa_set)) {
 			sum += (*this)[*it]->weight;
 			IntList::iterator prev_it = rem_it;
-			prev_it--;
+			--prev_it;
 			int temp = *it;
 			*it = *prev_it;
 			*prev_it = temp;
 			rem_it = prev_it;
-		} else it++;
+		} else {
+			++it;
+		}
 	return sum;
 }
 
 int PDNetwork::calcMaxBudget() {
 	int sum = 0;
-	for (DoubleVector::iterator it = pda->costs.begin(); it != pda->costs.end(); it++)
+	for (DoubleVector::iterator it = pda->costs.begin(); it != pda->costs.end(); ++it) {
 		sum += static_cast<int>(*it);
+	}
 	return sum;
 }
 
@@ -500,14 +509,20 @@ void PDNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &
 
 void PDNetwork::leaveFindPD(vector<SplitSet> &taxa_set) {
 	// subtract the weights from the extra_pd
-	if (extra_pd > 0)
-		for (vector<SplitSet>::iterator it = taxa_set.begin(); it != taxa_set.end(); it++) 
-			for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++)
+	if (extra_pd > 0) {
+		for (vector<SplitSet>::iterator it = taxa_set.begin(); it != taxa_set.end(); ++it) {
+			for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); ++it2) {
 				(*it2)->weight -= extra_pd;
-	if (min_pd) 
-		for (vector<SplitSet>::iterator it = taxa_set.begin(); it != taxa_set.end(); it++) 
-			for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++)
+			}
+		}
+	}
+	if (min_pd) {
+		for (vector<SplitSet>::iterator it = taxa_set.begin(); it != taxa_set.end(); ++it) {
+			for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); ++it2) {
 				(*it2)->weight = -(*it2)->weight;
+			}
+		}
+	}
 }
 
 
@@ -623,16 +638,17 @@ double PDNetwork::greedyPD(int subsize, Split &taxa_set, vector<int> &taxa_order
 	for (int step = 2; step < subsize; step++) {
 		Split pdk_set = taxa_set;
 		besti = -1;
-		for (i = 0; i < ntaxa; i++) 
-		if (!pdk_set.containTaxon(i)) {
-			Split curset;
-			curset.setNTaxa(ntaxa);
-			curset = pdk_set;
-			curset.addTaxon(i);
-			curset.weight = calcWeight(curset);
-			if (curset.weight > taxa_set.weight || besti == -1) {
-				taxa_set = curset;
-				besti = i;
+		for (i = 0; i < ntaxa; i++) {
+			if (!pdk_set.containTaxon(i)) {
+				Split curset;
+				curset.setNTaxa(ntaxa);
+				curset = pdk_set;
+				curset.addTaxon(i);
+				curset.weight = calcWeight(curset);
+				if (curset.weight > taxa_set.weight || besti == -1) {
+					taxa_set = curset;
+					besti = i;
+				}
 			}
 		}
 		//taxa_set.report(cout);
@@ -640,7 +656,6 @@ double PDNetwork::greedyPD(int subsize, Split &taxa_set, vector<int> &taxa_order
 	}
 	return taxa_set.getWeight();
 }
-
 
 /**
 	testing algorithm for phylogenetic diversity of a given size 
@@ -687,21 +702,23 @@ void PDNetwork::calcPDGain(vector<SplitSet> &pd_set, mmatrix(double) &delta) {
 	int ntaxa = pd_set.front().front()->getNTaxa();
 	delta.resize(pd_set.size());
 	int cnt = 0;
-	for (cnt = 0; cnt < delta.size(); cnt++) 
+	for (cnt = 0; cnt < delta.size(); ++cnt) 
 		delta[cnt].resize(ntaxa, 0);
 
 
 
-	for (it = pd_set.begin(), cnt = 0; it != pd_set.end(); it++, cnt++) {
+	for (it = pd_set.begin(), cnt = 0; 
+	     it != pd_set.end(); ++it, ++cnt) {
 		ASSERT(!(*it).empty());
 		// take only the first split for calculation
 		Split *sp = (*it).front();
-		for (int tax = 0; tax < ntaxa; tax++)
+		for (int tax = 0; tax < ntaxa; ++tax) {
 			if (!sp->containTaxon(tax)) {
 				sp->addTaxon(tax);
 				delta[cnt][tax] = calcWeight(*sp) - sp->weight;
 				sp->removeTaxon(tax);
 			}
+		}
 	}
 }
 
@@ -710,18 +727,21 @@ void PDNetwork::calcPDEndemism(SplitSet &area_set, DoubleVector &pd_endem) {
 
 	// make union of all id_sets
 	Split id_union(getNTaxa());
-	for (it_s = area_set.begin(); it_s != area_set.end(); it_s++) 
+	for (it_s = area_set.begin(); it_s != area_set.end(); ++it_s) {
 		id_union += *(*it_s);
+	}
 	
 	// calculate PD of union 
 	calcPD(id_union);
 
 	// now calculate PD endemism
 	pd_endem.clear();
-	for (it_s = area_set.begin(); it_s != area_set.end(); it_s++) {
+	for (it_s = area_set.begin(); 
+	     it_s != area_set.end(); ++it_s) {
 		// make union of all other set
 		Split id_other(getNTaxa());
-		for (SplitSet::iterator it_s2 = area_set.begin(); it_s2 != area_set.end(); it_s2++)
+		for (SplitSet::iterator it_s2 = area_set.begin(); 
+		     it_s2 != area_set.end(); ++it_s2)
 			if (it_s2 != it_s) id_other += *(*it_s2);
 		// calculate PD of all other sets
 		calcPD(id_other);
@@ -739,7 +759,7 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 	parseAreaName(area_names, given_areas);
 
 /*
-	for (set<string>::iterator it = given_areas.begin(); it != given_areas.end(); it++)
+	for (set<string>::iterator it = given_areas.begin(); it != given_areas.end(); ++it)
 		cout << (*it) << "!";
 	cout << endl;
 */
@@ -749,7 +769,8 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 	Split given_id(getNTaxa());
 
 	// convert taxa set to id set
-	for (it_s = area_set.begin(), it_n = all_names.begin(); it_s != area_set.end(); it_s++, it_n++) {
+	for (it_s = area_set.begin(), it_n = all_names.begin(); 
+	     it_s != area_set.end(); ++it_s, ++it_n) {
 		if (given_areas.find(*it_n) != given_areas.end())
 			given_id += *(*it_s);
 	}
@@ -761,7 +782,7 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 
 	// now calculate PD complementarity
 	pd_comp.clear();
-	for (it_s = area_set.begin(); it_s != area_set.end(); it_s++) {
+	for (it_s = area_set.begin(); it_s != area_set.end(); ++it_s) {
 		// make union the two sets
 		Split id_both(*(*it_s));
 		id_both += given_id;
@@ -773,10 +794,12 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 
 }
 
-void PDNetwork::transformLP2(Params &params, const char *outfile, int total_size, bool make_bin) {
+void PDNetwork::transformLP2(Params &params, const char *outfile,
+                             int total_size, bool make_bin) {
 	Split included_tax(getNTaxa());
 	IntVector::iterator it2;
-	for (it2 = initialset.begin(); it2 != initialset.end(); it2++)
+	for (it2 = initialset.begin(); 
+	     it2 != initialset.end(); ++it2)
 		included_tax.addTaxon(*it2);
 	try {
 		ofstream out;
@@ -879,7 +902,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 		}	
 
 		Split *pd_set = new Split(ntaxa, score);
-		for (i = 0; i < ntaxa; i++)
+		for (i = 0; i < ntaxa; ++i)
 			if (1.0 - variables[i] < tolerance) {
 				//pd_set->addTaxon(taxa_order[i]);
 				pd_set->addTaxon(i);
@@ -896,7 +919,8 @@ void PDNetwork::transformLP_Area2(Params &params, const char *outfile,
 	int nareas = static_cast<int>(getNAreas());
 	Split included_area(nareas);
 	IntVector::iterator it2;
-	for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++)
+	for (it2 = initialareas.begin(); 
+	     it2 != initialareas.end(); ++it2)
 		included_area.addTaxon(*it2);
 	try {
 		ofstream out;
@@ -928,8 +952,10 @@ void PDNetwork::transformMinK_Area2(Params &params, const char *outfile,
 	int nareas = static_cast<int>(getNAreas());
 	Split included_area(nareas);
 	IntVector::iterator it2;
-	for (it2 = initialareas.begin(); it2 != initialareas.end(); it2++)
+	for (it2 = initialareas.begin(); 
+	     it2 != initialareas.end(); ++it2) {
 		included_area.addTaxon(*it2);
+	}
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
@@ -1040,19 +1066,24 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 	}
 	IntVector unique_cost;
 	IntVector::iterator it2;
-	for (i = 0, it2 = cost_present.begin(); it2 != cost_present.end(); it2++, i++)
-		if (*it2) unique_cost.push_back(i);
+	for (i = 0, it2 = cost_present.begin(); 
+	     it2 != cost_present.end(); ++it2, ++i) {
+		if (*it2) { 
+			unique_cost.push_back(i);
+		}
+	}
 	ASSERT(unique_cost.size() == num_cost);
 
 	ok_budget.resize(params.budget+1, 0);
 	// initialize all entry with corresponding cost
-	for (it2 = unique_cost.begin(); it2 != unique_cost.end(); it2++)
-	if (*it2 < ok_budget.size())
+	for (it2 = unique_cost.begin(); it2 != unique_cost.end(); ++it2)
+	if (*it2 < ok_budget.size()) {
 		ok_budget[*it2] = 1;
+	}
 	// now use dynamic programming to find feasible budgets
 
-	for (i = 0; i <= params.budget; i++) 
-		for (it2 = unique_cost.begin(); it2 != unique_cost.end(); it2++) {
+	for (i = 0; i <= params.budget; i++) {
+		for (it2 = unique_cost.begin(); it2 != unique_cost.end(); ++it2) {
 			j = i - (*it2);
 			if (j < 0) continue;
 			if (ok_budget[j]) {
@@ -1060,13 +1091,15 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 				break;
 			}
 		}
+	}
 		
-
-	if (verbose_mode < VerboseMode::VB_MED)
+	if (verbose_mode < VerboseMode::VB_MED) {
 		return;
+	}
 	cout << "Feasible budgets:";
-	for (i = 0; i < ok_budget.size(); i++)
+	for (i = 0; i < ok_budget.size(); ++i) {
 		if (ok_budget[i]) cout << " " << i;
+	}
 	cout << endl;
 }
 
@@ -1098,7 +1131,8 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 	}
 	double total_weight = calcWeight();
 
-	for (vector<SplitSet>::iterator it = pd_set.begin(); it != pd_set.end(); it++) {
+	for (vector<SplitSet>::iterator it = pd_set.begin(); 
+	     it != pd_set.end(); ++it) {
 		// ignore, if get the same PD sets again
 		//if (it != pd_set.begin() && it->getWeight() == (it-1)->getWeight() && it->size() == (it-1)->size()) 
 			//continue;
@@ -1107,7 +1141,8 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 		if (params.nr_output == 1)
 			scoreout << (*it)[0]->countTaxa() << "  " << (it)->getWeight() << endl;
 
-		for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++, c_num++ ){
+		for (SplitSet::iterator it2 = (*it).begin(); 
+		     it2 != (*it).end(); ++it2, ++c_num ){
 			Split *this_set = *it2;
 			int count = this_set->countTaxa();
 			//if (count == 0) continue;
@@ -1181,8 +1216,10 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 		if (params.root || params.is_rooted) {
 			ASSERT(!initialset.empty());
 			int root_id = initialset[0];
-			for (SplitSet::iterator it = area_taxa.begin(); it != area_taxa.end(); it++)
+			for (SplitSet::iterator it = area_taxa.begin(); 
+			     it != area_taxa.end(); ++it) {
 				(*it)->addTaxon(root_id);
+			}
 		}
 		checkAreaCoverage();
 		num_area_coverage = findMinAreas(params, *area_coverage);
@@ -1355,19 +1392,22 @@ void PDNetwork::calcPDArea(Split &area_id_set) {
 	int ntaxa = getNTaxa();
 	int nareas = static_cast<int>(area_taxa.size());
 	Split sp(ntaxa);
-	for (int i = 0; i < nareas; i++)
-		if (area_id_set.containTaxon(i))
+	for (int i = 0; i < nareas; ++i) {
+		if (area_id_set.containTaxon(i)) {
 			sp += *area_taxa[i];
+		}
+	}
 	calcPD(sp);
 	area_id_set.weight = sp.weight;
 }
 
 bool PDNetwork::isUniquelyCovered(int taxon, int &area) {
 	area = -1;
-	for (int i = 0; i < getNAreas(); i++)
+	for (int i = 0; i < getNAreas(); ++i) {
 		if (area_taxa[i]->containTaxon(taxon)) {
 			if (area < 0) area = i;	else return false;
 		}
+	}
 	return (area >= 0);
 }
 
@@ -1377,14 +1417,14 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile,
                                           Split &included_area) {
 	int ntaxa = getNTaxa();
 	int nareas = static_cast<int>(getNAreas());
-	int i, j;
 	IntVector::iterator it;
 	Split tax_cover(ntaxa);
-	for (it = initialareas.begin(); it != initialareas.end(); it++) {
+	for (it = initialareas.begin(); it != initialareas.end(); ++it) {
 		tax_cover += *(area_taxa[*it]);
 		included_area.addTaxon(*it);
 	}
-	for (j = 0; j < ntaxa; j++) {
+	for (int j = 0; j < ntaxa; j++) {
+		int i;
 		if (isUniquelyCovered(j, i)) {
 			if (verbose_mode >= VerboseMode::VB_MED) {
 				cout << "Taxon " << taxa->GetTaxonLabel(j)
@@ -1403,20 +1443,22 @@ void PDNetwork::transformLP_Area_Coverage(const char *outfile,
 		lpObjectiveMinK(out, params);
 
 		// add constraint: every taxon should be covered by some area
-		for (j = 0; j < ntaxa; j++) {
+		for (int j = 0; j < ntaxa; j++) {
 			if (tax_cover.containTaxon(j)) continue;
 			bool ok = false;
-			for (i = 0; i < nareas; i++)
+			for (int i = 0; i < nareas; i++)
 				if (area_taxa[i]->containTaxon(j)) {
 					out << " +x" << i;
 					ok = true;
 				}
 			if (!ok) continue;
 			out << " >= 1";
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << endl;
-			else
+			}
+			else {
 				out << ";" << endl;
+			}
 		}
 		lpBoundaryConstraint(out, params);
 
@@ -1509,7 +1551,8 @@ int PDNetwork::findMinAreas(Params &params, Split &area_id) {
 bool PDNetwork::checkAreaCoverage() {
 	int ntaxa = getNTaxa();
 	Split tax_cover(ntaxa);
-	for (SplitSet::iterator it = area_taxa.begin(); it != area_taxa.end(); it++) {
+	for (SplitSet::iterator it = area_taxa.begin(); 
+	     it != area_taxa.end(); ++it) {
 		tax_cover += *(*it);
 	}
 	if (tax_cover.countTaxa() == ntaxa) {
@@ -1517,8 +1560,11 @@ bool PDNetwork::checkAreaCoverage() {
 	}
 
 	cout << "WARNING: some taxa are not covered by any area including: ";
-	for (int i = 0; i < ntaxa; i++)
-		if (!tax_cover.containTaxon(i)) cout << taxa->GetTaxonLabel(i) << " ";
+	for (int i = 0; i < ntaxa; i++) {
+		if (!tax_cover.containTaxon(i)) {
+			cout << taxa->GetTaxonLabel(i) << " ";
+		}
+	}
 	cout << endl;
 	return false;
 }
@@ -1548,10 +1594,12 @@ void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params,
 			out << " +" << (*spit)->getWeight() << " x" << y_value[i] - 2;
 	}
 
-	if (params.gurobi_format)
+	if (params.gurobi_format) {
 		out << endl << "Subject to" << endl;
-	else
+	}
+	else {
 		out << ";" << endl;
+	}
 }
 
 ///// TODO FOR taxon selection
@@ -1602,28 +1650,29 @@ void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params,
                                      int total_size) {
 
 	int nvars;
-	int i, j;
-	if (isPDArea())
+	if (isPDArea()) {
 		nvars = static_cast<int>(area_taxa.size());
-	else
+	}
+	else {
 		nvars = getNTaxa();
-
-	for (j = 0; j < nvars; j++) {
+	}
+	for (int j = 0; j < nvars; j++) {
 		double coeff = (isBudgetConstraint())
                      ? getPdaBlock()->getCost(j) : 1.0;
         if (areas_boundary) {
             coeff += areas_boundary[j*nvars+j] * params.boundary_modifier;
         }
 		out << ((j>0) ? " +" : "") << coeff << " x" << j;
-		
 	}
 	
 	if (areas_boundary && params.boundary_modifier != 0.0) {
-		for (i = 0; i < nvars-1; i++) 
-		for (j = i+1; j < nvars; j++) 
-		if (areas_boundary[i*nvars+j] > 0.0) {
-			double coeff = 2*areas_boundary[i*nvars+j] * params.boundary_modifier;
-				out << " -" << coeff << " y" << i << "_" << j;
+		for (int i = 0; i < nvars-1; i++) {
+			for (int j = i+1; j < nvars; j++) {
+				if (areas_boundary[i*nvars+j] > 0.0) {
+					double coeff = 2*areas_boundary[i*nvars+j] * params.boundary_modifier;
+						out << " -" << coeff << " y" << i << "_" << j;
+				}
+			}
 		}
 	}
 	out << " <= " << total_size;
@@ -1641,34 +1690,44 @@ void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params,
 		}
 		out  << " = " << total_size;
 	}*/
-	if (params.gurobi_format)
+	if (params.gurobi_format) {
 		out << endl;
-	else
+	}
+	else {
 		out << ";" << endl;
+	}
 }
 
 void PDNetwork::lpBoundaryConstraint(ostream &out, Params &params) {
 	// constraint on the variable for the shared boundary between areas
-	if (!areas_boundary || params.boundary_modifier == 0.0) 
+	if (!areas_boundary || params.boundary_modifier == 0.0) {
 		return;
-	if (params.quad_programming) return;
-	int i, j;
+	}
+	if (params.quad_programming) {
+		return;
+	}
 	int nareas = static_cast<int>(area_taxa.size());
 
-	for (i = 0; i < nareas-1; i++)
-		for (j = i+1; j < nareas; j++)
+	for (int i = 0; i < nareas-1; ++i) {
+		for (int j = i+1; j < nareas; ++j) {
 			if (areas_boundary[i*nareas+j] > 0.0) {
 				out << "x" << i << " - y" << i << "_" << j << " >= 0";
-				if (params.gurobi_format)
+				if (params.gurobi_format) {
 					out << endl;
-				else
+				}
+				else {
 					out << ";" << endl;
+				}
 				out << "x" << j << " - y" << i << "_" << j << " >= 0";
-				if (params.gurobi_format)
+				if (params.gurobi_format) {
 					out << endl;
-				else
+				}
+				else {
 					out << ";" << endl;
+				}
 			}
+		}
+	}
 }
 
 void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params,
@@ -1680,13 +1739,13 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params,
 	//if (params.root || params.is_rooted) root_id = initialset[0];
 	int nareas = static_cast<int>(area_taxa.size());
 
-
 	// adding the constraint for splits
-	for (spit = begin(),i=0; spit != end(); spit++,i++) {
+	for (spit = begin(),i=0; spit != end(); ++spit, ++i) {
 		if (y_value[i] >= 0) continue;
 		Split *sp = (*spit);
 
-		if (count1[i] < nareas && (isBudgetConstraint() || count1[i] <= nareas - total_size))
+		if (count1[i] < nareas && 
+		    (isBudgetConstraint() || count1[i] <= nareas - total_size))
 		{
 			out << "y" << i;
 			if (!params.gurobi_format)
@@ -1699,30 +1758,38 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params,
 						out << " +x" << j;
 				}
 			}
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << " <= 0" << endl;
-			else
+			}
+			else {
 				out << ";" << endl;
+			}
 		}
 
-		if (count2[i] < nareas && (isBudgetConstraint() || count2[i] <= nareas - total_size))
+		if (count2[i] < nareas && 
+		    (isBudgetConstraint() || count2[i] <= nareas - total_size))
 		{
 			sp->invert(); // scan the invert
 			out << "y" << i;
-			if (!params.gurobi_format)
+			if (!params.gurobi_format) {
 				out << " <=";
-			for (j = 0; j < nareas; j++) {
+			}
+			for (j = 0; j < nareas; ++j) {
 				if (sp->overlap(*area_taxa[j])) {
-					if (params.gurobi_format)
+					if (params.gurobi_format) {
 						out << " -x" << j;
-					else
+					}
+					else {
 						out << " +x" << j;
+					}
 				}
 			}
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << " <= 0" << endl;
-			else
+			}
+			else {
 				out << ";" << endl;
+			}
 			sp->invert(); // invert back to original
 		}
 	}
@@ -1734,22 +1801,29 @@ void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params,
 	int i,j;
 	int ntaxa = getNTaxa();
 	// adding the constraint for splits
-	for (spit = begin(),i=0; spit != end(); spit++,i++) {
-		if (y_value[i] >= 0) continue;
+	for (spit = begin(),i=0; spit != end(); ++spit,i++) {
+		if (y_value[i] >= 0) {
+			continue;
+		}
 		
 		Split *sp = (*spit);
 		bool contain_initset = sp->containAny(initialset);
 
-		if (!contain_initset && (isBudgetConstraint() || sp->countTaxa() <= ntaxa - total_size)) {
+		if (!contain_initset && 
+		    (isBudgetConstraint() || sp->countTaxa() <= ntaxa - total_size)) {
 			out << "y" << i;
-			for (j = 0; j < ntaxa; j++)
-				if (sp->containTaxon(j))
+			for (j = 0; j < ntaxa; ++j) {
+				if (sp->containTaxon(j)) {
 					out << " -x" << j;
+				}
+			}
 			out << " <= 0";
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << endl;
-			else
+			}
+			else {
 				out << ";" << endl;
+			}
 		}
 		contain_initset = false;
 		if (initialset.size() > 0) {
@@ -1757,16 +1831,20 @@ void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params,
 			contain_initset =  sp->containAny(initialset);
 			sp->invert();
 		}
-		if (!contain_initset && (isBudgetConstraint() || sp->countTaxa() >= total_size)) {
+		if (!contain_initset && 
+		    (isBudgetConstraint() || sp->countTaxa() >= total_size)) {
 			out << "y" << i;
 			for (j = 0; j < ntaxa; j++) 
-				if (!sp->containTaxon(j)) 
+				if (!sp->containTaxon(j)) {
 					out << " -x" << j;
+				}
 			out << " <= 0";
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << endl;
-			else
+			}
+			else {
 				out << ";" << endl;
+			}
 		}
 	}
 }
@@ -1781,21 +1859,27 @@ void PDNetwork::lpMinSDConstraint(ostream &out, Params &params,
 	if (required_sd > total_weight) required_sd = total_weight;
 	required_sd -= 1e-6;
 	// adding constraint for min conserved PD proportion
-	for (spit = begin(),i=0; spit != end(); spit++,i++)	{
-		if (y_value[i] < 0)
+	for (spit = begin(),i=0; spit != end(); ++spit, ++i)	{
+		if (y_value[i] < 0) {
 			out << " +" << (*spit)->getWeight() << " y" << i;
-		else if (y_value[i] >= 2)
+		}
+		else if (y_value[i] >= 2) {
 			out << " +" << (*spit)->getWeight() << " x" << y_value[i] - 2;
-		else if (y_value[i] == 1) required_sd -= (*spit)->getWeight();
+		}
+		else if (y_value[i] == 1) {
+			required_sd -= (*spit)->getWeight();
+		}
 	}
 	out.precision(12);
 	out << " >= " << required_sd;
 	out.precision(6);
 
-	if (params.gurobi_format)
+	if (params.gurobi_format) {
 		out << endl;
-	else
+	}
+	else {
 		out << ";" << endl;
+	}
 }
 
 void PDNetwork::lpVariableBound(ostream &out, Params &params,
@@ -1808,46 +1892,58 @@ void PDNetwork::lpVariableBound(ostream &out, Params &params,
 		out << "Bounds" << endl;
 
 
-	for (j = 0; j < included_vars.getNTaxa(); j++) {
+	for (j = 0; j < included_vars.getNTaxa(); ++j) {
 		if (included_vars.containTaxon(j)) {
 			out << "x" << j << " = 1";
 		} else {
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << "0 <= ";
+			}
 			out << "x" << j << " <= 1";
 		}		
-		if (params.gurobi_format)
+		if (params.gurobi_format) {
 			out << endl;
-		else
+		}
+		else {
 			out << ";" << endl;
+		}
 	}
 
 	if (!y_value.empty()) {
-		for (i = 0; i < getNSplits(); i++) {
-			if (y_value[i] >= 0) continue;
-			if (params.gurobi_format)
+		for (i = 0; i < getNSplits(); ++i) {
+			if (y_value[i] >= 0) {
+				continue;
+			}
+			if (params.gurobi_format) {
 				out << "0 <= ";
+			}
 			out << "y" << i << " <= 1";
-			if (params.gurobi_format)
+			if (params.gurobi_format) {
 				out << endl;
-			else
+			}
+			else {
 				out << ";" << endl;
+			}
 		}
 	}
 	int nvars = included_vars.getNTaxa();
 	if (areas_boundary && params.boundary_modifier != 0.0 && !params.quad_programming) {
-		for (i = 0; i < included_vars.getNTaxa()-1; i++)
-		for (j = i+1; j < included_vars.getNTaxa(); j++) 
-			if (areas_boundary[i*nvars+j] > 0.0) {
-				if (params.gurobi_format)
-					out << "0 <= ";
-				out << "y" << i << "_" << j << " <= 1";
-				if (params.gurobi_format)
-					out << endl;
-				else
-					out << ";" << endl;
-				
+		for (i = 0; i < included_vars.getNTaxa()-1; ++i) {
+			for (j = i+1; j < included_vars.getNTaxa(); ++j) {
+				if (areas_boundary[i*nvars+j] > 0.0) {
+					if (params.gurobi_format) {
+						out << "0 <= ";
+					}
+					out << "y" << i << "_" << j << " <= 1";
+					if (params.gurobi_format) {
+						out << endl;
+					}
+					else {
+						out << ";" << endl;
+					}
+				}
 			}
+		}
 	}
 }
 
@@ -1855,33 +1951,43 @@ void PDNetwork::lpVariableBinary(ostream &out, Params &params,
                                  Split &included_vars) {
 	int nvars;
 	int j;
-	if (isPDArea())
+	if (isPDArea()) {
 		nvars = static_cast<int>(area_taxa.size());
-	else
+	}
+	else {
 		nvars = static_cast<int>(getNTaxa());
+	}
 
 	bool first = true;
-	for (j = 0; j < nvars; j++) {
-		if (included_vars.containTaxon(j)) continue;
+	for (j = 0; j < nvars; ++j) {
+		if (included_vars.containTaxon(j)) {
+			continue;
+		}
 		if (params.gurobi_format) {
-			if (!first)
+			if (!first) {
 				out << " ";
-			else 
+			}
+			else {
 				out << "Binary" << endl;
+			}
 		} else {
-			if (!first) 
+			if (!first) {
 				out << ", ";
-			else
+			}
+			else {
 				out << "bin ";
+			}
 		}
 		out << "x" << j;
 		first = false;
 	}
 	if (!first) {
-		if (params.gurobi_format)
+		if (params.gurobi_format) {
 			out << endl;
-		else
+		}
+		else {
 			out << ";" << endl;
+		}
 	}
 }
 
@@ -1925,20 +2031,25 @@ void PDNetwork::lpInitialArea(ostream &out, Params &params) {
 	int j;
 
 	// adding constraint for initialset
-	for (auto it = initialset.begin(); it != initialset.end(); it++) {
-		if (it == initialset.begin() && (params.root || params.is_rooted)) // ignore the root
+	for (auto it = initialset.begin(); it != initialset.end(); ++it) {
+		if (it == initialset.begin() && 
+		    (params.root || params.is_rooted)) { // ignore the root
 			continue;
+		}
 		out << "1 <= ";
 		bool ok = false;
-		for (j = 0; j < nareas; j++)
+		for (j = 0; j < nareas; j++) {
 			if (area_taxa[j]->containTaxon(*it)) {
 				out << " +x" << j;
 				ok = true;
 			}
-		if (params.gurobi_format)
+		}
+		if (params.gurobi_format) {
 			out << endl;
-		else
+		}
+		else {
 			out << ";" << endl;
+		}
 		if (!ok) {
 			outError("No area contains taxon ", taxa->GetTaxonLabel(*it));
 		}
@@ -1951,7 +2062,7 @@ void PDNetwork::checkYValue(int total_size, vector<int> &y_value) {
 	int i;
 
 	y_value.resize(getNSplits(), -1);
-	for (spit = begin(),i=0; spit != end(); spit++,i++) {
+	for (spit = begin(),i=0; spit != end(); ++spit,++i) {
 		Split *sp = (*spit);
 		int id = -1;
 		int cnt = sp->countTaxa();
@@ -1988,10 +2099,10 @@ void PDNetwork::checkYValue_Area(int total_size, vector<int> &y_value,
 	y_value.resize(getNSplits(), -1);
 	count1.resize(getNSplits(), 0);
 	count2.resize(getNSplits(), 0);
-	for (spit = begin(),i=0; spit != end(); spit++,i++) {
+	for (spit = begin(),i=0; spit != end(); ++spit,++i) {
 		Split *sp = (*spit);
 		int id1 = -1, id2 = -1;
-		for (j = 0; j < nareas; j++) {
+		for (j = 0; j < nareas; ++j) {
 			if (sp->overlap(*area_taxa[j])) { 
 				count1[i]++;
 				id1 = j;

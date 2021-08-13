@@ -75,7 +75,7 @@ Split::Split(int antaxa, double aweight, vector<int> taxa_list)
 	// resize the split size
 	resize((ntaxa + UINT_BITS -1) / UINT_BITS, 0);
 
-	for (it = taxa_list.begin(); it != taxa_list.end(); it++)
+	for (it = taxa_list.begin(); it != taxa_list.end(); ++it)
 	{
 		int value = *it;
 		int bit_pos = value / UINT_BITS;
@@ -90,7 +90,7 @@ Split::Split(int antaxa, double aweight, vector<int> taxa_list)
 }
 
 void Split::invert() {
-	for (iterator uit = begin(); uit != end(); uit++)
+	for (iterator uit = begin(); uit != end(); ++uit)
 	{
 		int num_bits = (uit+1 == end()) ? ntaxa % UINT_BITS : UINT_BITS;
 
@@ -117,14 +117,14 @@ void Split::setNTaxa(int antaxa)
 {
 	ntaxa = antaxa;
 	resize((ntaxa + UINT_BITS - 1) / UINT_BITS, 0);
-	for (iterator it = begin(); it != end(); it++)
+	for (iterator it = begin(); it != end(); ++it)
 		(*it) = 0;
 }
 
 int Split::countTaxa() const {
 	int count=0;
-	for (size_t i = 0; i < size(); i++)
-		for (size_t j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); j++)
+	for (size_t i = 0; i < size(); ++i)
+		for (size_t j = 0; j < UINT_BITS && (i*UINT_BITS+j < getNTaxa()); ++j)
 			if ((*this)[i] & (1 << j))
 			{
 				count++;
@@ -159,7 +159,7 @@ int Split::firstTaxon() {
 }
 
 bool Split::isEmpty() {
-	for (iterator it = begin(); it != end(); it++)
+	for (iterator it = begin(); it != end(); ++it)
 		if (*it != 0) return false;
 	return true;
 }
@@ -175,7 +175,7 @@ bool Split::compatible(Split &sp)
 	ASSERT(sp.size() == size() && sp.ntaxa == ntaxa);
 
 	UINT res = 0, res2 = 0, res3 = 0, res4 = 0;
-	for (iterator it = begin(), sit = sp.begin(); it != end(); it++, sit++)
+	for (iterator it = begin(), sit = sp.begin(); it != end(); ++it, ++sit)
 	{
 		int num_bits = (it+1 == end()) ? ntaxa % UINT_BITS : UINT_BITS;
 		UINT it2 = (1 << (num_bits-1)) - 1 + (1 << (num_bits-1)) - (*it);
@@ -205,7 +205,7 @@ bool Split::preserved(Split &taxa_set)
 
 	int time_zero = 0, time_notzero = 0;
 	
-	for (iterator it = begin(), sit = taxa_set.begin(); it != end(); it++, sit++)
+	for (iterator it = begin(), sit = taxa_set.begin(); it != end(); ++it, ++sit)
 	{
 		UINT res = (*it) & (*sit);
 		if (res != 0 && res != (*sit))
@@ -244,7 +244,7 @@ int Split::trivial() {
 */
 	int id0 = 0, id1 = 0, pos = 0;
 	int bit0s = 0, bit1s = 0;
-	for (iterator it = begin(); it != end(); it++, pos++) {
+	for (iterator it = begin(); it != end(); ++it, ++pos) {
 		UINT content = *it;
 		int max_step;
 		if ((it + 1) == end()) {
@@ -317,8 +317,8 @@ bool Split::containTaxon(int tax_id)
 void Split::getTaxaList(vector<int> &invec) {
 	int tax = 0;
 	invec.clear();
-	for (iterator it = begin(); it != end(); it++) {
-		for (int i = 0; i < UINT_BITS && tax < ntaxa; i++, tax++)
+	for (iterator it = begin(); it != end(); ++it) {
+		for (int i = 0; i < UINT_BITS && tax < ntaxa; ++i, ++tax)
 			if (((*it) & (1 << i)) != 0) // inside the split
 				invec.push_back(tax);
 	}
@@ -329,8 +329,8 @@ void Split::getTaxaList(vector<int> &invec, vector<int> &outvec) {
 	int tax = 0;
 	invec.clear();
 	outvec.clear();
-	for (iterator it = begin(); it != end(); it++) {
-		for (int i = 0; i < UINT_BITS && tax < ntaxa; i++, tax++)
+	for (iterator it = begin(); it != end(); ++it) {
+		for (int i = 0; i < UINT_BITS && tax < ntaxa; ++i, ++tax)
 			if (((*it) & (1 << i)) != 0) // inside the split
 				invec.push_back(tax);
 			else
@@ -345,7 +345,7 @@ bool Split::operator<(const Split &sp) const {
 Split &Split::operator+=(Split &sp) {
 	ASSERT(sp.ntaxa == ntaxa);
 	iterator it1, it2;
-	for (it1 = begin(), it2 = sp.begin(); it1 != end(); it1++, it2++) {
+	for (it1 = begin(), it2 = sp.begin(); it1 != end(); ++it1, ++it2) {
 		(*it1) |= (*it2);
 	}
 	return *this;
@@ -354,7 +354,7 @@ Split &Split::operator+=(Split &sp) {
 Split &Split::operator*=(Split &sp) {
 	ASSERT(sp.ntaxa == ntaxa);
 	iterator it1, it2;
-	for (it1 = begin(), it2 = sp.begin(); it1 != end(); it1++, it2++) {
+	for (it1 = begin(), it2 = sp.begin(); it1 != end(); ++it1, ++it2) {
 		(*it1) &= (*it2);
 	}
 	return *this;	
@@ -363,25 +363,34 @@ Split &Split::operator*=(Split &sp) {
 Split &Split::operator-=(Split &sp) {
 	ASSERT(sp.ntaxa == ntaxa);
 	iterator it1, it2;
-	for (it1 = begin(), it2 = sp.begin(); it1 != end(); it1++, it2++) {
+	for (it1 = begin(), it2 = sp.begin(); 
+	     it1 != end(); ++it1, ++it2) {
 		(*it1) -= (*it1) & (*it2);
 	}
 	return *this;	
 }
 
 bool Split::operator==(const Split &sp) const{
-	if (ntaxa != sp.ntaxa) return false;
-	for (const_iterator it = begin(), it2 = sp.begin(); it != end(); it++, it2++)
-		if ((*it) != (*it2))
+	if (ntaxa != sp.ntaxa) {
+		return false;
+	}
+	for (const_iterator it = begin(), it2 = sp.begin(); 
+	     it != end(); ++it, ++it2) {
+		if ((*it) != (*it2)) {
 			return false;
+		}
+	}
 	return true;
 }
 
 bool Split::subsetOf (Split &sp) {
 	ASSERT(ntaxa == sp.ntaxa);
-	for (iterator it = begin(), it2 = sp.begin(); it != end(); it++, it2++)
-		if ( ((*it) & (*it2)) != (*it) )
+	for (iterator it = begin(), it2 = sp.begin(); 
+	     it != end(); ++it, ++it2) {
+		if ( ((*it) & (*it2)) != (*it) ) {
 			return false;
+		}
+	}
 	return true;
 }
 
@@ -408,7 +417,7 @@ void Split::randomize(int size) {
 	// repeat at most 10 times
 	const int MAX_STEP = 20;
 	const int PROB_STEP = 5;
-	for (int step = 0; step < MAX_STEP && num < size; step++) {
+	for (int step = 0; step < MAX_STEP && num < size; ++step) {
 		// probability of including a taxon
 		double prob = (double)(size - num) / ntaxa;
 		// increase the probability if passing too many iterations
@@ -416,25 +425,31 @@ void Split::randomize(int size) {
 		if (step >= PROB_STEP*2) prob *= 2.0;
 		if (step == MAX_STEP - 1) prob = 1.0;
 		// now scan through all elements, pick up at random
-		for (cnt = 0; cnt < ntaxa && num < size; cnt++)
+		for (cnt = 0; cnt < ntaxa && num < size; ++cnt)
 			if (!containTaxon(cnt) && ( random_double() <= prob )) {
 				addTaxon(cnt);
 				num++;
 			}
 	}
 	//report(cout);
-	if (num >= size) return;
-	cerr << "WARNING: random set has less than " << size << "taxa." << endl;
+	if (num >= size) { 
+		return;
+	}
+	cerr << "WARNING: random set has less than " 
+	     << size << "taxa." << endl;
 }
 
 
 bool Split::overlap(Split &sp) {
 	ASSERT(ntaxa == sp.ntaxa);
 	iterator it, it2;
-	for (it = begin(), it2 = sp.begin(); it != end(); it++, it2++)
-		if ((*it) & (*it2)) return true;
+	for (it = begin(), it2 = sp.begin(); 
+	     it != end(); ++it, ++it2) {
+		if ((*it) & (*it2)) {
+			return true;
+		}
+	}
 	return false;
-	
 }
 
 
@@ -442,8 +457,11 @@ Split::~Split()
 {}
 
 bool Split::containAny(IntVector &tax_id) {
-	for (IntVector::iterator it = tax_id.begin(); it != tax_id.end(); it++)
-		if (containTaxon(*it)) return true;
+	for (IntVector::iterator it = tax_id.begin(); it != tax_id.end(); ++it) {
+		if (containTaxon(*it)) {
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -451,11 +469,13 @@ Split *Split::extractSubSplit(Split &taxa_mask) {
 	ASSERT(taxa_mask.getNTaxa() == getNTaxa());
 	Split *sp = new Split(taxa_mask.countTaxa());
 	int id = 0;
-	for (int tax = 0; tax < ntaxa; tax++)
-	if (taxa_mask.containTaxon(tax)) {
-		if (containTaxon(tax))
-			sp->addTaxon(id);
-		id++;
+	for (int tax = 0; tax < ntaxa; tax++) {
+		if (taxa_mask.containTaxon(tax)) {
+			if (containTaxon(tax)) {
+				sp->addTaxon(id);
+			}
+			id++;
+		}
 	}
 	ASSERT(id == sp->getNTaxa());
 	return sp;
