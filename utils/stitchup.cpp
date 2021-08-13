@@ -389,7 +389,7 @@ template <class T=double> struct StitchupGraph {
         return success;
     }
     template <class F>
-    void writeSubtree ( const std::vector<Stitch<T>> stitchVector, 
+    void writeSubtree ( const std::vector<Stitch<T>>& stitchVector, 
                         std::vector<size_t>  nodeToEdge,
                         const Stitch<T>* backstop, size_t nodeIndex,
                         progress_display_ptr progress, F& out) const {
