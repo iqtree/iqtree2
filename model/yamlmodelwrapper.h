@@ -202,9 +202,6 @@ public:
         }
         return changed;
     }
-
-    virtual void afterWeightsChanged() {
-    }
     
     virtual bool scaleStateFreq() override {
         // make the frequencies sum to 1.0
