@@ -36,7 +36,7 @@
 #define PROBLEM(x) if (1) problems << x << ".\n"; else 0
 
 namespace {
-    bool endsWith(const std::string s, const char* suffix) {
+    bool endsWith(const std::string& s, const char* suffix) {
         auto suffixLen = strlen(suffix);
         if (s.length() < suffixLen) {
             return false;
@@ -66,6 +66,8 @@ namespace {
 
     std::string stripName;              //characters to strip from names
     std::string nameReplace("_");       //characters to replace stripepd chars with, in names
+    std::string truncateName;           //truncate names when you see one of these characters
+                                        //e.g. to make IQTree happy, truncate at space " ".
 };
 
 void showBanner() {
@@ -78,7 +80,8 @@ void showBanner() {
 }
 
 void showUsage() {
-    std::cout << "Usage: decenttree (-fasta [fastapath] (-strip-name [stripped]) (-name-replace [reps])\n";
+    std::cout << "Usage: decenttree (-fasta [fastapath] (-strip-name [stripped]) \n";
+    std::cout << "       (-name-replace [reps]) (-truncate-name-at [chars])\n";
     std::cout << "       (-uncorrected) (-no-matrix) (-dist-out [distout]\n";
     std::cout << "       (-alphabet [states]) (-unknown [chars]) (-not-dna))\n";
     std::cout << "       -in [mldist] (-c [level]) (-f [prec]) -out [newick] -t [algorithm]\n";
@@ -182,7 +185,7 @@ void useNumberedNamesIfAskedTo(FlatMatrix& m) {
         for (size_t i=0; i<name_count; ++i) {
             std::stringstream name;
             name << "A" << (i+1); //"A1", "A2", ...
-            m.sequenceName(i) = name.str();
+            m.setSequenceName(i, name.str());
         }
     }
 }
@@ -242,6 +245,15 @@ struct Sequences: public std::vector<Sequence> {
         } else {
             return at(i).getName();
         }
+    }
+    intptr_t getSize() const {
+        return size();
+    }
+    const std::string& getSequenceName(size_t i) const {
+        return at(i).getName();
+    }
+    void setSequenceName(size_t i, const std::string& new_name) {
+        at(i).setName(new_name);
     }
 };
 
@@ -671,7 +683,7 @@ bool writeMSAOutputFile(Sequences& sequences, const std::string& msaPath)
         }
         success = true;
     }
-    catch (std::ios::failure f) {
+    catch (std::ios::failure& f) {
         std::cerr << "I/O error trying to write"
             << " MSA format file: " << msaPath << std::endl;
     }
@@ -737,21 +749,56 @@ void setUpReplacementArray(const std::string& chars_to_strip,
     }
 }
 
-void fixUpSequenceNames(const std::string& chars_to_strip, 
+template <class S>
+void truncateSequenceNames(const char* truncation_chars,
+                           S&          sequences) {
+    intptr_t seq_count = sequences.getSize();
+    IntVector trunc(256, 0);
+    for (; *truncation_chars; ++truncation_chars) {
+        int ch = (static_cast<int>(*truncation_chars) & 255);
+        trunc[ch] = 1;
+    }
+    #ifdef _OPENMP
+    #pragma omp parallel for
+    #endif
+    for (intptr_t seq=0; seq<seq_count; ++seq) {
+        std::string old_name = sequences.getSequenceName(seq);
+        auto it = old_name.begin();
+        for (; it != old_name.end(); ++it) {
+            int ch = (static_cast<int>(*it) & 255);
+            if (trunc[ch] !=0 ) {
+                break;
+            }
+        }
+        if (it != old_name.end()) {
+            std::string new_name = old_name.substr(0, it-old_name.begin());
+            sequences.setSequenceName(seq, new_name);
+        }
+    }
+    //What about duplicated sequence names?
+    //Might as well warn the caller that it's happened
+}
+
+template <class S>
+void fixUpSequenceNames(const std::string& truncation_chars,
+                        const std::string& chars_to_strip, 
                         const std::string& replacement_chars,
-                        Sequences&  sequences) {
-    if (stripName.empty() || replacement_chars.empty()) {
+                        S&                 sequences) {
+    if (!truncation_chars.empty()) {
+        truncateSequenceNames(truncation_chars.c_str(), sequences);
+    }
+    if (chars_to_strip.empty() || replacement_chars.empty()) {
         return;
     }
     char in_char_to_out_char[256];
     setUpReplacementArray(chars_to_strip, replacement_chars, in_char_to_out_char);
 
-    intptr_t seq_count = sequences.size();
+    intptr_t seq_count = sequences.getSize();
     #ifdef _OPENMP
     #pragma omp parallel for
     #endif
     for (intptr_t seq=0; seq<seq_count; ++seq) {
-        std::string old_name = sequences[seq].getName();
+        std::string old_name = sequences.getSequenceName(seq);
         std::string new_name = old_name;
         for (size_t i=0; i<new_name.length(); ++i) {
             char ch_in   = old_name[i];
@@ -759,37 +806,10 @@ void fixUpSequenceNames(const std::string& chars_to_strip,
             new_name[i]  = in_char_to_out_char[ix_in];
         }
         if (new_name!=old_name) {
-            sequences[seq].setName(new_name);
+            sequences.setSequenceName(seq, new_name);
         }
     }
 }
-
-void fixUpSequenceNames(const std::string& chars_to_strip, 
-                        const std::string& replacement_chars,
-                        FlatMatrix& m) {
-    if (stripName.empty() || replacement_chars.empty()) {
-        return;
-    }
-    char in_char_to_out_char[256];
-    setUpReplacementArray(chars_to_strip, replacement_chars, in_char_to_out_char);
-
-    intptr_t seq_count = m.getSize();
-    #ifdef _OPENMP
-    #pragma omp parallel for
-    #endif
-    for (intptr_t seq=0; seq<seq_count; ++seq) {
-        std::string old_name = m.sequenceName(seq);
-        std::string new_name = old_name;
-        for (size_t i=0; i<new_name.length(); ++i) {
-            char ch_in   = old_name[i];
-            size_t ix_in = (unsigned char)(ch_in);
-            new_name[i]  = in_char_to_out_char[ix_in];
-        }
-        if (new_name!=old_name) {
-            m.setSequenceName(seq, new_name);
-        }
-    }
-}                        
 
 bool prepInput(const std::string& alignmentInputFilePath,
                const std::string& matrixInputFilePath,
@@ -798,13 +818,12 @@ bool prepInput(const std::string& alignmentInputFilePath,
                Sequences& sequences, bool loadMatrix,
                FlatMatrix& m) {
     if (!alignmentInputFilePath.empty()) {
-        Sequences sequences;
         std::vector<char> is_site_variant;
         if (!loadAlignment(alignmentInputFilePath, reportProgress,
             sequences, is_site_variant)) {
             return false;
         }
-        fixUpSequenceNames(stripName, nameReplace, sequences);
+        fixUpSequenceNames(truncateName, stripName, nameReplace, sequences);
         if (loadMatrix) {
             if (!loadSequenceDistancesIntoMatrix
                             (sequences, is_site_variant,
@@ -832,9 +851,17 @@ bool prepInput(const std::string& alignmentInputFilePath,
             }
         }
     } else if (!matrixInputFilePath.empty()) {
-        if (!loadDistanceMatrixInto(matrixInputFilePath,
+        if (loadDistanceMatrixInto(matrixInputFilePath,
                                     reportProgress, m)) {
-            fixUpSequenceNames(stripName, nameReplace, m);
+            fixUpSequenceNames(truncateName, stripName, nameReplace, m);
+            if (!distanceOutputFilePath.empty()) {
+                return m.writeToDistanceFile(format, precision,
+                                             compression_level,
+                                             distanceOutputFilePath );
+            }
+            return true;
+        } 
+        else {
             return false;
         }
     }
@@ -847,7 +874,7 @@ bool prepInput(const std::string& alignmentInputFilePath,
 class Argument {
 public:
     std::string name;
-    Argument(const char* arg_name): name(arg_name) {}
+    explicit Argument(const char* arg_name): name(arg_name) {}
     virtual ~Argument() = default;
     virtual void accept(const std::string& arg, const std::string& nextArg, 
                         char* argv[], int argc, int &argNum,
@@ -866,7 +893,7 @@ public:
           mapped_to(variable) { }
     void accept(const std::string& arg, const std::string& nextArg, 
                 char* argv[], int argc, 
-                int &argNum, std::stringstream& problems) {
+                int &argNum, std::stringstream& problems) override {
         ++argNum;
         if (argNum==argc) {
             problems << name << " should be followed by " << description << "\n";
@@ -884,7 +911,7 @@ public:
         : super(arg_name), description(desc), int_var(var) { }
     void accept(const std::string& arg, const std::string& nextArg, 
                 char* argv[], int argc, int &argNum, 
-                std::stringstream& problems) {
+                std::stringstream& problems) override {
         ++argNum;
         if (argNum==argc) {
             problems << name << " should be followed by " << description << ".\n";
@@ -903,7 +930,7 @@ public:
         : super(arg_name), switch_var(var), switch_setting(setting) { }
     void accept(const std::string& arg, const std::string& nextArg, 
                 char* argv[], int argc, int &argNum,
-                std::stringstream& problems) {
+                std::stringstream& problems) override {
         switch_var = switch_setting;
     }
 };
@@ -920,7 +947,7 @@ public:
         }
         clear();
     }
-    Argument* findByName(const std::string name) {
+    Argument* findByName(const std::string& name) {
         auto it = find(name);
         if (it == end()) {
             return nullptr;
@@ -985,7 +1012,9 @@ public:
         arg_map << new StringArgument("-dist-out", "distance matrix file path", distanceOutputFilePath);
         arg_map << new SwitchArgument("-no-matrix", isMatrixToBeLoaded, false);
         arg_map << new StringArgument("-strip-name", "list of characters to strip from name",
-                                    stripName);
+                                      stripName);
+        arg_map << new StringArgument("-truncate-name-at", "list of truncation characters",
+                                      truncateName);
         arg_map << new StringArgument("-name-replace", "list of characters to replace"
                                     " those stripped from names", nameReplace);
         arg_map << new StringArgument("-out", "output file path", outputFilePath);
@@ -1149,7 +1178,7 @@ int obeyCommandLineOptions(DecentTreeOptions& options) {
     }
     else if (!options.isMatrixToBeLoaded && 
              !options.alignmentFilePath.empty() && 
-             !options.distanceOutputFilePath.empty() ) {
+             !options.outputFilePath.empty() ) {
         succeeded = algorithm->constructTree(options.distanceOutputFilePath, 
                                              options.outputFilePath);
     }

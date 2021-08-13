@@ -58,6 +58,10 @@ const StrVector& FlatMatrix::getSequenceNames() const {
     return sequenceNames;
 }
 
+const std::string& FlatMatrix::getSequenceName(intptr_t i) const {
+    return sequenceNames[i];
+}
+
 const std::string& FlatMatrix::sequenceName(intptr_t i) const {
     return sequenceNames[i];
 }

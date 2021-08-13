@@ -41,9 +41,10 @@ public:
                double* distance_data);
     virtual ~FlatMatrix();
     
-    const StrVector&   getSequenceNames() const;
-    size_t             getMaxSeqNameLength()    const;
-    const std::string& sequenceName(intptr_t i)   const;
+    const StrVector&   getSequenceNames()          const;
+    size_t             getMaxSeqNameLength()       const;
+    const std::string& getSequenceName(intptr_t i) const;
+    const std::string& sequenceName(intptr_t i)    const;
     std::string&       sequenceName(intptr_t i);
     void               setSequenceName(intptr_t i, 
                                        const std::string& new_name);
