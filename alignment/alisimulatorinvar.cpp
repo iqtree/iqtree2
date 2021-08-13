@@ -37,7 +37,7 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
     vector<string> state_mapping;
     
     // initialize the site-specific rates
-    double *site_specific_rates = new double[sequence_length];
+    vector<double> site_specific_rates(sequence_length);
     initVariables(sequence_length, site_specific_rates);
     
     // initialize trans_matrix
@@ -66,7 +66,7 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
             }
 
             // initialize state_mapping (mapping from state to characters)
-            initializeStateMapping(tree->aln, state_mapping);
+            initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, output_filepath);
         }
@@ -91,9 +91,6 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
     // delete trans_matrix array
     delete[] trans_matrix;
     
-    // delete the site-specific rates
-    delete[] site_specific_rates;
-    
     // removing constant states if it's necessary
     if (length_ratio > 1)
         removeConstantSites();
@@ -102,7 +99,7 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
@@ -129,7 +126,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorInvar::initVariables(int sequence_length, double *site_specific_rates)
+void AliSimulatorInvar::initVariables(int sequence_length, vector<double> &site_specific_rates)
 {
     for (int i = 0; i < sequence_length; i++)
     {
@@ -139,4 +136,21 @@ void AliSimulatorInvar::initVariables(int sequence_length, double *site_specific
         else
             site_specific_rates[i] = 1;
     }
+}
+
+/**
+*  insert a new sequence into the current sequence when processing Insertion Events
+*
+*/
+void AliSimulatorInvar::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates)
+{
+    // initialize new_site_specific_rates for new sequence
+    vector<double> new_site_specific_rates(insertion_event.sequence.size());
+    initVariables(insertion_event.sequence.size(), new_site_specific_rates);
+    
+    // insert new_site_specific_rates into site_specific_rates
+    site_specific_rates.insert(site_specific_rates.begin()+insertion_event.position, new_site_specific_rates.begin(), new_site_specific_rates.end());
+    
+    // insert new_sequence into the current sequence
+    AliSimulator::insertNewSequenceForInsertionEvent(node, insertion_event, site_specific_rates);
 }

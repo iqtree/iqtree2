@@ -50,7 +50,7 @@ public:
         @return site-specific rates
     */
 
-    virtual void getSiteSpecificRates(double * site_specific_rates, int sequence_length);
+    virtual void getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length);
 
     /**
         write information

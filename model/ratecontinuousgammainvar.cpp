@@ -34,7 +34,7 @@ string RateContinuousGammaInvar::getNameParams() {
     return RateInvar::getNameParams() + RateContinuousGamma::getNameParams();
 }
 
-void RateContinuousGammaInvar::getSiteSpecificRates(double * site_specific_rates, int sequence_length)
+void RateContinuousGammaInvar::getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length)
 {
     // initialize gamma distribution
     gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);

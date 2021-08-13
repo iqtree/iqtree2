@@ -16,12 +16,12 @@ protected:
     /**
         get site-specific rates based on Continuous Gamma Distribution
     */
-    virtual void getSiteSpecificRatesContinuousGamma(double *site_specific_rates, int sequence_length);
+    virtual void getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length);
     
     /**
         get site-specific rates based on Discrete Distribution (Gamma/FreeRate)
     */
-    void getSiteSpecificRatesDiscrete(double *site_specific_rates, int sequence_length);
+    void getSiteSpecificRatesDiscrete(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length);
     
     /**
       estimate the state from accumulated trans_matrices
@@ -36,7 +36,7 @@ protected:
     /**
         initialize site specific model index based on its weights in the mixture model
     */
-    void intializeSiteSpecificModelIndex();
+    void intializeSiteSpecificModelIndex(int length, vector<short int> &new_site_specific_model_index);
     
     /**
         initialize caching accumulated_trans_matrix
@@ -51,12 +51,18 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, double *site_specific_rates);
+    virtual void initVariables(int sequence_length, vector<double> &site_specific_rates);
+    
+    /**
+    *  insert a new sequence into the current sequence when processing Insertion Events
+    *
+    */
+    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates);
     
 public:
     
@@ -79,7 +85,7 @@ public:
     /**
         get site-specific rates
     */
-    void getSiteSpecificRates(double *site_specific_rates, int sequence_length);
+    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length);
 
     /**
     *  simulate sequences for all nodes in the tree

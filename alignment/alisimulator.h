@@ -41,6 +41,18 @@ enum EVENT_TYPE {
     SUBSTITUTION
 };
 
+class InsertionEvent {
+public:
+    int position;
+    vector<short int> sequence;
+    
+    InsertionEvent(int new_position, vector<short int> new_sequence)
+    {
+        position = new_position;
+        sequence = new_sequence;
+    }
+};
+
 class AliSimulator{
 protected:
     
@@ -71,8 +83,9 @@ protected:
 
     /**
     *  randomly generate the ancestral sequence for the root node
+    *  by default (initial_freqs = true) freqs could be randomly generated if they are not specified
     */
-    vector<short int> generateRandomSequence(int sequence_length);
+    vector<short int> generateRandomSequence(int sequence_length, bool initial_freqs = true);
     
     /**
     *  randomly generate the base frequencies
@@ -103,7 +116,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa);
+    virtual void simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa);
     
     /**
     *  validate sequence length of codon
@@ -174,12 +187,12 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, double *site_specific_rates);
+    virtual void initVariables(int sequence_length, vector<double> &site_specific_rates);
     
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
@@ -199,22 +212,39 @@ protected:
     /**
         handle indels
     */
-    void handle_indels(ModelSubst *model, double *site_specific_rates, int sequence_length, int max_num_states, Node *node, NeighborVec::iterator it);
+    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it);
     
     /**
         handle insertion events
     */
-    void handle_insertion(int position, int max_num_states, NeighborVec::iterator it);
+    void handleInsertion(int sequence_length, vector<InsertionEvent> &insertion_events, vector<int> &index_mapping_by_jump_step);
     
     /**
         handle deletion events
     */
-    void handle_deletion(int position, int max_num_states, NeighborVec::iterator it);
+    void handleDeletion(int sequence_length, int max_num_states, Node* node);
     
     /**
         compute the total substitution rate
     */
-    double compute_total_sub_rate(ModelSubst *model, double *site_specific_rates, int max_num_states, vector<short int> sequence);
+    double computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence);
+    
+    /**
+        process Insertion events
+    */
+    void processInsertionEvents(int max_num_states, vector<InsertionEvent> insertion_events, vector<int> index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node);
+    
+    /**
+    *  insert a new sequence into the current sequence when processing Insertion Events
+    *
+    */
+    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates);
+    
+    /**
+    *  insert gaps into other nodes when processing Insertion Events
+    *
+    */
+    void insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, int max_num_states, Node *node, Node *dad, bool &stop_inserting_gaps);
     
 public:
     
@@ -266,7 +296,7 @@ public:
     *  initialize state_mapping (mapping from states into characters)
     *
     */
-    static void initializeStateMapping(Alignment *aln, vector<string> &state_mapping);
+    static void initializeStateMapping(int num_sites_per_state, Alignment *aln, vector<string> &state_mapping);
     
     /**
     *  convert numerical states into readable characters

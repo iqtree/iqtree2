@@ -19,7 +19,7 @@ AliSimulatorHeterogeneityInvar::AliSimulatorHeterogeneityInvar(AliSimulator *ali
 /**
     get site-specific rates based on Continuous Gamma Distribution
 */
-void AliSimulatorHeterogeneityInvar::getSiteSpecificRatesContinuousGamma(double *site_specific_rates, int sequence_length)
+void AliSimulatorHeterogeneityInvar::getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length)
 {
     RateContinuousGamma *rate_continuous_gamma = new RateContinuousGammaInvar(rate_heterogeneity->getGammaShape(), params->ran_seed, invariant_proportion);;
     

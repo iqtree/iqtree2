@@ -516,8 +516,9 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
 
 /**
 *  randomly generate the ancestral sequence for the root node
+*  by default (initial_freqs = true) freqs could be randomly generated if they are not specified
 */
-vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
+vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool initial_freqs)
 {
     // initialize sequence
     vector<short int> sequence;
@@ -536,7 +537,12 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length)
     {
         // get the base frequencies
         double *state_freq = new double[max_num_states];
-        getStateFrequenciesFromModel(tree, state_freq);
+        // initialize state frequencies if they're not specified and initial_freqs = true
+        if (initial_freqs)
+            getStateFrequenciesFromModel(tree, state_freq);
+        // otherwise, only get the state freqs from the model without re-initializing state freqs
+        else
+            tree->getModel()->getStateFrequency(state_freq);
         
         // finding the max probability position
         int max_prob_pos = 0;
@@ -639,14 +645,15 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             }
 
             // initialize state_mapping (mapping from state to characters)
-            initializeStateMapping(tree->aln, state_mapping);
+            initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, output_filepath);
         }
     }
     
     // simulate Sequences
-    simulateSeqs(sequence_length, NULL, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
+    vector<double> site_specific_rates;
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -673,7 +680,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int sequence_length, double *site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
+void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -700,7 +707,7 @@ void AliSimulator::simulateSeqs(int sequence_length, double *site_specific_rates
         
         // handle indels
         if (params->alisim_insertion_ratio != -1)
-            handle_indels(model, site_specific_rates, sequence_length, max_num_states, node, it);
+            handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it);
         
         // writing and deleting simulated sequence immediately if possible
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
@@ -951,7 +958,7 @@ void AliSimulator::estimateLengthRatio()
 *  initialize state_mapping (mapping from states into characters)
 *
 */
-void AliSimulator::initializeStateMapping(Alignment *aln, vector<string> &state_mapping)
+void AliSimulator::initializeStateMapping(int num_sites_per_state, Alignment *aln, vector<string> &state_mapping)
 {
     ASSERT(aln);
     
@@ -961,7 +968,10 @@ void AliSimulator::initializeStateMapping(Alignment *aln, vector<string> &state_
     for (int i = 0; i< max_num_states; i++)
         state_mapping[i] = aln->convertStateBackStr(i);
     // add an additional state for gap
-    state_mapping[max_num_states] = "-";
+    if (num_sites_per_state == 1)
+        state_mapping[max_num_states] = "-";
+    else
+        state_mapping[max_num_states] = "---";
 }
 
 /**
@@ -1031,14 +1041,14 @@ void AliSimulator::checkBaseFrequenciesDNAModels(IQTree* tree, string model_name
         // check whether base frequencies are not set for unequal base frequenceies models
         for (string model_item: unequal_base_frequencies_models)
             if (model_name.find(model_item) != std::string::npos && model_name.find("+F") == std::string::npos) {
-                outWarning(model_item+" must have unequal base frequencies. The base frequencies could be randomly generated if users do not provide them. However, we strongly recommend users specify the base frequencies (by using +F{freq1,...,freqN} in command-line options or using +F{freq1/.../freqN} when specifying branch-specific models in a treefile) for better simulation accuracy.");
+                outWarning(model_item+" must have unequal base frequencies. The base frequencies could be randomly generated if users do not provide them. However, we strongly recommend users specify the base frequencies by using +F{freq1/.../freqN} for better simulation accuracy.");
                 break;
             }
         
         // check whether base frequencies are set for equal base frequenceies models
         for (string model_item: equal_base_frequencies_models)
             if (model_name.find(model_item) != std::string::npos && model_name.find("+F") != std::string::npos) {
-                outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model (by removing +F{freq1,...,freqN} in command-line options or removing +F{freq1/.../freqN} when specifying branch-specific models specified in a treefile).");
+                outWarning(model_item+" must have equal base frequencies. Unequal base frequencies specified by users could lead to incorrect simulation. We strongly recommend users to not specify the base frequencies for this model by removing +F{freq1/.../freqN}.");
                 break;
             }
     }
@@ -1287,7 +1297,7 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // initialize the site-specific rates
-    double *site_specific_rates = new double[sequence_length];
+    vector<double> site_specific_rates(sequence_length, 1);
     initVariables(sequence_length, site_specific_rates);
     
     // check to regenerate the root sequence if the user has specified specific frequencies for root
@@ -1296,15 +1306,12 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
     
     // simulate a sequence for a node from a specific branch after all variables has been initializing
     simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, lengths);
-    
-    // delete the site-specific rates
-    delete[] site_specific_rates;
 }
 
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate*(*it)->length, trans_matrix);
@@ -1331,7 +1338,7 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *mod
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulator::initVariables(int sequence_length, double *site_specific_rates)
+void AliSimulator::initVariables(int sequence_length, vector<double> &site_specific_rates)
 {
     // Do nothing, this method will be overrided in AliSimulatorHeterogeneity and AliSimulatorInvar
 }
@@ -1486,7 +1493,7 @@ string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_lengt
 /**
     compute the total substitution rate
 */
-double AliSimulator::compute_total_sub_rate(ModelSubst *model, double *site_specific_rates, int max_num_states, vector<short int> sequence)
+double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence)
 {
     // initialize variables
     double total_sub_rate = 0;
@@ -1522,8 +1529,8 @@ double AliSimulator::compute_total_sub_rate(ModelSubst *model, double *site_spec
         // not compute the substitution rate for gaps/deleted sites
         if (sequence[i] != max_num_states)
         {
-            // if site_specific_rates is NULL, the relative site rate should be 1
-            if (site_specific_rates)
+            // if site_specific_rates is empty, the relative site rate should be 1
+            if (site_specific_rates.size() > 0)
                 total_sub_rate += sub_rate_on_state[sequence[i]]*site_specific_rates[i];
             else
                 total_sub_rate += sub_rate_on_state[sequence[i]];
@@ -1539,11 +1546,13 @@ double AliSimulator::compute_total_sub_rate(ModelSubst *model, double *site_spec
 /**
     handle indels
 */
-void AliSimulator::handle_indels(ModelSubst *model, double *site_specific_rates, int sequence_length, int max_num_states, Node *node, NeighborVec::iterator it)
+void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it)
 {
-    double total_sub_rate = compute_total_sub_rate(model, site_specific_rates, max_num_states, node->sequence);
+    double total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence);
     double total_event_rate = total_sub_rate * (1 + params->alisim_insertion_ratio + params->alisim_deletion_ratio);
     
+    vector<InsertionEvent> insertion_events;
+    vector<int> index_mapping_by_jump_step(sequence_length + 1, 0);
     double branch_length = (*it)->length;
     while (branch_length > 0)
     {
@@ -1565,31 +1574,17 @@ void AliSimulator::handle_indels(ModelSubst *model, double *site_specific_rates,
             else if (random_num < (params->alisim_insertion_ratio+params->alisim_deletion_ratio)/(1+params->alisim_insertion_ratio+params->alisim_deletion_ratio))
                 event_type = DELETION;
             
-            // Randomly select the position/site (from the set of all sites) where the event occurs based on a uniform distribution between 0 and the current length of the sequence
-            int position = 0;
-            for (int i = 0; i < 1000; i++)
-            {
-                position = random_int(sequence_length);
-                
-                // cannot insert/delete from a deleted site
-                if ((*it)->node->sequence[position] != max_num_states)
-                    break;
-            }
-            // validate the selected position
-            if ((*it)->node->sequence[position] == max_num_states && event_type != SUBSTITUTION)
-                outError("Sorry! Could not select an appropriate position for insertion/deletion events within 1000 attempts. You may set the deletion ratio too high. Please reduce it and try again!");
-            
             // process event
             switch (event_type)
             {
                 case INSERTION:
                 {
-                    handle_insertion(position, max_num_states, it);
+                    handleInsertion(sequence_length, insertion_events, index_mapping_by_jump_step);
                     break;
                 }
                 case DELETION:
                 {
-                    handle_deletion(position, max_num_states, it);
+                    handleDeletion(sequence_length, max_num_states, (*it)->node);
                     break;
                 }
                 default:
@@ -1599,13 +1594,91 @@ void AliSimulator::handle_indels(ModelSubst *model, double *site_specific_rates,
         }
 
     }
+    // process Insertion events one by one: adding new random sequences to the current sequence; then traverse the tree to add gaps into other sequences
+    processInsertionEvents(max_num_states, insertion_events, index_mapping_by_jump_step, site_specific_rates, (*it)->node);
+    
+    // update sequence_length
+    sequence_length = index_mapping_by_jump_step.size() + index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1] - 1;
+}
+
+/**
+    process Insertion events
+*/
+void AliSimulator::processInsertionEvents(int max_num_states, vector<InsertionEvent> insertion_events, vector<int> index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node)
+{
+    // insert new sequences to the current sequence
+    for (int i = 0; i < insertion_events.size(); i++)
+        insertNewSequenceForInsertionEvent(node, insertion_events[i], site_specific_rates);
+    
+    // insert gaps to other nodes
+    bool stop_inserting_gaps = false;
+    insertGapsForInsertionEvents(index_mapping_by_jump_step, node->id, max_num_states, tree->root, tree->root, stop_inserting_gaps);
+}
+
+/**
+*  insert a new sequence into the current sequence when processing Insertion Events
+*
+*/
+void AliSimulator::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates)
+{
+    node->sequence.insert(node->sequence.begin()+insertion_event.position, insertion_event.sequence.begin(), insertion_event.sequence.end());
+}
+
+/**
+*  insert gaps into other nodes when processing Insertion Events
+*
+*/
+void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, int max_num_states, Node *node, Node *dad, bool &stop_inserting_gaps)
+{
+    // check to stop
+    if (stop_inserting_gaps)
+        return;
+    
+    // only insert gaps into not-empty node
+    if (node->sequence.size() > 0)
+    {
+        // resize the sequence with gaps
+        node->sequence.resize(index_mapping_by_jump_step.size() + index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1] - 1, max_num_states);
+        
+        // update sites to new positions
+        for (int i = index_mapping_by_jump_step.size() - 1 - 1; i >= 0; i--)
+        {
+            if (index_mapping_by_jump_step[i] > 0)
+            {
+                node->sequence[i + index_mapping_by_jump_step[i]] = node->sequence[i];
+                
+                // if (*it)->node->sequence[i] is not overrided, it should be a gap
+                node->sequence[i] = max_num_states;
+            }
+            else
+                break;
+        }
+        
+    }
+    
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // stop traversing the tree if reaching the stopping node
+        if ((*it)->node->id == stopping_node_id)
+        {
+            stop_inserting_gaps = true;
+            break;
+        }
+        
+        // browse 1-step deeper to the neighbor node
+        insertGapsForInsertionEvents(index_mapping_by_jump_step, stopping_node_id, max_num_states, (*it)->node, node, stop_inserting_gaps);
+    }
 }
 
 /**
     handle insertion events
 */
-void AliSimulator::handle_insertion(int position, int max_num_states, NeighborVec::iterator it)
+void AliSimulator::handleInsertion(int sequence_length, vector<InsertionEvent> &insertion_events, vector<int> &index_mapping_by_jump_step)
 {
+    // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
+    int position = random_int(sequence_length + 1);
+    
     // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
     int length = -1;
     for (int i = 0; i < 1000; i++)
@@ -1620,15 +1693,21 @@ void AliSimulator::handle_insertion(int position, int max_num_states, NeighborVe
     if (length <= 0)
         outError("Sorry! Could not generate a positive length (for insertion events) based on the insertion-distribution named "+params->alisim_insertion_distribution+" within 1000 attempts.");
     
-    // Randomly generate length_I sites based on the state frequencies, then inserting them into the sequence at the selected location, and put length_I gaps into all other sequences. -> not efficient now (think about masking, a position must be a ‘-’ or a proper state).
-    cout << "An insertion event occurs +++++++"<<endl;
+    // create a new Insertion Event logging the position and a random length-site sequence
+    insertion_events.push_back(InsertionEvent(position + index_mapping_by_jump_step[position], generateRandomSequence(length, false)));
+    // update index_mapping_by_jump_step
+    for (int i = position; i < index_mapping_by_jump_step.size(); i++)
+        index_mapping_by_jump_step[i] += length;
 }
 
 /**
     handle deletion events
 */
-void AliSimulator::handle_deletion(int position, int max_num_states, NeighborVec::iterator it)
+void AliSimulator::handleDeletion(int sequence_length, int max_num_states, Node* node)
 {
+    // Randomly select the position/site (from the set of all sites) where the deletion event occurs based on a uniform distribution between 0 and the current length of the sequence
+    int position = random_int(sequence_length);
+    
     // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
     int length = -1;
     for (int i = 0; i < 1000; i++)
@@ -1644,11 +1723,11 @@ void AliSimulator::handle_deletion(int position, int max_num_states, NeighborVec
         outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution named "+params->alisim_deletion_distribution+" within 1000 attempts.");
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
-    for (int i = 0; i < length && (position + i) < (*it)->node->sequence.size(); i++)
+    for (int i = 0; i < length && (position + i) < node->sequence.size(); i++)
     {
         // if the current site is not a gap (has not been deleted) -> replacing it by a gap
-        if ((*it)->node->sequence[position + i ] != max_num_states)
-            (*it)->node->sequence[position + i ] = max_num_states;
+        if (node->sequence[position + i ] != max_num_states)
+            node->sequence[position + i ] = max_num_states;
         // otherwise, ignore the current site, moving forward to find a valid site (not a gap)
         else
         {

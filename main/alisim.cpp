@@ -485,9 +485,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // show a warning if the user wants to write internal sequences in not-supported cases
     if (super_alisimulator->params->alisim_write_internal_sequences
         &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-           || super_alisimulator->tree->isSuperTree()))
+           || super_alisimulator->tree->isSuperTree()
+           || super_alisimulator->params->alisim_insertion_ratio != -1))
     {
-        outWarning("Could not write out the internal sequences when using partition or ASC models. Only sequences at tips will be written to the output file.");
+        outWarning("Could not write out the internal sequences when using partition, or ASC models, or Indels. Only sequences at tips will be written to the output file.");
         super_alisimulator->params->alisim_write_internal_sequences = false;
     }
     
@@ -564,7 +565,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         else
         {
             // check whether we could write the output to file immediately after simulating it
-            if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE)
+            if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio == -1)
                 generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath);
             // otherwise, writing output to file after completing the simulation
             else
@@ -577,7 +578,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         
         // merge & write alignments to files if they have not yet been written
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-            || super_alisimulator->tree->isSuperTree())
+            || super_alisimulator->tree->isSuperTree()
+            || super_alisimulator->params->alisim_insertion_ratio != -1)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator);
         
         // show the time spent on writing sequences to the output file
@@ -597,7 +599,9 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         // make sure super_node is found
         if (super_node)
         {
-            ASSERT(site_ids.size() == node->sequence.size());
+            // shorten the sequence if it is longer than the expected length (due to Indels)
+            if (site_ids.size() != node->sequence.size())
+                node->sequence.resize(site_ids.size());
 
             // initialize sequence of the super_node
             if (super_node->sequence.size() != expected_num_states_super_tree)
@@ -698,7 +702,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
-            AliSimulator::initializeStateMapping(aln, state_mapping);
+            AliSimulator::initializeStateMapping(alisimulator->num_sites_per_state, aln, state_mapping);
 
 #ifdef _OPENMP
 #pragma omp parallel
