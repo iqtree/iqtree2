@@ -130,7 +130,7 @@ void ModelDNA::init(const char *model_name, string model_params,
                                               model_num, symmetry, def_freq);
     }
     if (name != "") {
-        setRateType(rate_type.c_str());
+        setRateType(rate_type);
     } else {
         //cout << "User-specified model "<< model_name << endl;
         if (setRateType(model_name)) {
@@ -261,8 +261,8 @@ double ModelDNA::readSingleRate(const std::string& str,
     try {
         rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
     } 
-    catch (string str) {
-        outError(str);
+    catch (string& error_str) {
+        outError(error_str);
     }
     end_pos += new_end_pos;
     return rate;
