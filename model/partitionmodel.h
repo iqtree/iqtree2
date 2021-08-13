@@ -57,28 +57,28 @@ public:
         set checkpoint object
         @param checkpoint
     */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint) override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
      * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
      * @return #parameters of the model + # branches
      */
-    virtual int getNParameters(int brlen_type) const;
+    virtual int getNParameters(int brlen_type) const override;
 
 	/**
 		optimize model parameters and tree branch lengths
@@ -92,7 +92,7 @@ public:
 	*/
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
-                                      PhyloTree* report_to_tree = nullptr);
+                                      PhyloTree* report_to_tree = nullptr) override;
         //supporting functions
         void reportPartitionOptimizationProgress(bool write_info, PhyloSuperTree* tree, 
                                                  int part, ModelFactory* fac, 
@@ -110,12 +110,12 @@ public:
 	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE,
                                                 bool write_info = true, double logl_epsilon = 0.1,
                                                 double gradient_epsilon = 0.0001,
-                                                PhyloTree* report_to_tree = nullptr);
+                                                PhyloTree* report_to_tree = nullptr) override;
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters();
+	virtual bool isUnstableParameters() override;
 
 	/** optimize linked alpha parameter of over all partitions with Gamma rate */
 	double optimizeLinkedAlpha(bool write_info, double gradient_epsilon);
@@ -124,12 +124,12 @@ public:
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
 		gamma shape parameter
 	*/
-	virtual double computeFunction(double shape);
+	virtual double computeFunction(double shape) override;
 
     /**
      return the number of dimensions
      */
-    virtual int getNDim() const;
+    virtual int getNDim() const override;
     
     
     /**
@@ -137,7 +137,7 @@ public:
      @param x the input vector x
      @return the function value at x
      */
-    virtual double targetFunk(double x[]);
+    virtual double targetFunk(double x[]) override;
 
     /**
      rescale the state frequencies
@@ -186,7 +186,7 @@ protected:
         into a vector that is index from 1 (NOTE: not from 0)
         @param variables (OUT) vector of variables, indexed from 1
      */
-    virtual void setVariables(double *variables);
+    virtual void setVariables(double *variables) override;
     
     /**
         this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -194,7 +194,7 @@ protected:
         @param variables vector of variables, indexed from 1
         @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
      */
-    virtual bool getVariables(const double *variables);
+    virtual bool getVariables(const double *variables) override;
 
 };
 

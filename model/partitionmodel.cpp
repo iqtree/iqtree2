@@ -319,8 +319,8 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info,
     }
 	double negative_lh;
 	double current_shape = linked_alpha;
-	double ferror, optx;
-	optx = minimizeOneDimen(site_rate->getTree()->params->min_gamma_shape,
+	double ferror;
+	double optx = minimizeOneDimen(site_rate->getTree()->params->min_gamma_shape,
                             current_shape, MAX_GAMMA_SHAPE,
                             max(gradient_epsilon, TOL_GAMMA_SHAPE),
                             &negative_lh, &ferror);
@@ -417,7 +417,8 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
     // by BFGS algorithm
     setVariables(variables);
     setVariables(variables2);
-    ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
+    auto markov = dynamic_cast<ModelMarkov*>(model);
+    markov->setBounds(lower_bound, upper_bound, bound_check);
     // expand the bound for linked model
 //    for (int i = 1; i <= ndim; i++) {
 //        lower_bound[i] = MIN_RATE*0.2;
