@@ -14,18 +14,18 @@
 
 TaxonToPlace::TaxonToPlace() : bestPlacement(), taxonId(-1), taxonName()
                , inserted(false), new_leaf(nullptr), new_interior(nullptr)
-               , partial_pars(nullptr) {
+               , partial_pars(nullptr), partial_lh(nullptr), scale_num(nullptr) {
 }
 
 TaxonToPlace::TaxonToPlace(const TaxonToPlace& rhs) = default; //copy everything!
 
 TaxonToPlace::TaxonToPlace(BlockAllocator* ba, int interior_id, int leaf_id,
-                           std::string name, bool delay) {
+                           const std::string& name, bool delay) {
     initialize(ba, interior_id, leaf_id, name, delay);
 }
 
 void TaxonToPlace::initialize(BlockAllocator* ba, int interior_id, int leaf_id,
-                              std::string name, bool delayCompute) {
+                              const std::string& name, bool delayCompute) {
     PhyloTree& phylo_tree = ba->getTree();
     inserted     = false;
     partial_lh   = nullptr;
@@ -229,7 +229,7 @@ bool TaxonToPlace::insertNearby(PhyloTree& phylo_tree, BlockAllocator& b,
     return true;
 }
 void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
-                                           PlacementCostCalculator& calculator,
+                                           const PlacementCostCalculator& calculator,
                                            const TargetBranch* tb,
                                            std::vector<PossiblePlacement>& scores) {
     if (tb==nullptr  ) {
@@ -252,10 +252,10 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
             } else {
                 PossiblePlacement p;
                 p.setTargetBranch(*it);
-                TargetBranch* tb = it->getTarget();
-                ASSERT(tb->stillExists());
-                tb->computeState(phylo_tree, parsimony_score,
-                                              p.getTargetIndex(), blocks);
+                TargetBranch* tb_here = it->getTarget();
+                ASSERT(tb_here->stillExists());
+                tb_here->computeState(phylo_tree, parsimony_score,
+                                      p.getTargetIndex(), blocks);
                 scores.emplace_back(p);
             }
         }
@@ -272,7 +272,7 @@ void TaxonToPlace::assessNewTargetBranches(PhyloTree& phylo_tree,
 LessFussyTaxon::LessFussyTaxon() : super() { }
 LessFussyTaxon::LessFussyTaxon(const LessFussyTaxon& rhs) = default; //copy everything!
 LessFussyTaxon::LessFussyTaxon(BlockAllocator* ba, int interior_id, int leaf_id,
-                               std::string name, bool delay)
+                               const std::string& name, bool delay)
                              : super(ba, interior_id, leaf_id, name, delay) {
 }
 size_t LessFussyTaxon::considerPlacements(const PossiblePlacement* placements,

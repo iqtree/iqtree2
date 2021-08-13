@@ -60,12 +60,12 @@ class ParsimonyCostCalculator : public PlacementCostCalculator {
 private:
     bool sankoff;
 public:
-    ParsimonyCostCalculator(bool usesSankoff);
-    virtual bool usesParsimony();
-    virtual bool usesSankoffParsimony();
+    explicit ParsimonyCostCalculator(bool usesSankoff);
+    virtual bool usesParsimony() override;
+    virtual bool usesSankoffParsimony() override;
     virtual void assessPlacementCost(PhyloTree& phylo_tree,
                                      const TaxonToPlace& taxon,
-                                     PossiblePlacement& placement) const;
+                                     PossiblePlacement& placement) const override;
 };
 
 class LikelihoodCostCalculator : public ParsimonyCostCalculator {
@@ -73,11 +73,11 @@ private:
     bool       midpoint;
 public:
     typedef ParsimonyCostCalculator super;
-    LikelihoodCostCalculator(bool useMidpoint);
+    explicit LikelihoodCostCalculator(bool useMidpoint);
     ~LikelihoodCostCalculator();
-    virtual bool usesLikelihood();
+    virtual bool usesLikelihood() override;
     virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
-                                     PossiblePlacement& placement) const;
+                                     PossiblePlacement& placement) const override;
 };
 
 

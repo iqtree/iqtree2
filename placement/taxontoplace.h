@@ -45,9 +45,9 @@ public:
     TaxonToPlace();
     TaxonToPlace(const TaxonToPlace& rhs); //copy everything!
     TaxonToPlace(BlockAllocator* ba, int interior_id, int leaf_id,
-                 std::string name, bool delayCompute);
+                 const std::string& name, bool delayCompute);
     void initialize(BlockAllocator* ba, int interior_id, int leaf_id,
-                    std::string name, bool delayCompute);
+                    const std::string& name, bool delayCompute);
     void computeParsimony(PhyloTree* tree);
 
     virtual      ~TaxonToPlace();
@@ -155,7 +155,7 @@ public:
      to which to append a PossiblePlacement for each
      unused replacement target branch.*/
     void assessNewTargetBranches ( PhyloTree& phylo_tree,
-                                   PlacementCostCalculator& calculator,
+                                   const PlacementCostCalculator& calculator,
                                    const TargetBranch* tb,
                                    std::vector<PossiblePlacement>& placements);
 };
@@ -183,10 +183,15 @@ public:
     explicit TypedTaxaToPlace(size_t reservation) {
         super::reserve(reservation);
     }
-    virtual bool isEmpty() const                        { return std::vector<T>::empty(); }
-    virtual TaxonToPlace& getTaxonByIndex(size_t index) { return std::vector<T>::at(index); }
-    virtual void sortBatch(size_t batchStart, size_t batchStop) {
-        std::sort( std::vector<T>::begin() + batchStart, std::vector<T>::begin() + batchStop);
+    virtual bool isEmpty() const override { 
+        return std::vector<T>::empty(); 
+    }
+    virtual TaxonToPlace& getTaxonByIndex(size_t index) override { 
+        return std::vector<T>::at(index); 
+    }
+    virtual void sortBatch(size_t batchStart, size_t batchStop) override {
+        std::sort( std::vector<T>::begin() + batchStart, 
+                   std::vector<T>::begin() + batchStop);
 
     }
     virtual ~TypedTaxaToPlace() = default;
@@ -203,10 +208,10 @@ public:
     LessFussyTaxon ( );
     LessFussyTaxon ( const LessFussyTaxon& rhs );
     LessFussyTaxon ( BlockAllocator* ba, int interior_id, int leaf_id,
-                     std::string name, bool delay);
+                     const std::string& name, bool delay);
     virtual size_t considerPlacements(const PossiblePlacement* placements,
-                                      size_t count);
-    virtual bool   considerAdditionalPlacement(const PossiblePlacement& placement);
-    virtual void   forgetGazumpedPlacements();
+                                      size_t count) override;
+    virtual bool   considerAdditionalPlacement(const PossiblePlacement& placement) override;
+    virtual void   forgetGazumpedPlacements() override;
 };
 #endif /* taxontoplace_h */

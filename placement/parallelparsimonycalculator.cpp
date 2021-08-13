@@ -135,8 +135,8 @@ void ParallelParsimonyCalculator::computeReverseParsimony(PhyloNode* first,
         intptr_t r = 0;
         intptr_t w = 0;
         for (;r<static_cast<intptr_t>(stuffToDo.size()); ++r) {
-            PhyloNode* first  = stuffToDo[r].first;
-            PhyloNode* second = stuffToDo[r].second;
+            first  = stuffToDo[r].first;
+            second = stuffToDo[r].second;
             FOR_EACH_ADJACENT_PHYLO_NODE(first, second, it, back) {
                 stuffToDoNext.emplace_back(back, first);
             }

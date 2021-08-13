@@ -35,7 +35,7 @@ class BatchPlacementOptimizer {
 protected:
     bool be_quiet;
 public:
-    BatchPlacementOptimizer(bool be_quiet);
+    explicit BatchPlacementOptimizer(bool be_quiet);
     virtual ~BatchPlacementOptimizer();
     virtual void optimizeAfterBatch(TaxaToPlace& taxa,
                                    intptr_t start_taxon_index,
@@ -54,7 +54,7 @@ class GlobalPlacementOptimizer {
 protected:
     bool be_quiet;
 public:
-    GlobalPlacementOptimizer(bool be_silent);
+    explicit GlobalPlacementOptimizer(bool be_silent);
     virtual ~GlobalPlacementOptimizer();
     virtual void optimizeAfterPlacement(PhyloTree& tree);
     
@@ -68,9 +68,9 @@ public:
 class GlobalLikelihoodPlacementOptimizer: public GlobalPlacementOptimizer {
 public:
     typedef GlobalPlacementOptimizer super;
-    GlobalLikelihoodPlacementOptimizer(bool be_silent);
+    explicit GlobalLikelihoodPlacementOptimizer(bool be_silent);
     virtual ~GlobalLikelihoodPlacementOptimizer();
-    virtual void optimizeAfterPlacement(PhyloTree& tree);
+    virtual void optimizeAfterPlacement(PhyloTree& tree) override;
 };
 
 #endif /* placementoptimizer_h */

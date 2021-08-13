@@ -117,15 +117,15 @@ public:
     typedef BlockAllocator super;
     LikelihoodBlockAllocator(PhyloTree& tree, int parsimonyIndex, int likelihoodIndex);
     virtual      ~LikelihoodBlockAllocator();
-    int          getLikelihoodBlockCount() const;
-    virtual void allocateLikelihoodBlocks(double*& partial_lh, UBYTE*& scale_num);
-    virtual void allocateMemoryFor(PhyloNeighbor* nei);
+    int          getLikelihoodBlockCount() const override;
+    virtual void allocateLikelihoodBlocks(double*& partial_lh, UBYTE*& scale_num) override;
+    virtual void allocateMemoryFor(PhyloNeighbor* nei) override;
 
     /** indicates if this block allocator is keeping track of
         likelihood and scalenum vectors
          @return true if it is (for LikelihoodBlocAllocator, it always is), 
          false if not*/
-    virtual bool usesLikelihood();
+    virtual bool usesLikelihood() override;
     
     /** Searches a subtree (on the side of second opposite first)
         for PhyloNeighbor instances that do not have
@@ -164,7 +164,7 @@ public:
      @return best likelihood found
      */
 
-    virtual void makeTreeReady(PhyloNode* first, PhyloNode* second);
+    virtual void makeTreeReady(PhyloNode* first, PhyloNode* second) override;
 };
 
 #endif /* blockallocator_h */

@@ -92,18 +92,18 @@ public:
     /**
      @param calculator a new PlacementCostCalulator instance
             (BaseballSearchHeuristic's destructor will delete it) */
-    BaseballSearchHeuristic(PlacementCostCalculator* calculatorToUse);
+    explicit BaseballSearchHeuristic(PlacementCostCalculator* calculatorToUse);
     virtual ~BaseballSearchHeuristic();
-    virtual bool isGlobalSearch() const;
-    virtual bool usesLikelihood() const;
+    virtual bool isGlobalSearch() const override;
+    virtual bool usesLikelihood() const override;
     virtual void prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
                                  intptr_t startTarget, intptr_t stopTarget,
                                  TaxaToPlace& taxa, 
-                                 intptr_t startTaxon, intptr_t stopTaxon);
+                                 intptr_t startTaxon, intptr_t stopTaxon) override;
     virtual bool isPlacementWorthTrying(const  TaxonToPlace& taxon,
                                         size_t taxonIndex,
-                                        const  TargetBranchRef& target );
-    virtual void doneFiltering();
+                                        const  TargetBranchRef& target ) override;
+    virtual void doneFiltering() override;
 };
 
 #endif /* searchheuristic_h */

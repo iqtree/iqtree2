@@ -52,8 +52,10 @@ SearchHeuristic* SearchHeuristic::getSearchHeuristic
     }
 }
 
-BaseballSearchHeuristic::BaseballSearchHeuristic(PlacementCostCalculator* calculatorToUse)
-    : calculator(calculatorToUse), tree_in_use(nullptr) {
+BaseballSearchHeuristic::BaseballSearchHeuristic
+    ( PlacementCostCalculator* calculatorToUse )
+    : calculator(calculatorToUse), taxon_base(0), target_base(0)
+    , tree_in_use(nullptr) {
 }
 
 bool BaseballSearchHeuristic::isGlobalSearch() const {

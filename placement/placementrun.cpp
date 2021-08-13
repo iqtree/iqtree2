@@ -52,9 +52,9 @@ void PlacementRun::setUpAllocator(int extra_parsimony_blocks,
                                   bool trackLikelihood,
                                   int extra_lh_blocks) {
     int      index_parsimony = 0;
-    int      index_lh        = 0;
     phylo_tree.deleteAllPartialLhAndParsimony(); 
     if (trackLikelihood) {
+        int index_lh = 0;
         phylo_tree.ensurePartialLHIsAllocated(extra_parsimony_blocks, extra_lh_blocks);
         phylo_tree.initializeAllPartialLh(index_parsimony, index_lh);
         block_allocator = new LikelihoodBlockAllocator(phylo_tree, index_parsimony, index_lh);
@@ -321,7 +321,6 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
                                TargetBranchRange& targets,
                                LikelihoodBlockPairs& blocks) {
     TaxonToPlace& c = taxa.getTaxonByIndex(taxon_index);
-    const char* verb = "inserted";
     const char* where ;
     if (c.canInsert()) {
         c.insertIntoTree(phylo_tree, *block_allocator,
@@ -344,9 +343,9 @@ void PlacementRun::insertTaxon(TaxaToPlace& taxa, size_t taxon_index,
           || verbose_mode >= VerboseMode::VB_MAX ) {
         const PossiblePlacement& p = c.getBestPlacement();
         stringstream s;
-        s << taxa_inserted_in_total << ". " << verb << " "
-            << c.taxonName << " " << where
-        << " (branch index " << p.getTargetIndex() << "). It had ";
+        s << taxa_inserted_in_total << ". inserted "
+          << c.taxonName << " " << where
+          << " (branch index " << p.getTargetIndex() << "). It had ";
         if (!calculator->usesLikelihood()) {
             s << "parsimony score " << (int)(p.score);
         } else {
@@ -385,11 +384,11 @@ void PlacementRun::logSubtreesNearAddedTaxa() const {
     for (size_t i=0; i<taxa_ids_to_add.size(); ++i) {
         PhyloNode*     leaf      = idToNode[taxa_ids_to_add[i]];
         if ( leaf != nullptr ) {
-            PhyloNeighbor* upLink    = leaf->firstNeighbor();
-            PhyloNode*     upNode    = upLink->getNode();
-            PhyloNeighbor* leftLink  = nullptr;
-            double leftLength  = -1;
-            double rightLength = -1;
+            PhyloNeighbor* upLink      = leaf->firstNeighbor();
+            PhyloNode*     upNode      = upLink->getNode();
+            PhyloNeighbor* leftLink    = nullptr;
+            double         leftLength  = -1;
+            double         rightLength = -1;
             FOR_EACH_PHYLO_NEIGHBOR(upNode, leaf, itNei, nei) {
                 if (leftLink==nullptr) {
                     leftLink   = nei;

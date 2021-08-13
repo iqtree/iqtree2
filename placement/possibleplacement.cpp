@@ -23,7 +23,7 @@ bool PossiblePlacement::operator <= (const PossiblePlacement& rhs) const {
 void PossiblePlacement::setTargetBranch(TargetBranchRange* targetRange, size_t index) {
     target_branch = TargetBranchRef(targetRange, index);
 }
-void PossiblePlacement::setTargetBranch(TargetBranchRef& branch_ref) {
+void PossiblePlacement::setTargetBranch(const TargetBranchRef& branch_ref) {
     target_branch = branch_ref;
 }
 bool PossiblePlacement::canStillUse() const {
