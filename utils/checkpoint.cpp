@@ -29,7 +29,7 @@ Checkpoint::~Checkpoint() {
 }
 
 
-void Checkpoint::setFileName(string filename_to_use) {
+void Checkpoint::setFileName(const std::string& filename_to_use) {
 	this->filename = filename_to_use;
 }
 
@@ -37,13 +37,13 @@ void Checkpoint::setFileName(string filename_to_use) {
 void Checkpoint::load(istream &in) {
     string line;
     string local_struct_name;
-    size_t pos;
     int listid = 0;
     while (!in.eof()) {
         safeGetLine(in, line);
-        pos = line.find('#');
-        if (pos != string::npos)
+        size_t pos = line.find('#');
+        if (pos != string::npos) {
             line.erase(pos);
+        }
         line.erase(line.find_last_not_of("\n\r\t")+1);
 //            trimString(line);
         if (line.empty()) continue;
@@ -127,8 +127,8 @@ void Checkpoint::setDumpInterval(double interval) {
 
 void Checkpoint::dump(ostream &out) {
     string local_struct_name;
-    size_t pos;
-    for (iterator i = begin(); i != end(); i++) {
+    for (iterator i = begin(); i != end(); ++i) {
+        size_t pos;
         if ((pos = i->first.find(CKP_SEP)) != string::npos) {
             if (local_struct_name != i->first.substr(0, pos)) {
                 local_struct_name = i->first.substr(0, pos);
@@ -136,15 +136,16 @@ void Checkpoint::dump(ostream &out) {
             }
             // check if key is a collection
             out << ' ' << i->first.substr(pos+1) << ": " << i->second << endl;
-        } else
+        } else {
             out << i->first << ": " << i->second << endl;
+        }
     }
 }
 
 void Checkpoint::dump(bool force) {
-    if (filename == "")
+    if (filename == "") {
         return;
-        
+    }   
     if (!force && getRealTime() < prev_dump_time + dump_interval) {
         return;
     }
@@ -165,10 +166,12 @@ void Checkpoint::dump(bool force) {
         *out << header << endl;
         // call dump stream
         dump(*out);
-        if (compression)
+        if (compression) {
             ((ogzstream*)out)->close();
-        else
+        }
+        else {
             ((ofstream*)out)->close();
+        }
         delete out;
 //        cout << "Checkpoint dumped" << endl;
         if (fileExists(filename)) {
@@ -184,24 +187,25 @@ void Checkpoint::dump(bool force) {
     double dump_time = getRealTime() - prev_dump_time;
     if (dump_time*20 > dump_interval) {
         dump_interval = ceil(dump_time*20);
-        cout << "NOTE: " << dump_time << " seconds to dump checkpoint file, increase to "
-        << dump_interval << endl;
+        cout << "NOTE: " << dump_time << " seconds to dump checkpoint file,"
+             << " increase to " << dump_interval << endl;
     }
 }
 
-bool Checkpoint::hasKey(string key) {
+bool Checkpoint::hasKey(const std::string& key) {
 	return (find(struct_name + key) != end());
 }
 
-bool Checkpoint::hasKeyPrefix(string key_prefix) {
+bool Checkpoint::hasKeyPrefix(const std::string& key_prefix) {
     string prefix = key_prefix;
     if (!struct_name.empty()) {
         prefix = struct_name + key_prefix;
     }
 	auto i = lower_bound(prefix);
     if (i != end()) {
-        if (i->first.compare(0, prefix.size(), prefix) == 0)
+        if (i->first.compare(0, prefix.size(), prefix) == 0) {
             return true;
+        }
     }
     return false;
 }
@@ -210,15 +214,17 @@ int Checkpoint::eraseKeyPrefix(string key_prefix) {
     int count = 0;
     iterator first_it = lower_bound(key_prefix);
     iterator i;
-	for (i = first_it; i != end(); i++) {
-        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
+	for (i = first_it; i != end(); ++i) {
+        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0) {
             count++;
-        else
+        }
+        else {
             break;
-
+        }
     }
-    if (count)
+    if (count) {
         erase(first_it, i);
+    }
     return count;
 }
 
@@ -227,14 +233,13 @@ int Checkpoint::keepKeyPrefix(string key_prefix) {
     int count = 0;
     erase(begin(), lower_bound(key_prefix));
     
-    for (iterator i = begin(); i != end(); i++) {
+    for (iterator i = begin(); i != end(); ++i) {
         if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
             count++;
         else {
             erase(i, end());
             break;
         }
-        
     }
     return count;
 }

@@ -72,7 +72,7 @@ StopRule::StopRule() : CheckpointFactory()
     should_stop = false;
 }
 
-void StopRule::initialize(Params &params) {
+void StopRule::initialize(const Params &params) {
 	stop_condition = params.stop_condition;
 	confidence_value = params.stop_confidence;
 	min_iteration = params.min_iterations;
@@ -351,7 +351,7 @@ void StopRule::computeInverseMatrixPart1
 
 void StopRule::computeInverseMatrixPart2
 		(int size, const SquareDoubleMatrix& omtrx, DoubleVector& wk,
-		 IntVector& index, DoubleMatrix &invMat) {
+		 const IntVector& index, DoubleMatrix &invMat) {
 	for (int jx = 0; jx < size; jx++) {
 		for (int ix = 0; ix < size; ix++) {			
 			wk[ix] = 0.0;
@@ -421,7 +421,7 @@ void StopRule::multiple (DoubleMatrix &mat1, DoubleMatrix &mat2,
 	}
 }
 
-void StopRule::multiple (DoubleMatrix &mat1, DoubleVector &vec2, 
+void StopRule::multiple (DoubleMatrix &mat1, const DoubleVector &vec2, 
                          DoubleVector &proVec) {
 	int row_, col_;
 	proVec.resize(mat1.size());
@@ -434,7 +434,7 @@ void StopRule::multiple (DoubleMatrix &mat1, DoubleVector &vec2,
 	}
 }
 
-void StopRule::multiple (DoubleVector &vec1, DoubleMatrix &mat2, 
+void StopRule::multiple (const DoubleVector &vec1, const DoubleMatrix &mat2, 
                          DoubleVector &proVec) {
 	int row_, col_;
 	proVec.resize(mat2[0].size());
@@ -446,7 +446,7 @@ void StopRule::multiple (DoubleVector &vec1, DoubleMatrix &mat2,
 	}
 }
 
-void StopRule::multiple (DoubleVector &vec1, DoubleVector &vec2, 
+void StopRule::multiple (const DoubleVector &vec1, const DoubleVector &vec2, 
                          DoubleMatrix &proMat) {
 	int row_, col_;
 	proMat.resize(vec1.size());

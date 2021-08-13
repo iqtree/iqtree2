@@ -118,7 +118,7 @@ public:
 class igzstream : public gzstreambase, public std::istream {
 public:
     igzstream() : gzstreambase(), std::istream( &buf) {}
-    igzstream( const char* name, int open_mode = std::ios::in)
+    explicit igzstream( const char* name, int open_mode = std::ios::in)
         : gzstreambase( name, open_mode), std::istream( &buf) {}
     const gzstreambuf* rdbuf() const { return gzstreambase::rdbuf(); }
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }
@@ -137,7 +137,7 @@ protected:
     progress_display_ptr progress;
 public:
     typedef igzstream super;
-    pigzstream(const char* format);
+    explicit pigzstream(const char* format);
     void open( const char* name, int open_mode = std::ios::in);
     void close();
     void done();
@@ -154,8 +154,8 @@ class ogzstream : public gzstreambase, public std::ostream {
 public:
     ogzstream() : gzstreambase(), std::ostream( &buf) {
     }
-    ogzstream( const char* name, int mode = std::ios::out,
-               int compression_level = 9)
+    explicit ogzstream( const char* name, int mode = std::ios::out,
+                        int compression_level = 9)
         : gzstreambase( name, mode, compression_level)
         , std::ostream( &buf) {
     }

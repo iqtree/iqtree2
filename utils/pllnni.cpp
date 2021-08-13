@@ -919,7 +919,7 @@ class TempStringCopy {
 	char* value;
 public:
 	TempStringCopy() = delete;
-	TempStringCopy(const char* original) {
+	explicit TempStringCopy(const char* original) {
 		auto len = strlen(original);
 		value    = (char*)malloc(len+1); //+1 for null terminator
 		memcpy(value, original, len+1);

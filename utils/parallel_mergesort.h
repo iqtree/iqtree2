@@ -6,6 +6,8 @@
 #ifndef parallel_mergesort_h
 #define parallel_mergesort_h
 
+#include <stdint.h>        //for intptr_t
+#include <algorithm>       //for std::sort
 #include "parallel_sort.h"
 
 template <class T> void merge_to(T *aStart, T* aStop,

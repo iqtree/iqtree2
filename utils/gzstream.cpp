@@ -250,13 +250,13 @@ void pigzstream::close() {
 }
 
 void pigzstream::done() {
+    #if USE_PROGRESS_DISPLAY
     if (progress!=nullptr) {
-        #if USE_PROGRESS_DISPLAY
         progress->done();
         delete progress;
-        #endif
-        progress = nullptr;
     }
+    #endif
+    progress = nullptr;
 }
 
 const gzstreambuf* pigzstream::rdbuf() const {

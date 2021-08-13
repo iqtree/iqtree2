@@ -571,7 +571,7 @@ public:
     using super::cluster;
     using super::finishClustering;
     
-    virtual std::string getAlgorithmName() const {
+    virtual std::string getAlgorithmName() const override {
         return "NTCJ";
     }
     void constructVectorOfEdges(std::vector< TaxonEdge <T> >& edges) {
@@ -629,7 +629,7 @@ public:
 
     }
 
-    virtual bool constructTree() {
+    virtual bool constructTree() override {
         if (row_count<3) {
             return false;
         }

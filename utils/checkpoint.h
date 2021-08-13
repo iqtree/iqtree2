@@ -74,7 +74,7 @@ public:
 	/**
 	 * @param filename file name
 	 */
-	void setFileName(string filename);
+	void setFileName(const string& filename);
 
     string &getFileName() { return filename; }
 
@@ -124,13 +124,13 @@ public:
 	 * @return true if checkpoint contains the key
 	 * @param key key to search for
 	 */
-	bool hasKey(string key);
+	bool hasKey(const std::string& key);
 
 	/**
 	 * @return true if checkpoint contains the key prefix
 	 * @param key_prefix key prefix to search for
 	 */
-	bool hasKeyPrefix(string key_prefix);
+	bool hasKeyPrefix(const std::string& key_prefix);
 
     /**
         erase all entries with a key prefix
@@ -241,10 +241,9 @@ public:
             return false;
         }
         size_t pos      = 0;
-        size_t next_pos = string::npos;
         value.clear();
         for (int i = 0; ; i++) {
-        	next_pos = it->second.find(", ", pos);
+        	size_t next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
             T val;
             if (ss >> val) {
@@ -279,12 +278,13 @@ public:
         if (it == end()) {
             return false;
         }
-        size_t pos = 0, next_pos;
+        size_t pos = 0;
         value.clear();
-        if ((pos = it->second.find('[')) == string::npos)
+        if ((pos = it->second.find('[')) == string::npos) {
             outError(key + " vector not starting with [");
+        }
         for (int i = 0; ; i++) {
-            next_pos = it->second.find(", ", pos);
+            size_t next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
             T val;
             if (ss >> val) {

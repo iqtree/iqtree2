@@ -197,9 +197,9 @@ void progress_display::appendUsage(bool verbed, double elapsedTime, double cpu,
         double percentCPU = 100.0 * ( (cpu-startCPUTime) / elapsedTime);
         progress << " using " << percentCPU << "% CPU";
     }
-    double estimatedTime = 0.0; //Estimated work still to do in seconds
     if (0.0 < workDone && 0.0 < elapsedTime && workDone < totalWorkToDo ) {
-        estimatedTime = ((totalWorkToDo - workDone) / workDone) * elapsedTime;
+        //Estimated work still to do in seconds
+        double estimatedTime = ((totalWorkToDo - workDone) / workDone) * elapsedTime;
         const char* leadIn = ( atMost && !verbed) ? " (at most " : " (";
         progress << leadIn;
         appendTimeDescription(estimatedTime, progress);

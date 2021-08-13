@@ -28,7 +28,7 @@ class SquareDoubleMatrix: public DoubleMatrix
 {
 public:
 	typedef DoubleMatrix super;
-	SquareDoubleMatrix(int rank);
+	explicit SquareDoubleMatrix(int rank);
 	SquareDoubleMatrix(const DoubleMatrix &originalMatrix, int rank);
 	void getPerRowMaximumAbsoluteValues(DoubleVector& rowMaxima) const;
 };
@@ -46,7 +46,7 @@ public:
 	*/
     StopRule();
 
-    void initialize(Params &params);
+    void initialize(const Params &params);
 	/**
 		destructor
 	*/
@@ -57,12 +57,12 @@ public:
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		read improved iteration number from a file
@@ -186,7 +186,7 @@ private:
 		void computeInverseMatrixPart1(int size, SquareDoubleMatrix& omtrx,
 		                               DoubleVector& wk, IntVector& index);
 		void computeInverseMatrixPart2(int size, const SquareDoubleMatrix& omtrx,
-		                               DoubleVector& wk, IntVector& index,
+		                               DoubleVector& wk, const IntVector& index,
 									   DoubleMatrix& invMat);
 
 
@@ -195,10 +195,10 @@ private:
 	void multiple (DoubleMatrix &mat1, DoubleMatrix &mat2, DoubleMatrix &proMat);
 
 
-	void multiple (DoubleMatrix &mat1, DoubleVector &vec2, DoubleVector &proVec);
+	void multiple (DoubleMatrix &mat1, const DoubleVector &vec2, DoubleVector &proVec);
 
-	void multiple (DoubleVector &vec1, DoubleMatrix &mat2, DoubleVector &proVec);
-	void multiple (DoubleVector &vec1, DoubleVector &vec2, DoubleMatrix &proMat);
+	void multiple (const DoubleVector &vec1, const DoubleMatrix &mat2, DoubleVector &proVec);
+	void multiple (const DoubleVector &vec1, const DoubleVector &vec2, DoubleMatrix &proMat);
 	double multiple (DoubleVector &vec1, DoubleVector &vec2);
 
 	void readVector(DoubleVector &tmpTimeVec_);

@@ -641,17 +641,16 @@ float Reduction10(int a, int b, int i, float lamda, float vab,
 float Lamda(int a, int b, float vab, float **delta, int n, int r)
 {
   float lamda=0.0;
-  int i;
 
   if(vab==0.0)
     lamda=0.5;
   else
     {
-      for(i=1; i <= n ; i++)
-	{
-          if(a != i && b != i && !Emptied(i,delta))
+      for(int i=1; i <= n ; i++) {
+          if(a != i && b != i && !Emptied(i,delta)) {
             lamda=lamda + (Variance(b,i,delta) - Variance(a,i,delta));
-	}
+          }
+	    }
       lamda=0.5 + lamda/(2*(r-2)*vab);
     }                                              /* Formula (9) and the  */
   if(lamda > 1.0)                                /* constraint that lamda*/
@@ -844,18 +843,18 @@ protected:
 public:
     BIONJ2009Adapter() {
     }
-    virtual const std::string& getName() const {
+    virtual const std::string& getName() const override {
         return name;
     }
-    virtual const std::string& getDescription() {
+    virtual const std::string& getDescription() override {
         return description;
     }
-    virtual bool isBenchmark() const {
+    virtual bool isBenchmark() const override {
         return false;
     }
     virtual bool constructTree
         ( const std::string &distanceMatrixFilePath
-         , const std::string & newickTreeFilePath) {
+         , const std::string & newickTreeFilePath) override {
             BioNj bio2009;
             if (endsWith(distanceMatrixFilePath,".gz")) {
                 std::cerr << "BIONJ2009 cannot handle .gz inputs\n";
@@ -867,17 +866,17 @@ public:
     virtual bool constructTreeInMemory
         ( const  StrVector& sequenceNames
          , const double *distanceMatrix
-         , const std::string & newickTreeFilePath) {
+         , const std::string & newickTreeFilePath) override {
             return false;
     }
-    virtual void setZippedOutput(bool zipIt) {
+    virtual void setZippedOutput(bool zipIt) override {
         if (zipIt) {
             std::cerr << "Warning: BIONJ2009 does not support gzip output (or input)" << std::endl;
         }
     }
-    virtual void beSilent() {
+    virtual void beSilent() override {
     }
-    virtual void setPrecision(int precision) {
+    virtual void setPrecision(int precision) override {
         //IGNORED
     }
 };

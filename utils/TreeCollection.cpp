@@ -40,7 +40,8 @@ void TreeCollection::addTrees(TreeCollection &trees) {
 
 void TreeCollection::addTrees(CandidateSet &candidateTrees) {
     CandidateSet::reverse_iterator rit;
-    for (rit = candidateTrees.rbegin(); rit != candidateTrees.rend(); rit++) {
+    for (rit = candidateTrees.rbegin(); 
+         rit != candidateTrees.rend(); ++rit) {
        treeStrings.push_back(rit->second.tree);
        scores.push_back(rit->first);
        sourceProcID.push_back(MPIHelper::getInstance().getProcessID());

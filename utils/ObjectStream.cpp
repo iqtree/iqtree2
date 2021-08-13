@@ -16,7 +16,7 @@ ObjectStream::ObjectStream(TreeCollection &trees) {
     initFromTreeCollection(trees);
 }
 
-void ObjectStream::initFromTreeCollection(TreeCollection &trees) {
+void ObjectStream::initFromTreeCollection(const TreeCollection &trees) {
     vector<string> treeStrings = trees.getTreeStrings();
     vector<double> scores = trees.getScores();
     vector<int> sourceProcID = trees.getSourceProcID();

@@ -15,7 +15,7 @@ TimeKeeper::TimeKeeper(const char* activity_name)
     , elapsed_wallclock_time(0.0), elapsed_cpu_time(0.0) {
 }
 
-TimeKeeper::TimeKeeper(std::string activity_name)
+TimeKeeper::TimeKeeper(const std::string& activity_name)
     : activity(activity_name), stopped(true)
     , elapsed_wallclock_time(0.0), elapsed_cpu_time(0.0) {
 }

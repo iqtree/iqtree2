@@ -135,13 +135,13 @@ void EigenDecomposition::calculateEigenVectorsOfQ(int num_state, int new_num,
 					evec[i][j] = evec_new[inew][jnew];
 					--jnew;
 				} else {
-					evec[i][j] = (i == j);
+					evec[i][j] = (i == j) ? 1.0 : 0;
 				}
 			}
 			--inew;
 		} else 
 		for (int j=0; j < num_state; j++) {
-			evec[i][j] = (i==j);
+			evec[i][j] = (i==j) ? 1.0 : 0;
 		}
 	}
 }
@@ -261,15 +261,15 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 					inv_evec[i*num_state+j] = a[jnew][inew] * forg_sqrt[jnew];
 					jnew--;
 				} else {
-					evec[i*num_state+j] = (i == j);
-					inv_evec[i*num_state+j] = (i == j);
+					evec[i*num_state+j]     = (i == j) ? 1 : 0;
+					inv_evec[i*num_state+j] = (i == j) ? 1 : 0;
 				}
 			}
  			inew--;
 		} else {
 			for (j=0; j < num_state; j++) {
-				evec[i*num_state+j] = (i==j);
-				inv_evec[i*num_state+j] = (i==j);
+				evec[i*num_state+j]     = (i==j) ? 1 : 0;
+				inv_evec[i*num_state+j] = (i==j) ? 1 : 0;
 			}
 		}
 
@@ -435,16 +435,16 @@ void EigenDecomposition::eigensystem_nonrev(
 					//jnew++;
 					jnew--;
 				} else {
-					evec[i*num_state+j] = (i == j);
-					inv_evec[i*num_state+j] = (i == j);
+					evec[i*num_state+j]     = (i == j) ? 1 : 0;
+					inv_evec[i*num_state+j] = (i == j) ? 1 : 0;
 				}
 			}
 // 			inew++;
  			inew--;
 		} else {
 			for (j=0; j < num_state; j++) {
-				evec[i*num_state+j] = (i==j);
-				inv_evec[i*num_state+j] = (i==j);
+				evec[i*num_state+j]     = (i==j) ? 1 : 0;
+				inv_evec[i*num_state+j] = (i==j) ? 1 : 0;
 			}
 		}
 
@@ -519,9 +519,11 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 	}
 
 	for (i = 0, sum = 0.0; i < num_state; i++) {
-		for (j = 0, temp = 0.0; j < num_state; j++)
-            if (j != i)
-			temp += a[i][j];
+		for (j = 0, temp = 0.0; j < num_state; j++) {
+            if (j != i) {
+				temp += a[i][j];
+			}
+		}
 		m[i] = temp; /* row sum */
 		sum += temp*stateFrqArr_[i]; /* exp. rate */
 	}

@@ -166,7 +166,7 @@ T StringToNumber ( const std::string &Text )
 {
     std::istringstream ss(Text);
     T result;
-    return ss >> result ? result : 0;
+    return ss >> (result ? result : 0);
 }
 
 //These three functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:

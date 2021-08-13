@@ -17,7 +17,7 @@ protected:
     
 public:
     explicit TimeKeeper(const char* activity_name);
-    explicit TimeKeeper(std::string name);
+    explicit TimeKeeper(const std::string& name);
     ~TimeKeeper();
 
     const std::string& getActivity() const;
@@ -38,7 +38,7 @@ public:
     const TimeKeeper& keeper;
     KeptTime() = delete;
     KeptTime(const KeptTime& rhs) = delete;
-    KeptTime(const TimeKeeper& tk);
+    explicit KeptTime(const TimeKeeper& tk);
     ~KeptTime();
 };
 
