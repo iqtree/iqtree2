@@ -41,7 +41,7 @@ public:
 		constructor, assigning an associated splits graph
 		@param asgraph a splits graph
 	*/
-    MSplitsBlock(SplitGraph *asgraph);
+    explicit MSplitsBlock(SplitGraph *asgraph);
 
 	/**
 		destructor

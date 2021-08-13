@@ -30,7 +30,7 @@ public:
         flag = 0;
     }
 
-    NxsModel(string name) {
+    explicit NxsModel(const std::string& name) {
         this->name = name;
         flag = 0;
     }
