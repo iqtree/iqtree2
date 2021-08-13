@@ -50,8 +50,8 @@ class NxsTaxaBlock
 		unsigned			GetNumTaxonLabels();
 		NxsString 			GetTaxonLabel(unsigned i);
 		bool 				NeedsQuotes(unsigned i);
-		virtual void		Report(std::ostream &out);
-		virtual void 		Reset();
+		virtual void		Report(std::ostream &out) override;
+		virtual void 		Reset() override;
 
 		class NxsX_NoSuchTaxon {};	/* thrown if FindTaxon cannot locate a supplied taxon label in the taxonLabels vector */
 
@@ -60,7 +60,7 @@ class NxsTaxaBlock
 		NxsStringVector	taxonLabels;	/* storage for list of taxon labels */
 		NxsBoolVector 	needsQuotes;	/* needsQuotes[i] true if label i needs to be quoted when output */
 
-		virtual void 	Read(NxsToken &token);
+		virtual void 	Read(NxsToken &token) override;
 
 	private:
 		void 			SetNtax(unsigned n);

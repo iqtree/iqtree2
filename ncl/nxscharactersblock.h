@@ -20,7 +20,12 @@
 #ifndef NCL_NXSCHARACTERSBLOCK_H
 #define NCL_NXSCHARACTERSBLOCK_H
 
-#include <iostream> //for std::ostream
+#include <iostream>   //for std::ostream
+#include "nxsdefs.h"  //for definition of NxsUnsignedSet
+#include "nxsblock.h" //for definition of NxsBlock class
+#include "nxstaxablock.h" //for definition of NxsTaxaBlock class
+#include "nxsdiscretematrix.h" //for definition of NxsDiscreteMatrix class
+#include "nxsdiscretedatum.h" //for definition of NxsDiscreteDatum class
 
 class NxsTaxaBlock;
 class NxsAssumptionsBlock;
@@ -246,13 +251,13 @@ class NxsCharactersBlock
 		NxsString				GetCharLabel(unsigned i);
 		NxsString				GetStateLabel(unsigned i, unsigned j);
 		NxsString				GetTaxonLabel(unsigned i);
-		virtual unsigned		CharLabelToNumber(NxsString s);
-		virtual unsigned		TaxonLabelToNumber(NxsString s);
+		virtual unsigned		CharLabelToNumber(NxsString s) override;
+		virtual unsigned		TaxonLabelToNumber(NxsString s) override;
 		virtual unsigned		GetMaxObsNumStates();
 		virtual unsigned		GetObsNumStates(unsigned j);
 		virtual void			DebugShowMatrix(std::ostream &out, bool use_matchchar, const char *marginText = 0);
-		virtual void			Report(std::ostream &out);
-		virtual void			Reset();
+		virtual void			Report(std::ostream &out) override;
+		virtual void			Reset() override;
 
 		NxsTaxaBlock			*taxa;				/* pointer to the TAXA block in which taxon labels are stored */
 
@@ -271,12 +276,12 @@ class NxsCharactersBlock
 		virtual void			HandleStdMatrix(NxsToken &token);
 		virtual unsigned		HandleTokenState(NxsToken &token, unsigned c);
 		virtual void			HandleTransposedMatrix(NxsToken &token);
-		virtual void			Read(NxsToken &token);
+		virtual void			Read(NxsToken &token) override;
 		unsigned				PositionInSymbols(char ch);
 		void					HandleStatelabels(NxsToken &token);
 		void					HandleTaxlabels(NxsToken &token);
 		void					ResetSymbols();
-		void					ShowStates(ostream &out, unsigned i, unsigned j);
+		void					ShowStates(std::ostream &out, unsigned i, unsigned j);
 		void					WriteStates(NxsDiscreteDatum &d, char *s, unsigned slen);
 
 		NxsAssumptionsBlock		*assumptionsBlock;	/* pointer to the ASSUMPTIONS block in which exsets, taxsets and charsets are stored */
@@ -370,7 +375,7 @@ inline bool *NxsCharactersBlock::GetActiveTaxonArray()
 inline NxsString NxsCharactersBlock::GetCharLabel(
   unsigned i)	/* the character in range [0..`nchar') */
 	{
-	NxsString s = " ";
+	NxsString s(" ");
 	if (static_cast<unsigned>(i) < charLabels.size())
 		s = charLabels[i];
 	return s;
@@ -757,7 +762,7 @@ inline void NxsCharactersBlock::RestoreTaxon(
 |	range [0..`ntax') and `j' is in the range [0..`nchar'). Also assumes `matrix' is non-NULL.
 */
 inline void NxsCharactersBlock::ShowStates(
-  ostream &out,	/* the stream on which to show the state(s) */
+  std::ostream &out,	/* the stream on which to show the state(s) */
   unsigned i,	/* the (0-offset) index of the taxon in question */
   unsigned j)	/* the (0-offset) index of the character in question */
 	{
@@ -784,7 +789,7 @@ inline unsigned NxsCharactersBlock::TaxonLabelToNumber(
 		{
 		i = 1 + taxa->FindTaxon(s);
 		}
-	catch(NxsTaxaBlock::NxsX_NoSuchTaxon)
+	catch(NxsTaxaBlock::NxsX_NoSuchTaxon& )
 		{
 		i = 0;
 		}

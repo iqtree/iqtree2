@@ -36,7 +36,9 @@ class NxsException
 		long		line;	/* current line in file */
 		long		col;	/* column of current line */
 
+		explicit NxsException(const char* s, file_pos fp = 0, long fl = 0L, long fc = 0L);
 		explicit NxsException(const NxsString &s, file_pos fp = 0, long fl = 0L, long fc = 0L);
+		NxsException(const char* s,      const NxsToken &t);
 		NxsException(const NxsString &s, const NxsToken &t);
 	};
 

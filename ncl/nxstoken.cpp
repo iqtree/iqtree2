@@ -148,31 +148,29 @@ void NxsToken::GetComment()
 |	Reads rest of a token surrounded with curly brackets (the starting '{' has already been input) up to and including
 |	the matching '}' character. All nested curly-bracketed phrases will be included.
 */
-void NxsToken::GetCurlyBracketedToken()
-	{
+void NxsToken::GetCurlyBracketedToken() {
 	// Set level to 1 initially.  Every '}' encountered reduces
 	// level by one, so that we know we can stop when level becomes 0.
 	//
 	int level = 1;
 
-	char ch;
-	for(;;)
-		{
-		ch = GetNextChar();
-		if (atEOF)
+	for(;;) {
+		char ch = GetNextChar();
+		if (atEOF) {
 			break;
-
-		if (ch == '}')
+		}
+		if (ch == '}') {
 			level--;
-		else if (ch == '{')
+		}
+		else if (ch == '{') {
 			level++;
-
+		}
 		AppendToToken(ch);
-
-		if (level == 0)
+		if (level == 0) {
 			break;
 		}
 	}
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Gets remainder of a double-quoted NEXUS word (the first double quote character was read in already by GetNextToken).
@@ -183,21 +181,20 @@ void NxsToken::GetCurlyBracketedToken()
 |	itself (not paired with another tandem single quote).
 */
 void NxsToken::GetDoubleQuotedToken()
-	{
-	char ch;
-
-	for(;;)
-		{
-		ch = GetNextChar();
-		if (atEOF)
+{
+	for(;;) {
+		char ch = GetNextChar();
+		if (atEOF) {
 			break;
-
-		if (ch == '\"')
+		}
+		if (ch == '\"') {
 			break;
-		else
+		}
+		else {
 			AppendToToken(ch);
 		}
 	}
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Gets remainder of a quoted NEXUS word (the first single quote character was read in already by GetNextToken). This
@@ -205,41 +202,35 @@ void NxsToken::GetDoubleQuotedToken()
 |	one after the other, in which case the function continues to gather characters until an isolated single quote is
 |	found. The tandem quotes are stored as a single quote character in the token NxsString.
 */
-void NxsToken::GetQuoted()
-	{
-	char ch;
-
-	for(;;)
-		{
-		ch = GetNextChar();
-		if (atEOF)
+void NxsToken::GetQuoted() {
+	for(;;) {
+		char ch = GetNextChar();
+		if (atEOF) {
 			break;
-
-		if (ch == '\'' && saved == '\'')
-			{
+		}
+		if (ch == '\'' && saved == '\'') {
 			// Paired single quotes, save as one single quote
 			//
 			AppendToToken(ch);
 			saved = '\0';
-			}
-		else if (ch == '\'' && saved == '\0')
-			{
+		}
+		else if (ch == '\'' && saved == '\0') {
 			// Save the single quote to see if it is followed by another
 			//
 			saved = '\'';
-			}
-		else if (saved == '\'')
-			{
+		}
+		else if (saved == '\'') {
 			// Previously read character was single quote but this is something else, save current character so that it will
 			// be the first character in the next token read
 			//
 			saved = ch;
 			break;
-			}
-		else
+		}
+		else {
 			AppendToToken(ch);
 		}
 	}
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Reads rest of parenthetical token (starting '(' already input) up to and including the matching ')' character.  All
@@ -370,8 +361,8 @@ bool NxsToken::Begins(
 |	Abbreviation should be used instead of Equals.
 */
 bool NxsToken::Equals(
-  NxsString s,			/* the string for comparison to the string currently stored in this token */
-  bool respect_case)	/* if true, comparison will be case-sensitive */
+  NxsString s,		 	   /* the string for comparison to the string currently stored in this token */
+  bool respect_case) const /* if true, comparison will be case-sensitive */
 	{
 	unsigned k;
 	char tokenChar, otherChar;
@@ -398,6 +389,11 @@ bool NxsToken::Equals(
 
 	return true;
 	}
+
+
+bool NxsToken::Equals(const char* s, bool respect_case) const {
+	return Equals(NxsString(s), respect_case);
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Reads characters from in until a complete token has been read and stored in token. GetNextToken performs a number 

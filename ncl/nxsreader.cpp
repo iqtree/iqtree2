@@ -248,7 +248,7 @@ void NxsReader::Execute(
 		{
 		token.GetNextToken();
 		}
-	catch (NxsException x)
+	catch (NxsException& x)
 		{
 		NexusError(token.errormsg, 0, 0, 0);
 		return;
@@ -290,7 +290,7 @@ void NxsReader::Execute(
 #else
 						strcpy_s(id_str, sizeof(id_str), currBlock->GetID().c_str());
 #endif
-						bool ok_to_read = EnteringBlock(id_str);
+						bool ok_to_read = EnteringBlock(NxsString(id_str));
 						if (!ok_to_read) 
 							currBlock = NULL;
 						else
@@ -320,7 +320,7 @@ void NxsReader::Execute(
 								currBlock = NULL;
 								return;
 								}	// catch (NxsException x) 
-							ExitingBlock(id_str /*currBlock->GetID()*/);
+							ExitingBlock(NxsString(id_str) /*currBlock->GetID()*/);
 							}	// else
 						}	// if (currBlock->IsEnabled()) 
 

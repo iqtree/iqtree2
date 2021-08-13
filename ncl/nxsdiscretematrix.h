@@ -21,6 +21,8 @@
 #define NCL_NXSDISCRETEMATRIX_H
 
 #include <limits.h>
+#include <iostream> //for class std::ostream
+#include "nxsdiscretedatum.h" //for class NxsDiscreteDatum
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Class providing storage for the discrete data types (dna, rna, nucleotide, standard, and protein) inside a DATA or 
@@ -50,7 +52,7 @@ class NxsDiscreteMatrix
 		void				AddRows(unsigned nAddRows);
 		void				AddState(unsigned i, unsigned j, unsigned value);
 		void				CopyStatesFromFirstTaxon(unsigned i, unsigned j);
-		void				DebugSaveMatrix(ostream &out, unsigned colwidth = 12);
+		void				DebugSaveMatrix(std::ostream &out, unsigned colwidth = 12);
 		unsigned			DuplicateRow(unsigned row, unsigned count, unsigned startCol = 0, unsigned endCol = UINT_MAX);
 		void				Flush();
 		unsigned			GetState(unsigned i, unsigned j, unsigned k = 0);

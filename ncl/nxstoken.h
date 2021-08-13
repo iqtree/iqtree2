@@ -57,7 +57,7 @@ class NxsToken
 
 		NxsString		errormsg;
 
-						NxsToken(std::istream &i);
+		explicit		NxsToken(std::istream &i);
 		virtual			~NxsToken();
 
 		bool			AtEOF();
@@ -65,7 +65,8 @@ class NxsToken
 		bool			Abbreviation(NxsString s);
 		bool			Begins(NxsString s, bool respect_case = false);
 		void			BlanksToUnderscores();
-		bool			Equals(NxsString s, bool respect_case = false);
+		bool			Equals(const char*, bool respect_case = false) const;
+		bool			Equals(NxsString s, bool respect_case = false) const;
 		long			GetFileColumn() const;
 		file_pos		GetFilePosition() const;
 		long			GetFileLine() const;
@@ -531,9 +532,11 @@ inline void NxsToken::GetNextContiguousToken(char stop_char) {
 	if (token.empty()) return;
 	NxsString::iterator last = token.end();
 	while (last != token.begin() && IsWhitespace(*(last-1))) {
-		last--;
+		--last;
 	}
-	if (last != token.end()) token.erase(last, token.end());
+	if (last != token.end()) {
+		token.erase(last, token.end());
+	}
 }
 
 #endif

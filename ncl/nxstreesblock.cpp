@@ -110,7 +110,7 @@ void NxsTreesBlock::HandleTreeDescription(
 	token.GetNextToken();
 
 	NxsString s = token.GetToken();
-	NxsString cmdName = (utree ? "UTREE" : "TREE");
+	NxsString cmdName (utree ? "UTREE" : "TREE");
 	if (s.size() < 2)
 		{
 		errormsg = "Expecting command comment or tree description in ";

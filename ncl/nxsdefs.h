@@ -31,10 +31,11 @@
 //
 #define NCL_MAX_STATES         76
 
+#include <iostream> //for streampos
 #if defined(__MWERKS__) || defined(__DECCXX) || defined(_MSC_VER) 
 	typedef long		file_pos;
 #else
-	typedef streampos	file_pos;
+	typedef std::streampos	file_pos;
 #endif
 
 #define	SUPPORT_OLD_NCL_NAMES
@@ -51,9 +52,9 @@
 typedef std::vector<bool>										NxsBoolVector;
 typedef std::vector<char>										NxsCharVector;
 typedef std::vector<unsigned>									NxsUnsignedVector;
-typedef std::vector<NxsStringVector>								NxsAllelesVector;
+typedef std::vector<NxsStringVector>							NxsAllelesVector;
 
-typedef std::set< unsigned, std::less<unsigned> >						NxsUnsignedSet;
+typedef std::set< unsigned, std::less<unsigned> >				NxsUnsignedSet;
 
 typedef std::map< unsigned, NxsStringVector, std::less<unsigned> >	NxsStringVectorMap;
 typedef std::map< NxsString, NxsString, std::less<NxsString> >		NxsStringMap;

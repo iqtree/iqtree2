@@ -28,12 +28,14 @@ NxsException::NxsException(
   file_pos fp,	/* the current file position */
   long fl,		/* the current file line */
   long fc)		/* the current file column */
-	{
-	pos		= fp;
-	line	= fl;
-	col		= fc;
-	msg		= s;
-	}
+	: msg(s), pos(fp), line(fl), col(fc) {
+}
+
+NxsException::NxsException(const char* s, file_pos fp , long fl , long fc)
+	 : msg(s), pos(fp), line(fl), col(fc) {
+}
+
+
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Creates a NxsException object with the specified message, getting file position information from the NxsToken.
@@ -41,9 +43,10 @@ NxsException::NxsException(
 NxsException::NxsException(
   const NxsString &s,		/* message that describes the error */
   const NxsToken &t)		/* NxsToken that was supplied the last token (the token that caused the error) */
-	{
-	msg		= s; 
-	pos		= t.GetFilePosition();
-	line	= t.GetFileLine();
-	col		= t.GetFileColumn();
-  	}
+	: msg(s), pos(t.GetFilePosition())
+	, line(t.GetFileLine()), col(t.GetFileColumn()) {
+}
+
+NxsException::NxsException(const char* s,      const NxsToken &t) 
+	: msg(s), pos( t.GetFilePosition()), line(t.GetFileLine()), col(t.GetFileColumn()) {
+}

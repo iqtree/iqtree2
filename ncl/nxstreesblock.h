@@ -19,6 +19,9 @@
 
 #ifndef NCL_NXSTREESBLOCK_H
 #define NCL_NXSTREESBLOCK_H
+#include "nxsstring.h"    //for NxsString class
+#include "nxsblock.h"     //for NxsBlock class
+#include "nxstaxablock.h" //for NxsTaxaBlock class
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	This class handles reading and storage for the NEXUS block TREES. It overrides the member functions Read and Reset,
@@ -49,7 +52,7 @@ class NxsTreesBlock
   : public NxsBlock
 	{
  	public:
-							NxsTreesBlock(NxsTaxaBlock *tb);
+		explicit			NxsTreesBlock(NxsTaxaBlock *tb);
 		virtual				~NxsTreesBlock();
 
 				void		ReplaceTaxaBlockPtr(NxsTaxaBlock *tb);
@@ -60,9 +63,9 @@ class NxsTreesBlock
 				NxsString	GetTranslatedTreeDescription(unsigned i);
 				bool		IsDefaultTree(unsigned i);
 				bool		IsRootedTree(unsigned i);
-		virtual void		Report(std::ostream &out);
+		virtual void		Report(std::ostream &out) override;
 		virtual void		BriefReport(NxsString &s);
-		virtual void		Reset();
+		virtual void		Reset() override;
 
 	protected :
 
@@ -74,7 +77,7 @@ class NxsTreesBlock
 		unsigned			ntrees;				/* number of trees stored */
 		unsigned			defaultTree;		/* 0-offset index of default tree specified by user, or 0 if user failed to specify a default tree using an asterisk in the NEXUS data file */
 
-		virtual	void		Read(NxsToken &token);
+		virtual	void		Read(NxsToken &token) override;
 		void				HandleTreeDescription(NxsToken &token, bool utree);
 	};
 

@@ -20,6 +20,9 @@
 #ifndef NCL_NXSDATABLOCK_H
 #define NCL_NXSDATABLOCK_H
 
+#include "nxscharactersblock.h" //for class NxsCharactersBlock
+#include "nxstaxablock.h"	//for class NxsTaxaBlock
+
 /*----------------------------------------------------------------------------------------------------------------------
 |	This class handles reading and storage for the NEXUS block DATA. It is derived from the NxsCharactersBlock class, 
 |	and differs from NxsCharactersBlock only in name and the fact that `newtaxa' is initially true rather than false.
@@ -31,7 +34,7 @@ class NxsDataBlock
 		NxsDataBlock(NxsTaxaBlock *tb, NxsAssumptionsBlock *ab);
 
 		void TransferTo(NxsCharactersBlock &charactersblock);
-		void Reset();
+		void Reset() override;
 	};
 
 typedef NxsDataBlock DataBlock;

@@ -19,6 +19,9 @@
 
 #ifndef NCL_ASSUMPTIONSBLOCK_H
 #define NCL_ASSUMPTIONSBLOCK_H
+#include "nxsblock.h" //for class NxsBlock
+#include "nxstaxablock.h" //for class NxsTaxaBlock
+#include "nxscharactersblock.h" //for class NsxCharactersBlock
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	This class handles reading and storage for the NxsReader block ASSUMPTIONS. It overrides the member functions Read 
@@ -36,7 +39,7 @@ class NxsAssumptionsBlock
   : public NxsBlock
 	{
 	public:
-							NxsAssumptionsBlock(NxsTaxaBlock *t);
+		explicit			NxsAssumptionsBlock(NxsTaxaBlock *t);
 		virtual				~NxsAssumptionsBlock();
 
 		void				ReplaceTaxaBlockPtr(NxsTaxaBlock *tb);
@@ -58,8 +61,8 @@ class NxsAssumptionsBlock
 		NxsString			GetDefExSetName();
 		void				ApplyExSet(NxsString nm);
 
-		virtual void		Report(std::ostream& out);
-		virtual void		Reset();
+		virtual void		Report(std::ostream& out) override;
+		virtual void		Reset() override;
 
 	private:
 		NxsTaxaBlock		*taxa;				/* pointer to the NxsTaxaBlock object */
@@ -79,8 +82,8 @@ class NxsAssumptionsBlock
 		void				HandleEndblock(NxsToken& token);
 		void				HandleExset(NxsToken& token);
 		void				HandleTaxset(NxsToken& token);
-		virtual void		Read(NxsToken& token);
-		virtual unsigned	TaxonLabelToNumber(NxsString s);
+		virtual void		Read(NxsToken& token) override;
+		virtual unsigned	TaxonLabelToNumber(NxsString s) override;
 	};
 
 typedef NxsAssumptionsBlock AssumptionsBlock;	// for backward compatibility

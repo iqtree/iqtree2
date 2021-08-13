@@ -19,6 +19,8 @@
 
 #ifndef NCL_NXSDISTANCESBLOCK_H
 #define NCL_NXSDISTANCESBLOCK_H
+#include "nxstoken.h" //for definition of NxsToken class
+#include "nxstaxablock.h" //for definition of NxsTaxaBlock class
 
 class NxsDistanceDatum;
 
@@ -64,7 +66,7 @@ class NxsDistancesBlock
   : public NxsBlock
 	{
 	public:
-							NxsDistancesBlock(NxsTaxaBlock *t);
+		explicit			NxsDistancesBlock(NxsTaxaBlock *t);
 		virtual				~NxsDistancesBlock();
 
 		double				GetDistance(unsigned i, unsigned j);
@@ -79,8 +81,8 @@ class NxsDistancesBlock
 		bool				IsLowerTriangular();
 		bool				IsMissing(unsigned i, unsigned j);
 		bool				IsUpperTriangular();
-		virtual void		Report(std::ostream &out);
-		virtual void		Reset();
+		virtual void		Report(std::ostream &out) override;
+		virtual void		Reset() override;
 		void				SetDistance(unsigned i, unsigned j, double d);
 		void				SetMissing(unsigned i, unsigned j);
 		void				SetNchar(unsigned i);
@@ -99,7 +101,7 @@ class NxsDistancesBlock
 		void				HandleMatrixCommand(NxsToken &token);
 		bool				HandleNextPass(NxsToken &token, unsigned &offset);
 		void				HandleTaxlabelsCommand(NxsToken &token);
-		virtual void		Read(NxsToken &token);
+		virtual void		Read(NxsToken &token) override;
 
 	private:
 

@@ -19,6 +19,9 @@
 #ifndef NCL_NXSEMPTYBLOCK_H
 #define NCL_NXSEMPTYBLOCK_H
 
+#include "nxsblock.h"   //for definition of NxsBlock class
+#include "nxsstring.h"	//for definition of NxsString class
+#include "nxstoken.h"   //for definition of NxsToken class
 /*----------------------------------------------------------------------------------------------------------------------
 |	This is a template that can be used to create a class representing a NEXUS block. Here are the steps to follow if
 |	you wish to create a new block specifically for use with your particular application. Suppose your application is
@@ -58,20 +61,18 @@ class NxsEmptyBlock
   : public NxsBlock
 	{
 	public:
-
 						NxsEmptyBlock();
 		virtual			~NxsEmptyBlock();
 
-		virtual void	Report(ostream &out);
+		virtual void	 Report(std::ostream &out) override;
 
 	protected:
-
-		void			SkippingCommand(NxsString commandName);
-		unsigned		TaxonLabelToNumber(NxsString s);
-		unsigned		CharLabelToNumber(NxsString s);
-		void			HandleEndblock(NxsToken &token);
-		virtual void	Read(NxsToken &token);
-		virtual void	Reset();
+		virtual void	 SkippingCommand(NxsString commandName) override;
+		virtual unsigned TaxonLabelToNumber(NxsString s) override;
+		virtual unsigned CharLabelToNumber(NxsString s) override;
+		virtual void	 HandleEndblock(NxsToken &token);
+		virtual void	 Read(NxsToken &token) override;
+		virtual void	 Reset() override;
 	};
 
 #endif

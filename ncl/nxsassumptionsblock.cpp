@@ -61,12 +61,13 @@ int NxsAssumptionsBlock::GetNumCharSets()
 */
 void NxsAssumptionsBlock::GetCharSetNames(
   NxsStringVector &names)	/* the vector in which to store the names */
-	{
+{
 	names.erase(names.begin(), names.end());
 	NxsUnsignedSetMap::const_iterator i;
-	for (i = charsets.begin(); i != charsets.end(); i++)
-	names.push_back((*i).first);
+	for (i = charsets.begin(); i != charsets.end(); ++i) {
+		names.push_back((*i).first);
 	}
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Returns reference to character set having name 'nm'.
@@ -99,12 +100,13 @@ int NxsAssumptionsBlock::GetNumTaxSets()
 */
 void NxsAssumptionsBlock::GetTaxSetNames(
   NxsStringVector &names)	/* the vector in which to store the names */
-	{
+{
 	names.erase(names.begin(), names.end());
 	NxsUnsignedSetMap::const_iterator i;
-	for (i = taxsets.begin(); i != taxsets.end(); i++)
+	for (i = taxsets.begin(); i != taxsets.end(); ++i) {
 		names.push_back((*i).first);
 	}
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Returns reference to taxon set having name 'nm'.
@@ -137,12 +139,13 @@ int NxsAssumptionsBlock::GetNumExSets()
 */
 void NxsAssumptionsBlock::GetExSetNames(
   NxsStringVector &names)	/* the vector in which to store the names */
-	{
+{
 	names.erase(names.begin(), names.end());
 	NxsUnsignedSetMap::const_iterator i;
-	for (i = exsets.begin(); i != exsets.end(); i++)
+	for (i = exsets.begin(); i != exsets.end(); ++i) {
 		names.push_back((*i).first);
 	}
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Returns reference to exclusion set having name 'nm'.
@@ -439,7 +442,7 @@ void NxsAssumptionsBlock::Report(
 		else
 			{
 			out << "  " << charsets.size() << " character sets defined:" << endl;
-			for (; charsets_iter != charsets.end(); charsets_iter++)
+			for (; charsets_iter != charsets.end(); ++charsets_iter)
 				{
 				NxsString nm = (*charsets_iter).first;
 				out << "    " << nm;
@@ -463,7 +466,7 @@ void NxsAssumptionsBlock::Report(
 		else
 			{
 			out << "  " << taxsets.size() << " taxon sets defined:" << endl;
-			for (; taxsets_iter != taxsets.end(); taxsets_iter++)
+			for (; taxsets_iter != taxsets.end(); ++taxsets_iter)
 				{
 				NxsString nm = (*taxsets_iter).first;
 				out << "    " << nm;
@@ -487,7 +490,7 @@ void NxsAssumptionsBlock::Report(
 		else
 			{
 			out << "  " << exsets.size() << " exclusion sets defined:" << endl;
-			for (; exsets_iter != exsets.end(); exsets_iter++)
+			for (; exsets_iter != exsets.end(); ++exsets_iter)
 				{
 				NxsString nm = (*exsets_iter).first;
 				out << "    " << nm;

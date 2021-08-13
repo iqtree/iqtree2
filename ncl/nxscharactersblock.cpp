@@ -77,12 +77,11 @@ unsigned NxsCharactersBlock::ApplyDelset(
 	assert(taxonPos != NULL);
 
 	unsigned num_deleted = 0;
-	unsigned k;
 
 	NxsUnsignedSet::const_iterator i;
-	for (i = delset.begin(); i != delset.end(); i++)
+	for (i = delset.begin(); i != delset.end(); ++i)
 		{
-		k = taxonPos[*i];
+		unsigned k = taxonPos[*i];
 		if (k == UINT_MAX)
 			continue;
 
@@ -109,12 +108,10 @@ unsigned NxsCharactersBlock::ApplyExset(
 	assert(charPos != NULL);
 
 	int num_excluded = 0;
-	unsigned k;
 
 	NxsUnsignedSet::const_iterator i;
-	for (i = exset.begin(); i != exset.end(); i++)
-		{
-		k = charPos[*i];
+	for (i = exset.begin(); i != exset.end(); ++i) {
+		unsigned k = charPos[*i];
 		if (k == UINT_MAX)
 			continue;
 
@@ -140,15 +137,14 @@ unsigned NxsCharactersBlock::ApplyIncludeset(
 	assert(charPos != NULL);
 
 	unsigned num_included = 0;
-	unsigned k;
 
 	NxsUnsignedSet::const_iterator i;
-	for (i = inset.begin(); i != inset.end(); i++)
+	for (i = inset.begin(); i != inset.end(); ++i)
 		{
-		k = charPos[*i];
-		if (k == UINT_MAX)
+		unsigned k = charPos[*i];
+		if (k == UINT_MAX) {
 			continue;
-
+		}
 		// k equal to UINT_MAX means character was not eliminated
 		// and therefore can be excluded
 		//
@@ -172,25 +168,23 @@ unsigned NxsCharactersBlock::ApplyRestoreset(
 	assert(taxonPos != NULL);
 
 	unsigned num_restored = 0;
-	unsigned k;
 
 	NxsUnsignedSet::const_iterator i;
-	for (i = restoreset.begin(); i != restoreset.end(); i++)
-		{
-		k = taxonPos[*i];
-		if (k == UINT_MAX)
+	for (i = restoreset.begin(); i != restoreset.end(); ++i) {
+		unsigned k = taxonPos[*i];
+		if (k == UINT_MAX) {
 			continue;
-
+		}
 		// k equal to UINT_MAX means data was supplied for
 		// this taxon and therefore it can be restored
 		//
-		if (activeTaxon[k] == false)
+		if (activeTaxon[k] == false) {
 			num_restored++;
-		activeTaxon[k] = true;
 		}
-
-	return num_restored;
+		activeTaxon[k] = true;
 	}
+	return num_restored;
+}
 
 /*----------------------------------------------------------------------------------------------------------------------
 |	Use to allocate memory for (and initialize) `charPos' array, which keeps track of the original character index in 
@@ -271,30 +265,35 @@ void NxsCharactersBlock::Consume(
 	symbols				= other.symbols;
 	other.symbols		= NULL;
 
-	if (charPos != NULL)
+	if (charPos != nullptr) {
 		delete [] charPos;
+	}
 	charPos				= other.charPos;
-	other.charPos		= NULL;
+	other.charPos		= nullptr;
 
-	if (taxonPos != NULL)
-	delete [] taxonPos;
+	if (taxonPos != nullptr) {
+		delete [] taxonPos;
+	}
 	taxonPos			= other.taxonPos;
-	other.taxonPos		= NULL;
+	other.taxonPos		= nullptr;
 
-	if (activeChar != NULL)
-	delete [] activeChar;
+	if (activeChar != nullptr) {
+		delete [] activeChar;
+	}
 	activeChar			= other.activeChar;
 	other.activeChar	= NULL;
 
-	if (activeTaxon != NULL)
-	delete [] activeTaxon;
+	if (activeTaxon != nullptr) {
+		delete [] activeTaxon;
+	}
 	activeTaxon			= other.activeTaxon;
-	other.activeTaxon	= NULL;
+	other.activeTaxon	= nullptr;
 
-	if (matrix != NULL)
-	delete matrix;
+	if (matrix != nullptr) {
+		delete matrix;
+	}
 	matrix				= other.matrix;
-	other.matrix		= NULL;
+	other.matrix		= nullptr;
 
 	equates.clear();
 	int size = static_cast<int>(other.equates.size());
@@ -311,7 +310,7 @@ void NxsCharactersBlock::Consume(
 	if (size > 0)
 		{
 		NxsUnsignedSet::const_iterator i;
-		for (i = other.eliminated.begin(); i != other.eliminated.end(); i++)
+		for (i = other.eliminated.begin(); i != other.eliminated.end(); ++i)
 			eliminated.insert(*i);
 		other.eliminated.clear();
 		}
@@ -321,7 +320,7 @@ void NxsCharactersBlock::Consume(
 	if (size > 0)
 		{
 		NxsStringVector::const_iterator i;
-		for (i = other.charLabels.begin(); i != other.charLabels.end(); i++)
+		for (i = other.charLabels.begin(); i != other.charLabels.end(); ++i)
 			charLabels.push_back((*i));
 		other.charLabels.clear();
 		}
@@ -331,7 +330,7 @@ void NxsCharactersBlock::Consume(
 	if (size > 0)
 		{
 		NxsStringVectorMap::const_iterator i;
-		for (i = other.charStates.begin(); i != other.charStates.end(); i++)
+		for (i = other.charStates.begin(); i != other.charStates.end(); ++i)
 			charStates[ (*i).first ] = (*i).second;
 		other.charStates.clear();
 		}
@@ -490,7 +489,7 @@ NxsString NxsCharactersBlock::GetStateLabel(
   unsigned i,	/* the locus in range [0..`nchar') */
   unsigned j)	/* the 0-offset index of the state of interest */
 	{
-	NxsString s = " ";
+	NxsString s (" ");
 	NxsStringVectorMap::const_iterator cib = charStates.find(i);
 	if (cib != charStates.end() && static_cast<unsigned>(j) < (*cib).second.size())
 		{
@@ -604,17 +603,17 @@ void NxsCharactersBlock::HandleCharstatelabels(
 	unsigned currChar = 0;
 	bool semicolonFoundInInnerLoop = false;
 	bool tokenAlreadyRead = false;
-	bool save = true;
 
 	charStates.clear();
 	charLabels.clear();
 
-	if (charPos == NULL)
+	if (charPos == nullptr) {
 		BuildCharPosArray();
+	}
 
 	for (;;)
 		{
-		save = true;
+		bool save = true;
 
 		if (semicolonFoundInInnerLoop)
 			break;
@@ -646,7 +645,7 @@ void NxsCharactersBlock::HandleCharstatelabels(
 			{
 			currChar++;
 			if (!IsEliminated(currChar - 1))
-				charLabels.push_back(" ");
+				charLabels.emplace_back(" ");
 			}
 
 		// If n refers to a character that has been eliminated, go through the motions of
@@ -896,7 +895,7 @@ void NxsCharactersBlock::HandleEndblock(
 			NxsString nm = charToken;
 			nm += " ";
 			nm += (k+1);
-			charLabels.push_back(nm.c_str());
+			charLabels.emplace_back(nm);
 			}
 		}
 	}
@@ -1482,10 +1481,8 @@ bool NxsCharactersBlock::HandleNextState(
 	//
 	assert(token.GetTokenLength() > 0);
 
-	// We've read in the state now, so if this character has been eliminated, we don't want to go any further with it
-	//
-	if (j < 0)
-		return true;
+	// We've read in the state now, so if this character has been eliminated, 
+	// we don't want to go any further with it
 
 	// See if any equate macros apply
 	//
@@ -1495,7 +1492,7 @@ bool NxsCharactersBlock::HandleNextState(
 	if (p != equates.end())
 		{
 		NxsString sval = (*p).second;
-		token.ReplaceToken(sval.c_str());
+		token.ReplaceToken(sval);
 		}
 
 	// Handle case of single-character state symbol
@@ -1809,7 +1806,7 @@ void NxsCharactersBlock::HandleStdMatrix(
 	assert(charPos != NULL);
 	assert(taxonPos != NULL);
 
-	unsigned i = 0, j, currChar = 0;
+	unsigned currChar = 0;
 	unsigned firstChar = 0;
 	unsigned lastChar = ncharTotal;
 	unsigned nextFirst = 0;
@@ -1821,7 +1818,7 @@ void NxsCharactersBlock::HandleStdMatrix(
 		//******** Beginning of loop through taxa ********
 		//************************************************
 
-		for (i = 0; i < ntax; i++)
+		for (int i = 0; i < ntax; i++)
 			{
 			if (labels)
 				{
@@ -1950,7 +1947,7 @@ void NxsCharactersBlock::HandleStdMatrix(
 				// characters that were eliminated and will be set to the correct row for characters 
 				// that have not been eliminated.
 				//
-				j = charPos[currChar];
+				int j = charPos[currChar];
 
 				// ok will be false only if a newline character is encountered before character j processed
 				//
@@ -2419,7 +2416,7 @@ void NxsCharactersBlock::Read(
 
 		if (token.Equals("DIMENSIONS"))
 			{
-			HandleDimensions(token, "NEWTAXA", "NTAX", "NCHAR");
+			HandleDimensions(token, NxsString("NEWTAXA"), NxsString("NTAX"), NxsString("NCHAR"));
 			}
 		else if (token.Equals("FORMAT"))
 			{
@@ -2451,12 +2448,12 @@ void NxsCharactersBlock::Read(
 			}
 		else if (token.Equals("END"))
 			{
-			HandleEndblock(token, "Character");
+			HandleEndblock(token, NxsString("Character"));
 			break;
 			}
 		else if (token.Equals("ENDBLOCK"))
 			{
-			HandleEndblock(token, "Character");
+			HandleEndblock(token, NxsString("Character"));
 			break;
 			}
 		else
@@ -2617,7 +2614,7 @@ void NxsCharactersBlock::Report(
 		{
 		out << "  The following characters were eliminated:" << endl;
 		NxsUnsignedSet::const_iterator k;
-		for (k = eliminated.begin(); k != eliminated.end(); k++)
+		for (k = eliminated.begin(); k != eliminated.end(); ++k)
 			{
 			out << "    " << ((*k)+1) << endl;
 			}

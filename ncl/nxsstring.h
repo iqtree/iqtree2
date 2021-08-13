@@ -46,6 +46,7 @@ class NxsString
   : public std::string
 	{
 	public:
+		typedef std::string super;
 
 		class NxsX_NotANumber {};	/* exception thrown if attempt to convert string to a number fails */
 
@@ -57,7 +58,7 @@ class NxsString
 			};
 
 							NxsString();
-							NxsString(const char *s);
+		explicit            NxsString(const char *s);
 							NxsString(const NxsString &s);
 
 		//	Accessors
@@ -67,6 +68,7 @@ class NxsString
 		int					ConvertToInt() const;
 		long				ConvertToLong() const;
 		double				ConvertToDouble() const;
+		bool                Equals(const char* s) const;
 		bool				Equals(const NxsString &s, NxsString::CmpEnum mode = respect_case) const;
 		bool				EqualsCaseInsensitive(const NxsString &s) const;
 		NxsString			GetQuoted() const;
@@ -150,7 +152,7 @@ class NStrCaseInsensitiveEquals
 	{
 	public :
 
-					NStrCaseInsensitiveEquals(const NxsString &s);
+		explicit	NStrCaseInsensitiveEquals(const NxsString &s);
 		bool		operator()(const NxsString &s);
 		
 	protected :
@@ -166,7 +168,7 @@ class NStrCaseSensitiveEquals
 	{
 	public :
 
-					NStrCaseSensitiveEquals(const NxsString &s);
+		explicit	NStrCaseSensitiveEquals(const NxsString &s);
 		bool		operator()(const NxsString &s) const;
 
 	protected :
@@ -189,11 +191,9 @@ struct NxsStringEqual
 |	Creates a function object for case-insensitive comparisons of `s' to a container of strings. 
 */
 inline NStrCaseInsensitiveEquals::NStrCaseInsensitiveEquals(
-  const NxsString &s)	/* the string to be compared */
-	{
-	compStr = s;
+  const NxsString &s): compStr(s) {	/* the string to be compared */
 	compStr.Capitalize();
-	}
+}
 	
 /*--------------------------------------------------------------------------------------------------------------------------
 |	Returns the result of a case-sensitive compare of `s' and the string stored when the NStrCaseInsensitiveEquals object  
@@ -218,10 +218,8 @@ inline bool NStrCaseInsensitiveEquals::operator()(
 |	Creates a function object for case-sensitive comparisons of `s' to a container of strings. 
 */
 inline NStrCaseSensitiveEquals::NStrCaseSensitiveEquals(
-  const NxsString &s)	/* the string that all other strings will be compared to when the (const NxsString &) operator is called */  
-	{
-	compStr = s;
-	}
+  const NxsString &s): compStr(s) { /* the string that all other strings will be compared to when the (const NxsString &) operator is called */  
+}
 
 /*--------------------------------------------------------------------------------------------------------------------------
 |	Returns the result of a case-sensitive compare of `s' and the string stored when the NStrCaseSensitiveEquals was 
@@ -354,7 +352,8 @@ inline NxsString &NxsString::operator=(
   char c)	/* the character to which the stored string should be set */
 	{
 	clear();
-	return (*this += c);
+	*this += c;
+	return *this;
 	}
 
 /*--------------------------------------------------------------------------------------------------------------------------
@@ -465,6 +464,10 @@ inline bool NxsString::Equals(
 		}
 	return false;
 	}
+
+inline bool NxsString::Equals(const char* s) const {
+	return *this == s;
+}
 
 /*--------------------------------------------------------------------------------------------------------------------------
 |	Allows functions that take and return references to NxsString strings to be placed in a series of << operators.

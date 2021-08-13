@@ -28,7 +28,7 @@
 class Indent
 	{
 	public:
-					Indent(unsigned i);
+		explicit	Indent(unsigned i);
 
 		unsigned	leftMarg;	/* the amount by which to indent */
 	};
