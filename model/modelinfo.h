@@ -80,7 +80,7 @@ private:
 public:
     friend class ModelFileLoader;
     
-    explicit ModelInfoFromName(std::string name);
+    explicit ModelInfoFromName(const std::string& name);
     explicit ModelInfoFromName(const char* name);
     virtual ~ModelInfoFromName() = default;
     

@@ -114,7 +114,7 @@ void RateMeyerHaeseler::readRateFile(char *rate_file_to_read) {
 		}
 	} catch (const char *str) {
 		outError(str);
-	} catch (string str) {
+	} catch (string& str) {
 		outError(str);
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
@@ -161,7 +161,7 @@ void RateMeyerHaeseler::getRates(DoubleVector &rates) const {
 	} 
 }
 
-void RateMeyerHaeseler::setRates(DoubleVector &rates) {
+void RateMeyerHaeseler::setRates(const DoubleVector &rates) {
 	pat_rates = rates;
 }
 

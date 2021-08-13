@@ -1019,7 +1019,7 @@ namespace ModelExpression {
                 auto value =  expr->evaluate();
                 std::cout << " evaluated to " << value;
             }
-            catch (ModelExpression::ModelException x) {
+            catch (ModelExpression::ModelException& x) {
                 std::cout << " could not be evaluated (" << x.getMessage() << ")";
             }
             std::cout << std::endl;

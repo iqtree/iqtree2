@@ -31,9 +31,10 @@ public:
         @param freq state frequency type
         @param tree associated phylogenetic tree
     */
-    ModelDNAError(const char *model_name, string model_params, StateFreqType freq,
-                  string freq_params, string seqerr,
-                  PhyloTree *tree, PhyloTree* report_to_tree);
+    ModelDNAError(const char *model_name, const string& model_params, 
+                  StateFreqType freq, const string& freq_params, 
+                  const string& seqerr, PhyloTree *tree, 
+                  PhyloTree* report_to_tree);
 
     /**
         start structure for checkpointing

@@ -26,8 +26,8 @@ ModelDNA::ModelDNA(PhyloTree *tree, PhyloTree* report_to_tree)
 {
 }
 
-ModelDNA::ModelDNA(const char* model_name, std::string model_params,
-                   StateFreqType freq,     std::string freq_params,
+ModelDNA::ModelDNA(const char* model_name, const std::string& model_params,
+                   StateFreqType freq,     const std::string& freq_params,
                    PhyloTree*    tree,     PhyloTree*  report_to_tree)
     : ModelMarkov(tree, report_to_tree)
 {

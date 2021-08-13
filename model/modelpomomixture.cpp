@@ -15,8 +15,8 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelPoMoMixture::ModelPoMoMixture(const char *model_name, string model_params,
-                                   StateFreqType freq_type, string freq_params,
+ModelPoMoMixture::ModelPoMoMixture(const char *model_name,  const string& model_params,
+                                   StateFreqType freq_type, const string& freq_params,
                                    PhyloTree *tree, string pomo_params,
                                    string pomo_rate_str, PhyloTree* report_to_tree)
 	:   ModelPoMo(model_name, model_params, freq_type,

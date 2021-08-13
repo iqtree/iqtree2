@@ -76,13 +76,13 @@ void ModelListFromYAMLFile::loadFromFile (Params& params,
                                   *this, nullptr, report_to_tree);
         }
     }
-    catch (YAML::ParserException e) {
+    catch (YAML::ParserException& e) {
         outError(e.what());
     }
-    catch (YAML::Exception e) {
+    catch (YAML::Exception& e) {
         outError(e.what());
     }
-    catch (ModelExpression::ModelException x) {
+    catch (ModelExpression::ModelException& x) {
         outError(x.getMessage());
     }
 }
@@ -244,7 +244,7 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName
     try {
     return getModelByReference(*model_info, tree, freq_type, models_block, 
                                parameter_list, report_to_tree);
-    } catch (ModelExpression::ModelException x) {
+    } catch (ModelExpression::ModelException& x) {
         std::stringstream complaint;
         complaint << "Cannot initialize model " 
                   << model_name << ": " << x.getMessage();

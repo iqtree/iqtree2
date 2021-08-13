@@ -94,7 +94,7 @@ public:
                                   ModelInfoFromYAMLFile& info,
                                   LoggingTarget* logging_target);
     void parseModelParameter (const YAML::Node& param,
-                              std::string name,
+                              const std::string& name,
                               ModelInfoFromYAMLFile& info,
                               LoggingTarget* logging_target);
     void parseMatrixParameter(const YAML::Node& param,
@@ -135,12 +135,12 @@ public:
                         ModelInfoFromYAMLFile* parent_model,
                         LoggingTarget* logging_target);
 
-    void handleInheritance(Params&                params,
-                           ModelInfoFromYAMLFile& info, 
-                           ModelListFromYAMLFile& list,
-                           std::string            inheritance_list,
-                           bool                   must_be_rate_models,
-                           LoggingTarget*         logging_target);
+    void handleInheritance(Params&                      params,
+                           ModelInfoFromYAMLFile&       info, 
+                           const ModelListFromYAMLFile& list,
+                           std::string                  inheritance_list,
+                           bool                         must_be_rate_models,
+                           LoggingTarget*               logging_target);
 
 };
 

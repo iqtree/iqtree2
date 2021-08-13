@@ -34,7 +34,7 @@ public:
      */
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.0001,
-                                      PhyloTree* report_to_tree = nullptr);
+                                      PhyloTree* report_to_tree = nullptr) override;
 
     /**
         sort classes in ascending order of tree lengths
@@ -49,6 +49,6 @@ public:
      * @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
      * @return #parameters of the model + # branches
      */
-    virtual int getNParameters(int brlen_type) const;
+    virtual int getNParameters(int brlen_type) const override;
 
 };

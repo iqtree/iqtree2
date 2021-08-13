@@ -13,7 +13,7 @@ RateFreeInvar::RateFreeInvar(int ncat,
 	: RateFree(ncat, tree, report_to_tree), invar(0.1, tree) {
 }
 
-RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params,
+RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, const string& params,
                              bool sorted_rates, double p_invar_sites,
                              string opt_alg, PhyloTree *tree)
     : RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)

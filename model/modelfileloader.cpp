@@ -309,8 +309,8 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     }
 }
 
-void ModelFileLoader::parseModelParameter(const YAML::Node& param,
-                                          std::string name,
+void ModelFileLoader::parseModelParameter(const YAML::Node&  param,
+                                          const std::string& name,
                                           ModelInfoFromYAMLFile& info,
                                           LoggingTarget* logging_target) {
     YAMLFileParameter p;
@@ -601,7 +601,7 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
                     }
                 }
             }
-            catch (ModelExpression::ModelException x) {
+            catch (ModelExpression::ModelException& x) {
                 throw ModelExpression::ModelException
                       ("Error evaluating subscript range for " + param.name + 
                        ": " + x.getMessage() );
@@ -713,7 +713,7 @@ void ModelFileLoader::dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info
                     double value = interpreter.evaluate();
                     dump << separator << value;
                 }
-                catch (ModelExpression::ModelException x) {
+                catch (ModelExpression::ModelException& x) {
                     dump << separator << " ERROR(" << x.getMessage() << ")"
                          << " for entry [" << (row+1) << "," << (col+1) << "]";
                     broken = true;
@@ -777,7 +777,7 @@ bool ModelFileLoader::parseModelNameAndParameters(const std::string& input,
 
 void ModelFileLoader::handleInheritance(Params& params,
                                         ModelInfoFromYAMLFile& info,
-                                        ModelListFromYAMLFile& list,
+                                        const ModelListFromYAMLFile& list,
                                         std::string inheritance_list,
                                         bool must_be_rate_models,
                                         LoggingTarget* logging_target) {

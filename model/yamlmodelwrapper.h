@@ -446,8 +446,8 @@ public:
     typedef YAMLModelWrapper<ModelBIN> super;
     YAMLModelBinary(ModelInfoFromYAMLFile& info,
                     bool  make_copy, const char *model_name, 
-                    std::string model_params, StateFreqType freq, 
-                    std::string freq_params,  PhyloTree*    tree, 
+                    const std::string& model_params, StateFreqType freq, 
+                    const std::string& freq_params,  PhyloTree*    tree, 
                     PhyloTree* report_to_tree);
 };
 
@@ -466,8 +466,8 @@ public:
     typedef YAMLModelWrapper<ModelCodon> super;
     YAMLModelCodon(ModelInfoFromYAMLFile& info, 
                    bool make_copy, const char *model_name, 
-                   std::string model_params, StateFreqType freq, 
-                   std::string freq_params,  PhyloTree*    tree, 
+                   const std::string& model_params, StateFreqType freq, 
+                   const std::string& freq_params,  PhyloTree*    tree, 
                    PhyloTree* report_to_tree);
 };
 

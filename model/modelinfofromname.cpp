@@ -27,8 +27,8 @@
 
 namespace {
     std::string::size_type findSubStr(const std::string& name,
-        const std::string sub1,
-        const std::string sub2) {
+        const std::string& sub1,
+        const std::string& sub2) {
         std::string::size_type pos1, pos2;
         for (pos1 = 0; pos1 != std::string::npos; pos1++) {
             pos1 = name.find(sub1, pos1);
@@ -72,7 +72,7 @@ namespace {
     }
 };
 
-ModelInfoFromName::ModelInfoFromName(std::string name) : model_name(name) {}
+ModelInfoFromName::ModelInfoFromName(const std::string& name) : model_name(name) {}
 ModelInfoFromName::ModelInfoFromName(const char* name) : model_name(name) {}
 
 std::string ModelInfoFromName::getFreeRateParameters

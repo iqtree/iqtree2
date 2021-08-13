@@ -39,8 +39,8 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelBIN(const char *model_name, string model_params, StateFreqType freq,
-             string freq_params, PhyloTree *tree, PhyloTree* report_to_tree);
+    ModelBIN(const char *model_name, const string& model_params, StateFreqType freq,
+             const string& freq_params, PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it

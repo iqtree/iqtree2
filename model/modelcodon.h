@@ -46,8 +46,8 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelCodon(const char *model_name, string model_params,
-               StateFreqType freq, string freq_params,
+	ModelCodon(const char *model_name, const string& model_params,
+               StateFreqType freq, const string& freq_params,
                PhyloTree *tree, PhyloTree* report_to_tree);
 
 	/**
@@ -117,9 +117,9 @@ public:
 		void    readCodons         (istream& in, int nscodons,
                                     StrVector& codons, IntVector& state_map);
 		void    calculateCodonRates(int nrates, int nscodons,
-                                    IntVector& state_map, 
+                                    const IntVector& state_map, 
                                     const double* q);
-		void    calculateStateFrequencies(int nscodons, IntVector& state_map, 
+		void    calculateStateFrequencies(int nscodons, const IntVector& state_map, 
                                           const double* f);
 		void    freeFrequencyVector(double*& f);
 		void    freeCodonQMatrix   (double*& f);

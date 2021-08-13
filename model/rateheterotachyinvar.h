@@ -20,7 +20,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateHeterotachyInvar(int ncat, string params, double p_invar_sites, PhyloTree *tree);
+    RateHeterotachyInvar(int ncat, const string& params, double p_invar_sites, PhyloTree *tree);
 
 	/**
 		constructor (used by, for example, YAMLRateModelWrapper)

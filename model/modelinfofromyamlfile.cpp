@@ -425,8 +425,8 @@ void ModelInfoFromYAMLFile::setNumberOfStatesAndSequenceType
     forceAssign("numStates", num_states);
 }
 
-double ModelInfoFromYAMLFile::evaluateExpression(std::string& expr,
-                                                 std::string context) {
+double ModelInfoFromYAMLFile::evaluateExpression(const std::string& expr,
+                                                 const std::string& context) {
     const char* verb = "parsing";
     try {
         ModelExpression::InterpretedExpression interpreter(*this, expr);

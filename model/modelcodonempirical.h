@@ -22,8 +22,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelCodonEmpirical(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-    		PhyloTree *tree, bool count_rates = true);
+	ModelCodonEmpirical(const char *model_name, const string& model_params, 
+	                    StateFreqType freq, const string& freq_params,
+    		            PhyloTree *tree, bool count_rates = true);
 
 	/**
 	 * destructor

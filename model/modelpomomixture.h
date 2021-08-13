@@ -37,9 +37,9 @@ public:
 		@param tree associated phylogenetic tree
 	*/
     ModelPoMoMixture(const char *model_name,
-                     string model_params,
+                     const string& model_params,
                      StateFreqType freq_type,
-                     string freq_params,
+                     const string& freq_params,
                      PhyloTree *tree,
                      string pomo_params,
                      string pomo_rate_str,
@@ -50,38 +50,38 @@ public:
 	/**
 	 * @return model name
 	 */
-	virtual string getName() const;
+	virtual string getName() const override;
 
     /**
         set checkpoint object
         @param checkpoint
     */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint) override;
 
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
 	/**
 		@return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 	/**
 		@return the number of dimensions corresponding to state frequencies
 	*/
-	virtual int getNDimFreq() const;
+	virtual int getNDimFreq() const override;
 
 
 	/**
@@ -89,43 +89,44 @@ public:
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
     /**
      * @return TRUE if parameters are at the boundary that may cause
      * numerical unstability
      */
-    virtual bool isUnstableParameters();
+    virtual bool isUnstableParameters() override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check) override;
 
 	/**
 		optimize model parameters
 		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double gradient_epsilon,
-                                      PhyloTree* report_to_tree);
+                                      PhyloTree* report_to_tree) override;
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
-	virtual void decomposeRateMatrix();
+	virtual void decomposeRateMatrix() override;
 
     /**
      * Report the state frequencies to the output file stream 'out'.
      *
      * @param out Output file stream.
      */
-    virtual void report(ostream &out);
+    virtual void report(ostream &out) override;
 
 
     /**
@@ -142,15 +143,15 @@ public:
   // circumvent this, by adding this virtual function; for normal models, it
   // just returns `num_states`, however, for mixture models, it returns
   // `num_states*nmixtures`.
-  virtual int get_num_states_total();
+  virtual int get_num_states_total() override;
 
   // Mon Jul 3 15:53:00 BST 2017; added by Dominik. Same problem as with
   // `get_num_states_total()`. The pointers to the eigenvalues and eigenvectors
   // need to be updated recursively, if the model is a mixture model. For a
   // normal Markov model, only the standard pointers are set. This was done in
   // `ModelMixture::initMem()` before.
-  virtual void update_eigen_pointers(double *eval, double *evec
-                                     , double *inv_evec, double *inv_evec_transposed);
+  virtual void update_eigen_pointers(double *eval, double *evec, double *inv_evec, 
+									 double *inv_evec_transposed) override;
 
 
 	/**
@@ -160,7 +161,7 @@ public:
      @param trans_matrix (OUT) the transition matrix between all pairs of states.
      Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0) override;
 
 
 protected:
@@ -175,7 +176,7 @@ protected:
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1
 	*/
-	virtual void setVariables(double *variables);
+	virtual void setVariables(double *variables) override;
 
 	/**
 		this function is served for the multi-dimension optimization. It should assign the model parameters
@@ -183,42 +184,43 @@ protected:
 		@param variables vector of variables, indexed from 1
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual bool getVariables(const double *variables);
+	virtual bool getVariables(const double *variables) override;
 
 #ifdef _MSC_VER
 	//MSVC generates warning messages about these member functions
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
 public:
-	virtual string getNameParams() const { return mixture.getNameParams(); }
-	virtual bool isMixture()       const { return mixture.isMixture(); }
-	virtual int getNMixtures()     { return mixture.getNMixtures(); }
-	virtual double getMixtureWeight(int cat)              { return mixture.getMixtureWeight(cat); }
-	virtual void setMixtureWeight(int cat, double weight) { mixture.setMixtureWeight(cat, weight); }
-	virtual void setFixMixtureWeight(bool fix_weight)     { mixture.setFixMixtureWeight(fix_weight); }
-	virtual ModelSubst* getMixtureClass(int cat)          { return mixture.getMixtureClass(cat); }
-	virtual void setMixtureClass(int cat, ModelSubst* m)  { mixture.setMixtureClass(cat, m); }
-	virtual void getStateFrequency(double* state_freq, int mixture_num = 0) 
+	virtual string getNameParams() const override { return mixture.getNameParams(); }
+	virtual bool isMixture()       const override { return mixture.isMixture(); }
+	virtual int getNMixtures()     override { return mixture.getNMixtures(); }
+	virtual double getMixtureWeight(int cat)              override { return mixture.getMixtureWeight(cat); }
+	virtual void setMixtureWeight(int cat, double weight) override { mixture.setMixtureWeight(cat, weight); }
+	virtual void setFixMixtureWeight(bool fix_weight)     override { mixture.setFixMixtureWeight(fix_weight); }
+	virtual ModelSubst* getMixtureClass(int cat)          override { return mixture.getMixtureClass(cat); }
+	virtual void setMixtureClass(int cat, ModelSubst* m)  override { mixture.setMixtureClass(cat, m); }
+	virtual void getStateFrequency(double* state_freq, int mixture_num = 0) override 
 	{ 
 		mixture.getStateFrequency(state_freq, mixture_num);
 	}
 	virtual void computeTransDerv(double time, double* trans_matrix,
 		double* trans_derv1, double* trans_derv2, int mixture_num = 0) {
 		mixture.computeTransDerv(time, trans_matrix,
-			trans_derv1, trans_derv2, mixture_num);
+			trans_derv1, trans_derv2, mixture_num) override;
 	}
-	virtual void setOptimizeSteps(int steps)   { mixture.setOptimizeSteps(steps); }
-	virtual uint64_t getMemoryRequired()       { return mixture.getMemoryRequired(); }
-	virtual void writeParameters(ostream& out) { mixture.writeParameters(out); }
+	virtual void setOptimizeSteps(int steps)   override { mixture.setOptimizeSteps(steps); }
+	virtual uint64_t getMemoryRequired()       override { return mixture.getMemoryRequired(); }
+	virtual void writeParameters(ostream& out) override { mixture.writeParameters(out); }
 
-    virtual bool isPolymorphismAware()    { return super::isPolymorphismAware(); };
-    virtual int getNumRateEntries() const { return super::getNumRateEntries();  }
-    virtual void computeTipLikelihood(PML::StateType state, double* state_lk) {
+    virtual bool isPolymorphismAware()    override { return super::isPolymorphismAware(); };
+    virtual int getNumRateEntries() const override { return super::getNumRateEntries();  }
+    virtual void computeTipLikelihood(PML::StateType state, double* state_lk) override {
 		super::computeTipLikelihood(state, state_lk);
     }
-    virtual ModelSubst* getMutationModel() { return super::getMutationModel(); }
-    virtual void setRates()                { ModelPoMo::setRates(); }
-    virtual void computeRateMatrix(double** rate_matrix, double* state_freq, int num_state) {
+    virtual ModelSubst* getMutationModel() override { return super::getMutationModel(); }
+    virtual void setRates()                override { ModelPoMo::setRates(); }
+    virtual void computeRateMatrix(double** rate_matrix, 
+	                               double* state_freq, int num_state) override{
 		super::computeRateMatrix(rate_matrix, state_freq, num_state);
     }
 #endif

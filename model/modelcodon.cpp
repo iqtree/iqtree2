@@ -248,8 +248,8 @@ ModelCodon::ModelCodon(PhyloTree *tree, PhyloTree* report_to_tree)
     setDefaults();
 }
 
-ModelCodon::ModelCodon(const char *model_name, string model_params,
-                       StateFreqType freq, string freq_params,
+ModelCodon::ModelCodon(const char *model_name, const string& model_params,
+                       StateFreqType freq, const string& freq_params,
                        PhyloTree *tree, PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree)
 {
@@ -713,7 +713,7 @@ void ModelCodon::readCodons(istream& in, int nscodons,
 }
 
 void ModelCodon::calculateCodonRates(int nrates, int nscodons,
-                                     IntVector& state_map, 
+                                     const IntVector& state_map, 
                                      const double* q) {
 	// since rates for codons is stored in lower-triangle, 
     // special treatment is needed
@@ -739,7 +739,7 @@ void ModelCodon::calculateCodonRates(int nrates, int nscodons,
 	}
 }
 
-void ModelCodon::calculateStateFrequencies(int nscodons, IntVector& state_map,  
+void ModelCodon::calculateStateFrequencies(int nscodons, const IntVector& state_map,  
                                            const double* f) {
 	memset(state_freq, 0, num_states*sizeof(double));
     auto min_freq = Params::getInstance().min_state_freq;

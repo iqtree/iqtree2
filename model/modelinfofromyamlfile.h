@@ -414,7 +414,8 @@ public:
     //Initialization helper functions
     void setNumberOfStatesAndSequenceType(int requested_num_states,
                                           LoggingTarget* logging_target);
-    double evaluateExpression(std::string& expression, std::string context);
+    double evaluateExpression(const std::string& expression,  
+                              const std::string& context);
 
     //Parameters and variables
     const YAMLFileParameter* findParameter(const char* name)            const;

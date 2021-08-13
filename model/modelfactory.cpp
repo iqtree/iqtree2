@@ -87,7 +87,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
         int num_model = 0;
         int num_freq  = 0;
         for (ModelsBlock::iterator it = models_block->begin();
-             it != models_block->end(); it++) {
+             it != models_block->end(); ++it) {
             if (it->second.flag & NM_FREQ) {
                 num_freq++;
             }
@@ -128,7 +128,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
     return string::npos;
 }
 
-string ModelFactory::getDefaultModelName(PhyloTree *tree, Params &params) {
+string ModelFactory::getDefaultModelName(PhyloTree *tree, const Params &params) {
     std::string model_str;
     if      (tree->aln->seq_type == SeqType::SEQ_DNA)     model_str = "HKY";
     else if (tree->aln->seq_type == SeqType::SEQ_PROTEIN) model_str = "LG";
@@ -165,8 +165,8 @@ StateFreqType ModelFactory::getDefaultFrequencyTypeForSequenceType(SeqType seq_t
     return freq_type;
 }
 
-ModelFactory::ModelFactory(Params&    params, string&      model_name,
-                           PhyloTree* tree,   ModelsBlock* models_block,
+ModelFactory::ModelFactory(Params&    params, const string& model_name,
+                           PhyloTree* tree,   ModelsBlock*  models_block,
                            PhyloTree* report_to_tree): CheckpointFactory() {
     model              = nullptr;
     site_rate          = nullptr;
@@ -334,7 +334,7 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
     }
 }
 
-void ModelFactory::moveErrorModelParameter(string rate_str, string model_str) {
+void ModelFactory::moveErrorModelParameter(string& rate_str, string& model_str) {
     // move error model +E from rate_str to model_str
     //string seqerr_str = "";
     size_t spec_pos;
@@ -351,7 +351,7 @@ void ModelFactory::moveErrorModelParameter(string rate_str, string model_str) {
 }
 
 void ModelFactory::removeSamplingParametersFromRateString(bool pomo,
-                                                          std::string rate_str) {
+                                                          std::string& rate_str) {
     // PoMo; +NXX and +W or +S because those flags are handled when
     // reading in the data.  Set PoMo parameters (heterozygosity).
     size_t n_pos_start = rate_str.find("+N");
@@ -394,7 +394,7 @@ void ModelFactory::removeSamplingParametersFromRateString(bool pomo,
     }
 }
 
-void ModelFactory::initializePoMo(bool pomo, ModelInfo& rate_info,
+void ModelFactory::initializePoMo(bool pomo, const ModelInfo& rate_info,
                                   std::string& rate_str,
                                   std::string& model_str) {
     // In case of PoMo, check that only supported flags are given.
@@ -493,7 +493,7 @@ void ModelFactory::initializeFrequency(const Params& params, PhyloTree* tree,
 
 void ModelFactory::initializeModel(const std::string& model_name,
                                    ModelsBlock *models_block,
-                                   ModelInfo& model_info, string& model_str,
+                                   const ModelInfo& model_info, string& model_str,
                                    StateFreqType freq_type, string& freq_params,
                                    bool optimize_mixmodel_weight,
                                    PhyloTree* tree,
@@ -522,8 +522,8 @@ void ModelFactory::initializeModel(const std::string& model_name,
         if (model_str == "JC" || model_str == "POISSON") {
             outError("JC is not suitable for site-specific model");
         }
-        model = new ModelSet(model_str.c_str(), tree);
-        ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+        ModelSet *models = new ModelSet(model_str.c_str(), tree); // assign pointer for convenience
+        model = models;
         auto freq_type_to_use = (freq_type != StateFreqType::FREQ_UNKNOWN) 
                               ? freq_type : StateFreqType::FREQ_EMPIRICAL;
         models->init(freq_type_to_use, report_to_tree);
@@ -920,7 +920,8 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
     model->setFixMixtureWeight(true);
     int nmix = model->getNMixtures();
     for (int mix = 0; mix < nmix; mix++) {
-        ((ModelMarkov*)model->getMixtureClass(mix))->total_num_subst = 1.0;
+        auto markov = dynamic_cast<ModelMarkov*>(model->getMixtureClass(mix));
+        markov->total_num_subst = 1.0;
         model->setMixtureWeight(mix, 1.0);
     }
     model->decomposeRateMatrix();

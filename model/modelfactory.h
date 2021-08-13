@@ -86,10 +86,10 @@ public:
         @param model_name full model name
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactory(Params &params, string &model_name, PhyloTree *tree,
+	ModelFactory(Params &params, const string &model_name, PhyloTree *tree,
                  ModelsBlock *models_block, PhyloTree* report_to_tree);
 
-    string getDefaultModelName(PhyloTree *tree, Params &params);
+    string getDefaultModelName(PhyloTree *tree, const Params &params);
     
     StateFreqType getDefaultFrequencyTypeForSequenceType(SeqType seq_type);
 
@@ -105,10 +105,10 @@ public:
     void moveRateParameters(string& model_str, string& rate_str);
     void moveFrequencyParameters(string& rate_str, string& model_str,
                                  string& freq_str);
-    void moveErrorModelParameter(string rate_str, string model_str);
+    void moveErrorModelParameter(string& rate_str, string& model_str);
     void removeSamplingParametersFromRateString(bool pomo,
-                                                std::string rate_str);
-    void initializePoMo(bool pomo, ModelInfo& rate_info,
+                                                std::string& rate_str);
+    void initializePoMo(bool pomo, const ModelInfo& rate_info,
                         std::string& rate_str, std::string& model_str);
     void initializeFrequency(const Params& params, PhyloTree* tree,
                              string& freq_str, string& freq_params,
@@ -116,7 +116,7 @@ public:
                              bool& optimize_mixmodel_weight);
     void initializeModel(const std::string& model_name,
                          ModelsBlock *models_block,
-                         ModelInfo& model_info, string& model_str,
+                         const ModelInfo& model_info, string& model_str,
                          StateFreqType freq_type, string& freq_params,
                          bool optimize_mixmodel_weight,
                          PhyloTree* tree,

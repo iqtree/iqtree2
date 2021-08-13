@@ -91,7 +91,7 @@ public:
 
 	void getRates(DoubleVector &rates) const;
 
-	void setRates(DoubleVector &rates);
+	void setRates(const DoubleVector &rates);
 
 	void initializeRates();
 

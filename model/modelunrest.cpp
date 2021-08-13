@@ -7,7 +7,7 @@
 
 #include "modelunrest.h"
 
-ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params,
+ModelUnrest::ModelUnrest(PhyloTree *tree, const string& model_params,
                          PhyloTree* report_to_tree)
 	: ModelMarkov(tree, false)
 {
@@ -27,7 +27,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params,
     super::init(StateFreqType::FREQ_ESTIMATE, report_to_tree);
 }
 
-/* static */ bool ModelUnrest::validModelName(string model_name) {
+/* static */ bool ModelUnrest::validModelName(const string& model_name) {
 	return (model_name == "UNREST");
 }
 

@@ -8,8 +8,8 @@
 #include "modelcodonsemiempirical.h"
 
 ModelCodonSemiEmpirical::ModelCodonSemiEmpirical
-		(const char *model_name, string model_params,
-		 StateFreqType freq, string freq_params, 
+		(const char *model_name, const string& model_params,
+		 StateFreqType freq, const string& freq_params, 
 		 PhyloTree *tree, bool count_rates) :
 		ModelCodonEmpirical(model_name, model_params, freq, 
 		                   freq_params, tree, count_rates),

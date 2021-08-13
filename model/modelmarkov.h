@@ -351,7 +351,7 @@ public:
   // reused by children. The title is necessary, because, e.g., for PoMo, the
   // rates are mutation rates and not substitution rates, and also
   // exchangeabilities may be reported.
-  void report_rates(ostream &out, string title, double *r);
+  void report_rates(ostream &out, const string& title, double *r);
 
   // Report the stationary frequencies state_freq or custom_state_freq (if
   // given) to output stream out.

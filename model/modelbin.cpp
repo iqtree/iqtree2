@@ -23,8 +23,8 @@ ModelBIN::ModelBIN(PhyloTree *tree, PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree) {
 }
 
-ModelBIN::ModelBIN(const char *model_name, string model_params,
-                   StateFreqType freq, string freq_params,
+ModelBIN::ModelBIN(const char *model_name, const string& model_params,
+                   StateFreqType freq, const string& freq_params,
                    PhyloTree *tree, PhyloTree* report_to_tree)
 : ModelMarkov(tree, report_to_tree)
 {

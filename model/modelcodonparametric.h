@@ -21,8 +21,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelCodonParametric(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-    		PhyloTree *tree, bool count_rates = true);
+	ModelCodonParametric(const char *model_name, const std::string& model_params, 
+	                     StateFreqType freq,     const std::string& freq_params,
+    		             PhyloTree *tree, bool count_rates = true);
 
     /**
      * destructor
@@ -36,13 +37,13 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params, 
 	                  StateFreqType freq, string freq_params,
-					  PhyloTree* report_to_tree);
+					  PhyloTree* report_to_tree) override;
 
 	/**
 		write information
 		@param out output stream
 	*/
-	virtual void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) override;
 
 protected:
 
