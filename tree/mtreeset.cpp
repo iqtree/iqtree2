@@ -176,7 +176,6 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 	IntVector *weights, bool compressed) 
 {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
-	int count, omitted;
 /*	IntVector ok_trees;
 	if (trees_id) {
 		int max_id = *max_element(trees_id->begin(), trees_id->end());
@@ -201,10 +200,12 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
                 }
 			}
 			cout << cnt << " beginning tree(s) discarded" << endl;
-			if (in->eof())
+			if (in->eof()) {
 				throw "Burnin value is too large.";
+			}
 		}
-		for (count = 1, omitted = 0; !in->eof() && count <= max_count; count++) {
+		int omitted = 0;
+		for (int count = 1; !in->eof() && count <= max_count; ++count) {
 			if (!weights || weights->at(count-1)) {
 				//cout << "Reading tree " << count << " ..." << endl;
 				MTree *tree = newTree();
@@ -223,26 +224,38 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 				//in->exceptions(ios::badbit);
 				while (!in->eof()) {
 					char ch;
-					if (!((*in) >> ch)) break;
-					if (ch == ';') break;
+					if (!((*in) >> ch)) {
+						break;
+					}
+					if (ch == ';') {
+						break;
+					}
 				}
 				++omitted;
 			} 
 			char ch;
 			in->exceptions(ios::goodbit);
 			(*in) >> ch;
-			if (in->eof()) break;
+			if (in->eof()) {
+				break;
+			}
 			in->unget();
 			in->exceptions(ios::failbit | ios::badbit);
 
 		}
 		cout << size() << " tree(s) loaded (" << countRooted() << " rooted and " << countUnrooted() << " unrooted)" << endl;
-		if (omitted) cout << omitted << " tree(s) omitted" << endl;
+		if (omitted) {
+			cout << omitted << " tree(s) omitted" << endl;
+		}
 		//in->exceptions(ios::failbit | ios::badbit);
-		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
+		if (compressed) {
+			((igzstream*)in)->close(); 
+		} else {
+			((ifstream*)in)->close();
+		}
 		// following line was missing which caused small memory leak
 		delete in;
-	} catch (ios::failure) {
+	} catch (ios::failure& dummy) {
 		outError(ERR_READ_INPUT, infile);		
 	} catch (const char* str) {
 		outError(str);
