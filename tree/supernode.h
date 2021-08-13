@@ -23,28 +23,28 @@
 #include "phylonode.h"
 
 #define FOR_EACH_ADJACENT_SUPER_NODE(mynode, mydad, it, mychild) \
-    for (SuperNode* mychild=nullptr, *child2x=(SuperNode*)(mynode); child2x!=nullptr; child2x=nullptr) \
+    for (SuperNode* mychild=nullptr, *child2x=dynamic_cast<SuperNode*>(mynode); child2x!=nullptr; child2x=nullptr) \
         for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-            if ((mychild = (SuperNode*)(*it)->node ) && mychild != mydad )
+            if ((mychild = dynamic_cast<SuperNeighbor*>(*it)->getNode() ) && mychild != mydad )
 
 #define FOR_EACH_SUPER_NEIGHBOR(mynode, mydad, it, nei) \
-    for (SuperNeighbor* nei=nullptr, *nei2x=((SuperNode*)(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
+    for (SuperNeighbor* nei=nullptr, *nei2x=(dynamic_cast<SuperNode*>(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
         for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-            if ((nei = (SuperNeighbor*)(*it)) && nei->getNode() != (mydad) )
+            if ((nei = dynamic_cast<SuperNeighbor*>(*it)) && nei->getNode() != (mydad) )
 
 #define FOR_SUPER_NEIGHBOR(mynode, mydad, it) \
 	for (it = SuperNeighborVec::iterator((mynode)->neighbors.begin()); \
-		 it != (mynode)->neighbors.end(); it++) \
+		 it != (mynode)->neighbors.end(); ++it) \
 		if ((*it)->node != (mydad))
 
 #define FOR_SUPER_NEIGHBOR_IT(mynode, mydad, it) \
 	for (SuperNeighborVec::iterator it((mynode)->neighbors.begin()); \
-		 it != (mynode)->neighbors.end(); it++) \
+		 it != (mynode)->neighbors.end(); ++it) \
 		if ((*it)->node != (mydad))
 
 #define FOR_SUPER_NEIGHBOR_DECLARE(mynode, mydad, it) \
 	SuperNeighborVec::iterator it((mynode)->neighbors.begin()); \
-	for (; it != (mynode)->neighbors.end(); it++) \
+	for (; it != (mynode)->neighbors.end(); ++it) \
 		if ((*it)->node != (mydad))
 
 class SuperNode;
@@ -87,7 +87,7 @@ public:
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    SuperNeighbor* newNeighbor() const;
+    SuperNeighbor* newNeighbor() const override;
 
     /**
         vector of size m (m = #partitions)
@@ -144,13 +144,13 @@ public:
         @param length branch length
         @param id branch ID
     */
-    virtual void addNeighbor(Node *node, double length, int id = -1);
+    virtual void addNeighbor(Node *node, double length, int id = -1) override;
 
     virtual SuperNeighbor* findNeighbor(Node* node);
 
-    virtual SuperNeighbor* firstNeighbor() const;
+    virtual SuperNeighbor* firstNeighbor() const override;
     
-    virtual SuperNeighbor* lastNeighbor() const;
+    virtual SuperNeighbor* lastNeighbor() const override;
 
     virtual SuperNeighbor* getNeighborByIndex(size_t index);
     

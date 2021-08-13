@@ -36,7 +36,8 @@ void CandidateSet::saveCheckpoint() {
     checkpoint->startStruct("CandidateSet");
     int ntrees = min(Params::getInstance().numNNITrees, (int) size());
     checkpoint->startList(Params::getInstance().numNNITrees);
-    for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
+    for (reverse_iterator it = rbegin(); 
+            it != rend() && ntrees > 0; ++it, --ntrees) {
         checkpoint->addListElement();
         stringstream ss;
         ss.precision(12);
@@ -77,7 +78,7 @@ string CandidateSet::getRandTopTree(int numTopTrees) {
     if (empty())
         return "";
     int id = random_int(min(numTopTrees, (int) size()));
-    for (reverse_iterator it = rbegin(); it != rend(); it++) {
+    for (reverse_iterator it = rbegin(); it != rend(); ++it) {
         if (id == 0)
             return it->second.tree;
         id--;
@@ -92,7 +93,7 @@ StrVector CandidateSet::getBestTreeStrings(int numTree) {
     }
     StrVector res;
     int cnt = numTree;
-    for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
+    for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; ++rit, --cnt) {
         res.push_back(rit->second.tree);
     }
     return res;
@@ -237,7 +238,7 @@ DoubleVector CandidateSet::getBestScores(int numBestScore) {
     }
     DoubleVector res;
     for (reverse_iterator rit = rbegin();
-         rit != rend() && numBestScore > 0; rit++, numBestScore--) {
+         rit != rend() && numBestScore > 0; ++rit, --numBestScore) {
         res.push_back(rit->first);
     }
     return res;
@@ -309,7 +310,7 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
         numTrees = (int) size();
 
     for (reverse_iterator rit = rbegin();
-         rit != rend() && numTrees > 0; rit++, numTrees--) {
+         rit != rend() && numTrees > 0; ++rit, --numTrees) {
         res.insert(*rit);
     }
     return res;
@@ -320,7 +321,7 @@ void CandidateSet::getAllTrees(StrVector&    trees,
     trees.clear();
     scores.clear();
 
-    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+    for (reverse_iterator rit = rbegin(); rit != rend(); ++rit) {
         if (format != -1) {
             trees.push_back(convertTreeString(rit->second.tree, format));
         } else {
@@ -380,12 +381,12 @@ int CandidateSet::computeSplitOccurences(double supportThreshold) {
      * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.
      */
     CandidateSet::iterator treeIt;
-    for (treeIt = begin(); treeIt != end(); treeIt++) {
+    for (treeIt = begin(); treeIt != end(); ++treeIt) {
         MTree tree(treeIt->second.tree, Params::getInstance().is_rooted);
         SplitGraph splits;
         tree.convertSplits(splits);
         SplitGraph::iterator itg;
-        for (itg = splits.begin(); itg != splits.end(); itg++) {
+        for (itg = splits.begin(); itg != splits.end(); ++itg) {
             int value;
             Split *sp = candSplits.findSplit(*itg, value);
             if (sp != NULL) {
@@ -417,7 +418,8 @@ int CandidateSet::countStableSplits(double thresHold) {
     if (candSplits.empty())
         return 0;
     int numMaxSupport = 0;
-    for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
+    for (SplitIntMap::iterator it = candSplits.begin(); 
+            it != candSplits.end(); ++it) {
         if (it->first->getWeight() >= thresHold && it->first->countTaxa() > 1) {
             //cout << "Stable support: " << it->first->getWeight() << endl;
             numMaxSupport++;
@@ -433,7 +435,8 @@ void CandidateSet::reportStableSplits() {
     }
 
 //    int numMaxSupport = 0;
-    for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
+    for (SplitIntMap::iterator it = candSplits.begin(); 
+            it != candSplits.end(); ++it) {
         if (it->second == candSplits.getNumTree() && it->first->countTaxa() > 1) {
             cout << it->first->getWeight() << " / " << candSplits.getNumTree() << endl;
             ASSERT(it->first->getWeight() == candSplits.getNumTree());
@@ -448,7 +451,7 @@ void CandidateSet::setAln(Alignment *alignment) {
 
 CandidateSet CandidateSet::getCandidateTrees(double score) {
     CandidateSet res;
-    for (CandidateSet::iterator it = begin(); it != end(); it++) {
+    for (CandidateSet::iterator it = begin(); it != end(); ++it) {
         if (abs(it->first - score) < 0.1) {
             res.insert(*it);
         }
@@ -463,7 +466,7 @@ void CandidateSet::printTrees(string suffix) {
     outTrees.open(outTreesFile.c_str());
     outLHs.open(outLHsFile.c_str());
     outLHs.precision(15);
-    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+    for (reverse_iterator rit = rbegin(); rit != rend(); ++rit) {
         outLHs << rit->first << endl;
         outTrees << rit->second.topology << endl;
     }

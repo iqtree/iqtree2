@@ -297,9 +297,9 @@ double ParsimonyLazyTBRMove::apply
     // 4. what was ED, becomes ID
     // 5. what was FD, becomes JD
     //
-    TargetBranch& t1    = branches[first_target_branch_id].clearReverseParsimony();
-    TargetBranch& t2    = branches[second_target_branch_id].clearReverseParsimony();
-    TargetBranch& moved = branches[source_branch_id].clearReverseParsimony();
+    const TargetBranch& t1    = branches[first_target_branch_id].clearReverseParsimony();
+    const TargetBranch& t2    = branches[second_target_branch_id].clearReverseParsimony();
+    const TargetBranch& moved = branches[source_branch_id].clearReverseParsimony();
     
     PhyloNode* nodes[10];     //nodes that are invoved (A through J)
     intptr_t   branch_ids[7]; //branches that get messed with (element [6] is moved)

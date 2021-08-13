@@ -37,7 +37,7 @@ public:
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual PhyloNeighborMixlen* newNeighbor() const;
+    virtual PhyloNeighborMixlen* newNeighbor() const override;
 
     /** branch lengths for mixture */
     DoubleVector lengths;
@@ -48,14 +48,14 @@ public:
         @param c class index
         @return branch length for class c
     */
-    virtual double getLength(int c);
+    virtual double getLength(int c) override;
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
         @return branch length for class c
     */
-    virtual void getLength(DoubleVector &vec);
+    virtual void getLength(DoubleVector &vec) override;
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
@@ -63,7 +63,7 @@ public:
         @param vec (OUT) destination branch length vector
         @param start_pos starting position in vec to copy to
     */
-    virtual void getLength(DoubleVector &vec, int start_pos);
+    virtual void getLength(DoubleVector &vec, int start_pos) override;
 
 
     /**
@@ -72,14 +72,14 @@ public:
         @param c class index
         @return branch length for class c
     */
-    virtual void setLength(int c, double len);
+    virtual void setLength(int c, double len) override;
 
     /**
         get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
         the default is just to return a single branch length
         @return branch length for class c
     */
-    virtual void setLength(const DoubleVector &vec);
+    virtual void setLength(const DoubleVector &vec) override;
 
     /**
         set branch length by length of a Neighbor, used by heterotachy model (PhyloNeighborMixlen)
@@ -87,7 +87,7 @@ public:
         @param nei source neigbor to copy branch lengths
         @return branch length for class c
     */
-    virtual void setLength(Neighbor *nei);
+    virtual void setLength(Neighbor *nei) override;
     
     /**
         set branch lengths, used by heterotachy model (PhyloNeighborMixlen)
@@ -95,7 +95,7 @@ public:
         @param vec source branch length vector
         @param start_pos starting position in vec to copy from
     */
-    virtual void setLength(const DoubleVector &vec, int start_pos, int num_elem);
+    virtual void setLength(const DoubleVector &vec, int start_pos, int num_elem) override;
     
     virtual PhyloNodeMixlen* getNode() const;
 };
@@ -133,7 +133,7 @@ public:
         @param length branch length
         @param id branch ID
      */
-    void addNeighbor(Node *node, double length, int id = -1);
+    void addNeighbor(Node *node, double length, int id = -1) override;
 
     /**
         add a neighbor for heterotachy model
@@ -143,7 +143,7 @@ public:
      */
     void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
-    virtual PhyloNeighborMixlen* firstNeighbor() const;
+    virtual PhyloNeighborMixlen* firstNeighbor() const override;
 
     virtual PhyloNeighborMixlen* findNeighbor(PhyloNodeMixlen* node) const;
 

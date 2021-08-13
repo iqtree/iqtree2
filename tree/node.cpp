@@ -87,7 +87,8 @@ bool Node::isInCherry() {
 
 bool Node::isCherry() {
     int num_leaves = 0;
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+    for (NeighborVec::iterator it = neighbors.begin(); 
+         it != neighbors.end(); ++it) {
         num_leaves += (*it)->node->isLeaf() ? 1 : 0;
     }
     return (num_leaves > 1);
@@ -111,8 +112,9 @@ Node *Node::calcHeight(Node *dad) {
     }
     // scan through all children
     height = -INFINITY;
-    Node *lowestLeaf = NULL;
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
+    Node *lowestLeaf = nullptr;
+    for (NeighborVec::iterator it = neighbors.begin(); 
+         it != neighbors.end(); ++it)
         if ((*it)->node != dad) {
             Node *leaf = (*it)->node->calcHeight(this);
             if ((*it)->node->height + (*it)->length > height) {
@@ -132,9 +134,10 @@ int Node::calDist(Node* partner, Node* dad, int curLen) {
     } else {
         Node* left = nullptr;
         Node* right = nullptr;
-        for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        for (NeighborVec::iterator it = neighbors.begin(); 
+             it != neighbors.end(); ++it) {
             if ((*it)->node != dad) {
-                if (left == NULL)
+                if (left == nullptr)
                     left = (*it)->node;
                 else
                     right = (*it)->node;
@@ -228,7 +231,7 @@ bool Node::isNeighbor(Node* node) {
 
 NeighborVec::iterator Node::findNeighborIt(Node *node) {
     NeighborVec::iterator it;
-    for ( it = neighbors.begin(); it != neighbors.end(); it++) {
+    for ( it = neighbors.begin(); it != neighbors.end(); ++it) {
         if ((*it)->node == node) {
             return it;
         }
@@ -285,7 +288,8 @@ void Node::updateNeighbor(Node *node, Neighbor *newnei, double newlen) {
 void Node::updateNeighbor(Node* node, Node *newnode, double newlen) {
     ASSERT(node!=nullptr);
     ASSERT(newnode!=nullptr);
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
+    for (NeighborVec::iterator it = neighbors.begin(); 
+         it != neighbors.end(); ++it)
         if ((*it)->node == node) {
             (*it)->node = newnode;
             (*it)->length = newlen;
@@ -296,24 +300,27 @@ void Node::updateNeighbor(Node* node, Node *newnode, double newlen) {
 double Node::updateNeighbor(Node* node, Node *newnode) {
     ASSERT(node!=nullptr);
     ASSERT(newnode!=nullptr);
-    for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
+    for (NeighborVec::iterator it = neighbors.begin(); 
+         it != neighbors.end(); ++it) {
         if ((*it)->node == node) {
             (*it)->node = newnode;
             return (*it)->length;
         }
+    }
     return -1;
 }
 
 Node::~Node() {
-    NeighborVec::reverse_iterator it;
-    for (it = neighbors.rbegin(); it != neighbors.rend(); it++) {
+    for (auto it = neighbors.rbegin(); 
+         it != neighbors.rend(); ++it) {
         delete (*it);
     }
     neighbors.clear();
 }
 
 bool Node::unlinkNeighbor(Node* node) {
-    for (auto it=neighbors.begin(); it!=neighbors.end(); ++it) {
+    for (auto it=neighbors.begin(); 
+         it!=neighbors.end(); ++it) {
         if ((*it)->node == node) {
             delete (*it);
             neighbors.erase(it);

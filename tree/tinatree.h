@@ -33,7 +33,7 @@ public:
      * Constructor with given alignment
      * @param alignment
      */
-    TinaTree(Alignment *alignment);
+    explicit TinaTree(Alignment *alignment);
 
     ~TinaTree();
     /**
@@ -52,10 +52,11 @@ public:
      */
     int computeParsimonyScore(intptr_t ptn, int &states, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
 
-	virtual void initializeAllPartialLh();
+	virtual void initializeAllPartialLh() override;
 
 	virtual void initializeAllPartialLh(int &index, int &indexlh,
-                                        PhyloNode *node = NULL, PhyloNode *dad = NULL);
+                                        PhyloNode *node = nullptr, 
+                                        PhyloNode *dad  = nullptr) override;
 
 };
 

@@ -312,7 +312,7 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         tree->getTaxaName(taxname);
         // create the map from taxa between 2 trees
         Split taxa_mask(leafNum);
-        for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
+        for (StrVector::iterator it = taxname.begin(); it != taxname.end(); ++it) {
             if (name_map.find(*it) == name_map.end())
                 outError("Taxon not found in full tree: ", *it);
             taxa_mask.addTaxon(name_map[*it]);
@@ -423,7 +423,8 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
             node->name.append(tmp.str());
         }
     }
-    for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
+    for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); 
+            it != subtrees.rend(); ++it)
         delete (*it);
 
     PUT_MEANING(gCF, "Gene concordance factor (=gCF_N/gN %)");

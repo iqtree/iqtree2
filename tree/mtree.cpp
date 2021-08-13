@@ -82,7 +82,8 @@ MTree::MTree(MTree &tree) {
     init(tree);
 }
 
-MTree::MTree(string& treeString, StrVector& taxaNames, bool isRooted) {
+MTree::MTree(string& treeString, StrVector& taxaNames, 
+             bool isRooted) {
     stringstream str;
     str << treeString;
     str.seekg(0, ios::beg);
@@ -131,9 +132,9 @@ void MTree::assignIDs(StrVector& taxaNames) {
     }
     StrVector taxname;
     getTaxaName(taxname);
-    for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
+    for (StrVector::iterator it = taxname.begin(); it != taxname.end(); ++it) {
         bool foundTaxa = false;
-        for (auto it2 = taxaNames.begin(); it2 != taxaNames.end(); it2++) {
+        for (auto it2 = taxaNames.begin(); it2 != taxaNames.end(); ++it2) {
             if ( *it == *it2 ) {
                 foundTaxa = true;
                 break;
@@ -304,7 +305,8 @@ void MTree::resolveMultifurcation() {
 
     NodeVector nodes;
     getInternalNodes(nodes);
-    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+    for (NodeVector::iterator it = nodes.begin(); 
+         it != nodes.end(); ++it) {
         while ((*it)->degree() > 3) {
             Node *new_node = newNode();
             int id1 = random_int((*it)->degree());
@@ -336,6 +338,7 @@ void MTree::resolveMultifurcation() {
             (*it)->neighbors.erase((*it)->neighbors.begin() + id1);
             (*it)->addNeighbor(new_node, -1.0);
         }
+    }
 }
 
 Node* MTree::newNode(int node_id, const char* node_name) {
@@ -800,7 +803,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
         outError(str, reportInputInfo());
-    } catch (string str) {
+    } catch (string& str) {
         outError(str.c_str(), reportInputInfo());
     } catch (ios::failure) {
         outError(ERR_READ_INPUT, reportInputInfo());
@@ -1453,7 +1456,7 @@ bool MTree::containsSplits(SplitGraph& splits) {
 	SplitGraph treeSplits;
 	convertSplits(treeSplits);
 	//check if treeSplits contains all splits in splits
-	for (SplitGraph::iterator it = splits.begin(); it != splits.end(); it++) {
+	for (SplitGraph::iterator it = splits.begin(); it != splits.end(); ++it) {
 		if (!treeSplits.containSplit(**it))
 			return false;
 	}
@@ -1729,12 +1732,13 @@ void MTree::scaleCladeSupport(double norm, bool make_int, Node *node, Node *dad)
         double supp = 0.0;
         try {
             supp = convert_double(node->name.c_str());
-        } catch (string str) {
+        } catch (string& str) {
             outError(str);
         }
         supp *= norm;
-        if (make_int)
+        if (make_int) {
             supp = round(supp);
+        }
         node->name = "";
         std::stringstream s;
         s << supp;
@@ -1769,7 +1773,7 @@ int MTree::freeNode(Node *node, Node *dad)
     NeighborVec::reverse_iterator it;
     int num_nodes = 1;
     for (it = node->neighbors.rbegin(); 
-         it != node->neighbors.rend(); it++) {
+         it != node->neighbors.rend(); ++it) {
         if ((*it)->node != dad) {
             num_nodes += freeNode((*it)->node, node);
         }
@@ -1896,7 +1900,8 @@ int MTree::sortTaxa(Node *node, Node *dad) {
     }
     ;
     int i = 0;
-    for (IntNeighborMap::iterator it = taxid_nei_map.begin(); it != taxid_nei_map.end(); it++, i++) {
+    for (IntNeighborMap::iterator it = taxid_nei_map.begin(); 
+            it != taxid_nei_map.end(); ++it, ++i) {
         if (node->neighbors[i]->node == dad) {
             ++i;
         }
@@ -2006,14 +2011,16 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
         if (node->findNeighbor(dad)->length <= zero_epsilon) zero_length = true;
     }
     if (node->isLeaf()) {
-        for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
+        for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ++ii) {
             if (abs(*(ii-1)) > 1000) out << ' ';
             else out << fig_char[0];
             int num = abs(*ii);
             if (num > 1000) num -= 1000;
             for (i = 0; i < num; i++) out << ' ';
         }
-        out << ((node==dad->neighbors.front()->node) ? fig_char[2] : ((node==dad->neighbors.back()->node) ? fig_char[4] : fig_char[3]));
+        out << ((node==dad->neighbors.front()->node) 
+               ? fig_char[2] 
+               : ((node==dad->neighbors.back()->node) ? fig_char[4] : fig_char[3]));
         for (i = 0; i < br_len; i++)
             out << ((zero_length) ? '*' : fig_char[1]);
         out << node->name;
@@ -2047,7 +2054,8 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
         ++cnt;
         if (cnt == descendant_cnt) break;
         if (subtree_br.size() > 1)
-            for (ii = subtree_br.begin()+1; ii != subtree_br.end(); ii++) {
+            for (ii = subtree_br.begin()+1; 
+                 ii != subtree_br.end(); ++ii) {
                 if (abs(*(ii-1)) > 1000) out << ' ';
                 else out << fig_char[0];
                 if (ii == subtree_br.begin()) continue;
@@ -2105,7 +2113,6 @@ bool MTree::equalTopology(MTree *tree) {
 
 void MTree::calcDist(char *filename) {
     StrVector taxname;
-    int i, j;
 
     // allocate memory
     taxname.resize(leafNum);
@@ -2123,9 +2130,9 @@ void MTree::calcDist(char *filename) {
         // now write the distances in phylip .dist format
         out << leafNum << endl;
 
-        for (i = 0; i < static_cast<int>(leafNum); i++) {
+        for (int i = 0; i < static_cast<int>(leafNum); i++) {
             out << taxname[i] << "   ";
-            for (j = 0; j < static_cast<int>(leafNum); j++) {
+            for (int j = 0; j < static_cast<int>(leafNum); j++) {
                 out << dist[i*leafNum + j] << "  ";
             }
             out << endl;
@@ -2233,9 +2240,11 @@ void PDTaxaSet::setTree(MTree &tree) {
 
 
 void PDTaxaSet::printTaxa(ostream &out) {
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it)->name != ROOT_NAME)
+    for (iterator it = begin(); it != end(); ++it) {
+        if ((*it)->name != ROOT_NAME) {
             out << (*it)->name << endl;
+        }
+    }
 }
 
 void PDTaxaSet::printTaxa(const char *filename) {
@@ -2273,8 +2282,9 @@ void PDTaxaSet::printTree(const char *filename) {
 void PDTaxaSet::makeIDSet(int ntaxa, Split &id_set) {
     id_set.setNTaxa(ntaxa);
     id_set.setWeight(score);
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); ++it) {
         id_set.addTaxon((*it)->id);
+    }
 }
 
 void MTree::writeInternalNodeNames(string &out_file) {
@@ -2282,7 +2292,8 @@ void MTree::writeInternalNodeNames(string &out_file) {
         ofstream out(out_file.c_str());
         NodeVector nodes;
         getInternalNodes(nodes);
-        for (NodeVector::iterator nit = nodes.begin(); nit != nodes.end(); nit++) {
+        for (NodeVector::iterator nit = nodes.begin(); 
+                nit != nodes.end(); ++nit) {
             out  << " " << (*nit)->name;
         }
         out << endl;
@@ -2544,17 +2555,17 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 	convertSplits(mysg, &nodes, root->neighbors[0]->node);
     StringIntMap name_index;
     int ntrees, taxid;
-    for (taxid = 0; taxid < mysg.getNTaxa(); taxid++) {
+    for (taxid = 0; taxid < mysg.getNTaxa(); ++taxid) {
         name_index[mysg.getTaxa()->GetTaxonLabel(taxid)] = taxid;
     }
     NodeVector::iterator nit;
     if (assign_sup) {
-        for (nit = nodes.begin(); nit != nodes.end(); nit++) {
+        for (nit = nodes.begin(); nit != nodes.end(); ++nit) {
             (*nit)->height = 0.0;
         }
     }    
 	SplitGraph::iterator sit;
-    for (sit = mysg.begin(); sit != mysg.end(); sit++) {
+    for (sit = mysg.begin(); sit != mysg.end(); ++sit) {
         (*sit)->setWeight(0.0);
     }
 	for (ntrees = 1; !in.eof(); ntrees++) {
@@ -2563,13 +2574,14 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 
 		// read in the tree and convert into split system for indexing
 		tree.readTree(in, is_rooted);
-		if (verbose_mode >= VerboseMode::VB_DEBUG)
+		if (verbose_mode >= VerboseMode::VB_DEBUG) {
 			cout << ntrees << " " << endl;
+        }
 		StrVector taxname;
 		tree.getTaxaName(taxname);
 		// create the map from taxa between 2 trees
 		Split taxa_mask(leafNum);
-		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
+		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); ++it) {
             if (name_index.find(*it) == name_index.end())
                 outError("Taxon not found in full tree: ", *it);
 			taxid = name_index[*it];
@@ -2578,42 +2590,47 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 		// make the taxa ordering right before converting to split system
 		taxname.clear();
 		int smallid;
-		for (taxid = 0, smallid = 0; taxid < static_cast<int>(leafNum); taxid++)
+		for (taxid = 0, smallid = 0; taxid < static_cast<int>(leafNum); ++taxid) {
 			if (taxa_mask.containTaxon(taxid)) {
 				taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
 				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
 				tree.findLeafName(name)->id = smallid++;
 			}
+        }
 		ASSERT(taxname.size() == tree.leafNum);
 
 		SplitGraph sg;
 		//NodeVector nodes;
 		tree.convertSplits(sg);
 		SplitIntMap hash_ss;
-		for (sit = sg.begin(); sit != sg.end(); sit++)
+		for (sit = sg.begin(); sit != sg.end(); ++sit) {
 			hash_ss.insertSplit((*sit), 1);
+        }
 
 		// now scan through all splits in current tree
 		int common_splits = 0;
-		for (sit = mysg.begin(); sit != mysg.end(); sit++)
-		if ((*sit)->trivial() < 0) // it is an internal split
-		{
-
+		for (sit = mysg.begin(); sit != mysg.end(); ++sit) {
+		if ((*sit)->trivial() < 0) { // it is an internal split
 			Split *subsp = (*sit)->extractSubSplit(taxa_mask);
-			if (subsp->shouldInvert())
+			if (subsp->shouldInvert()) {
 				subsp->invert();
+            }
 			Split *sp = hash_ss.findSplit(subsp);
 			if (sp) {
 				++common_splits;
 				//(*sit)->setWeight((*sit)->getWeight()+1.0);
 				if (verbose_mode >= VerboseMode::VB_MAX) {
-					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
-						if ((*sit)->containTaxon(taxid))
+					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++) {
+						if ((*sit)->containTaxon(taxid)) {
 							cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
+                        }
+                    }
 					cout << " --> ";
-					for (taxid = 0; taxid < sp->getNTaxa(); taxid++)
-						if (sp->containTaxon(taxid))
+					for (taxid = 0; taxid < sp->getNTaxa(); taxid++) {
+						if (sp->containTaxon(taxid)) {
 							cout << " " << taxname[taxid];
+                        }
+                    }
 					cout << endl;
 				}
                 if (assign_sup && subsp->trivial() < 0) {
@@ -2622,10 +2639,11 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
             }
             delete subsp;
         }
+        }
         
         //cout << "common_splits = " << common_splits << endl;
         double max_dist = branchNum-leafNum + tree.branchNum-tree.leafNum;
-        double rf_val = max_dist - 2*common_splits;
+        double rf_val   = max_dist - 2*common_splits;
         if (Params::getInstance().normalize_tree_dist) {
             rf_val = rf_val / max_dist;
         }
@@ -2633,26 +2651,28 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 		char ch;
 		in.exceptions(ios::goodbit);
 		(in) >> ch;
-		if (in.eof()) break;
+		if (in.eof()) {
+            break;
+        }
 		in.unget();
 		in.exceptions(ios::failbit | ios::badbit);
-        
-        if (one_tree)
+        if (one_tree) {
             break;
-
+        }
 	}
-    if (assign_sup)
-        for (nit = nodes.begin(); nit != nodes.end(); nit++)
-            if (!(*nit)->isLeaf())
+    if (assign_sup) {
+        for (nit = nodes.begin(); nit != nodes.end(); ++nit) {
+            if (!(*nit)->isLeaf()) {
                 (*nit)->name = convertIntToString(static_cast<int>((*nit)->height));
-
-//	cout << ntrees << " trees read" << endl;
-
-
+            }
+        }
+    }
+    //	cout << ntrees << " trees read" << endl;
 }
 
 void MTree::reportDisagreedTrees(StrVector &taxname, MTreeSet &trees, Split &mysplit) {
-	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
+	for (MTreeSet::iterator it = trees.begin(); 
+         it != trees.end(); ++it) {
 		MTree *tree = (*it);
 		SplitGraph sg;
 		tree->convertSplits(taxname, sg);
@@ -2747,18 +2767,22 @@ int MTree::collapseZeroBranches(Node *node, Node *dad, double threshold) {
 		count += collapseZeroBranches((*it)->node, node, threshold);
 	}
 	NeighborVec nei_vec;
-	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
-	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
-	if ((*it)->node != dad && (*it)->length <= threshold) {
-		// delete the child node
-        removeNode(node, (*it)->node);
-        ++count;
-	}
+	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), 
+                   node->neighbors.end());
+	for (it = nei_vec.begin(); it != nei_vec.end(); ++it) {
+        if ((*it)->node != dad && (*it)->length <= threshold) {
+            // delete the child node
+            removeNode(node, (*it)->node);
+            ++count;
+        }
+    }
     return count;
 }
 
 int MTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
-	if (!node) node = root;
+	if (!node) {
+        node = root;
+    }
     int count = 0;
 	FOR_NEIGHBOR_DECLARE(node, dad, it) {
 		count += collapseInternalBranches((*it)->node, node, threshold);
@@ -2767,9 +2791,11 @@ int MTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
         return count;
     }
 	NeighborVec nei_vec;
-	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
-	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
-	if ((*it)->node != dad && !(*it)->node->isLeaf() && (*it)->length <= threshold) {
+	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), 
+                   node->neighbors.end());
+	for (it = nei_vec.begin(); it != nei_vec.end(); ++it) 
+	if ((*it)->node != dad && !(*it)->node->isLeaf() && 
+        (*it)->length <= threshold) {
 		// delete the child node
         removeNode(node, (*it)->node);
         ++count;
@@ -2812,7 +2838,7 @@ void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
 Node *MTree::findFirstTaxon(Node *node, Node *dad) {
 	if (!node) node = root;
 //	Node *next;
-	for (int i = 0; i < nodeNum; i++)
+	for (int i = 0; i < nodeNum; ++i)
 		FOR_NEIGHBOR_IT(node, dad, it) {
 			if ((*it)->node->isLeaf()) return (*it)->node;
 			dad = node;
@@ -2833,7 +2859,8 @@ int MTree::removeTaxa(const StrVector &taxa_names,
         double work_to_do = static_cast<double>(taxa_names.size());
         initProgress(work_to_do, context, "removed", "taxon");
     }
-    for (auto sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
+    for (auto sit = taxa_names.begin(); 
+         sit != taxa_names.end(); ++sit) {
         Node *node = findLeafName(*sit);
         if (!node) {
             if (context!=nullptr) {
@@ -2848,7 +2875,6 @@ int MTree::removeTaxa(const StrVector &taxa_names,
         }
 		Node *innode = node->neighbors[0]->node;
 		Node *othernodes[2] = { NULL, NULL };
-		int i;
 		double length = 0;
 
 		bool should_merge = true;
@@ -2866,7 +2892,7 @@ int MTree::removeTaxa(const StrVector &taxa_names,
 		if (should_merge)
 		{
 			// merge two branches
-			for (i = 0; i < 2; i++)
+			for (int i = 0; i < 2; i++)
 				for (it = othernodes[i]->neighbors.begin();
                      it != othernodes[i]->neighbors.end(); ++it)
 					if ((*it)->node == innode)
@@ -2877,7 +2903,8 @@ int MTree::removeTaxa(const StrVector &taxa_names,
             delete innode;
 		} else {
 			// simple delete the neighbor of innode
-			for (it = innode->neighbors.begin(); it != innode->neighbors.end(); it++)
+			for (it = innode->neighbors.begin(); 
+                 it != innode->neighbors.end(); ++it)
 				if ((*it)->node == node) {
 					innode->neighbors.erase(it);
 					break;
@@ -2899,7 +2926,8 @@ int MTree::removeTaxa(const StrVector &taxa_names,
     ASSERT(taxa.size() > 0);
     // reassign taxon IDs
     int id = 0;
-    for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++) {
+    for (NodeVector::iterator nit = taxa.begin(); 
+         nit != taxa.end(); ++nit) {
         if (*nit == root && rooted) {
             (*nit)->id = static_cast<int>(taxa.size())-1;
         } else {
@@ -3008,7 +3036,8 @@ Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
     return res;
 }
 
-void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, 
+                                Node *node, Node *dad) {
     if (dad) {
         nodes.push_back(node);
         nodes2.push_back(dad);
@@ -3016,16 +3045,20 @@ void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *nod
 
     NeighborVec neivec = node->neighbors;
     NeighborVec::iterator i1, i2;
-    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
-        for (i2 = i1+1; i2 != neivec.end(); i2++)
+    for (i1 = neivec.begin(); i1 != neivec.end(); ++i1) {
+        for (i2 = i1+1; i2 != neivec.end(); ++i2) {
             if ((*i1)->node->height > (*i2)->node->height) {
                 Neighbor *nei = *i1;
                 *i1 = *i2;
                 *i2 = nei;
             }
-    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
-        if ((*i1)->node != dad)
+        }
+    }
+    for (i1 = neivec.begin(); i1 != neivec.end(); ++i1) {
+        if ((*i1)->node != dad) {
             getPreOrderBranches(nodes, nodes2, (*i1)->node, node);
+        }
+    }
 //    FOR_NEIGHBOR_IT(node, dad, it) 
 //        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
 }

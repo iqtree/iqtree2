@@ -53,7 +53,7 @@ void SPRMoves::add(const SPRMove& spr) {
     }
     if (size() >= MAX_SPR_MOVES) {
         iterator it = end();
-        it--;
+        --it;
         erase(it);
     }
     insert(spr);

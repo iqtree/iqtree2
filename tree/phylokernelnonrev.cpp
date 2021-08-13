@@ -114,7 +114,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
             double *echild = echildren;
 
             FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-                PhyloNode child = nei->getNode();
+                PhyloNode* child = nei->getNode();
                 if (child->isLeaf()) {
                     // external node
                     int state_child;
@@ -424,7 +424,8 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
         IntVector states_dad = aln->seq_states[dad->id];
         states_dad.push_back(aln->STATE_UNKNOWN);
         // precompute information from one tip
-        for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+        for (IntVector::iterator it = states_dad.begin(); 
+             it != states_dad.end(); ++it) {
             double *lh_node = partial_lh_node +(*it)*block;
             double *lh_derv1 = partial_lh_derv1 +(*it)*block;
             double *lh_derv2 = partial_lh_derv2 +(*it)*block;
@@ -456,18 +457,21 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
 #endif
-        for (int thread_id = 0; thread_id < num_threads; thread_id++) {
+        for (int thread_id = 0; thread_id < num_threads; ++thread_id) {
             intptr_t ptn_lower = limits[thread_id];
             intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
+            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
+                 it != traversal_info.end(); ++it)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
-            for (ptn = ptn_lower; ptn < ptn_upper; ptn++) {
+            for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
                 double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
                 double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 int state_dad;
-                state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
+                state_dad = (ptn < orig_nptn) 
+                            ? (aln->at(ptn))[dad->id] 
+                            : model_factory->unobserved_ptns[ptn-orig_nptn];
                 double *lh_node = partial_lh_node + state_dad*block;
                 double *lh_derv1 = partial_lh_derv1 + state_dad*block;
                 double *lh_derv2 = partial_lh_derv2 + state_dad*block;
@@ -510,14 +514,15 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c, x) schedule(static,1) num_threads(num_threads)
 #endif
-        for (int thread_id = 0; thread_id < num_threads; thread_id++) {
+        for (int thread_id = 0; thread_id < num_threads; ++thread_id) {
             intptr_t ptn_lower = limits[thread_id];
             intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
+            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
+                 it != traversal_info.end(); ++it) {
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
-
-            for (ptn = ptn_lower; ptn < ptn_upper; ptn++) {
+            }
+            for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
                 double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
                 double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 double *partial_lh_node = node_branch->partial_lh + ptn*block;
@@ -525,11 +530,11 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                 double *trans_derv1_tmp = trans_derv1;
                 double *trans_derv2_tmp = trans_derv2;
                 for (c = 0; c < ncat; c++) {
-                    for (i = 0; i < nstates; i++) {
+                    for (i = 0; i < nstates; ++i) {
                         double lh_state = 0.0;
                         double lh_derv1 = 0.0;
                         double lh_derv2 = 0.0;
-                        for (x = 0; x < nstates; x++) {
+                        for (x = 0; x < nstates; ++x) {
                             lh_state += trans_mat_tmp[x] * partial_lh_node[x];
                             lh_derv1 += trans_derv1_tmp[x] * partial_lh_node[x];
                             lh_derv2 += trans_derv2_tmp[x] * partial_lh_node[x];
@@ -639,14 +644,15 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
                 double *lh_node = partial_lh_node + c*nstates;
                 model->getStateFrequency(lh_node);
                 double prop = site_rate->getProp(c);
-                for (i = 0; i < nstates; i++)
+                for (i = 0; i < nstates; ++i)
                     lh_node[i] *= prop;
             }
         } else {
             IntVector states_dad = aln->seq_states[dad->id];
             states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
-            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+            for (IntVector::iterator it = states_dad.begin(); 
+                 it != states_dad.end(); ++it) {
                 double *lh_node = partial_lh_node +(*it)*block;
                 double *lh_tip = tip_partial_lh + (*it)*nstates;
                 double *trans_mat_tmp = trans_mat;

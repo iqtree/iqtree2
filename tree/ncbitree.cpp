@@ -48,13 +48,12 @@ void NCBITree::readNCBINames(const char* infile, const char *name_type) {
 void NCBITree::readNCBINames(ifstream &in, const char *name_type) {
     ASSERT(!nodes.empty());
     char ch;
-    int node_id;
     string node_name, unique_name;
 
     in_line = in_column = 0;
 
     while (!in.eof()) {
-        node_id = 0;
+        int node_id = 0;
         if (!(in >> node_id)) break;
         in_line++;
         if (node_id <= 0) throw "Wrong node ID";
@@ -71,7 +70,8 @@ void NCBITree::readNCBINames(ifstream &in, const char *name_type) {
             getline(in, unique_name, '\t');
             if (unique_name != "") node_name = unique_name;
 
-            for (string::iterator i = node_name.begin(); i != node_name.end(); i++) {
+            for (string::iterator i = node_name.begin(); 
+                 i != node_name.end(); ++i) {
                 if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.') {
                     (*i) = '_';
                 }
@@ -246,14 +246,17 @@ int NCBITree::pruneBridgeNodes(Node *node, Node *dad) {
 
 int NCBITree::freeNode(Node *node, Node *dad)
 {
-    if (!node) node = root;
-    NeighborVec::reverse_iterator it;
+    if (!node) {
+        node = root;
+    }
     int num_nodes = 1;
-    for (it = node->neighbors.rbegin(); it != node->neighbors.rend(); it++)
+    for (auto it = node->neighbors.rbegin(); 
+         it != node->neighbors.rend(); ++it) {
         if ((*it)->node != dad) {
             num_nodes += freeNode((*it)->node, node);
         }
-    nodes[node->id] = NULL;
+    }
+    nodes[node->id] = nullptr;
     delete node;
     return num_nodes;
 }

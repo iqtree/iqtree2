@@ -753,12 +753,11 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 if (SAFE_NUMERIC) {
                     // numerical scaling per category
                     UBYTE *scale_dad;
-                    UBYTE min_scale;
                     double *partial_lh_scaled = buffers.theta_all + ptn*block;
                     memcpy(partial_lh_scaled, partial_lh_dad, sizeof(VectorClass)*block);
                     for (size_t i = 0; i < VectorClass::size(); i++) {
                         scale_dad = dad_branch->scale_num+(ptn+i)*ncat_mix;
-                        min_scale = scale_dad[0];
+                        UBYTE min_scale = scale_dad[0];
                         for (size_t c = 1; c < ncat_mix; c++) {
                             min_scale = min(min_scale, scale_dad[c]);
                         }
@@ -1254,9 +1253,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 if (SAFE_NUMERIC) {
                     // numerical scaling per category
                     UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
-                    UBYTE min_scale;
                     for (size_t i = 0; i < VectorClass::size(); i++) {
-                        min_scale = scale_dad[0];
+                        UBYTE min_scale = scale_dad[0];
                         for (size_t c = 1; c < ncat_mix; c++) {
                             min_scale = min(min_scale, scale_dad[c]);
                         }
@@ -1330,11 +1328,14 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
             intptr_t ptn_lower = limits[packet_id];
             intptr_t ptn_upper = limits[packet_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
+            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
+                 it != traversal_info.end(); ++it) {
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
+            }
 
             // reset memory for _pattern_lh_cat
-            memset(buffers._pattern_lh_cat+ptn_lower*ncat_mix, 0, (ptn_upper-ptn_lower)*ncat_mix*sizeof(double));
+            memset(buffers._pattern_lh_cat+ptn_lower*ncat_mix, 
+                   0, (ptn_upper-ptn_lower)*ncat_mix*sizeof(double));
 
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 VectorClass lh_ptn(0.0);
@@ -1390,10 +1391,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 #else
                     boost::scoped_array<UBYTE> sum_scale(new UBYTE[ncat_mix]);
 #endif
-                    UBYTE min_scale;
-                    
                     for (size_t i = 0; i < VectorClass::size(); i++) {
-                        min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
+                        UBYTE min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
                         VectorClass min_scale_vec(min_scale);
                         for (size_t c = 1; c < ncat_mix; c++) {
                             sum_scale[c] = scale_dad[c] + scale_node[c];

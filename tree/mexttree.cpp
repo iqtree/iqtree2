@@ -222,7 +222,8 @@ void MExtTree::generateUniform(int size, bool binary)
 		Node *newnode = newNode(size+i-2);
 		// reconnect the left end
 		node = leftend[index];
-		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		for (NeighborVec::iterator it = node->neighbors.begin(); 
+		     it != node->neighbors.end(); ++it) 
 			if ((*it)->node == rightend[index]) {
 				len = random_double();
 				(*it)->node = newnode;

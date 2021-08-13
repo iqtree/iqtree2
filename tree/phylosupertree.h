@@ -84,23 +84,23 @@ public:
         set checkpoint object
         @param checkpoint
     */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint) override;
 
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
             set the model factory
             @param model_fac model factory
      */
-    virtual void setModelFactory(ModelFactory *model_fac);
+    virtual void setModelFactory(ModelFactory *model_fac) override;
 
     /**
      2019-06-03: copy part_info from tree, taking into account -bsam option
@@ -116,39 +116,39 @@ public:
     virtual void setSuperAlignment(Alignment *alignment);
 
     /** remove identical sequences from the tree */
-    virtual void removeIdenticalSeqs(Params &params);
+    virtual void removeIdenticalSeqs(Params &params) override;
 
     /** reinsert identical sequences into the tree and reset original alignment */
-    virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
+    virtual void reinsertIdenticalSeqs(Alignment *orig_aln) override;
 
-	virtual void setParams(Params* params);
+	virtual void setParams(Params* params) override;
 
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
-	virtual void initSettings(Params& params);
+	virtual void initSettings(Params& params) override;
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk) override;
 
-    virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+    virtual void changeLikelihoodKernel(LikelihoodKernel lk) override;
 
-    virtual void setParsimonyKernel(LikelihoodKernel lk);
+    virtual void setParsimonyKernel(LikelihoodKernel lk) override;
 
-    virtual void setNumThreads(int num_threads);
+    virtual void setNumThreads(int num_threads) override;
 
-	virtual bool isSuperTree() { return true; }
+	virtual bool isSuperTree() override { return true; }
 
     /**
      print tree to .treefile
      @param params program parameters, field root is taken
      */
-    virtual void printResultTree(string suffix = "");
+    virtual void printResultTree(string suffix = "") override;
 
     /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
-    virtual string getTreeString();
+    virtual string getTreeString() override;
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -156,16 +156,18 @@ public:
             @param nodes_have_names true, if the ids of the nodes are to be calculated
                                     from the names (rather than the converse)
      */
-    virtual void readTreeString(const string &tree_string, bool nodes_have_names=false);
+    virtual void readTreeString(const string &tree_string, bool nodes_have_names=false) override;
 
     /**
      * save branch lengths into a vector
      */
-    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, 
+                                   PhyloNode *node = nullptr, PhyloNode *dad = nullptr) override;
     /**
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
-    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, 
+                                      PhyloNode *node = nullptr, PhyloNode *dad = nullptr) override;
 
     /**
         Collapse all internal branches with length <= threshold
@@ -174,7 +176,8 @@ public:
         @param threshold branch length threshold
         @return number of branches collapsed
     */
-    virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+    virtual int collapseInternalBranches(Node *node = nullptr, Node *dad = nullptr, 
+                                         double threshold = 0.0) override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -182,7 +185,8 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual SuperNode* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual SuperNode* newNode(int node_id = -1, 
+                               const char* node_name = nullptr) override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -190,19 +194,19 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual SuperNode* newNode(int node_id, int node_name);
+    virtual SuperNode* newNode(int node_id, int node_name) override;
 
-    virtual SuperNode* getRoot();
+    virtual SuperNode* getRoot() override;
 
 	/**
 	 *		@return number of alignment patterns
 	*/
-	virtual size_t getAlnNPattern() const;
+	virtual size_t getAlnNPattern() const override;
 
 	/**
 	 *		@return number of alignment sites
 	*/
-	virtual size_t getAlnNSite() const;
+	virtual size_t getAlnNSite() const override;
 
     /**
             compute the distance between 2 sequences.
@@ -211,7 +215,7 @@ public:
             @param initial_dist initial distance
             @return distance between seq1 and seq2
      */
-    virtual double computeDist(int seq1, int seq2, double initial_dist, double &var);
+    virtual double computeDist(int seq1, int seq2, double initial_dist, double &var) override;
 
 	/**
 		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
@@ -250,22 +254,22 @@ public:
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */
-    virtual void initializeAllPartialLh();
+    virtual void initializeAllPartialLh() override;
 
     /**
             de-allocate central_partial_lh
      */
-    virtual void deleteAllPartialLh();
+    virtual void deleteAllPartialLh() override;
 
     /**
      NEWLY ADDED (2014-12-04): clear all partial likelihood for a clean computation again
      */
-    virtual void clearAllPartialLH(bool set_to_null = false);
+    virtual void clearAllPartialLH(bool set_to_null = false) override;
     
     /**
      NEWLY ADDED (20-Aug-2020): clear all scale_num info for a clean computation again
      */
-    virtual void clearAllScaleNum(bool set_to_null);
+    virtual void clearAllScaleNum(bool set_to_null) override;
 
     /**
             compute the tree likelihood
@@ -273,12 +277,12 @@ public:
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihood(double *pattern_lh = NULL);
+    virtual double computeLikelihood(double *pattern_lh = NULL) override;
 
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
      */
-    virtual int getNumLhCat(SiteLoglType wsl);
+    virtual int getNumLhCat(SiteLoglType wsl) override;
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -288,15 +292,17 @@ public:
             @param cur_logl current log-likelihood (for sanity check)
             @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
-    		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = nullptr,
+    		                              double *pattern_lh_cat = nullptr, 
+                                          SiteLoglType wsl = WSL_RATECAT) override;
 
     /**
             compute pattern posterior probabilities per rate/mixture category
             @param pattern_prob_cat (OUT) all pattern-probabilities per category
             @param wsl either WSL_RATECAT, WSL_MIXTURE or WSL_MIXTURE_RATECAT
      */
-    virtual void computePatternProbabilityCategory(double *pattern_prob_cat, SiteLoglType wsl);
+    virtual void computePatternProbabilityCategory(double *pattern_prob_cat, 
+                                                   SiteLoglType wsl) override;
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
@@ -306,7 +312,7 @@ public:
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD,
                                        int maxNRStep = 100, bool were_lengths_consistent = true,
-                                       PhyloTree* report_to_tree = nullptr);
+                                       PhyloTree* report_to_tree = nullptr) override;
 
     /**
             search the best swap for a branch
@@ -315,20 +321,21 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, 
+                                      NNIMove *nniMoves = nullptr) override;
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
             @param clearLH indicates whether or not the partial likelihood should be cleared
      */
-    virtual void doNNI(const NNIMove &move, bool clearLH = true);
+    virtual void doNNI(const NNIMove &move, bool clearLH = true) override;
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(const NNIMove &nnimove);
+    virtual void changeNNIBrans(const NNIMove &nnimove) override;
 
     /**
         OBSOLETE!
@@ -342,12 +349,12 @@ public:
             reinsert the whole list of leaves back into the supertree then call mapTrees
             @param del_leaves the list of deleted leaves, returned by deleteLeaves() function
      */
-    virtual void reinsertLeaves(PhyloNodeVector &del_leaves);
+    virtual void reinsertLeaves(PhyloNodeVector &del_leaves) override;
 
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
-	virtual void computeBranchLengths();
+	virtual void computeBranchLengths() override;
 
 	/**
 	 * print debug information about all maps
@@ -357,7 +364,7 @@ public:
 	/**
 	 * initialize partition information for super tree
 	*/
-	virtual void initPartitionInfo();
+	virtual void initPartitionInfo() override;
 
 	int getMaxPartNameLength();
 
@@ -376,7 +383,7 @@ public:
     /**
             get the name of the model
     */
-    virtual string getModelName();
+    virtual string getModelName() override;
 	/**
 	 * extract subtree containing all taxa from partition IDs
 	 * @param ids partitions IDs
@@ -388,13 +395,14 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false) override;
 
     /**
      * compute the memory size for top partitions required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, bool full_mem = false);
+    virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, 
+                                               bool full_mem = false) override;
 
     /**
      * count the number of super branches that map to no branches in gene trees
@@ -409,7 +417,8 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, 
+                                  PhyloNode *dad = nullptr) override;
 
     virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
@@ -420,7 +429,9 @@ public:
     /**
         initialize computing ancestral sequence probability for an internal node by marginal reconstruction
     */
-    virtual void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+    virtual void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, 
+                                            double* &ptn_ancestral_prob, 
+                                            int* &ptn_ancestral_seq) override;
 
     /**
         compute ancestral sequence probability for an internal node by marginal reconstruction
@@ -430,14 +441,18 @@ public:
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
     virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
-        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+                                               double *ptn_ancestral_prob, 
+                                               int *ptn_ancestral_seq) override;
 
-    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, 
+                                             double *ptn_ancestral_prob, 
+                                             int *ptn_ancestral_seq) override;
 
     /**
         end computing ancestral sequence probability for an internal node by marginal reconstruction
     */
-    virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+    virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, 
+                                           int* &ptn_ancestral_seq) override;
     
 	/**
 		write site-rates to a file in the following format:
@@ -448,7 +463,7 @@ public:
 		@param out output stream to write rates
         @param bayes TRUE to use empirical Bayesian, false for ML method
      */
-    virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
+    virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1) override;
 
     /**
         write site log likelihood to a output stream
@@ -456,7 +471,7 @@ public:
         @param wsl write site-loglikelihood type
         @param partid partition ID as first column of the line. -1 to omit it
     */
-    virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
+    virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1) override;
 
 
     virtual void writeBranch(ostream &out, Node* node1, Node* node2);
@@ -466,7 +481,7 @@ public:
      Feature requested by Rob Lanfear
      @param out output stream
      */
-    virtual void writeBranches(ostream &out);
+    virtual void writeBranches(ostream &out) override;
 
     /**
         print partition file with best model parameters

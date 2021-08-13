@@ -16,7 +16,7 @@ ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
 }
 
 ConstraintTree::~ConstraintTree() {
-    for (iterator mit = begin(); mit != end(); mit++)
+    for (iterator mit = begin(); mit != end(); ++mit)
         delete (mit->first);
     clear();
 }
@@ -62,7 +62,7 @@ void ConstraintTree::initFromTree() {
 	NodeVector nodes;
 	getInternalNodes(nodes);
 	int num_collapsed = 0;
-	for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+	for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); ++it)
 		if ((*it)->degree() == 2) {
 			Node *left = (*it)->neighbors[0]->node;
 			Node *right = (*it)->neighbors[1]->node;
@@ -82,7 +82,7 @@ void ConstraintTree::initFromTree() {
     StrVector::iterator it;
     getTaxaName(taxname);
     taxname_index.clear();
-    for (it = taxname.begin(); it != taxname.end(); it++) {
+    for (it = taxname.begin(); it != taxname.end(); ++it) {
         taxname_index[(*it)] = static_cast<int>(it - taxname.begin());
     }
 
@@ -91,11 +91,11 @@ void ConstraintTree::initFromTree() {
     convertSplits(taxname, sg);
     sg.removeTrivialSplits();
 
-    for (iterator mit = begin(); mit != end(); mit++)
+    for (iterator mit = begin(); mit != end(); ++mit)
         delete (mit->first);
     clear();
 
-    for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); sit++) {
+    for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); ++sit) {
         if (!(*sit)->containTaxon(0))
             (*sit)->invert();
         insertSplit(new Split(**sit), 1);
@@ -142,7 +142,7 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
     
     int tax_count1 = 0;
     
-    for (it = tax1.begin(); it != tax1.end(); it++)
+    for (it = tax1.begin(); it != tax1.end(); ++it)
         if ((mit = taxname_index.find(*it)) != taxname_index.end()) {
             // taxon found
             tax_count1++;
@@ -152,7 +152,7 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
         return true;
         
     int tax_count2 = 0;
-    for (it = tax2.begin(); it != tax2.end(); it++)
+    for (it = tax2.begin(); it != tax2.end(); ++it)
         if ((mit = taxname_index.find(*it)) != taxname_index.end()) {
             // taxon found
             tax_count2++;
@@ -174,7 +174,7 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
         if (res) return true;
         
         // otherwise, check for compatibility with all splits
-        for (iterator sit = begin(); sit != end(); sit++)
+        for (iterator sit = begin(); sit != end(); ++sit)
             if (!sit->first->compatible(sp1))
                return false;
         return true;
@@ -185,7 +185,7 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
         taxa_mask += sp2;
         Split* subsp = sp1.extractSubSplit(taxa_mask);
         bool res = true;
-        for (iterator sit = begin(); sit != end(); sit++) {
+        for (iterator sit = begin(); sit != end(); ++sit) {
             Split *subit = sit->first->extractSubSplit(taxa_mask);
             if (!subit->compatible(*subsp)) {
                 res = false;

@@ -46,19 +46,19 @@ public:
     /**
         start structure for checkpointing
     */
-    virtual void startCheckpoint();
+    virtual void startCheckpoint() override;
 
     /** 
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /** 
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
-    virtual PhyloNodeMixlen* getRoot();
+    virtual PhyloNodeMixlen* getRoot() override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -66,7 +66,8 @@ public:
             @param node_name node name
             @return a new node
      */
-    virtual PhyloNodeMixlen* newNode(int node_id = -1, const char* node_name = NULL);
+    virtual PhyloNodeMixlen* newNode(int node_id = -1, 
+                                     const char* node_name = NULL) override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -74,7 +75,7 @@ public:
             @param node_name node name issued by an interger
             @return a new node
      */
-    virtual PhyloNodeMixlen* newNode(int node_id, int node_name);
+    virtual PhyloNodeMixlen* newNode(int node_id, int node_name) override;
     
     /**
             refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
@@ -84,21 +85,22 @@ public:
                         from the names (rather than the converse)
 
      */
-    virtual void readTreeString(const string &tree_string, bool nodes_have_names = false);
+    virtual void readTreeString(const string &tree_string, 
+                                bool nodes_have_names = false) override;
 
     virtual void initializeModel(Params &params, string model_name,
                                  ModelsBlock *models_block,
-                                 PhyloTree* report_to_tree);
+                                 PhyloTree* report_to_tree) override;
 
     /**
         @return true if this is a tree with mixture branch lengths, default: false
     */
-    virtual bool isMixlen() { return !initializing_mixlen; }
+    virtual bool isMixlen() override { return !initializing_mixlen; }
 
     /**
         @return number of mixture branch lengths, default: 1
     */
-    virtual int getMixlen() {
+    virtual int getMixlen() override {
         if (initializing_mixlen)
             return 1;
         else
@@ -115,7 +117,8 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    virtual void treeLengths(DoubleVector &lenvec, Node *node = NULL, Node *dad = NULL);
+    virtual void treeLengths(DoubleVector &lenvec, Node *node = nullptr, 
+                             Node *dad = nullptr) override;
 
     /**
      * assign branch length as mean over all branch lengths of categories
@@ -128,13 +131,14 @@ public:
      *  @param out output stream
      *  @param length_nei target Neighbor to print
      */
-    virtual void printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei);
+    virtual void printBranchLength(ostream &out, int brtype, bool print_slash, 
+                                   Neighbor *length_nei) override;
 
     /**
             print tree to .treefile
             @param params program parameters, field root is taken
      */
-    virtual void printResultTree(string suffix = "");
+    virtual void printResultTree(string suffix = "") override;
 
     /**
         initialize mixture branch lengths
@@ -153,7 +157,7 @@ public:
         @param dad dad node
     */
     virtual void fixOneNegativeBranch(double branch_length,
-                                      Neighbor *dad_branch, Node *dad);
+                                      Neighbor *dad_branch, Node *dad) override;
 
     /**
      * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
@@ -165,7 +169,7 @@ public:
             @return likelihood score
      */
     virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
-                                   bool clearLH = true, int maxNRStep = 100);
+                                   bool clearLH = true, int maxNRStep = 100) override;
 
     /**
             optimize all branch lengths of the tree
@@ -174,7 +178,7 @@ public:
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD,
                                        int maxNRStep = 100, bool were_lengths_consistent = true,
-                                       PhyloTree* report_to_tree = nullptr);
+                                       PhyloTree* report_to_tree = nullptr) override;
 
 	/**
 		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
@@ -185,7 +189,7 @@ public:
 		@param df (OUT) first derivative
 		@param ddf (OUT) second derivative
 	*/
-	virtual void computeFuncDervMulti(double *value, double *df, double *ddf);
+	virtual void computeFuncDervMulti(double *value, double *df, double *ddf) override;
 
     /**
             Inherited from Optimization class.
@@ -196,12 +200,12 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual void computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() const;
+	virtual int getNDim() const override;
 
 
 	/**
@@ -209,7 +213,7 @@ public:
 		@param x the input vector x
 		@return the function value at x
 	*/
-	virtual double targetFunk(double x[]);
+	virtual double targetFunk(double x[]) override;
 
 	/**
 		the approximated derivative function
@@ -217,10 +221,10 @@ public:
 		@param dfx the derivative at x
 		@return the function value at x
 	*/
-	virtual double derivativeFunk(double x[], double dfx[]);
+	virtual double derivativeFunk(double x[], double dfx[]) override;
 
     /** For Mixlen stuffs */
-    virtual int getCurMixture() { return cur_mixture; }
+    virtual int getCurMixture() override { return cur_mixture; }
 
     /**
      *  Optimize current tree using NNI
@@ -228,7 +232,7 @@ public:
      *  @return
      *      <number of NNI steps, number of NNIs> done
      */
-    virtual pair<int, int> optimizeNNI(bool speedNNI, const char* context);
+    virtual pair<int, int> optimizeNNI(bool speedNNI, const char* context) override;
 
     /** number of mixture categories */
     int mixlen;

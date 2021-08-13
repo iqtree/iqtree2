@@ -14,6 +14,7 @@
 #include <placement/blockallocator.h>
 #include <placement/parallelparsimonycalculator.h>
 #include <utils/timeutil.h> //for getRealTime
+#include <functional> //for std::function
 
 #if defined (__GNUC__) || defined(__clang__) && !defined(CLANG_UNDER_VS)
 #define vml_popcnt __builtin_popcount
@@ -599,10 +600,10 @@ int PhyloTree::setParsimonyBranchLengths() {
                                            node_branch->partial_pars,
                                            dad->id, node->id, sequences );
 
-        int adjustment = 0;
+        adjustment = 0;
         adjustParsimonyBranchSubstitutionCount(dad, node, adjustment);
 
-        double branch_length = static_cast<double>(subst+adjustment)*persite;
+        branch_length = static_cast<double>(subst+adjustment)*persite;
         correctBranchLengthIfNeedBe(branch_length);
         fixOneNegativeBranch(branch_length, dad_branch, dad);
         sum_score += subst;
@@ -1427,7 +1428,7 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order,
     }
     
     // reindex taxon ID from alignment
-    for (it = nodes.begin(); it != nodes.end(); it++) {
+    for (it = nodes.begin(); it != nodes.end(); ++it) {
         (*it)->id = name2id[(*it)->name];
         ASSERT((*it)->id >= 0);
         taxon_order.push_back((*it)->id);
@@ -1438,8 +1439,9 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order,
     // reindex internal nodes properly
     nodes.clear();
     getInternalNodes(nodes);
-    for (it = nodes.begin(); it != nodes.end(); it++)
+    for (it = nodes.begin(); it != nodes.end(); ++it) {
         (*it)->id = aln->getNSeq32() + static_cast<int>(it - nodes.begin());
+    }
 
     // add the remaining taxa
     for (int i = 0; i < aln->getNSeq(); ++i) {
@@ -1555,8 +1557,9 @@ int PhyloTree::computeParsimonyTree(Alignment* alignment,
     if (params->compute_likelihood) {
         fixNegativeBranch(true);
     } else {
-        double score = best_pars_score;
-        setAllBranchLengthsFromParsimony(true, score);
+        double dbl_score = best_pars_score;
+        setAllBranchLengthsFromParsimony(true, dbl_score);
+        score = static_cast<int>(floor(dbl_score));
     }
     if (orig_rooted) {
         // convert to rooted tree if originally so
@@ -1979,7 +1982,7 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
     computeBranchDirection();
     
     // firstly make bifurcating tree
-    for (auto it = nodes.begin(); it != nodes.end(); it++)
+    for (auto it = nodes.begin(); it != nodes.end(); ++it)
     {
         PhyloNode *node = *it;
         int id[3];
