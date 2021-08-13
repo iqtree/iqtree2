@@ -292,7 +292,6 @@ bool  ModelCheckpoint::getBestTree(string &best_tree) {
 }
 
 bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, CandidateModelSet &ordered_models) {
-    double best_score_AIC, best_score_AICc, best_score_BIC;
     if (tree->isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)tree;
         ordered_models.clear();
@@ -307,6 +306,7 @@ bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, CandidateModelSet &order
         }
         return true;
     } else {
+        double best_score_AIC, best_score_AICc, best_score_BIC;
         CKP_RESTORE2(this, best_score_AIC);
         CKP_RESTORE2(this, best_score_AICc);
         CKP_RESTORE2(this, best_score_BIC);
@@ -1571,31 +1571,34 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets,
 	vector<PartitionInfo> part_info;
 	vector<PhyloTree*> tree_vec;
     SuperAlignment *new_super_aln = new SuperAlignment();
-	for (it = gene_sets.begin(); it != gene_sets.end(); it++) {
+	for (it = gene_sets.begin(); it != gene_sets.end(); ++it) {
         Alignment *aln = super_aln->concatenateAlignments(*it);
 		PartitionInfo info;
 		aln->model_name = model_names[it-gene_sets.begin()];
         info.part_rate = 1.0; // BIG FIX: make -spp works with -m TESTMERGE now!
         info.evalNNIs = 0;
-		for (set<int>::iterator i = it->begin(); i != it->end(); i++) {
+		for (set<int>::iterator i = it->begin(); i != it->end(); ++i) {
 			if (i != it->begin()) {
 				aln->name += "+";
-                if (!super_aln->partitions[*i]->position_spec.empty())
+                if (!super_aln->partitions[*i]->position_spec.empty()) {
                     aln->position_spec += ", ";
+                }
 			}
 			aln->name += super_aln->partitions[*i]->name;
 			aln->position_spec += super_aln->partitions[*i]->position_spec;
 			if (!super_aln->partitions[*i]->aln_file.empty()) {
-                if (aln->aln_file.empty())
+                if (aln->aln_file.empty()) {
                     aln->aln_file = super_aln->partitions[*i]->aln_file;
+                }
                 else if (aln->aln_file != super_aln->partitions[*i]->aln_file) {
                     aln->aln_file = aln->aln_file + ',' + 
                                     super_aln->partitions[*i]->aln_file;
                 }
 			}
 			if (!super_aln->partitions[*i]->sequence_type.empty()) {
-                if (aln->sequence_type.empty())
+                if (aln->sequence_type.empty()) {
                     aln->sequence_type = super_aln->partitions[*i]->sequence_type;
+                }
                 else if (aln->sequence_type != super_aln->partitions[*i]->sequence_type) {
                     aln->sequence_type = "__NA__";
                 }
@@ -2068,7 +2071,7 @@ void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec,
 /**
  merge vector src into dest, eliminating duplicates
  */
-void mergePairs(vector<SubsetPair> &dest, vector<SubsetPair> &src) {
+void mergePairs(vector<SubsetPair> &dest, const vector<SubsetPair> &src) {
     unordered_set<string> dest_set;
     for (SubsetPair s: dest) {
         string range = convertIntToString(s.first)
@@ -3353,7 +3356,8 @@ void CandidateModelSet::sortModelsByScore
 }
 
 int CandidateModelSet::updateAlignmentIfDataTypeChanged
-        (Params& params, PhyloTree* in_tree, Alignment* prot_aln, Alignment* dna_aln) {
+        (const Params& params, PhyloTree* in_tree, 
+         Alignment* prot_aln, Alignment* dna_aln) {
     // update alignment if best data type changed
     int best_model = getBestModelID(params.model_test_criterion);
     if (at(best_model).aln != in_tree->aln) {

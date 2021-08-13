@@ -51,7 +51,7 @@ public:
         this->aln = aln;
     }
     
-    CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
+    explicit CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->aln = aln;
         getUsualModel(aln);
     }
@@ -329,8 +329,8 @@ public:
         void storeBestModel                       (ModelCheckpoint &model_info);
         void sortModelsByScore                    (ModelCheckpoint &model_info,
                                                    int64_t num_models);
-        int  updateAlignmentIfDataTypeChanged(Params&    params,   PhyloTree* in_tree,
-                                              Alignment* prot_aln, Alignment* dna_aln);
+        int  updateAlignmentIfDataTypeChanged(const Params& params,   PhyloTree* in_tree,
+                                              Alignment*    prot_aln, Alignment* dna_aln);
 
 private:
     
