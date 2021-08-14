@@ -238,7 +238,7 @@ protected:
     *  insert a new sequence into the current sequence when processing Insertion Events
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates);
     
     /**
     *  insert gaps into other nodes when processing Insertion Events

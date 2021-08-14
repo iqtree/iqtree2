@@ -81,45 +81,45 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
 /**
     regenerate ancestral sequence based on mixture model component base fequencies
 */
-void AliSimulatorHeterogeneity::regenerateAncestralSequenceMixtureModel(){
-    // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
-    if (tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath){
-        // dummy variables
-        ModelSubst* model = tree->getModel();
-        int num_models = model->getNMixtures();
-        int num_states = tree->aln->getMaxNumStates();
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int length, vector<short int> new_site_specific_model_index){
+    // dummy variables
+    ModelSubst* model = tree->getModel();
+    int num_models = model->getNMixtures();
+    int num_states = tree->aln->getMaxNumStates();
+    
+    // initialize base frequencies maxtrix
+    double * base_freqs_all_components = new double[num_models*num_states];
+    double * base_freqs_one_component = new double[num_states];
+    
+    // retrieve base frequencies of each model component
+    for (int i = 0; i < num_models; i++)
+    {
+        model->getStateFrequency(base_freqs_one_component, i);
         
-        // initialize base frequencies maxtrix
-        double * base_freqs_all_components = new double[num_models*num_states];
-        double * base_freqs_one_component = new double[num_states];
-        
-        // retrieve base frequencies of each model component
-        for (int i = 0; i < num_models; i++)
-        {
-            model->getStateFrequency(base_freqs_one_component, i);
-            
-            // copy base_freqs_one_component to base_freqs_all_components
-            for (int j = 0; j < num_states; j++)
-                base_freqs_all_components[i*num_states+j] = base_freqs_one_component[j];
-        }
-        
-        // delete base_freqs_one_component
-        delete [] base_freqs_one_component;
-        
-        // convert base_freqs_all_components to accummulated matrix
-        convertProMatrixIntoAccumulatedProMatrix(base_freqs_all_components, num_models, num_states);
-        
-        // re-generate the ancestral sequence
-        for (int i = 0; i < expected_num_sites; i++)
-        {
-            double rand_num = random_double();
-            int starting_index = site_specific_model_index[i]*num_states;
-            tree->root->sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(base_freqs_all_components, rand_num, starting_index, starting_index + num_states - 1, starting_index) - starting_index;
-        }
-        
-        // delete base_freqs_one_component
-        delete [] base_freqs_all_components;
+        // copy base_freqs_one_component to base_freqs_all_components
+        for (int j = 0; j < num_states; j++)
+            base_freqs_all_components[i*num_states+j] = base_freqs_one_component[j];
     }
+    
+    // delete base_freqs_one_component
+    delete [] base_freqs_one_component;
+    
+    // convert base_freqs_all_components to accummulated matrix
+    convertProMatrixIntoAccumulatedProMatrix(base_freqs_all_components, num_models, num_states);
+    
+    // re-generate the sequence
+    vector <short int> new_sequence(length, num_states);
+    for (int i = 0; i < length; i++)
+    {
+        double rand_num = random_double();
+        int starting_index = new_site_specific_model_index[i]*num_states;
+        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(base_freqs_all_components, rand_num, starting_index, starting_index + num_states - 1, starting_index) - starting_index;
+    }
+    
+    // delete base_freqs_one_component
+    delete [] base_freqs_all_components;
+    
+    return new_sequence;
 }
 
 /**
@@ -314,9 +314,9 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex(expected_num_sites, site_specific_model_index);
     
-    // regenerate ancestral sequence based on mixture model component base fequencies
-    if (tree->getModel()->isMixture())
-        regenerateAncestralSequenceMixtureModel();
+    // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
+    if (tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
+        tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
     
     // initialize site-specific rates
     vector<double> site_specific_rates(sequence_length);
@@ -463,7 +463,7 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, vector<double
 *  insert a new sequence into the current sequence when processing Insertion Events
 *
 */
-void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates)
+void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates)
 {
     // initialize new_site_specific_model_index
     vector<short int> new_site_specific_model_index;
@@ -482,6 +482,10 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, I
     
     // insert new_site_specific_rate_index into site_specific_rate_index
     site_specific_rate_index.insert(site_specific_rate_index.begin()+insertion_event.position, new_site_specific_rate_index.begin(), new_site_specific_rate_index.end());
+    
+    // regenerate new_sequence if mixture model is used
+    if (tree->getModel()->isMixture())
+        insertion_event.sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
     
     // insert new_sequence into the current sequence
     AliSimulator::insertNewSequenceForInsertionEvent(node, insertion_event, site_specific_rates);

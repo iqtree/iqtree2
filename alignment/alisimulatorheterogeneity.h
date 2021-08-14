@@ -44,9 +44,9 @@ protected:
     void intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, int max_num_states, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model);
     
     /**
-        regenerate ancestral sequence based on mixture model component base fequencies
+        regenerate sequence based on mixture model component base fequencies
     */
-    void regenerateAncestralSequenceMixtureModel();
+    vector<short int> regenerateSequenceMixtureModel(int length, vector<short int> new_site_specific_model_index);
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
@@ -62,7 +62,7 @@ protected:
     *  insert a new sequence into the current sequence when processing Insertion Events
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates);
     
 public:
     

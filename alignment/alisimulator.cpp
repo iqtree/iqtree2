@@ -1619,7 +1619,7 @@ void AliSimulator::processInsertionEvents(int max_num_states, vector<InsertionEv
 *  insert a new sequence into the current sequence when processing Insertion Events
 *
 */
-void AliSimulator::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent insertion_event, vector<double> &site_specific_rates)
+void AliSimulator::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates)
 {
     node->sequence.insert(node->sequence.begin()+insertion_event.position, insertion_event.sequence.begin(), insertion_event.sequence.end());
 }
