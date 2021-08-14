@@ -11,51 +11,51 @@ class ModelGTR : public ModelMarkov {
         ModelGTR(PhyloTree *tree, bool count_rates);
         ~ModelGTR() = default;
 
-        virtual void        saveCheckpoint();
-        virtual void        restoreCheckpoint();
-        virtual std::string getName()       const;
-        virtual std::string getNameParams() const;
+        virtual void        saveCheckpoint() override;
+        virtual void        restoreCheckpoint() override;
+        virtual std::string getName()       const override;
+        virtual std::string getNameParams() const override;
         void                getNameParamsFreq(std::ostream &retname) const;
-        void                init(const char *model_name, string model_params,
-                                 StateFreqType freq, string freq_params,
-                                 PhyloTree* report_to_tree);
-        virtual void        writeInfo(ostream &out);
-        virtual void        getRateMatrix(double *rate_mat);
-        virtual void        setRateMatrix(double* rate_mat);
-        virtual void        setStateFrequency(double* freq);
-        virtual void        getQMatrix(double *q_mat);
-        virtual int         getNDim() const;
-        virtual int         getNDimFreq() const;
-        virtual bool        scaleStateFreq();
-        virtual void        setVariables(double *variables);
-        virtual bool        getVariables(const double *variables);
-        virtual double      targetFunk(double x[]);
-        virtual bool        isUnstableParameters();
+        void                init(const char *model_name, const std::string& model_params,
+                                 StateFreqType freq, const std::string& freq_params,
+                                 PhyloTree* report_to_tree) override;
+        virtual void        writeInfo(ostream &out) override;
+        virtual void        getRateMatrix(double *rate_mat) override;
+        virtual void        setRateMatrix(double* rate_mat) override;
+        virtual void        setStateFrequency(double* freq) override;
+        virtual void        getQMatrix(double *q_mat) override;
+        virtual int         getNDim() const override;
+        virtual int         getNDimFreq() const override;
+        virtual bool        scaleStateFreq() override;
+        virtual void        setVariables(double *variables) override;
+        virtual bool        getVariables(const double *variables) override;
+        virtual double      targetFunk(double x[]) override;
+        virtual bool        isUnstableParameters() override;
         virtual void        setBounds(double *lower_bound, double *upper_bound, 
-	                                  bool *bound_check);
+	                                  bool *bound_check) override;
         virtual double      optimizeParameters(double gradient_epsilon,
-                                               PhyloTree* report_to_tree);
-        virtual void        decomposeRateMatrix();
+                                               PhyloTree* report_to_tree) override;
+        virtual void        decomposeRateMatrix() override;
         virtual void        manuallyComputeEigenvectors();
-        virtual void        readRates(istream &in);
-        virtual void        readRates(std::string str);
-        virtual void        readStateFreq(istream &in, PhyloTree* report_to_tree);
-        virtual void        readStateFreq(string str, PhyloTree* report_to_tree);
+        virtual void        readRates(istream &in) override;
+        virtual void        readRates(std::string str) override;
+        virtual void        readStateFreq(istream &in, PhyloTree* report_to_tree) override;
+        virtual void        readStateFreq(string str, PhyloTree* report_to_tree) override;
         virtual void        readParameters(const char* file_name, 
                                            bool        adapt_tree_ignored,
 							               PhyloTree*  report_to_tree);
-        virtual void        freeMem();
+        virtual void        freeMem() override;
 
         virtual void    computeTransMatrix(double time, 
-                                   double *trans_matrix, int mixture=0);
+                                   double *trans_matrix, int mixture=0) override;
         void    computeTransMatrixFreq(double time, 
                                        double* trans_matrix);
-        double  computeTrans(double time, int state1, int state2);
+        double  computeTrans(double time, int state1, int state2) override;
         double  computeTrans(double time, int state1, int state2, 
-                             double &derv1, double &derv2);
+                             double &derv1, double &derv2) override;
         virtual void computeTransDerv(double  time, double* trans_matrix, 
 	                             double* trans_derv1, double* trans_derv2,
-                                 int mixture = 0);
+                                 int mixture = 0) override;
         void    computeTransDervFreq(double time, double rate_val, 
                                      double* trans_matrix, double* trans_derv1, 
 				 					 double* trans_derv2);

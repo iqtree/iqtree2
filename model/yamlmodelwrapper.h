@@ -415,8 +415,8 @@ public:
     typedef YAMLModelWrapper<ModelDNA> super;
     YAMLModelDNA(ModelInfoFromYAMLFile& info,
                  bool make_copy, const char *model_name, 
-                 std::string model_params, StateFreqType freq, 
-                 std::string freq_params,  PhyloTree*    tree, 
+                 const std::string& model_params, StateFreqType freq, 
+                 const std::string& freq_params,  PhyloTree*    tree, 
                  PhyloTree* report_to_tree);
 };
 
@@ -425,8 +425,8 @@ public:
     typedef YAMLModelWrapper<ModelDNAError> super;
     YAMLModelDNAError(ModelInfoFromYAMLFile& info,
                       bool make_copy, const char *model_name, 
-                      std::string model_params, StateFreqType freq, 
-                      std::string freq_params,  PhyloTree*    tree, 
+                      const std::string& model_params, StateFreqType freq, 
+                      const std::string& freq_params,  PhyloTree*    tree, 
                       PhyloTree* report_to_tree);
     bool getVariables(const double *variables) override;
 };
@@ -436,8 +436,8 @@ public:
     typedef YAMLModelWrapper<ModelProtein> super;
     YAMLModelProtein(ModelInfoFromYAMLFile& info, 
                      bool make_copy, const char *model_name,
-                     std::string model_params, StateFreqType freq, 
-                     std::string freq_params,  ModelsBlock* block,
+                     const std::string& model_params, StateFreqType freq, 
+                     const std::string& freq_params,  ModelsBlock* block,
                      PhyloTree *tree, PhyloTree* report_to_tree);
 };
 
@@ -456,8 +456,8 @@ public:
     typedef YAMLModelWrapper<ModelMorphology> super;
     YAMLModelMorphology(ModelInfoFromYAMLFile& info,
                         bool make_copy, const char *model_name, 
-                        std::string model_params, StateFreqType freq, 
-                        std::string freq_params,  PhyloTree*    tree, 
+                        const std::string& model_params, StateFreqType freq, 
+                        const std::string& freq_params,  PhyloTree*    tree, 
                         PhyloTree* report_to_tree);
 };
 

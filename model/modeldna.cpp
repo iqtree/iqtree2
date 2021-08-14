@@ -113,8 +113,8 @@ string getDNAModelInfo(string model_name, string &full_name,
     return name;
 }
 
-void ModelDNA::init(const char *model_name, string model_params,
-                    StateFreqType freq, string freq_params,
+void ModelDNA::init(const char *model_name, const string& model_params,
+                    StateFreqType freq, const string& freq_params,
                     PhyloTree* report_to_tree)
 {
     ASSERT(num_states == 4); // make sure that you create model for DNA

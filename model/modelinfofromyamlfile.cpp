@@ -37,7 +37,7 @@ VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
 
 YAMLFileParameter::YAMLFileParameter()
     : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)
-    , type(ModelParameterType::OTHER), value(0.0) {
+    , type(ModelParameterType::OTHER), tolerance(0.001), value(0.0)  {
 }
 
 std::string YAMLFileParameter::getSubscriptedVariableName(int subscript) const {
@@ -601,7 +601,7 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
             Interpreter ix(*this, p.init_expression);
             v = ix.evaluate();
         }
-        catch (Exception x) {
+        catch (Exception& x) {
             std::stringstream complaint;
             complaint << "Error initializing " << p.name 
                         << "(" << i << ")";
@@ -888,7 +888,7 @@ void ModelInfoFromYAMLFile::readModelVariablesByType
                             << " of " << getLongName()
                             << " (model does not define variable).";
                 outError(complaint.str());
-
+                return;
             }
             const ModelVariable& var = it->second;
             if (var.isFixed() && !even_fixed_ones) {
@@ -1144,14 +1144,15 @@ YAMLFileParameter& ModelInfoFromYAMLFile::getRateParameter()  {
 
 std::string ModelInfoFromYAMLFile::getStringProperty(const char* name,
     const char* default_value) const {
-    auto it = string_properties.find(name);
+    std::string low_name = string_to_lower(name);
+    auto        it       = string_properties.find(low_name);
     return it == string_properties.end() ? default_value : it->second;
 }
 
 bool ModelInfoFromYAMLFile::hasStringProperty
         (const char* name, std::string& value) const {
     std::string low_name = string_to_lower(name);
-    auto it = string_properties.find(name);
+    auto it = string_properties.find(low_name);
     if (it==string_properties.end()) {
         return false;
     }
@@ -1213,7 +1214,7 @@ void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_sta
                 Interpreter interpreter(*this, expr_string);
                 likelihoods[column] = interpreter.evaluate();
             }
-            catch (ModelExpression::ModelException x) {
+            catch (ModelExpression::ModelException& x) {
                 std::stringstream msg;
                 msg << "Error parsing expression"
                     << " for tip likelihood matrix entry"
@@ -1715,9 +1716,9 @@ bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
         i = j + 1;
     }
     bool fix      = !params.optimize_from_given_params;
-    int  position = 0;
     getVariableNamesByPosition();
     try {
+        int  position = 0;
         for (i=0; i<expr_list.size(); ++i) {
             Interpreter* ix = expr_list[i];
             Expression*  ex = ix->expression();
@@ -1738,7 +1739,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
             expr_list[i] = 0;
         }   
     }
-    catch (Exception problem) {
+    catch (Exception& problem) {
         std::stringstream complaint;
         complaint << "An error occurred parsing parameter list"
                   << " ... " << parameter_list << " ...:\n"

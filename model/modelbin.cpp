@@ -31,8 +31,8 @@ ModelBIN::ModelBIN(const char *model_name, const string& model_params,
 	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
-void ModelBIN::init(const char *model_name, string model_params,
-                    StateFreqType freq, string freq_params,
+void ModelBIN::init(const char *model_name, const string& model_params,
+                    StateFreqType freq, const string& freq_params,
                     PhyloTree* report_to_tree)
 {
 	ASSERT(num_states == 2); // make sure that you create model for Binary data

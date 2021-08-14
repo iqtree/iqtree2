@@ -1253,10 +1253,11 @@ ModelMixture::ModelMixture(PhyloTree *tree,
     optimize_steps       = 0;
 }
 
-ModelMixture::ModelMixture(string orig_model_name, string model_name,
-                           string model_list, ModelsBlock *models_block,
-                           StateFreqType freq, string freq_params, PhyloTree *tree,
-                           bool optimize_weights, PhyloTree* report_to_tree)
+ModelMixture::ModelMixture(const string& orig_model_name, const string& model_name,
+                           const string& model_list, ModelsBlock *models_block,
+                           StateFreqType freq, const string& freq_params, 
+                           PhyloTree *tree, bool optimize_weights, 
+                           PhyloTree* report_to_tree)
     : ModelMarkov(tree) {
     prop                 = nullptr;
     fix_prop             = true;
@@ -1267,7 +1268,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name,
                 optimize_weights, report_to_tree);
 }
 
-void ModelMixture::initMixture(string orig_model_name, string model_name,
+void ModelMixture::initMixture(string orig_model_name, const string& model_name,
                                string model_list, ModelsBlock *models_block,
                                StateFreqType freq, string freq_params,
                                PhyloTree *tree, bool optimize_weights,

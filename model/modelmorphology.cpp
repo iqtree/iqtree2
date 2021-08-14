@@ -11,17 +11,17 @@ ModelMorphology::ModelMorphology(PhyloTree *tree, PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree) {
 }
 
-ModelMorphology::ModelMorphology(const char *model_name, string model_params,
-                                 StateFreqType freq, string freq_params,
+ModelMorphology::ModelMorphology(const char *model_name, const string& model_params,
+                                 StateFreqType freq, const string& freq_params,
                                  PhyloTree *tree, PhyloTree* report_to_tree)
 : ModelMarkov(tree, report_to_tree)
 {
 	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
-void ModelMorphology::init(const char *model_name, string model_params,
-                           StateFreqType freq, string freq_params,
-                           PhyloTree* report_to_tree)
+void ModelMorphology::init(const char *  model_name, const string& model_params,
+                           StateFreqType freq,       const string& freq_params,
+                           PhyloTree*    report_to_tree)
 {
     name = model_name;
     full_name = model_name;

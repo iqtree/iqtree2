@@ -142,8 +142,8 @@ void ModelGTR::getNameParamsFreq(std::ostream &retname) const {
 		retname << "+FQ";
 }
 
-void ModelGTR::init(const char *model_name, string model_params,
-                    StateFreqType freq, string freq_params,
+void ModelGTR::init(const char *model_name, const std::string& model_params,
+                    StateFreqType freq, const std::string& freq_params,
                     PhyloTree* report_to_tree) {
 	//if (type == StateFreqType::FREQ_UNKNOWN) return;
 	int i;
@@ -621,46 +621,45 @@ double ModelGTR::optimizeParameters(double gradient_epsilon,
 }
 
 void ModelGTR::decomposeRateMatrix() {
-	int i, j, k = 0;
-
 	if (num_params == -1) {
 		manuallyComputeEigenvectors();
 	} else {
 		double **rate_matrix = new double*[num_states];
 
-		for (i = 0; i < num_states; i++)
+		for (int i = 0; i < num_states; i++) {
 			rate_matrix[i] = new double[num_states];
-
+		}
         if (half_matrix) {
-            for (i = 0, k = 0; i < num_states; i++) {
+			int k = 0;
+            for (int i = 0; i < num_states; i++) {
                 rate_matrix[i][i] = 0.0;
-                for (j = i+1; j < num_states; j++, k++) {
+                for (int j = i+1; j < num_states; j++, k++) {
                     rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
                     rate_matrix[j][i] = rate_matrix[i][j];
                 }
             }
         } else {
             // full matrix
-            for (i = 0; i < num_states; i++) {
+            for (int i = 0; i < num_states; i++) {
                 memcpy(rate_matrix[i], &rates[i*num_states], num_states*sizeof(double));
                 rate_matrix[i][i] = 0.0;
             }
 //            IntVector codonid;
 //            codonid.reserve(num_states);
 //            int baseid[] = {3,1,0,2};
-//            for (i=0; i<4; i++)
-//                for (j=0; j<4; j++)
-//                    for (k=0; k<4; k++)
+//            for (int i=0; i<4; i++)
+//                for (int j=0; j<4; j++)
+//                    for (int k=0; k<4; k++)
 //                        codonid.push_back(baseid[i]*16+baseid[j]*4+baseid[k]);
 //            cout.precision(4);
 //            cout << "rate_matrix=" << endl;
-//            for (i = 0; i < num_states; i++) {
-//                for (j = 0; j < num_states; j++)
+//            for (int i = 0; i < num_states; i++) {
+//                for (int j = 0; j < num_states; j++)
 //                    cout << " " << rate_matrix[codonid[i]][codonid[j]];
 //                cout << endl;
 //            }
 //            cout << "state_freq=";
-//            for (i = 0; i < num_states; i++)
+//            for (int i = 0; i < num_states; i++)
 //                cout << " " << state_freq[codonid[i]];
 //            cout << endl;
         }
@@ -669,8 +668,9 @@ void ModelGTR::decomposeRateMatrix() {
 			            eigenvectors, inv_eigenvectors, num_states);
 		//eigensystem(rate_matrix, state_freq, eigenvalues, 
 		//            eigenvectors, inv_eigenvectors, num_states);
-		for (i = num_states-1; i >= 0; i--)
+		for (int i = num_states-1; i >= 0; i--) {
 			delete [] rate_matrix[i];
+		}
 		delete [] rate_matrix;
 	}
 //	for (i = 0; i < num_states; i++)
@@ -760,8 +760,8 @@ void ModelGTR::readRates(istream &in) {
 	} else {
 		try {
 			rates[0] = convert_double(str.c_str());
-		} catch (string &str) {
-			outError(str);
+		} catch (string& error_str) {
+			outError(error_str);
 		}
 		if (rates[0] < 0.0)
 			throw "Negative rates not allowed";
@@ -776,27 +776,31 @@ void ModelGTR::readRates(istream &in) {
 
 void ModelGTR::readRates(string str) {
 	int nrates = getNumRateEntries();
-	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
 	if (str.find("equalrate") != string::npos) {
 		for (int i = 0; i < nrates; i++)
 			rates[i] = 1.0;
 	} else for (int i = 0; i < nrates; i++) {
+		int end_pos = 0;
 		int new_end_pos;
 		try {
 			rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-		} catch (string &str) {
-			outError(str);
+		} catch (string& error_str) {
+			outError(error_str);
 		}
 		end_pos += new_end_pos;
-		if (rates[i] <= 0.0)
+		if (rates[i] <= 0.0) {
 			outError("Non-positive rates found");
-		if (i == nrates-1 && end_pos < str.length())
+		}
+		if (i == nrates-1 && end_pos < str.length()) {
 			outError("String too long ", str);
-		if (i < nrates-1 && end_pos >= str.length())
+		}
+		if (i < nrates-1 && end_pos >= str.length()) {
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
+		}
+		if (end_pos < str.length() && str[end_pos] != ',') {
 			outError("Comma to separate rates not found in ", str);
+		}
 		end_pos++;
 	}
 	num_params = 0;

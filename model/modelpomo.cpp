@@ -18,11 +18,11 @@ ModelPoMo::ModelPoMo(PhyloTree *tree, PhyloTree* report_to_tree)
 }
 
 ModelPoMo::ModelPoMo(const char *model_name,
-                     string model_params,
+                     const string& model_params,
                      StateFreqType freq_type,
-                     string freq_params,
+                     const string& freq_params,
                      PhyloTree *tree,
-                     string pomo_heterozygosity,
+                     const string& pomo_heterozygosity,
                      PhyloTree* report_to_tree)
     // Set reversibility to true to allocate memory for objects (like
     // eigenvalues) necessary when the model is reversible.  In case
@@ -58,7 +58,7 @@ void ModelPoMo::init_mutation_model(const char *model_name,  string model_params
                                           freq_params, phylo_tree, report_to_tree);
         }
     }
-    catch (string str) {
+    catch (string& str) {
         cout << "Error during initialization of"
              << " the underlying mutation model of PoMo." << endl;
         cout << "PoMo only works with DNA models at the moment." << endl;
@@ -758,7 +758,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
     } else {
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); it++) {
-            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++) {
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); ++it2) {
                 int state = (int)*it2;
                 if (state < num_states)
                     outError("Unknown PoMo state in pattern.");
@@ -817,9 +817,9 @@ double ModelPoMo::estimateEmpiricalWattersonTheta()
         auto unknown = phylo_tree->aln->STATE_UNKNOWN;
         auto sampled_states = phylo_tree->aln->pomo_sampled_states.size();
         for (Alignment::iterator it = phylo_tree->aln->begin();
-             it != phylo_tree->aln->end(); it++) {
+             it != phylo_tree->aln->end(); ++it) {
             for (Pattern::iterator it2 = it->begin();
-                 it2 != it->end(); it2++) {
+                 it2 != it->end(); ++it2) {
                 int state = (int)*it2;
                 if (state < num_states) {
                     outError("Unknown PoMo state in pattern.");

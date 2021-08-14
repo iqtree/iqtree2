@@ -176,7 +176,7 @@ void ModelFileLoader::setParameterSubscriptRange(ModelInfoFromYAMLFile& info,
                 << " was greater than maximum (" << p.maximum_subscript << ")";
         }
     }
-    catch (ModelExpression::ModelException x) {
+    catch (ModelExpression::ModelException& x) {
         std::stringstream msg;
         msg << "Error parsing " << parsing_what
             << " for " << info.getName()
@@ -358,7 +358,7 @@ void ModelFileLoader::parseModelParameter(const YAML::Node&  param,
     info.addParameter(p, logging_target);
 }
 
-bool ModelFileLoader::isAParameterOverride(ModelInfoFromYAMLFile& info,
+bool ModelFileLoader::isAParameterOverride(const ModelInfoFromYAMLFile& info,
                                            YAMLFileParameter& p) {
     for (const YAMLFileParameter& oldp: info.parameters) {
         if (oldp.name == p.name) {
@@ -371,7 +371,6 @@ bool ModelFileLoader::isAParameterOverride(ModelInfoFromYAMLFile& info,
                           "Cannot redefine parameter subscript range");
             p = oldp;
             return true;
-            break;
         }
     }
     return false;
@@ -527,8 +526,8 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
         //and are equivalent to parameter name/initialValue pairs
         //Todo: For now, I don't want to support (x,y) = (1,2).
         //
-        std::stringstream complaint;
         if (!constraint.IsScalar()) {
+            std::stringstream complaint;
             complaint << "Constraint setting"
                       << " for model " << info.model_name
                       << " was not a scalar.";
@@ -540,6 +539,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                 interpreter(info, constraint_string);
             ModelExpression::Expression* x = interpreter.expression();
             if (!x->isAssignment()) {
+                std::stringstream complaint;
                 complaint << "Constraint setting for model " << info.model_name
                           << " was not an asignment: " << constraint_string;
                 outError(complaint.str());
@@ -548,7 +548,7 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                 dynamic_cast<ModelExpression::Assignment*>(x);
             setConstraint(a, info, constraint_string, logging_target);
         }
-        catch (ModelExpression::ModelException x) {
+        catch (ModelExpression::ModelException& x) {
             std::stringstream complaint;
             complaint << "An error occurred parsing constraint " << constraint_num
                       << ": " << x.getMessage();
@@ -601,10 +601,10 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
                     }
                 }
             }
-            catch (ModelExpression::ModelException& x) {
+            catch (ModelExpression::ModelException& ex) {
                 throw ModelExpression::ModelException
                       ("Error evaluating subscript range for " + param.name + 
-                       ": " + x.getMessage() );
+                       ": " + ex.getMessage() );
             }
             if (rangeChanged) {
                 info.updateParameterSubscriptRange(param, range.first, 
@@ -1041,8 +1041,8 @@ void ModelFileLoader::parseYAMLModel(Params &params,
 void ModelFileLoader::parseYAMLModelInheritance
         (Params& params, 
          const YAML::Node& substitution_model,
-         ModelInfoFromYAMLFile& info,
-         ModelListFromYAMLFile& list,
+        ModelInfoFromYAMLFile& info,
+         const ModelListFromYAMLFile& list,
          LoggingTarget* logging_target) {
     if (!info.superclass_model_name.empty()) {
         TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, 
@@ -1122,8 +1122,9 @@ void ModelFileLoader::parseYAMLModelStringProperties
         auto prop_node = substitution_model[prop_name];
         if (prop_node) {
             if (prop_node.IsScalar()) {
+                std::string lower_name = string_to_lower(prop_name);
                 std::string prop_value = prop_node.Scalar();
-                info.string_properties[prop_name] = prop_value;
+                info.string_properties[lower_name] = prop_value;
                 TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity,
                               "string property " << prop_name <<
                               " set to " << prop_value);

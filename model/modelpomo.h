@@ -59,9 +59,9 @@ class ModelPoMo : public ModelMarkov
      *
      * @return
      */
-    ModelPoMo(const char *model_name, string model_params,
-              StateFreqType freq_type, string freq_params,
-              PhyloTree *tree, string pomo_heterozygosity,
+    ModelPoMo(const char *model_name, const string& model_params,
+              StateFreqType freq_type, const string& freq_params,
+              PhyloTree *tree, const string& pomo_heterozygosity,
               PhyloTree* report_to_tree);
 
     ModelPoMo(PhyloTree *tree, PhyloTree* report_to_tree);

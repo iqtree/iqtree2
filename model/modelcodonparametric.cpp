@@ -18,8 +18,8 @@ ModelCodonParametric::ModelCodonParametric
 ModelCodonParametric::~ModelCodonParametric() {
 }
 
-void ModelCodonParametric::init(const char*   model_name, std::string model_params, 
-                                StateFreqType freq,       std::string freq_params,
+void ModelCodonParametric::init(const char*   model_name, const std::string& model_params, 
+                                StateFreqType freq,       const std::string& freq_params,
 								PhyloTree*    report_to_tree)
 {
 	StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;

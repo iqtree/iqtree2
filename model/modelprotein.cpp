@@ -984,8 +984,8 @@ void ModelProtein::setModelsBlock(ModelsBlock* blocks) {
 }
 
 
-void ModelProtein::init(const char *model_name, string model_params,
-                        StateFreqType freq, string freq_params,
+void ModelProtein::init(const char *model_name, const string& model_params,
+                        StateFreqType freq, const string& freq_params,
                         PhyloTree* report_to_tree) {
     ASSERT(num_states == 20);
     ASSERT(models_block!=nullptr && "models_block uninitialized");

@@ -49,7 +49,7 @@ ModelDNAError::ModelDNAError(const char *model_name, const string& model_params,
     }
 }
 
-void ModelDNAError::setEpsilon(double e, bool fixed, string seqerr) {
+void ModelDNAError::setEpsilon(double e, bool fixed, const std::string& seqerr) {
     epsilon = e;
     fix_epsilon = fixed;
     seqerr_name = seqerr;

@@ -1586,8 +1586,8 @@ void ModelMarkov::readRatesReversible(istream &in, string str) {
     int nrates = getNumRateEntries();
     try {
         rates[0] = convert_double(str.c_str());
-    } catch (string &str) {
-        outError(str);
+    } catch (string& error_str) {
+        outError(error_str);
     }
     if (rates[0] < 0.0) {
         throw "Negative rates not allowed";
@@ -1612,8 +1612,8 @@ void ModelMarkov::readRatesNonReversible(istream &in, string str) {
                 // top-left element was already red
                 try {
                     row_sum = convert_double(str.c_str());
-                } catch (string &str) {
-                    outError(str);
+                } catch (string& error_str) {
+                    outError(error_str);
                 }
             } else if (row != col) {
                 // non-diagonal element
@@ -1653,8 +1653,8 @@ void ModelMarkov::readRates(string str) {
             int new_end_pos;
             try {
                 rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
-            } catch (string &str) {
-                outError(str);
+            } catch (string& error_str) {
+                outError(error_str);
             }
             end_pos += new_end_pos;
             if (rates[i] <= 0.0) {
@@ -1784,7 +1784,7 @@ void ModelMarkov::readParameters(const char *file_name,
     }
 }
 
-void ModelMarkov::readParametersString(string &model_str, bool adapt_tree,
+void ModelMarkov::readParametersString(const string& model_str, bool adapt_tree,
                                        PhyloTree* report_to_tree) {
 
     // if detect if reading full matrix or half matrix by the first entry
@@ -2020,14 +2020,14 @@ int matinv (double x[], int n, int m, double space[])
        Check and calculate |x|.
        Det may have the wrong sign.  Check and fix.
     */
-    int *irow=(int*) space;
-    double ee=1e-100, t,t1,xmax, det=1;
+    int *irow=(int*) space; //Note: James B. 14-Aug-2021 This looks VERY wrong.
+    double ee=1e-100, t,t1, det=1;
 
     for (int i=0; i<n; ++i) {
         irow[i]=i;
     }
     for (int i=0; i<n; ++i)  {
-        xmax = fabs(x[i*m+i]);
+        double xmax = fabs(x[i*m+i]);
         for (int j=i+1; j<n; ++j) {
             if (xmax<fabs(x[j*m+i]))
             {

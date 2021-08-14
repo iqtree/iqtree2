@@ -96,7 +96,7 @@ public:
          @param fixed
          @param seqerr
     */
-    void setEpsilon(double e, bool fixed, string seqerr);
+    void setEpsilon(double e, bool fixed, const std::string& seqerr);
 
 protected:
 

@@ -15,8 +15,8 @@ public:
 	typedef ModelMarkov super;
 
 	ModelLieMarkov(string model_name, PhyloTree *tree,
-					string model_params, StateFreqType freq_type,
-					string freq_params, PhyloTree* report_to_tree);
+				   const string& model_params, StateFreqType freq_type,
+				   const string& freq_params, PhyloTree* report_to_tree);
 	virtual ~ModelLieMarkov();
 
 	/**
@@ -24,9 +24,9 @@ public:
 		@param model_name name of the model
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
-	virtual void init(const char *model_name, string model_params,
-                      StateFreqType freq, string freq_params,
-                      PhyloTree* report_to_tree) override;
+	virtual void init(const char *  model_name, const string& model_params,
+                      StateFreqType freq,       const string& freq_params,
+                      PhyloTree*    report_to_tree) override;
 
         /**
              start structure for checkpointing
@@ -50,7 +50,7 @@ public:
 	*/
 	virtual void writeInfo(ostream &out) override;
 
-	static void getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
+	static void getLieMarkovModelInfo(const string& model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
 
 	static StateFreqType getDefaultFrequencyType(int model_num, int symmetry);
 
@@ -69,7 +69,7 @@ public:
 	*/
 	virtual bool isReversible() override;
 
-	static bool validModelName(string model_name);
+	static bool validModelName(const string& model_name);
 	void setBounds(double *lower_bound, double *upper_bound, 
 	               bool *bound_check) override;
 	

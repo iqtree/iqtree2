@@ -321,15 +321,15 @@ const double MIN_LIE_WEIGHT = -0.98;
 const double MAX_LIE_WEIGHT =  0.98;
 
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree,
-                               string model_params, StateFreqType freq_type,
-                               string freq_params, PhyloTree* report_to_tree)
+                               const string& model_params, StateFreqType freq_type,
+                               const string& freq_params, PhyloTree* report_to_tree)
 	: ModelMarkov(tree, false) {
   init(model_name.c_str(), model_params, freq_type, freq_params,
        report_to_tree);
 }
 
-void ModelLieMarkov::init(const char *model_name, string model_params,
-                          StateFreqType freq, string freq_params,
+void ModelLieMarkov::init(const char *model_name, const string& model_params,
+                          StateFreqType freq, const string& freq_params,
                           PhyloTree* report_to_tree)
 {
     // TODO: why is freq_params not handled here?
@@ -422,7 +422,7 @@ void ModelLieMarkov::writeInfo(ostream &out) {
 }
 
 /*static*/ void ModelLieMarkov::getLieMarkovModelInfo
-				(string model_name, string &name, string &full_name, 
+				(const string& model_name, string &name, string &full_name, 
 	             int &model_num, int &symmetry, StateFreqType &def_freq) {
     parseModelName(model_name,&model_num,&symmetry);
     // Special case, just because it is confusing
@@ -622,7 +622,7 @@ bool ModelLieMarkov::isReversible() {
     return false;
 }
 
-/* static */ bool ModelLieMarkov::validModelName(string model_name) {
+/* static */ bool ModelLieMarkov::validModelName(const string& model_name) {
     int model_num, symmetry;
     parseModelName(model_name,&model_num,&symmetry);
     return (model_num!=-1);

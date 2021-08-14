@@ -119,7 +119,6 @@ std::string ModelInfoFromName::getFrequencyMixtureParams
 (std::string& freq_str) const {
     // first handle mixture frequency
     std::string::size_type posfreq = model_name.find("+FMIX");
-    size_t close_bracket;
     freq_str = model_name;
 
     if (posfreq != string::npos) {
@@ -138,7 +137,7 @@ std::string ModelInfoFromName::getFrequencyMixtureParams
         if (fmix_str[5] != OPEN_BRACKET) {
             outError("Mixture-frequency must start with +FMIX{");
         }
-        close_bracket = fmix_str.find(CLOSE_BRACKET);
+        size_t close_bracket = fmix_str.find(CLOSE_BRACKET);
         if (close_bracket == string::npos) {
             outError("Close bracket not found in ", fmix_str);
         }

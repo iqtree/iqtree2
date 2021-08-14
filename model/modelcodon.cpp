@@ -375,8 +375,8 @@ StateFreqType ModelCodon::initCodon(const char *model_name,
 	return StateFreqType::FREQ_UNKNOWN;
 }
 
-void ModelCodon::init(const char*   model_name, string model_params,
-                      StateFreqType freq,       string freq_params,
+void ModelCodon::init(const char*   model_name, const string& model_params,
+                      StateFreqType freq,       const string& freq_params,
                       PhyloTree*    report_to_tree) {
     initEmpiricalRates();
     ignore_state_freq      = false;

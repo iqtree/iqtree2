@@ -25,9 +25,9 @@ YAMLModelCodon::YAMLModelCodon(ModelInfoFromYAMLFile& info,
 }
 
 YAMLModelDNA::YAMLModelDNA(ModelInfoFromYAMLFile& info,
-                           bool        make_copy,    const char*   model_name, 
-                           std::string model_params, StateFreqType freq, 
-                           std::string freq_params,  PhyloTree*    tree, 
+                           bool               make_copy,    const char*   model_name, 
+                           const std::string& model_params, StateFreqType freq, 
+                           const std::string& freq_params,  PhyloTree*    tree, 
                            PhyloTree*  report_to_tree)
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq,
@@ -36,11 +36,11 @@ YAMLModelDNA::YAMLModelDNA(ModelInfoFromYAMLFile& info,
     setRateMatrixFromModel();
 }
 
-YAMLModelDNAError::YAMLModelDNAError(ModelInfoFromYAMLFile& info,
-                                     bool        make_copy,    const char* model_name, 
-                                     std::string model_params, StateFreqType freq, 
-                                     std::string freq_params,  PhyloTree*    tree, 
-                                     PhyloTree* report_to_tree)                    
+YAMLModelDNAError::YAMLModelDNAError
+    (ModelInfoFromYAMLFile& info, bool  make_copy, const char* model_name, 
+     const std::string& model_params, StateFreqType freq, 
+     const std::string& freq_params,  PhyloTree*    tree, 
+     PhyloTree* report_to_tree)                    
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq,
             freq_params, report_to_tree);
@@ -58,8 +58,8 @@ bool YAMLModelDNAError::getVariables(const double *variables) {
 
 YAMLModelMorphology::YAMLModelMorphology(ModelInfoFromYAMLFile& info,
                                          bool        make_copy,    const char* model_name, 
-                                         std::string model_params, StateFreqType freq, 
-                                         std::string freq_params,  PhyloTree*    tree, 
+                                         const std::string& model_params, StateFreqType freq, 
+                                         const std::string& freq_params,  PhyloTree*    tree, 
                                          PhyloTree*  report_to_tree)
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq, freq_params, report_to_tree);
@@ -68,10 +68,10 @@ YAMLModelMorphology::YAMLModelMorphology(ModelInfoFromYAMLFile& info,
 }
 
 YAMLModelProtein::YAMLModelProtein(ModelInfoFromYAMLFile& info, 
-                                   bool        make_copy,    const char*   model_name, 
-                                   std::string model_params, StateFreqType freq, 
-                                   std::string freq_params,  ModelsBlock*  block,
-                                   PhyloTree*  tree,         PhyloTree*    report_to_tree)
+                                   bool               make_copy,    const char*   model_name, 
+                                   const std::string& model_params, StateFreqType freq, 
+                                   const std::string& freq_params,  ModelsBlock*  block,
+                                   PhyloTree*         tree,         PhyloTree*    report_to_tree)
         : super(info, make_copy, tree, report_to_tree) {
     setModelsBlock(block);
     setNumberOfStates(20);

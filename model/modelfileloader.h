@@ -42,8 +42,8 @@ protected:
                                      bool                   overriding,
                                      ModelInfoFromYAMLFile& info,
                                      YAMLFileParameter&     p);
-    bool isAParameterOverride       (ModelInfoFromYAMLFile& info,
-                                     YAMLFileParameter&     p);
+    bool isAParameterOverride       (const ModelInfoFromYAMLFile& info,
+                                     YAMLFileParameter&           p);
     void parseYAMLSubModels         (Params&                params,
                                      const YAML::Node&      substitution_model,
                                      ModelInfoFromYAMLFile& info,
@@ -52,7 +52,7 @@ protected:
     void parseYAMLModelInheritance  (Params&                params,
                                      const YAML::Node&      substitution_model,
                                      ModelInfoFromYAMLFile& info,
-                                     ModelListFromYAMLFile& list,
+                                     const ModelListFromYAMLFile& list,
                                      LoggingTarget*         logging_target);
     void parseYAMLModelStringProperties(const YAML::Node& substitution_model,
                                         ModelInfoFromYAMLFile& info,
@@ -67,7 +67,7 @@ protected:
                                      bool&          have_first_parent);
 
 public:
-    ModelFileLoader(const char* path);
+    explicit ModelFileLoader(const char* path);
     std::string stringScalar(const YAML::Node& node,
                              const char* key,
                              const char* default_value);

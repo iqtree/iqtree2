@@ -604,7 +604,7 @@ double RateMeyerDiscrete::classifyRates(double tree_lh,
 	for (ncategory = 2; ; ncategory++) {
         cout << endl << "Classifying rates into "
              << ncategory << " categories..." << endl;
-		new_tree_lh = classifyRatesKMeans(report_to_tree);
+		classifyRatesKMeans(report_to_tree);
 		new_tree_lh = phylo_tree->optimizeAllBranches();
 		cout << "For " << ncategory << " categories, LogL = " << new_tree_lh;
 		double lh_diff = 2*(tree_lh - new_tree_lh);

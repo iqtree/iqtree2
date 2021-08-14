@@ -17,10 +17,9 @@
 #endif
 
 ModelSubst::ModelSubst(int nstates)
-    : Optimization(), CheckpointFactory() {
+    : Optimization(), CheckpointFactory()
+    , name("JC"), full_name("JC (Juke and Cantor, 1969)") {
     num_states = nstates;
-    name = "JC";
-    full_name = "JC (Juke and Cantor, 1969)";
     state_freq = new double[num_states];
     for (int i = 0; i < num_states; i++) {
         state_freq[i] = 1.0 / num_states;
