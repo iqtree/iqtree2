@@ -41,18 +41,6 @@ enum EVENT_TYPE {
     SUBSTITUTION
 };
 
-class InsertionEvent {
-public:
-    int position;
-    vector<short int> sequence;
-    
-    InsertionEvent(int new_position, vector<short int> new_sequence)
-    {
-        position = new_position;
-        sequence = new_sequence;
-    }
-};
-
 class AliSimulator{
 protected:
     
@@ -217,7 +205,7 @@ protected:
     /**
         handle insertion events
     */
-    void handleInsertion(int sequence_length, vector<InsertionEvent> &insertion_events, vector<int> &index_mapping_by_jump_step);
+    void handleInsertion(int &sequence_length, int max_num_states, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node);
     
     /**
         handle deletion events
@@ -230,21 +218,22 @@ protected:
     double computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence);
     
     /**
-        process Insertion events
-    */
-    void processInsertionEvents(int max_num_states, vector<InsertionEvent> insertion_events, vector<int> index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node);
-    
-    /**
-    *  insert a new sequence into the current sequence when processing Insertion Events
+    *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
     
     /**
     *  insert gaps into other nodes when processing Insertion Events
     *
     */
     void insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, int max_num_states, Node *node, Node *dad, bool &stop_inserting_gaps);
+    
+    /**
+    *  randomly select a valid position (not a deleted-site) for insertion/deletion event
+    *
+    */
+    int selectValidPositionForIndels(int upper_bound, vector<short int> sequence, int max_num_states);
     
 public:
     

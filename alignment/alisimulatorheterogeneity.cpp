@@ -460,33 +460,33 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, vector<double
 }
 
 /**
-*  insert a new sequence into the current sequence when processing Insertion Events
+*  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates)
+void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
 {
     // initialize new_site_specific_model_index
     vector<short int> new_site_specific_model_index;
-    intializeSiteSpecificModelIndex(insertion_event.sequence.size(), new_site_specific_model_index);
+    intializeSiteSpecificModelIndex(new_sequence.size(), new_site_specific_model_index);
     
     // insert new_site_specific_model_index into site_specific_model_index
-    site_specific_model_index.insert(site_specific_model_index.begin()+insertion_event.position, new_site_specific_model_index.begin(), new_site_specific_model_index.end());
+    site_specific_model_index.insert(site_specific_model_index.begin()+position, new_site_specific_model_index.begin(), new_site_specific_model_index.end());
     
     // initialize new_site_specific_rates, and new_site_specific_rate_index for new sequence
-    vector<double> new_site_specific_rates(insertion_event.sequence.size());
+    vector<double> new_site_specific_rates(new_sequence.size());
     vector<short int> new_site_specific_rate_index;
-    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, insertion_event.sequence.size());
+    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_sequence.size());
     
     // insert new_site_specific_rates into site_specific_rates
-    site_specific_rates.insert(site_specific_rates.begin()+insertion_event.position, new_site_specific_rates.begin(), new_site_specific_rates.end());
+    site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
     
     // insert new_site_specific_rate_index into site_specific_rate_index
-    site_specific_rate_index.insert(site_specific_rate_index.begin()+insertion_event.position, new_site_specific_rate_index.begin(), new_site_specific_rate_index.end());
+    site_specific_rate_index.insert(site_specific_rate_index.begin()+position, new_site_specific_rate_index.begin(), new_site_specific_rate_index.end());
     
     // regenerate new_sequence if mixture model is used
     if (tree->getModel()->isMixture())
-        insertion_event.sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
+        new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(node, insertion_event, site_specific_rates);
+    AliSimulator::insertNewSequenceForInsertionEvent(node, position, new_sequence, site_specific_rates);
 }

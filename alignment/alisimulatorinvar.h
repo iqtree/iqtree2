@@ -26,10 +26,10 @@ protected:
     virtual void initVariables(int sequence_length, vector<double> &site_specific_rates);
     
     /**
-    *  insert a new sequence into the current sequence when processing Insertion Events
+    *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(Node *node, InsertionEvent &insertion_event, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
     
 public:
     
