@@ -5445,7 +5445,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                            sequences without constant sites" << endl
     << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
     << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
-    << "  --indel <INS>,<DEL>       Specify the ratio of insertion rate <INS>,"<< endl
+    << "  --indel <INS>,<DEL>       Activate Indels (insertion/deletion events) and"<< endl
+    << "                            Specify the ratio of insertion rate <INS>, and"<< endl
+    << "                            deletion rate <DEL>, respectively, to the substitution rate"<< endl
     << "  --indel-distribution <INS_DIS>,<DEL_DIS> Specify the distributions for generating"<< endl
     << "                            the random number of sites to insert/delete." << endl
     << "                            By default, a geometric distribution with p of 0.5 is used." << endl
