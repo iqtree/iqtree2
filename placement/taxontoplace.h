@@ -127,7 +127,7 @@ public:
     void findNewPlacement ( PhyloTree& phylo_tree, BlockAllocator& b,
                             LikelihoodBlockPairs& blocks,
                             TargetBranchRange& dest,
-                            PlacementCostCalculator& calculator );
+                            const PlacementCostCalculator& calculator );
 
     /** insert this taxon into the tree, NEAR its preferred location, marking the
         target branch of the chosen location as used, and add additional

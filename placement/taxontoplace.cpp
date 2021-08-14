@@ -207,7 +207,7 @@ void TaxonToPlace::forgetGazumpedPlacements() {
 void TaxonToPlace::findNewPlacement(PhyloTree& phylo_tree, BlockAllocator& b,
                                      LikelihoodBlockPairs& blocks,
                                      TargetBranchRange& dest,
-                                     PlacementCostCalculator& calculator ) {
+                                     const PlacementCostCalculator& calculator ) {
     const TargetBranch* blocked_target = bestPlacement.getTarget();
     forgetGazumpedPlacements();
     std::vector<PossiblePlacement> placements;
