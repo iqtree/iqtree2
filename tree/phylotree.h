@@ -1906,7 +1906,8 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @param maxNRStep maximum number of Newton-Raphson steps
      */
-    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, 
+                                   bool clearLH = true, int maxNRStep = 100);
 
     /**
             optimize all branch lengths of the children of node

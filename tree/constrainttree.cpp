@@ -230,25 +230,28 @@ bool ConstraintTree::isCompatible (MTree *tree) {
 
 
 
-bool ConstraintTree::isCompatible(NNIMove &nni) {
-    if (empty())
+bool ConstraintTree::isCompatible(const NNIMove &nni) {
+    if (empty()) {
         return true;
+    }
     // check for consistency with constraint tree
     StrVector taxset1, taxset2;
     
     // get taxa set 1 (below node1)
-    FOR_NEIGHBOR_DECLARE(nni.node1, nni.node2, it)
+    FOR_NEIGHBOR_DECLARE(nni.node1, nni.node2, it) {
         if (it != nni.node1Nei_it) {
             getUnorderedTaxaName(taxset1, (*it)->node, nni.node1);
         }
+    }
     //taxset1 also includes taxa below node2Nei_it if doing NNI 
     getUnorderedTaxaName(taxset1, (*nni.node2Nei_it)->node, nni.node2);
     
     // get taxa set 1 (below node1)
-    FOR_NEIGHBOR(nni.node2, nni.node1, it)
+    FOR_NEIGHBOR(nni.node2, nni.node1, it) {
         if (it != nni.node2Nei_it) {
             getUnorderedTaxaName(taxset2, (*it)->node, nni.node2);
         }
+    }
     //taxset2 also includes taxa below node1Nei_it if doing NNI 
     getUnorderedTaxaName(taxset2, (*nni.node1Nei_it)->node, nni.node1);
     

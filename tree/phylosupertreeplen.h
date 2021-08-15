@@ -54,18 +54,18 @@ public:
     /**
         save object into the checkpoint
     */
-    virtual void saveCheckpoint();
+    virtual void saveCheckpoint() override;
 
     /**
         restore object from the checkpoint
     */
-    virtual void restoreCheckpoint();
+    virtual void restoreCheckpoint() override;
 
     /**
      print tree to .treefile
      @param params program parameters, field root is taken
      */
-    virtual void printResultTree(string suffix = "");
+    virtual void printResultTree(string suffix = "") override;
 
     /**
         Read the tree saved with Taxon Names and branch lengths.
@@ -74,13 +74,14 @@ public:
                                 from the names (rather than the converse)
 
      */
-    virtual void readTreeString(const string &tree_string, bool nodes_have_names = false);
+    virtual void readTreeString(const string &tree_string, 
+                                bool nodes_have_names = false) override;
 
     /**
      * Return the tree string containing taxon names and branch lengths
      * @return tree string
      */
-    virtual string getTreeString();
+    virtual string getTreeString() override;
 
 
     /**
@@ -91,23 +92,23 @@ public:
             @return distance between seq1 and seq2
      */
 
-    virtual double computeDist(int seq1, int seq2, double initial_dist, double &var);
+    virtual double computeDist(int seq1, int seq2, double initial_dist, double &var) override;
 
 	/**
 		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
 		and map F={f_1,...,f_k} the edges of supertree T to edges of subtrees T|Y_i
 	*/
-	virtual void mapTrees();
+	virtual void mapTrees() override;
 
 	/**
 	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
 	 */
-	virtual void linkTrees();
+	virtual void linkTrees() override;
 
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */
-    virtual void initializeAllPartialLh();
+    virtual void initializeAllPartialLh() override;
 
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
@@ -116,15 +117,17 @@ public:
             @param index the index
      */
     virtual void initializeAllPartialLh(int &index, int &indexlh,
-                                        PhyloNode *node = NULL, PhyloNode *dad = NULL);
+                                        PhyloNode *node = nullptr, 
+                                        PhyloNode *dad  = nullptr) override;
 
     void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr,
-                                PhyloNode *node = NULL, PhyloNode *dad = NULL);
+                                PhyloNode *node = nullptr, 
+                                PhyloNode *dad  = nullptr);
 
     /**
             de-allocate central_partial_lh
      */
-    virtual void deleteAllPartialLh();
+    virtual void deleteAllPartialLh() override;
 
 	/**
 	 * @return the type of NNI around node1-node2 for partition part
@@ -140,7 +143,7 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual void computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf) override;
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
@@ -148,7 +151,7 @@ public:
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
-    virtual double computeFunction(double value);
+    virtual double computeFunction(double value) override;
 
     /**
             compute tree likelihood on a branch. used to optimize branch length
@@ -157,14 +160,14 @@ public:
             @return tree likelihood
      */
     virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                           LikelihoodBufferSet& buffers);
+                                           LikelihoodBufferSet& buffers) override;
 
     /**
             compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length
             @return tree likelihood
      */
 
-    virtual double computeLikelihoodFromBuffer();
+    virtual double computeLikelihoodFromBuffer() override;
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
@@ -176,7 +179,7 @@ public:
                                        double tolerance = TOL_LIKELIHOOD,
                                        int maxNRStep = 100,
                                        bool were_lengths_consistent = true,
-                                       PhyloTree* report_to_tree = nullptr);
+                                       PhyloTree* report_to_tree = nullptr) override;
 
     /**
             optimize one branch length by ML by optimizing all mapped branches of subtrees
@@ -185,7 +188,8 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @return likelihood score
      */
-    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, 
+                                   bool clearLH = true, int maxNRStep = 100) override;
 
     /**
             search the best swap for a branch
@@ -194,7 +198,8 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, 
+                                      NNIMove *nniMoves = nullptr) override;
 
 
     /**
@@ -202,20 +207,21 @@ public:
             @param move the single NNI
             @param clearLH decides whether or not the partial likelihood should be cleared
      */
-    virtual void doNNI(const NNIMove &move, bool clearLH = true);
+    virtual void doNNI(const NNIMove &move, bool clearLH = true) override;
 
 	/**
             apply  NNIs from the non-conflicting NNI list
             @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(const vector<NNIMove> &compatibleNNIs, bool changeBran = true);
+    virtual void doNNIs(const vector<NNIMove> &compatibleNNIs, 
+                        bool changeBran = true) override;
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(const NNIMove &nnimove);
+    virtual void changeNNIBrans(const NNIMove &nnimove) override;
 
     /**
             This is for ML. try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
@@ -232,25 +238,29 @@ public:
      *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
      *	@param saved_link_dad_nei   pointer to link_neighbor dad_nei
      */
-    void linkCheck(int part, Node* node, Node* dad, PhyloNeighbor* saved_link_dad_nei);
-    void linkCheckRe(int part, Node* node, Node* dad, PhyloNeighbor* saved_link_dad_nei,PhyloNeighbor* saved_link_node_nei);
+    void linkCheck(int part, Node* node, Node* dad, 
+                   PhyloNeighbor* saved_link_dad_nei);
+
+    void linkCheckRe(int part, Node* node, Node* dad, 
+                     PhyloNeighbor* saved_link_dad_nei,
+                     PhyloNeighbor* saved_link_node_nei);
 
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
-	virtual void computeBranchLengths();
+	virtual void computeBranchLengths() override;
 
 	bool checkBranchLen();
 	void mapBranchLen();
 	void mapBranchLen(int part);
-	virtual void printMapInfo();
+	virtual void printMapInfo() override;
 
 //	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);
 
 	/**
 	 * initialize partition information for super tree
 	*/
-	virtual void initPartitionInfo();
+	virtual void initPartitionInfo() override;
 
 	void printNNIcasesNUM();
 
@@ -277,9 +287,10 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, 
+                                  PhyloNode *dad = nullptr) override;
 
-    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad) override;
     
 protected:
 	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;

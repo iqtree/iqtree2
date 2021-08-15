@@ -85,7 +85,7 @@ public:
         @param nni an NNIMove
         @return TRUE if the NNI is compatible, FALSE otherwise
     */
-    bool isCompatible(NNIMove &nni);
+    bool isCompatible(const NNIMove &nni);
 
     /**
         @param taxname taxon name to search for

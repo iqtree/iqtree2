@@ -24,7 +24,7 @@ CandidateSet::CandidateSet() : CheckpointFactory() {
     this->maxSize = Params::getInstance().maxCandidates;
 }
 
-void CandidateSet::initTrees(CandidateSet& candSet) {
+void CandidateSet::initTrees(const CandidateSet& candSet) {
     int curMaxSize = this->maxSize;
     *this = candSet;
     setMaxSize(curMaxSize);
@@ -251,7 +251,7 @@ double CandidateSet::getBestScore() {
         return rbegin()->first;
 }
 
-string CandidateSet::convertTreeString(string treeString, int format) {
+string CandidateSet::convertTreeString(const string& treeString, int format) const {
     MTree mtree;
     stringstream str;
     str << treeString;

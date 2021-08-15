@@ -289,16 +289,18 @@ PhyloTree* extractSubtreeUB(IntVector &ids, MTree* tree, Params *params, int sw)
 	for (i = 0; i < ids.size(); i++)
 		taxa_set[ids[i]]=1;
 
-	PhyloTree *treeCopy = new PhyloTree(); // this will be a new subtree
-	Alignment *alignment = new Alignment();
-	alignment->extractSubAlignment(((PhyloTree*)tree)->aln,ids,0);
+	PhyloTree* phylo_tree = dynamic_cast<PhyloTree*>(tree);
+	PhyloTree* treeCopy   = new PhyloTree(); // this will be a new subtree
+	Alignment* alignment  = new Alignment();
+
+	alignment->extractSubAlignment(phylo_tree->aln,ids,0);
 
 	treeCopy->copyTree(tree, taxa_set);
 	treeCopy->setAlignment(alignment);
 	if(sw == 1){
-		treeCopy->setModel(((PhyloTree*)tree)->getModel());
-		treeCopy->setRate(((PhyloTree*)tree)->getRate());
-		treeCopy->setModelFactory(((PhyloTree*)tree)->getModelFactory());
+		treeCopy->setModel(phylo_tree->getModel());
+		treeCopy->setRate(phylo_tree->getRate());
+		treeCopy->setModelFactory(phylo_tree->getModelFactory());
 		treeCopy->initializeAllPartialLh();
 		treeCopy->setCurScore(treeCopy->computeLikelihood());
 	}
@@ -478,9 +480,11 @@ double RandomTreeAB(PhyloTree* treeORGN, PhyloTree* treeAorgn, PhyloTree* treeBo
 
 
 	tree->setAlignment(treeORGN->aln);
-	tree->setModel(((PhyloTree*)treeORGN)->getModel());
-	tree->setRate(((PhyloTree*)treeORGN)->getRate());
-	tree->setModelFactory(((PhyloTree*)treeORGN)->getModelFactory());
+	PhyloTree* original_tree = dynamic_cast<PhyloTree*>(treeORGN);
+
+	tree->setModel       (original_tree->getModel());
+	tree->setRate        (original_tree->getRate());
+	tree->setModelFactory(original_tree->getModelFactory());
 	tree->initializeAllPartialLh();
 
 	tree->setCurScore(tree->computeLikelihood());

@@ -24,7 +24,7 @@ PhyloSuperTreeUnlinked::PhyloSuperTreeUnlinked(SuperAlignment *alignment)
 
 
 void PhyloSuperTreeUnlinked::readTree(istream &in, bool &is_rooted) {
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         (*it)->rooted = Params::getInstance().is_rooted;
         (*it)->readTree(in, (*it)->rooted);
         is_rooted |= (*it)->rooted;
@@ -101,16 +101,17 @@ bool PhyloSuperTreeUnlinked::isBifurcating(Node *node, Node *dad) {
 
 string PhyloSuperTreeUnlinked::getTreeString() {
     stringstream tree_stream;
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); ++it)
         (*it)->printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
     return tree_stream.str();
 }
 
-void PhyloSuperTreeUnlinked::readTreeString(const string &tree_string, bool nodes_have_names) {
+void PhyloSuperTreeUnlinked::readTreeString(const string &tree_string, 
+                                            bool nodes_have_names) {
     stringstream str;
     str << tree_string;
     str.seekg(0, ios::beg);
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         (*it)->freeNode();
         (*it)->readTree(str, rooted);
         if (!nodes_have_names) {
@@ -123,7 +124,7 @@ void PhyloSuperTreeUnlinked::readTreeString(const string &tree_string, bool node
 }
 
 void PhyloSuperTreeUnlinked::saveCheckpoint() {
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         checkpoint->startStruct((*it)->aln->name);
         (*it)->saveCheckpoint();
         checkpoint->endStruct();
@@ -131,7 +132,7 @@ void PhyloSuperTreeUnlinked::saveCheckpoint() {
 }
 
 void PhyloSuperTreeUnlinked::restoreCheckpoint() {
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         checkpoint->startStruct((*it)->aln->name);
         (*it)->restoreCheckpoint();
         checkpoint->endStruct();
@@ -157,7 +158,7 @@ void PhyloSuperTreeUnlinked::saveBranchLengths(DoubleVector &lenvec, int startid
  * restore branch lengths from a vector previously called with saveBranchLengths
  */
 void PhyloSuperTreeUnlinked::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         (*it)->restoreBranchLengths(lenvec, startid);
         startid += (*it)->branchNum * (*it)->getMixlen();
     }
@@ -172,7 +173,7 @@ void PhyloSuperTreeUnlinked::computeBranchLengths() {
 }
 
 void PhyloSuperTreeUnlinked::printTree(ostream &out, int brtype) {
-    for (iterator tree = begin(); tree != end(); tree++)
+    for (iterator tree = begin(); tree != end(); ++tree)
         (*tree)->printTree(out, brtype);
 }
 
@@ -189,8 +190,9 @@ void PhyloSuperTreeUnlinked::printResultTree(string suffix) {
     }
     ofstream out;
     out.open(tree_file_name.c_str());
-    for (iterator tree = begin(); tree != end(); tree++)
-        (*tree)->printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+    for (iterator tree = begin(); tree != end(); ++tree)
+        (*tree)->printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | 
+                                WT_SORT_TAXA | WT_NEWLINE);
     out.close();
     if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Best tree printed to " << tree_file_name << endl;
@@ -199,7 +201,7 @@ void PhyloSuperTreeUnlinked::printResultTree(string suffix) {
 
 double PhyloSuperTreeUnlinked::treeLength(Node *node, Node *dad) {
     double len = 0.0;
-    for (iterator tree = begin(); tree != end(); tree++) {
+    for (iterator tree = begin(); tree != end(); ++tree) {
         len += (*tree)->treeLength();
     }
     return len;
@@ -207,7 +209,7 @@ double PhyloSuperTreeUnlinked::treeLength(Node *node, Node *dad) {
 
 double PhyloSuperTreeUnlinked::treeLengthInternal( double epsilon, Node *node, Node *dad) {
     double len = 0.0;
-    for (iterator tree = begin(); tree != end(); tree++)
+    for (iterator tree = begin(); tree != end(); ++tree)
         len += (*tree)->treeLengthInternal(epsilon);
     return len;
 }
@@ -218,7 +220,7 @@ pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info, const char* 
     double score = 0.0;
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: NNIs, NNI_steps, score)
     for (int i = 0; i < size(); i++) {
-        IQTree *part_tree = (IQTree*)at(part_order[i]);
+        IQTree *part_tree = dynamic_cast<IQTree*>(at(part_order[i]));
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
         part_tree->setCheckpoint(ckp);
@@ -260,7 +262,7 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
 
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: tree_lh)
     for (int i = 0; i < size(); i++) {
-        IQTree *part_tree = (IQTree*)at(part_order[i]);
+        IQTree *part_tree = dynamic_cast<IQTree*>(at(part_order[i]));
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
         part_tree->setCheckpoint(ckp);

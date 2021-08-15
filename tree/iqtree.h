@@ -994,7 +994,8 @@ protected:
 
     void estDeltaMin();
 
-    void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
+    void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, 
+                           const vector<NNIMove> &compatibleNNIs);
 
     string generateParsimonyTree(int randomSeed);
 

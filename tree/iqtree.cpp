@@ -1910,24 +1910,24 @@ void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits,
         node = root;
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
-            if (isInnerBranch((*it)->node, node)) {
-                Branch curBranch;
-                curBranch.first = (*it)->node;
-                curBranch.second = node;
-                Split* curSplit;
-                Split *sp = (*it)->split;
-                ASSERT(sp != NULL);
-                curSplit = new Split(*sp);
-                if (curSplit->shouldInvert())
-                    curSplit->invert();
-                if (splits.findSplit(curSplit) != NULL) {
-                    //curSplit->report(cout);
-                    branches.insert(pair<int,Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
-                }
-                delete curSplit;
+        if (isInnerBranch((*it)->node, node)) {
+            Branch curBranch;
+            curBranch.first = (*it)->node;
+            curBranch.second = node;
+            Split* curSplit;
+            Split *sp = (*it)->split;
+            ASSERT(sp != NULL);
+            curSplit = new Split(*sp);
+            if (curSplit->shouldInvert())
+                curSplit->invert();
+            if (splits.findSplit(curSplit) != NULL) {
+                //curSplit->report(cout);
+                branches.insert(pair<int,Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
             }
-            getSplitBranches(branches, splits, (*it)->node, node);
+            delete curSplit;
         }
+        getSplitBranches(branches, splits, (*it)->node, node);
+    }
 }
 
 bool IQTree::shouldEvaluate(Split *curSplit, SplitIntMap &tabuSplits,
@@ -4532,7 +4532,7 @@ void IQTree::printIntermediateTree(int brtype) {
 }
 
 void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs,
-                               vector<NNIMove> &compatibleNNIs) {
+                               const vector<NNIMove> &compatibleNNIs) {
     for (int i = 0; i < numNNIs; i++) {
         Split *sp = new Split(*getSplit(compatibleNNIs[i].node1,
                                         compatibleNNIs[i].node2));

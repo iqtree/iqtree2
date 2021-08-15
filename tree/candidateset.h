@@ -74,7 +74,7 @@ public:
      *  Replace the current candidate trees by those in another candidate set
      *  @param candSet the candidate set whose trees will be copied over
      */
-    void initTrees(CandidateSet& candSet);
+    void initTrees(const CandidateSet& candSet);
 
     /**
         save object into the checkpoint
@@ -205,7 +205,7 @@ public:
      * 	@return
      * 		Newick string of the tree topology
      */
-    string convertTreeString(const string tree, int format = WT_TAXON_ID | WT_SORT_TAXA);
+    string convertTreeString(const string& tree, int format = WT_TAXON_ID | WT_SORT_TAXA) const;
 
     /**
      * 	Return a unique topology (sorted by taxon names, rooted at taxon with alphabetically smallest name)
