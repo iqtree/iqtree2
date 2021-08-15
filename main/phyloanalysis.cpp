@@ -1389,7 +1389,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
 
                 int part = 0;
                 for (PhyloSuperTree::iterator it = stree->begin();
-                        it != stree->end(); it++, part++) {
+                        it != stree->end(); ++it, ++part) {
                     out << "FOR PARTITION " << (*it)->aln->name
                             << ":" << endl << endl;
                     (*it)->setRootNode(params.root);
@@ -4637,7 +4637,7 @@ void assignBranchSupportNew(Params &params) {
     BranchVector branches;
     tree->getInnerBranches(branches);
     BranchVector::iterator brit;
-    for (brit = branches.begin(); brit != branches.end(); brit++) {
+    for (brit = branches.begin(); brit != branches.end(); ++brit) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         string label = brit->second->name;
         if (!label.empty()) {
@@ -4689,30 +4689,30 @@ void assignBranchSupportNew(Params &params) {
         << "# Columns are tab-separated with following meaning:" << endl
         << "#   ID: Branch ID" << endl;
     map<string,string>::iterator mit;
-    for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+    for (mit = meanings.begin(); mit != meanings.end(); ++mit) {
         if (mit->first[0] != '*') {
             out << "#   " << mit->first << ": " << mit->second << endl;
         }
     }
     out << "#   Label: Existing branch label" << endl;
     out << "#   Length: Branch length" << endl;
-    for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+    for (mit = meanings.begin(); mit != meanings.end(); ++mit) {
         if (mit->first[0] == '*') {
             out << "# " << mit->first << ": " << mit->second << endl;
         }
     }
     out << "ID";
-    for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+    for (mit = meanings.begin(); mit != meanings.end(); ++mit) {
         if (mit->first[0] != '*') {
             out << "\t" << mit->first;
         }
     }
     out << "\tLabel\tLength" << endl;
-    for (brit = branches.begin(); brit != branches.end(); brit++) {
+    for (brit = branches.begin(); brit != branches.end(); ++brit) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         out << ID;
-        for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+        for (mit = meanings.begin(); mit != meanings.end(); ++mit) {
             if (mit->first[0] == '*') {
                 continue; // ignore NOTES
             }
@@ -4731,7 +4731,8 @@ void assignBranchSupportNew(Params &params) {
         out << '\t' << label << '\t' << length << endl;
     }
     out.close();
-    cout << "Concordance factors per branch printed to " << filename << endl;
+    cout << "Concordance factors per branch printed to " 
+         << filename << endl;
     
     if (params.print_cf_quartets) {
         filename = prefix + ".cf.quartet";
@@ -4754,7 +4755,7 @@ void assignBranchSupportNew(Params &params) {
             << "#   qDF2_N: Number of discordant sites supporting quartet Seq1,Seq4|Seq2,Seq3" << endl
             << "#   qN: Number of decisive sites with four taxa Seq1,Seq2,Seq3,Seq4 (=qCF_N+qDF1_N+qDF2_N)" << endl
             << "ID\tQuartID\tSeq1\tSeq2\tSeq3\tSeq4\tqCF\tqCF_N\tqDF1\tqDF1_N\tqDF2\tqDF2_N\tqN" << endl;
-        for (brit = branches.begin(); brit != branches.end(); brit++) {
+        for (brit = branches.begin(); brit != branches.end(); ++brit) {
             Neighbor *branch = brit->second->findNeighbor(brit->first);
             int ID = brit->second->id;
             for (int qid = 0; ; qid++) {
@@ -4790,7 +4791,7 @@ void assignBranchSupportNew(Params &params) {
     << "#   gD2: 1/0 if NNI-2 tree is concordant/discordant with branch" << endl
     << "# NOTE: NA means that tree is not decisive for branch" << endl
     << "ID\tTreeID\tgC\tgD1\tgD2" << endl;
-    for (brit = branches.begin(); brit != branches.end(); brit++) {
+    for (brit = branches.begin(); brit != branches.end(); ++brit) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         for (int part = 1; ; part++) {
@@ -4824,7 +4825,7 @@ void assignBranchSupportNew(Params &params) {
     << "#   sD2: Number of discordant sites for alternative quartet 2" << endl
     << "# NOTE: NA means that locus is not decisive for branch" << endl
     << "ID\tPartID\tsC\tsD1\tsD2" << endl;
-    for (brit = branches.begin(); brit != branches.end(); brit++) {
+    for (brit = branches.begin(); brit != branches.end(); ++brit) {
         Neighbor *branch = brit->second->findNeighbor(brit->first);
         int ID = brit->second->id;
         for (int part = 1; ; part++) {
@@ -4878,7 +4879,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     sort(taxa.begin(), taxa.end(), nodenamecmp);
     int i = 0;
     for (NodeVector::iterator it = taxa.begin();
-         it != taxa.end(); it++) {
+         it != taxa.end(); ++it) {
         (*it)->id = i++;
     }
 
@@ -4904,7 +4905,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     if (params && detectInputFile(input_trees) == InputType::IN_NEXUS) {
         sg.init(*params);
         for (SplitGraph::iterator it = sg.begin();
-             it != sg.end(); it++) {
+             it != sg.end(); ++it) {
             auto weight = static_cast<int>((*it)->getWeight());
             hash_ss.insertSplit((*it), weight );
         }
@@ -4912,7 +4913,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
         sg.getTaxaName(sgtaxname);
         i = 0;
         for (StrVector::iterator sit = sgtaxname.begin();
-                sit != sgtaxname.end(); sit++, i++) {
+                sit != sgtaxname.end(); ++sit, ++i) {
             Node *leaf = mytree.findLeafName(*sit);
             if (leaf==nullptr) {
                 outError("Tree does not contain taxon ", *sit);
@@ -5026,7 +5027,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
         for (SplitGraph::iterator it = sg.begin(); it != sg.end();) {
             if ((*it)->getWeight() > weight_threshold) {
                 hash_ss.insertSplit((*it), static_cast<int>((*it)->getWeight()));
-                it++;
+                ++it;
             } else {
                 // delete the split
                 if (it != sg.end()-1) {

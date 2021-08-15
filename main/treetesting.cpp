@@ -342,7 +342,8 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
         if (tree->isSuperTree()) {
             PhyloSuperTree *super_tree = (PhyloSuperTree*)tree;
             size_t offset = 0;
-            for (PhyloSuperTree::iterator it = super_tree->begin(); it != super_tree->end(); it++) {
+            for (auto it = super_tree->begin(); 
+                 it != super_tree->end(); ++it) {
                 size_t part_ncat = (*it)->getNumLhCat(wsl);
                 (*it)->aln->getSitePatternIndex(pattern_index);
                 size_t nsite = (*it)->aln->getNSite();
@@ -610,18 +611,23 @@ public:
  */
 int cntdist2(double *vec, int bb, double t)
 {
-    int i,i0,i1;
-    
-    i0=0; i1=bb-1;
-    if(t < vec[0]) return 0;
-    else if(vec[bb-1] <= t) return bb;
-    
-    while(i1-i0>1) {
-        i=(i0+i1)/2;
-        if(vec[i] <= t) i0=i;
-        else i1=i;
+    if(t < vec[0]) {
+        return 0;
     }
-    
+    else if(vec[bb-1] <= t) { 
+        return bb;
+    }
+    int i0=0; 
+    int i1=bb-1;
+    while(i1-i0>1) {
+        int i=(i0+i1)/2;
+        if(vec[i] <= t) {
+            i0=i;
+        }
+        else {
+            i1=i;
+        }
+    }
     return i1;
 }
 
