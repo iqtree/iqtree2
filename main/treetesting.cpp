@@ -134,8 +134,6 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
                 ncat = part_ncat;
         }
     }
-    int i;
-    
     
     try {
         ofstream out;
@@ -148,9 +146,9 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
         if (tree->isSuperTree()) {
             out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->at(0)->aln->name << ", etc)" << endl
             << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
-        } else
+        } else {
             out << "#   Site:   Alignment site ID" << endl;
-        
+        }
         out << "#   LnL:    Logarithm of site likelihood" << endl
         << "#           Thus, sum of LnL is equal to tree log-likelihood" << endl
         << "#   LnLW_k: Logarithm of (category-k site likelihood times category-k weight)" << endl
@@ -158,10 +156,12 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
         
         if (tree->isSuperTree()) {
             out << "Part\tSite\tLnL";
-        } else
+        } else {
             out << "Site\tLnL";
-        for (i = 0; i < ncat; i++)
+        }
+        for (int i = 0; i < ncat; i++) {
             out << "\tLnLW_" << i+1;
+        }
         out << endl;
         out.precision(4);
         out.setf(ios::fixed);
@@ -185,7 +185,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
          cout << "Probability of const sites: " << const_prob << endl;
          }
          */
-    } catch (ios::failure) {
+    } catch (ios::failure&) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
     
@@ -324,7 +324,7 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
             wsl = WSL_MIXTURE;
         }
     }
-    size_t cat, ncat = tree->getNumLhCat(wsl);
+    size_t ncat = tree->getNumLhCat(wsl);
     double *ptn_prob_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
     tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
     
@@ -335,8 +335,9 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
         if (tree->isSuperTree())
             out << "Set\t";
         out << "Site";
-        for (cat = 0; cat < ncat; cat++)
+        for (int cat = 0; cat < ncat; cat++) {
             out << "\tp" << cat+1;
+        }
         out << endl;
         IntVector pattern_index;
         if (tree->isSuperTree()) {
@@ -350,8 +351,9 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
                 for (size_t site = 0; site < nsite; ++site) {
                     out << (it-super_tree->begin())+1 << "\t" << site+1;
                     double *prob_cat = ptn_prob_cat + (offset+pattern_index[site]*part_ncat);
-                    for (cat = 0; cat < part_ncat; cat++)
+                    for (int cat = 0; cat < part_ncat; cat++) {
                         out << "\t" << prob_cat[cat];
+                    }
                     out << endl;
                 }
                 offset += (*it)->aln->getNPattern()*(*it)->getNumLhCat(wsl);
@@ -362,15 +364,16 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
             for (size_t site = 0; site < nsite; ++site) {
                 out << site+1;
                 double *prob_cat = ptn_prob_cat + pattern_index[site]*ncat;
-                for (cat = 0; cat < ncat; cat++) {
+                for (int cat = 0; cat < ncat; cat++) {
                     out << "\t" << prob_cat[cat];
                 }
                 out << endl;
             }
         }
         out.close();
-        cout << "Site probabilities per category printed to " << filename << endl;
-    } catch (ios::failure) {
+        cout << "Site probabilities per category"
+             << " printed to " << filename << endl;
+    } catch (ios::failure&) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
     

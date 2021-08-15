@@ -2728,7 +2728,7 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
 /**
  * print footer of summary file
  */
-void summarizeFooter(ostream &out, Params &params);
+void summarizeFooter(ostream &out, const Params &params);
 
 
 /**

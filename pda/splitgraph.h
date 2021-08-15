@@ -187,7 +187,7 @@ public:
 		@return TRUE if split sp is contained in the split system
 		@param sp target split to search for
 	*/
-	bool containSplit(Split &sp);
+	bool containSplit(const Split &sp);
 
 	/**
 		compute the boundary length of the area set, using areas_boundary variable

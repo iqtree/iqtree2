@@ -263,7 +263,7 @@ void printRunMode(ostream &out, RunMode run_mode) {
     }
 }
 
-void summarizeAnalysisType(ostream &out, Params &params, 
+void summarizeAnalysisType(ostream &out, const Params &params, 
                            bool budget_constraint,
                            InputType analysis_type);
 
@@ -307,7 +307,7 @@ void summarizeHeader(ostream &out, Params &params,
                           analysis_type);
 }
 
-void summarizeAnalysisType(ostream &out, Params &params,
+void summarizeAnalysisType(ostream &out, const Params &params,
                            bool budget_constraint,
                            InputType analysis_type) {
     out << "Type of analysis: ";
@@ -335,7 +335,7 @@ void summarizeAnalysisType(ostream &out, Params &params,
     //out << "Random number seed: " << params.ran_seed << endl;
 }
 
-void summarizeFooter(ostream &out, Params &params) {
+void summarizeFooter(ostream &out, const Params &params) {
     separator(out);
     time_t beginTime;
     time (&beginTime);
@@ -357,7 +357,7 @@ int getMaxNameLen(StrVector &setName) {
     return len;
 }
 
-void printPDUser(ostream &out, Params &params, PDRelatedMeasures &pd_more) {
+void printPDUser(ostream &out, const Params &params, PDRelatedMeasures &pd_more) {
     out << "List of user-defined sets of taxa with PD score computed" << endl << endl;
     int maxlen = getMaxNameLen(pd_more.setName)+2;
     out.width(maxlen);
@@ -389,7 +389,7 @@ void printPDUser(ostream &out, Params &params, PDRelatedMeasures &pd_more) {
     separator(out, 1);
 }
 
-void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
+void summarizeTree(Params &params, const PDTree &tree, vector<PDTaxaSet> &taxa_set,
     PDRelatedMeasures &pd_more) {
     string filename;
     if (params.out_file == NULL) {
@@ -420,7 +420,8 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
 
         int subsize = params.min_size-params.is_rooted;
         if (params.run_mode == PD_USER_SET) subsize = 1;
-        for (tid = taxa_set.begin(); tid != taxa_set.end(); tid++, subsize++) {
+        for (tid = taxa_set.begin(); tid != taxa_set.end(); 
+             ++tid, ++subsize) {
             if (tid != taxa_set.begin())
                 separator(out, 1);
             if (params.run_mode == PD_USER_SET) {
@@ -430,7 +431,8 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
                 out << "For k = " << subsize << " the optimal PD score is " << (*tid).score << endl;
                 out << "The optimal PD set has " << subsize << " taxa:" << endl;
             }
-            for (NodeVector::iterator it = (*tid).begin(); it != (*tid).end(); it++)
+            for (NodeVector::iterator it = (*tid).begin(); 
+                 it != (*tid).end(); ++it)
                 if ((*it)->name != ROOT_NAME){
                     out << (*it)->name << endl;
                 }
@@ -451,8 +453,7 @@ void summarizeTree(Params &params, PDTree &tree, vector<PDTaxaSet> &taxa_set,
     }
 }
 
-
-void printTaxaSet(Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode) {
+void printTaxaSet(const Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode) {
     int subsize = params.min_size-params.is_rooted;
     ofstream out;
     ofstream scoreout;
@@ -468,10 +469,12 @@ void printTaxaSet(Params &params, vector<PDTaxaSet> &taxa_set, RunMode cur_mode)
         filename = params.out_prefix;
         filename += ".pdtaxa";
         out.open(filename.c_str());
-        if (!out.is_open())
+        if (!out.is_open()) {
             outError(ERR_WRITE_OUTPUT, filename);
+        }
     }
-    for (vector<PDTaxaSet>::iterator tid = taxa_set.begin(); tid != taxa_set.end(); tid++, subsize++) {
+    for (vector<PDTaxaSet>::iterator tid = taxa_set.begin(); 
+         tid != taxa_set.end(); ++tid, ++subsize) {
         if (params.nr_output > 10) {
             filename = params.out_prefix;
             filename += ".";
@@ -688,7 +691,7 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
     bool nested = true;
     Split *cur_sp = NULL;
     int id = 1;
-    for (it = pd_set.begin(); it != pd_set.end(); it++) {
+    for (it = pd_set.begin(); it != pd_set.end(); ++it) {
         if ((*it).empty()) continue;
         if ((*it).size() > 1) {
             nested = false;
@@ -701,7 +704,7 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
             IntVector sp_tax;
             sp->getTaxaList(sp_tax);
             ranking.insert(ranking.end(), sp_tax.begin(), sp_tax.end());
-            for (inti = sp_tax.begin(); inti != sp_tax.end(); inti++)
+            for (inti = sp_tax.begin(); inti != sp_tax.end(); ++inti)
                 indices.push_back(id++);
         } else {
             if ( !cur_sp->subsetOf(*sp)) {
@@ -716,11 +719,11 @@ bool makeRanking(vector<SplitSet> &pd_set, IntVector &indices, IntVector &rankin
             IntVector sp_tax;
             sp_diff2.getTaxaList(sp_tax);
             ranking.insert(ranking.end(), sp_tax.begin(), sp_tax.end());
-            for (inti = sp_tax.begin(); inti != sp_tax.end(); inti++)
+            for (inti = sp_tax.begin(); inti != sp_tax.end(); ++inti)
                 indices.push_back(-id);
             sp_diff.getTaxaList(sp_tax);
             ranking.insert(ranking.end(), sp_tax.begin(), sp_tax.end());
-            for (inti = sp_tax.begin(); inti != sp_tax.end(); inti++)
+            for (inti = sp_tax.begin(); inti != sp_tax.end(); ++inti)
                 indices.push_back(id);
             if ( !cur_sp->subsetOf(*sp)) {
                 ranking.push_back(-2);
@@ -740,13 +743,15 @@ void printNexusSets(const char *filename, PDNetwork &sg, vector<SplitSet> &pd_se
         out.open(filename);
         out << "#NEXUS" << endl << "BEGIN Sets;" << endl;
         vector<SplitSet>::iterator it;
-        for (it = pd_set.begin(); it != pd_set.end(); it++) {
+        for (it = pd_set.begin(); it != pd_set.end(); ++it) {
             int id = 1;
-            for (SplitSet::iterator sit = (*it).begin(); sit != (*it).end(); sit++, id++) {
+            for (SplitSet::iterator sit = (*it).begin(); 
+                 sit != (*it).end(); ++sit, ++id) {
                 IntVector taxa;
                 (*sit)->getTaxaList(taxa);
                 out << "   TAXSET Opt_" << taxa.size() << "_" << id << " =";
-                for (IntVector::iterator iit = taxa.begin(); iit != taxa.end(); iit++) {
+                for (IntVector::iterator iit = taxa.begin(); 
+                     iit != taxa.end(); ++iit) {
                     if (sg.isPDArea())
                         out << " '" << sg.getSetsBlock()->getSet(*iit)->name << "'";
                     else
@@ -769,26 +774,24 @@ void printNexusSets(const char *filename, PDNetwork &sg, vector<SplitSet> &pd_se
 void computeTaxaFrequency(SplitSet &taxa_set, DoubleVector &freq) {
     ASSERT(taxa_set.size());
     int ntaxa = taxa_set[0]->getNTaxa();
-    int i;
-
     freq.resize(ntaxa, 0);
-    for (SplitSet::iterator it2 = taxa_set.begin(); it2 != taxa_set.end(); it2++) {
-        for ( i = 0; i < ntaxa; i++)
-            if ((*it2)->containTaxon(i)) freq[i] += 1.0;
+    for (SplitSet::iterator it2 = taxa_set.begin(); 
+         it2 != taxa_set.end(); ++it2) {
+        for ( int i = 0; i < ntaxa; ++i) {
+            if ((*it2)->containTaxon(i)) { 
+                freq[i] += 1.0;
+            }
+        }
     }
-
-    for ( i = 0; i < ntaxa; i++)
+    for ( int i = 0; i < ntaxa; i++) {
         freq[i] /= taxa_set.size();
-
+    }
 }
 
 /**
     summarize the running results
 */
 void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDRelatedMeasures &pd_more, bool full_report) {
-    int i;
-
-
     if (params.nexus_output) {
         string nex_file = params.out_prefix;
         nex_file += ".pdsets.nex";
@@ -798,9 +801,9 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
     if (params.out_file == NULL) {
         filename = params.out_prefix;
         filename += ".pda";
-    } else
+    } else {
         filename = params.out_file;
-
+    }
     try {
         ofstream out;
         out.open(filename.c_str());
@@ -809,13 +812,12 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         /****************************/
         summarizeHeader(out, params, sg.isBudgetConstraint(), InputType::IN_NEXUS);
 
-        out << "Network size: " << sg.getNTaxa()-params.is_rooted << " taxa, " <<
-            sg.getNSplits()-params.is_rooted << " splits (of which " <<
-            sg.getNTrivialSplits() << " are trivial splits)" << endl;
+        out << "Network size: " << sg.getNTaxa()-params.is_rooted << " taxa, " 
+            << sg.getNSplits()-params.is_rooted << " splits (of which "
+            << sg.getNTrivialSplits() << " are trivial splits)" << endl;
         out << "Network type: " << ((sg.isCircular()) ? "Circular" : "General") << endl;
 
         separator(out);
-
         checkSplitDistance(out, sg);
 
         int c_num = 0;
@@ -826,7 +828,6 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         if (params.detected_mode != LINEAR_PROGRAMMING) stepsize = 1;
         vector<SplitSet>::iterator it;
         SplitSet::iterator it2;
-
 
         if (params.run_mode == PD_USER_SET) {
             printPDUser(out, params, pd_more);
@@ -839,15 +840,18 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         if (params.run_mode != PD_USER_SET && !params.num_bootstrap_samples) {
             out << "Summary of the PD-score and the number of optimal PD-sets with the same " << endl << "optimal PD-score found." << endl;
 
-            if (sg.isBudgetConstraint())
+            if (sg.isBudgetConstraint()) {
                 out << endl << "Budget   PD-score   %PD-score   #PD-sets" << endl;
-            else
+            }
+            else {
                 out << endl << "Size-k   PD-score   %PD-score   #PD-sets" << endl;
+            }
 
             int sizex = subsize;
             double total = sg.calcWeight();
 
-            for (it = pd_set.begin(); it != pd_set.end(); it++, sizex+=stepsize) {
+            for (it = pd_set.begin(); it != pd_set.end(); 
+                 ++it, sizex+=stepsize) {
                 out.width(6);
                 out << right << sizex << " ";
                 out.width(10);
@@ -885,15 +889,18 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         /****************************/
         if (params.run_mode != PD_USER_SET && params.num_bootstrap_samples) {
             out << "Summary of the bootstrap analysis " << endl;
-            for (it = pd_set.begin(); it != pd_set.end(); it++) {
+            for (it = pd_set.begin(); it != pd_set.end(); ++it) {
                 DoubleVector freq;
                 computeTaxaFrequency((*it), freq);
                 out << "For k/budget = " << subsize << " the " << ((sg.isPDArea()) ? "areas" : "taxa")
                     << " supports are: " << endl;
-                for (i = 0; i < freq.size(); i++)
+                for (int i = 0; i < freq.size(); i++) {
                     out << ((sg.isPDArea()) ? sg.getSetsBlock()->getSet(i)->name : sg.getTaxa()->GetTaxonLabel(i))
                         << "\t" << freq[i] << endl;
-                if ((it+1) != pd_set.end()) separator(out, 1);
+                }
+                if ((it+1) != pd_set.end()) {
+                    separator(out, 1);
+                }
             }
             out << endl;
             separator(out);
@@ -925,7 +932,8 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
                 out << "Area names" << endl;
 
 
-            for (IntVector::iterator intv = ranking.begin(), intid = index.begin(); intv != ranking.end(); intv ++, intid++) {
+            for (IntVector::iterator intv = ranking.begin(), intid = index.begin(); 
+                 intv != ranking.end(); ++intv, ++intid) {
                 if (*intv == -10)
                     out << "<--- multiple optimal set here --->" << endl;
                 else if (*intv == -1)
@@ -969,13 +977,16 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         if (params.run_mode != PD_USER_SET)
             separator(out,1);
 
-        for (it = pd_set.begin(); it != pd_set.end(); it++, subsize+=stepsize) {
+        for (it = pd_set.begin(); it != pd_set.end(); ++it, subsize+=stepsize) {
 
             // check if the pd-sets are the same as previous one
             if (sg.isBudgetConstraint() && it != pd_set.begin()) {
                 vector<SplitSet>::iterator prev, next;
-                for (next=it, prev=it-1; next != pd_set.end() && next->getWeight() == (*prev).getWeight() &&
-                    next->size() == (*prev).size(); next++ ) ;
+                for (next=it, prev=it-1; 
+                     next != pd_set.end() && 
+                     next->getWeight() == (*prev).getWeight() &&
+                     next->size() == (*prev).size(); 
+                     ++next ) ;
                 if (next != it) {
                     // found something in between!
                     out << endl;
@@ -996,24 +1007,34 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
             double weight = (*it).getWeight();
 
             if (params.run_mode != PD_USER_SET) {
-                out << "For " << ((sg.isBudgetConstraint()) ? "budget" : "k") << " = " << subsize;
+                out << "For " << ((sg.isBudgetConstraint()) ? "budget" : "k") 
+                    << " = " << subsize;
                 out << " the optimal PD score is " << weight << endl;
 
                 if (num_sets == 1) {
-                    if (!sg.isBudgetConstraint())
-                        out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted <<
-                            ((sg.isPDArea()) ? " areas" : " taxa");
-                    else
-                        out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted <<
-                        ((sg.isPDArea()) ? " areas" : " taxa") << " and requires " << sg.calcCost(*(*it)[0]) << " budget";
-                    if (!sg.isPDArea()) out << " and covers " << sg.countSplits(*(*it)[0]) <<
-                        " splits (of which " << sg.countInternalSplits(*(*it)[0]) << " are internal splits)";
+                    if (!sg.isBudgetConstraint()) {
+                        out << "The optimal PD set has " 
+                            << (*it)[0]->countTaxa()-params.is_rooted
+                            << ((sg.isPDArea()) ? " areas" : " taxa");
+                    }
+                    else {
+                        out << "The optimal PD set has " << (*it)[0]->countTaxa()-params.is_rooted 
+                            << ((sg.isPDArea()) ? " areas" : " taxa") 
+                            << " and requires " << sg.calcCost(*(*it)[0]) << " budget";
+                    }
+                    if (!sg.isPDArea()) {
+                        out << " and covers " << sg.countSplits(*(*it)[0]) 
+                            << " splits (of which " << sg.countInternalSplits(*(*it)[0]) 
+                            << " are internal splits)";
+                    }
                     out << endl;
                 }
-                else
-                    out << "Found " << num_sets << " PD sets with the same optimal score." << endl;
+                else {
+                    out << "Found " << num_sets << " PD sets" 
+                        << " with the same optimal score." << endl;
+                }
             }
-            for (it2 = (*it).begin(), c_num=1; it2 != (*it).end(); it2++, c_num++){
+            for (it2 = (*it).begin(), c_num=1; it2 != (*it).end(); ++it2, ++c_num){
                 Split *this_set = *it2;
 
                 if (params.run_mode == PD_USER_SET && it2 != (*it).begin())
@@ -1039,7 +1060,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
                 out << endl;
 
                 if (params.run_mode != PD_USER_SET && sg.isPDArea()) {
-                    for (i = 0; i < sg.getSetsBlock()->getNSets(); i++)
+                    for (int i = 0; i < sg.getSetsBlock()->getNSets(); i++) {
                         if (this_set->containTaxon(i)) {
                             if (sg.isBudgetConstraint()) {
                                 out.width(max_len);
@@ -1052,19 +1073,26 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
                                 out << sg.getSetsBlock()->getSet(i)->name << endl;
                             }
                         }
-
+                    }
                     Split sp(sg.getNTaxa());
-                    for (i = 0; i < sg.getSetsBlock()->getNSets(); i++)
-                        if (this_set->containTaxon(i))
+                    for (int i = 0; i < sg.getSetsBlock()->getNSets(); i++) {
+                        if (this_set->containTaxon(i)) {
                             sp += *(sg.area_taxa[i]);
-                    out << endl << "which contains " << sp.countTaxa() - params.is_rooted << " taxa: " << endl;
-                    for (i = 0; i < sg.getNTaxa(); i++)
-                        if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && sp.containTaxon(i))
+                        }
+                    }
+                    out << endl << "which contains " 
+                        << sp.countTaxa() - params.is_rooted << " taxa: " << endl;
+                    for (int i = 0; i < sg.getNTaxa(); i++) {
+                        if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && 
+                            sp.containTaxon(i)) {
                             out << sg.getTaxa()->GetTaxonLabel(i) << endl;
+                        }
+                    }
 
                 } else
-                for ( i = 0; i < sg.getNTaxa(); i++)
-                    if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && this_set->containTaxon(i)) {
+                for (int i = 0; i < sg.getNTaxa(); i++) {
+                    if (sg.getTaxa()->GetTaxonLabel(i) != ROOT_NAME && 
+                        this_set->containTaxon(i)) {
                         if (sg.isBudgetConstraint()) {
                             out.width(max_len);
                             out << left << sg.getTaxa()->GetTaxonLabel(i) << "\t";
@@ -1076,6 +1104,7 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
                             out << sg.getTaxa()->GetTaxonLabel(i) << endl;
                         }
                     }
+                }
             }
         }
 
@@ -1086,7 +1115,8 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
         summarizeFooter(out, params);
 
         out.close();
-        cout << endl << "Results are summarized in " << filename << endl << endl;
+        cout << endl << "Results are summarized in " 
+             << filename << endl << endl;
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
@@ -1098,10 +1128,12 @@ void printGainMatrix(const char *filename, mmatrix(double) &delta_gain, int star
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
         int k = start_k;
-        for (mmatrix(double)::iterator it = delta_gain.begin(); it != delta_gain.end(); it++, k++) {
+        for (mmatrix(double)::iterator it = delta_gain.begin(); 
+                it != delta_gain.end(); ++it, ++k) {
             out << k;
-            for (int i = 0; i < (*it).size(); i++)
+            for (int i = 0; i < (*it).size(); ++i) {
                 out << "  " << (*it)[i];
+            }
             out << endl;
         }
         out.close();
@@ -1205,12 +1237,12 @@ void calculateTaxaOrder(CircularNetwork& sg,
                         vector<int>& taxa_order) {
     if (sg.isCircular()) {
         // is a circular network, get circular order
-        for (int i = 0; i < sg.getNTaxa(); i++) {
+        for (int i = 0; i < sg.getNTaxa(); ++i) {
             taxa_order.push_back(sg.getCircleId(i));
         }
     } else {
         // otherwise, get the incremental order
-        for (int i = 0; i < sg.getNTaxa(); i++) {
+        for (int i = 0; i < sg.getNTaxa(); ++i) {
             taxa_order.push_back(i);
         }
     }
@@ -1228,7 +1260,7 @@ void runBootstrapAnalysis(Params& params, CircularNetwork& sg,
     StrVector taxname;
     sg.getTaxaName(taxname);
     int i = 1;
-    for (MTreeSet::iterator it = mtrees->begin(); it != mtrees->end(); it++, i++) {
+    for (MTreeSet::iterator it = mtrees->begin(); it != mtrees->end(); ++it, ++i) {
         cout << "---------- TREE " << i << " ----------" << endl;
         // convert tree into split sytem
         SplitGraph sg2;
@@ -1251,8 +1283,9 @@ void reportOnPDSets(CircularNetwork& sg, vector<SplitSet>& pd_set) {
     if (verbose_mode >= VerboseMode::VB_DEBUG && !sg.isPDArea()) {
         cout << "PD set(s) with score(s): " << endl;
         for (vector<SplitSet>::iterator it = pd_set.begin(); 
-             it != pd_set.end(); it++) {
-            for (SplitSet::iterator it2 = (*it).begin(); it2 != (*it).end(); it2++ ){
+             it != pd_set.end(); ++it) {
+            for (SplitSet::iterator it2 = (*it).begin(); 
+                 it2 != (*it).end(); ++it2 ) {
                 //(*it)->report(cout);
                 cout << "  " << (*it2)->getWeight() << "    ";
                 for (int i = 0; i < sg.getNTaxa(); i++) {
@@ -1276,7 +1309,7 @@ void printSplitSet(SplitGraph &sg, SplitIntMap &hash_ss) {
         (*it)->report(cout);
     }*/
     sg.getTaxa()->Report(cout);
-    for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++) {
+    for (SplitGraph::iterator it = sg.begin(); it != sg.end(); ++it) {
         if ((*it)->getWeight() > 50 && (*it)->countTaxa() > 1)
         (*it)->report(cout);
     }
@@ -1303,7 +1336,8 @@ void calcTreeCluster(Params &params) {
     treename += ".clu-id";
     tree.printTree(treename.c_str());
 
-    for (mmatrix(int)::iterator it = clusters.begin(); it != clusters.end(); it++, cnt++) {
+    for (mmatrix(int)::iterator it = clusters.begin(); 
+         it != clusters.end(); ++it, ++cnt) {
         ostringstream filename;
         filename << params.out_prefix << "." << cnt << ".clu";
         ofstream out(filename.str().c_str());
@@ -1312,10 +1346,11 @@ void calcTreeCluster(Params &params) {
         filename2 << params.out_prefix << "." << cnt << ".name-clu";
         ofstream out2(filename2.str().c_str());
 
-        out << "w" << endl << "c" << endl << "4" << endl << "b" << endl << "g" << endl << 4-params.is_rooted << endl;
+        out << "w" << endl << "c" << endl << "4" << endl << "b" << endl 
+            << "g" << endl << 4-params.is_rooted << endl;
         IntVector::iterator it2;
         NodeVector::iterator it3;
-        for (it2 = (*it).begin(), it3 = taxa.begin(); it2 != (*it).end(); it2++, it3++)
+        for (it2 = (*it).begin(), it3 = taxa.begin(); it2 != (*it).end(); ++it2, ++it3)
             if ((*it3)->name != ROOT_NAME) {
                 out << char((*it2)+'a') << endl;
                 out2 << (*it3)->name << "  " << char((*it2)+'a') << endl;
@@ -1323,7 +1358,8 @@ void calcTreeCluster(Params &params) {
         out << "y" << endl;
         out.close();
         out2.close();
-        cout << "Cluster " << cnt << " printed to " << filename.rdbuf() << " and " << filename2.rdbuf() << endl;
+        cout << "Cluster " << cnt << " printed to " << filename.rdbuf() 
+             << " and " << filename2.rdbuf() << endl;
     }
 }
 
@@ -1378,7 +1414,8 @@ void printAreaList(Params &params) {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename.c_str());
-        for (TaxaSetNameVector::iterator it = allsets->begin(); it != allsets->end(); it++) {
+        for (TaxaSetNameVector::iterator it = allsets->begin(); 
+             it != allsets->end(); ++it) {
             out << (*it)->name;
             out << endl;
         }
@@ -1437,9 +1474,8 @@ void calcDistribution(Params &params) {
     }
 }
 
-void printRFDist(string filename, double *rfdist, int n, int m, int rf_dist_mode, bool print_msg = true) {
-    int i, j;
-
+void printRFDist(string filename, double *rfdist, int n, int m, 
+                 int rf_dist_mode, bool print_msg = true) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -1454,37 +1490,45 @@ void printRFDist(string filename, double *rfdist, int n, int m, int rf_dist_mode
             << "#    Dist:    Robinson-Foulds distance" << endl
             << "ID1,ID2,Dist" << endl;
             if (rf_dist_mode == RF_ADJACENT_PAIR) {
-                for (i = 0; i < n; i++)
+                for (int i = 0; i < n; i++) {
                     out << i+1 << ',' << i+2 << ',' << rfdist[i] << endl;
+                }
             } else if (Params::getInstance().rf_same_pair) {
-                for (i = 0; i < n; i++)
+                for (int i = 0; i < n; i++) {
                     out << i+1 << ',' << i+1 << ',' << rfdist[i] << endl;
+                }
             } else {
-                for (i = 0; i < n; i++)  {
-                    for (j = 0; j < m; j++)
+                for (int i = 0; i < n; i++)  {
+                    for (int j = 0; j < m; j++) {
                         out << i+1 << ',' << j+1 << ',' << rfdist[i*m+j] << endl;
+                    }
                 }
             }
-        } else if (rf_dist_mode == RF_ADJACENT_PAIR || Params::getInstance().rf_same_pair) {
+        } else if (rf_dist_mode == RF_ADJACENT_PAIR || 
+                   Params::getInstance().rf_same_pair) {
             out << "XXX        ";
             out << 1 << " " << n << endl;
-            for (i = 0; i < n; i++)
+            for (int i = 0; i < n; i++) {
                 out << " " << rfdist[i];
+            }
             out << endl;
         } else {
             // all pairs
             out << n << " " << m << endl;
-            for (i = 0; i < n; i++)  {
+            for (int i = 0; i < n; i++)  {
                 out << "Tree" << i << "      ";
-                for (j = 0; j < m; j++)
+                for (int j = 0; j < m; j++) {
                     out << " " << rfdist[i*m+j];
+                }
                 out << endl;
             }
         }
         out.close();
-        if (print_msg)
-            cout << "Robinson-Foulds distances printed to " << filename << endl;
-    } catch (ios::failure) {
+        if (print_msg) {
+            cout << "Robinson-Foulds distances printed to " 
+                 << filename << endl;
+        }
+    } catch (ios::failure& ) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
 }
@@ -1692,7 +1736,7 @@ void branchStats(Params &params){
         out.exceptions(ios::failbit | ios::badbit);
         out.open(output.c_str());
         mytree.printBrInfo(out);
-    } catch (ios::failure) {
+    } catch (ios::failure& ) {
         outError(ERR_WRITE_OUTPUT, output);
     }
     cout << "Information about branch lengths of the tree is printed to: " << output << endl;
@@ -1706,7 +1750,7 @@ void branchStats(Params &params){
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(output.c_str());
-        for (int i = 0; i < nodes1.size(); i++)
+        for (int i = 0; i < nodes1.size(); ++i)
             out << nodes1[i]->findNeighbor(nodes2[i])->length << " ";
         out << endl;
     } catch (ios::failure) {
@@ -1724,8 +1768,9 @@ void compare(Params &params){
     sort(taxa.begin(), taxa.end(), nodenamecmp);
     int i;
     NodeVector::iterator it;
-    for (it = taxa.begin(), i = 0; it != taxa.end(); it++, i++)
-            (*it)->id = i;
+    for (it = taxa.begin(), i = 0; it != taxa.end(); ++it, ++i) {
+        (*it)->id = i;
+    }
 
     string drawFile = params.second_tree;
     drawFile += ".draw";
@@ -2104,9 +2149,7 @@ extern "C" void funcAbort(int signal_number)
 extern "C" void getintargv(int *argc, char **argv[]) 
 {
     int    done;
-    int    count;
     int    n;
-    int    l;
     char   ch;
     char  *argtmp;
     char **argstr;
@@ -2135,9 +2178,8 @@ extern "C" void getintargv(int *argc, char **argv[])
 
         fprintf(stdout, "\nEnter single parameter [! for none]: ");
         fflush(stdout);
-        count = fscanf(stdin, "%s", argstr[n]);
-        do ;
-        while (getc(stdin) != '\n');
+        int count = fscanf(stdin, "%s", argstr[n]);
+        do {} while (getc(stdin) != '\n');
 
         if(argstr[0][0] == '!') {
             count = 0;
@@ -2151,7 +2193,7 @@ extern "C" void getintargv(int *argc, char **argv[])
 
         while(!done) {
             fprintf(stdout, "\nCurrent commandline: ");
-            for(l=1; l<n; l++) {
+            for(int l=1; l<n; l++) {
                 fprintf(stdout, "%s ", argstr[l]);
             }
             fprintf(stdout, "\nQuit [q]; confirm [y]%s%s%s: ",

@@ -1166,15 +1166,15 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     bool *test_options = test_options_default;
     //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
     const int noptions = element_count(rate_options);
-    int i, j;
     
     bool with_new = (model_name.find("NEW") != string::npos || 
                      model_name.substr(0,2) == "MF" || model_name.empty());
     bool with_asc = (model_name.find("ASC") != string::npos);
 
     if (seq_type == SeqType::SEQ_POMO) {
-        for (i = 0; i < noptions; i++)
+        for (int i = 0; i < noptions; i++) {
             test_options[i] = test_options_pomo[i];
+        }
     }
     // If not PoMo, go on with normal treatment.
     else if (frac_invariant_sites == 0.0) {
@@ -1210,19 +1210,22 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
         // normal data, use +I instead
         if (with_new && rate_set != "1") {
             // change +I+G to +R
-            if (with_asc)
+            if (with_asc) {
                 test_options = test_options_asc_new;
-            else
+            }
+            else {
                 test_options = test_options_new;
+            }
         } else if (with_asc) {
             test_options = test_options_asc;
-        } else if (rate_set == "1")
+        } else if (rate_set == "1") {
             test_options = test_options_fast;
-        else
+        } else {
             test_options = test_options_default;
+        }
         if (frac_invariant_sites == 0.0) {
             // deactivate +I
-            for (j = 0; j < noptions; ++j) {
+            for (int j = 0; j < noptions; ++j) {
                 if (strstr(rate_options[j], "+I")) {
                     test_options[j] = false;
                 }
@@ -1236,14 +1239,14 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
         if (!ratehet.empty() && iEquals(ratehet[0], "ALL")) {
             ratehet.erase(ratehet.begin());
             StrVector ratedef;
-            for (j = 0; j < noptions; ++j) {
+            for (int j = 0; j < noptions; ++j) {
                 if (test_options[j]) {
                     ratedef.push_back(rate_options[j]);
                 }
             }
             ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
         }
-        for (j = 0; j < ratehet.size(); j++) {
+        for (int j = 0; j < ratehet.size(); j++) {
             if (ratehet[j] != "" && ratehet[j][0] != '+' && ratehet[j][0] != '*')
                 ratehet[j] = "+" + ratehet[j];
             if (ratehet[j] == "+E") { 
@@ -1251,7 +1254,7 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
             }
         }
     } else {
-        for (j = 0; j < noptions; ++j) {
+        for (int j = 0; j < noptions; ++j) {
             if (test_options[j]) {
                 ratehet.push_back(rate_options[j]);
             }
@@ -1452,7 +1455,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln,
     return max_cats;
 }
 
-void replaceModelInfo(string &set_name, ModelCheckpoint &model_info, 
+void replaceModelInfo(const string &set_name, ModelCheckpoint &model_info, 
                       ModelCheckpoint &new_info) {
     for (auto it = new_info.begin(); it != new_info.end(); it++) {
         model_info.put(set_name + CKP_SEP + it->first, it->second);

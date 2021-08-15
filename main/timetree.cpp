@@ -90,7 +90,7 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
             try {
                 int end_pos;
                 convert_double(date.c_str(), end_pos);
-            } catch (string str) {
+            } catch (string& str) {
                 throw line_out + str;
             }
             dates[name] = date;
@@ -99,9 +99,9 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
         // set the failbit again
         in.exceptions(ios::failbit | ios::badbit);
         in.close();
-    } catch (ios::failure) {
+    } catch (ios::failure& ) {
         outError(ERR_READ_INPUT, date_file);
-    } catch (string str) {
+    } catch (string& str) {
         outError(str);
     } catch (...) {
         outError("Error reading date file " + date_file);

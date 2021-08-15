@@ -1907,7 +1907,6 @@ void computeMLDist ( Params& params, IQTree& iqtree,
 }
 
 void computeInitialDist(Params &params, IQTree &iqtree) {
-    double longest_dist;
     if (params.dist_file) {
         cout << "Reading distance matrix file "
              << params.dist_file << " ..." << endl;
@@ -1918,7 +1917,7 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
     }
     if (params.compute_jc_dist || params.compute_obs_dist || 
         params.partition_file) {
-        longest_dist = iqtree.computeDistanceMatrix(params, iqtree.aln);
+        double longest_dist = iqtree.computeDistanceMatrix(params, iqtree.aln);
         //if (!params.suppress_zero_distance_warnings) {
         //  checkZeroDist(iqtree.aln, iqtree.dist_matrix);
         //}
@@ -1982,12 +1981,11 @@ void initializeParams(Params &params, IQTree &iqtree)
 void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh,
                NodeVector &pruned_taxa, StrVector &linked_name) {
     int num_low_support;
-    double mytime;
 
     if (params.aLRT_threshold <= 100 &&
         (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
         ASSERT(params.compute_likelihood);
-        mytime = getCPUTime();
+        double mytime = getCPUTime();
         cout << "Testing tree branches by SH-like aLRT"
              << " with " << params.aLRT_replicates
              << " replicates..." << endl;
@@ -2042,7 +2040,7 @@ void restoreTaxa(IQTree &iqtree, double *saved_dist_mat,
         //     << tree.curScore << endl;
         pair<int, int> nniInfo;
         nniInfo = iqtree.optimizeNNI(true, "");
-        cout << "Log-likelihood    after reoptimizing full tree: "
+        cout << "Log-likelihood after reoptimizing full tree: "
              << iqtree.getCurScore() << endl;
         //auto   fact      = iqtree.getModelFactory();
         //double opt_score = fact->optimizeParameters(params.fixed_branch_length,
@@ -2051,7 +2049,7 @@ void restoreTaxa(IQTree &iqtree, double *saved_dist_mat,
 
     }
 }
-void runApproximateBranchLengths(Params &params, IQTree &iqtree) {
+void runApproximateBranchLengths(const Params &params, IQTree &iqtree) {
     if (!params.fixed_branch_length && params.leastSquareBranch) {
         cout << endl << "Computing Least Square branch lengths..." << endl;
         iqtree.optimizeAllBranchesLS();
@@ -2307,8 +2305,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     }
     
     if (params.print_conaln && iqtree.isSuperTree()) {
-        string str = params.out_prefix;
-        str = params.out_prefix;
+        string str(params.out_prefix);
         str += ".conaln";
         iqtree.aln->printAlignment(params.aln_output_format, str.c_str());
     }
@@ -2512,7 +2509,7 @@ void optimizeConTree(Params &params, IQTree *tree) {
 
 void handleGammaInvariantOptions(Params &params, IQTree &iqtree);
 
-void handleQuartetLikelihoodMapping(Params &params, IQTree &iqtree);
+void handleQuartetLikelihoodMapping(const Params &params, IQTree &iqtree);
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
@@ -3151,7 +3148,7 @@ void handleGammaInvariantOptions(Params &params, IQTree &iqtree) {
     }
 }
 
-void handleQuartetLikelihoodMapping(Params &params, IQTree &iqtree) {
+void handleQuartetLikelihoodMapping(const Params &params, IQTree &iqtree) {
     if (params.lmap_num_quartets >= 0) {
         cout << endl << "Performing likelihood mapping with ";
         if (params.lmap_num_quartets > 0) {
@@ -3441,7 +3438,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     else
         iqtree.setCurScore(iqtree.computeLikelihood());
     RateHeterogeneity* site_rates = (iqtree.getRate());
-    double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
     DoubleVector initAlphas;
     if (Params::getInstance().randomAlpha) {
         while (initAlphas.size() < 10) {
@@ -3449,6 +3445,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
             initAlphas.push_back(initAlpha + iqtree.params->min_gamma_shape*2);
         }
     } else {
+        double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
         initAlphas.assign(values, values+10);
     }
     double bestLogl = iqtree.getCurScore();

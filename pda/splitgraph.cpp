@@ -168,7 +168,7 @@ void SplitGraph::saveCheckpoint() {
     int nsplits = static_cast<int>(size());
     CKP_SAVE(nsplits);
     checkpoint->startList(static_cast<int>(size()));
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         checkpoint->addListElement();
         stringstream ss;
         ss << (*it)->getWeight();
@@ -214,9 +214,11 @@ void SplitGraph::restoreCheckpoint() {
 
 int SplitGraph::getNTrivialSplits() {
     int count = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it)->trivial() >= 0)
+    for (iterator it = begin(); it != end(); ++it) {
+        if ((*it)->trivial() >= 0) {
             count++;
+        }
+    }
     return count;
 }
 
@@ -235,16 +237,18 @@ void SplitGraph::createStarTree() {
 
 void SplitGraph::AddTaxaFromSets() {
     cout << "Taking taxa from SETS block..." << endl;
-    for (int i = 0; i < sets->getNSets(); i++)
+    for (int i = 0; i < sets->getNSets(); ++i) {
         for(vector<string>::iterator it = sets->getSet(i)->taxlist.begin(); 
-            it != sets->getSet(i)->taxlist.end(); it++) 
+            it != sets->getSet(i)->taxlist.end(); ++it) {
             if (!taxa->IsAlreadyDefined(NxsString(it->c_str()))) {
                 taxa->AddTaxonLabel(NxsString(it->c_str()));
-            }    
+            }
+        }
+    }    
 }
 
 void SplitGraph::freeMem() {
-    for (reverse_iterator it = rbegin(); it != rend(); it++) {
+    for (reverse_iterator it = rbegin(); it != rend(); ++it) {
         //(*it)->report(cout);
         delete *it;
     }
@@ -309,17 +313,18 @@ void SplitGraph::report(ostream &out)
     {
         out << "no split" << endl;
     }
-    else if (size() == 1)
+    else if (size() == 1) {
         out << "one split" << endl;
-    else
+    }
+    else {
         out << size() << " splits" << endl;
-
-    if (size() == 0)
+    }
+    if (size() == 0) {
         return;
-
+    }
     sort(begin(), end(), compareSplit);
     int k = 0;
-    for (iterator it = begin(); it != end(); it++,k++)
+    for (iterator it = begin(); it != end(); ++it,++k)
     {
         out << '\t' << (k+1) << '\t';
         (*it)->report(out);
@@ -330,11 +335,11 @@ void SplitGraph::reportConflict(ostream &out)
 {
     int k = 0;
     out << "Compatible splits: " << endl;
-    for (iterator i = begin(); i != end(); i++, k++)
+    for (iterator i = begin(); i != end(); ++i, ++k)
     {
         out << (k+1) << '\t';
         int k2 = 1;
-        for (iterator j = begin(); j != end(); j++, k2++)
+        for (iterator j = begin(); j != end(); ++j, ++k2)
             if ( j != i && (*i)->compatible(*(*j)))
             {
                 out << k2 << " ";
@@ -350,16 +355,18 @@ void SplitGraph::reportConflict(ostream &out)
 double SplitGraph::calcWeight(Split &taxa_set)
 {
     double sum = 0.0;
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it)->preserved(taxa_set))
+    for (iterator it = begin(); it != end(); ++it) {
+        if ((*it)->preserved(taxa_set)) {
             sum += (*it)->getWeight();
+        }
+    }
     return sum;
 }
 
 int SplitGraph::countSplits(Split &taxa_set)
 {
     int cnt = 0;
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         if ((*it)->preserved(taxa_set)) {
             ++cnt;
         }
@@ -370,7 +377,7 @@ int SplitGraph::countSplits(Split &taxa_set)
 int SplitGraph::countInternalSplits(Split &taxa_set)
 {
     int cnt = 0;
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         if ((*it)->trivial() < 0 && (*it)->preserved(taxa_set)) {
             ++cnt;
         }
@@ -383,14 +390,14 @@ int SplitGraph::countInternalSplits(Split &taxa_set)
 */
 double SplitGraph::calcWeight() {
     double sum = 0.0;
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); ++it)
         sum += (*it)->weight;
     return sum;
 }
 
 double SplitGraph::calcTrivialWeight() {
     double sum = 0.0;
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); ++it)
         if ((*it)->trivial() >= 0)
             sum += (*it)->weight;
     return sum;
@@ -398,7 +405,7 @@ double SplitGraph::calcTrivialWeight() {
 
 double SplitGraph::maxWeight() {
     double m = -1e6;
-    for (iterator it = begin(); it != end(); it++)
+    for (iterator it = begin(); it != end(); ++it)
         if (m < (*it)->weight) m = (*it)->weight;
     return m;
 }
@@ -465,13 +472,14 @@ void SplitGraph::calcDistance(mmatrix(double) &dist) {
     vector<int>::iterator i, j;
 
     dist.resize(ntaxa);
-    for (mmatrix(double)::iterator di = dist.begin(); di != dist.end(); di++)
+    for (mmatrix(double)::iterator di = dist.begin(); di != dist.end(); ++di) {
         (*di).resize(ntaxa, 0);
+    }
 
-    for (it = begin(); it != end(); it++) {
+    for (it = begin(); it != end(); ++it) {
         (*it)->getTaxaList(vi, vj);
-        for (i = vi.begin(); i != vi.end(); i++)
-            for (j = vj.begin(); j < vj.end(); j++) {
+        for (i = vi.begin(); i != vi.end(); ++i)
+            for (j = vj.begin(); j < vj.end(); ++j) {
                 dist[*i][*j] += (*it)->weight;
                 dist[*j][*i] += (*it)->weight;
             }
@@ -488,8 +496,9 @@ void SplitGraph::calcDistance(mmatrix(double) &dist, vector<int> &taxa_order) {
     dist.resize(ntaxa);
     for (i = 0; i < ntaxa; i++) {
         dist[i].resize(ntaxa);
-        for (j = 0; j < ntaxa; j++)
+        for (j = 0; j < ntaxa; j++) {
             dist[i][j] = my_dist[taxa_order[i]][taxa_order[j]];
+        }
     }
 }
 
@@ -588,7 +597,7 @@ void SplitGraph::saveFileNexus(ostream &out, bool omit_trivial) {
     out << "MATRIX" << endl;
     int near_zeros = 0;
     int zeros = 0;
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         if (omit_trivial && (*it)->trivial() >= 0) continue;
         if ((*it)->weight == 0.0) zeros ++;
         if ((*it)->weight <= 1e-6) near_zeros ++;
@@ -608,7 +617,7 @@ void SplitGraph::saveFileNexus(ostream &out, bool omit_trivial) {
 void SplitGraph::saveFileStarDot(ostream &out, bool omit_trivial) {
     int ntaxa = getNTaxa();
     int i;
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         if (omit_trivial && (*it)->trivial() >= 0) continue;
         bool swap_code = !(*it)->containTaxon(0);
         if (swap_code) {
@@ -640,7 +649,7 @@ void SplitGraph::saveFile(const char* out_file, InputType file_format, bool omit
 }
 
 void SplitGraph::scaleWeight(double norm, bool make_int, int precision) {
-    for (iterator itg = begin(); itg != end(); itg ++ )
+    for (iterator itg = begin(); itg != end(); ++itg)
         if (make_int)
             (*itg)->setWeight( round((*itg)->getWeight()*norm) );
         else if (precision < 0)
@@ -649,12 +658,14 @@ void SplitGraph::scaleWeight(double norm, bool make_int, int precision) {
             (*itg)->setWeight( round((*itg)->getWeight()*norm*pow((double)10.0,precision))/pow((double)10.0,precision));
 }
 // TODO Implement a more efficient function using Hash Table
-bool SplitGraph::containSplit(Split &sp) {
+bool SplitGraph::containSplit(const Split &sp) {
     Split invert_sp(sp);
     invert_sp.invert();
-    for (iterator it = begin(); it != end(); it++)
-        if ((*(*it)) == sp || (*(*it)) == invert_sp)
+    for (iterator it = begin(); it != end(); ++it) {
+        if ((*(*it)) == sp || (*(*it)) == invert_sp) {
             return true;
+        }
+    }
     return false;
 }
 
@@ -678,9 +689,11 @@ double SplitGraph::computeBoundary(Split &area) {
 }
 
 bool SplitGraph::compatible(Split *sp) {
-    for (iterator it = begin(); it != end(); it++)
-        if (!(*it)->compatible(*sp))
+    for (iterator it = begin(); it != end(); ++it) {
+        if (!(*it)->compatible(*sp)) {
             return false;
+        }
+    }
     return true;
 }
 
@@ -709,21 +722,25 @@ void SplitGraph::findMaxCompatibleSplits(SplitGraph &maxsg) {
     maxsg.splits->cycle = splits->cycle;
     // make the splits
 
-    for (SplitSet::iterator it = myset.begin(); it != myset.end(); it++) 
-        if (maxsg.compatible(*it)){
+    for (SplitSet::iterator it = myset.begin(); it != myset.end(); ++it) {
+        if (maxsg.compatible(*it)) {
             maxsg.push_back(new Split(*(*it)));
             //(*it)->report(cout);
-            if (maxsg.size() >= max_splits)
+            if (maxsg.size() >= max_splits) {
                 break;
+            }
         }
+    }
     myset.clear();
 }
 
 bool SplitGraph::isWeaklyCompatible() {
-    if (getNSplits() < 3) return true;
-    for (iterator it1 = begin(); it1+2 != end(); it1++)
-        for (iterator it2 = it1+1; it2+1 != end(); it2++)
-            for (iterator it3 = it2+1; it3 != end(); it3++) {
+    if (getNSplits() < 3) {
+        return true;
+    }
+    for (iterator it1 = begin(); it1+2 != end(); ++it1) {
+        for (iterator it2 = it1+1; it2+1 != end(); ++it2) {
+            for (iterator it3 = it2+1; it3 != end(); ++it3) {
                 Split sp1(*(*it1));
                 Split sp2(*(*it2));
                 Split sp3(*(*it3));
@@ -751,6 +768,8 @@ bool SplitGraph::isWeaklyCompatible() {
                 if (sp.isEmpty()) continue;
                 return false;
             }
+        }
+    }
     return true;
 }
 
