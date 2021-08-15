@@ -609,7 +609,8 @@ void SuperAlignment::loadOneNexusPartition(const Params& params,
 
 void SuperAlignment::readPartitionDir
         (string partition_dir, const char *sequence_type,
-         InputType &intype, string model, bool remove_empty_seq) {
+         const InputType &intype, const string& model, 
+         bool remove_empty_seq) {
     //    Params origin_params = params;
     string dir = partition_dir;
     if (dir.back() != '/') {
@@ -663,7 +664,8 @@ void SuperAlignment::readPartitionDir
 
 void SuperAlignment::readPartitionList(string file_list,
                                        const char *sequence_type,
-                                       InputType &intype, string model,
+                                       const InputType &intype, 
+                                       const string& model,
                                        bool remove_empty_seq)
 {
     //    Params origin_params = params;
@@ -828,7 +830,6 @@ void SuperAlignment::printBestPartition(const char *filename) {
 
 
 void SuperAlignment::printPartitionRaxml(const char *filename) {
-    int part;
 //    for (part = 0; part < partitions.size(); part++) {
 //        if (partitions[part]->aln_file != "") {
 //            cout << "INFO: Printing partition in RAxML format"
@@ -841,7 +842,7 @@ void SuperAlignment::printPartitionRaxml(const char *filename) {
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
         int start_site;
-        for (part = 0, start_site = 1; part < partitions.size(); part++) {
+        for (int part = 0, start_site = 1; part < partitions.size(); part++) {
             string name = partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             int end_site = start_site + partitions[part]->getNSite32();
@@ -1687,11 +1688,15 @@ double SuperAlignment::computeDist(int seq1, int seq2) const {
          it != partitions.end(); ++it, ++part) {
 		int id1 = taxa_index[seq1][part];
 		int id2 = taxa_index[seq2][part];
-		if (id1 < 0 || id2 < 0) continue;
+		if (id1 < 0 || id2 < 0) {
+            continue;
+        }
 		dist += (*it)->computeDist(id1, id2);
+        ++num;
 	}
-	if (num == 0) // two sequences are not overlapping at all!
+	if (num == 0) { // two sequences are not overlapping at all!
 		return MAX_GENETIC_DIST;
+    }
 	return dist / num;
 }
 
@@ -1731,10 +1736,12 @@ void SuperAlignment::printSubAlignments(Params &params) {
 	int part;
 	for (pit = partitions.begin(), part = 0; 
          pit != partitions.end(); ++pit, ++part) {
-		if (params.aln_output)
+		if (params.aln_output) {
 			filename = params.aln_output;
-		else
+        }
+		else {
 			filename = params.out_prefix;
+        }
 		filename += "." + (*pit)->name;
         int exclude_sites = (params.aln_nogaps) ? EXCLUDE_GAP : 0;
         (*pit)->printAlignment(params.aln_output_format, filename.c_str(), 
@@ -1761,13 +1768,12 @@ double SuperAlignment::computeMissingData() {
 	}
 	ret /= getNSeq() * len;
 	return 1.0 - ret;
-
 }
 
 void SuperAlignment::identifyUnionTaxa
         (const std::set<int>& ids, std::string& union_taxa, 
          int& nsites, int& nstates, SeqType& sub_type ) const {
-	for (auto it = ids.begin(); it != ids.end(); it++) {
+	for (auto it = ids.begin(); it != ids.end(); ++it) {
 		int id = *it;
 		ASSERT(id >= 0 && id < partitions.size());
 		if (nstates == 0) {
@@ -1789,7 +1795,7 @@ void SuperAlignment::identifyUnionTaxa
 		if (it == ids.begin()) {
             union_taxa = taxa_set; 
         } else {
-			for (int j = 0; j < union_taxa.length(); j++) {
+			for (int j = 0; j < union_taxa.length(); ++j) {
 				if (taxa_set[j] == 1) { 
                     union_taxa[j] = 1;
                 }
@@ -1830,11 +1836,11 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) const {
         //Pattern taxa_pat = getPattern(id);
         //taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
     	for (Alignment::iterator it = partitions[id]->begin(); 
-             it != partitions[id]->end(); it++) {
+             it != partitions[id]->end(); ++it) {
     		Pattern pat;
     		//int part_seq = 0;
             intptr_t union_seq_count = union_taxa.size();
-    		for (intptr_t seq = 0; seq < union_seq_count; seq++)
+    		for (intptr_t seq = 0; seq < union_seq_count; ++seq)
     			if (union_taxa[seq] == 1) {
     				char ch = aln->STATE_UNKNOWN;
                     int seq_part = taxa_index[seq][id];
@@ -1850,7 +1856,7 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) const {
     		aln->addPattern(pat, site, (*it).frequency);
     		// IMPORTANT BUG FIX FOLLOW
     		int ptnindex = aln->pattern_index[pat];
-            for (int j = 0; j < (*it).frequency; j++) {
+            for (int j = 0; j < (*it).frequency; ++j) {
                 aln->site_pattern[site++] = ptnindex;
             }
     	}
@@ -1864,9 +1870,9 @@ Alignment *SuperAlignment::concatenateAlignments() const {
     vector<SeqType>   seq_types;
     StrVector         genetic_codes;
     vector<set<int> > ids;
-    for (int i = 0; i < partitions.size(); i++) {
+    for (int i = 0; i < partitions.size(); ++i) {
         bool found = false;
-        for (int j = 0; j < seq_types.size(); j++)
+        for (int j = 0; j < seq_types.size(); ++j)
             if (partitions[i]->seq_type == seq_types[j] &&
                 partitions[i]->genetic_code == genetic_codes[j]) {
                 ids[j].insert(i);
@@ -1899,7 +1905,7 @@ Alignment *SuperAlignment::concatenateAlignments() const {
     saln->seq_names = seq_names;
     saln->taxa_index.resize(saln->seq_names.size());
     for (auto it = saln->taxa_index.begin();
-         it != saln->taxa_index.end(); it++) {
+         it != saln->taxa_index.end(); ++it) {
         it->resize(nsite, -1);
     }
     for (size_t site = 0; site != nsite; ++site) {
@@ -1970,7 +1976,7 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
              pit != partitions[part]->ordered_pattern.end(); ++pit) {
             Pattern pattern(*pit);
             pattern.resize(nseq); // maximal unknown states
-            for (int j = 0; j < nseq; j++) {
+            for (int j = 0; j < nseq; ++j) {
                 if (taxa_index[j][part] >= 0) {
                     pattern[j] = (*pit)[taxa_index[j][part]];
                 }

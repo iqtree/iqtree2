@@ -5359,9 +5359,9 @@ double Alignment::readDist(const char *file_name, bool is_incremental,
         cout << "Distance matrix was read from " << file_name << endl;
     } catch (const char *str) {
         outError(str);
-    } catch (string str) {
-        outError(str);
-    } catch (ios::failure) {
+    } catch (string& error_str) {
+        outError(error_str);
+    } catch (ios::failure& io_fail) {
         outError(ERR_READ_INPUT, file_name);
     }
     return longest_dist;
