@@ -1746,9 +1746,7 @@ bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
                   << problem.getMessage();
         outError(complaint.str());
     }
-
     changeSubscriptRangesOfParameters(logging_target);
-
     return !expr_list.empty();
 }
 
