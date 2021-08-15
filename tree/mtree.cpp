@@ -82,7 +82,7 @@ MTree::MTree(MTree &tree) {
     init(tree);
 }
 
-MTree::MTree(string& treeString, StrVector& taxaNames, 
+MTree::MTree(const string& treeString, StrVector& taxaNames, 
              bool isRooted) {
     stringstream str;
     str << treeString;
@@ -92,7 +92,7 @@ MTree::MTree(string& treeString, StrVector& taxaNames,
     assignLeafID();
 }
 
-MTree::MTree(string& treeString, bool isRooted) {
+MTree::MTree(const string& treeString, bool isRooted) {
     stringstream str;
     str << treeString;
     str.seekg(0, ios::beg);

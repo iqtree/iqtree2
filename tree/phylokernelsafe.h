@@ -197,7 +197,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         if (child->node->isLeaf()) {
             vector<int>::iterator it;
             for (it = aln->seq_states[child->id].begin()
-                ; it != aln->seq_states[child->id].end(); it++) {
+                ; it != aln->seq_states[child->id].end(); ++it) {
                 int state = (*it);
                 double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                 VectorClass *echild_ptr = echild;
@@ -906,7 +906,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
-    	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+    	for (IntVector::iterator it = states_dad.begin(); 
+             it != states_dad.end(); ++it) {
     		double *lh_node = partial_lh_node + (*it)*block;
     		double *lh_tip = tip_partial_lh + (*it)*tip_block;
     		VectorClass *vc_val_tmp = vc_val;
@@ -1479,7 +1480,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         UINT *x = dad_branch->partial_pars;
         int start_pos = 0;
 
-        for (vector<Alignment*>::iterator alnit = partitions->begin(); alnit != partitions->end(); alnit++) {
+        for (vector<Alignment*>::iterator alnit = partitions->begin(); 
+             alnit != partitions->end(); ++alnit) {
             int end_pos = start_pos + (*alnit)->ordered_pattern.size();
             switch ((*alnit)->seq_type) {
             case SeqType::SEQ_DNA:

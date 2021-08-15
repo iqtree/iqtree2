@@ -378,7 +378,7 @@ public:
      *  Create a phylotree from the tree string and assign alignment.
      *  Taxa IDs are numbered according to their orders in the alignment.
      */
-    PhyloTree(string& treeString, Alignment *aln, bool isRooted);
+    PhyloTree(const string& treeString, Alignment *aln, bool isRooted);
 
     void init();
 
@@ -1119,19 +1119,19 @@ public:
         compute traversal_info of both subtrees
     */
     template<class VectorClass, const int nstates>
-    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, LikelihoodBufferSet& buffers, bool compute_partial_lh);
+    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, const LikelihoodBufferSet& buffers, bool compute_partial_lh);
     template<class VectorClass>
-    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, LikelihoodBufferSet& buffers, bool compute_partial_lh);
+    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, const LikelihoodBufferSet& buffers, bool compute_partial_lh);
 
     /**
         precompute info for models
     */
     template<class VectorClass, const int nstates>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(const TraversalInfo &info, VectorClass* buffer);
     template<class VectorClass>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(const TraversalInfo &info, VectorClass* buffer);
     template<class VectorClass>
-    void computePartialInfoWrapper(TraversalInfo &info, double* buffer);    
+    void computePartialInfoWrapper(const TraversalInfo &info, double* buffer);    
 
     /** 
         sort neighbor in descending order of subtree size (number of leaves within subree)
@@ -1170,59 +1170,59 @@ public:
      */
     virtual void computePartialLikelihood(TraversalInfo &info,
                                           intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                          LikelihoodBufferSet& buffers);
+                                          const LikelihoodBufferSet& buffers);
     typedef void (PhyloTree::*ComputePartialLikelihoodType)(TraversalInfo &info,
                                                             intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                                            LikelihoodBufferSet& buffers);
+                                                            const LikelihoodBufferSet& buffers);
     ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
 
     #if (EIGEN_PARTIAL_LIKELIHOOD)
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                       LikelihoodBufferSet& buffers);
+                                       const LikelihoodBufferSet& buffers);
 
     void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                                LikelihoodBufferSet& buffers);
+                                                const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                           LikelihoodBufferSet& buffers);
+                                           const LikelihoodBufferSet& buffers);
     #endif
     
     void computeNonrevPartialLikelihood(TraversalInfo &info,
                                         intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                        LikelihoodBufferSet& buffers);
+                                        const LikelihoodBufferSet& buffers);
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     void computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
                                                    intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                                   LikelihoodBufferSet& buffers);
+                                                   const LikelihoodBufferSet& buffers);
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
     void computeNonrevPartialLikelihoodSIMD(TraversalInfo &info,
                                             intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                            LikelihoodBufferSet& buffers);
+                                            const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodSIMD(TraversalInfo &info,
                                       intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                      LikelihoodBufferSet& buffers);
+                                      const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                                              intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                             LikelihoodBufferSet& buffers);
+                                             const LikelihoodBufferSet& buffers);
 
     #if (EIGEN_PARTIAL_LIKELIHOOD)
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                                  LikelihoodBufferSet& buffers);
+                                                  const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                                  LikelihoodBufferSet& buffers);
+                                                  const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                                    LikelihoodBufferSet& buffers);
+                                                    const LikelihoodBufferSet& buffers);
     #endif
 
     /****************************************************************************
@@ -1303,9 +1303,9 @@ public:
     typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)(LikelihoodBufferSet&);
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
     
-    typedef void (PhyloTree::*ComputePartialInfoType)(TraversalInfo &info, double* buffer);
+    typedef void (PhyloTree::*ComputePartialInfoType)(const TraversalInfo &info, double* buffer);
     ComputePartialInfoType computePartialInfoPointer;
-    void computePartialInfoDouble(TraversalInfo &info, double* buffer);
+    void computePartialInfoDouble(const TraversalInfo &info, double* buffer);
 
 #if (EIGEN_PARTIAL_LIKELIHOOD)
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -1635,36 +1635,36 @@ public:
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
     void computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                                 double *df, double *ddf,
-                                                LikelihoodBufferSet& buffers);
+                                                const LikelihoodBufferSet& buffers);
     template<class VectorClass, const bool SAFE_NUMERIC,
              const int nstates, const bool FMA = false>
     void computeNonrevLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                          double *df, double *ddf,
-                                         LikelihoodBufferSet& buffers);
+                                         const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
               const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                      intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                     LikelihoodBufferSet& buffers);
+                                     const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
             const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                             intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
-                                            LikelihoodBufferSet& buffers);
+                                            const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
             const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                    double *df, double *ddf,
-                                   LikelihoodBufferSet& buffers);
+                                   const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
               const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                           double *df, double *ddf,
-                                          LikelihoodBufferSet& buffers);
+                                          const LikelihoodBufferSet& buffers);
 
     /** For Mixlen stuffs */
     virtual int getCurMixture() { return 0; }
@@ -1673,13 +1673,13 @@ public:
               const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervMixlenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                          double &df, double &ddf,
-                                         LikelihoodBufferSet& buffers);
+                                         const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
               const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                                 double &df, double &ddf,
-                                                LikelihoodBufferSet& buffers);
+                                                const LikelihoodBufferSet& buffers);
 
 
     /*
@@ -1703,15 +1703,15 @@ public:
      */
     void computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                double *df, double *ddf,
-                               LikelihoodBufferSet& buffers);
+                               const LikelihoodBufferSet& buffers);
 
     typedef void (PhyloTree::*ComputeLikelihoodDervType)(PhyloNeighbor *, PhyloNode *, double *, double *,
-                                                         LikelihoodBufferSet&);
+                                                         const LikelihoodBufferSet&);
     ComputeLikelihoodDervType computeLikelihoodDervPointer;
 
     typedef void (PhyloTree::*ComputeLikelihoodDervMixlenType)(PhyloNeighbor *, PhyloNode *,
                                                                double &, double &,
-                                                               LikelihoodBufferSet&);
+                                                               const LikelihoodBufferSet&);
     ComputeLikelihoodDervMixlenType computeLikelihoodDervMixlenPointer;
 
     /****************************************************************************

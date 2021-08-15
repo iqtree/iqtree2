@@ -141,7 +141,8 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		double *partial_lh_right = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
 
 		vector<int>::iterator it;
-		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
+		for (it = aln->seq_states[left->node->id].begin(); 
+		     it != aln->seq_states[left->node->id].end(); ++it) {
 			int state = (*it);
 			VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 			VectorClass vleft[VCSIZE];
@@ -165,7 +166,8 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 			}
 		}
 
-		for (it = aln->seq_states[right->node->id].begin(); it != aln->seq_states[right->node->id].end(); it++) {
+		for (it = aln->seq_states[right->node->id].begin(); 
+		     it != aln->seq_states[right->node->id].end(); ++it) {
 			int state = (*it);
 			VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 			VectorClass vright[VCSIZE];
@@ -260,7 +262,8 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 
 		vector<int>::iterator it;
-		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
+		for (it = aln->seq_states[left->node->id].begin(); 
+		     it != aln->seq_states[left->node->id].end(); ++it) {
 			int state = (*it);
 			VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 			VectorClass vleft[VCSIZE];
@@ -772,7 +775,8 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
-    	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+    	for (IntVector::iterator it = states_dad.begin(); 
+		     it != states_dad.end(); ++it) {
     		double *lh_node = partial_lh_node + (*it)*block;
     		double *lh_tip = tip_partial_lh + (*it)*statemix;
     		VectorClass *vc_val_tmp = vc_val;

@@ -137,7 +137,8 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		double *partial_lh_right = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
 
 		vector<int>::iterator it;
-		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
+		for (it = aln->seq_states[left->node->id].begin(); 
+		     it != aln->seq_states[left->node->id].end(); ++it) {
 			int state = (*it);
 			VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 			VectorClass vleft[VCSIZE];

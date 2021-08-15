@@ -199,7 +199,7 @@ int PhyloNode::computeSize(PhyloNode *dad) {
 
 PhyloNeighbor* PhyloNode::findNeighbor(Node* node)
 {
-    return (PhyloNeighbor*) Node::findNeighbor(node);
+    return dynamic_cast<PhyloNeighbor*>(Node::findNeighbor(node));
 }
 
 bool PhyloNode::hasNeighbor(PhyloNode* node) {
@@ -215,25 +215,26 @@ PhyloNeighbor* PhyloNode::firstNeighbor() const {
     if (neighbors.empty()) {
         return nullptr;
     }
-    return (PhyloNeighbor*) neighbors[0];
+    return dynamic_cast<PhyloNeighbor*>(neighbors[0]);
 }
 
 PhyloNeighbor* PhyloNode::lastNeighbor() const {
     if (neighbors.empty()) {
         return nullptr;
     }
-    return (PhyloNeighbor*) neighbors[neighbors.size()-1];
+    return dynamic_cast<PhyloNeighbor*>(neighbors[neighbors.size()-1]);
 }
 
 PhyloNeighbor* PhyloNode::getNeighborByIndex(size_t index) {
     ASSERT(index < neighbors.size());
-    return (PhyloNeighbor*)neighbors[index];
+    return dynamic_cast<PhyloNeighbor*>(neighbors[index]);
 }
 
 PhyloBranch::PhyloBranch() : super(nullptr, nullptr) {}
 
 PhyloBranch::PhyloBranch(const Branch& copyMe)
-    : super((PhyloNode*)(copyMe.first), (PhyloNode*)(copyMe.second)) {}
+    : super(dynamic_cast<PhyloNode*>(copyMe.first), 
+            dynamic_cast<PhyloNode*>(copyMe.second)) {}
 
 PhyloBranch::PhyloBranch(PhyloNode* left, PhyloNode* right)
     : super(left, right) {}

@@ -942,7 +942,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                     quartet_aln->orderPatternByNumChars(PAT_VARIANT);
                 PhyloTree *quartet_tree;
                 if (isSuperTree()) {
-                    quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+                    quartet_tree = new PhyloSuperTree(dynamic_cast<SuperAlignment*>(quartet_aln), 
+                                                      dynamic_cast<PhyloSuperTree*>(this));
                 } else {
                     quartet_tree = new PhyloTree(quartet_aln);
                 }
@@ -962,8 +963,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                 
                 // set up partition model
                 if (isSuperTree()) {
-                    PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-                    PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+                    PhyloSuperTree *quartet_super_tree = dynamic_cast<PhyloSuperTree*>(quartet_tree);
+                    PhyloSuperTree *super_tree = dynamic_cast<PhyloSuperTree*>(this);
                     for (int i = 0; i < quartet_super_tree->size(); i++) {
                         quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
                         quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
@@ -992,7 +993,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                 quartet_tree->setRate(NULL);
                 
                 if (isSuperTree()) {
-                    PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                    PhyloSuperTree *quartet_super_tree = dynamic_cast<PhyloSuperTree*>(quartet_tree);
                     for (int i = 0; i < quartet_super_tree->size(); i++) {
                         quartet_super_tree->at(i)->setModelFactory(NULL);
                         quartet_super_tree->at(i)->setModel(NULL);
@@ -1270,9 +1271,12 @@ void readGroupNewick(char *filename, MSetsBlock *sets_block) {
                 myset->name = "Cluster" + convertInt64ToString(sets->size());
             }
             // check for duplicated name
-            for (TaxaSetNameVector::iterator it = sets->begin(); it != sets->end()-1; it++)
-                if ((*it)->name == myset->name)
+            for (TaxaSetNameVector::iterator it = sets->begin(); 
+                 it != sets->end()-1; ++it) {
+                if ((*it)->name == myset->name) {
                     throw "Duplicated cluster name " + myset->name;
+                }
+            }
             if (ch == ',') continue; // continue to read next cluster
             if (ch == ';') break;
             throw "No ',' or ';' found after " + name + ")";
@@ -1323,7 +1327,8 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     if(numsets > 5) outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!");
 
     int n = 0;
-    for (TaxaSetNameVector::iterator i = allsets->begin(); i != allsets->end(); i++) {
+    for (TaxaSetNameVector::iterator i = allsets->begin(); 
+         i != allsets->end(); ++i) {
 	if ((*i)->name.compare("ignored")==0 || (*i)->name.compare("IGNORED")==0) {
 		LMGroups.Name[4] = (*i)->name;
 		int numtax = static_cast<int>((*i)->taxlist.size());

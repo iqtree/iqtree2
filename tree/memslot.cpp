@@ -33,7 +33,7 @@ void MemSlotVector::init(PhyloTree *tree, int num_slot) {
     size_t lh_size = tree->getPartialLhSize();
     size_t scale_size = tree->getScaleNumSize();
     reset();
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         it->partial_lh = tree->central_partial_lh + lh_size*(it-begin());
         it->scale_num = tree->central_scale_num + scale_size*(it-begin());
     }
@@ -42,7 +42,7 @@ void MemSlotVector::init(PhyloTree *tree, int num_slot) {
 void MemSlotVector::reset() {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
-    for (iterator it = begin(); it != end(); it++) {
+    for (iterator it = begin(); it != end(); ++it) {
         it->status = 0;
         it->nei = NULL;
     }
@@ -148,8 +148,10 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
 
 
     // no free slot found, find an unlocked slot with minimal size
-    for (iterator it = begin(); it != end(); it++)
-        if ((it->status & MEM_LOCKED) == 0 && (it->status & MEM_SPECIAL) == 0 && min_size > it->nei->size) {
+    for (iterator it = begin(); it != end(); ++it)
+        if ((it->status & MEM_LOCKED) == 0 && 
+            (it->status & MEM_SPECIAL) == 0 && 
+            min_size > it->nei->size) {
             best = it;
             min_size = it->nei->size;
             // 2 is the minimum size

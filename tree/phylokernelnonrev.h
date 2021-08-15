@@ -31,12 +31,12 @@ using namespace std;
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 void PhyloTree::computeNonrevPartialLikelihoodSIMD(TraversalInfo &info,
                                                    intptr_t ptn_lower, intptr_t ptn_upper, int packet_id,
-                                                   LikelihoodBufferSet& buffers) {
+                                                   const LikelihoodBufferSet& buffers) {
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
                                                           intptr_t ptn_lower, intptr_t ptn_upper, int packet_id,
-                                                          LikelihoodBufferSet& buffers) {
+                                                          const LikelihoodBufferSet& buffers) {
 #endif
     
     PhyloNeighbor *dad_branch = info.dad_branch;
@@ -581,12 +581,12 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 void PhyloTree::computeNonrevLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                                 double *df, double *ddf,
-                                                LikelihoodBufferSet& buffers) {
+                                                const LikelihoodBufferSet& buffers) {
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                                        double *df, double *ddf,
-                                                       LikelihoodBufferSet& buffers) {
+                                                       const LikelihoodBufferSet& buffers) {
 #endif
 
     PhyloNode*     node        = dad_branch->getNode();

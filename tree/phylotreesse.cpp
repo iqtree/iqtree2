@@ -217,8 +217,9 @@ void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
  *
  ******************************************************/
 
-void PhyloTree::computePartialLikelihood(TraversalInfo &info, intptr_t ptn_left, intptr_t ptn_right, int packet_id,
-                                         LikelihoodBufferSet& buffers) {
+void PhyloTree::computePartialLikelihood(TraversalInfo &info, intptr_t ptn_left, 
+                                         intptr_t ptn_right, int packet_id,
+                                         const LikelihoodBufferSet& buffers) {
     (this->*computePartialLikelihoodPointer)(info, ptn_left, ptn_right, packet_id, buffers);
 }
 
@@ -229,7 +230,7 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 
 void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                       double *df, double *ddf,
-                                      LikelihoodBufferSet& buffers) {
+                                      const LikelihoodBufferSet& buffers) {
     (this->*computeLikelihoodDervPointer)(dad_branch, dad, df, ddf, buffers);
 }
 
@@ -643,7 +644,7 @@ void PhyloTree::computePtnInvar() {
 
 #if (EIGEN_PARTIAL_LIKELIHOOD)
 void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                              LikelihoodBufferSet& buffers) {
+                                              const LikelihoodBufferSet& buffers) {
 
     // don't recompute the likelihood
 	assert(dad);

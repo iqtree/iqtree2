@@ -104,7 +104,8 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 		if(test1 == 1){
 			if(taxaA.size() > 3 && taxaB.size() > 3){ // IQTree does not compute lh of tree with less than 4 taxa.
 				allSplits++;
-				sumFraction(((PhyloNode*) branch1[i]), ((PhyloNode*) branch2[i]), tree);
+				sumFraction(dynamic_cast<PhyloNode*>(branch1[i]), 
+				            dynamic_cast<PhyloNode*>(branch2[i]), tree);
 		}
 		}
 
@@ -408,7 +409,8 @@ MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
 	NodeVector taxa;
 	treeR->getTaxa(taxa);
 	ASSERT(taxa.size() == size);
-	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+	for (NodeVector::iterator it = taxa.begin(); 
+	     it != taxa.end(); --it)
 		(*it)->name = tree->aln->getSeqName((*it)->id);
 
 	return (MTree*)treeR;

@@ -50,26 +50,26 @@ struct ParsimonyLazySPRMove : public ParsimonyMove {
 public:
     ParsimonyLazySPRMove();
     static intptr_t getParsimonyVectorSize(intptr_t radius);
-    virtual void initialize(intptr_t source_branch, bool beLazy);
-    virtual std::string getDescription() const;
+    virtual void initialize(intptr_t source_branch, bool beLazy) override;
+    virtual std::string getDescription() const override;
     virtual void finalize(PhyloTree& tree,
-                          const TargetBranchRange& branches);
+                          const TargetBranchRange& branches) override;
     void findForwardLazySPR(const PhyloTree& tree, const TargetBranchRange& branches,
                             int radius, double disconnection_benefit);
     void findBackwardLazySPR(const PhyloTree& tree, const TargetBranchRange& branches,
                              int radius, double disconnection_benefit);
     virtual bool isStillPossible(const TargetBranchRange& branches,
-                                 PhyloBranchVector& path) const;
+                                 PhyloBranchVector& path) const override;
     virtual double recalculateBenefit
                    ( PhyloTree& tree, double parsimony_score,
                      TargetBranchRange& branches,
                      LikelihoodBlockPairs &blocks,
-                     ParsimonyPathVector& parsimony_path_vectors) const;
+                     ParsimonyPathVector& parsimony_path_vectors) const override;
     virtual double apply(PhyloTree& tree,
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         ParsimonyPathVector& parsimony_path_vectors);
+                         ParsimonyPathVector& parsimony_path_vectors) override;
 }; //ParsimonyLazySPRMove
 
 class ParsimonySPRMove: public ParsimonyLazySPRMove {
@@ -122,7 +122,7 @@ public:
                           const TargetBranchRange& branches,
                           int radius,
                           std::vector<UINT*> &path_parsimony,
-                          double parsimony_score);
+                          double parsimony_score) override;
 }; //ParsimonySPRMove
 
 #endif /* parsimonyspr_h */

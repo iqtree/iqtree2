@@ -62,10 +62,13 @@ UINT ParsTree::findMstScore(int ptn) {
 	//--- Prim algorithm
 	UINT * labelled_value = new UINT[aln->num_states];
 	bool * added = new bool[aln->num_states];
-	for(int i = 0; i < aln->num_states; i++) labelled_value[i] = UINT_MAX;
-	for(int i = 0; i < aln->num_states; i++) added[i] = false;
+	for(int i = 0; i < aln->num_states; i++) {
+		labelled_value[i] = UINT_MAX;
+	}
+	for(int i = 0; i < aln->num_states; i++) {
+		added[i] = false;
+	}
 
-	int add_node;
 //	labeled_value[0] = 0;
 	int count = 0;
 
@@ -81,7 +84,7 @@ UINT ParsTree::findMstScore(int ptn) {
 		}
 		// find among nodes unadded the one with smallest value
 		UINT min_label = UINT_MAX;
-		add_node = -1;
+		int  add_node = -1;
 		for(int c = 0; c < aln->num_states; c++){
 			if((added[c] == false) && (site_states[c] == 0))
 				if(labelled_value[c] < min_label){

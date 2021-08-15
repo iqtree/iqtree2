@@ -138,7 +138,7 @@ PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
     this->aln = aln;
 }
 
-PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree() {
+PhyloTree::PhyloTree(const string& treeString, Alignment* aln, bool isRooted) : MTree() {
     init();
     stringstream str;
     str << treeString;
@@ -1576,7 +1576,7 @@ double PhyloTree::computePartialParsimonyOutOfTree(const UINT* left_partial_pars
         ( left_partial_pars, right_partial_pars, dad_partial_pars );
 }
 
-void PhyloTree::computePartialInfoDouble(TraversalInfo &info, double* buffer) {
+void PhyloTree::computePartialInfoDouble(const TraversalInfo &info, double* buffer) {
     (this->*computePartialInfoPointer)(info, buffer);
 }
 
@@ -1963,9 +1963,9 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
     determineBlockSizes();
 
     // allocate the big central partial likelihoods memory
-    size_t IT_NUM = 2;
     if (!nni_partial_lh) {
         // allocate memory only once!
+        size_t IT_NUM = 2;
         nni_partial_lh = aligned_alloc<double>(IT_NUM*lh_block_size);
         nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
     }
@@ -3748,7 +3748,7 @@ void PhyloTree::moveRoot(Node *node1, Node *node2) {
     node2->updateNeighbor(node1, root_dad, len);
     
     if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
+        dynamic_cast<PhyloSuperTree*>(this)->mapTrees();
     }
     if (Params::getInstance().pll) {
         pllReadNewick(getTreeString());
@@ -4242,7 +4242,6 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
     bool uncorrected = params->compute_obs_dist;
         //Use uncorrected (observed) distances
     intptr_t seqCount = aln->getNSeq();
-    bool workToDo = false;
     cout.precision(6);
     EX_TRACE("Checking if distances already calculated...");
     //Check if there's any work to do.
@@ -4250,6 +4249,7 @@ double PhyloTree::computeDistanceMatrix_Experimental() {
     //matrix (ick) has already been initialized and there's no
     //point doing all the following.
     {
+        bool workToDo = false;
         DoubleVector rowMaxDistance;
         rowMaxDistance.resize(seqCount, 0.0);
         #pragma omp parallel for
@@ -4573,7 +4573,7 @@ void PhyloTree::computeBioNJ(Params &params) {
         }
     }
     double tree_load_start_time = getRealTime();
-    readTreeFile(bionj_file.c_str());
+    readTreeFile(bionj_file);
     if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Loading tree (from file " << bionj_file << ") took "
              << (getRealTime()-tree_load_start_time) << " sec." << endl;
@@ -4985,8 +4985,8 @@ void PhyloTree::pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info)
 
     info.left_node->updateNeighbor(info.left_it, info.dad_nei_right);
     info.right_node->updateNeighbor(info.right_it, info.dad_nei_left);
-    ((PhyloNeighbor*) info.dad_nei_right)->partial_lh = newPartialLh();
-    ((PhyloNeighbor*) info.dad_nei_left)->partial_lh = newPartialLh();
+    dynamic_cast<PhyloNeighbor*>(info.dad_nei_right)->partial_lh = newPartialLh();
+    dynamic_cast<PhyloNeighbor*>(info.dad_nei_left)->partial_lh  = newPartialLh();
     //James B. 07-Oct-2020.  Look to see if these are leaked?
 }
 
@@ -5616,7 +5616,7 @@ int PhyloTree::collapseStableClade(int min_support, NodeVector &pruned_taxa,
     }
 
     // set root to the first taxon which was not deleted
-    for (auto tax_it = taxa.begin(); tax_it != taxa.end(); tax_it++)
+    for (auto tax_it = taxa.begin(); tax_it != taxa.end(); ++tax_it)
         if (linked_taxid[(*tax_it)->id] < 0) {
             root = (*tax_it);
             break;

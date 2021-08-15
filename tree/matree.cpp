@@ -30,7 +30,8 @@ void MaTree::printBrInfo(ostream& out) {
     SplitGraph mySg;
     convertSplits(mySg);
     //get information about the branch length based on this SplitGraph
-    for ( SplitGraph::iterator it = mySg.begin(); it != mySg.end(); it++)
+    for ( SplitGraph::iterator it = mySg.begin(); 
+          it != mySg.end(); ++it)
     {
         (*it)->report(cout);
         //the split is an external branch
@@ -70,11 +71,12 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
     NodeVector taxa;
     getTaxa(taxa);
     sort(taxa.begin(), taxa.end(), nodenamecmp);
-    int i;
+    int i = 0;
     NodeVector::iterator it;
-    for (it = taxa.begin(), i = 0; it != taxa.end(); it++, i++)
+    for (it = taxa.begin(); 
+         it != taxa.end(); ++it, ++i) {
         (*it)->id = i;
-
+    }
     //convert the tree into SplitIntMap
     SplitIntMap sim;
     Split *sp = new Split(leafNum);

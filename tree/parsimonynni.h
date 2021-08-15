@@ -19,29 +19,29 @@ public:
     ParsimonyNNIMove(const ParsimonyNNIMove& rhs);
     ParsimonyNNIMove& operator=(const ParsimonyNNIMove& rhs);
     virtual ~ParsimonyNNIMove() = default;
-    virtual void initialize(intptr_t source_branch, bool beLazy);
-    virtual std::string getDescription() const;
+    virtual void initialize(intptr_t source_branch, bool beLazy) override;
+    virtual std::string getDescription() const override;
     static intptr_t getParsimonyVectorSize(intptr_t radius);
     static intptr_t getMinimumPathVectorCount();
     virtual void   findMove(const PhyloTree& tree, 
                             const TargetBranchRange& branches,
                             int /*radius*/ /* ignored; just part of signature */,
                             std::vector<UINT*> &path_parsimony,
-                            double parsimony_score);
+                            double parsimony_score) override;
     virtual void finalize(PhyloTree& tree,
-                          const TargetBranchRange& branches);
+                          const TargetBranchRange& branches) override;
     virtual bool isStillPossible(const TargetBranchRange& branches,
-                                 PhyloBranchVector& path) const;
+                                 PhyloBranchVector& path) const override;
     virtual double recalculateBenefit
                    ( PhyloTree& tree, double tree_parsimony_score,
                      TargetBranchRange& branches,
                      LikelihoodBlockPairs &blocks,
-                     ParsimonyPathVector& parsimony_path_vectors) const;
+                     ParsimonyPathVector& parsimony_path_vectors) const override;
     virtual double apply(PhyloTree& tree,
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         ParsimonyPathVector& parsimony_path_vectors);
+                         ParsimonyPathVector& parsimony_path_vectors) override;
 protected:
     void consider(intptr_t branch_id, PhyloNode* leftNode,
                   const PhyloBranch& middleBranch,

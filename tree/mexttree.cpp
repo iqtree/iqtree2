@@ -55,8 +55,10 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	NodeVector taxa;
 	getTaxa(taxa);
 	ASSERT(taxa.size() == params.sub_size);
-	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+	for (NodeVector::iterator it = taxa.begin(); 
+	     it != taxa.end(); ++it) {
 		(*it)->name = alignment->getSeqName((*it)->id);
+	}
 }
 
 void MExtTree::setZeroInternalBranches(int num_zero_len) {
@@ -234,7 +236,8 @@ void MExtTree::generateUniform(int size, bool binary)
 			}
 		// reconnect the right end
 		node = rightend[index];
-		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+		for (NeighborVec::iterator it = node->neighbors.begin(); 
+		     it != node->neighbors.end(); ++it) {
 			if ((*it)->node == leftend[index]) {
 				len = random_double();
 				(*it)->node = newnode;
@@ -243,6 +246,7 @@ void MExtTree::generateUniform(int size, bool binary)
 				//cout << "  right " << rightend[index]->id  << " " << newnode->id  << endl;
 				break;
 			}
+		}
 
 		// add a new leaf
 		Node *newleaf = newNode(i, i);
@@ -462,13 +466,15 @@ void MExtTree::createCluster(NodeVector &taxa, mmatrix(int) &clusters, Node *nod
 			FOR_NEIGHBOR_DECLARE(child, node, it2)
 				createCluster(count++, (*it2)->node, child);
 			if (!rooted) {
-				FOR_NEIGHBOR(node, child, it2) 
+				FOR_NEIGHBOR(node, child, it2) {
 					createCluster(count++, (*it2)->node, node);
-			} else createCluster(count++, node, child);
-
-
+				}
+			} else {
+				createCluster(count++, node, child);
+			}
 			clusters.resize(clusters.size()+1);
-			for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++) {
+			for (NodeVector::iterator nit = taxa.begin(); 
+			     nit != taxa.end(); ++nit) {
 				clusters.back().push_back((int)((*nit)->height));
 			}
 			child->name = "";
@@ -486,7 +492,6 @@ void MExtTree::createCluster(int clu_num, Node *node, Node *dad) {
 	}
 }
 
-
 void MExtTree::collapseLowBranchSupport(DoubleVector &minsup, Node *node, Node *dad) {
     if (!node) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -499,12 +504,13 @@ void MExtTree::collapseLowBranchSupport(DoubleVector &minsup, Node *node, Node *
             cout << "Branch with name " << node->name << " ignored" << endl;
             return;
         }
-        for (int i = 0; i < vec.size(); i++)
+        for (int i = 0; i < vec.size(); i++) {
             if (vec[i] < minsup[i]) {
                 // support smaller than threshold, mark this branch for deletion
                 dad->findNeighbor(node)->length = -1.0;
                 node->findNeighbor(dad)->length = -1.0;
                 break;
             }
+		}
     }
 }

@@ -106,7 +106,7 @@ void PhyloTreeMixlen::restoreCheckpoint() {
 }
 
 PhyloNodeMixlen* PhyloTreeMixlen::getRoot() {
-    return (PhyloNodeMixlen*)root;
+    return dynamic_cast<PhyloNodeMixlen*>(root);
 }
 
 PhyloNodeMixlen* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
@@ -161,9 +161,11 @@ void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec,
 }
 
 #define FOR_EACH_PHYLO_NEIGHBOR_MIXLEN(mynode, mydad, it, nei) \
-    for (PhyloNeighborMixlen* nei=nullptr, *nei2x=((PhyloNodeMixlen*)(mynode))->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
+    for (PhyloNeighborMixlen* nei=nullptr, *nei2x=dynamic_cast<PhyloNodeMixlen*>(mynode)->firstNeighbor(); nei2x!=nullptr ; nei2x=nullptr) \
         for (NeighborVec::iterator it = (mynode)->neighbors.begin(); it != (mynode)->neighbors.end(); ++it) \
-                if ((nei = (PhyloNeighborMixlen*)(*it)) && nei->getNode() != (mydad) )
+                if ((nei = dynamic_cast<PhyloNeighborMixlen*>(*it)) && nei->getNode() != (mydad) )
+
+
 
 
 void PhyloTreeMixlen::initializeMixBranches(PhyloNodeMixlen* node, 
@@ -680,7 +682,7 @@ pair<int, int> PhyloTreeMixlen::optimizeNNI(bool speedNNI, const char* context) 
 void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, 
                                         bool print_slash, 
                                         Neighbor *length_nei) {
-    PhyloNeighborMixlen* nei = (PhyloNeighborMixlen*)length_nei;
+    PhyloNeighborMixlen* nei = dynamic_cast<PhyloNeighborMixlen*>(length_nei);
     if (nei->lengths.empty()) {
         return PhyloTree::printBranchLength(out, brtype, print_slash, length_nei);
     }

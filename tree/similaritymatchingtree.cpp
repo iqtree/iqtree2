@@ -158,7 +158,7 @@ public:
 
     virtual ~SimilarityNode() = default;
 
-    virtual void recalculate() {
+    virtual void recalculate() override {
         super::recalculate();
         if (leftChild==nullptr) {
             if (rightChild==nullptr) {
@@ -247,7 +247,7 @@ public:
         }
         return parent;
     }
-    virtual SimilarityNode* newNode(SimilarityNode* left, SimilarityNode* right) {
+    virtual SimilarityNode* newNode(SimilarityNode* left, SimilarityNode* right) override {
         SimilarityNode* node  = new SimilarityNode();
         node->taxon_id   = -1;
         node->leftChild  = left;
@@ -271,8 +271,8 @@ void PhyloTree::calculateSimilarityWeights(std::vector<CharVector>& matrix,
                 #ifdef _OPENMP
                 #pragma omp parallel for
                 #endif
-                for (intptr_t i=0; i<size; ++i) {
-                    matrix[i].push_back(static_cast<char>(data[i]));
+                for (intptr_t j=0; j<size; ++j) {
+                    matrix[j].push_back(static_cast<char>(data[j]));
                 }
                 weights.push_back(1.0);
             }

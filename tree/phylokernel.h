@@ -83,7 +83,7 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 #if (EIGEN_PARTIAL_LIKELIHOOD)
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                                  LikelihoodBufferSet& buffers) {
+                                                  const LikelihoodBufferSet& buffers) {
 
     // don't recompute the likelihood
     assert(dad);
@@ -636,7 +636,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
         std::swap(dad_branch, node_branch);
     }
     if (!dad_branch->isLikelihoodComputed()) {
-        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad), buffers;
+        computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad, buffers);
     }
     if (!node_branch->isLikelihoodComputed()) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node, buffers);

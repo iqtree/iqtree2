@@ -34,23 +34,23 @@ public:
     
     static intptr_t getParsimonyVectorSize(intptr_t radius);
     
-    virtual void initialize(intptr_t id_of_source_branch, bool beLazy);
+    virtual void initialize(intptr_t id_of_source_branch, bool beLazy) override;
     
-    virtual std::string getDescription() const;
+    virtual std::string getDescription() const override;
     
     virtual void finalize(PhyloTree& tree,
-                          const TargetBranchRange& branches) ;
+                          const TargetBranchRange& branches) override;
     
     bool doBranchesTouch(const TargetBranchRange& branches,
                          intptr_t id_1, intptr_t id_2) const;
     
     virtual bool isStillPossible(const TargetBranchRange& branches,
-                                 PhyloBranchVector& path) const;
+                                 PhyloBranchVector& path) const override;
     virtual double recalculateBenefit
                    ( PhyloTree& tree, double parsimony_score,
                      TargetBranchRange& branches,
                      LikelihoodBlockPairs &blocks,
-                     ParsimonyPathVector& parsimony_path_vectors) const;
+                     ParsimonyPathVector& parsimony_path_vectors) const override;
     
     class LazyTBRSearch {
     public:
@@ -99,7 +99,7 @@ public:
                           const TargetBranchRange& branches,
                           int radius,
                           std::vector<UINT*>& path_parsimony,
-                          double parsimony_score);
+                          double parsimony_score) override;
     
     void getOtherNeighbors(PhyloNode* of, PhyloNode* but_not,
                            PhyloNode** put_here, intptr_t* branch_ids);
@@ -118,7 +118,7 @@ public:
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         ParsimonyPathVector& parsimony_path_vectors);
+                         ParsimonyPathVector& parsimony_path_vectors) override;
 };
 
 struct ProperParsimonyTBRMove : public ParsimonyLazyTBRMove {
@@ -167,7 +167,7 @@ public:
                           const TargetBranchRange& branches,
                           int radius,
                           std::vector<UINT*>& path_parsimony,
-                          double parsimony_score);
+                          double parsimony_score) override;
 };
 
 #endif /* parsimonytbr_h */

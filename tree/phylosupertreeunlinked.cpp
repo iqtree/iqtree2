@@ -61,7 +61,6 @@ int PhyloSuperTreeUnlinked::computeParsimonyTree(Alignment*   alignment,
     int i;
     ASSERT(saln->partitions.size() == size());
     for (i = 0; i < size(); i++) {
-        const char* doing_what;
         score += at(i)->computeParsimonyTree(saln->partitions[i], rand_stream,
                                              nullptr, doing_what);
     }

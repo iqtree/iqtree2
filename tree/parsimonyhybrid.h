@@ -41,7 +41,7 @@ public:
     }
 
     virtual void   initialize(intptr_t source_branch_id_to_use,
-                              bool be_lazy) {
+                              bool be_lazy) override {
         benefit          = 0;
         source_branch_id = source_branch_id_to_use;
         lazy             = be_lazy;
@@ -53,7 +53,7 @@ public:
                             const TargetBranchRange& branches,
                             int radius,
                             std::vector<UINT*> &path_parsimony,
-                            double parsimony_score) {
+                            double parsimony_score) override {
         alpha_move.findMove(tree, branches, radius,
                             path_parsimony, parsimony_score);
         beta_move.findMove(tree, branches,
@@ -62,7 +62,7 @@ public:
     }
     
     virtual void   finalize(PhyloTree& tree,
-                            const TargetBranchRange& branches) {
+                            const TargetBranchRange& branches) override {
         alpha_move.finalize(tree, branches);
         beta_move.finalize(tree, branches);
         alpha_move_was_better = beta_move <= alpha_move;
@@ -76,14 +76,14 @@ public:
                              + beta_move.positions_considered;
     }
     
-    virtual std::string getDescription() const {
+    virtual std::string getDescription() const override {
         return alpha_move_was_better
             ? alpha_move.getDescription()
             : beta_move.getDescription();
     }
     
     virtual bool   isStillPossible(const TargetBranchRange& branches,
-                                   PhyloBranchVector& path) const {
+                                   PhyloBranchVector& path) const override {
         if (alpha_move_was_better) {
             if (alpha_move.isStillPossible(branches, path)) {
                 return true;
@@ -104,7 +104,7 @@ public:
     virtual double recalculateBenefit(PhyloTree& tree, double tree_parsimony_score,
                                       TargetBranchRange& branches,
                                       LikelihoodBlockPairs &blocks,
-                                      ParsimonyPathVector& parsimony_path_vectors) const {
+                                      ParsimonyPathVector& parsimony_path_vectors) const override {
         return alpha_move_was_better
             ? alpha_move.recalculateBenefit(tree, tree_parsimony_score,
                                             branches, blocks,
@@ -118,7 +118,7 @@ public:
                          double parsimony_score,
                          TargetBranchRange& branches,
                          LikelihoodBlockPairs blocks,
-                         ParsimonyPathVector& parsimony_path_vectors) {
+                         ParsimonyPathVector& parsimony_path_vectors) override {
         return (alpha_move_was_better)
             ? alpha_move.apply(tree, parsimony_score, branches, blocks, parsimony_path_vectors)
             : beta_move.apply (tree, parsimony_score, branches, blocks, parsimony_path_vectors);

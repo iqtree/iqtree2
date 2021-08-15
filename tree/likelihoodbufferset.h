@@ -36,7 +36,7 @@ public:
      */
     double* theta_all;
     size_t  theta_block_size;   //How big it is
-    bool    theta_computed;     //True if it's content is computed
+    mutable bool theta_computed;//True if its content is computed
     bool    theta_borrowed;     //True if it belongs to something else
                                 //(other than this instance)
 

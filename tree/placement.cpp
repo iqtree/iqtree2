@@ -264,7 +264,7 @@ void PhyloTree::constructLocalCopyOfRegion(TargetBranchRange& targets,
     copy.fake_nodes.resize(node_count);
     for (intptr_t i=0; i<node_count; ++i) {
         int node_id               = copy.real_nodes[i]->id;
-        copy.map_to_real_node[node_id] = (PhyloNode*)copy.real_nodes[i];
+        copy.map_to_real_node[node_id] = dynamic_cast<PhyloNode*>(copy.real_nodes[i]);
         copy.map_to_fake_node[node_id] = &copy.fake_nodes[i];
         copy.fake_nodes[i].id          = node_id;
     }
@@ -422,7 +422,7 @@ void PhyloTree::updateRegionFromLocalCopy(PhyloTreeThreadingContext& context,
         PhyloNeighbor* fake_nei      = fake->firstNeighbor();
         PhyloNode*     fake_adjacent = fake_nei->getNode();
         for (Neighbor* real_nei : real->neighbors) {
-            PhyloNeighbor* real_phylo_nei = (PhyloNeighbor*)real_nei;
+            PhyloNeighbor* real_phylo_nei = dynamic_cast<PhyloNeighbor*>(real_nei);
             PhyloNode*     real_adjacent  = real_phylo_nei->getNode();
             if ( real_adjacent->id == fake_adjacent->id ) {
                 //Each boundary node might have 3 neighbors

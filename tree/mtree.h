@@ -70,13 +70,13 @@ public:
      *      Constructor, read tree from string.
      *      Taxa IDs are assigned according to the order in taxaNames
      */
-    MTree(string& treeString, StrVector& taxaNames, bool isRooted);
+    MTree(const string& treeString, StrVector& taxaNames, bool isRooted);
 
     /**
      *  Read tree from string assuming that the taxa names are numeric numbers
      *  Leaf IDs are then assigned according to the number in the taxa names
      */
-    MTree(string& treeString, bool isRooted);
+    MTree(const string& treeString, bool isRooted);
 
     /**
      *   Assign taxa IDs according to the order in taxaNames

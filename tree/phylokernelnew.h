@@ -810,7 +810,7 @@ inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_part
 
 #ifdef KERNEL_FIX_STATES
 template<class VectorClass>
-void PhyloTree::computePartialInfoWrapper(TraversalInfo &info, double* buffer) {
+void PhyloTree::computePartialInfoWrapper(const TraversalInfo &info, double* buffer) {
     computePartialInfo(info, reinterpret_cast<VectorClass*>(buffer));
 }
 
@@ -821,7 +821,7 @@ template<class VectorClass, const int nstates>
 #else
 template<class VectorClass>
 #endif
-void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
+void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffer) {
 
 #ifndef KERNEL_FIX_STATES
     int nstates = aln->num_states;
@@ -1051,7 +1051,8 @@ template<class VectorClass, const int nstates>
 template<class VectorClass>
 #endif
 void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad,
-                                     LikelihoodBufferSet& buffers, bool compute_partial_lh) {
+                                     const LikelihoodBufferSet& buffers, 
+                                     bool compute_partial_lh) {
 
     if ((tip_partial_lh_computed & 1) == 0)
     {
@@ -1193,12 +1194,12 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad,
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computePartialLikelihoodSIMD(TraversalInfo &info,
                                              intptr_t ptn_lower, intptr_t ptn_upper, int packet_id,
-                                             LikelihoodBufferSet& buffers)
+                                             const LikelihoodBufferSet& buffers)
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                                                     intptr_t ptn_lower, intptr_t ptn_upper, int packet_id,
-                                                    LikelihoodBufferSet& buffers)
+                                                    const LikelihoodBufferSet& buffers)
 #endif
 {
     PhyloNeighbor* dad_branch = info.dad_branch;
@@ -1994,12 +1995,12 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad
                                             , intptr_t ptn_lower, intptr_t ptn_upper, int packet_id
-                                            , LikelihoodBufferSet& buffers)
+                                            , const LikelihoodBufferSet& buffers)
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad
                                                    , intptr_t ptn_lower, intptr_t ptn_upper, int packet_id
-                                                   , LikelihoodBufferSet& buffers)
+                                                   , const LikelihoodBufferSet& buffers)
 #endif
 {
     PhyloNode*     node        = dad_branch->getNode();
@@ -2189,14 +2190,14 @@ template <class VectorClass, const bool SAFE_NUMERIC,
 void PhyloTree::computeLikelihoodDervSIMD
     ( PhyloNeighbor* dad_branch, PhyloNode* dad,
       double* df,                double* ddf,
-      LikelihoodBufferSet& buffers )
+      const LikelihoodBufferSet& buffers )
 #else
 template <class VectorClass, const bool SAFE_NUMERIC,
           const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodDervGenericSIMD
     ( PhyloNeighbor* dad_branch, PhyloNode* dad,
       double* df,                double* ddf,
-      LikelihoodBufferSet& buffers)
+      const LikelihoodBufferSet& buffers)
 #endif
 {
     PhyloNode*     node        = dad_branch->getNode();
@@ -2878,16 +2879,15 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 if (SAFE_NUMERIC) {
                     // numerical scaling per category
                     const UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
-                    UBYTE min_scale;
                     for (size_t i = 0; i < VectorClass::size(); i++) {
-                        min_scale = scale_dad[0];
+                        UBYTE min_scale = scale_dad[0];
                         for (size_t c = 1; c < ncat_mix; c++) {
                             min_scale = min(min_scale, scale_dad[c]);
                         }
                         vc_min_scale_ptr[i] = min_scale;
 
                         double *this_lh_cat = &buffers._pattern_lh_cat[ptn*ncat_mix + i];
-                        for (size_t c = 0; c < ncat_mix; c++) {
+                        for (size_t c = 0; c < ncat_mix; ++c) {
                             // rescale lh_cat if necessary
                             if (scale_dad[c] == min_scale+1) {
                                 this_lh_cat[c*VectorClass::size()] *= SCALING_THRESHOLD;
@@ -3448,11 +3448,12 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodDervMixlenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
                                                 double &df, double &ddf,
-                                                LikelihoodBufferSet& buffers)
+                                                const LikelihoodBufferSet& buffers)
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                                       double &df, double &ddf, LikelihoodBufferSet& buffers)
+                                                       double &df, double &ddf, 
+                                                       const LikelihoodBufferSet& buffers)
 #endif
 {
     PhyloNode*     node        = dad_branch->getNode();

@@ -385,7 +385,6 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
             
             nei1_part->length += delta;
             if(nei1_part->length<-1e-4) {
-                std::stringstream complaint;
                 LOG_LINE(VerboseMode::VB_MED, "Problem: value " << value
                          << " lambda = " << lambda << endl
                          << "NEGATIVE BRANCH len = " << nei1_part->length
@@ -395,7 +394,6 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
             
             nei2_part->length += delta;
             if(nei2_part->length<-1e-4) {
-                std::stringstream complaint;
                 LOG_LINE(VerboseMode::VB_MED, "Problem: value " << value
                          << " lambda = " << lambda << endl
                          << "NEGATIVE BRANCH len = " << nei2_part->length
@@ -978,10 +976,10 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			if(is_nni[part]==NNI_NO_EPSILON){
 				node1_link[part]     = nei2_new->link_neighbors[part]->getNode();
 				node2_link[part]     = nei1_new->link_neighbors[part]->getNode();
-				node1_link_nei[part] = ((SuperNeighbor*)node1_nei)->link_neighbors[part];
-				node1_link_it[part] = node1_link[part]->findNeighborIt(node1_link_nei[part]->node);
-				node2_link_nei[part] = ((SuperNeighbor*)node2_nei)->link_neighbors[part];
-				node2_link_it[part] = node2_link[part]->findNeighborIt(node2_link_nei[part]->node);
+				node1_link_nei[part] = dynamic_cast<SuperNeighbor*>(node1_nei)->link_neighbors[part];
+				node1_link_it[part]  = node1_link[part]->findNeighborIt(node1_link_nei[part]->node);
+				node2_link_nei[part] = dynamic_cast<SuperNeighbor*>(node2_nei)->link_neighbors[part];
+				node2_link_it[part]  = node2_link[part]->findNeighborIt(node2_link_nei[part]->node);
 			}
 
 		// Do the NNI swap on SuperTrees ----------------------------------------------------
@@ -1085,13 +1083,15 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				for(id=2; id<6; id++){
 					if(node2->isNeighbor(neighbor_nodes[id-2])){
 						// nei2_new should be updated
-						if(((SuperNeighbor*)node2->findNeighbor(neighbor_nodes[id-2]))->link_neighbors[part]){
+						auto go_back = node2->findNeighbor(neighbor_nodes[id-2]);
+						SuperNeighbor* nei_back = dynamic_cast<SuperNeighbor*>(go_back);
+						if(nei_back->link_neighbors[part]){
 							//cout<<"node2: "<<"id = "<<id<<"; node_id = "<<((SuperNeighbor*)(node2->findNeighbor(neighbor_nodes[id-2])))->link_neighbors[part]->node->id<<";"<<endl;
-							if(((SuperNeighbor*)node2->findNeighbor(neighbor_nodes[id-2]))->link_neighbors[part]->node
+							if(nei_back->link_neighbors[part]->node
 									== nei1_new->link_neighbors[part]->node){
 								//assert(((SuperNeighbor*)node2->findNeighbor(neighbor_nodes[id-2]))->link_neighbors[part]->node->id
 									//	== (*sub_saved_it[part*6 + id])->node->id);
-								nei2_new->link_neighbors[part] = (PhyloNeighbor*)(*sub_saved_it[part*6 + id]);
+								nei2_new->link_neighbors[part] = dynamic_cast<PhyloNeighbor*>(*sub_saved_it[part*6 + id]);
 								//cout<<"   nei id = "<<id<<"; node_id = "<<((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node->id<<";"<<endl;
 								//cout<<"   sub "<<"id = "<<id<<"; node_id = "<<(*sub_saved_it[part*6 + id])->node->id<<";"<<endl;
 								break;
@@ -1177,7 +1177,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    				}
 	    				//cout<<"HERE it is: "<<((SuperNeighbor*)(*it))->link_neighbors[part]->node->id<<endl;
 	    				//cout<<nei2_new->link_neighbors[part]->node->id<<endl;
-						((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
+						auto xnei = node_link->findNeighbor(nei_link);
+						dynamic_cast<PhyloNeighbor*>(xnei)->clearPartialLh();
 						//cout<<"CASE:"<<is_nni[part]<<"Cleared partial likelihood"<<endl;
 	    			}
 	    		// Optimize the branch incident to node1
@@ -1211,7 +1212,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    				if(node_link->id == nei_link->id){
 	    					nei_link = nei2_new->link_neighbors[part]->node;
 	    				}
-	    				((PhyloNeighbor*)node_link->findNeighbor(nei_link))->clearPartialLh();
+						auto xnei = node_link->findNeighbor(nei_link);
+	    				dynamic_cast<PhyloNeighbor*>(xnei)->clearPartialLh();
 	    				//cout<<"CASE:"<<is_nni[part]<<"Cleared partial likelihood"<<endl;
 	    			}
 	    		}
@@ -1452,7 +1454,7 @@ void PhyloSuperTreePlen::linkCheck(int part,Node* node, Node* dad,
 void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, 
 	                                 PhyloNeighbor* saved_link_dad_nei,
 	                                 PhyloNeighbor* saved_link_node_nei){
-	SuperNode* superDad = (SuperNode*)dad;
+	SuperNode* superDad = dynamic_cast<SuperNode*>(dad);
 	FOR_EACH_SUPER_NEIGHBOR(node, dad, it, nei){
 		if ( nei->link_neighbors[part] == superDad->findNeighbor(node)->link_neighbors[part]){
 			linkCheckRe(part, (*it)->node, node, saved_link_dad_nei, saved_link_node_nei);

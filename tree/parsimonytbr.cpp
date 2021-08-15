@@ -19,7 +19,8 @@
 #include <utils/timekeeper.h>                      //for TimeKeeper
 
 
-ParsimonyLazyTBRMove::ParsimonyLazyTBRMove(): super() {
+ParsimonyLazyTBRMove::ParsimonyLazyTBRMove()
+    : super(), depth(0), disconnection_benefit(0) {
     initialize(0, true);
 }
     
@@ -149,7 +150,8 @@ ParsimonyLazyTBRMove::LazyTBRSearch::LazyTBRSearch
     ( const PhyloTree& t, const TargetBranchRange& b, int r,
       std::vector<UINT*>& p, double s, ParsimonyLazyTBRMove& m )
     : tree(t), branches(b), max_radius(r),
-      path_parsimony(p), parsimony_score(s), move(m) {
+      path_parsimony(p), parsimony_score(s), move(m),
+      first_id(-1), first_depth(0) {
     auto source = branches[m.source_branch_id];
     front       = source.first;
     back        = source.second;
@@ -341,8 +343,8 @@ double ParsimonyLazyTBRMove::apply
 }
 ProperParsimonyTBRMove::ProperTBRSearch::ProperTBRSearch(const PhyloTree& t, const TargetBranchRange& b, int r,
           std::vector<UINT*>& p, double s, ParsimonyLazyTBRMove& m )
-    : super(t, b, r, p, s, m), front_parsimony(nullptr)
-    , back_parsimony(nullptr) {
+    : super(t, b, r, p, s, m), front_parsimony(nullptr), front_score(0)
+    , back_parsimony(nullptr), back_score(0) {
     path.resize(max_radius, nullptr);
 }
 UINT* ProperParsimonyTBRMove::ProperTBRSearch::offPathParsimony(PhyloNode* a, PhyloNode* b, PhyloNode* c ) {

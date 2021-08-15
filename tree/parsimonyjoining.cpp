@@ -233,7 +233,7 @@ public:
 class RapidParsimonyMatrix: public StartTree::BoundingMatrix<NJFloat, ParsimonyMatrix>  {
 public:
     typedef StartTree::BoundingMatrix<NJFloat, ParsimonyMatrix> super;
-    RapidParsimonyMatrix(PhyloTree& tree) {
+    explicit RapidParsimonyMatrix(PhyloTree& tree) {
         setTree(&tree);
     }
     virtual std::string getAlgorithmName() const {
@@ -243,7 +243,7 @@ public:
 
 class AuctionParsimonyMatrix:public StartTree::AuctionMatrix<NJFloat, ParsimonyMatrix> {
 public:
-    AuctionParsimonyMatrix(PhyloTree& tree) {
+    explicit AuctionParsimonyMatrix(PhyloTree& tree) {
         setTree(&tree);
     }
     virtual std::string getAlgorithmName() const {
