@@ -20,7 +20,7 @@
 
 
 ParsimonyLazyTBRMove::ParsimonyLazyTBRMove()
-    : super(), depth(0), disconnection_benefit(0) {
+    : super(), disconnection_benefit(0), depth(0) {
     initialize(0, true);
 }
     
