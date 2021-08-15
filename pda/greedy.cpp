@@ -27,18 +27,20 @@
 */
 void Greedy::run(Params &params, vector<PDTaxaSet> &taxa_set)
 {
-	Node *node1, *node2;
+	Node* node1;
 	NodeVector subtree;
 	subtree.resize(nodeNum, NULL);
 
 	//if (params.is_rooted) subsize++;
 
-	if (params.min_size < 2) 
+	if (params.min_size < 2) {
 		params.min_size = params.sub_size;
+	}
 
 	taxa_set.resize(params.sub_size - params.min_size + 1);
 
 	if (initialset.empty()) {
+		Node* node2;
 		taxa_set[0].score = root->longestPath2(node1, node2);
 		root = node1;
 		// initialize the subtree length
@@ -61,7 +63,7 @@ void Greedy::run(Params &params, vector<PDTaxaSet> &taxa_set)
 		root = initialset[0];
 		int included = static_cast<int>(initialset.size());
 		// put all taxa on the initial set into subtree
-		for (auto it = initialset.begin(); it != initialset.end(); it++) {
+		for (auto it = initialset.begin(); it != initialset.end(); ++it) {
 			if (subtree[(*it)->id]) {
 				cout << "Duplicated " << (*it)->name << endl;
 				included--;
@@ -118,7 +120,8 @@ void Greedy::buildOnInitialSet(NodeVector &subtree, NodeVector &nodestack, Node 
 		if (next->isLeaf() && subtree[next->id] != NULL) {
 			// the next node is a leaf and is in the initial set
 			// put all node on the stack into the subtree
-			for (NodeVector::iterator itnode = nodestack.begin(); itnode != nodestack.end(); itnode++) {
+			for (NodeVector::iterator itnode = nodestack.begin(); 
+			     itnode != nodestack.end(); ++itnode) {
 				subtree[(*itnode)->id] = (*itnode);
 			}
 		}
@@ -133,25 +136,29 @@ void Greedy::buildOnInitialSet(NodeVector &subtree, NodeVector &nodestack, Node 
 	@return the subtree length
 */
 double Greedy::updateOnInitialSet(NodeVector &subtree) {
-	int i;
 	// scan through interior nodes
-	for (i = leafNum; i < nodeNum; i++) 
-		if (subtree[i] != NULL) {
+	for (int i = leafNum; i < nodeNum; i++) 
+		if (subtree[i] != nullptr) {
 			Node *node = subtree[i];
-			for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
-				if (subtree[(*it)->node->id] == NULL){
+			for (NeighborVec::iterator it = node->neighbors.begin(); 
+			     it != node->neighbors.end(); ++it) {
+				if (subtree[(*it)->node->id] == nullptr) {
 					addNeighbor((*it));
 				}
+			}
 		}
 	double len = 0.0;
-	for (i = 0; i < nodeNum; i++) 
-		if (subtree[i] != NULL) {
+	for (int i = 0; i < nodeNum; ++i) {
+		if (subtree[i] != nullptr) {
 			Node *node = subtree[i];
-			for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
+			for (NeighborVec::iterator it = node->neighbors.begin(); 
+			     it != node->neighbors.end(); ++it) {
 				if (subtree[(*it)->node->id] != NULL){
 					len += (*it)->length;
 				}
+			}
 		}
+	}
 	return len / 2.0;
 }
 
@@ -186,13 +193,15 @@ NeighborSet::iterator Greedy::highestNeighbor()
 	add an edge into the NeighborSet
 */
 void Greedy::addNeighbor(Neighbor* neigh) {
-	if (list_size <= 0)
+	if (list_size <= 0) {
 		return;
-	if (neighset.size() < list_size)
+	}
+	if (neighset.size() < list_size) {
 		neighset.insert(neigh);
+	}
 	else {
 		NeighborSet::iterator last = neighset.end();
-		last--;
+		--last;
 		Neighbor* endn = *last;
     	if ((neigh->length + neigh->node->height) > (endn->length + endn->node->height)) {
 			neighset.erase(last);

@@ -36,8 +36,10 @@ class SplitGraph;
 struct hashfunc_Split {
 	size_t operator()(const Split* sp) const {
 		size_t sum = 0;
-		for (Split::const_iterator it = sp->begin(); it != sp->end(); it++)
+		for (Split::const_iterator it = sp->begin(); 
+		     it != sp->end(); ++it) {
 			sum = (*it) + (sum << 6) + (sum << 16) - sum;
+		}
 		return sum;
 	}
 };
@@ -92,6 +94,9 @@ class SplitIntMap : map<Split*, int, std::less<Split*> >
 #endif
 {
 public:
+
+	SplitIntMap();
+	~SplitIntMap() = default;
 
 	/**
 		find a split

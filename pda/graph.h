@@ -21,7 +21,7 @@ class Graph
     bool isCyclicUtil(int v, bool visited[], bool *rs);  // used by isCyclic()
 
 public:
-    Graph(int V);   // Constructor
+    explicit Graph(int V);   // Constructor
     void addEdge(int v, int w);   // to add an edge to graph
     bool isCyclic();    // returns true if there is a cycle in this graph
 };

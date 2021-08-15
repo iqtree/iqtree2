@@ -104,7 +104,7 @@ public:
 		@param taxa_set (OUT) corresponding set of taxa
 		@param pd_more (OUT) more computed PD measures will be stored here
 	*/
-	void computePD(Params &params, SplitSet &taxa_set, PDRelatedMeasures &pd_more);
+	void computePD(const Params &params, SplitSet &taxa_set, PDRelatedMeasures &pd_more);
 
 	/**
 		this will be called by findPD at the beginning
@@ -307,7 +307,7 @@ protected:
 		@param taxa_order (IN) order of inserted taxa
 		@return the PD score of the maximal set, also returned in taxa_set.weight
 	*/
-	double localSearchPD(int subsize, Split &taxa_set, vector<int> &taxa_order);
+	double localSearchPD(int subsize, Split &taxa_set, const vector<int> &taxa_order);
 	
 /********************************************************
 	exhaustive search
@@ -388,16 +388,17 @@ protected:
 	*/
 	bool isUniquelyCovered(int taxon, int &area);
 
-	void lpObjectiveMaxSD(ostream &out, Params &params, IntVector &y_value, int total_size);
+	void lpObjectiveMaxSD(ostream &out, const Params &params, 
+	                      IntVector &y_value, int total_size);
 
 	void lpObjectiveMinK(ostream &out, Params &params);
 
 	void lpSplitConstraint_RS(ostream &out, Params &params, IntVector &y_value, IntVector &count1, IntVector &count2, int total_size);
-	void lpSplitConstraint_TS(ostream &out, Params &params, IntVector &y_value, int total_size);
+	void lpSplitConstraint_TS(ostream &out, Params &params, const IntVector &y_value, int total_size);
 
 	void lpK_BudgetConstraint(ostream &out, Params &params, int total_size);
 
-	void lpMinSDConstraint(ostream &out, Params &params, IntVector &y_value, double pd_proportion);
+	void lpMinSDConstraint(ostream &out, const Params &params, IntVector &y_value, double pd_proportion);
 
 	void lpVariableBound(ostream &out, Params &params, Split &included_vars, IntVector &y_value);
 

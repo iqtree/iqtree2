@@ -78,8 +78,9 @@ int PDTreeSet::getNTaxa() {
 void PDTreeSet::readRootNode(const char *root_name) {
 	string name = root_name;
 	init_taxa.push_back(name);
-	for (iterator it = begin(); it != end(); it++)
+	for (iterator it = begin(); it != end(); ++it) {
 		((PDTree*)(*it))->readRootNode(root_name);
+	}
 }
 
 void PDTreeSet::readParams(Params &params) {
@@ -92,20 +93,20 @@ void PDTreeSet::readParams(Params &params) {
 	DoubleVector ori_weight;
 	readWeightFile(params, ntaxa, scale, tax_name, ori_weight);
 
-	for (iterator it = begin(); it != end(); it++) {
+	for (iterator it = begin(); it != end(); ++it) {
 		// now convert the weights
 		PDTree *mytree = (PDTree*)(*it);
 		LeafMapName lsn;
 		mytree->buildLeafMapName(lsn);
 		DoubleVector tax_weight;
 		tax_weight.resize(ntaxa, 0);
-		for (int i = 0; i < tax_name.size(); i++) {
+		for (int i = 0; i < tax_name.size(); ++i) {
 			LeafMapName::iterator nameit = lsn.find(tax_name[i]);
-			if (nameit == lsn.end())
+			if (nameit == lsn.end()) {
 				outError(ERR_NO_TAXON, tax_name[i]);
+			}
 			tax_weight[(*nameit).second->id] = ori_weight[i];
 		}
-	
 		// incoporate them into the tree
 		mytree->incoporateParams(scale, tax_weight);
 	}
@@ -120,11 +121,12 @@ void PDTreeSet::readInitialSet(Params &params) {
 	readInitTaxaFile(params, ntaxa, tax_name);
 	init_taxa.insert(init_taxa.end(), tax_name.begin(), tax_name.end());
 
-	for (iterator itree = begin(); itree != end(); itree++) {
+	for (iterator itree = begin(); itree != end(); ++itree) {
 		PDTree *mytree = (PDTree*)(*itree);
 		LeafMapName lsn;
 		mytree->buildLeafMapName(lsn);
-		for (StrVector::iterator it = tax_name.begin(); it != tax_name.end(); it++) {
+		for (StrVector::iterator it = tax_name.begin(); 
+		     it != tax_name.end(); ++it) {
 			LeafMapName::iterator nameit = lsn.find((*it));
 			if (nameit == lsn.end()) {
 				outError(ERR_NO_TAXON, *it);

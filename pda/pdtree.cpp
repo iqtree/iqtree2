@@ -130,7 +130,8 @@ void PDTree::readInitialSet(Params &params) {
 	int ntaxa = leafNum - params.is_rooted;
 	StrVector tax_name;
 	readInitTaxaFile(params, ntaxa, tax_name);
-	for (StrVector::iterator it = tax_name.begin(); it != tax_name.end(); it++) {
+	for (StrVector::iterator it = tax_name.begin(); 
+	     it != tax_name.end(); ++it) {
 		LeafMapName::iterator nameit = lsn.find((*it));
 		if (nameit == lsn.end()) {
 			Node *node = findNodeName(*it);
@@ -139,8 +140,9 @@ void PDTree::readInitialSet(Params &params) {
 			else {
 				Node *taxon;
 				int distance = findNearestTaxon(taxon, node);
-				cout << "Replace internal node " << node->name << " by taxon " 
-					 << taxon->name << " (" << distance << " branches away)" << endl;
+				cout << "Replace internal node " 
+				     << node->name << " by taxon "  << taxon->name 
+					 << " (" << distance << " branches away)" << endl;
 				initialset.push_back(taxon);
 			}
 		} else
@@ -172,10 +174,11 @@ void PDTree::readParams(Params &params) {
 
 	if (params.scaling_factor >= 0) {
 		if (params.scaling_factor > 1) outError("Scaling factor must be between 0 and 1");
-		cout << "Rescaling branch lengths with " << params.scaling_factor << 
-			" and taxa weights with " << 1 - params.scaling_factor << endl;
+		cout << "Rescaling branch lengths with " << params.scaling_factor
+			 << " and taxa weights with " << 1 - params.scaling_factor << endl;
 		scale = params.scaling_factor;
-		for (DoubleVector::iterator it = tax_weight.begin(); it != tax_weight.end(); it++)
+		for (DoubleVector::iterator it = tax_weight.begin(); 
+		     it != tax_weight.end(); ++it)
 			(*it) *= (1 - scale);
 	}
 
@@ -228,17 +231,19 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 	vector<PDTaxaSet>::iterator it_ts;
 	TaxaSetNameVector::iterator i;
 
-	for (i = allsets->begin(), it_ts = taxa_set.begin(); i != allsets->end(); i++, it_ts++) {
+	for (i = allsets->begin(), it_ts = taxa_set.begin(); i != allsets->end(); ++i, ++it_ts) {
 		set<string> taxa_name;
-		for (NodeVector::iterator it = initialset.begin(); it != initialset.end(); it++)
+		for (NodeVector::iterator it = initialset.begin(); it != initialset.end(); ++it) {
 			taxa_name.insert((*it)->name);
-		for (vector<string>::iterator it2 = (*i)->taxlist.begin(); it2 != (*i)->taxlist.end(); it2++) {
+		}
+		for (vector<string>::iterator it2 = (*i)->taxlist.begin(); 
+		     it2 != (*i)->taxlist.end(); ++it2) {
 			LeafMapName::iterator nameit = lsn.find(*it2);
-			if (nameit == lsn.end())
+			if (nameit == lsn.end()) {
 				outError(ERR_NO_TAXON, *it2);
+			}
 			taxa_name.insert(*it2);
 		}
-
 		Split id_set;
 		makeTaxaSet(taxa_name, *it_ts);
 		(*it_ts).makeIDSet(leafNum, id_set);
@@ -309,24 +314,29 @@ void PDTree::calcPDEndemism(vector<PDTaxaSet> &area_set, DoubleVector &pd_endem)
 
 	// convert taxa set to id set
 	id_sets.resize(area_set.size());
-	for (it_a = area_set.begin(), it_s = id_sets.begin(); it_a != area_set.end(); it_a++, it_s++) 
+	for (it_a = area_set.begin(), it_s = id_sets.begin(); 
+	     it_a != area_set.end(); ++it_a, ++it_s) {
 		(*it_a).makeIDSet(leafNum, *it_s);
-
+	}
 	// make union of all id_sets
 	Split id_union(leafNum);
-	for (it_s = id_sets.begin(); it_s != id_sets.end(); it_s++) 
+	for (it_s = id_sets.begin(); it_s != id_sets.end(); ++it_s) {
 		id_union += *it_s;
-	
+	}
 	// calculate PD of union 
 	calcPD(id_union);
 
 	// now calculate PD endemism
 	pd_endem.clear();
-	for (it_s = id_sets.begin(); it_s != id_sets.end(); it_s++) {
+	for (it_s = id_sets.begin(); it_s != id_sets.end(); ++it_s) {
 		// make union of all other set
 		Split id_other(leafNum);
-		for (vector<Split>::iterator it_s2 = id_sets.begin(); it_s2 != id_sets.end(); it_s2++)
-			if (it_s2 != it_s) id_other += *it_s2;
+		for (vector<Split>::iterator it_s2 = id_sets.begin(); 
+		     it_s2 != id_sets.end(); ++it_s2) {
+			if (it_s2 != it_s) {
+				id_other += *it_s2;
+			}
+		}
 		// calculate PD of all other sets
 		calcPD(id_other);
 
@@ -336,15 +346,16 @@ void PDTree::calcPDEndemism(vector<PDTaxaSet> &area_set, DoubleVector &pd_endem)
 }
 
 
-void PDTree::calcPDComplementarity(vector<PDTaxaSet> &area_set, char *area_names, DoubleVector &pd_comp) {
+void PDTree::calcPDComplementarity(vector<PDTaxaSet> &area_set, 
+                                   char *area_names, DoubleVector &pd_comp) {
 
 	set<string> given_areas;
-
 	parseAreaName(area_names, given_areas);
 
 /*
-	for (set<string>::iterator it = given_areas.begin(); it != given_areas.end(); it++)
+	for (set<string>::iterator it = given_areas.begin(); it != given_areas.end(); ++it) {
 		cout << (*it) << "!";
+	}
 	cout << endl;
 */
 	vector<Split> id_sets;
@@ -355,21 +366,21 @@ void PDTree::calcPDComplementarity(vector<PDTaxaSet> &area_set, char *area_names
 
 	// convert taxa set to id set
 	id_sets.resize(area_set.size());
-	for (it_a = area_set.begin(), it_s = id_sets.begin(); it_a != area_set.end(); it_a++, it_s++) {
+	for (it_a = area_set.begin(), it_s = id_sets.begin(); 
+	     it_a != area_set.end(); ++it_a, ++it_s) {
 		(*it_a).makeIDSet(leafNum, *it_s);
-		if (given_areas.find((*it_a).name) != given_areas.end())
+		if (given_areas.find((*it_a).name) != given_areas.end()) {
 			given_id += *it_s;
+		}
 	}
-	
-	if (given_id.countTaxa() == 0)
+	if (given_id.countTaxa() == 0) {
 		outError("Complementary area name(s) not correct");
+	}
 	calcPD(given_id);
-
-	
 
 	// now calculate PD complementarity
 	pd_comp.clear();
-	for (it_s = id_sets.begin(); it_s != id_sets.end(); it_s++) {
+	for (it_s = id_sets.begin(); it_s != id_sets.end(); ++it_s) {
 		// make union the two sets
 		Split id_both(*it_s);
 		id_both += given_id;
@@ -378,8 +389,8 @@ void PDTree::calcPDComplementarity(vector<PDTaxaSet> &area_set, char *area_names
 		// calc PD complementarity
 		pd_comp.push_back(id_both.weight - given_id.weight);
 	}
-
 }
+
 int PDTree::findNearestTaxon(Node* &taxon, Node *node, Node *dad) {
 	if (node->isLeaf()) {
 		taxon = node;

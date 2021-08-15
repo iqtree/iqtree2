@@ -33,14 +33,14 @@ public:
 		construct from program parameters
 		@param params program parameters
 	*/
-    Greedy(Params &params) : 
+    explicit Greedy(Params &params) : 
 		PDTree(params) {}
 
 	/**
 		construct from a tree
 		@param tree a tree class
 	*/
-    Greedy(PDTree &tree) : 
+    explicit Greedy(PDTree &tree) : 
 		PDTree(tree) {}
 
 	/**

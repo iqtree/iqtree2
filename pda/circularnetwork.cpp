@@ -95,10 +95,8 @@ void reportMyMat(ostream &out, mmatrix(T) &mat) {
 	}
 } 
 
-
-
-void CircularNetwork::computePDInfo(Params &params, DoubleMatrix &table, 
-		 DoubleMatrix &dist, int root) {
+void CircularNetwork::computePDInfo(const Params &params, DoubleMatrix &table, 
+		                            const DoubleMatrix &dist, int root) {
 	int ntaxa = getNTaxa();
 	int v, k, w;
 	// allocate memory to solution table, set everything to ZERO
@@ -127,7 +125,7 @@ void CircularNetwork::computePDInfo(Params &params, DoubleMatrix &table,
 	//cout << table;
 }
 
-double CircularNetwork::computePDScore(int sub_size, DoubleMatrix &table, int root) {
+double CircularNetwork::computePDScore(int sub_size, const DoubleMatrix &table, int root) {
 	int ntaxa = getNTaxa();
 
 	int v;
@@ -528,13 +526,16 @@ double CircularNetwork::computePDBudgetScore(int budget, mmatrix(double) &table,
 	int ntaxa = getNTaxa();
 	double max_pd = INT_MIN;
 	int v;
-	int total_b;
 
 	budget -= static_cast<int>(pda->costs[taxa_order[root]]);
 	for (v = root+1; v < ntaxa; v++) {
-		total_b = budget - static_cast<int>(pda->costs[taxa_order[v]]);
-		if (total_b > max_b[root][v]) total_b = max_b[root][v];
-		if (total_b < 0) continue;
+		int total_b = budget - static_cast<int>(pda->costs[taxa_order[v]]);
+		if (total_b > max_b[root][v]) {
+			total_b = max_b[root][v];
+		}
+		if (total_b < 0) {
+			continue;
+		}
 		if (max_pd < dist[root][v] + table[v][total_b]) {
 			max_pd = dist[root][v] + table[v][total_b];
 		}

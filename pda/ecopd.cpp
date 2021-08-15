@@ -402,7 +402,6 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);
 	out.open(fileOUT);
-	int m,i,j;
 	//int step=0,step_all=0;
 	//cout<<"# of species to conserve:"<<nspecies<<endl;
 	int nspecies=k;
@@ -415,10 +414,11 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 	maxlevel=levelDAG[0]; //i=0;
 // 	cout<<"DAG levels:"<<endl;
 // 	cout<<"LevelDAG[0]:"<<levelDAG[0]<<endl;
- 	for(i=1;i<nvar;i++){
+ 	for(int i=1;i<nvar;i++) {
 //  		//cout<<"LevelDAG["<<i<<"]:"<<levelDAG[i]<<endl;
- 		if(maxlevel<levelDAG[i])
+ 		if(maxlevel<levelDAG[i]) {
  			maxlevel=levelDAG[i];
+		 }
 	}
 	//cout<<"max DAG level:"<<maxlevel+1<<endl;
 //# of species at each d level---------------------------------
@@ -443,10 +443,10 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 //----------------------------------------------------------------------------------------------------------------
 	out<<"Maximize"<<endl;
 	tree.getBranchOrdered(nodes1,nodes2);
-	for(i=0;i<tree.branchNum;i++){
+	for (int i=0;i<tree.branchNum;i++) {
 		nodes1[i]->findNeighbor(nodes2[i])->id=i;
 		nodes2[i]->findNeighbor(nodes1[i])->id=i;
-		if(i<tree.branchNum-1)
+		if (i<tree.branchNum-1)
 			out<<nodes1[i]->findNeighbor(nodes2[i])->length<<" "<<"y"<<i<<" + ";
 		else
 			out<<nodes1[i]->findNeighbor(nodes2[i])->length<<" "<<"y"<<i<<endl;
@@ -457,13 +457,16 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 	out<<"Subject To"<<endl;
 //----------------------------------------------------------------------------------------------------------------
 // 1. constraint: species present in the set
-	if(initialTaxa.size()!=0)
-		for(m=0;m<initialTaxa.size();m++)
+	if (initialTaxa.size()!=0) {
+		for (int m=0;m<initialTaxa.size();m++) {
 			out<<"x"<<findSpeciesIDname(&initialTaxa[m])<<" = 1"<<endl;
+		}
+	}
 //----------------------------------------------------------------------------------------------------------------
 // 2. constraint: the sum of all species is <= k
-	for(i=0;i<nvar-1;i++)
+	for (int i=0;i<nvar-1;i++) {
 		out<<"x"<<i<<" + ";
+	}
 	out<<"x"<<nvar-1<<" <= "<<nspecies<<endl;
 
 //----------------------------------------------------------------------------------------------------------------
@@ -487,9 +490,9 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 // 4. constraints: SURVIVAL CONSTRAINT
 	if(weighted){
 		//weighted food web: sum of weights is greater than a given threshold--------------------------------
-		for(j=0;j<nvar;j++)
-			if(taxaDAG[j]->degree()>0){//the ones that have children in the DAG
-				for(i=0;i<taxaDAG[j]->degree();i++){
+		for (int j=0;j<nvar;j++) {
+			if (taxaDAG[j]->degree()>0){//the ones that have children in the DAG
+				for (int i=0;i<taxaDAG[j]->degree();i++){
 					if(i<taxaDAG[j]->degree()-1){
 						out<<taxaDAG[j]->neighbors[i]->length<<" x"<<taxaDAG[j]->neighbors[i]->node->id<<" + ";
 					} else {
@@ -497,34 +500,39 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 					}
 				}
 			}
-	}else{
+		}
+	} else {
 		//for each predator the sum of children in the DAG is >= to its value-------------------------------
-		for(j=0;j<nvar;j++)
-			if(taxaDAG[j]->degree()>0){//the ones that have children in the DAG
-				for(i=0;i<taxaDAG[j]->degree();i++){
-					if(i<taxaDAG[j]->degree()-1){
+		for (int j=0;j<nvar;j++) {
+			if (taxaDAG[j]->degree()>0){//the ones that have children in the DAG
+				for (int i=0;i<taxaDAG[j]->degree();i++){
+					if (i<taxaDAG[j]->degree()-1){
 						out<<"x"<<taxaDAG[j]->neighbors[i]->node->id<<" + ";
 					} else {
 						out<<"x"<<taxaDAG[j]->neighbors[i]->node->id<<" - x"<<taxaDAG[j]->id<<" >= 0"<<endl;
 					}
 				}
 			}
+		}
 	}
 //----------------------------------------------------------------------------------------------------------------
 // 5. constraints for edges in the PhyloTree
 	//cout<<"root "<<tree.root->id<<endl;
 	vector<int> taxaBelow;
-	for(i=0;i<tree.branchNum;i++)
+	for(int i=0;i<tree.branchNum;i++)
 		//constraints: SUM{Xv in T(e)}(Xv)>=Ye -----------------------------------------------
 		if((nodes1[i]->isLeaf()) && (nodes1[i]!=root))
-			out<<"x"<<nodes1[i]->id<<" - y"<<nodes1[i]->findNeighbor(nodes2[i])->id<<" >= 0"<<endl;
+			out << "x"<<nodes1[i]->id<<" - y"
+			    << nodes1[i]->findNeighbor(nodes2[i])->id<<" >= 0"<<endl;
 		else {
 			tree.getTaxaID(taxaBelow,nodes2[i],nodes1[i]);
-			for(j=0;j<taxaBelow.size();j++)
-				if(j<taxaBelow.size()-1)
+			for (int j=0;j<taxaBelow.size();j++) {
+				if (j<taxaBelow.size()-1) {
 					out<<"x"<<taxaBelow[j]<<" + ";
-				else
+				} else {
 					out<<"x"<<taxaBelow[j];
+				}
+			}
 			taxaBelow.clear();
 			out<<" - y"<<nodes1[i]->findNeighbor(nodes2[i])->id<<" >= 0"<<endl;
 		}
@@ -532,18 +540,22 @@ void ECOpd::printECOlpRooted(const char* fileOUT,ECOpd &tree){
 // Printing bounds for variables
 //----------------------------------------------------------------------------------------------------------------
 	out<<"Bounds"<<endl;
-	for(j=0;j<nvar;j++)
-			out<<"0 <= x"<<taxaDAG[j]->id<<" <= 1"<<endl;
-	for(i=0;i<tree.branchNum;i++)
+	for(int j=0;j<nvar;j++) {
+		out<<"0 <= x"<<taxaDAG[j]->id<<" <= 1"<<endl;
+	}
+	for(int i=0;i<tree.branchNum;i++) {
 		out<<"0 <= y"<<i<<" <= 1"<<endl;
+	}
 //----------------------------------------------------------------------------------------------------------------
 // Printing variables (For IP model)
 //----------------------------------------------------------------------------------------------------------------
 	out<<"Generals"<<endl;
-	for(j=0;j<nvar;j++)
+	for (int j=0;j<nvar;j++) {
 		out<<"x"<<taxaDAG[j]->id<<" ";
-	for(i=0;i<tree.branchNum;i++)
+	}
+	for (int i=0;i<tree.branchNum;i++) {
 		out<<"y"<<i<<" ";
+	}
 //----------------------------------------------------------------------------------------------------------------
 	out<<endl<<"End"<<endl;
 	out.close();
@@ -1242,13 +1254,13 @@ void ECOpd::defineK(Params &params){
 }
 
 void ECOpd::checkInitialTaxa(){
-	int i = 0, j = 0;
 	vector<int> eraseSET;
 	if(initialTaxa.size() != 0){
 		cout<<"Reading taxa to be included in the final optimal subset.."<<endl;
 		//for(i=0; i<initialTaxa.size(); i++)
 		//	cout<<initialTaxa[i]<<endl;
-		for(i=0; i<initialTaxa.size(); i++){
+		int j = 0;
+		for(int i=0; i<initialTaxa.size(); i++){
 			if(findSpeciesIDname(&initialTaxa[i]) == -1){
 				j++;
 				if(j == 1){
@@ -1261,15 +1273,17 @@ void ECOpd::checkInitialTaxa(){
 			}
 		}
 		cout<<endl;
-		if(eraseSET.size()!=0)
-			for(i = static_cast<int>(eraseSET.size())-1; i>=0; i--){
+		if(eraseSET.size()!=0) {
+			for(int i = static_cast<int>(eraseSET.size())-1; i>=0; --i) {
 				initialTaxa.erase(initialTaxa.begin() + eraseSET[i]);
 			}
+		}
 		cout<<"------------------------------------------"<<endl;
 		cout<<"Taxa to be included in the optimal subset:"<<endl;
 		cout<<"------------------------------------------"<<endl;
-		for(i=0; i<initialTaxa.size(); i++)
-			cout<<initialTaxa[i]<<endl;
+		for(int i=0; i<initialTaxa.size(); i++) {
+			cout << initialTaxa[i] << endl;
+		}
 		//cout<<"The initial subset size is"<<initialTaxa.size()<<endl;
 		cout<<endl;
 	}
@@ -1294,12 +1308,10 @@ void ECOpd::printSubFoodWeb(const char* fileOUT, double* variables){
 }
 
 void ECOpd::dietConserved(double *variables){
-	int i,j;
-	double c;
-	for(i=0; i<nvar; i++){
-		c = 0;
+	for(int i=0; i<nvar; i++){
+		double c = 0;
 		if(variables[i] == 1){
-			for(j=0; j<nvar; j++){
+			for(int j=0; j<nvar; j++){
 				if(variables[j] == 1)
 					c += DAG[j][i];
 			}

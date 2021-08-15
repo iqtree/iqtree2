@@ -40,7 +40,7 @@ public:
 		construct network from a NEXUS file, e.g. produced by SplitsTree
 		@param params program parameters
 	*/
-    CircularNetwork(Params &params);
+    explicit CircularNetwork(Params &params);
 
 
 	/**
@@ -50,7 +50,8 @@ public:
 		@param taxa_set (OUT) the set of taxa in the maximal PD set
 		@param taxa_order (OUT) order of inserted taxa
 	*/
-	virtual void findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &taxa_order);
+	virtual void findPD(Params &params, vector<SplitSet> &taxa_set, 
+	                    vector<int> &taxa_order) override;
 
 /********************************************************
 	Dynamic programming strategy
@@ -112,7 +113,8 @@ protected:
 		@param dist distance matrix
 		@param root index of the root taxon
 	*/
-	void computePDInfo(Params &params, DoubleMatrix &table, DoubleMatrix  &dist, int root);
+	void computePDInfo(const Params &params, DoubleMatrix &table,
+	                   const DoubleMatrix &dist, int root);
 
 	/**
 		compute the PD score
@@ -120,7 +122,7 @@ protected:
 		@param table computed information
 		@param root index of the root taxon
 	*/
-	double computePDScore(int sub_size, DoubleMatrix &table, int root);
+	double computePDScore(int sub_size, const DoubleMatrix &table, int root);
 
 
 	/**

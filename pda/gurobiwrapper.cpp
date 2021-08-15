@@ -99,7 +99,7 @@ int gurobi_solve(const char *filename, int ntaxa, double *score, double *variabl
 		in.close();
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
-	} catch (string str) {
+	} catch (string& str) {
 		outError(str);
 	}
 
@@ -131,7 +131,7 @@ int gurobi_solve(const char *filename, int ntaxa, double *score, double *variabl
 		in.close();
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
-	} catch (string str) {
+	} catch (string& str) {
 		outError(str);
 	}
 	return ret;

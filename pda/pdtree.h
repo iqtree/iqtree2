@@ -34,13 +34,13 @@ public:
 		construct from program parameters
 		@param params program parameters
 	*/
-    PDTree(Params &params);
+    explicit PDTree(Params &params);
 
 	/**
 		constructor, get from another tree
 		@param tree another MTree
 	*/
-    PDTree(PDTree &tree);
+    explicit PDTree(PDTree &tree);
 
 	/**
 		constructor

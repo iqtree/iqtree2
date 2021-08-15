@@ -288,7 +288,7 @@ void PDNetwork::calcExclusivePD(Split &id_set) {
 
 
 
-void PDNetwork::computePD(Params &params, SplitSet &pd_set, PDRelatedMeasures &pd_more) {
+void PDNetwork::computePD(const Params &params, SplitSet &pd_set, PDRelatedMeasures &pd_more) {
 	//MSetsBlock *sets;
 	//sets = new MSetsBlock();
 
@@ -663,13 +663,15 @@ double PDNetwork::greedyPD(int subsize, Split &taxa_set, vector<int> &taxa_order
 	@param taxa_set (OUT) the set of taxa in the PD-set
 	@return the PD score of the maximal set, also returned in taxa_set.weight
 */
-double PDNetwork::localSearchPD(int subsize, Split &taxa_set, vector<int> &taxa_order) {
+double PDNetwork::localSearchPD(int subsize, Split &taxa_set, 
+                                const vector<int> &taxa_order) {
 	int ntaxa = getNTaxa();
 	//int nsplits = getNSplits();
 	int i;
 	taxa_set.setNTaxa(ntaxa);
-	for (i = 0; i < subsize; i++) 
+	for (i = 0; i < subsize; i++) {
 		taxa_set.addTaxon(taxa_order[i]);
+	}
 	taxa_set.weight = calcWeight(taxa_set);
 	taxa_set.report(cout);
 	bool stop;
@@ -759,8 +761,9 @@ void PDNetwork::calcPDComplementarity(SplitSet &area_set, char *area_names,
 	parseAreaName(area_names, given_areas);
 
 /*
-	for (set<string>::iterator it = given_areas.begin(); it != given_areas.end(); ++it)
+	for (set<string>::iterator it = given_areas.begin(); it != given_areas.end(); ++it) {
 		cout << (*it) << "!";
+	}
 	cout << endl;
 */
 	SplitSet::iterator it_s;
@@ -1047,7 +1050,7 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 	cost_present.resize(static_cast<size_t>(*maxi) + 1, 0);
 	int i, j, num_cost = 0;
 	DoubleVector::iterator it;
-	for (it = pda->costs.begin(); it != pda->costs.end(); it++) {
+	for (it = pda->costs.begin(); it != pda->costs.end(); ++it) {
 		if ((*it) != round(*it)) {
 			outError("Non integer cost detected.");
 		}
@@ -1576,24 +1579,25 @@ bool PDNetwork::checkAreaCoverage() {
 ***********************************************/
 
 
-void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params,
+void PDNetwork::lpObjectiveMaxSD(ostream &out, const Params &params,
                                  IntVector &y_value, int total_size) {
 	//IntVector y_value, count1, count2;
 	iterator spit;
 	int i;
 	// define the objective function
-	if (params.gurobi_format)
+	if (params.gurobi_format) {
 		out << "Maximize" << endl;
-	else
-		out << "max: ";
-	
-	for (spit = begin(),i=0; spit != end(); spit++,i++)	{
-		if (y_value[i] < 0)
-			out << " +" << (*spit)->getWeight() << " y" << i;
-		else if (y_value[i] >= 2)
-			out << " +" << (*spit)->getWeight() << " x" << y_value[i] - 2;
 	}
-
+	else {
+		out << "max: ";
+	}
+	for (spit = begin(),i=0; spit != end(); ++spit,++i)	{
+		if (y_value[i] < 0) {
+			out << " +" << (*spit)->getWeight() << " y" << i;
+		} else if (y_value[i] >= 2) {
+			out << " +" << (*spit)->getWeight() << " x" << y_value[i] - 2;
+		}
+	}
 	if (params.gurobi_format) {
 		out << endl << "Subject to" << endl;
 	}
@@ -1605,7 +1609,6 @@ void PDNetwork::lpObjectiveMaxSD(ostream &out, Params &params,
 ///// TODO FOR taxon selection
 void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	iterator spit;
-	int i, j;
 	int nareas = static_cast<int>(area_taxa.size());
 
 	// define the objective function
@@ -1614,36 +1617,38 @@ void PDNetwork::lpObjectiveMinK(ostream &out, Params &params) {
 	else
 		out << "min: ";
 	
-	for (j = 0; j < nareas; j++) {
+	for (int j = 0; j < nareas; j++) {
 		double coeff = (isBudgetConstraint()) ? getPdaBlock()->getCost(j) : 1.0;
         if (areas_boundary) {
             coeff += areas_boundary[j*nareas+j] * params.boundary_modifier;
         }
 		out << ((j>0) ? " +" : "") << coeff << " x" << j;
-
-
 	}
 
 	if (areas_boundary && params.boundary_modifier != 0.0) {
-		if (params.quad_programming)
+		if (params.quad_programming) {
 			out << " + [";
-		for (i = 0; i < nareas-1; i++) 
-		for (j = i+1; j < nareas; j++) 
-		if (areas_boundary[i*nareas+j] > 0.0) {
-			double coeff = 2*areas_boundary[i*nareas+j] * params.boundary_modifier;
-			if (params.quad_programming)
-				out << " -" << coeff << " x" << i << " * x" << j;
-			else
-				out << " -" << coeff << " y" << i << "_" << j;
 		}
-		if (params.quad_programming)
+		for (int i = 0; i < nareas-1; i++) {
+			for (int j = i+1; j < nareas; j++) {
+				if (areas_boundary[i*nareas+j] > 0.0) {
+					double coeff = 2*areas_boundary[i*nareas+j] * params.boundary_modifier;
+					if (params.quad_programming)
+						out << " -" << coeff << " x" << i << " * x" << j;
+					else
+						out << " -" << coeff << " y" << i << "_" << j;
+				}
+			}
+		}
+		if (params.quad_programming) {
 			out << " ] / 2";
+		}
 	}
-
-	if (params.gurobi_format)
+	if (params.gurobi_format) {
 		out << endl << "Subject to" << endl;
-	else
+	} else {
 		out << ";" << endl;
+	}
 }
 
 void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params,
@@ -1664,7 +1669,6 @@ void PDNetwork::lpK_BudgetConstraint(ostream &out, Params &params,
         }
 		out << ((j>0) ? " +" : "") << coeff << " x" << j;
 	}
-	
 	if (areas_boundary && params.boundary_modifier != 0.0) {
 		for (int i = 0; i < nvars-1; i++) {
 			for (int j = i+1; j < nvars; j++) {
@@ -1796,7 +1800,7 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params,
 }
 
 void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params,
-                                     IntVector &y_value, int total_size) {
+                                     const IntVector &y_value, int total_size) {
 	iterator spit;
 	int i,j;
 	int ntaxa = getNTaxa();
@@ -1849,8 +1853,7 @@ void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params,
 	}
 }
 
-
-void PDNetwork::lpMinSDConstraint(ostream &out, Params &params,
+void PDNetwork::lpMinSDConstraint(ostream &out, const Params &params,
                                   IntVector &y_value, double pd_proportion) {
 	iterator spit;
 	int i;

@@ -38,24 +38,27 @@ double SplitSet::getWeight() {
 	release the memory of all element splits, then resize to 0
 */
 void SplitSet::removeAll() {
-	for (reverse_iterator it = rbegin(); it != rend(); it++)
-		if (*it) delete *it;
+	for (reverse_iterator it = rbegin(); 
+	     it != rend(); ++it) {
+		if (*it) {
+			delete *it;
+		}
+	}
 	clear();
 }
 
 
 bool SplitSet::compatible(Split *sp) {
-	for (iterator it = begin(); it != end(); it++)
-		if (!(*it)->compatible(*sp))
+	for (iterator it = begin(); it != end(); ++it) {
+		if (!(*it)->compatible(*sp)) {
 			return false;
+		}
+	}
 	return true;
 }
-
 
 SplitSet::~SplitSet()
 {
 	removeAll();
 	//cout << "deleted" << endl;
 }
-
-

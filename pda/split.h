@@ -60,7 +60,7 @@ public:
 		@param antaxa number of taxa
 		@param aweight weight of split
 	*/
-	Split(int antaxa, double aweight = 0.0);
+	explicit Split(int antaxa, double aweight = 0.0);
 
 
 	/**
