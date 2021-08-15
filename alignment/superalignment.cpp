@@ -260,7 +260,7 @@ void SuperAlignment::buildPattern() {
 //    buildSeqStates();
 }
 
-void SuperAlignment::readPartition(Params &params) {
+void SuperAlignment::readPartition(const Params &params) {
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -323,7 +323,7 @@ void SuperAlignment::readPartition(Params &params) {
         in.close();
     } catch(ios::failure) {
         outError(ERR_READ_INPUT);
-    } catch (string str) {
+    } catch (string& str) {
         outError(str);
     }
 }
@@ -420,7 +420,7 @@ void SuperAlignment::readPartitionRaxml(const Params &params) {
         in.close();
     } catch(ios::failure) {
         outError(ERR_READ_INPUT);
-    } catch (string str) {
+    } catch (string& str) {
         outError(str);
     }
 }
@@ -720,7 +720,7 @@ void SuperAlignment::readPartitionList(string file_list,
 }
 
 void SuperAlignment::printPartition(const char *filename, 
-                                    const char *aln_file) {
+                                    const char *aln_file) const {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -735,7 +735,7 @@ void SuperAlignment::printPartition(const char *filename,
 }
 
 void SuperAlignment::printPartition(ostream &out, const char *aln_file, 
-                                    bool append) {
+                                    bool append) const {
     if (append) {
         out << endl;
     }
@@ -864,7 +864,6 @@ void SuperAlignment::printPartitionRaxml(const char *filename) {
 }
 
 void SuperAlignment::printBestPartitionRaxml(const char *filename) {
-    int part;
 //    for (part = 0; part < partitions.size(); part++) {
 //        if (partitions[part]->aln_file != "") {
 //            cout << "INFO: Printing partition in RAxML format" 
@@ -876,7 +875,7 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
-        for (part = 0; part < partitions.size(); part++) {
+        for (int part = 0; part < partitions.size(); part++) {
             string part_name = partitions[part]->name;
             replace(part_name.begin(), part_name.end(), '+', '_');
             string model_name = partitions[part]->model_name;
@@ -941,7 +940,7 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
                                          int min_true_char, int min_taxa, 
                                          IntVector *kept_partitions) {
 	ASSERT(aln->isSuperAlignment());
-	SuperAlignment *saln = (SuperAlignment*)aln;
+	SuperAlignment *saln = dynamic_cast<SuperAlignment*>(aln);
     name = aln->name;
     model_name = aln->model_name;
     sequence_type = aln->sequence_type;
@@ -1004,9 +1003,9 @@ SuperAlignment *SuperAlignment::extractPartitions(IntVector &part_id) {
 
     unordered_set<string> seq_names_set;
     IntVector::iterator it;
-    for (it = part_id.begin(); it != part_id.end(); it++) {
+    for (it = part_id.begin(); it != part_id.end(); ++it) {
         for (auto seq = partitions[*it]->seq_names.begin(); 
-             seq != partitions[*it]->seq_names.end(); seq++) {
+             seq != partitions[*it]->seq_names.end(); ++seq) {
             if (seq_names_set.find(*seq) == seq_names_set.end()) {
                 newaln->seq_names.push_back(*seq);
                 seq_names_set.insert(*seq);
@@ -1191,7 +1190,7 @@ bool SuperAlignment::areSequencesIdentical(intptr_t seq1, intptr_t seq2) {
             return false;
         }
         // now if both seqs are present, check sequence content
-        for (iterator it = (*ait)->begin(); it != (*ait)->end(); it++) {
+        for (iterator it = (*ait)->begin(); it != (*ait)->end(); ++it) {
             if  ((*it)[subseq1] != (*it)[subseq2]) {
                 return false;
             }
@@ -1201,7 +1200,7 @@ bool SuperAlignment::areSequencesIdentical(intptr_t seq1, intptr_t seq2) {
 }
 
 Alignment* SuperAlignment::filterOutSequences
-                (BoolVector& isSequenceRemoved) {
+                (const BoolVector& isSequenceRemoved) {
 	// now remove identical sequences
     intptr_t  nseq = getNSeq();
 	IntVector keep_seqs;
@@ -1217,13 +1216,14 @@ Alignment* SuperAlignment::filterOutSequences
 	return aln;
 }
 
-int SuperAlignment::checkAbsentStates(string msg) {
+int SuperAlignment::checkAbsentStates(const string& msg) {
     int count = 0;
     for (auto it = partitions.begin(); it != partitions.end(); ++it) {
         int64_t     index = it-partitions.begin();
-        std::string msg   = "partition " 
-                          + convertInt64ToString((index)+1);
-        count += (*it)->checkAbsentStates(msg);
+        std::string msg2   = "partition " 
+                           + convertInt64ToString((index)+1)
+                           + " " + msg;
+        count += (*it)->checkAbsentStates(msg2);
     }
     return count;
 }
@@ -1325,30 +1325,35 @@ void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_fr
     
     double *part_pair_freq = new double[square];
     double *part_state_freq = new double[nstates];
-    int i, j;
     
     for (auto it = partitions.begin(); it != partitions.end(); it++) {
         (*it)->computeDivergenceMatrix(part_pair_freq, part_state_freq, false);
-        for (i = 0; i < square; i++)
+        for (int i = 0; i < square; i++) {
             pair_freq[i] += part_pair_freq[i];
-        for (i = 0; i < nstates; i++)
+        }
+        for (int i = 0; i < nstates; i++) {
             state_freq[i] += part_state_freq[i];
+        }
     }
     if (normalize) {
         double sum = 0.0;
-        for (i = 0; i < nstates; i++)
+        for (int i = 0; i < nstates; i++) {
             sum += state_freq[i];
+        }
         sum = 1.0/sum;
-        for (i = 0; i < nstates; i++)
+        for (int i = 0; i < nstates; i++) {
             state_freq[i] *= sum;
-        for (i = 0; i < nstates; i++) {
+        }
+        for (int i = 0; i < nstates; i++) {
             sum = 0.0;
             double *pair_freq_ptr = pair_freq + (i*nstates);
-            for (j = 0; j < nstates; j++)
+            for (int j = 0; j < nstates; j++) {
                 sum += pair_freq_ptr[j];
+            }
             sum = 1.0/sum;
-            for (j = 0; j < nstates; j++)
+            for (int j = 0; j < nstates; j++) {
                 pair_freq_ptr[j] *= sum;
+            }
         }
     }
     delete [] part_state_freq;
@@ -1477,7 +1482,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln,
 void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, 
                                               const char *spec) {
     ASSERT(aln->isSuperAlignment());
-    SuperAlignment *super_aln = (SuperAlignment*) aln;
+    SuperAlignment *super_aln = dynamic_cast<SuperAlignment*>(aln);
     ASSERT(partitions.empty());
     name = aln->name;
     model_name = aln->model_name;
@@ -1634,7 +1639,7 @@ void SuperAlignment::shuffleAlignment() {
 }
 
 
-double SuperAlignment::computeObsDist(int seq1, int seq2) {
+double SuperAlignment::computeObsDist(int seq1, int seq2) const {
 	int diff_pos = 0, total_pos = 0;
 	for (size_t site = 0; site < getNSite(); ++site) {
 		int id1 = taxa_index[seq1][site];
@@ -1656,7 +1661,7 @@ double SuperAlignment::computeObsDist(int seq1, int seq2) {
 }
 
 
-double SuperAlignment::computeDist(int seq1, int seq2) {
+double SuperAlignment::computeDist(int seq1, int seq2) const {
 	if (partitions.empty()) return 0.0;
 	double obs_dist = computeObsDist(seq1, seq2);
     int num_states = partitions[0]->num_states;
@@ -1703,7 +1708,7 @@ void SuperAlignment::printAlignment(InputType format, ostream &out,
                                     const char* file_name, bool append, 
                                     const char *aln_site_list,
                                     int exclude_sites, const char *ref_seq_name,
-                                    bool report_progress)
+                                    bool report_progress) const
 {
     //Ask for all of them
     set<int> all_the_partition_ids;
@@ -1725,7 +1730,7 @@ void SuperAlignment::printSubAlignments(Params &params) {
 	string filename;
 	int part;
 	for (pit = partitions.begin(), part = 0; 
-         pit != partitions.end(); pit++, part++) {
+         pit != partitions.end(); ++pit, ++part) {
 		if (params.aln_output)
 			filename = params.aln_output;
 		else
@@ -1737,11 +1742,12 @@ void SuperAlignment::printSubAlignments(Params &params) {
 	}
 }
 
-double SuperAlignment::computeUnconstrainedLogL() {
+double SuperAlignment::computeUnconstrainedLogL() const {
 	double logl = 0.0;
-	vector<Alignment*>::iterator pit;
-	for (pit = partitions.begin(); pit != partitions.end(); pit++)
+	for (auto pit = partitions.begin(); 
+         pit != partitions.end(); ++pit) {
 		logl += (*pit)->computeUnconstrainedLogL();
+    }
 	return logl;
 }
 
@@ -1760,7 +1766,7 @@ double SuperAlignment::computeMissingData() {
 
 void SuperAlignment::identifyUnionTaxa
         (const std::set<int>& ids, std::string& union_taxa, 
-         int& nsites, int& nstates, SeqType& sub_type ) {
+         int& nsites, int& nstates, SeqType& sub_type ) const {
 	for (auto it = ids.begin(); it != ids.end(); it++) {
 		int id = *it;
 		ASSERT(id >= 0 && id < partitions.size());
@@ -1792,7 +1798,7 @@ void SuperAlignment::identifyUnionTaxa
 	}
 }
 
-Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
+Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) const {
 	string  union_taxa;
 	int     nsites   = 0;
     int     nstates  = 0;
@@ -1854,7 +1860,7 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 	return aln;
 }
 
-Alignment *SuperAlignment::concatenateAlignments() {
+Alignment *SuperAlignment::concatenateAlignments() const {
     vector<SeqType>   seq_types;
     StrVector         genetic_codes;
     vector<set<int> > ids;

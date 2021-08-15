@@ -44,7 +44,7 @@ class SuperAlignment : public Alignment
 protected:
     void identifyUnionTaxa(const std::set<int>& ids, 
                            std::string& union_taxa, int& nsites, 
-                           int& nstates, SeqType& sub_type );
+                           int& nstates, SeqType& sub_type ) const;
 
 public:
 	/** constructor initialize from a supertree */
@@ -72,10 +72,10 @@ public:
     virtual void init(StrVector *sequence_names = NULL);
     
     /** return that this is a super-alignment structure */
-	virtual bool isSuperAlignment() { return true; }
+	virtual bool isSuperAlignment() override { return true; }
 
     /** read partition model file */
-    void readPartition(Params &params);
+    void readPartition(const Params &params);
     
     /** read RAxML-style partition file */
     void readPartitionRaxml(const Params &params);
@@ -100,8 +100,8 @@ public:
     void readPartitionList(string file_list, const char *sequence_type, InputType &intype,
                            string model, bool remove_empty_seq);
 
-    void printPartition(const char *filename, const char *aln_file);
-    void printPartition(ostream &out, const char *aln_file = NULL, bool append = false);
+    void printPartition(const char *filename, const char *aln_file) const;
+    void printPartition(ostream &out, const char *aln_file = NULL, bool append = false) const;
 
     void printPartitionRaxml(const char *filename);
     
@@ -119,23 +119,23 @@ public:
 	 * the index of sites in 2nd, 3rd,... genes have to be increased by the number of patterns in previous genes
 	 * so that all indices are distinguishable
 	*/
-	virtual void getSitePatternIndex(IntVector &pattern_index);
+	virtual void getSitePatternIndex(IntVector &pattern_index) override;
 
 	/**
 	 * @param freq (OUT) vector of site-pattern frequencies for all sub-alignments
 	*/
-	virtual void getPatternFreq(IntVector &pattern_freq);
+	virtual void getPatternFreq(IntVector &pattern_freq) override;
 
     /**
      * @param[out] freq vector of site-pattern frequencies
      */
-    virtual void getPatternFreq(int *freq);
+    virtual void getPatternFreq(int *freq) override;
 
     /**
         Print all site information to a file
         @param filename output file name
     */
-    virtual void printSiteInfo(const char* filename);
+    virtual void printSiteInfo(const char* filename) override;
 
     /**
      compute empirical substitution counts between state pairs
@@ -143,7 +143,8 @@ public:
      @param[out] pair_freq matrix of size num_states*num_states
      @param[out] state_freq vector of size num_states
      */
-    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
+    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, 
+                                         bool normalize = true) override;
 
     /**
      perform matched-pair tests of symmetry of Lars Jermiin et al.
@@ -154,8 +155,10 @@ public:
      @param rstream random stream to shuffle alignment columns
      @param out_stat output stream to print pairwise statistics
      */
-    virtual void doSymTest(size_t vecid, vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
-                           vector<SymTestResult> &intsym, int *rstream = NULL, vector<SymTestStat> *stats = NULL);
+    virtual void doSymTest(size_t vecid, vector<SymTestResult> &sym, 
+                           vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, int *rstream = nullptr, 
+                           vector<SymTestStat> *stats = nullptr) override;
 
     /**
             extract sub-alignment of a sub-set of sequences
@@ -165,8 +168,9 @@ public:
             @param min_taxa only keep alignment that has >= min_taxa sequences
             @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
-    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, 
-                                     int min_taxa = 0, IntVector *kept_partitions = NULL);
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, 
+                                     int min_true_char, int min_taxa = 0, 
+                                     IntVector *kept_partitions = nullptr) override;
 
     /**
         extract a subset of partitions to form a new SuperAlignment object
@@ -189,11 +193,13 @@ public:
      * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
      * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
      */
-    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, 
+                                          StrVector &removed_seqs, 
+                                          StrVector &target_seqs) override;
     
         //Supporting functions
         bool areSequencesIdentical(intptr_t seq1, intptr_t seq2);
-        Alignment* filterOutSequences(BoolVector& isSequenceRemoved);
+        Alignment* filterOutSequences(const BoolVector& isSequenceRemoved);
 
 
     /** determine hashes
@@ -208,7 +214,7 @@ public:
         @param msg additional message into the warning
         @return number of absent states in the alignment
     */
-    virtual int checkAbsentStates(string msg);
+    virtual int checkAbsentStates(const string &msg) override;
 
 	/**
 		Quit if some sequences contain only gaps or missing data
@@ -224,14 +230,16 @@ public:
             	must equal m, where m is the alignment length. Otherwise, an error will occur.
             	If spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
 	*/
-	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL, const char *spec = NULL);
+	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = nullptr, 
+                                          const char *spec = nullptr) override;
 
 	/**
 		resampling pattern frequency by a non-parametric bootstrap 
 		@param pattern_freq (OUT) resampled pattern frequencies
         @param spec bootstrap specification, see above
 	*/
-	virtual void createBootstrapAlignment(IntVector &pattern_freq, const char *spec = NULL);
+	virtual void createBootstrapAlignment(IntVector &pattern_freq, 
+                                          const char *spec = nullptr) override;
 
 	/**
 		resampling pattern frequency by a non-parametric bootstrap
@@ -239,12 +247,13 @@ public:
         @param spec bootstrap specification, see above
         @param rstream random generator stream, NULL to use the global randstream
 	*/
-	virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL, int *rstream = NULL);
+	virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = nullptr, 
+                                          int *rstream = nullptr) override;
 
 	/**
 	 * shuffle alignment by randomizing the order of sites over all sub-alignments
 	 */
-	virtual void shuffleAlignment();
+	virtual void shuffleAlignment() override;
 
 	/**
 		compute the observed (Hamming) distance (number of different pairs of positions per site)
@@ -253,7 +262,7 @@ public:
 		@param seq2 index of sequence 2
 		@return the observed distance between seq1 and seq2 (between 0.0 and 1.0)
 	*/
-	virtual double computeObsDist(int seq1, int seq2);
+	virtual double computeObsDist(int seq1, int seq2) const override;
 
 	/**
 		compute the Juke-Cantor corrected distance between 2 sequences over all partitions
@@ -261,7 +270,7 @@ public:
 		@param seq2 index of sequence 2		
 		@return any distance between seq1 and seq2
 	*/
-	virtual double computeDist(int seq1, int seq2);
+	virtual double computeDist(int seq1, int seq2) const override;
 
 	/**
 	 * print the super-alignment to a file
@@ -271,7 +280,7 @@ public:
     virtual void printAlignment(InputType format, ostream &out, const char* file_name
                                 , bool append = false, const char *aln_site_list = NULL
                                 , int exclude_sites = 0, const char *ref_seq_name = NULL
-                                , bool report_progress = true);
+                                , bool report_progress = true) const override;
 
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name
@@ -283,12 +292,13 @@ public:
      @param quartet ID of four taxa
      @param[out] support number of sites supporting 12|34, 13|24 and 14|23
      */
-    virtual void computeQuartetSupports(IntVector &quartet, vector<int64_t> &support);
+    virtual void computeQuartetSupports(IntVector &quartet, 
+                                        vector<int64_t> &support) override;
     
 	/**
 		@return unconstrained log-likelihood (without a tree)
 	*/
-	virtual double computeUnconstrainedLogL();
+	virtual double computeUnconstrainedLogL() const override;
 
 	/**
 	 * @return proportion of missing data in super alignment
@@ -305,18 +315,18 @@ public:
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
      */
-    virtual void countConstSite();
+    virtual void countConstSite() override;
 
     /**
      * 	@return number of states, if it is a partition model, return max num_states across all partitions
      */
-    virtual int getMaxNumStates() {
+    virtual int getMaxNumStates() const override {
     	return max_num_states;
     }
 
     /** order pattern by number of character states and return in ptn_order
     */
-    virtual void orderPatternByNumChars(int pat_type);
+    virtual void orderPatternByNumChars(int pat_type) override;
 
 	/**
 		actual partition alignments
@@ -336,14 +346,13 @@ public:
 	 * @param ids IDs of sub-alignments
 	 * @return concatenated alignment
 	 */
-    Alignment *concatenateAlignments(set<int> &ids);
+    Alignment *concatenateAlignments(set<int> &ids) const;
 
 	/**
 	 * concatenate all alignments
 	 * @return concatenated alignment
 	 */
-    Alignment *concatenateAlignments();
-
+    Alignment *concatenateAlignments() const;
 
 };
 

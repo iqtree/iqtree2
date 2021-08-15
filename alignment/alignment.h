@@ -132,7 +132,7 @@ public:
      @param data_block nexus DATA block
      @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
      */
-    Alignment(NxsDataBlock *data_block, char *sequence_type, string model);
+    Alignment(NxsDataBlock *data_block, char *sequence_type, const string& model);
 
     /**
             destructor
@@ -391,7 +391,7 @@ public:
     virtual void printAlignment(InputType format, ostream &out, const char* file_name,
                                 bool append = false, const char *aln_site_list = nullptr,
                                 int exclude_sites = 0, const char *ref_seq_name = nullptr,
-                                bool report_progress = true);
+                                bool report_progress = true) const;
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = nullptr,
                      int exclude_sites = 0, const char *ref_seq_name = nullptr, 
@@ -403,11 +403,11 @@ public:
 
     void printFasta(ostream &out, bool append = false, const char *aln_site_list = nullptr,
                     int exclude_sites = 0, const char *ref_seq_name = nullptr,
-                    bool report_progress = true);
+                    bool report_progress = true) const;
 
     void printNexus(ostream &out, bool append = false, const char *aln_site_list = NULL,
                     int exclude_sites = 0, const char *ref_seq_name = NULL, 
-                    bool print_taxid = false, bool report_progress = true);
+                    bool print_taxid = false, bool report_progress = true) const;
     /**
             Print the number of gaps per site
             @param filename output file name
@@ -455,7 +455,11 @@ public:
         return site_pattern[site];
     }
 
-    inline Pattern getPattern(size_t site) {
+    inline Pattern& getPattern(size_t site) {
+        return at(site_pattern[site]);
+    }
+
+    inline const Pattern& getPattern(size_t site) const {
         return at(site_pattern[site]);
     }
 
@@ -513,7 +517,7 @@ public:
         @param msg additional message into the warning
         @return number of absent states in the alignment
     */
-    virtual int checkAbsentStates(string msg);
+    virtual int checkAbsentStates(const string& msg);
 
     /**
             check proper and undupplicated sequence names
@@ -653,14 +657,16 @@ public:
             	must equal m, where m is the alignment length. Otherwise, an error will occur.
             	If spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
      */
-    virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL, const char *spec = NULL);
+    virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = nullptr, 
+                                          const char *spec = nullptr);
 
     /**
             resampling pattern frequency by a non-parametric bootstrap 
             @param pattern_freq (OUT) resampled pattern frequencies
             @param spec bootstrap specification, see above
      */
-    virtual void createBootstrapAlignment(IntVector &pattern_freq, const char *spec = NULL);
+    virtual void createBootstrapAlignment(IntVector &pattern_freq, 
+                                          const char *spec = nullptr);
 
     /**
             resampling pattern frequency by a non-parametric bootstrap
@@ -668,7 +674,8 @@ public:
             @param spec bootstrap specification, see above
             @param rstream random generator stream, NULL to use the global randstream
      */
-    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL, int *rstream = NULL);
+    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = nullptr, 
+                                          int *rstream = nullptr);
 
 	/**
 			Diep: This is for UFBoot2-Corr
@@ -780,7 +787,7 @@ public:
             @param seq2 index of sequence 2
             @return the observed distance between seq1 and seq2 (between 0.0 and 1.0)
      */
-    virtual double computeObsDist(int seq1, int seq2);
+    virtual double computeObsDist(int seq1, int seq2) const;
 
     /**
             @param obs_dist the observed distance between two sequences
@@ -793,7 +800,7 @@ public:
             @param seq2 index of sequence 2
             @return Jukes-Cantor correction distance between seq1 and seq2
      */
-    double computeJCDist(int seq1, int seq2);
+    double computeJCDist(int seq1, int seq2) const;
 
     /**
             abstract function to compute the distance between 2 sequences. The default return
@@ -802,7 +809,7 @@ public:
             @param seq2 index of sequence 2		
             @return any distance between seq1 and seq2
      */
-    virtual double computeDist(int seq1, int seq2) {
+    virtual double computeDist(int seq1, int seq2) const {
         return computeJCDist(seq1, seq2);
     }
 
@@ -878,7 +885,7 @@ public:
                                   size_t num_unknown_states,
                                   PhyloTree* report_to_tree);
 
-    int convertPomoState(int state);
+    int convertPomoState(int state) const;
 
     /** 
      * Compute the absolute frequencies of the different states.
@@ -968,12 +975,12 @@ public:
     /**
             @return unconstrained log-likelihood (without a tree)
      */
-    virtual double computeUnconstrainedLogL();
+    virtual double computeUnconstrainedLogL() const;
 
     /**
      * 	@return number of states, if it is a partition model, return max num_states across all partitions
      */
-    virtual int getMaxNumStates() { return num_states; }
+    virtual int getMaxNumStates() const { return num_states; }
 
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;

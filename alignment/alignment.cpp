@@ -148,7 +148,7 @@ double chi2prob (int deg, double chi2)
 } /* chi2prob */
 
 
-int Alignment::checkAbsentStates(string msg) {
+int Alignment::checkAbsentStates(const string& msg) {
     double *state_freq = new double[num_states];
     computeStateFreq(state_freq, 0, nullptr);
     string absent_states, rare_states;
@@ -832,7 +832,7 @@ Alignment::Alignment(const char *filename,
 }
 
 Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type,
-                     string model) : vector<Pattern>() {
+                     const string& model) : vector<Pattern>() {
     name = "Noname";
     this->model_name = model;
     if (sequence_type) {
@@ -3615,13 +3615,12 @@ void Alignment::printPhylip(ostream &out, bool append,
 
 void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
                            int exclude_sites, const char *ref_seq_name,
-                           bool report_progress)
+                           bool report_progress) const
 {
     IntVector kept_sites;
     buildRetainingSites(aln_site_list, kept_sites, exclude_sites, ref_seq_name);
-    StrVector::iterator it;
     int seq_id = 0;
-    for (it = seq_names.begin(); it != seq_names.end(); ++it, ++seq_id) {
+    for (auto it = seq_names.begin(); it != seq_names.end(); ++it, ++seq_id) {
         out << ">" << (*it) << endl;
         int j = 0;
         for (auto i = site_pattern.begin();  i != site_pattern.end(); ++i, ++j) {
@@ -3635,7 +3634,7 @@ void Alignment::printFasta(ostream &out, bool append, const char *aln_site_list,
 
 void Alignment::printNexus(ostream &out, bool append, const char *aln_site_list,
                            int exclude_sites, const char *ref_seq_name, 
-                           bool print_taxid, bool report_progress) {
+                           bool print_taxid, bool report_progress) const {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites,
                                            exclude_sites, ref_seq_name);
@@ -3716,7 +3715,7 @@ void Alignment::printAlignment(InputType format, const char *file_name,
 void Alignment::printAlignment(InputType format, ostream &out, const char* file_name
                                , bool append,       const char *aln_site_list
                                , int exclude_sites, const char *ref_seq_name
-                               , bool report_progress) {
+                               , bool report_progress) const {
     double printStart = getRealTime();
     const char* formatName = "phylip";
     switch (format) {
@@ -4268,7 +4267,7 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
 
 void Alignment::createBootstrapAlignment(Alignment *aln,
                                          IntVector* pattern_freq,
-                                         const char *spec) {
+                                         const char *spec)  {
     if (aln->isSuperAlignment()) {
         outError("Internal error: ", __func__);
     }
@@ -4802,7 +4801,7 @@ bool Alignment::updateFrom(const Alignment* other,
 }
 
 
-void Alignment::countConstSite() {
+void Alignment::countConstSite()  {
     int num_const_sites = 0;
     num_informative_sites = 0;
     num_variant_sites = 0;
@@ -4985,13 +4984,14 @@ Alignment::~Alignment()
     site_model.clear();
 }
 
-double Alignment::computeObsDist(int seq1, int seq2) {
+double Alignment::computeObsDist(int seq1, int seq2) const {
     size_t diff_pos = 0;
     size_t total_pos = getNSite() - num_variant_sites;
     // initialize with number of constant sites
-    for (iterator it = begin(); it != end(); ++it) {
-        if ((*it).isConst())
+    for (auto it = begin(); it != end(); ++it) {
+        if ((*it).isConst()) {
             continue;
+        }
         int state1 = convertPomoState((*it)[seq1]);
         int state2 = convertPomoState((*it)[seq2]);
         if  (state1 < num_states && state2 < num_states) {
@@ -5022,7 +5022,7 @@ double Alignment::computeJCDistanceFromObservedDistance(double obs_dist) const
     return -log(x) / z;
 }
 
-double Alignment::computeJCDist(int seq1, int seq2) {
+double Alignment::computeJCDist(int seq1, int seq2) const {
     double obs_dist = computeObsDist(seq1, seq2);
     return computeJCDistanceFromObservedDistance(obs_dist);
 }
@@ -5504,7 +5504,7 @@ void Alignment::computeStateFreq (double *state_freq,
     delete [] state_count;
 }
 
-int Alignment::convertPomoState(int state) {
+int Alignment::convertPomoState(int state) const {
   // This map from an observed state to a PoMo state influences parsimony
   // construction and the +I likelihood computation. It should not make too much
   // of a difference though.
@@ -6294,7 +6294,7 @@ void Alignment::convfreq(double *stateFrqArr) {
 	}
 } /* convfreq */
 
-double Alignment::computeUnconstrainedLogL() {
+double Alignment::computeUnconstrainedLogL() const {
     intptr_t nptn = size();
     double logl = 0.0;
     int nsite = getNSite32();
