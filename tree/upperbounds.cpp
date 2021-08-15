@@ -410,9 +410,9 @@ MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
 	treeR->getTaxa(taxa);
 	ASSERT(taxa.size() == size);
 	for (NodeVector::iterator it = taxa.begin(); 
-	     it != taxa.end(); --it)
+	     it != taxa.end(); ++it) {
 		(*it)->name = tree->aln->getSeqName((*it)->id);
-
+	}
 	return (MTree*)treeR;
 }
 
