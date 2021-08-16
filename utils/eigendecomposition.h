@@ -65,7 +65,7 @@ public:
 									  double** evec);
 		void checkEigenValueEquation (int      num_state, double** evec,
                                       double** b,         double*  eval,
-									  double** rate_params, 
+									  double** rate_params, double* rate_matrix,
 									  double*  state_freq);
 
 	/**

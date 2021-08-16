@@ -92,7 +92,7 @@ void outError(const char *error, const char *msg, bool quit) {
     outError(str, quit);
 }
 
-void outError(const char *error, string msg, bool quit) {
+void outError(const char *error, const string& msg, bool quit) {
     string str = error;
     str += msg;
     outError(str, quit);
@@ -242,7 +242,7 @@ bool renameString(std::string &name) {
 }
 
 
-void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight) {
+void readWeightFile(const Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight) {
     cout << "Reading scale factor and taxa weights file " << params.param_file << " ..." << endl;
     try {
         ifstream in;
@@ -271,8 +271,8 @@ void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_nam
         in.close();
     } catch (ios::failure) {
         outError(ERR_READ_INPUT);
-    } catch (string str) {
-        outError(str);
+    } catch (string& error_str) {
+        outError(error_str);
     }
 }
 
@@ -299,12 +299,12 @@ void readStringFile(const char* filename, int max_num, StrVector &strv) {
     }
 }
 
-void readInitTaxaFile(Params &params, int ntaxa, StrVector &tax_name) {
+void readInitTaxaFile(const Params &params, int ntaxa, StrVector &tax_name) {
     cout << "Reading initial taxa set file " << params.initial_file << " ..." << endl;
     readStringFile(params.initial_file, ntaxa, tax_name);
 }
 
-void printString2File(string myString, string filename) {
+void printString2File(const string& myString, string filename) {
     ofstream myfile(filename.c_str());
     if (myfile.is_open()) {
         myfile << myString;
@@ -314,7 +314,7 @@ void printString2File(string myString, string filename) {
     }
 }
 
-void readInitAreaFile(Params &params, int nareas, StrVector &area_name) {
+void readInitAreaFile(const Params &params, int nareas, StrVector &area_name) {
     cout << "Reading initial area file " << params.initial_area_file << " ..." << endl;
     readStringFile(params.initial_area_file, nareas, area_name);
 }
@@ -354,8 +354,8 @@ void readAreasBoundary(char *file_name, MSetsBlock *areas, double *areas_boundar
         cout << "Areas relation matrix was read from " << file_name << endl;
     } catch (const char *str) {
         outError(str);
-    } catch (string str) {
-        outError(str);
+    } catch (string& error_str) {
+        outError(error_str);
     } catch (ios::failure) {
         outError(ERR_READ_INPUT, file_name);
     }
@@ -401,8 +401,8 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
         outError(ERR_READ_INPUT);
     } catch (const char *str) {
         outError(str);
-    } catch (string str) {
-        outError(str);
+    } catch (string& error_str) {
+        outError(error_str);
     }
 }
 

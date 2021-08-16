@@ -101,7 +101,7 @@ void EigenDecomposition::eigensystem(
 	calculateEigenVectorsOfQ(num_state, new_num, forg, 
 	                         evec_new, evec);
 	checkEigenValueEquation (num_state, evec, b, eval,
-	                         rate_params, state_freq);
+	                         rate_params, nullptr, state_freq);
 
 
 	for (i=num_state-1; i>= 0; i--) {
@@ -149,6 +149,7 @@ void EigenDecomposition::calculateEigenVectorsOfQ(int num_state, int new_num,
 void EigenDecomposition::checkEigenValueEquation(int      num_state, double** evec,
                                                  double** b,    double *eval,
 												 double** rate_params, 
+												 double*  rate_matrix,
 												 double*  state_freq) {
 	/* check eigenvalue equation */
 	bool   is_error = false;
@@ -167,12 +168,25 @@ void EigenDecomposition::checkEigenValueEquation(int      num_state, double** ev
 	}
 	if (is_error) {
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
-		cout << "Rate matrix R: " << endl;
-		for (int i = 0; i < num_state; i++) {
-			for (int j = 0; j < num_state; j++) {
-				cout << rate_params[i][j] << " ";
+		if (rate_params!=nullptr) {
+			//double**, num_state pointers to rows (each of num_state doubles)
+			cout << "Rate matrix R: " << endl;
+			for (int i = 0; i < num_state; i++) {
+				for (int j = 0; j < num_state; j++) {
+					cout << rate_params[i][j] << " ";
+				}
+				cout << endl;
 			}
-			cout << endl;
+		}
+		if (rate_matrix!=nullptr) {
+			//double*, row major order, num_state*num_state doubles
+			cout << "Rate matrix R: " << endl;
+			for (int i = 0; i < num_state; i++) {
+				for (int j = 0; j < num_state; j++) {
+					cout << rate_matrix[i*num_state+j] << " ";
+				}
+				cout << endl;
+			}
 		}
 		cout << "State frequencies: " << endl;
 		for (int i = 0; i < num_state; i++) {
@@ -343,14 +357,14 @@ void EigenDecomposition::eigensystem_nonrev(
 	double *rate_matrix, double *state_freq, double *eval, double *eval_imag,
 	double *evec, double *inv_evec, int num_state)
 {
-	double *forg = new double[num_state];
-	double *evali = new double[num_state];
-	double *new_forg = new double[num_state];
-	double *eval_new = new double[num_state];
-	double **a = (double**)new double[num_state];
-	double **b = (double**)new double[num_state];
-	double **evec_new = (double**)new double[num_state];
-	double **inv_evec_new = (double**)new double[num_state];
+	double *forg          = new double[num_state];
+	double *evali         = new double[num_state];
+	double *new_forg      = new double[num_state];
+	double *eval_new      = new double[num_state];
+	double **a            = new double*[num_state];
+	double **b            = new double*[num_state];
+	double **evec_new     = new double*[num_state];
+	double **inv_evec_new = new double*[num_state];
 	int *ordr = new int[num_state + 1];
 	int i, j, error, new_num, inew, jnew;
 //	double zero;
@@ -425,7 +439,7 @@ void EigenDecomposition::eigensystem_nonrev(
 
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
-	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
+	for (i = num_state-1,inew = new_num-1; i >= 0; i--) {
 		if (forg[i] > ZERO_FREQ) {
 // 			for (j = 0, jnew = 0; j < num_state; j++)
 			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) {
@@ -447,39 +461,29 @@ void EigenDecomposition::eigensystem_nonrev(
 				inv_evec[i*num_state+j] = (i==j) ? 1 : 0;
 			}
 		}
-
-	/* check eigenvalue equation */
-	error = 0;
-//	for (j = 0; j < num_state; j++) {
-//		for (i = 0, zero = 0.0; i < num_state; i++) {
-//			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k][j];
-//			zero -= eval[j] * evec[i][j];
-//			if (fabs(zero) > 1.0e-5) {
-//				error = 1;
-//				break;
-//			}
-//		}
-//	}
-	if (error) {
-		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation!\n";
-		cout << "Rate matrix R: " << endl;
-		for (i = 0; i < num_state; i++) {
-			for (j = 0; j < num_state; j++) cout << rate_matrix[i*num_state+j] << " ";
-			cout << endl;
-		}
-		cout << "State frequencies: " << endl;
-		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
-		cout << endl;
 	}
 
-	for (i=num_state-1; i>= 0; i--)
+#if (0)
+	vector<double*> evec_rows;
+	for (int i=0; i<num_state; ++i) {
+		evec_rows.push_back(evec + num_state*i );
+	}
+	checkEigenValueEquation(num_state, evec_rows.data(), b, eval, nullptr, 
+	                        rate_matrix, state_freq );
+#endif
+
+	for (int i=num_state-1; i>= 0; i--) {
 		delete [] inv_evec_new[i];
-	for (i=num_state-1; i>= 0; i--)
+	}
+	for (int i=num_state-1; i>= 0; i--) {
 		delete [] evec_new[i];
-	for (i=num_state-1; i>= 0; i--)
+	}
+	for (int i=num_state-1; i>= 0; i--) {
 		delete [] b[i];
-	for (i=num_state-1; i>= 0; i--)
+	}
+	for (int i=num_state-1; i>= 0; i--) {
 		delete [] a[i];
+	}
 	delete [] ordr;
 	delete [] inv_evec_new;
 	delete [] evec_new;
@@ -507,7 +511,7 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 		return;
 */
 	int i, j;
-	double delta, temp, sum;
+	double temp, sum;
 	double *m = new double[num_state];
 
 	if (!ignore_state_freq) {
@@ -529,7 +533,7 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 	}
 
 	if (normalize_matrix) {
-		delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+		double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
 
 		for (i = 0; i < num_state; i++) {
 			for (j = 0; j < num_state; j++) {
@@ -610,11 +614,12 @@ void EigenDecomposition::symmetrizeRateMatrix(double **a, double *stateFrq,
 void EigenDecomposition::tred2(double **a, int n, double *d, double *e)
 {
 	int l,k,j,i;
-	double scale,hh,h,g,f;
+	double hh,g,f;
 
 	for (i=n-1;i>0;i--) {
 		l=i-1;
-		h=scale=0.0;
+		double h=0.0;
+		double scale=0.0;
 		if (l > 0) {
 			for (k=0;k<=l;k++)
 				scale += fabs(a[i][k]);
@@ -695,13 +700,13 @@ double pythag(double a, double b)
 
 void EigenDecomposition::tqli(double *d, double *e, int n, double **z) 
 {
-	int m,l,iter,i,k;
+	int m,l,i,k;
 	double s,r,p,g,f,dd,c,b;
 
 	for (i=1;i<n;i++) e[i-1]=e[i];
 	e[n-1]=0.0;
 	for (l=0;l<n;l++) {
-		iter=0;
+		int iter=0;
 		do {
 			for (m=l;m<n-1;m++) {
 				dd=fabs(d[m])+fabs(d[m+1]);
@@ -751,16 +756,13 @@ void EigenDecomposition::tqli(double *d, double *e, int n, double **z)
 #undef NRANSI
 
 void EigenDecomposition::elmhes(double **a, int *ordr, int n) {
-	int m, j, i;
-	double y, x;
-
-
-	for (i = 0; i < n; i++)
+	for (int i = 0; i < n; i++) {
 		ordr[i] = 0;
-	for (m = 2; m < n; m++) {
-		x = 0.0;
-		i = m;
-		for (j = m; j <= n; j++) {
+	}
+	for (int m = 2; m < n; m++) {
+		double x = 0.0;
+		int i = m;
+		for (int j = m; j <= n; j++) {
 			if (fabs(a[j - 1][m - 2]) > fabs(x)) {
 				x = a[j - 1][m - 2];
 				i = j;
@@ -769,26 +771,26 @@ void EigenDecomposition::elmhes(double **a, int *ordr, int n) {
 		ordr[m - 1] = i;      /* vector */
 
 		if (i != m) {
-			for (j = m - 2; j < n; j++) {
-				y = a[i - 1][j];
+			for (int j = m - 2; j < n; j++) {
+				double y = a[i - 1][j];
 				a[i - 1][j] = a[m - 1][j];
 				a[m - 1][j] = y;
 			}
-			for (j = 0; j < n; j++) {
-				y = a[j][i - 1];
+			for (int j = 0; j < n; j++) {
+				double y = a[j][i - 1];
 				a[j][i - 1] = a[j][m - 1];
 				a[j][m - 1] = y;
 			}
 		}
 		if (x != 0.0) {
 			for (i = m; i < n; i++) {
-				y = a[i][m - 2];
+				double y = a[i][m - 2];
 				if (y != 0.0) {
 					y /= x;
 					a[i][m - 2] = y;
-					for (j = m - 1; j < n; j++)
+					for (int j = m - 1; j < n; j++)
 						a[i][j] -= y * a[m - 1][j];
-					for (j = 0; j < n; j++)
+					for (int j = 0; j < n; j++)
 						a[j][m - 1] += y * a[j][i];
 				}
 			}
@@ -1215,27 +1217,36 @@ void EigenDecomposition::hqr2(int n, int low, int hgh, double **h,
 
 void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 	double eps = 1.0e-20; /* ! */
-	int i, j, k, l, maxi=0, idx, ix, jx;
+	int    l, maxi=0, idx, ix, jx;
 	double sum, tmp, maxb, aw;
-	int *index = new int[size];
-	double *wk;
-	double **omtrx = (double**) new double[size];
 
-	for (i = 0; i < size; i++)
-		omtrx[i] = new double[size];
+	IntVector index_vector(size, 0);
+	int *index = index_vector.data();
+
+	DoubleVector omtrx_entries(size*size, 0.0);
+	vector<double*> omtrx_rows(size);
+	for (int i = 0; i < size; i++) {
+		omtrx_rows[i] = omtrx_entries.data() + i*size;
+	}
+	double** omtrx = omtrx_rows.data();
 
 	/* copy inmat to omtrx */
-	for (i = 0; i < size; i++)
-		for (j = 0; j < size; j++)
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
 			omtrx[i][j] = inmat[i][j];
+		}
+	}
 
-	wk = (double *) calloc((size_t)size, sizeof(double));
+	DoubleVector wk_vector(size, 0.0);
+	double* wk = wk_vector.data();
+
 	aw = 1.0;
-	for (i = 0; i < size; i++) {
+	for (int i = 0; i < size; i++) {
 		maxb = 0.0;
-		for (j = 0; j < size; j++) {
-			if (fabs(omtrx[i][j]) > maxb)
+		for (int j = 0; j < size; j++) {
+			if (fabs(omtrx[i][j]) > maxb) {
 				maxb = fabs(omtrx[i][j]);
+			}
 		}
 		if (maxb == 0.0) {
 			/* Singular matrix */
@@ -1243,18 +1254,20 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 		}
 		wk[i] = 1.0 / maxb;
 	}
-	for (j = 0; j < size; j++) {
-		for (i = 0; i < j; i++) {
+	for (int j = 0; j < size; j++) {
+		for (int i = 0; i < j; i++) {
 			sum = omtrx[i][j];
-			for (k = 0; k < i; k++)
+			for (int k = 0; k < i; k++) {
 				sum -= omtrx[i][k] * omtrx[k][j];
+			}
 			omtrx[i][j] = sum;
 		}
 		maxb = 0.0;
-		for (i = j; i < size; i++) {
+		for (int i = j; i < size; i++) {
 			sum = omtrx[i][j];
-			for (k = 0; k < j; k++)
+			for (int k = 0; k < j; k++) {
 				sum -= omtrx[i][k] * omtrx[k][j];
+			}
 			omtrx[i][j] = sum;
 			tmp = wk[i] * fabs(sum);
 			if (tmp >= maxb) {
@@ -1263,7 +1276,7 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 			}
 		}
 		if (j != maxi) {
-			for (k = 0; k < size; k++) {
+			for (int k = 0; k < size; k++) {
 				tmp = omtrx[maxi][k];
 				omtrx[maxi][k] = omtrx[j][k];
 				omtrx[j][k] = tmp;
@@ -1272,81 +1285,82 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 			wk[maxi] = wk[j];
 		}
 		index[j] = maxi;
-		if (omtrx[j][j] == 0.0)
+		if (omtrx[j][j] == 0.0) {
 			omtrx[j][j] = eps;
+		}
 		if (j != size - 1) {
 			tmp = 1.0 / omtrx[j][j];
-			for (i = j + 1; i < size; i++)
+			for (int i = j + 1; i < size; i++) {
 				omtrx[i][j] *= tmp;
+			}
 		}
 	}
 	for (jx = 0; jx < size; jx++) {
-		for (ix = 0; ix < size; ix++)
+		for (ix = 0; ix < size; ix++) {
 			wk[ix] = 0.0;
+		}
 		wk[jx] = 1.0;
 		l = -1;
-		for (i = 0; i < size; i++) {
+		for (int i = 0; i < size; i++) {
 			idx = index[i];
 			sum = wk[idx];
 			wk[idx] = wk[i];
 			if (l != -1) {
-				for (j = l; j < i; j++)
+				for (int j = l; j < i; j++) {
 					sum -= omtrx[i][j] * wk[j];
-			} else if (sum != 0.0)
+				}
+			} else if (sum != 0.0) {
 				l = i;
+			}
 			wk[i] = sum;
 		}
-		for (i = size - 1; i >= 0; i--) {
+		for (int i = size - 1; i >= 0; i--) {
 			sum = wk[i];
-			for (j = i + 1; j < size; j++)
+			for (int j = i + 1; j < size; j++) {
 				sum -= omtrx[i][j] * wk[j];
+			}
 			wk[i] = sum / omtrx[i][i];
 		}
-		for (ix = 0; ix < size; ix++)
+		for (ix = 0; ix < size; ix++) {
 			imtrx[ix][jx] = wk[ix];
+		}
 	}
-	free((char *)wk);
-	wk = NULL;
-	for (i = size-1; i >= 0; i--)
-		delete [] omtrx[i];
-	delete [] omtrx;
-	delete [] index;
 } /* luinverse */
 
 void EigenDecomposition::checkevector(double *evec, double *ivec, int nn) {
-	int i, j, ia, ib, ic, error;
-	double **matx = (double**) new double [nn];
-	double sum;
-
-	for (i = 0; i < nn; i++)
-		matx[i] = new double[nn];
+	DoubleVector matx_entries(nn*nn, 0.0); //nn*nn matrix
+	vector<double*> matx_rows(nn);         //rows of matx_entries
+	for (int i = 0; i < nn; i++) {
+		matx_rows[i] = matx_entries.data() + i*nn;
+	}
+	double** matx = matx_rows.data();
 
 	/* multiply matrix of eigenvectors and its inverse */
-	for (ia = 0; ia < nn; ia++) {
-		for (ic = 0; ic < nn; ic++) {
-			sum = 0.0;
-			for (ib = 0; ib < nn; ib++) sum += evec[ia*nn+ib] * ivec[ib*nn+ic];
+	for (int ia = 0; ia < nn; ia++) {
+		for (int ic = 0; ic < nn; ic++) {
+			double sum = 0.0;
+			for (int ib = 0; ib < nn; ib++) {
+				sum += evec[ia*nn+ib] * ivec[ib*nn+ic];
+			}
 			matx[ia][ic] = sum;
 		}
 	}
 	/* check whether the unitary matrix is obtained */
-	error = 0;
-	for (i = 0; i < nn; i++) {
-		for (j = 0; j < nn; j++) {
+	int error_count = 0;
+	for (int i = 0; i < nn; i++) {
+		for (int j = 0; j < nn; j++) {
 			if (i == j) {
-				if (fabs(matx[i][j] - 1.0) > 1.0e-5)
-					error = 1;
+				if (fabs(matx[i][j] - 1.0) > 1.0e-5) {
+					++error_count;
+				}
 			} else {
-				if (fabs(matx[i][j]) > 1.0e-5)
-					error = 1;
+				if (fabs(matx[i][j]) > 1.0e-5) {
+					++error_count;
+				}
 			}
 		}
 	}
-	if (error) {
+	if (0<error_count) {
 		cout << "\nWARNING: Inversion of eigenvector matrix not perfect!\n";
 	}
-
-	for (i = nn-1; i >= 0; i--)
-		delete [] matx[i];
-	delete [] matx;
 } /* checkevector */

@@ -305,8 +305,8 @@ public:
         @param key key name
         @return bool value for key
     */
-	bool getBool(string key, bool &ret);
-	bool getBool(string key);
+	bool getBool(const string& key, bool &ret);
+	bool getBool(const string& key);
 
 //    /** 
 //        @param key key name
@@ -397,7 +397,7 @@ public:
     /**
         start a new struct
     */
-    void startStruct(string name);
+    void startStruct(const string& name);
 
     /**
         end the current struct

@@ -985,8 +985,8 @@ public:
 
     ArgumentMap arg_map;
 
-    DecentTreeOptions() {
-        algorithmName  = StartTree::Factory::getNameOfDefaultTreeBuilder();
+    DecentTreeOptions()
+        : algorithmName(StartTree::Factory::getNameOfDefaultTreeBuilder()) {
         isOutputZipped            = false;
         isOutputSuppressed        = false;
         isOutputToStandardOutput  = false; //caller asked for newick tree to go to std::cout

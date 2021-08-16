@@ -24,7 +24,7 @@ const std::string& TimeKeeper::getActivity() const {
     return activity;
 }
 
-void TimeKeeper::setActivity(std::string& new_activity) {
+void TimeKeeper::setActivity(const std::string& new_activity) {
     activity = new_activity;
 }
 

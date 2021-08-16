@@ -15,13 +15,10 @@
 const char* CKP_HEADER =     "--- # IQ-TREE Checkpoint ver >= 1.6";
 const char* CKP_HEADER_OLD = "--- # IQ-TREE Checkpoint";
 
-Checkpoint::Checkpoint() {
-	filename = "";
-    prev_dump_time = 0;
+Checkpoint::Checkpoint(): filename(""), struct_name(""), header(CKP_HEADER) {
+	prev_dump_time = 0;
     dump_interval = 60; // dumping at most once per 60 seconds
-    struct_name = "";
     compression = true;
-    header = CKP_HEADER;
 }
 
 
@@ -248,7 +245,7 @@ int Checkpoint::keepKeyPrefix(string key_prefix) {
  * series of get function to get value of a key
  *-------------------------------------------------------------*/
 
-bool Checkpoint::getBool(string key, bool &ret) {
+bool Checkpoint::getBool(const string& key, bool &ret) {
     string value;
     if (!get(key, value)) {
         return false;
@@ -263,10 +260,11 @@ bool Checkpoint::getBool(string key, bool &ret) {
     return true;
 }
 
-bool Checkpoint::getBool(string key) {
+bool Checkpoint::getBool(const string& key) {
     bool ret = false;
-    if (!getBool(key, ret))
+    if (!getBool(key, ret)) {
         return false;
+    }
     return ret;
 }
 
@@ -285,7 +283,7 @@ void Checkpoint::putBool(string key, bool value) {
 /*-------------------------------------------------------------
  * nested structures
  *-------------------------------------------------------------*/
-void Checkpoint::startStruct(string name) {
+void Checkpoint::startStruct(const string& name) {
     struct_name = struct_name + name + CKP_SEP;
 }
 

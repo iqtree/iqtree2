@@ -2243,13 +2243,13 @@ public:
     double date_outlier;
 
     /** suppress the list of sequences */
-    double suppress_list_of_sequences;
+    bool   suppress_list_of_sequences;
 
     /** suppress warnings about low or zero distances */
-    double suppress_zero_distance_warnings;
+    bool   suppress_zero_distance_warnings;
 
     /** suppress notes about duplicate sequences */
-    double suppress_duplicate_sequence_warnings;
+    bool   suppress_duplicate_sequence_warnings;
     
     /** format to use when writing (.mldist) distance matrix files */
     string dist_format;
@@ -2362,7 +2362,7 @@ void outError(const char *error, const char *msg, bool quit = true);
 /**
         print double error messages then exit program
  */
-void outError(const char *error, string msg, bool quit = true);
+void outError(const char *error, const string& msg, bool quit = true);
 
 /**
         Output a warning message to screen
@@ -2475,7 +2475,7 @@ bool renameString(std::string &name);
         @param tax_name (OUT) vector of taxa names
         @param tax_weight (OUT) vector of corresponding taxa weights
  */
-void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight);
+void readWeightFile(const Params &params, int ntaxa, double &scale, StrVector &tax_name, DoubleVector &tax_weight);
 
 /**
         read the initial taxa set from the file
@@ -2483,7 +2483,7 @@ void readWeightFile(Params &params, int ntaxa, double &scale, StrVector &tax_nam
         @param ntaxa number of taxa
         @param tax_name (OUT) vector of taxa names
  */
-void readInitTaxaFile(Params &params, int ntaxa, StrVector &tax_name);
+void readInitTaxaFile(const Params &params, int ntaxa, StrVector &tax_name);
 
 /**
         read the initial area set from the file
@@ -2491,7 +2491,7 @@ void readInitTaxaFile(Params &params, int ntaxa, StrVector &tax_name);
         @param nareas number of areas
         @param area_name (OUT) vector of area names
  */
-void readInitAreaFile(Params &params, int nareas, StrVector &area_name);
+void readInitAreaFile(const Params &params, int nareas, StrVector &area_name);
 
 
 /**
@@ -2558,7 +2558,7 @@ void usage(char* argv[]);
 /**
  *   Print a string into a file
  */
-void printString2File(string myString, string filename);
+void printString2File(const string& myString, string filename);
 
 /**
  * print usage for iq-tree

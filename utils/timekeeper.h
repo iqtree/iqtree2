@@ -27,7 +27,7 @@ public:
     bool didAnything() const;
     std::string getElapsedDescription() const;
 
-    void setActivity(std::string& new_activity);
+    void setActivity(const std::string& new_activity);
     void setActivity(const char*  new_activity);
 
     
