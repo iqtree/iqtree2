@@ -850,7 +850,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 	ofile += ".lp";
 	double score;
 	int lp_ret, i, ntaxa = getNTaxa();
-	int k, min_k, max_k, step_k, index;
+	int k, min_k, max_k, step_k;
 
 	double *variables = new double[ntaxa];
 
@@ -871,7 +871,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 	else
 		cout << "running k = ";
 	for (k = min_k; k <= max_k; k += step_k) {
-		index = (k - min_k) / step_k;
+		int index = (k - min_k) / step_k;
 		if (!params.binary_programming) {
 			transformLP2(params, ofile.c_str(), k, false);
 			cout << " " << k;
@@ -1079,16 +1079,19 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 
 	ok_budget.resize(params.budget+1, 0);
 	// initialize all entry with corresponding cost
-	for (it2 = unique_cost.begin(); it2 != unique_cost.end(); ++it2)
-	if (*it2 < ok_budget.size()) {
-		ok_budget[*it2] = 1;
+	for (it2 = unique_cost.begin(); it2 != unique_cost.end(); ++it2) {
+		if (*it2 < ok_budget.size()) {
+			ok_budget[*it2] = 1;
+		}
 	}
 	// now use dynamic programming to find feasible budgets
 
 	for (i = 0; i <= params.budget; i++) {
 		for (it2 = unique_cost.begin(); it2 != unique_cost.end(); ++it2) {
 			j = i - (*it2);
-			if (j < 0) continue;
+			if (j < 0) {
+				continue;
+			}
 			if (ok_budget[j]) {
 				ok_budget[i] = 1;
 				break;
@@ -1580,7 +1583,7 @@ bool PDNetwork::checkAreaCoverage() {
 
 
 void PDNetwork::lpObjectiveMaxSD(ostream &out, const Params &params,
-                                 IntVector &y_value, int total_size) {
+                                 const IntVector &y_value, int total_size) {
 	//IntVector y_value, count1, count2;
 	iterator spit;
 	int i;
@@ -1799,7 +1802,7 @@ void PDNetwork::lpSplitConstraint_RS(ostream &out, Params &params,
 	}
 }
 
-void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params,
+void PDNetwork::lpSplitConstraint_TS(ostream &out, const Params &params,
                                      const IntVector &y_value, int total_size) {
 	iterator spit;
 	int i,j;
@@ -1854,7 +1857,7 @@ void PDNetwork::lpSplitConstraint_TS(ostream &out, Params &params,
 }
 
 void PDNetwork::lpMinSDConstraint(ostream &out, const Params &params,
-                                  IntVector &y_value, double pd_proportion) {
+                                  const IntVector &y_value, double pd_proportion) {
 	iterator spit;
 	int i;
 	double total_weight = calcWeight();
@@ -1885,7 +1888,7 @@ void PDNetwork::lpMinSDConstraint(ostream &out, const Params &params,
 	}
 }
 
-void PDNetwork::lpVariableBound(ostream &out, Params &params,
+void PDNetwork::lpVariableBound(ostream &out, const Params &params,
                                 Split &included_vars, IntVector &y_value) {
 	IntVector::iterator it2;
 	int i, j;
@@ -2023,7 +2026,7 @@ void PDNetwork::lpVariableBinary(const char *outfile, Params &params,
     }
     Split included_vars(nvars);
     for (IntVector::iterator it2 = initial_set.begin()
-         ; it2 != initial_set.end(); it2++) {
+         ; it2 != initial_set.end(); ++it2) {
         included_vars.addTaxon(*it2);
     }
     lpVariableBinary(outfile, params, included_vars);

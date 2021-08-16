@@ -2723,7 +2723,7 @@ void sort_index(T* first, T* last, int *index) {
 /**
  * print the header of summary file
  */
-void summarizeHeader(ostream &out, Params &params, bool budget_constraint, InputType analysis_type);
+void summarizeHeader(ostream &out, const Params &params, bool budget_constraint, InputType analysis_type);
 
 /**
  * print footer of summary file

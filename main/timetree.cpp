@@ -109,7 +109,7 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
 }
 
 /** read the date information from the alignment taxon names */
-void readDateTaxName(set<string> &nodenames, TaxonDateMap &dates) {
+void readDateTaxName(const set<string> &nodenames, TaxonDateMap &dates) {
     cout << "Extracting date from node names..." << endl;
     for (string name : nodenames) {
         // get the date in the taxon name after the '|' sign

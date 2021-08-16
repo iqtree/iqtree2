@@ -43,7 +43,7 @@ public:
 		construct PD network from a NEXUS or NEWICK file, e.g. produced by SplitsTree
 		@param params program parameters
 	*/
-    PDNetwork(Params &params);
+    explicit PDNetwork(Params &params);
 
 
 	/**
@@ -389,18 +389,18 @@ protected:
 	bool isUniquelyCovered(int taxon, int &area);
 
 	void lpObjectiveMaxSD(ostream &out, const Params &params, 
-	                      IntVector &y_value, int total_size);
+	                      const IntVector &y_value, int total_size);
 
 	void lpObjectiveMinK(ostream &out, Params &params);
 
 	void lpSplitConstraint_RS(ostream &out, Params &params, IntVector &y_value, IntVector &count1, IntVector &count2, int total_size);
-	void lpSplitConstraint_TS(ostream &out, Params &params, const IntVector &y_value, int total_size);
+	void lpSplitConstraint_TS(ostream &out, const Params &params, const IntVector &y_value, int total_size);
 
 	void lpK_BudgetConstraint(ostream &out, Params &params, int total_size);
 
-	void lpMinSDConstraint(ostream &out, const Params &params, IntVector &y_value, double pd_proportion);
+	void lpMinSDConstraint(ostream &out, const Params &params, const IntVector &y_value, double pd_proportion);
 
-	void lpVariableBound(ostream &out, Params &params, Split &included_vars, IntVector &y_value);
+	void lpVariableBound(ostream &out, const Params &params, Split &included_vars, IntVector &y_value);
 
 	void lpBoundaryConstraint(ostream &out, Params &params);
 

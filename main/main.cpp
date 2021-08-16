@@ -270,7 +270,7 @@ void summarizeAnalysisType(ostream &out, const Params &params,
 /**
     summarize the running with header
 */
-void summarizeHeader(ostream &out, Params &params, 
+void summarizeHeader(ostream &out, const Params &params, 
                      bool budget_constraint, InputType analysis_type) {
     printCopyright(out);
     out << "Input tree/split network file name: " << params.user_file << endl;
@@ -2148,7 +2148,6 @@ extern "C" void funcAbort(int signal_number)
 
 extern "C" void getintargv(int *argc, char **argv[]) 
 {
-    int    done;
     int    n;
     char   ch;
     char  *argtmp;
@@ -2174,7 +2173,7 @@ extern "C" void getintargv(int *argc, char **argv[])
     ch = (char) tolower((int) ch);
 
     if (ch == 'y') {
-        done=FALSE;
+        bool done=false;
 
         fprintf(stdout, "\nEnter single parameter [! for none]: ");
         fflush(stdout);
@@ -2214,7 +2213,7 @@ extern "C" void getintargv(int *argc, char **argv[])
         
             switch (ch) {
                 case 'y': 
-                    done=TRUE;
+                    done=true;
                     break;
                 case 'e': 
                     fprintf(stdout, "\nEnter single parameter [! for none]: ");
@@ -2510,17 +2509,16 @@ int main(int argc, char *argv[]) {
     { /* local scope */
         int found = FALSE;              /* "click" found in cmd name? */
         int n, dummyint;
-        char *tmpstr;
         int intargc;
         char **intargv;
         intargc = 0;
-        intargv = NULL;
+        intargv = nullptr;
 
         for (n = static_cast<int>(strlen(argv[0])) - 5;
              (n >= 0) && !found && (argv[0][n] != '/')
              && (argv[0][n] != '\\'); n--) {
 
-            tmpstr = &(argv[0][n]);
+            char* tmpstr = &(argv[0][n]);
             dummyint = 0;
             (void) sscanf(tmpstr, "click%n", &dummyint);
             if (dummyint == 5) found = TRUE;

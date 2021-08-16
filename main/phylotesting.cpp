@@ -792,8 +792,8 @@ void selectSingleModel(Params &params, IQTree &iqtree,
     }
     iqtree.aln->model_name = best_model.getName();
     
-    Checkpoint *checkpoint = &model_checkpoint;
     string best_model_AIC, best_model_AICc, best_model_BIC;
+    Checkpoint *checkpoint = &model_checkpoint;
     CKP_RESTORE(best_model_AIC);
     CKP_RESTORE(best_model_AICc);
     CKP_RESTORE(best_model_BIC);

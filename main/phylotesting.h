@@ -145,9 +145,9 @@ public:
      restore model from checkpoint
      */
     bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
-        size_t posR;
         const char *rates[] = {"+R", "*R", "+H", "*H"};
         for (int i = 0; i < element_count(rates); i++) {
+            size_t posR;
             if ((posR = model->rate_name.find(rates[i])) != string::npos) {
                 int cat = convert_int(model->rate_name.substr(posR+2).c_str());
                 subst_name = model->subst_name;
@@ -263,19 +263,23 @@ public:
      for a rate model XXX+R[k], return XXX+R[k-j] that finished
      @return the index of fewer category +R model that finished
      */
-    int getLowerKModel(int model) {
-        size_t posR;
+    int getLowerKModel(int model) {    
+
         const char *rates[] = {"+R", "*R", "+H", "*H"};
         for (int i = 0; i < element_count(rates); i++) {
-            if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
+            size_t posR = at(model).rate_name.find(rates[i]);
+            if (posR == string::npos) {
                 continue;
+            }
             int cat = convert_int(at(model).rate_name.substr(posR+2).c_str());
             for (int prev_model = model-1; prev_model >= 0; prev_model--, cat--) {
                 string name = at(model).rate_name.substr(0, posR+2) + convertIntToString(cat-1);
-                if (at(prev_model).rate_name != name)
+                if (at(prev_model).rate_name != name) {
                     break;
-                if (!at(prev_model).hasFlag(MF_DONE))
+                }
+                if (!at(prev_model).hasFlag(MF_DONE)) {
                     continue;
+                }
                 return prev_model;
             }
         }

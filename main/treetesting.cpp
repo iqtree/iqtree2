@@ -1233,8 +1233,9 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
             double curScore = tree->getCurScore();
             memset(pattern_lh, 0, maxnptn*sizeof(double));
             tree->computePatternLikelihood(pattern_lh, &curScore);
-            if (params.do_weighted_test || params.do_au_test)
+            if (params.do_weighted_test || params.do_au_test) {
                 memcpy(pattern_lhs + tid*maxnptn, pattern_lh, maxnptn*sizeof(double));
+            }
         }
         if (params.print_site_lh) {
             string tree_name = "Tree" + convertIntToString(tree_index+1);

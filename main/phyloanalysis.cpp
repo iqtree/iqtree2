@@ -88,14 +88,13 @@ void reportReferences(Params &params, ofstream &out) {
     << "in the genomic era. Mol. Biol. Evol., in press." << endl
     << "https://doi.org/10.1093/molbev/msaa015" << endl << endl;
     
-    bool modelfinder_only = false;
     if (info.isModelFinder()) {
         out << "To cite ModelFinder please use: " << endl << endl
             << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler," << endl
             << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
             << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
             << "https://doi.org/10.1038/nmeth.4285" << endl << endl;
-        modelfinder_only = info.isModelFinderOnly();
+        bool modelfinder_only = info.isModelFinderOnly();
     }
     if (info.isPolymorphismAware()) {
         out << "For polymorphism-aware models please cite:" << endl << endl
@@ -1980,7 +1979,6 @@ void initializeParams(Params &params, IQTree &iqtree)
 
 void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh,
                NodeVector &pruned_taxa, StrVector &linked_name) {
-    int num_low_support;
 
     if (params.aLRT_threshold <= 100 &&
         (params.aLRT_replicates > 0 || params.localbp_replicates > 0)) {
@@ -1992,10 +1990,10 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh,
         iqtree.setRootNode(params.root);
         double curScore =  iqtree.getCurScore();
         iqtree.computePatternLikelihood(pattern_lh, &curScore);
-        num_low_support = iqtree.testAllBranches(params.aLRT_threshold, curScore,
-                                                 pattern_lh, params.aLRT_replicates,
-                                                 params.localbp_replicates,
-                                                 params.aLRT_test, params.aBayes_test);
+        int num_low_support = iqtree.testAllBranches(params.aLRT_threshold, curScore,
+                                                     pattern_lh, params.aLRT_replicates,
+                                                     params.localbp_replicates,
+                                                     params.aLRT_test, params.aBayes_test);
         iqtree.printResultTree();
         cout << "  " << getCPUTime() - mytime << " sec." << endl;
         cout << num_low_support << " branches show low support values (<= "
@@ -3576,7 +3574,7 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
 void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
-    ModelCheckpoint *model_info = new ModelCheckpoint;
+    ModelCheckpoint *model_checkpoint = new ModelCheckpoint;
     StrVector removed_seqs, twin_seqs;
 
     // turn off all branch tests
@@ -3629,7 +3627,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
     double start_time = getCPUTime();
     double start_real_time = getRealTime();
 
-    startTreeReconstruction(params, tree, *model_info);
+    startTreeReconstruction(params, tree, *model_checkpoint);
     
     // 2018-06-21: bug fix: alignment might be changed by -m ...MERGE
     alignment = tree->aln;
@@ -3739,7 +3737,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
             }
         }
         if (params.num_bootstrap_samples == 1) {
-            reportPhyloAnalysis(params, *boot_tree, *model_info);
+            reportPhyloAnalysis(params, *boot_tree, *model_checkpoint);
         }
         // WHY was the following line missing, which caused memory leak?
         bootstrap_alignment = boot_tree->aln;
@@ -3800,7 +3798,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
                                    treefile_name.c_str(), false, treefile_name.c_str(),
                                    params.out_prefix.c_str(), ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
-            reportPhyloAnalysis(params, *tree, *model_info);
+            reportPhyloAnalysis(params, *tree, *model_checkpoint);
         }
     } else if (params.consensus_type == CT_CONSENSUS_TREE &&
                MPIHelper::getInstance().isMaster()) {
@@ -3813,7 +3811,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         params.stop_condition = sc;
         tree->stop_rule.initialize(params);
         optimizeConTree(params, tree);
-        reportPhyloAnalysis(params, *tree, *model_info);
+        reportPhyloAnalysis(params, *tree, *model_checkpoint);
     } else {
         cout << endl;
     }
@@ -3859,7 +3857,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         }
         cout << endl;
     }
-    delete model_info;
+    delete model_checkpoint;
 }
 
 void convertAlignment(Params &params, IQTree *iqtree) {
@@ -4993,8 +4991,6 @@ void computeConsensusTree(const char *input_trees, int burnin,
                           const char *out_prefix,
                           const char *tree_weight_file,
                           Params *params) {
-    bool rooted = false;
-
     // read the bootstrap tree file
     /*
      MTreeSet boot_trees(input_trees, rooted, burnin, tree_weight_file);
@@ -5044,6 +5040,7 @@ void computeConsensusTree(const char *input_trees, int burnin,
          }*/
         scale /= sg.maxWeight();
     } else {
+        bool rooted = false;
         boot_trees.init(input_trees, rooted, burnin, max_count,
                 tree_weight_file);
         boot_trees.convertSplits(sg, cutoff, SW_COUNT, weight_threshold);
