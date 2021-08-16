@@ -380,7 +380,7 @@ void ModelCodon::init(const char*   model_name, const string& model_params,
                       PhyloTree*    report_to_tree) {
     initEmpiricalRates();
     ignore_state_freq      = false;
-    StateFreqType def_freq = StateFreqType::FREQ_UNKNOWN;
+    StateFreqType def_freq;
     name                   = full_name = model_name;
     size_t pos             = name.find('_');
     if (pos == string::npos) {

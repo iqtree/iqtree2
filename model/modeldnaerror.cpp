@@ -14,11 +14,10 @@
 #define MAX_EPSILON 0.5
 
 ModelDNAError::ModelDNAError(PhyloTree *tree, PhyloTree* report_to_tree)
-: ModelDNA(tree, report_to_tree)
+: ModelDNA(tree, report_to_tree), seqerr_name("+E")
 {
     epsilon     = 0.05;
     fix_epsilon = false;
-    seqerr_name = "+E";
 }
 
 ModelDNAError::ModelDNAError(const char *model_name, const string& model_params,
@@ -26,10 +25,10 @@ ModelDNAError::ModelDNAError(const char *model_name, const string& model_params,
                              const string& seqerr, PhyloTree *tree, 
                              PhyloTree* report_to_tree)
     : ModelDNA(model_name, model_params, freq, freq_params, tree, report_to_tree)
+    , seqerr_name(seqerr)
 {
     epsilon = 0.05;
     fix_epsilon = false;
-    seqerr_name = seqerr;
     // now parse the epsilon parameter
     string::size_type pos;
     if ((pos = seqerr.find(OPEN_BRACKET)) != string::npos) {

@@ -126,7 +126,8 @@ void ModelDNA::init(const char *model_name, const string& model_params,
         // Second try: Lie Markov models. (Note, we're still missing UNREST
         // model. 12.12 is equivalent, but user may not realize that.)
         int model_num, symmetry; // returned by getLieMarkovModelInfo, but not used here
-        ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name,
+        string model_name_string(model_name);
+        ModelLieMarkov::getLieMarkovModelInfo(model_name_string, name, full_name,
                                               model_num, symmetry, def_freq);
     }
     if (name != "") {

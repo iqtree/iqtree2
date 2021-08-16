@@ -100,14 +100,14 @@ ModelsBlock *readModelsDefinition(Params &params) {
     return models_block;
 }
 
-ModelFactory::ModelFactory() : CheckpointFactory() {
+ModelFactory::ModelFactory() 
+    : CheckpointFactory(), ASC_type(ASCType::ASC_NONE) {
     model              = nullptr;
     site_rate          = nullptr;
     store_trans_matrix = false;
     is_storing         = false;
     joint_optimize     = false;
     fused_mix_rate     = false;
-    ASC_type           = ASCType::ASC_NONE;
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
