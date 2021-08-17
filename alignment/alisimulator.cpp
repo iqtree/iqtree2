@@ -1504,21 +1504,9 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
     model->getQMatrix(q_matrix);
     
     // extract sub rate for each state from q_matrix
-    double max_sub_rate = 0;
     double* sub_rate_on_state = new double[max_num_states];
     for (int i = 0; i < max_num_states; i++)
-    {
         sub_rate_on_state[i] = - q_matrix[i * (max_num_states + 1)];
-        
-        // record the maximum sub rate
-        if (max_sub_rate < sub_rate_on_state[i])
-            max_sub_rate = sub_rate_on_state[i];
-    }
-    
-    // normalize the sub_rate_on_state (if neccessary)
-    if (fabs(max_sub_rate-1.0) > 1e-5)
-        for (int i = 0; i < max_num_states; i++)
-            sub_rate_on_state[i] /= max_sub_rate;
     
     // delete q_matrix;
     delete[] q_matrix;
