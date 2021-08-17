@@ -366,31 +366,28 @@ void EigenDecomposition::eigensystem_nonrev(
 	double **evec_new     = new double*[num_state];
 	double **inv_evec_new = new double*[num_state];
 	int *ordr = new int[num_state + 1];
-	int i, j, error, new_num, inew, jnew;
+	int new_num;
 //	double zero;
 
-
-	for (i=0; i < num_state; i++)
+	for (int i=0; i < num_state; i++) {
 		a[i] = new double[num_state];
-	for (i=0; i < num_state; i++)
 		b[i] = new double[num_state];
-	for (i=0; i < num_state; i++)
 		evec_new[i] = new double[num_state];
-	for (i=0; i < num_state; i++)
 		inv_evec_new[i] = new double[num_state];
+	}
 
 	/* get relative transition matrix and frequencies */
 	memcpy(forg, state_freq, num_state * sizeof(double));
     // BQM 2015-09-07: normalize state frequencies to 1
     double sum = 0.0;
-	for (i = 0; i < num_state; i++) {
+	for (int i = 0; i < num_state; i++) {
 		sum += forg[i];
 	}
     sum = 1.0/sum;
-	for (i = 0; i < num_state; i++) {
+	for (int i = 0; i < num_state; i++) {
 		forg[i] *= sum;
 	}
-	for (i = 0; i < num_state; i++) {
+	for (int i = 0; i < num_state; i++) {
 		memcpy(a[i], &rate_matrix[i * num_state], num_state * sizeof(double));
 	}
 	//rtfdata(a, forg, num_state);
@@ -399,9 +396,11 @@ void EigenDecomposition::eigensystem_nonrev(
 	computeRateMatrix(a, forg, num_state); /* make 1 PAM rate matrix */
 
 	/* copy a to b */
-	for (i = 0; i < num_state; i++)
-		for (j = 0; j < num_state; j++)
+	for (int i = 0; i < num_state; i++) {
+		for (int j = 0; j < num_state; j++) {
 			b[i][j] = a[i][j];
+		}
+	}
 
 	eliminateZero(b, forg, num_state, a, new_forg, new_num);
 
@@ -415,7 +414,7 @@ void EigenDecomposition::eigensystem_nonrev(
 	hqr2(new_num, 1, new_num, a, evec_new, eval_new, evali);
     
     // check that complex eigenvalues are conjugated
-	for (i = 0; i < new_num; i++) {
+	for (int i = 0; i < new_num; i++) {
 		if (evali[i] != 0.0) {
 			ASSERT(i < new_num - 1 && evali[i + 1] != 0.0);
 			i++;
@@ -425,7 +424,7 @@ void EigenDecomposition::eigensystem_nonrev(
 
 	// now get back eigen
 	//for (i = 0,inew = 0; i < num_state; i++)
-	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
+	for (int i = num_state-1,inew = new_num-1; i >= 0; i--)
         if (forg[i] > ZERO_FREQ) {
             eval[i] = eval_new[inew];
             eval_imag[i] = evali[inew];
@@ -439,10 +438,10 @@ void EigenDecomposition::eigensystem_nonrev(
 
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
-	for (i = num_state-1,inew = new_num-1; i >= 0; i--) {
+	for (int i = num_state-1,inew = new_num-1; i >= 0; i--) {
 		if (forg[i] > ZERO_FREQ) {
 // 			for (j = 0, jnew = 0; j < num_state; j++)
-			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) {
+			for (int j = num_state-1, jnew = new_num-1; j >= 0; j--) {
 				if (forg[j] > ZERO_FREQ) {
 					evec[i*num_state+j] = evec_new[inew][jnew];
 					inv_evec[i*num_state+j] = inv_evec_new[inew][jnew];
@@ -456,7 +455,7 @@ void EigenDecomposition::eigensystem_nonrev(
 // 			inew++;
  			inew--;
 		} else {
-			for (j=0; j < num_state; j++) {
+			for (int j=0; j < num_state; j++) {
 				evec[i*num_state+j]     = (i==j) ? 1 : 0;
 				inv_evec[i*num_state+j] = (i==j) ? 1 : 0;
 			}
@@ -474,14 +473,8 @@ void EigenDecomposition::eigensystem_nonrev(
 
 	for (int i=num_state-1; i>= 0; i--) {
 		delete [] inv_evec_new[i];
-	}
-	for (int i=num_state-1; i>= 0; i--) {
 		delete [] evec_new[i];
-	}
-	for (int i=num_state-1; i>= 0; i--) {
 		delete [] b[i];
-	}
-	for (int i=num_state-1; i>= 0; i--) {
 		delete [] a[i];
 	}
 	delete [] ordr;
@@ -590,8 +583,9 @@ void EigenDecomposition::symmetrizeRateMatrix(double **a, double *stateFrq,
 	                                          double *stateFrq_sqrt, int num_state) {
 	int i, j;
 
-	for (i = 0; i < num_state; i++)
+	for (i = 0; i < num_state; i++) {
 		stateFrq_sqrt[i] = sqrt(stateFrq[i]);
+	}
 	for (i = 0; i < num_state; i++) {
         double tmp = 1.0/stateFrq_sqrt[i];
 		for (j = 0; j < i; j++) {
@@ -613,20 +607,21 @@ void EigenDecomposition::symmetrizeRateMatrix(double **a, double *stateFrq,
 
 void EigenDecomposition::tred2(double **a, int n, double *d, double *e)
 {
-	int l,k,j,i;
 	double hh,g,f;
 
-	for (i=n-1;i>0;i--) {
-		l=i-1;
+	for (int i=n-1;i>0;i--) {
+		int l=i-1;
 		double h=0.0;
-		double scale=0.0;
 		if (l > 0) {
-			for (k=0;k<=l;k++)
+			double scale=0.0;
+			for (int k=0;k<=l;k++) {
 				scale += fabs(a[i][k]);
-			if (scale == 0.0)
+			}
+			if (scale == 0.0) {
 				e[i]=a[i][l];
+			}
 			else {
-				for (k=0;k<=l;k++) {
+				for (int k=0;k<=l;k++) {
 					a[i][k] /= scale;
 					h += a[i][k]*a[i][k];
 				}
@@ -636,46 +631,54 @@ void EigenDecomposition::tred2(double **a, int n, double *d, double *e)
 				h -= f*g;
 				a[i][l]=f-g;
 				f=0.0;
-				for (j=0;j<=l;j++) {
+				for (int j=0;j<=l;j++) {
 					a[j][i]=a[i][j]/h;
 					g=0.0;
-					for (k=0;k<=j;k++)
+					for (int k=0;k<=j;k++) {
 						g += a[j][k]*a[i][k];
-					for (k=j+1;k<=l;k++)
+					}
+					for (int k=j+1;k<=l;k++) {
 						g += a[k][j]*a[i][k];
+					}
 					e[j]=g/h;
 					f += e[j]*a[i][j];
 				}
 				hh=f/(h+h);
-				for (j=0;j<=l;j++) {
+				for (int j=0;j<=l;j++) {
 					f=a[i][j];
 					e[j]=g=e[j]-hh*f;
-					for (k=0;k<=j;k++)
+					for (int k=0;k<=j;k++) {
 						a[j][k] -= (f*e[k]+g*a[i][k]);
+					}
 				}
 			}
-		} else
+		} else {
 			e[i]=a[i][l];
+		}
 		d[i]=h;
 	}
 	d[0]=0.0;
 	e[0]=0.0;
 	/* Contents of this loop can be omitted if eigenvectors not
 			wanted except for statement d[i]=a[i][i]; */
-	for (i=0;i<n;i++) {
-		l=i;
+	for (int i=0;i<n;i++) {
+		int l=i;
 		if (d[i] != 0.0) {
-			for (j=0;j<l;j++) {
+			for (int j=0;j<l;j++) {
 				g=0.0;
-				for (k=0;k<l;k++)
+				for (int k=0;k<l;k++) {
 					g += a[i][k]*a[k][j];
-				for (k=0;k<l;k++)
+				}
+				for (int k=0;k<l;k++) {
 					a[k][j] -= g*a[k][i];
+				}
 			}
 		}
 		d[i]=a[i][i];
 		a[i][i]=1.0;
-		for (j=0;j<l;j++) a[j][i]=a[i][j]=0.0;
+		for (int j=0;j<l;j++) {
+			a[j][i]=a[i][j]=0.0;
+		}
 	}
 }
 
@@ -1216,8 +1219,8 @@ void EigenDecomposition::hqr2(int n, int low, int hgh, double **h,
 } /* hqr2 */
 
 void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
-	double eps = 1.0e-20; /* ! */
-	int    l, maxi=0, idx, ix, jx;
+	double eps  = 1.0e-20; /* ! */
+	int    maxi = 0, idx, ix, jx;
 	double sum, tmp, maxb, aw;
 
 	IntVector index_vector(size, 0);
@@ -1300,7 +1303,7 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 			wk[ix] = 0.0;
 		}
 		wk[jx] = 1.0;
-		l = -1;
+		int l = -1;
 		for (int i = 0; i < size; i++) {
 			idx = index[i];
 			sum = wk[idx];
