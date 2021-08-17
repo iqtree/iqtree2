@@ -36,9 +36,9 @@ public:
 		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
-		@param testAlpha turn on option for doing random restart optimization of alpha and p_invar
 	*/
-    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, string optimize_alg, PhyloTree *tree, bool testParamDone);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, 
+	               string optimize_alg, PhyloTree *tree, bool testParamDone);
 
     /**
      *  check whether +I+G is used

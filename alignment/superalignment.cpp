@@ -841,8 +841,8 @@ void SuperAlignment::printPartitionRaxml(const char *filename) {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
-        int start_site;
-        for (int part = 0, start_site = 1; part < partitions.size(); part++) {
+        int start_site = 1;
+        for (int part = 0; part < partitions.size(); part++) {
             string name = partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             int end_site = start_site + partitions[part]->getNSite32();

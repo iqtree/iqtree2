@@ -317,7 +317,7 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
     }
 
     // set to model_joint if set
-    auto params = Params::getInstance();
+    const Params& params = Params::getInstance();
     if (params.model_joint) {
         model_str = params.model_joint;
         freq_str = "";
@@ -1370,7 +1370,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
     }
 
-    auto params = Params::getInstance();
+    const Params& params = Params::getInstance();
     if (params.root_find && tree->rooted
         && params.root_move_dist > 0) {
         cur_lh = tree->optimizeRootPosition(params.root_move_dist,
