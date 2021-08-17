@@ -37,7 +37,7 @@
 //        Class: UNJMatrix<T>
 //        Note:  Subclass of NJMatrix.
 //               UNJ's name ("unweighted...") is a bit misleading.
-//               To recover the "unweighted" contributions of the taxons in
+//               To recover the "unweighted" contributions of the taxa in
 //               two clusters of sizes s1 and s2 it is necessary to reweight
 //               contributions from both (e.g. d = d1*s1/(s1+s2) + d2*s2/(s1+s2)),
 //               where d1 and d2 are distances from another cluster (cluster 3)
