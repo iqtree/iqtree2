@@ -15,6 +15,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     params = input_params;
     AliSimulator::initializeIQTreeFromTreeFile();
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
+    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -44,6 +45,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     params = input_params;
     tree = iq_tree;
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
+    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -963,15 +965,14 @@ void AliSimulator::initializeStateMapping(int num_sites_per_state, Alignment *al
     ASSERT(aln);
     
     // initialize state_mapping (mapping from state to characters)
-    int max_num_states = aln->getMaxNumStates();
-    state_mapping.resize(max_num_states+1);
-    for (int i = 0; i< max_num_states; i++)
+    int total_states = aln->STATE_UNKNOWN + 1;
+    state_mapping.resize(total_states);
+    for (int i = 0; i< total_states; i++)
         state_mapping[i] = aln->convertStateBackStr(i);
+
     // add an additional state for gap
-    if (num_sites_per_state == 1)
-        state_mapping[max_num_states] = "-";
-    else
-        state_mapping[max_num_states] = "---";
+    if (num_sites_per_state == 3)
+        state_mapping[total_states-1] = "---";
 }
 
 /**
@@ -1324,8 +1325,8 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *mod
     for (int i = 0; i < sequence_length; i++)
     {
         // if the parent's state is a gap -> the children's state should also be a gap
-        if (node->sequence[i] == max_num_states)
-            (*it)->node->sequence[i] = max_num_states;
+        if (node->sequence[i] == STATE_UNKNOWN)
+            (*it)->node->sequence[i] = STATE_UNKNOWN;
         else
         {
             // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
@@ -1515,7 +1516,7 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
     for (int i = 0; i < sequence_length; i++)
     {
         // not compute the substitution rate for gaps/deleted sites
-        if (sequence[i] != max_num_states)
+        if (sequence[i] != STATE_UNKNOWN)
         {
             // if site_specific_rates is empty, the relative site rate should be 1
             if (site_specific_rates.size() > 0)
@@ -1613,7 +1614,7 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
     if (node->sequence.size() > 0)
     {
         // resize the sequence with gaps
-        node->sequence.resize(index_mapping_by_jump_step.size() + index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1] - 1, max_num_states);
+        node->sequence.resize(index_mapping_by_jump_step.size() + index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1] - 1, STATE_UNKNOWN);
         
         // update sites to new positions
         for (int i = index_mapping_by_jump_step.size() - 1 - 1; i >= 0; i--)
@@ -1623,7 +1624,7 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
                 node->sequence[i + index_mapping_by_jump_step[i]] = node->sequence[i];
                 
                 // if (*it)->node->sequence[i] is not overrided, it should be a gap
-                node->sequence[i] = max_num_states;
+                node->sequence[i] = STATE_UNKNOWN;
             }
             else
                 break;
@@ -1711,8 +1712,8 @@ void AliSimulator::handleDeletion(int sequence_length, int max_num_states, Node*
     for (int i = 0; i < length && (position + i) < node->sequence.size(); i++)
     {
         // if the current site is not a gap (has not been deleted) -> replacing it by a gap
-        if (node->sequence[position + i ] != max_num_states)
-            node->sequence[position + i ] = max_num_states;
+        if (node->sequence[position + i ] != STATE_UNKNOWN)
+            node->sequence[position + i ] = STATE_UNKNOWN;
         // otherwise, ignore the current site, moving forward to find a valid site (not a gap)
         else
         {
@@ -1734,11 +1735,11 @@ int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int
         position = random_int(upper_bound);
         
         // a valid position must not be a deleted site
-        if (position == sequence.size() || sequence[position] != max_num_states)
+        if (position == sequence.size() || sequence[position] != STATE_UNKNOWN)
             break;
     }
     // validate the position
-    if (position < sequence.size() && sequence[position] == max_num_states)
+    if (position < sequence.size() && sequence[position] == STATE_UNKNOWN)
         outError("Sorry! Could not select a valid position (not a deleted-site) for insertion/deletion events within 1000 attempts. You may specify a too high deletion rate, thus almost all sites were deleted. Please try again a a smaller deletion ratio!");
     return position;
 }

@@ -22,6 +22,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     rate_heterogeneity = tree->getRate();
     max_length_taxa_name = alisimulator->max_length_taxa_name;
     fundi_items = alisimulator->fundi_items;
+    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
 }
 
 /**
@@ -418,8 +419,8 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
         for (int i = 0; i < sequence_length; i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
-            if (node->sequence[i] == max_num_states)
-                (*it)->node->sequence[i] = max_num_states;
+            if (node->sequence[i] == STATE_UNKNOWN)
+                (*it)->node->sequence[i] = STATE_UNKNOWN;
             else
             {
                 (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
@@ -436,8 +437,8 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
         for (int i = 0; i < sequence_length; i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
-            if (node->sequence[i] == max_num_states)
-                (*it)->node->sequence[i] = max_num_states;
+            if (node->sequence[i] == STATE_UNKNOWN)
+                (*it)->node->sequence[i] = STATE_UNKNOWN;
             else
             {
                 // randomly select the state, considering it's dad states, and the transition_probability_matrix

@@ -22,6 +22,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     invariant_proportion = invar_prop;
     max_length_taxa_name = alisimulator->max_length_taxa_name;
     fundi_items = alisimulator->fundi_items;
+    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
 }
 
 /**
@@ -113,7 +114,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
     {
         
         // if this site is invariant or the parent's state is a gap -> preserve the dad's state
-        if (site_specific_rates[i] == 0 || node->sequence[i] == max_num_states)
+        if (site_specific_rates[i] == 0 || node->sequence[i] == STATE_UNKNOWN)
             (*it)->node->sequence[i] = node->sequence[i];
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {

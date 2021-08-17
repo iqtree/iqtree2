@@ -775,8 +775,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                         current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, super_tree->getAlnNSite());
                         
                         // copy alignment from the current tree to the super_tree
-                        int initial_state = current_tree->aln->getMaxNumStates();
-                        copySequencesToSuperTree(site_ids, super_tree->getAlnNSite(), super_tree, initial_state, current_tree->root, current_tree->root);
+                        copySequencesToSuperTree(site_ids, super_tree->getAlnNSite(), super_tree, current_tree->aln->STATE_UNKNOWN, current_tree->root, current_tree->root);
                         
 #ifdef _OPENMP
 #pragma omp critical

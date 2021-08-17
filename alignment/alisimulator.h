@@ -245,6 +245,7 @@ public:
     double length_ratio = 1;
     short int max_length_taxa_name = 10;
     vector<FunDi_Item> fundi_items;
+    short int STATE_UNKNOWN;
     
     /**
         constructor
