@@ -459,20 +459,14 @@ extern int NNI_MAX_NR_STEP;
         having to pass the params variable around
  */
 class Params {
-public:
-    static Params& getInstance();
 private:
-    Params () {}; // Disable constructor
-    // Temoprarily commented out because void PhyloSuperTree::readPartition(Params &params)
-    // make a copy of params?
-    //Params (Params const&) {}; // Disable copy constructor
-    //void operator=(Params const&) {}; // Disable assignment
+    Params();
 public:
+    Params (const Params& rhs) = delete;
+    Params& operator=(const Params& rhs) = delete;
 
-    /**
-    *  Fast and accurate optimiation for alpha and p_invar
-    */
-    bool fai;
+    static Params& getInstance();
+
 
     /**
      *  Option to check memory consumption only
@@ -490,14 +484,9 @@ public:
      */
     bool adaptPertubation;
 
-	/**
-	 *  Option to do mutlipe start for estimating alpha and p_invar
-	 */
-	bool testAlpha;
-
     /**
      *  Restart the optimization of alpha and pinvar from different starting
-     *  pinv values (supercedes the option testAlpha
+     *  pinv values (supercedes the option testAlpha, which has been removed).
      */
     bool opt_gammai;
 
@@ -624,7 +613,7 @@ public:
     /**
      *  TBR distance (radius) for parsimony tree
      */
-    int   tbr_radius;
+    int    tbr_radius;
 
     int    parsimony_tbr_iterations;
 
@@ -647,12 +636,6 @@ public:
      *  Different type of Least Square variances
      */
 	LEAST_SQUARE_VAR ls_var_type;
-
-	/**
-	 *  Threshold (likelihood difference between NNI and current tree)
-	 *  to start optimizing 5 branches
-	 */
-	double nniThresHold;
 
 	/**
 	 *  Optimize 5 branches on NNI tree
@@ -917,7 +900,7 @@ public:
             name of the reference sequence where aln_site_list is based on,
             NULL to take alignment positions.
      */
-    char *ref_seq_name;
+    const char *ref_seq_name;
 
     /**
             alignment output format
@@ -1786,11 +1769,6 @@ public:
      *  Output log-likelihood
      */
     bool nni_lh;
-
-    /**
-     *  The number of iqp iteration before the heuristics is applied
-     */
-    int speedUpFromIter;
 
     /**
      *  Lambda in PhyML algorithm
