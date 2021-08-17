@@ -15,12 +15,11 @@
 const char* CKP_HEADER =     "--- # IQ-TREE Checkpoint ver >= 1.6";
 const char* CKP_HEADER_OLD = "--- # IQ-TREE Checkpoint";
 
-Checkpoint::Checkpoint(): filename(""), struct_name(""), header(CKP_HEADER) {
+Checkpoint::Checkpoint(): filename(""), header(CKP_HEADER), struct_name("") {
 	prev_dump_time = 0;
     dump_interval = 60; // dumping at most once per 60 seconds
     compression = true;
 }
-
 
 Checkpoint::~Checkpoint() {
 }
