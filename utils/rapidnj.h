@@ -283,9 +283,9 @@ public:
             if ( infiniteDistance <= values[i] ) {
                 break;
             }
-            if ( clusterToRow[clusterIndices[i]] != notMappedToRow ) {
-                ++w;
-            }
+            bool liveRow = ( clusterToRow[clusterIndices[i]] != 
+                             notMappedToRow);
+            w += (liveRow ? 1 : 0);
         }
         if (w<row_count) {
             values[w] = infiniteDistance;
@@ -299,7 +299,7 @@ public:
         clusterTotals[clusterA] = -infiniteDistance;
         clusterToRow[clusterB]  = notMappedToRow;
         clusterTotals[clusterB] = -infiniteDistance;
-        size_t clusterC = clusters.size(); //cluster # of new cluster
+        size_t clusterC         = clusters.size(); //cluster # of new cluster
         super::cluster(a,b);
         if (b<row_count) {
             clusterToRow[clusterMoved] = static_cast<int>(b);
@@ -349,8 +349,8 @@ public:
         #endif
         for (size_t b=0; b<threadCount; ++b) {
             T      qBestForThread = qBest;
-            size_t rStart         = b*rSize / threadCount;
-            size_t rStop          = (b+1)*rSize / threadCount;
+            size_t rStart         = (b*rSize)     / threadCount;
+            size_t rStop          = ((b+1)*rSize) / threadCount;
             for (size_t r=rStart; r < rStop
                     && rowMinima[r].value < infiniteDistance; ++r) {
                 intptr_t rowA     = rowMinima[r].row;
@@ -388,7 +388,7 @@ public:
             #ifdef _OPENMP
             #pragma omp parallel for if(threshold<halfLen)
             #endif
-            for ( intptr_t i=0; i<halfLen; ++i) {
+            for ( intptr_t i = 0; i<halfLen; ++i) {
                 intptr_t j = i + gap;
                 if ( rowMinima[j] < rowMinima[i] ) {
                     std::swap(rowMinima[i], rowMinima[j]);
@@ -429,9 +429,9 @@ public:
              && rowMinima[r].value < infiniteDistance; ++r) {
             intptr_t rowA   = rowMinima[r].row;
             intptr_t rowB   = rowMinima[r].column;
-            size_t clusterA = (rowA < row_count) ? rowToCluster[rowA] : 0;
-            size_t clusterB = (rowB < row_count) ? rowToCluster[rowB] : 0;
-            size_t row      = (clusterA<clusterB) ? rowA : rowB;
+            size_t clusterA = (rowA < row_count)    ? rowToCluster[rowA] : 0;
+            size_t clusterB = (rowB < row_count)    ? rowToCluster[rowB] : 0;
+            size_t row      = (clusterA < clusterB) ? rowA : rowB;
             if (row < (size_t)row_count) {
                 rowScanOrder[w] = row;
                 w += rowOrderChosen[row] ? 0 : 1;
@@ -448,6 +448,7 @@ public:
             w += ( rowOrderChosen[row] ? 0 : 1 );
         }
     }
+
     virtual void getRowMinima() const {
         //
         //Note: Rather than multiplying distances by (n-2)
@@ -482,7 +483,7 @@ public:
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (intptr_t  r=0; r<row_count ; ++r) {
+        for (intptr_t r=0; r<row_count; ++r) {
             size_t row             = rowScanOrder[r];
             size_t cluster_num     = rowToCluster[row];
             T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster_num];
@@ -491,6 +492,7 @@ public:
             rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBest);
         }
     }
+
     Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const {
         T nless2      = (T)( row_count - 2 );
         T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ( (T)1.0 / nless2 );
