@@ -5469,6 +5469,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --write-all               Enable writing internal sequences" << endl
     << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
+    << "  --nt NUM                  Set the number of threads to run the simulation" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
     << "                            users should specify the seed number" << endl
     << "  -gz                       Enable output compression but taking longer running time" << endl
