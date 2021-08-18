@@ -434,16 +434,27 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     else
     {
         (*it)->node->sequence.resize(sequence_length);
-        for (int i = 0; i < sequence_length; i++)
+        int i;
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
         {
-            // if the parent's state is a gap -> the children's state should also be a gap
-            if (node->sequence[i] == STATE_UNKNOWN)
-                (*it)->node->sequence[i] = STATE_UNKNOWN;
-            else
+            double* tmp_trans_matrix = new double[max_num_states*max_num_states];
+#ifdef _OPENMP
+#pragma omp for
+#endif
+            for (i = 0; i < sequence_length; i++)
             {
-                // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+                // if the parent's state is a gap -> the children's state should also be a gap
+                if (node->sequence[i] == STATE_UNKNOWN)
+                    (*it)->node->sequence[i] = STATE_UNKNOWN;
+                else
+                {
+                    // randomly select the state, considering it's dad states, and the transition_probability_matrix
+                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], tmp_trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+                }
             }
+            delete[] tmp_trans_matrix;
         }
     }
 }
