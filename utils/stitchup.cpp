@@ -133,7 +133,7 @@ public:
     typedef Stitch<T> super;
     using   super::length;
     size_t  hack; //Used to impose a pseudo-random ordering on equal-length edges
-    LengthSortedStitch() : super(0,0,0.0) {}
+    LengthSortedStitch() : super(0,0,0.0), hack(0) {}
     LengthSortedStitch(size_t sourceIndex, size_t destinationIndex, T edgeLength):
         super(sourceIndex, destinationIndex, edgeLength ) {
         lastHack = lastHack * 2862933555777941757UL + 3037000493UL;
@@ -163,7 +163,7 @@ template <class T=double> struct StitchupGraph {
     std::vector< IntVector > setMembers;
     int                      nodeCount;
     bool                     silent;
-    StitchupGraph() : nodeCount(0) {
+    StitchupGraph() : nodeCount(0), silent(false) {
     }
     void clear() {
         StitchupGraph temp;
@@ -450,7 +450,7 @@ public:
     using super::column_count;
     using super::loadDistancesFromFlatArray;
     bool silent;
-    StitchupMatrix(): isOutputToBeZipped(false) {
+    StitchupMatrix(): isOutputToBeZipped(false), silent(false) {
     }
     virtual std::string getAlgorithmName() const {
         return "STITCHUP";

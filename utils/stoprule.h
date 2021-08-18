@@ -199,7 +199,7 @@ private:
 
 	void multiple (const DoubleVector &vec1, const DoubleMatrix &mat2, DoubleVector &proVec);
 	void multiple (const DoubleVector &vec1, const DoubleVector &vec2, DoubleMatrix &proMat);
-	double multiple (DoubleVector &vec1, DoubleVector &vec2);
+	double multiple (DoubleVector &vec1, const DoubleVector &vec2);
 
 	void readVector(DoubleVector &tmpTimeVec_);
 

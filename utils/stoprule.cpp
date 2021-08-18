@@ -461,7 +461,7 @@ void StopRule::multiple (const DoubleVector &vec1, const DoubleVector &vec2,
 }
 
 double StopRule::multiple (DoubleVector &vec1, 
-                           DoubleVector &vec2) {
+                           const DoubleVector &vec2) {
 	double sum_ = 0.0;
 	for (int count_ = 0; count_ < vec1.size(); count_ ++) {
 		sum_ += vec1[count_] * vec2[count_];

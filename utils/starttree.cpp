@@ -101,7 +101,7 @@ BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
 BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse,
                                                  const char *descriptionToGive)
     : name(nameToUse), description(descriptionToGive)
-    , isOutputToBeZipped(false), silent(false) {
+    , isOutputToBeZipped(false), silent(false), precision(4) {
     for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
         if (!it->second->getName().empty()) {
             builders.push_back(it->second);
@@ -224,7 +224,7 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
             std::cout << std::endl;
         }
     }
-    return true;
+    return ok;
 }
 };
 

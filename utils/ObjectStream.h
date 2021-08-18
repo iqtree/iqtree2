@@ -20,13 +20,13 @@ public:
 
     explicit ObjectStream(TreeCollection& trees);
 
-    ObjectStream() {
-        objectData = NULL;
+    ObjectStream(): objectData(nullptr), objectDataSize(0)  {
     }
 
     virtual ~ObjectStream() {
-        if (objectData != NULL)
+        if (objectData != nullptr) {
             delete [] objectData;
+        }
     }
 
     /**
