@@ -8,6 +8,9 @@
 #ifndef parallel_sort_h
 #define parallel_sort_h
 
+#include <stdint.h> //for definition of intptr_t
+#include <vector>   //for definition of std::vector template class
+
 
 template <class T> class ParallelSorter {
 public:
