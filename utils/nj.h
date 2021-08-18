@@ -245,7 +245,7 @@ protected:
         
         T aFudge          = 0.0;
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:aFudge)
         #endif
         for (intptr_t i=0; i<row_count; ++i) {
             if (i!=a && i!=b) {
