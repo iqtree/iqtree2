@@ -324,7 +324,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
     getSiteSpecificRates(site_specific_rate_index, site_specific_rates, sequence_length);
     
     // initialize trans_matrix
-    double *trans_matrix = new double[max_num_states*max_num_states];
+    double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
     
     // write output to file (if output_filepath is specified)
     if (output_filepath.length() > 0)
@@ -435,13 +435,14 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     {
         (*it)->node->sequence.resize(sequence_length);
         int i;
+        int thread_id = 0;
 #ifdef _OPENMP
-#pragma omp parallel
+#pragma omp parallel shared(trans_matrix) private(thread_id)
 #endif
         {
-            double* tmp_trans_matrix = new double[max_num_states*max_num_states];
 #ifdef _OPENMP
-#pragma omp for
+            thread_id = omp_get_thread_num();
+#pragma omp for schedule(static)
 #endif
             for (i = 0; i < sequence_length; i++)
             {
@@ -451,10 +452,9 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
                 else
                 {
                     // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], tmp_trans_matrix, max_num_states, (*it)->length, node->sequence[i]);
+                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix+thread_id*max_num_states*max_num_states, max_num_states, (*it)->length, node->sequence[i]);
                 }
             }
-            delete[] tmp_trans_matrix;
         }
     }
 }

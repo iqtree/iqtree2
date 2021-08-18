@@ -42,7 +42,7 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
     initVariables(sequence_length, site_specific_rates);
     
     // initialize trans_matrix
-    double *trans_matrix = new double[max_num_states*max_num_states];
+    double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
     
     // write output to file (if output_filepath is specified)
     if (output_filepath.length() > 0)
