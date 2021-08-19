@@ -764,8 +764,9 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     
     // update the num_children_done_simulation
     node->num_children_done_simulation++;
-    // remove the sequence of the current node to release the memory
-    if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1))
+    // remove the sequence of the current node to release the memory if it's an internal node && all of its children have done their simulation && the user does't (use indel && want to output the internal sequences)
+    if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1)
+        && !(params->alisim_insertion_ratio != -1 && params->alisim_write_internal_sequences))
     {
         // convert numerical states into readable characters and write internal sequences to file if the user want to do so
         if (params->alisim_write_internal_sequences && state_mapping.size() > 0)

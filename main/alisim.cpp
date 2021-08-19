@@ -485,10 +485,9 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // show a warning if the user wants to write internal sequences in not-supported cases
     if (super_alisimulator->params->alisim_write_internal_sequences
         &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-           || super_alisimulator->tree->isSuperTree()
-           || super_alisimulator->params->alisim_insertion_ratio != -1))
+           || super_alisimulator->tree->isSuperTree()))
     {
-        outWarning("Could not write out the internal sequences when using partition, or ASC models, or Indels. Only sequences at tips will be written to the output file.");
+        outWarning("Could not write out the internal sequences when using partition, or ASC models. Only sequences at tips will be written to the output file.");
         super_alisimulator->params->alisim_write_internal_sequences = false;
     }
     
@@ -824,7 +823,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
 */
 void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
 {
-    if (node->isLeaf() && node->name!=ROOT_NAME) {
+    if ((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio != -1)) {
 #ifdef _OPENMP
 #pragma omp task firstprivate(node) shared(out)
 #endif
