@@ -205,12 +205,12 @@ protected:
     /**
         handle insertion events
     */
-    void handleInsertion(int &sequence_length, int max_num_states, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node);
+    void handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node);
     
     /**
         handle deletion events
     */
-    void handleDeletion(int sequence_length, int max_num_states, Node* node);
+    void handleDeletion(int sequence_length, Node* node);
     
     /**
         compute the total substitution rate
@@ -227,13 +227,13 @@ protected:
     *  insert gaps into other nodes when processing Insertion Events
     *
     */
-    void insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, int max_num_states, Node *node, Node *dad, bool &stop_inserting_gaps);
+    void insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, Node *node, Node *dad, bool &stop_inserting_gaps);
     
     /**
     *  randomly select a valid position (not a deleted-site) for insertion/deletion event
     *
     */
-    int selectValidPositionForIndels(int upper_bound, vector<short int> sequence, int max_num_states);
+    int selectValidPositionForIndels(int upper_bound, vector<short int> sequence);
     
 public:
     

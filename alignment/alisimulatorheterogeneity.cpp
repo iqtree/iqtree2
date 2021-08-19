@@ -434,8 +434,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     else
     {
         (*it)->node->sequence.resize(sequence_length);
-        int i;
-        int thread_id = 0;
+        int i, thread_id = 0;
 #ifdef _OPENMP
 #pragma omp parallel shared(trans_matrix) private(thread_id)
 #endif

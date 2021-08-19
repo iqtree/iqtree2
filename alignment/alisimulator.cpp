@@ -1567,12 +1567,12 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
             {
                 case INSERTION:
                 {
-                    handleInsertion(sequence_length, max_num_states, index_mapping_by_jump_step, site_specific_rates, (*it)->node);
+                    handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, (*it)->node);
                     break;
                 }
                 case DELETION:
                 {
-                    handleDeletion(sequence_length, max_num_states, (*it)->node);
+                    handleDeletion(sequence_length, (*it)->node);
                     break;
                 }
                 default:
@@ -1587,7 +1587,7 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
     if (index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1]>0)
     {
         bool stop_inserting_gaps = false;
-        insertGapsForInsertionEvents(index_mapping_by_jump_step, (*it)->node->id, max_num_states, tree->root, tree->root, stop_inserting_gaps);
+        insertGapsForInsertionEvents(index_mapping_by_jump_step, (*it)->node->id, tree->root, tree->root, stop_inserting_gaps);
     }
 }
 
@@ -1604,7 +1604,7 @@ void AliSimulator::insertNewSequenceForInsertionEvent(Node *node, int position, 
 *  insert gaps into other nodes when processing Insertion Events
 *
 */
-void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, int max_num_states, Node *node, Node *dad, bool &stop_inserting_gaps)
+void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, Node *node, Node *dad, bool &stop_inserting_gaps)
 {
     // check to stop
     if (stop_inserting_gaps)
@@ -1643,17 +1643,17 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
         }
         
         // browse 1-step deeper to the neighbor node
-        insertGapsForInsertionEvents(index_mapping_by_jump_step, stopping_node_id, max_num_states, (*it)->node, node, stop_inserting_gaps);
+        insertGapsForInsertionEvents(index_mapping_by_jump_step, stopping_node_id, (*it)->node, node, stop_inserting_gaps);
     }
 }
 
 /**
     handle insertion events
 */
-void AliSimulator::handleInsertion(int &sequence_length, int max_num_states, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node)
+void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
-    int position = selectValidPositionForIndels(sequence_length + 1, node->sequence, max_num_states);
+    int position = selectValidPositionForIndels(sequence_length + 1, node->sequence);
     
     // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
     int length = -1;
@@ -1689,11 +1689,8 @@ void AliSimulator::handleInsertion(int &sequence_length, int max_num_states, vec
 /**
     handle deletion events
 */
-void AliSimulator::handleDeletion(int sequence_length, int max_num_states, Node* node)
+void AliSimulator::handleDeletion(int sequence_length, Node* node)
 {
-    // Randomly select the position/site (from the set of all sites) where the deletion event occurs based on a uniform distribution between 0 and the current length of the sequence
-    int position = selectValidPositionForIndels(sequence_length, node->sequence, max_num_states);
-    
     // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
     int length = -1;
     for (int i = 0; i < 1000; i++)
@@ -1707,6 +1704,12 @@ void AliSimulator::handleDeletion(int sequence_length, int max_num_states, Node*
     // validate the length
     if (length <= 0)
         outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution named "+params->alisim_deletion_distribution+" within 1000 attempts.");
+    
+    // Randomly select the position/site (from the set of all sites) where the deletion event occurs based on a uniform distribution between 0 and the current length of the sequence
+    int position = 0;
+    int upper_bound = sequence_length - length;
+    if (upper_bound > 0)
+        position = selectValidPositionForIndels(upper_bound, node->sequence);
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
     for (int i = 0; i < length && (position + i) < node->sequence.size(); i++)
@@ -1727,7 +1730,7 @@ void AliSimulator::handleDeletion(int sequence_length, int max_num_states, Node*
 *  randomly select a valid position (not a deleted-site) for insertion/deletion event
 *
 */
-int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> sequence, int max_num_states)
+int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> sequence)
 {
     int position = -1;
     for (int i = 0; i < 1000; i++)
