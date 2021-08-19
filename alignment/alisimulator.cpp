@@ -691,6 +691,12 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
         
+        // handle indels
+        vector<short int> indel_sequence;
+        vector<int> index_mapping_by_jump_step;
+        if (params->alisim_insertion_ratio != -1)
+            handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step);
+        
         // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
         if ((*it)->attributes["model"].length()>0)
             branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
@@ -707,9 +713,9 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
                 permuteSelectedSites(fundi_items, (*it)->node);
         }
         
-        // handle indels
+        // merge the simulated sequence with the indel_sequence
         if (params->alisim_insertion_ratio != -1)
-            handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it);
+            mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
         
         // writing and deleting simulated sequence immediately if possible
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
@@ -1536,12 +1542,12 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
 /**
     handle indels
 */
-void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it)
+void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step)
 {
     double total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence);
     double total_event_rate = total_sub_rate * (1 + params->alisim_insertion_ratio + params->alisim_deletion_ratio);
-    
-    vector<int> index_mapping_by_jump_step(sequence_length + 1, 0);
+    indel_sequence = node->sequence;
+    index_mapping_by_jump_step.resize(sequence_length + 1, 0);
     double branch_length = (*it)->length;
     while (branch_length > 0)
     {
@@ -1568,12 +1574,12 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
             {
                 case INSERTION:
                 {
-                    handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, (*it)->node);
+                    handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, indel_sequence);
                     break;
                 }
                 case DELETION:
                 {
-                    handleDeletion(sequence_length, (*it)->node);
+                    handleDeletion(sequence_length, indel_sequence);
                     break;
                 }
                 default:
@@ -1596,9 +1602,9 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulator::insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
+void AliSimulator::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
 {
-    node->sequence.insert(node->sequence.begin()+position, new_sequence.begin(), new_sequence.end());
+    indel_sequence.insert(indel_sequence.begin()+position, new_sequence.begin(), new_sequence.end());
 }
 
 /**
@@ -1651,10 +1657,10 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
 /**
     handle insertion events
 */
-void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node)
+void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
-    int position = selectValidPositionForIndels(sequence_length + 1, node->sequence);
+    int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
     
     // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
     int length = -1;
@@ -1672,7 +1678,7 @@ void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapp
     
     // insert new_sequence into the current sequence
     vector<short int> new_sequence = generateRandomSequence(length, false);
-    insertNewSequenceForInsertionEvent(node, position, new_sequence, site_specific_rates);
+    insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, site_specific_rates);
     
     // update the sequence_length
     sequence_length += length;
@@ -1690,7 +1696,7 @@ void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapp
 /**
     handle deletion events
 */
-void AliSimulator::handleDeletion(int sequence_length, Node* node)
+void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_sequence)
 {
     // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
     int length = -1;
@@ -1710,14 +1716,14 @@ void AliSimulator::handleDeletion(int sequence_length, Node* node)
     int position = 0;
     int upper_bound = sequence_length - length;
     if (upper_bound > 0)
-        position = selectValidPositionForIndels(upper_bound, node->sequence);
+        position = selectValidPositionForIndels(upper_bound, indel_sequence);
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
-    for (int i = 0; i < length && (position + i) < node->sequence.size(); i++)
+    for (int i = 0; i < length && (position + i) < indel_sequence.size(); i++)
     {
         // if the current site is not a gap (has not been deleted) -> replacing it by a gap
-        if (node->sequence[position + i ] != STATE_UNKNOWN)
-            node->sequence[position + i ] = STATE_UNKNOWN;
+        if (indel_sequence[position + i ] != STATE_UNKNOWN)
+            indel_sequence[position + i ] = STATE_UNKNOWN;
         // otherwise, ignore the current site, moving forward to find a valid site (not a gap)
         else
         {
@@ -1746,4 +1752,24 @@ int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int
     if (position < sequence.size() && sequence[position] == STATE_UNKNOWN)
         outError("Sorry! Could not select a valid position (not a deleted-site) for insertion/deletion events within 1000 attempts. You may specify a too high deletion rate, thus almost all sites were deleted. Please try again a a smaller deletion ratio!");
     return position;
+}
+
+/**
+    merge the simulated sequence with indel_sequence
+*/
+void AliSimulator::mergeIndelSequence(Node* node, vector<short int> indel_sequence, vector<int> index_mapping_by_jump_step)
+{
+    // mapping state from the current sequence into indel_sequence
+    for (int i = 0; i < index_mapping_by_jump_step.size() - 1; i++)
+    {
+        // preserving deleted site
+        if (indel_sequence[i+index_mapping_by_jump_step[i]] != STATE_UNKNOWN)
+            indel_sequence[i+index_mapping_by_jump_step[i]] = node->sequence[i+index_mapping_by_jump_step[i]];
+    }
+    
+    // release the memory for the current sequence
+    vector<short int>().swap(node->sequence);
+    
+    // update the new sequence
+    node->sequence = indel_sequence;
 }

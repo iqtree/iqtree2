@@ -143,7 +143,7 @@ void AliSimulatorInvar::initVariables(int sequence_length, vector<double> &site_
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorInvar::insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
+void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
 {
     // initialize new_site_specific_rates for new sequence
     vector<double> new_site_specific_rates(new_sequence.size());
@@ -153,5 +153,5 @@ void AliSimulatorInvar::insertNewSequenceForInsertionEvent(Node *node, int posit
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(node, position, new_sequence, site_specific_rates);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, site_specific_rates);
 }

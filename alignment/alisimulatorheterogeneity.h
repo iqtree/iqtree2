@@ -62,7 +62,7 @@ protected:
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
     
 public:
     

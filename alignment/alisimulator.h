@@ -200,17 +200,17 @@ protected:
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it);
+    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step);
     
     /**
         handle insertion events
     */
-    void handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, Node* node);
+    void handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence);
     
     /**
         handle deletion events
     */
-    void handleDeletion(int sequence_length, Node* node);
+    void handleDeletion(int sequence_length, vector<short int> &indel_sequence);
     
     /**
         compute the total substitution rate
@@ -221,7 +221,7 @@ protected:
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
     
     /**
     *  insert gaps into other nodes when processing Insertion Events
@@ -234,6 +234,12 @@ protected:
     *
     */
     int selectValidPositionForIndels(int upper_bound, vector<short int> sequence);
+    
+    /**
+        merge the simulated sequence with indel_sequence
+    */
+    virtual void mergeIndelSequence(Node* node, vector<short int> indel_sequence, vector<int> index_mapping_by_jump_step);
+    
     
 public:
     

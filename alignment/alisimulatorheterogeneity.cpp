@@ -474,7 +474,7 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, vector<double
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
+void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
 {
     // initialize new_site_specific_model_index
     vector<short int> new_site_specific_model_index;
@@ -499,5 +499,5 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(Node *node, i
         new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(node, position, new_sequence, site_specific_rates);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, site_specific_rates);
 }
