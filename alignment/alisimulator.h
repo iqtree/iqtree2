@@ -165,17 +165,17 @@ protected:
     /**
         branch-specific evolution
     */
-    void branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it);
+    void branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length);
     
     /**
         simulate a sequence for a node from a specific branch
     */
-    void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
+    void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths = "");
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
@@ -200,7 +200,7 @@ protected:
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step);
+    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, double &indel_branch_length);
     
     /**
         handle insertion events
