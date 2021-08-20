@@ -590,31 +590,27 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
     copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *super_tree, int initial_state, Node *node, Node *dad){
+void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
-        // find the corresponding node (super_node) in the super_tree
-        Node *super_node = super_tree->findLeafName(node->name);
+        // find the corresponding node in the current_tree
+        Node *current_node = current_tree->findLeafName(node->name);
 
-        // make sure super_node is found
-        if (super_node)
+        // initialize sequence of the super_node
+        if (node->sequence.size() != expected_num_states_super_tree)
         {
-            // shorten the sequence if it is longer than the expected length (due to Indels)
-            if (site_ids.size() != node->sequence.size())
-                node->sequence.resize(site_ids.size());
-
-            // initialize sequence of the super_node
-            if (super_node->sequence.size() != expected_num_states_super_tree)
-            {
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-                if (super_node->sequence.size() != expected_num_states_super_tree)
-                    super_node->sequence.resize(expected_num_states_super_tree, initial_state);
-            }
-
+            if (node->sequence.size() != expected_num_states_super_tree)
+                node->sequence.resize(expected_num_states_super_tree, initial_state);
+        }
+        
+        // copy sequence from the current_node to the super_node (if the current node is found)
+        if (current_node)
+        {
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
-            for (int i = 0; i < node->sequence.size(); i++)
-                super_node->sequence[site_ids[i]] = node->sequence[i];
+            for (int i = 0; i < site_ids.size(); i++)
+                node->sequence[site_ids[i]] = current_node->sequence[i];
         }
     }
     
@@ -622,7 +618,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
         // browse 1-step deeper to the neighbor node
-        copySequencesToSuperTree(site_ids, expected_num_states_super_tree, super_tree, initial_state, (*it)->node, node);
+        copySequencesToSuperTree(site_ids, expected_num_states_super_tree, current_tree, initial_state, (*it)->node, node);
     }
 }
 
@@ -732,6 +728,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
     if (alisimulator->tree->isSuperTree())
     {
         PhyloSuperTree *super_tree = ((PhyloSuperTree *)alisimulator->tree);
+        int total_expected_num_states = super_tree->getAlnNSite();
         
         // merge phylotrees using the same alignment file and the same sequence_type and the same num_states (morph) with each other -> write sequences to the corresponding output files
         for (int i = 0; i < super_tree->size(); i++)
@@ -771,25 +768,61 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                         // extract site_ids of the partition
                         const char* info_spec = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::position_spec.c_str();
                         IntVector site_ids;
-                        current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, super_tree->getAlnNSite());
+                        current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, total_expected_num_states);
                         
                         // copy alignment from the current tree to the super_tree
-                        copySequencesToSuperTree(site_ids, super_tree->getAlnNSite(), super_tree, current_tree->aln->STATE_UNKNOWN, current_tree->root, current_tree->root);
+                        copySequencesToSuperTree(site_ids, total_expected_num_states, current_tree, current_tree->aln->STATE_UNKNOWN, super_tree->root, super_tree->root);
                         
+                        // determine the max_site_index for the current partition
+                        for (int site_index:site_ids)
+                            if (current_tree->max_site_id_mapping <site_index)
+                                current_tree->max_site_id_mapping = site_index;
 #ifdef _OPENMP
 #pragma omp critical
 #endif
                         {
-                            // update max_site_index
-                            for (int site_index:site_ids)
-                                if (max_site_index<site_index)
-                                    max_site_index = site_index;
+                            // update the overall max_site_index
+                            if (max_site_index < current_tree->max_site_id_mapping)
+                                max_site_index = current_tree->max_site_id_mapping;
                             
                             // update partition_list
                             partition_list = partition_list + "_" + super_tree->at(j)->aln->name;
                             partition_count++;
                         }
                     }
+                }
+                
+                // insert redundant sites (inserted sites due to Indels) to the sequences
+                if (super_tree->params->alisim_insertion_ratio != -1)
+                {
+                    vector<short int> site_index_step_mapping(max_site_index+1, 0);
+                    for (j = i; j < super_tree->size(); j++)
+                    {
+                        IQTree *current_tree = (IQTree*) super_tree->at(j);
+                        if (!super_tree->at(i)->aln->aln_file.compare(current_tree->aln->aln_file) && super_tree->at(i)->aln->seq_type == super_tree->at(j)->aln->seq_type && super_tree->at(i)->aln->num_states == super_tree->at(j)->aln->num_states)
+                        {
+                            // determine the expected number of sites, the real number of sites, then compute the number of inserted_sites
+                            int expected_num_sites = current_tree->aln->getNSite();
+                            bool stop = false;
+                            int real_sequence_length = 0;
+                            determineSequenceLength(current_tree->root, current_tree->root, stop, real_sequence_length);
+                            int num_inserted_sites = real_sequence_length - expected_num_sites;
+                            
+                            if (num_inserted_sites > 0)
+                            {
+                                // insert Indels sites
+                                insertIndelSites(current_tree->max_site_id_mapping + site_index_step_mapping[current_tree->max_site_id_mapping]+1, expected_num_sites, num_inserted_sites, current_tree, super_tree->root, super_tree->root);
+                                
+                                // update site_index_step_mapping
+                                for (int k = current_tree->max_site_id_mapping + 1; k < site_index_step_mapping.size(); k++)
+                                    site_index_step_mapping[k] += num_inserted_sites;
+                                
+                                // update the max_site_index
+                                max_site_index += num_inserted_sites;
+                            }
+                        }
+                    }
+                    
                 }
                 
                 // show time spent on merging partitions
@@ -986,5 +1019,35 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
     FOR_NEIGHBOR(node, dad, it) {
         // browse 1-step deeper to the neighbor node
         determineSequenceLength((*it)->node, node, stop, sequence_length);
+    }
+}
+
+
+/**
+*  insert redundant sites (inserted sites due to Indels) to the sequences of the super tree
+*/
+void insertIndelSites(int position, int starting_index, int num_inserted_sites, IQTree *current_tree, Node *node, Node *dad)
+{
+    if (node->isLeaf() && node->name!=ROOT_NAME) {
+        // find the corresponding node in the current_tree
+        Node *current_node = current_tree->findLeafName(node->name);
+
+        // if current_node is found, inserting sites normally
+        if (current_node)
+        {
+            node->sequence.insert(node->sequence.begin()+position, current_node->sequence.begin()+starting_index, current_node->sequence.end());
+        }
+        // otherwise, insert gaps
+        else
+        {
+            node->sequence.insert(node->sequence.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
+        }
+    }
+    
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        insertIndelSites(position, starting_index, num_inserted_sites, current_tree, (*it)->node, node);
     }
 }

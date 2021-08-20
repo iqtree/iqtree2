@@ -868,6 +868,11 @@ public:
 
     /** if WT_BR_SCALE turned on, printTree will scale branch length with this factor */
     double len_scale;
+    
+    /**
+            AliSim: the highest site id mapping when using partitions
+     */
+    int max_site_id_mapping = -1;
 
     /**
     *   Pointer to the global params

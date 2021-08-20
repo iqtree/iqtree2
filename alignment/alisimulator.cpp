@@ -700,12 +700,18 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         if (params->alisim_insertion_ratio != -1)
             handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step, indel_branch_length);
         
-        // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
-        if ((*it)->attributes["model"].length()>0)
-            branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length);
-        // otherwise, simulate the sequence based on the common model
+        // if branch_length = 0 -> clone the sequence from the parent's node
+        if ((*it)->length == 0)
+            (*it)->node->sequence = node->sequence;
         else
-            simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length);
+        {
+            // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
+            if ((*it)->attributes["model"].length()>0)
+                branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length);
+            // otherwise, simulate the sequence based on the common model
+            else
+                simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length);
+        }
         
         // permuting selected sites for FunDi model
         if (params->alisim_fundi_taxon_set.size()>0)

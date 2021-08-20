@@ -66,7 +66,7 @@ int computeTotalSequenceLengthAllPartitions(PhyloSuperTree *super_tree);
 /**
 *  copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *super_tree, int initial_state, Node *node, Node *dad);
+void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad);
 
 /**
 *  write all sequences of a tree to an output file
@@ -106,5 +106,10 @@ void unrootTree(AliSimulator *alisimulator);
 *
 */
 void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_length);
+
+/**
+*  insert redundant sites (inserted sites due to Indels) to the sequences of the super tree
+*/
+void insertIndelSites(int position, int starting_index, int num_inserted_sites, IQTree *current_tree, Node *node, Node *dad);
 
 #endif /* alisim_h */
