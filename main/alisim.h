@@ -101,4 +101,10 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator);
 */
 void unrootTree(AliSimulator *alisimulator);
 
+/**
+*  determine real sequence length (for Indels)
+*
+*/
+void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_length);
+
 #endif /* alisim_h */

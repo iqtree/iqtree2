@@ -488,7 +488,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
            || super_alisimulator->tree->isSuperTree()))
     {
         outWarning("Could not write out the internal sequences when using partition, or ASC models. Only sequences at tips will be written to the output file.");
-        super_alisimulator->params->alisim_write_internal_sequences = false;
+        Params::getInstance().alisim_write_internal_sequences = false;
     }
     
     // iteratively generate multiple datasets for each tree
@@ -812,6 +812,14 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
     else
     {
         int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
+        
+        // determine the real sequence_length if Indels is used
+        if (alisimulator->params->alisim_insertion_ratio != -1)
+        {
+            bool stop = false;
+            determineSequenceLength(alisimulator->tree->root, alisimulator->tree->root, stop, sequence_length);
+        }
+        
         //  get the num_leaves
         int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
         writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator);
@@ -954,4 +962,29 @@ void unrootTree(AliSimulator *alisimulator)
     }
     else
         outError("The input tree is unrooted, thus, doesn't need to unroot it.");
+}
+
+/**
+*  determine real sequence length (for Indels)
+*
+*/
+void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_length)
+{
+    // check to stop
+    if (stop)
+        return;
+    
+    // determine the real sequence_length
+    if (node->sequence.size() > 0)
+    {
+        sequence_length = node->sequence.size();
+        stop = true;
+    }
+    
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        determineSequenceLength((*it)->node, node, stop, sequence_length);
+    }
 }

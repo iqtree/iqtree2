@@ -426,7 +426,8 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
                     num_variant_states++;
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    if (num_variant_states >= round(expected_num_sites/length_ratio))
+                    // keep checking if Indels is used
+                    if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == -1)
                         break;
                 }
             
@@ -480,7 +481,8 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
 */
 void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad){
     // no need to check the further sites if num_variant_states has exceeded the expected_num_variant_states
-    if (num_variant_states >= expected_num_variant_states)
+    // keep checking if Indels is used
+    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == -1)
         return;
     
     if (node->isLeaf() && node->name!=ROOT_NAME) {
@@ -488,8 +490,7 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
         if (num_variant_states == -1)
         {
             num_variant_states = 0;
-            for (int i = 0; i < node->sequence.size(); i++)
-                variant_state_mask.push_back(node->sequence[i]);
+            variant_state_mask = node->sequence;
         }
         // otherwise, check state by state to update the mask
         else
@@ -502,7 +503,8 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
                     num_variant_states++;
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    if (num_variant_states >= expected_num_variant_states)
+                    // keep checking if Indels is used
+                    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == -1)
                         break;
                 }
         }
