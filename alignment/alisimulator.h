@@ -240,6 +240,11 @@ protected:
     */
     virtual void mergeIndelSequence(Node* node, vector<short int> indel_sequence, vector<int> index_mapping_by_jump_step);
     
+    /**
+        generate indel-size from its distribution
+    */
+    int generateIndelSize(IndelDistribution indel_dis);
+    
     
 public:
     

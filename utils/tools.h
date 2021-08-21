@@ -148,6 +148,32 @@ struct Distribution {
   int pool_size;
 } ;
 
+/**
+ *  Specify 5 distributions for indel-size generation.
+ */
+enum INDEL_DIS_TYPE {
+    NEG_BIN,
+    ZIPF,
+    LAV,
+    GEO,
+    USER_DEFINED
+};
+
+struct IndelDistribution {
+    INDEL_DIS_TYPE indel_dis_type;
+    double param_1 = -1, param_2 = -1;
+    string user_defined_dis = "";
+    // constructor
+    IndelDistribution(){}
+    IndelDistribution(INDEL_DIS_TYPE new_indel_dis_type, double new_param_1 = -1, double new_param_2 = -1, string new_user_defined_dis = "")
+    {
+        indel_dis_type = new_indel_dis_type;
+        param_1 = new_param_1;
+        param_2 = new_param_2;
+        user_defined_dis = new_user_defined_dis;
+    }
+} ;
+
 class Linear {
 public:
 
@@ -2363,12 +2389,12 @@ public:
     /**
     *  the insertion-distribution for drawing the number of inserted sites
     */
-    string alisim_insertion_distribution;
+    IndelDistribution alisim_insertion_distribution;
     
     /**
     *  the deletion-distribution for drawing the number of deleted sites
     */
-    string alisim_deletion_distribution;
+    IndelDistribution alisim_deletion_distribution;
 };
 
 /**
@@ -2963,6 +2989,42 @@ double random_double(int *rstream = NULL);
  * @param mean the mean of exponential distribution
  */
 double random_double_exponential_distribution(double mean);
+
+/**
+ * geometric random number generation
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param p
+ */
+int random_int_geometric(double p);
+
+/**
+ * negative binomial distribution
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param r, q
+ */
+int random_int_nebin(int r, double q);
+
+/**
+ * Zipfian distribution
+ * algorithm from DAWG (Cartwright, 2005).
+ * Draw from Zipf distribution, with parameter a > 1.0
+ * Devroye Luc (1986) Non-uniform random variate generation.
+ * Springer-Verlag: Berlin. p551
+ * @param a, m
+ */
+int random_int_zipf(double a, int m = -1);
+
+/**
+ * Lavalette distribution
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param a, m
+ */
+int random_int_lav(double a, int m);
+
+/**
+ * Parse indel-size distribution
+ */
+IndelDistribution parseIndelDis(string input);
 
 template <class T>
 void my_random_shuffle (T first, T last, int *rstream = NULL)

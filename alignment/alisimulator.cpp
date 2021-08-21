@@ -1679,7 +1679,7 @@ void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapp
     int length = -1;
     for (int i = 0; i < 1000; i++)
     {
-        length = (int) random_number_from_distribution(params->alisim_insertion_distribution);
+        length = generateIndelSize(params->alisim_insertion_distribution);
         
         // a valid length must be greater than 0
         if (length > 0)
@@ -1687,7 +1687,7 @@ void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapp
     }
     // validate the length
     if (length <= 0)
-        outError("Sorry! Could not generate a positive length (for insertion events) based on the insertion-distribution named "+params->alisim_insertion_distribution+" within 1000 attempts.");
+        outError("Sorry! Could not generate a positive length (for insertion events) based on the insertion-distribution within 1000 attempts.");
     
     // insert new_sequence into the current sequence
     vector<short int> new_sequence = generateRandomSequence(length, false);
@@ -1715,7 +1715,7 @@ void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_
     int length = -1;
     for (int i = 0; i < 1000; i++)
     {
-        length = (int) random_number_from_distribution(params->alisim_deletion_distribution);
+        length = (int) generateIndelSize(params->alisim_deletion_distribution);
         
         // a valid length must be greater than 0
         if (length > 0)
@@ -1723,7 +1723,7 @@ void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_
     }
     // validate the length
     if (length <= 0)
-        outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution named "+params->alisim_deletion_distribution+" within 1000 attempts.");
+        outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution within 1000 attempts.");
     
     // Randomly select the position/site (from the set of all sites) where the deletion event occurs based on a uniform distribution between 0 and the current length of the sequence
     int position = 0;
@@ -1785,4 +1785,31 @@ void AliSimulator::mergeIndelSequence(Node* node, vector<short int> indel_sequen
     
     // update the new sequence
     node->sequence = indel_sequence;
+}
+
+/**
+    generate indel-size from its distribution
+*/
+int AliSimulator::generateIndelSize(IndelDistribution indel_dis)
+{
+    int random_size = -1;
+    switch (indel_dis.indel_dis_type)
+    {
+        case NEG_BIN:
+            random_size = random_int_nebin(indel_dis.param_1, indel_dis.param_2);
+            break;
+        case ZIPF:
+            random_size = random_int_zipf(indel_dis.param_1, indel_dis.param_2);
+            break;
+        case LAV:
+            random_size = random_int_lav(indel_dis.param_1, indel_dis.param_2);
+            break;
+        case GEO:
+            random_size = random_int_geometric(indel_dis.param_1) + 1;
+            break;
+        default:
+            random_size = random_number_from_distribution(indel_dis.user_defined_dis);
+            break;
+    }
+    return random_size;
 }
