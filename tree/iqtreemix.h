@@ -77,6 +77,16 @@ public:
     double optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradient_epsilon, int max_steps);
     double optimizeTreeWeightsByBFGS(double gradient_epsilon);
 
+    double optimizeBranchLensByBFGS(double gradient_epsilon);
+
+    // save branch lengths of all trees
+    // node and dad are always NULL
+    void getBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
+
+    // restore branch lengths of all trees
+    // node and dad are always NULL
+    void setBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
+    
     virtual void showTree();
     
     /** set the root by name
@@ -106,6 +116,12 @@ public:
 
     /** set pointer of params variable */
     virtual void setParams(Params* params);
+
+    /*
+     * Generate the branch IDs
+     * Branches of different trees with the same partition share the same ID
+     */
+    void computeBranchID();
 
     /**
      * Generate the initial tree (usually used for model parameter estimation)
@@ -268,6 +284,23 @@ public:
      */
     bool weightGrpExist;
 
+    /**
+            branch ID
+            branches of different trees with the same partition are assigned to the same ID
+     */
+    vector<int> branch_id;
+    
+    /**
+            branch group
+            groups of branches of different trees with the same partition
+     */
+    vector<IntVector> branch_group;
+    
+    /**
+            branch lengths (for optimization)
+     */
+    vector<DoubleVector> branch_len;
+
 private:
 
     // to separate the submodel names and the site rate names from the full model name
@@ -299,7 +332,13 @@ private:
              set all the tree weights of the same group to their average
      */
     void checkWeightGrp();
-    
+
+    /**
+             If there are multiple branches belonging to the same group
+             set all the branches of the same group to their average
+     */
+    void checkBranchGrp();
+
     // -------------------------------------
     // for BFGS optimzation on tree weights
     // -------------------------------------
@@ -317,7 +356,12 @@ private:
     
     // get the dimension of the variables (for tree weights)
     int getNDim();
-
+    
+    // optimization on which variable
+    // 1 - tree weights
+    // 2 - branch lengths
+    int optim_type;
+    
     /**
             immediate array for pattern likelihoods during computation
      */
@@ -359,6 +403,11 @@ private:
     bool anySiteRate;
 
     /**
+            whether it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
+     */
+    bool isHighRestrict;
+
+    /**
             number of trees
      */
     size_t ntree;
@@ -372,6 +421,11 @@ private:
             number of parsimony informative sites
      */
     size_t ninformsite;
+    
+    /**
+            number of branches of each tree
+     */
+    size_t nbranch;
 
     /**
             initial models

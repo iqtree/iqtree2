@@ -1169,6 +1169,36 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
     }
 }
 
+// output both nodes and also the node ids
+void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, IntVector &nodeids, Node *node, Node *dad, bool post_traversal) {
+    if (!node) node = root;
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)   {
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (!post_traversal) {
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+            nodeids.push_back((*it)->id);
+        }
+        getBranches(nodes, nodes2, nodeids, (*it)->node, node, post_traversal);
+        if (post_traversal) {
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+            nodeids.push_back((*it)->id);
+        }
+    }
+}
+
 void MTree::getBranches(int max_dist, NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)

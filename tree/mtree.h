@@ -506,6 +506,16 @@ public:
                      bool post_traversal = false);
 
     /**
+            get all descending branches and the node IDs below the node
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+            @param nodes (OUT) vector of one end node of branch
+            @param nodes2 (OUT) vector of the other end node of branch
+            @param post_traversal true to add branches in post traversal order, default: pre-traversal
+     */
+    void getBranches(NodeVector &nodes, NodeVector &nodes2, IntVector &nodeids, Node *node = NULL, Node *dad = NULL, bool post_traversal = false);
+
+    /**
      get all descending branches below the node not further away from max_dist
      @param max_dist maximum distance for descending branches
      @param node the starting node, NULL to start from the root

@@ -8,6 +8,8 @@
 #include "iqtreemix.h"
 const double MIN_PROP = 0.001;
 const double MAX_PROP = 1000.0;
+const double MIN_LEN = 1e-4;
+const double MAX_LEN = 1.0;
 
 // Input formats for the tree-mixture model
 // 1. linked models and site rates: GTR+G4+T
@@ -25,7 +27,11 @@ IQTreeMix::IQTreeMix() : IQTree() {
     patn_isconst = NULL;
     ptn_like_cat = NULL;
     _ptn_like_cat = NULL;
+    // initialize the variables
+    isTreeWeightFixed = false;
     weightGrpExist = false;
+    isHighRestrict = false;
+    optim_type = 1;
 }
 
 IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTree(aln) {
@@ -69,10 +75,15 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     // optimize_steps = 100;
     optimize_steps = 1000;
     
-    // initialize the tree weights as non-fixed, that means it needs to be optimized
+    // initialize the variables
     isTreeWeightFixed = false;
-    
     weightGrpExist = false;
+    isHighRestrict = false;
+    optim_type = 1;
+    if (ntree > 0)
+        nbranch = 2 * aln->getNSeq() - 3; // number of branches in a unrooted tree
+    else
+        nbranch = 0;
 }
 
 IQTreeMix::~IQTreeMix() {
@@ -180,7 +191,7 @@ void rmSpace(string& s) {
 
 // to separate the submodel names and the site rate names from the full model name
 void IQTreeMix::separateModel(string modelName) {
-    size_t t_pos, i, k, d_pos, d_pos2;
+    size_t t_pos, t_pos2, i, k, d_pos, d_pos2;
     string s;
     vector<string> model_array, submodel_array, weight_array;
     
@@ -191,17 +202,24 @@ void IQTreeMix::separateModel(string modelName) {
     isLinkSiteRate = true; // initialize to true
     
     // check how many trees
-    //cout << "[IQTreeMix::separateModel] modelName = " << modelName << endl;
+    cout << "[IQTreeMix::separateModel] modelName = " << modelName << endl;
     t_pos = modelName.rfind("+T");
     if (t_pos == string::npos) {
         outError("This model is not a tree mixture model, because there is no '+T'");
     }
-    if (t_pos < modelName.length()-2) {
-        d_pos = t_pos+2;
+    t_pos2 = t_pos+2;
+    if (t_pos2 < modelName.length()) {
+        // if "+TR", then it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
+        if (modelName[t_pos2] == 'R') {
+            cout << "This is a highly-restricted model, in which the edges of different trees having the same partition have the same lengths" << endl;
+            isHighRestrict = true;
+            t_pos2++;
+        }
+        d_pos = t_pos2;
         while (d_pos < modelName.length() && isdigit(modelName[d_pos]))
             d_pos++;
-        if (d_pos - t_pos > 2) {
-            ntree = atoi(modelName.substr(t_pos+2, d_pos-t_pos-2).c_str());
+        if (d_pos - t_pos2 > 0) {
+            ntree = atoi(modelName.substr(t_pos2, d_pos-t_pos2).c_str());
             if (ntree < size()) {
                 cout << endl << "NOTE: Only the first " << ntree << " trees in the treefile are considered, because '" <<  modelName.substr(t_pos+1) << "' has been specified!" << endl;
                 resize(ntree);
@@ -360,6 +378,14 @@ void IQTreeMix::separateModel(string modelName) {
     if (siterate_names.size() > 1 && siterate_names.size() != ntree) {
         outError("Error! The number of site rates specified in the mixture does not match with the tree number");
     }
+
+    // if it is a high restricted model, build the branch ID
+    if (isHighRestrict) {
+        // build the branch ID
+        computeBranchID();
+        // show trees
+        showTree();
+    }
 }
 
 void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
@@ -368,6 +394,7 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
 
     models.clear();
     site_rates.clear();
+    cout << "[IQTreeMix::initializeModel] model_name: " << model_name << endl;
     separateModel(model_name);
 
     // initialize the models
@@ -603,6 +630,74 @@ double IQTreeMix::optimizeAllBranches(int my_iterations, double tolerance, int m
 }
 
 /**
+        compute the updated tree weights according to the likelihood values along each site
+        prerequisite: computeLikelihood() has been invoked
+
+ */
+double IQTreeMix::optimizeBranchLensByBFGS(double gradient_epsilon) {
+    int ndim = branch_group.size();
+    size_t i;
+    double *variables; // used for BFGS numerical recipes
+    double *upper_bound;
+    double *lower_bound;
+    bool *bound_check;
+    double score;
+
+    // optimization on which variable
+    // 2 - branch lengths
+    optim_type = 2;
+    
+    // collect the branch lengths of the tree
+    getBranchLengths(branch_len);
+
+    // compute the likelihood of each tree
+    computeLikelihood();
+    
+    // allocate memory to the arrays
+    variables = new double[ndim+1]; // used for BFGS numerical recipes
+    upper_bound = new double[ndim+1];
+    lower_bound = new double[ndim+1];
+    bound_check = new bool[ndim+1];
+
+    // by BFGS algorithm
+    setVariables(variables);
+    setBounds(lower_bound, upper_bound, bound_check);
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, gradient_epsilon);
+    getVariables(variables);
+
+    delete[] variables;
+    delete[] upper_bound;
+    delete[] lower_bound;
+    delete[] bound_check;
+    
+    return score;
+}
+
+// save branch lengths of all trees
+// node and dad are always NULL
+void IQTreeMix::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
+    size_t i;
+
+    if (len.size() < ntree) {
+        len.resize(ntree);
+    }
+    for (i=0; i<ntree; i++) {
+        at(i)->saveBranchLengths(len[i]);
+    }
+}
+
+// restore branch lengths of all trees
+// node and dad are always NULL
+void IQTreeMix::setBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
+    ASSERT(len.size() == ntree);
+    size_t i;
+
+    for (i=0; i<ntree; i++) {
+        at(i)->restoreBranchLengths(len[i]);
+    }
+}
+
+/**
          If there are multiple tree weights belonging to the same group
          set all the tree weights of the same group to their average
  */
@@ -628,6 +723,39 @@ void IQTreeMix::checkWeightGrp() {
 
 
 /**
+         If there are multiple branches belonging to the same group
+         set all the branches of the same group to their average
+ */
+void IQTreeMix::checkBranchGrp() {
+    size_t i,j;
+    size_t treeIdx,branchIdx;
+    double grp_mean;
+    
+    // collect the branch lengths of the tree
+    getBranchLengths(branch_len);
+    
+    // set all the lengths of the branches in the same group as their average
+    for (i = 0; i < branch_group.size(); i++) {
+        grp_mean = 0.0;
+        for (j = 0; j < branch_group[i].size(); j++) {
+            treeIdx = branch_group[i].at(j) / nbranch;
+            branchIdx = branch_group[i].at(j) % nbranch;
+            grp_mean += branch_len[treeIdx].at(branchIdx);
+        }
+        grp_mean = grp_mean / branch_group[i].size();
+        for (j = 0; j < branch_group[i].size(); j++) {
+            treeIdx = branch_group[i].at(j) / nbranch;
+            branchIdx = branch_group[i].at(j) % nbranch;
+            branch_len[treeIdx].at(branchIdx) = grp_mean;
+        }
+    }
+    
+    // save the updated branch lengths of the tree
+    setBranchLengths(branch_len);
+}
+
+
+/**
         compute the updated tree weights according to the likelihood values along each site
         prerequisite: computeLikelihood() has been invoked
 
@@ -642,7 +770,10 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
     initializeAllPartialLh();
     prev_score = computeLikelihood();
     clearAllPartialLH();
-    
+    // optimization on which variable
+    // 1 - tree weights
+    optim_type = 1;
+
     for (step = 0; step < max_steps || max_steps == -1; step++) {
         
         getPostProb(pattern_mix_lh, false);
@@ -843,6 +974,104 @@ void IQTreeMix::setParams(Params* params) {
     }
     this->params = params;
 };
+
+/*
+ * Generate the branch IDs
+ * Branches of different trees with the same partition share the same ID
+ */
+void IQTreeMix::computeBranchID() {
+
+    StrVector taxname;
+    NodeVector nodes1, nodes2;
+    Split* split;
+    string split_str0, split_str1, split_str;
+    size_t i,j,l;
+    size_t branch_idx;
+    UINT k;
+    int curr_id;
+    
+    map<string,int> split_id;
+    map<string,int>::iterator itr;
+    branch_id.resize(nbranch * size());
+    DoubleVector lenvec;
+    IntVector ids;
+
+    for (j=0; j<size(); j++) {
+        
+        nodes1.clear();
+        nodes2.clear();
+        taxname.clear();
+        lenvec.clear();
+        ids.clear();
+
+        at(j)->getTaxaName(taxname);
+        at(j)->getBranches(nodes1,nodes2,ids);
+        at(j)->buildNodeSplit();
+        for (i=0; i<nodes1.size(); i++) {
+            branch_idx = j * nbranch + ids[i];
+            split = at(j)->getSplit(nodes2[i], nodes1[i]);
+            split_str0 = "";
+            split_str1 = "";
+            for (l=0; l<split->size(); l++) {
+                for (k = 0; k < UINT_BITS && (l*UINT_BITS+k < split->getNTaxa()); k++) {
+                    if (split->at(l) & (1 << k)) {
+                        if (split_str1.length() > 0) {
+                            split_str1.append(",");
+                        }
+                        split_str1.append(taxname[l * UINT_BITS + k]);
+                    } else {
+                        if (split_str0.length() > 0) {
+                            split_str0.append(",");
+                        }
+                        split_str0.append(taxname[l * UINT_BITS + k]);
+                    }
+                }
+            }
+            // select the smaller one according to lexical order
+            if (split_str0 < split_str1)
+                split_str = split_str0;
+            else
+                split_str = split_str1;
+
+            itr = split_id.find(split_str);
+            if (itr == split_id.end()) {
+                // new split_str
+                curr_id = split_id.size();
+                split_id.insert(pair<string,int> (split_str, curr_id) );
+                // cout << split_str << " -> " << curr_id << endl;
+                branch_group.push_back(vector<int>(1,branch_idx));
+            } else {
+                curr_id = itr->second;
+                branch_group[curr_id].push_back(branch_idx);
+            }
+            branch_id[branch_idx] = curr_id;
+        }
+    }
+    
+    /*
+    // for debugging
+    // list branch_id
+    cout << "branch_id:";
+    for (i=0; i<branch_id.size(); i++) {
+        if (i>0)
+            cout << ",";
+        cout << branch_id[i];
+    }
+    cout << endl;
+    
+    // list branch_group
+    cout << "branch_group" << endl;
+    for (i=0; i<branch_group.size(); i++) {
+        cout << "group " << i << ":";
+        for (j=0; j<branch_group[i].size(); j++) {
+            if (j>0)
+                cout << ",";
+            cout << branch_group[i].at(j);
+        }
+        cout << endl;
+    }
+    */
+}
 
 /**
  * Generate the initial tree (usually used for model parameter estimation)
@@ -1091,6 +1320,20 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         initializeTreeWeights();
     }
     
+    if (isHighRestrict) {
+        // it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
+
+        // If there are multiple branches belonging to the same group
+        // set all the branches of the same group to their average
+        checkBranchGrp();
+    }
+    
+    // show trees
+    // cout << "Initial trees:" << endl;
+    // showTree();
+    // score = computeLikelihood();
+    // cout << "Initial likelihood = " << score << endl;
+
     prev_score = score = -DBL_MAX;
 
     for (step = 0; step < optimize_steps; step++) {
@@ -1110,13 +1353,15 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             if (siterate_names[0].find("R") != string::npos) {
                 site_rates[0]->rescaleRates();
             }
-            // cout << "after optimizing linked site rate model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
+            // score = computeLikelihood();
+            // cout << "after optimizing linked site rate model, likelihood = " << score << endl;
         }
 
         // optimize the linked subsitution model
         if (isLinkModel) {
             models[0]->optimizeParameters(curr_epsilon);
-            // cout << "after optimizing linked subsitution model, likelihood = " << score << "(t_score=" << t_score << ")" << endl;
+            // score = computeLikelihood();
+            // cout << "after optimizing linked subsitution model, likelihood = " << score << endl;
         }
         
         score = computeLikelihood();
@@ -1129,7 +1374,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 
             if (params->fixed_branch_length != BRLEN_FIX) {
                 // optimize tree branches
-                score = optimizeAllBranches(1, curr_epsilon);  // loop max n times
+                if (isHighRestrict) {
+                    score = optimizeBranchLensByBFGS(curr_epsilon);
+                } else {
+                    score = optimizeAllBranches(1, curr_epsilon);  // loop max n times
+                }
                 // cout << "after optimizing branches, likelihood = " << score << endl;
             }
 
@@ -1161,6 +1410,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 } else {
                     score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1);  // loop max n times
                 }
+                // cout << "after optimizing tree weights, likelihood = " << score << endl;
             }
 
             score = computeLikelihood();
@@ -1472,57 +1722,112 @@ void IQTreeMix::computeFreqArray(double* pattern_mix_lh, bool need_computeLike) 
 
 
 double IQTreeMix::targetFunk(double x[]) {
+    double score;
     getVariables(x);
-    return -computeLikelihood_combine();
+    if (optim_type==1)
+        score = -computeLikelihood_combine();
+    else
+        score = -computeLikelihood();
+    return score;
 }
 
 // read the tree weights and write into "variables"
 void IQTreeMix::setVariables(double *variables) {
     // for tree weights
     size_t i;
-    size_t ndim = weight_group_member.size();
-    for (i=0; i<ndim; i++) {
-        variables[i+1] = tmp_weights[i];
+    size_t ndim;
+    size_t treeidx, branchidx;
+    
+    if (optim_type==1) {
+        // optimization on tree weight
+        ndim = weight_group_member.size();
+        for (i=0; i<ndim; i++) {
+            variables[i+1] = tmp_weights[i];
+        }
+    } else {
+        // optimization on branch length
+        ndim = branch_group.size();
+        for (i=0; i<ndim; i++) {
+            treeidx = branch_group[i].at(0) / nbranch;
+            branchidx = branch_group[i].at(0) % nbranch;
+            variables[i+1] = branch_len[treeidx].at(branchidx);
+        }
     }
 }
 
-// read the "variables" and write into tree weights
+// read the "variables" and write into tree
 void IQTreeMix::getVariables(double *variables) {
-    // for tree weights
     size_t i,j;
-    size_t ndim = weight_group_member.size();
-    double sum = 0.0;
+    size_t ndim;
+    size_t treeidx,branchidx;
+    double sum;
     double w;
-    for (i=0; i<ndim; i++) {
-        tmp_weights[i] = variables[i+1];
-        sum += tmp_weights[i] * weight_group_member[i].size();
-    }
-    for (i=0; i<ndim; i++) {
-        w = tmp_weights[i] / sum;
-        for (j=0; j<weight_group_member[i].size(); j++) {
-            weights[weight_group_member[i].at(j)] = w;
+    
+    if (optim_type==1) {
+        // for tree weight
+        ndim = weight_group_member.size();
+        sum = 0.0;
+        for (i=0; i<ndim; i++) {
+            tmp_weights[i] = variables[i+1];
+            sum += tmp_weights[i] * weight_group_member[i].size();
         }
+        for (i=0; i<ndim; i++) {
+            w = tmp_weights[i] / sum;
+            for (j=0; j<weight_group_member[i].size(); j++) {
+                weights[weight_group_member[i].at(j)] = w;
+            }
+        }
+    } else {
+        // for branch length
+        ndim = branch_group.size();
+        for (i=0; i<ndim; i++) {
+            for (j=0; j<branch_group[i].size(); j++) {
+                treeidx = branch_group[i].at(j) / nbranch;
+                branchidx = branch_group[i].at(j) % nbranch;
+                branch_len[treeidx].at(branchidx) = variables[i+1];
+            }
+        }
+        setBranchLengths(branch_len);
     }
 }
 
 // set the bounds
 void IQTreeMix::setBounds(double *lower_bound, double *upper_bound, bool* bound_check) {
     size_t i;
-    size_t ndim = weight_group_member.size();
-    for (i=0; i<ndim; i++) {
-        lower_bound[i+1] = MIN_PROP;
-        upper_bound[i+1] = MAX_PROP;
-        bound_check[i+1] = false;
+    size_t ndim;
+    
+    if (optim_type == 1) {
+        // optimization on tree weight
+        ndim = weight_group_member.size();
+        for (i=0; i<ndim; i++) {
+            lower_bound[i+1] = MIN_PROP;
+            upper_bound[i+1] = MAX_PROP;
+            bound_check[i+1] = false;
+        }
+    } else {
+        // optimization on branch length
+        ndim = branch_group.size();
+        for (i=0; i<ndim; i++) {
+            lower_bound[i+1] = MIN_LEN;
+            upper_bound[i+1] = MAX_LEN;
+            bound_check[i+1] = false;
+        }
     }
 }
 
-// get the dimension of the variables (for tree weights)
+// get the dimension of the variables
 int IQTreeMix::getNDim() {
     size_t s;
-    if (weight_group_member.size() > 0)
-        s = weight_group_member.size();
-    else
-        s = size();
+    if (optim_type == 1) {
+        // optimization on tree weight
+        if (weight_group_member.size() > 0)
+            s = weight_group_member.size();
+        else
+            s = size();
+    } else {
+        // optimization on branch length
+        s = branch_group.size();
+    }
     return s;
 }
 
