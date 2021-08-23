@@ -33,8 +33,8 @@ namespace StartTree
     class BuilderInterface
     {
     public:
-        BuilderInterface() {}
-        virtual ~BuilderInterface() {}
+        BuilderInterface() = default;
+        virtual ~BuilderInterface() = default;
         virtual bool isBenchmark() const = 0;
         virtual void setZippedOutput(bool zipIt) = 0;
         virtual bool constructTree
