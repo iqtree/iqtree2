@@ -2503,7 +2503,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--indel") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --indel <INSERTION_RATIO>,<DELETION_RATIO>";
+                    throw "Use --indel <INSERTION_RATE>,<DELETION_RATE>";
                 
                 string arg = argv[cnt];
                 // detect the seperator
@@ -2514,26 +2514,26 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // validate the input
                 size_t pos = arg.find(delimiter);
                 if (pos == std::string::npos)
-                    throw "Use --indel <INSERTION_RATIO>,<DELETION_RATIO>";
+                    throw "Use --indel <INSERTION_RATE>,<DELETION_RATE>";
                 
                 // get INSERTION_RATIO
                 params.alisim_insertion_ratio = convert_double(arg.substr(0, pos).c_str());
                 if (params.alisim_insertion_ratio < 0)
-                    throw "<INSERTION_RATIO> must not be negative.";
+                    throw "<INSERTION_RATE> must not be negative.";
                 
-                // remove "<INSERTION_RATIO>,"
+                // remove "<INSERTION_RATE>,"
                 arg.erase(0, pos + 1);
                 
-                // get DELETION_RATIO
+                // get DELETION_RATE
                 params.alisim_deletion_ratio = convert_double(arg.c_str());
                 if (params.alisim_deletion_ratio < 0)
-                    throw "<DELETION_RATIO> must not be negative.";
+                    throw "<DELETION_RATE> must not be negative.";
                 
                 continue;
             }
             if (strcmp(argv[cnt], "--indel-distribution") == 0) {
                 cnt++;
-                string err_msg = "Use --indel-distribution <INS_DIS>/<DEL_DIS>. Notes: <INS_DIS>/<DEL_DIS> could be names of user-defined distributions, or NB{<int_r>,<double_q>}, POW{<double_a>[,<int_max>]}, LAV{<double_a>,<int_max>}, GEO{<double_p>}, which specifies Negative Binomial, Zipfia, Lavalette, and Geometric distribution, respectively.";
+                string err_msg = "Use --indel-distribution <INS_DIS>/<DEL_DIS>. Notes: <INS_DIS>/<DEL_DIS> could be names of user-defined distributions, or NB{<int_r>,<double_q>}, POW{<double_a>[,<int_max>]}, LAV{<double_a>,<int_max>}, GEO{<double_p>}, which specifies Negative Binomial, Zipfian, Lavalette, and Geometric distribution, respectively.";
                 if (cnt >= argc)
                     throw err_msg;
                 
@@ -5443,8 +5443,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
     << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
     << "  --indel <INS>,<DEL>       Activate Indels (insertion/deletion events) and"<< endl
-    << "                            Specify the ratio of insertion rate <INS>, and"<< endl
-    << "                            deletion rate <DEL>, respectively, to the substitution rate"<< endl
+    << "                            Specify the insertion/deletion rate relative to"<< endl
+    << "                            the substitution rate of 1"<< endl
     << "  --indel-distribution <INS_DIS>/<DEL_DIS> Specify the distributions for generating"<< endl
     << "                            the random number of sites to insert/delete." << endl
     << "                            By default, a geometric distribution with p of 0.5 is used." << endl
