@@ -26,28 +26,21 @@ PhyloTreeMixlen::PhyloTreeMixlen() : IQTree()
 #ifdef USE_CPPOPTLIB
 , cppoptlib::BoundedProblem<double>()
 #endif
+    ,mixlen(1), cur_mixture(-1), initializing_mixlen(false)
 {
-	mixlen = 1;
-    cur_mixture = -1;
-//    relative_treelen = NULL;
-    initializing_mixlen = false;
 }
 
-PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln)
+PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) 
+    : IQTree(aln)
 #ifdef USE_CPPOPTLIB
-, cppoptlib::BoundedProblem<double>(mixlen)
+    , cppoptlib::BoundedProblem<double>(mixlen)
 #endif
+    , cur_mixture(-1), initializing_mixlen(false)
 {
-//	cout << "Initializing heterotachy mixture branch lengths" << endl;
-    cur_mixture = -1;
-//    relative_treelen = NULL;
-    initializing_mixlen = false;
     setMixlen(mixlen);
 }
 
 PhyloTreeMixlen::~PhyloTreeMixlen() {
-//    if (relative_treelen)
-//        aligned_free(relative_treelen);
 }
 
 void PhyloTreeMixlen::startCheckpoint() {
@@ -155,8 +148,9 @@ void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec,
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
         treeLengths(lenvec, (*it)->node, node);
-        for (int i = 0; i < mixlen; i++)
+        for (int i = 0; i < mixlen; i++) {
             lenvec[i] += (*it)->getLength(i);
+        }
     }
 }
 

@@ -1442,9 +1442,9 @@ double ModelFactory::optimizeBranchLengths(int fixed_len, double cur_lh, int max
     else if (fixed_len == BRLEN_SCALE) {
         double scaling = 1.0;
         TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_MAX,
-                        "Optimizing branch scaling");
+                      "Optimizing branch scaling");
         return tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling,
-                                                    MAX_BRLEN_SCALE, gradient_epsilon);
+                                               MAX_BRLEN_SCALE, gradient_epsilon);
     } else {
         return cur_lh;
     }

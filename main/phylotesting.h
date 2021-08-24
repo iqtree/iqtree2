@@ -225,7 +225,7 @@ public:
                  const StrVector& ratehet, 
                  const std::string& pomo_suffix, bool auto_model,
                  const vector<int>& flags);
-        void getNamesOfModelsFromYAMLModelFile(Params& params, Alignment* aln);
+        void getNamesOfModelsFromYAMLModelFile(const Params& params, Alignment* aln);
 
     /**
      Filter out all "non-promising" rate models
@@ -287,20 +287,24 @@ public:
     }
 
     int getHigherKModel(int model) {
-        size_t posR;
+        
         const char *rates[] = {"+R", "*R", "+H", "*H"};
         for (int i = 0; i < element_count(rates); i++) {
-            if ((posR = at(model).rate_name.find(rates[i])) == string::npos)
+            size_t posR = at(model).rate_name.find(rates[i]);
+            if (posR == string::npos) {
                 continue;
+            }
             size_t this_posR = at(model).rate_name.find(rates[i]);
             ASSERT(this_posR != string::npos);
             int cat = convert_int(at(model).rate_name.substr(this_posR+2).c_str());
             for (int next_model = model+1; next_model < size(); next_model++, cat++) {
 //                if (at(next_model).name.substr(0, posR) != orig_name.substr(0, posR))
 //                    break;
-                string rate_name = at(model).rate_name.substr(posR, 2) + convertIntToString(cat+1);
-                if (at(next_model).rate_name.find(rate_name) == string::npos)
+                string rate_name = at(model).rate_name.substr(posR, 2) 
+                                 + convertIntToString(cat+1);
+                if (at(next_model).rate_name.find(rate_name) == string::npos) {
                     break;
+                }
                 return next_model;
             }
         }

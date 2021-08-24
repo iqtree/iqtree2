@@ -95,16 +95,20 @@ public:
     /**
         @return true if this is a tree with mixture branch lengths, default: false
     */
-    virtual bool isMixlen() override { return !initializing_mixlen; }
+    virtual bool isMixlen() override { 
+        return !initializing_mixlen; 
+    }
 
     /**
         @return number of mixture branch lengths, default: 1
     */
     virtual int getMixlen() override {
-        if (initializing_mixlen)
+        if (initializing_mixlen) {
             return 1;
-        else
+        }
+        else {
             return mixlen;
+        }
     }
 
     /**

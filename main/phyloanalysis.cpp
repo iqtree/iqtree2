@@ -95,6 +95,7 @@ void reportReferences(Params &params, ofstream &out) {
             << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
             << "https://doi.org/10.1038/nmeth.4285" << endl << endl;
         bool modelfinder_only = info.isModelFinderOnly();
+        //And then what?!
     }
     if (info.isPolymorphismAware()) {
         out << "For polymorphism-aware models please cite:" << endl << endl
@@ -137,11 +138,12 @@ void reportReferences(Params &params, ofstream &out) {
             << "https://doi.org/10.1093/bioinformatics/bty384" << endl << endl;
     }
 
-    if (params.dating_method == "LSD")
+    if (params.dating_method == "LSD") {
         out << "Since you used least square dating (LSD) please also cite: " << endl << endl
         << "Thu-Hien To, Matthieu Jung, Samantha Lycett, Olivier Gascuel (2016)" << endl
         << "Fast dating using least-squares criteria and algorithms. Syst. Biol. 65:82-97." << endl
         << "https://doi.org/10.1093/sysbio/syv068" << endl << endl;
+    }
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
@@ -697,8 +699,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
         DoubleVector lenvec;
         tree.treeLengths(lenvec);
         out << "Class tree lengths: ";
-        for (int i = 0; i < lenvec.size(); i++)
+        for (int i = 0; i < lenvec.size(); i++) {
             out << " " << lenvec[i];
+        }
         out << endl;
     }
 
@@ -2550,8 +2553,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     ModelsBlock *models_block = readModelsDefinition(params);
     initializeParams(params, *iqtree);
     ModelInfoFromName model_info(iqtree->aln->model_name);
-
-    if (model_info.hasRateHeterotachy() && !iqtree->isMixlen()) {
+    bool isHeterotachy = model_info.hasRateHeterotachy();
+    int  num_mixlen;
+    if (isYAMLRateHeterotachyModel(params, iqtree->aln->model_name, num_mixlen)) {
+        isHeterotachy = true;
+    } 
+    if (isHeterotachy && !iqtree->isMixlen()) {
         // create a new instance
         IQTree* iqtree_new = new PhyloTreeMixlen(iqtree->aln, 0);
         iqtree_new->setCheckpoint(iqtree->getCheckpoint());

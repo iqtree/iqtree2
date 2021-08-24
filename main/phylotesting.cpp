@@ -1364,7 +1364,7 @@ void CandidateModelSet::combineSubstitutionModelsWithRateHeterogeneity
 }
 
 void CandidateModelSet::getNamesOfModelsFromYAMLModelFile
-        (Params& params, Alignment* aln) {
+        (const Params& params, Alignment* aln) {
     auto yaml_path = params.yaml_model_file;
     if (!yaml_path.empty()) {
         //Get names of models from the model file
@@ -2066,7 +2066,9 @@ void findClosestPairs(SuperAlignment *super_aln, DoubleVector &lenvec,
         double pair_count = round(closest_pairs.size() * cluster * 0.01);
         size_t num_pairs  = static_cast<size_t>(pair_count);
         num_pairs = min(num_pairs, Params::getInstance().partfinder_rcluster_max);
-        if (num_pairs <= 0) num_pairs = 1;
+        if (num_pairs == 0) {
+            num_pairs = 1;
+        }
         closest_pairs.erase(closest_pairs.begin() + num_pairs, closest_pairs.end());
     }
 }

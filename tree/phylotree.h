@@ -1987,7 +1987,8 @@ public:
         @param gradient_epsilon gradient epsilon
         @return optimal tree log-likelihood
     */
-    double optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon);
+    double optimizeTreeLengthScaling(double min_scaling, double &scaling, 
+                                     double max_scaling, double gradient_epsilon);
 
     /**
         print tree length scaling to a file (requested by Rob Lanfear)

@@ -1457,7 +1457,7 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order,
  get all neighboring branches to a removed node
  */
 void getNeiBranches(PhyloNeighborVec &removed_nei,
-                    NodeVector &attached_node, NodeVector &added_nodes, int i,
+                    NodeVector &attached_node, const NodeVector &added_nodes, int i,
                     NodeVector &nodes1, NodeVector &nodes2)
 {
     // get target branches surrounding attached_node

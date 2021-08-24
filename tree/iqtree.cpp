@@ -1264,6 +1264,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string context = treeDescription.str();
         double score;
         if (params->compute_likelihood) {
+            optimizeAllBranches();
             doNNISearch(true, context.c_str(), this);
             score = curScore;
         } else {
@@ -2837,6 +2838,7 @@ double IQTree::doTreeSearch() {
          *----------------------------------------*/
         optimizing.start();
         if (params->compute_likelihood) {
+            optimizeAllBranches();
             pair<int, int> nniInfos; // <num_NNIs, num_steps>
             nniInfos = doNNISearch(true, "", this);
         }
