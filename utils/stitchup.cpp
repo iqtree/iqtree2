@@ -450,7 +450,7 @@ public:
     using super::column_count;
     using super::loadDistancesFromFlatArray;
     bool silent;
-    StitchupMatrix(): isOutputToBeZipped(false), silent(false) {
+    StitchupMatrix(): silent(false), isOutputToBeZipped(false)  {
     }
     virtual std::string getAlgorithmName() const {
         return "STITCHUP";
