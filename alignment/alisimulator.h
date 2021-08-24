@@ -215,7 +215,7 @@ protected:
     /**
         compute the total substitution rate
     */
-    double computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence);
+    double computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence, int &num_gaps);
     
     /**
     *  insert a new sequence into the current sequence

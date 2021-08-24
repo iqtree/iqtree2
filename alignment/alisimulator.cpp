@@ -1511,12 +1511,15 @@ string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_lengt
 /**
     compute the total substitution rate
 */
-double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence)
+double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence, int &num_gaps)
 {
     // initialize variables
     double total_sub_rate = 0;
     int sequence_length = sequence.size();
     double* q_matrix = new double[max_num_states*max_num_states];
+    
+    /*double* freqs = new double[max_num_states];
+    model->getStateFrequency(freqs);*/
     
     // get the Rate (Q) Matrix
     model->getQMatrix(q_matrix);
@@ -1524,7 +1527,10 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
     // extract sub rate for each state from q_matrix
     double* sub_rate_on_state = new double[max_num_states];
     for (int i = 0; i < max_num_states; i++)
-        sub_rate_on_state[i] = - q_matrix[i * (max_num_states + 1)];
+    sub_rate_on_state[i] = - q_matrix[i * (max_num_states + 1)];// * freqs[i];
+    
+    // delete freqs
+    // delete[] freqs;
     
     // delete q_matrix;
     delete[] q_matrix;
@@ -1541,6 +1547,8 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
             else
                 total_sub_rate += sub_rate_on_state[sequence[i]];
         }
+        else
+            num_gaps++;
     }
     
     // delete sub_rate_on_state;
@@ -1554,8 +1562,14 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
 */
 void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, double &indel_branch_length)
 {
-    double total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence);
-    double total_event_rate = total_sub_rate * (1 + params->alisim_insertion_ratio + params->alisim_deletion_ratio);
+    int num_gaps = 0;
+    double total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence, num_gaps);
+    double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
+    double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps);
+    double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
+    double ins_upper = total_ins_rate/total_event_rate;
+    double del_upper = (total_ins_rate+total_del_rate)/total_event_rate;
+    
     indel_sequence = node->sequence;
     index_mapping_by_jump_step.resize(sequence_length + 1, 0);
     double branch_length = (*it)->length;
@@ -1575,9 +1589,9 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
             // Determine the event type (insertion, deletion, substitution) occurs
             double random_num = random_double();
             EVENT_TYPE event_type = SUBSTITUTION;
-            if (random_num < params->alisim_insertion_ratio/(1+params->alisim_insertion_ratio+params->alisim_deletion_ratio))
+            if (random_num < ins_upper)
                 event_type = INSERTION;
-            else if (random_num < (params->alisim_insertion_ratio+params->alisim_deletion_ratio)/(1+params->alisim_insertion_ratio+params->alisim_deletion_ratio))
+            else if (random_num < del_upper)
                 event_type = DELETION;
             
             // process event
