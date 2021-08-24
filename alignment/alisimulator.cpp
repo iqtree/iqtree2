@@ -696,9 +696,10 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         // handle indels
         vector<short int> indel_sequence;
         vector<int> index_mapping_by_jump_step;
-        double indel_branch_length = -1;
+        //double indel_branch_length = -1;
         if (params->alisim_insertion_ratio != -1)
-            handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step, indel_branch_length);
+            //handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step, indel_branch_length);
+            handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step);
         
         // if branch_length = 0 -> clone the sequence from the parent's node
         if ((*it)->length == 0)
@@ -707,10 +708,12 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         {
             // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
             if ((*it)->attributes["model"].length()>0)
-                branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length);
+                //branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length);
+                branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
             // otherwise, simulate the sequence based on the common model
             else
-                simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length);
+                //simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length);
+                simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
         }
         
         // permuting selected sites for FunDi model
@@ -1237,7 +1240,8 @@ void AliSimulator::intializeStateFreqsMixtureModel(IQTree* tree)
 /**
     branch-specific evolution
 */
-void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length)
+//void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length)
+void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it)
 {
     // initialize a dummy model for this branch
     string model_full_name = (*it)->attributes["model"];
@@ -1302,7 +1306,8 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
     tmp_tree->getModel()->writeInfo(cout);
     
     // simulate the sequence for the current node based on the branch-specific model
-    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length, lengths);
+    //tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length, lengths);
+    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, max_num_states, node, it, lengths);
     
     // delete the dummy alisimulator
     delete tmp_alisimulator;
@@ -1311,7 +1316,8 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 /**
     simulate a sequence for a node from a specific branch
 */
-void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
+//void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
+void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // initialize the site-specific rates
     vector<double> site_specific_rates(sequence_length, 1);
@@ -1322,17 +1328,20 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
         regenerateRootSequenceBranchSpecificModel((*it)->attributes["freqs"], max_num_states, sequence_length, node);
     
     // simulate a sequence for a node from a specific branch after all variables has been initializing
-    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length, lengths);
+    //simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length, lengths);
+    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, lengths);
 }
 
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
+//void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
+void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
-    double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
-    model->computeTransMatrix(partition_rate*branch_length, trans_matrix);
+    //double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
+    //model->computeTransMatrix(partition_rate*branch_length, trans_matrix);
+    model->computeTransMatrix(partition_rate * (*it)->length, trans_matrix);
     
     // convert the probability matrix into an accumulated probability matrix
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
@@ -1560,7 +1569,8 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
 /**
     handle indels
 */
-void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, double &indel_branch_length)
+//void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, double &indel_branch_length)
+void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step)
 {
     int num_gaps = 0;
     double total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence, num_gaps);
@@ -1573,7 +1583,7 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
     indel_sequence = node->sequence;
     index_mapping_by_jump_step.resize(sequence_length + 1, 0);
     double branch_length = (*it)->length;
-    indel_branch_length = branch_length;
+    //indel_branch_length = branch_length;
     while (branch_length > 0)
     {
         // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
@@ -1600,13 +1610,13 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
                 case INSERTION:
                 {
                     handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, indel_sequence);
-                    indel_branch_length -= waiting_time;
+                    //indel_branch_length -= waiting_time;
                     break;
                 }
                 case DELETION:
                 {
                     handleDeletion(sequence_length, indel_sequence);
-                    indel_branch_length -= waiting_time;
+                    //indel_branch_length -= waiting_time;
                     break;
                 }
                 default:

@@ -100,11 +100,13 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
+//void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
-    double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
-    model->computeTransMatrix(partition_rate*branch_length, trans_matrix);
+    /*double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
+    model->computeTransMatrix(partition_rate*branch_length, trans_matrix);*/
+    model->computeTransMatrix(partition_rate * (*it)->length, trans_matrix);
     
     // convert the probability matrix into an accumulated probability matrix
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
