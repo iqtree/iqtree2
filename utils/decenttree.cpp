@@ -1149,10 +1149,11 @@ int obeyCommandLineOptions(DecentTreeOptions& options) {
     if (!options.isTreeConstructionSkipped) {
         if (algorithm==nullptr) {
             std::cerr << "Tree builder algorithm was unexpectedly null"
-                << " (internal logic error)." << std::endl;
+                      << " (internal logic error)." << std::endl;
             return 1;
         }
-        algorithm->setZippedOutput(options.isOutputZipped || endsWith(options.outputFilePath,".gz"));
+        algorithm->setZippedOutput(options.isOutputZipped || 
+                                   endsWith(options.outputFilePath,".gz"));
         if (options.beSilent) {
             algorithm->beSilent();
         }
@@ -1160,7 +1161,8 @@ int obeyCommandLineOptions(DecentTreeOptions& options) {
     }
     Sequences  sequences;
     FlatMatrix m;
-    bool succeeded = prepInput(options.alignmentFilePath, options.inputFilePath,
+    bool succeeded = prepInput(options.alignmentFilePath, 
+                               options.inputFilePath,
                                !algorithm->isBenchmark(),
                                options.distanceOutputFilePath,
                                sequences, options.isMatrixToBeLoaded, m);
