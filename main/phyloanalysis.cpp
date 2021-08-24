@@ -3170,6 +3170,25 @@ void handleQuartetLikelihoodMapping(const Params &params, IQTree &iqtree) {
     }
 }
 
+void emptyFile(const std::string& file_name);
+
+void doReconstructionRun(IQTree* tree, Alignment* alignment,
+                         int orig_seed, int run,
+                         const std::string& runtrees_name,
+                         DoubleVector& runLnL, int& best_run,
+                         ModelCheckpoint *model_checkpoint);
+
+IQTree* setUpReplicateTree(IQTree* tree, Alignment* alignment);
+
+void appendTreeToRunsFile(IQTree* iqtree, 
+                          const std::string& runtrees_name);
+
+void initializeTreeAndModelStructure(IQTree* tree);
+
+void restoreTreeAndModelFromBestRun(IQTree* tree,
+                                    const DoubleVector& runLnL, 
+                                    const int& best_run);
+
 /**********************************************************
  * MULTIPLE TREE RECONSTRUCTION
  ***********************************************************/
@@ -3177,8 +3196,9 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment,
                                    IQTree *tree) {
     ModelCheckpoint *model_checkpoint = new ModelCheckpoint;
     
-    if (params.suppress_output_flags & OUT_TREEFILE)
+    if (params.suppress_output_flags & OUT_TREEFILE) {
         outError("Suppress .treefile not allowed with -runs option");
+    }
     string treefile_name = params.out_prefix;
     treefile_name += ".treefile";
     string runtrees_name = params.out_prefix;
@@ -3189,130 +3209,26 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment,
         cout << endl << "CHECKPOINT: " << runLnL.size()
              << " independent run(s) restored" << endl;
     } else if (MPIHelper::getInstance().isMaster()) {
-        // first empty the runtrees file
-        try {
-            ofstream tree_out;
-            tree_out.exceptions(ios::failbit | ios::badbit);
-            tree_out.open(runtrees_name.c_str());
-            tree_out.close();
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, runtrees_name);
-        }
+        emptyFile(runtrees_name);
     }
     
-    double start_time = getCPUTime();
+    double start_time      = getCPUTime();
     double start_real_time = getRealTime();
     
     int orig_seed = params.ran_seed;
-    int run;
-    int best_run = 0;
-    for (run = 0; run < runLnL.size(); run++)
-        if (runLnL[run] > runLnL[best_run])
+    int best_run   = 0;
+    for (int run = 1; run < runLnL.size(); run++) {
+        if (runLnL[run] > runLnL[best_run]) {
             best_run = run;
+        }
+    }
 
     // do multiple tree reconstruction
-    for (run = static_cast<int>(runLnL.size()); 
+    for (int run = static_cast<int>(runLnL.size()); 
          run < params.num_runs; run++) {
-
-        auto run_name = "run" + convertIntToString(run+1);
-        tree->getCheckpoint()->startStruct(run_name);
-        
-        params.ran_seed = orig_seed + run*1000 
-                        + MPIHelper::getInstance().getProcessID();
-        
-        cout << endl << "---> START RUN NUMBER " << run + 1
-             << " (seed: " << params.ran_seed << ")" << endl;
-        
-        tree->getCheckpoint()->put("seed", params.ran_seed);
-        
-        // initialize random stream for replicating the run
-        
-        int *saved_randstream = randstream;
-        init_random(params.ran_seed);
-        
-        IQTree *iqtree;
-        if (alignment->isSuperAlignment()){
-            if(params.partition_type != BRLEN_OPTIMIZE){
-                iqtree = new PhyloSuperTreePlen((SuperAlignment*) alignment,
-                                                (PhyloSuperTree*) tree);
-            } else {
-                iqtree = new PhyloSuperTree((SuperAlignment*) alignment,
-                                            (PhyloSuperTree*) tree);
-            }
-        } else {
-            // allocate heterotachy tree if neccessary
-            ModelInfoFromName model_info(alignment->model_name);
-            
-            if (params.num_mixlen > 1) {
-                iqtree = new PhyloTreeMixlen(alignment, params.num_mixlen);
-            } else if (model_info.hasRateHeterotachy()) {
-                iqtree = new PhyloTreeMixlen(alignment, 0);
-            } else
-                iqtree = new IQTree(alignment);
-        }
-        
-        if (!tree->constraintTree.empty()) {
-            iqtree->constraintTree.readConstraint(tree->constraintTree);
-        }
-        
-        // set checkpoint
-        iqtree->setCheckpoint(tree->getCheckpoint());
-        iqtree->num_precision = tree->num_precision;
-        
-        runTreeReconstruction(params, iqtree);
-        // read in the output tree file
-        stringstream ss;
-        iqtree->printTree(ss);
-        if (MPIHelper::getInstance().isMaster())
-            try {
-                ofstream tree_out;
-                tree_out.exceptions(ios::failbit | ios::badbit);
-                tree_out.open(runtrees_name.c_str(), 
-                              ios_base::out | ios_base::app);
-                tree_out.precision(10);
-                tree_out << "[ lh=" << iqtree->getBestScore() << " ]";
-                tree_out << ss.str() << endl;
-                tree_out.close();
-            } catch (ios::failure) {
-                outError(ERR_WRITE_OUTPUT, runtrees_name);
-            }
-        // fix bug: set the model for original tree after testing
-        ModelInfoFromName model_info(params.model_name);
-        if (model_info.isModelFinder() && tree->isSuperTree()) {
-            PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
-            stree->part_info =  ((PhyloSuperTree*)iqtree)->part_info;
-        }
-        runLnL.push_back(iqtree->getBestScore());
-
-        if (MPIHelper::getInstance().isMaster()) {
-            if (params.num_bootstrap_samples > 0 &&
-                params.consensus_type == CT_CONSENSUS_TREE &&
-                (run == 0 || iqtree->getBestScore() > runLnL[best_run])) {
-                // 2017-12-08: optimize branch lengths of consensus tree
-                // now optimize branch lengths of the consensus tree
-                string current_tree = iqtree->getTreeString();
-                optimizeConTree(params, iqtree);
-                // revert the best tree
-                iqtree->readTreeString(current_tree);
-                iqtree->saveCheckpoint();
-            }
-        }
-        if (iqtree->getBestScore() > runLnL[best_run])
-            best_run = run;
-            
-        if (params.num_runs == 1)
-            reportPhyloAnalysis(params, *iqtree, *model_checkpoint);
-        delete iqtree;
-        
-        tree->getCheckpoint()->endStruct();
-        // clear all checkpointed information
-//        tree->getCheckpoint()->keepKeyPrefix("iqtree");
-        tree->getCheckpoint()->putVector("runLnL", runLnL);
-//        tree->getCheckpoint()->putBool("finished", false);
-        tree->getCheckpoint()->dump(true);
-        // restore randstream
-        finish_random();
-        randstream = saved_randstream;
+        doReconstructionRun(tree, alignment, orig_seed, run,
+                            runtrees_name, runLnL, best_run,
+                            model_checkpoint);
     }
     
     cout << endl << "---> SUMMARIZE RESULTS FROM "
@@ -3320,58 +3236,9 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment,
     cout << "Run " << best_run+1 <<  " gave best log-likelihood: "
          << runLnL[best_run] << endl;
 
-    // initialize tree and model structure
-    ModelsBlock *models_block = readModelsDefinition(params);
-    tree->setParams(&params);
-    tree->setNumThreads(params.num_threads);
-    if (!tree->getModelFactory()) {
-        tree->initializeModel(params, tree->aln->model_name,
-                              models_block, tree);
-    }
-    if (tree->getRate()->isHeterotachy() && !tree->isMixlen()) {
-        ASSERT(0 && "Heterotachy tree not properly created");
-    }
-    delete models_block;
+    initializeTreeAndModelStructure(tree);
 
-    // restore the tree and model from the best run
-    tree->getCheckpoint()->startStruct("run" + convertIntToString(best_run+1));
-    tree->restoreCheckpoint();
-    tree->getModelFactory()->restoreCheckpoint();
-    tree->setCurScore(runLnL[best_run]);
-    if (params.gbo_replicates && !tree->isSuperTreeUnlinked()) {
-        
-        string out_file = (string)params.out_prefix + ".splits";
-        auto last_split = tree->boot_splits.back();
-        if (params.print_splits_file) {
-            last_split->saveFile(out_file.c_str(), InputType::IN_OTHER, true);
-            cout << "Split supports printed to star-dot file " << out_file << endl;
-        }
-
-        if (params.print_splits_nex_file) {
-            out_file = (string)params.out_prefix + ".splits.nex";
-            last_split->saveFile(out_file.c_str(), InputType::IN_NEXUS, false);
-            cout << "Split supports printed to NEXUS file " << out_file << endl;
-        }
-
-        // overwrite .ufboot trees
-        if (params.print_ufboot_trees)
-            tree->writeUFBootTrees(params);
-
-        // overwrite .contree
-        string contree;
-        if (!tree->getCheckpoint()->getString("contree", contree))
-            ASSERT(0 && "Couldn't restore contree");
-        string contree_file = string(params.out_prefix) + ".contree";
-        string current_tree = tree->getTreeString();
-        tree->readTreeString(contree);
-        tree->setRootNode(params.root);
-        tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
-        tree->printTree(contree_file.c_str(), WT_BR_LEN |
-                        WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
-        tree->readTreeString(current_tree);
-        cout << "Consensus tree written to " << contree_file << endl;
-    }
-    tree->getCheckpoint()->endStruct();
+    restoreTreeAndModelFromBestRun(tree, runLnL, best_run);
     
     // overwrite .treefile
     tree->printResultTree();
@@ -3386,7 +3253,200 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment,
              << params.num_runs << " runs: "
              << elapsed << " seconds." << endl << endl;
     }
+
     delete model_checkpoint;
+}
+
+void emptyFile(const std::string& file_name) {
+        // first empty the runtrees file
+    try {
+        ofstream tree_out;
+        tree_out.exceptions(ios::failbit | ios::badbit);
+        tree_out.open(file_name.c_str());
+        tree_out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, file_name);
+    }
+}
+
+void doReconstructionRun(IQTree* tree, Alignment* alignment,
+                         int orig_seed, int run,
+                         const std::string& runtrees_name,
+                         DoubleVector& runLnL, int& best_run,
+                         ModelCheckpoint *model_checkpoint) {
+    auto run_name = "run" + convertIntToString(run+1);
+    tree->getCheckpoint()->startStruct(run_name);
+    
+    tree->params->ran_seed = orig_seed + run*1000 
+                    + MPIHelper::getInstance().getProcessID();
+    
+    cout << endl << "---> START RUN NUMBER " << run + 1
+            << " (seed: " << tree->params->ran_seed << ")" << endl;
+    
+    tree->getCheckpoint()->put("seed", tree->params->ran_seed);
+    
+    // initialize random stream for replicating the run
+    
+    int *saved_randstream = randstream;
+    init_random(tree->params->ran_seed);
+    
+    IQTree* iqtree = setUpReplicateTree(tree, alignment);
+    
+    runTreeReconstruction(*tree->params, iqtree);
+    // read in the output tree file
+    if (MPIHelper::getInstance().isMaster()) {
+        appendTreeToRunsFile(iqtree, runtrees_name);
+    }
+
+    // fix bug: set the model for original tree after testing
+    ModelInfoFromName model_info(tree->params->model_name);
+    if (model_info.isModelFinder() && tree->isSuperTree()) {
+        PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
+        stree->part_info =  ((PhyloSuperTree*)iqtree)->part_info;
+    }
+    runLnL.push_back(iqtree->getBestScore());
+
+    if (MPIHelper::getInstance().isMaster()) {
+        if (tree->params->num_bootstrap_samples > 0 &&
+            tree->params->consensus_type == CT_CONSENSUS_TREE &&
+            (run == 0 || iqtree->getBestScore() > runLnL[best_run])) {
+            // 2017-12-08: optimize branch lengths of consensus tree
+            // now optimize branch lengths of the consensus tree
+            string current_tree = iqtree->getTreeString();
+            optimizeConTree(*tree->params, iqtree);
+            // revert the best tree
+            iqtree->readTreeString(current_tree);
+            iqtree->saveCheckpoint();
+        }
+    }
+    if (iqtree->getBestScore() > runLnL[best_run]) {
+        best_run = run;
+    }   
+    if (tree->params->num_runs == 1) {
+        reportPhyloAnalysis(*tree->params, *iqtree, *model_checkpoint);
+    }
+    delete iqtree;
+    
+    tree->getCheckpoint()->endStruct();
+    // clear all checkpointed information
+//        tree->getCheckpoint()->keepKeyPrefix("iqtree");
+    tree->getCheckpoint()->putVector("runLnL", runLnL);
+//        tree->getCheckpoint()->putBool("finished", false);
+    tree->getCheckpoint()->dump(true);
+    // restore randstream
+    finish_random();
+    randstream = saved_randstream;
+}
+
+IQTree* setUpReplicateTree(IQTree* tree, Alignment* alignment) {
+    IQTree *iqtree;
+    if (alignment->isSuperAlignment()){
+        if(tree->params->partition_type != BRLEN_OPTIMIZE){
+            iqtree = new PhyloSuperTreePlen((SuperAlignment*) alignment,
+                                            (PhyloSuperTree*) tree);
+        } else {
+            iqtree = new PhyloSuperTree((SuperAlignment*) alignment,
+                                        (PhyloSuperTree*) tree);
+        }
+    } else {
+        // allocate heterotachy tree if neccessary
+        ModelInfoFromName model_info(alignment->model_name);
+        
+        if (tree->params->num_mixlen > 1) {
+            iqtree = new PhyloTreeMixlen(alignment, 
+                                         tree->params->num_mixlen);
+        } else if (model_info.hasRateHeterotachy()) {
+            iqtree = new PhyloTreeMixlen(alignment, 0);
+        } else
+            iqtree = new IQTree(alignment);
+    }
+    
+    if (!tree->constraintTree.empty()) {
+        iqtree->constraintTree.readConstraint(tree->constraintTree);
+    }
+    
+    // set checkpoint
+    iqtree->setCheckpoint(tree->getCheckpoint());
+    iqtree->num_precision = tree->num_precision;
+    return iqtree;
+}
+
+void appendTreeToRunsFile(IQTree* iqtree, 
+                          const std::string& runtrees_name) {
+    stringstream ss;
+    iqtree->printTree(ss);
+    try {
+        ofstream tree_out;
+        tree_out.exceptions(ios::failbit | ios::badbit);
+        tree_out.open(runtrees_name.c_str(), 
+                        ios_base::out | ios_base::app);
+        tree_out.precision(10);
+        tree_out << "[ lh=" << iqtree->getBestScore() << " ]";
+        tree_out << ss.str() << endl;
+        tree_out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, runtrees_name);
+    }
+}
+
+void initializeTreeAndModelStructure(IQTree* tree) {
+    // initialize tree and model structure
+    ModelsBlock *models_block = readModelsDefinition(*tree->params);
+    tree->setParams(tree->params);
+    tree->setNumThreads(tree->params->num_threads);
+    if (!tree->getModelFactory()) {
+        tree->initializeModel(*tree->params, tree->aln->model_name,
+                              models_block, tree);
+    }
+    if (tree->getRate()->isHeterotachy() && !tree->isMixlen()) {
+        ASSERT(0 && "Heterotachy tree not properly created");
+    }
+    delete models_block;
+}
+
+void restoreTreeAndModelFromBestRun(IQTree* tree,
+                                    const DoubleVector& runLnL, 
+                                    const int& best_run) {
+    // restore the tree and model from the best run
+    tree->getCheckpoint()->startStruct("run" + convertIntToString(best_run+1));
+    tree->restoreCheckpoint();
+    tree->getModelFactory()->restoreCheckpoint();
+    tree->setCurScore(runLnL[best_run]);
+    if (tree->params->gbo_replicates && !tree->isSuperTreeUnlinked()) {
+        string out_file = (string)tree->params->out_prefix + ".splits";
+        auto last_split = tree->boot_splits.back();
+        if (tree->params->print_splits_file) {
+            last_split->saveFile(out_file.c_str(), InputType::IN_OTHER, true);
+            cout << "Split supports printed to star-dot file " << out_file << endl;
+        }
+
+        if (tree->params->print_splits_nex_file) {
+            out_file = (string)tree->params->out_prefix + ".splits.nex";
+            last_split->saveFile(out_file.c_str(), InputType::IN_NEXUS, false);
+            cout << "Split supports printed to NEXUS file " << out_file << endl;
+        }
+
+        // overwrite .ufboot trees
+        if (tree->params->print_ufboot_trees) {
+            tree->writeUFBootTrees(*tree->params);
+        }
+
+        // overwrite .contree
+        string contree;
+        if (!tree->getCheckpoint()->getString("contree", contree)) {
+            ASSERT(0 && "Couldn't restore contree");
+        }
+        string contree_file = string(tree->params->out_prefix) + ".contree";
+        string current_tree = tree->getTreeString();
+        tree->readTreeString(contree);
+        tree->setRootNode(tree->params->root);
+        tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
+        tree->printTree(contree_file.c_str(), WT_BR_LEN |
+                        WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        tree->readTreeString(current_tree);
+        cout << "Consensus tree written to " << contree_file << endl;
+    }
+    tree->getCheckpoint()->endStruct();
 }
 
 void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
