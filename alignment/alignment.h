@@ -1131,6 +1131,18 @@ public:
 	 */
 	bool readSiteStateFreq(const char* site_freq_file);
 
+        void readSiteStateFreqFromFile
+                (ifstream& in, const IntVector& pattern_to_site,
+                 bool& aln_changed);
+        void checkForEqualityOfSites
+                (const IntVector& pattern_to_site,
+                 const IntVector& site_id, 
+                 double *site_freq_entry, bool& aln_changed);
+                //note: Takes ownership of site_freq_entry,
+                //      which should have been allocated with
+                //      operator new [].
+        void handleUnspecifiedSites
+                (int specified_sites, bool& aln_changed);
     /**
      * disable the display of progress bars for actions being carried out by this alignment
      */

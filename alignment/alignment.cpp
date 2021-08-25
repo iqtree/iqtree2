@@ -6522,85 +6522,11 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
 		in.open(site_freq_file);
-		double freq;
-		string site_spec;
-		int specified_sites = 0;
 		in.exceptions(ios::badbit);
-		for (int model_id = 0; !in.eof(); model_id++) {
-			// remove the failbit
-			in >> site_spec;
-			if (in.eof()) break;
-			IntVector site_id;
-			extractSiteID(this, site_spec.c_str(), site_id);
-			specified_sites += static_cast<int>(site_id.size());
-            if (site_id.size() == 0) {
-                throw "No site ID specified";
-            }
-			for (auto it = site_id.begin(); it != site_id.end(); it++) {
-                if (site_model[*it] != -1) {
-                    throw "Duplicated site ID";
-                }
-                site_model[*it] = static_cast<int>(site_state_freq.size());
-            }
-            double *site_freq_entry = new double[num_states];
-            double sum = 0;
-            for (int i = 0; i < num_states; ++i) {
-                in >> freq;
-                if (freq <= 0.0 || freq >= 1.0) {
-                    throw "Frequencies must be strictly positive and smaller than 1";
-                }
-                site_freq_entry[i] = freq;
-                sum += freq;
-            }
-            if (fabs(sum-1.0) > 1e-4) {
-                if (fabs(sum-1.0) > 1e-3)
-                    outWarning("Frequencies of site " + site_spec + 
-                        " do not sum up to 1 and will be normalized");
-                sum = 1.0/sum;
-                for (int i = 0; i < num_states; ++i)
-                    site_freq_entry[i] *= sum;
-            }
-            convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
 
-            // 2016-02-01: now check for equality of sites
-            // with same site-pattern and same freq
-            int prev_site = pattern_to_site[getPatternID(site_id[0])];
-            if (site_id.size() == 1 && prev_site < site_id[0] &&
-                site_model[prev_site] != -1) {
-                // compare freq with prev_site
-                bool matched_freq = true;
-                double *prev_freq = site_state_freq[site_model[prev_site]];
-                for (int i = 0; i < num_states; ++i) {
-                    if (site_freq_entry[i] != prev_freq[i]) {
-                        matched_freq = false;
-                        break;
-                    }
-                }
-                if (matched_freq) {
-                    site_model[site_id[0]] = site_model[prev_site];
-                } else
-                    aln_changed = true;
-            }
+        readSiteStateFreqFromFile(in, pattern_to_site, 
+                                  aln_changed);
 
-            if (site_model[site_id[0]] == site_state_freq.size()) {
-                site_state_freq.push_back(site_freq_entry);
-            }
-            else {
-                delete [] site_freq_entry;
-            }
-        }
-        if (specified_sites < site_model.size()) {
-            aln_changed = true;
-            // there are some unspecified sites
-            cout << site_model.size() - specified_sites
-                 << " unspecified sites will get default frequencies" << endl;
-            for (size_t i = 0; i < site_model.size(); ++i) {
-                if (site_model[i] == -1) {
-                    site_model[i] = static_cast<int>(site_state_freq.size());
-                }
-            }
-            site_state_freq.push_back(NULL);
-        }
         in.clear();
         // set the failbit again
         in.exceptions(ios::failbit | ios::badbit);
@@ -6619,6 +6545,106 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
     cout << site_state_freq.size()
          << " distinct per-site state frequency vectors detected" << endl;
     return aln_changed;
+}
+
+void Alignment::readSiteStateFreqFromFile
+        (ifstream& in, const IntVector& pattern_to_site,
+         bool& aln_changed) {
+    double freq;
+    string site_spec;
+    int    specified_sites = 0;
+
+    for (int model_id = 0; !in.eof(); model_id++) {
+        // remove the failbit
+        in >> site_spec;
+        if (in.eof()) {
+            break;
+        }
+        IntVector site_id;
+        extractSiteID(this, site_spec.c_str(), site_id);
+        specified_sites += static_cast<int>(site_id.size());
+        if (site_id.size() == 0) {
+            throw "No site ID specified";
+        }
+        for (auto it = site_id.begin(); it != site_id.end(); it++) {
+            if (site_model[*it] != -1) {
+                throw "Duplicated site ID";
+            }
+            site_model[*it] = static_cast<int>(site_state_freq.size());
+        }
+        double *site_freq_entry = new double[num_states];
+        double sum = 0;
+        for (int i = 0; i < num_states; ++i) {
+            in >> freq;
+            if (freq <= 0.0 || freq >= 1.0) {
+                throw "Frequencies must be strictly positive and smaller than 1";
+            }
+            site_freq_entry[i] = freq;
+            sum += freq;
+        }
+        if (fabs(sum-1.0) > 1e-4) {
+            if (fabs(sum-1.0) > 1e-3) {
+                outWarning("Frequencies of site " + site_spec + 
+                    " do not sum up to 1 and will be normalized");
+            }
+            sum = 1.0/sum;
+            for (int i = 0; i < num_states; ++i) {
+                site_freq_entry[i] *= sum;
+            }
+        }
+        convfreq(site_freq_entry); // regularize frequencies 
+                                   //(eg if some freq = 0)
+        checkForEqualityOfSites(pattern_to_site, site_id, 
+                                site_freq_entry, aln_changed);
+    }
+    handleUnspecifiedSites(specified_sites, aln_changed);
+}
+
+void Alignment::checkForEqualityOfSites
+        (const IntVector& pattern_to_site, const IntVector& site_id,
+         double* site_freq_entry, bool& aln_changed) {
+    // 2016-02-01: now check for equality of sites
+    // with same site-pattern and same freq
+    int prev_site = pattern_to_site[getPatternID(site_id[0])];
+    if (site_id.size() == 1 && prev_site < site_id[0] &&
+        site_model[prev_site] != -1) {
+        // compare freq with prev_site
+        bool matched_freq = true;
+        double *prev_freq = site_state_freq[site_model[prev_site]];
+        for (int i = 0; i < num_states; ++i) {
+            if (site_freq_entry[i] != prev_freq[i]) {
+                matched_freq = false;
+                break;
+            }
+        }
+        if (matched_freq) {
+            site_model[site_id[0]] = site_model[prev_site];
+        } else {
+            aln_changed = true;
+        }
+    }
+    if (site_model[site_id[0]] == site_state_freq.size()) {
+        site_state_freq.push_back(site_freq_entry);
+    }
+    else {
+        delete [] site_freq_entry;
+    }
+}
+
+void Alignment::handleUnspecifiedSites
+        (int specified_sites, bool& aln_changed) {
+    if (specified_sites < site_model.size()) {
+        aln_changed = true;
+        // there are some unspecified sites
+        cout << site_model.size() - specified_sites
+             << " unspecified sites will get default frequencies" << endl;
+        for (size_t i = 0; i < site_model.size(); ++i) {
+            if (site_model[i] == -1) {
+                site_model[i] = static_cast<int>(site_state_freq.size());
+            }
+        }
+        site_state_freq.push_back(NULL);
+    }
 }
 
 void Alignment::showNoProgress() {
