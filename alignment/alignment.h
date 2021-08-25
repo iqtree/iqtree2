@@ -289,6 +289,11 @@ public:
         void determineSeqTypeStatesAndSymbols
                 (NxsCharactersBlock::DataTypesEnum data_type, 
                  NxsCharactersBlock *data_block, char*& symbols);
+        void extractStateMatricesFromDataBlock
+                (NxsCharactersBlock *data_block,
+                 char* char_to_state, char* state_to_char);
+        void extractSequenceNamesFromDataBlock
+                (NxsCharactersBlock *data_block);
 
     vector<Pattern> ordered_pattern;
     

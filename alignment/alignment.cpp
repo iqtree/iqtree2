@@ -1068,52 +1068,26 @@ void Alignment::determineSeqTypeStatesAndSymbols
 }
 
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
-    int nseq  = data_block->GetNTax();
-    int nsite = data_block->GetNCharTotal();
     char char_to_state[NUM_CHAR];
     char state_to_char[NUM_CHAR];
     
-    if (!data_block->GetMatrix()) {
-        outError("MATRIX command undeclared or invalid");
-    }
-    
-    auto  data_type = (NxsCharactersBlock::DataTypesEnum)data_block->GetDataType();
-    char* symbols   = nullptr;
-    determineSeqTypeStatesAndSymbols(data_type, data_block, symbols);
+    extractStateMatricesFromDataBlock(data_block, char_to_state, state_to_char);
+    extractSequenceNamesFromDataBlock(data_block);
 
-    computeUnknownState();
-    memset(char_to_state, STATE_UNKNOWN, NUM_CHAR);
-    memset(state_to_char, '?', NUM_CHAR);
-    for (int i = 0; i < strlen(symbols); i++) {
-        char_to_state[(int)symbols[i]] = i;
-        state_to_char[i] = symbols[i];
-    }
-    state_to_char[(int)STATE_UNKNOWN] = '-';
-
-
-    int seq, site;
-
-    if (data_block->taxa->GetNumTaxonLabels() == 0)
-        outError("MATRIX not found, make sure nexus command"
-                 " before MATRIX ends with semi-colon (;)");
-
-    if (data_block->taxa->GetNumTaxonLabels() != nseq)
-        outError("ntax is different from number of matrix rows");
-
-    for (seq = 0; seq < nseq; seq++) {
-        seq_names.push_back(data_block->GetTaxonLabel(seq));
-    }
+    auto data_type = (NxsCharactersBlock::DataTypesEnum)data_block->GetDataType();
+    int  nseq      = data_block->GetNTax();
+    int  nsite     = data_block->GetNCharTotal();
 
     site_pattern.resize(nsite, -1);
 
-    int num_gaps_only = 0;
-
-    for (site = 0; site < nsite; site++) {
+    int  num_gaps_only = 0;
+    for (int site = 0; site < nsite; site++) {
         Pattern pat;
-        for (seq = 0; seq < nseq; seq++) {
+        for (int seq = 0; seq < nseq; seq++) {
             int nstate = data_block->GetNumStates(seq, site);
-            if (nstate == 0)
+            if (nstate == 0) {
                 pat.push_back(STATE_UNKNOWN);
+            }
             else if (nstate == 1) {
                 pat.push_back(char_to_state[(int)data_block->GetState(seq, site, 0)]);
             } else if (data_type == NxsCharactersBlock::dna ||
@@ -1144,12 +1118,50 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         cout << "WARNING: " << num_gaps_only
              << " sites contain only gaps or ambiguous characters." << endl;
     }
-    if (verbose_mode >= VerboseMode::VB_MAX)
-        for (site = 0; site < size(); site++) {
-            for (seq = 0; seq < nseq; seq++)
+    if (verbose_mode >= VerboseMode::VB_MAX) {
+        for (int site = 0; site < size(); site++) {
+            for (int seq = 0; seq < nseq; seq++) {
                 cout << state_to_char[(int)(*this)[site][seq]];
+            }
             cout << "  " << (*this)[site].frequency << endl;
         }
+    }
+}
+
+void Alignment::extractStateMatricesFromDataBlock
+        (NxsCharactersBlock *data_block,
+         char* char_to_state, char* state_to_char) {
+    if (!data_block->GetMatrix()) {
+        outError("MATRIX command undeclared or invalid");
+    }
+    
+    auto  data_type = (NxsCharactersBlock::DataTypesEnum)data_block->GetDataType();
+    char* symbols   = nullptr;
+    determineSeqTypeStatesAndSymbols(data_type, data_block, symbols);
+
+    computeUnknownState();
+    memset(char_to_state, STATE_UNKNOWN, NUM_CHAR);
+    memset(state_to_char, '?', NUM_CHAR);
+    for (int i = 0; i < strlen(symbols); i++) {
+        char_to_state[(int)symbols[i]] = i;
+        state_to_char[i] = symbols[i];
+    }
+    state_to_char[(int)STATE_UNKNOWN] = '-';
+}
+
+void Alignment::extractSequenceNamesFromDataBlock
+        (NxsCharactersBlock *data_block) {
+    int  nseq  = data_block->GetNTax();
+    if (data_block->taxa->GetNumTaxonLabels() == 0) {
+        outError("MATRIX not found, make sure nexus command"
+                 " before MATRIX ends with semi-colon (;)");
+    }
+    if (data_block->taxa->GetNumTaxonLabels() != nseq) {
+        outError("ntax is different from number of matrix rows");
+    }
+    for (int seq = 0; seq < nseq; seq++) {
+        seq_names.push_back(data_block->GetTaxonLabel(seq));
+    }
 }
 
 /**
