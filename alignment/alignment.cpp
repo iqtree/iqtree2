@@ -673,7 +673,6 @@ Alignment* Alignment::removeSpecifiedSequences
     return aln;
 }
 
-
 void Alignment::adjustHash(StateType v, size_t& hash) const {
     //Based on what boost::hash_combine() does.
     //For now there's no need for a templated version
@@ -2100,46 +2099,26 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     resize(nsite / step);
     PatternInfoVector patternInfo(this, nt2aa);
     patternInfo.resize((nsite + (step-1)) / step);
+
     progress_display_ptr progress_here = nullptr;
-    if (progress==nullptr && !isShowingProgressDisabled) {
-        #if USE_PROGRESS_DISPLAY
-        progress_here = new progress_display( (double) nsite, "Constructing alignment",
-                                              "examined", "site");
-        progress = progress_here;
-        #endif
-    }
-    
+
+    progressLocal(!isShowingProgressDisabled, (double) nsite, 
+                  "Constructing alignment", "examined", 
+                  "site", progress, progress_here);
+
     patternInfo.loadPatterns(nsite, step, nseq, sequences, progress);
+    progressLocalDone(progress, progress_here);
 
-    if (progress_here!=nullptr) {
-        #if USE_PROGRESS_DISPLAY
-        progress_here->done();
-        delete progress_here;
-        #endif
-        progress_here = progress = nullptr;
-    }
-
-    #if USE_PROGRESS_DISPLAY
-    if (progress==nullptr && !isShowingProgressDisabled) {
-        progress_here = new progress_display((double)nsite, "Compressing patterns",
-                                             "processed", "site");
-        progress = progress_here;
-    }
-    #endif
 
     //2. Now handle warnings and errors, and compress patterns, sequentially
+    progressLocal(!isShowingProgressDisabled, (double) nsite,
+                  "Compressing patterns", "processed", 
+                  "site", progress, progress_here);
     std::stringstream err_str;
     int w = patternInfo.compressPatterns(step, err_str, progress);
     resize(w);
-
-    if (progress_here!=nullptr) {
-        #if USE_PROGRESS_DISPLAY
-        progress_here->done();
-        #endif
-        delete progress_here;
-        progress_here = progress = nullptr;
-    }
-    
+    progressLocalDone(progress, progress_here);
+ 
     intptr_t taxon_count = getNSeq();
     singleton_parsimony_states.resize(taxon_count, 0);
     for (int p=0; p<w; ++p) {
@@ -2156,14 +2135,10 @@ bool Alignment::constructPatterns(int nseq, int nsite,
     total_singleton_parsimony_states = total_states;
 
     if (patternInfo.num_gaps_only) {
-        #if USE_PROGRESS_DISPLAY
-        if (progress!=nullptr) { progress->hide(); }
-        #endif
+        progressHide(progress);
         cout << "WARNING: " << patternInfo.num_gaps_only
              << " sites contain only gaps or ambiguous characters." << endl;
-        #if USE_PROGRESS_DISPLAY
-        if (progress!=nullptr) { progress->show(); }
-        #endif
+        progressShow(progress);
     }
     if (err_str.str() != "") {
         throw err_str.str();
@@ -2277,13 +2252,9 @@ int PatternInfoVector::compressPatterns(int step, std::stringstream& err_str,
         PatternInfo& info     = at(r);
         std::string  warnings = info.warnings.str();
         if (!warnings.empty()) {
-            #if USE_PROGRESS_DISPLAY
-            if (progress!=nullptr) { progress->hide(); }
-            #endif
+            progressHide(progress);
             cout << warnings;
-            #if USE_PROGRESS_DISPLAY
-            if (progress!=nullptr) { progress->show(); }
-            #endif
+            progressShow(progress);
         }
         std::string errors = info.errors.str();
         if (!errors.empty()) {
@@ -3813,12 +3784,9 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
             ++siteMod;
         }
     }
-    if (progress!=nullptr) {
-        #if USE_PROGRESS_DISPLAY
-        progress->done();
-        #endif
-        progress = nullptr;
-    }
+    progressDone(progress);
+    progressDelete(progress);
+
     updatePatterns(oldPatternCount); //JB 27-Jul-2020 Parallelized
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;

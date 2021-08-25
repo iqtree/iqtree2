@@ -65,11 +65,58 @@ protected:
 };
 
 typedef progress_display* progress_display_ptr;
+inline void progressLocal(bool wantProgress, double workToDo,
+                          const char* description, const char* verb,
+                          const char* noun, progress_display_ptr& progress,
+                          progress_display_ptr& progress_here ) {
+    if (progress==nullptr && wantProgress) {
+        #if USE_PROGRESS_DISPLAY
+        progress_here = new progress_display( workToDo, description, verb, noun);
+        progress = progress_here;
+        #endif
+    }
+}
+inline void progressHide(progress_display_ptr p) { 
+    if (p!=nullptr) {
+        p->hide(); 
+    }
+}
+inline void progressShow(progress_display_ptr p) { 
+    if (p!=nullptr) {
+        p->show(); 
+    }
+}
+inline void progressDone(progress_display_ptr p) { 
+    if (p!=nullptr) {
+        p->done(); 
+    }
+}
+inline void progressDelete(progress_display_ptr& p) {
+    delete p;
+    p = nullptr;
+}
+inline void progressLocalDone(progress_display_ptr& progress,
+                              progress_display_ptr& progress_here) {
+    if (progress_here!=nullptr) {
+        progressDone(progress_here);
+        progressDelete(progress_here);
+        progress = nullptr;
+    }
+}
 
 #else
 typedef double  progress_display;
 typedef double* progress_display_ptr;
-
+inline void progressLocal(bool wantProgress, double workToDo,
+                          const char* description, const char* verb,
+                          const char* noun, progress_display_ptr& progress,
+                          progress_display_ptr& progress_here ) {}
+inline void progressHide(progress_display_ptr) {}
+inline void progressShow(progress_display_ptr) {}
+inline void progressDone(progress_display_ptr) {}
+inline void progressDelete(progress_display_ptr p) {}
+inline void progressLocalDone(progress_display_ptr& progress,
+                              progress_display_ptr& progress_here) {}
 #endif
 
 template <class S>
