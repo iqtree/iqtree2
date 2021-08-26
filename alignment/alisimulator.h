@@ -207,14 +207,14 @@ protected:
     void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step);
     
     /**
-        handle insertion events
+        handle insertion events, return the insertion-size
     */
-    void handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence);
+    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence);
     
     /**
-        handle deletion events
+        handle deletion events, return the deletion-size
     */
-    void handleDeletion(int sequence_length, vector<short int> &indel_sequence);
+    int handleDeletion(int sequence_length, vector<short int> &indel_sequence);
     
     /**
         compute the total substitution rate
@@ -248,6 +248,16 @@ protected:
         generate indel-size from its distribution
     */
     int generateIndelSize(IndelDistribution indel_dis);
+    
+    /**
+        compute mean of deletion-size
+    */
+    double computeMeanDelSize(int sequence_length);
+    
+    /**
+        root Tree
+    */
+    void rootTree();
     
     
 public:

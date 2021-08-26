@@ -86,7 +86,7 @@ public:
     /**
         get site-specific rates
     */
-    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length);
+    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length);
 
     /**
     *  simulate sequences for all nodes in the tree

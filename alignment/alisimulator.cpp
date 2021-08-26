@@ -655,6 +655,10 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         }
     }
     
+    // rooting the tree if it's unrooted
+    if (!tree->rooted)
+        rootTree();
+    
     // simulate Sequences
     vector<double> site_specific_rates;
     simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
@@ -726,7 +730,7 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         }
         
         // merge the simulated sequence with the indel_sequence
-        if (params->alisim_insertion_ratio != -1)
+        if (params->alisim_insertion_ratio != -1 && (*it)->length > 0)
             mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
         
         // writing and deleting simulated sequence immediately if possible
@@ -1573,12 +1577,14 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
 void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step)
 {
     int num_gaps = 0;
-    double total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence, num_gaps);
+    double total_sub_rate = 0;
+    /* computeTotalSubRate is not used now. It shoulb be used later when implementing method 2 of Indelible
+     total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence, num_gaps);*/
+    // count the number of gaps in the sequence
+    num_gaps = count(node->sequence.begin(), node->sequence.end(), STATE_UNKNOWN);
     double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
-    double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps);
+    double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
     double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
-    double ins_upper = total_ins_rate/total_event_rate;
-    double del_upper = (total_ins_rate+total_del_rate)/total_event_rate;
     
     indel_sequence = node->sequence;
     index_mapping_by_jump_step.resize(sequence_length + 1, 0);
@@ -1597,25 +1603,26 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
             branch_length -=  waiting_time;
             
             // Determine the event type (insertion, deletion, substitution) occurs
-            double random_num = random_double();
+            double random_num = random_double()*total_event_rate;
             EVENT_TYPE event_type = SUBSTITUTION;
-            if (random_num < ins_upper)
+            if (random_num < total_ins_rate)
                 event_type = INSERTION;
-            else if (random_num < del_upper)
+            else if (random_num < total_ins_rate+total_del_rate)
                 event_type = DELETION;
             
             // process event
+            int length_change = 0;
             switch (event_type)
             {
                 case INSERTION:
                 {
-                    handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, indel_sequence);
+                    length_change = handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, indel_sequence);
                     //indel_branch_length -= waiting_time;
                     break;
                 }
                 case DELETION:
                 {
-                    handleDeletion(sequence_length, indel_sequence);
+                    length_change = -handleDeletion(sequence_length, indel_sequence);
                     //indel_branch_length -= waiting_time;
                     break;
                 }
@@ -1623,6 +1630,11 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
                     // ignore substitution event as it has already processed
                     break;
             }
+            
+            // update total_event_rate
+            total_ins_rate += params->alisim_insertion_ratio * length_change;
+            total_del_rate += params->alisim_deletion_ratio * length_change;
+            total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
         }
 
     }
@@ -1694,7 +1706,7 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
 /**
     handle insertion events
 */
-void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence)
+int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
     int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
@@ -1728,12 +1740,15 @@ void AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapp
         else
             break;
     }
+    
+    // return insertion-size
+    return length;
 }
 
 /**
     handle deletion events
 */
-void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_sequence)
+int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_sequence)
 {
     // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
     int length = -1;
@@ -1756,11 +1771,15 @@ void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_
         position = selectValidPositionForIndels(upper_bound, indel_sequence);
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
+    int real_deleted_length = 0;
     for (int i = 0; i < length && (position + i) < indel_sequence.size(); i++)
     {
         // if the current site is not a gap (has not been deleted) -> replacing it by a gap
         if (indel_sequence[position + i ] != STATE_UNKNOWN)
+        {
             indel_sequence[position + i ] = STATE_UNKNOWN;
+            real_deleted_length++;
+        }
         // otherwise, ignore the current site, moving forward to find a valid site (not a gap)
         else
         {
@@ -1768,6 +1787,9 @@ void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_
             position++;
         }
     }
+    
+    // return deletion-size
+    return real_deleted_length;
 }
 
 /**
@@ -1777,7 +1799,7 @@ void AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_
 int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> sequence)
 {
     int position = -1;
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < upper_bound; i++)
     {
         position = random_int(upper_bound);
         
@@ -1787,7 +1809,7 @@ int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int
     }
     // validate the position
     if (position < sequence.size() && sequence[position] == STATE_UNKNOWN)
-        outError("Sorry! Could not select a valid position (not a deleted-site) for insertion/deletion events within 1000 attempts. You may specify a too high deletion rate, thus almost all sites were deleted. Please try again a a smaller deletion ratio!");
+        outError("Sorry! Could not select a valid position (not a deleted-site) for insertion/deletion events. You may specify a too high deletion rate, thus almost all sites were deleted. Please try again a a smaller deletion ratio!");
     return position;
 }
 
@@ -1836,4 +1858,73 @@ int AliSimulator::generateIndelSize(IndelDistribution indel_dis)
             break;
     }
     return random_size;
+}
+
+/**
+    compute mean of deletion-size
+*/
+double AliSimulator::computeMeanDelSize(int sequence_length)
+{
+    // only compute mean of deletion-size if it has not yet computed
+    if (params->alisim_mean_deletion_size == -1)
+    {
+        // dummy variables
+        int total = 0;
+        int num_success = 0;
+        
+        // randomly generate sequence_length random deletion-sizes from the deletion-distribution
+        for (int i = 0; i < sequence_length; i++)
+        {
+            int random_size = generateIndelSize(params->alisim_insertion_distribution);
+            
+            // only process positive random sizes
+            if (random_size > 0)
+            {
+                total += random_size;
+                num_success++;
+            }
+        }
+        
+        // make sure we could generate positive size
+        if (num_success == 0)
+            outError("Could not generate positive deletion-sizes from the deletion-distribution. Please check and try again!");
+        else
+            params->alisim_mean_deletion_size = (double)total/num_success;
+    }
+    
+    return params->alisim_mean_deletion_size;
+}
+
+/**
+    root tree
+*/
+void AliSimulator::rootTree()
+{
+    // dummy variables
+    Node* new_root = new Node();
+    Node* second_internal_node;
+    
+    // extract the intermediate node
+    if (tree && tree->root && tree->root->neighbors.size() > 0)
+        second_internal_node = tree->root->neighbors[0]->node;
+    if (second_internal_node)
+    {
+        // update new_root
+        new_root->name = ROOT_NAME;
+        new_root->id = tree->leafNum;
+        new_root->sequence = tree->root->sequence;
+        
+        // change the id of the intermediate node if it's equal to the root's id
+        if (second_internal_node->id == new_root->id)
+            second_internal_node->id = (new_root->id * 10);
+        
+        // link new_root node with the intermediate node
+        new_root->addNeighbor(second_internal_node, 0);
+        second_internal_node->addNeighbor(new_root, 0);
+        
+        // update related info
+        tree->root = new_root;
+        tree->rooted = true;
+        tree->leafNum++;
+    }
 }

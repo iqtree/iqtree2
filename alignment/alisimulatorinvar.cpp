@@ -73,6 +73,10 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
         }
     }
     
+    // rooting the tree if it's unrooted
+    if (!tree->rooted)
+        rootTree();
+    
     // simulate sequences with only Invariant sites option
     simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
     

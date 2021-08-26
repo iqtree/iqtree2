@@ -1409,6 +1409,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_deletion_ratio = -1;
     params.alisim_insertion_distribution = IndelDistribution(GEO,0.5);
     params.alisim_deletion_distribution = IndelDistribution(GEO,0.5);
+    params.alisim_mean_deletion_size = -1;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2519,6 +2520,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_deletion_ratio = convert_double(arg.c_str());
                 if (params.alisim_deletion_ratio < 0)
                     throw "<DELETION_RATE> must not be negative.";
+                
+                // reset INSERTION_RATE and DELETION_RATE if both of them are zero
+                if (params.alisim_deletion_ratio == 0 && params.alisim_insertion_ratio == 0)
+                {
+                    params.alisim_insertion_ratio = -1;
+                    params.alisim_deletion_ratio = -1;
+                }
                 
                 continue;
             }
@@ -5914,7 +5922,10 @@ double random_double(int *rstream) {
  */
 double random_double_exponential_distribution(double mean)
 {
-    double ran = static_cast<double> (random_int(999) + 1) / 1000;
+    double ran;
+    do
+        ran = random_double();
+    while (ran == 0.0);
     return -mean * log(ran);
 }
 

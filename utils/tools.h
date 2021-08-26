@@ -2395,6 +2395,11 @@ public:
     *  the deletion-distribution for drawing the number of deleted sites
     */
     IndelDistribution alisim_deletion_distribution;
+    
+    /**
+    *  mean of deletion-size
+    */
+    double alisim_mean_deletion_size;
 };
 
 /**

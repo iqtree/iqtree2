@@ -245,7 +245,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
 /**
     get site-specific rates
 */
-void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length)
+void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length)
 {
     new_site_specific_rate_index.resize(sequence_length);
     
@@ -266,7 +266,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
             // or set the rate index equal to the model index
             else
             {
-                new_site_specific_rate_index[i] = site_specific_model_index[i];
+                new_site_specific_rate_index[i] = new_site_specific_model_index[i];
                 site_specific_rates[i] = rate_heterogeneity->getRate(new_site_specific_rate_index[i]);
             }
         }
@@ -321,7 +321,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
     
     // initialize site-specific rates
     vector<double> site_specific_rates(sequence_length);
-    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, sequence_length);
+    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length);
     
     // initialize trans_matrix
     double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
@@ -354,6 +354,10 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
             outError(ERR_WRITE_OUTPUT, output_filepath);
         }
     }
+    
+    // rooting the tree if it's unrooted
+    if (!tree->rooted)
+        rootTree();
     
     // simulate sequences
     simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
@@ -478,7 +482,7 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, vector<double
     intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index);
     
     // initialize site-specific rates
-    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, sequence_length);
+    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length);
 }
 
 /**
@@ -497,7 +501,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     // initialize new_site_specific_rates, and new_site_specific_rate_index for new sequence
     vector<double> new_site_specific_rates(new_sequence.size());
     vector<short int> new_site_specific_rate_index;
-    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_sequence.size());
+    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_site_specific_model_index, new_sequence.size());
     
     // insert new_site_specific_rates into site_specific_rates
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
