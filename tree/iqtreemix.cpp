@@ -202,7 +202,6 @@ void IQTreeMix::separateModel(string modelName) {
     isLinkSiteRate = true; // initialize to true
     
     // check how many trees
-    cout << "[IQTreeMix::separateModel] modelName = " << modelName << endl;
     t_pos = modelName.rfind("+T");
     if (t_pos == string::npos) {
         outError("This model is not a tree mixture model, because there is no '+T'");
@@ -394,7 +393,6 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
 
     models.clear();
     site_rates.clear();
-    cout << "[IQTreeMix::initializeModel] model_name: " << model_name << endl;
     separateModel(model_name);
 
     // initialize the models
@@ -770,9 +768,6 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
     initializeAllPartialLh();
     prev_score = computeLikelihood();
     clearAllPartialLH();
-    // optimization on which variable
-    // 1 - tree weights
-    optim_type = 1;
 
     for (step = 0; step < max_steps || max_steps == -1; step++) {
         
@@ -822,6 +817,10 @@ double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
     double *lower_bound;
     bool *bound_check;
     double score;
+
+    // optimization on which variable
+    // 1 - tree weights
+    optim_type = 1;
 
     // special case: ndim = 1, i.e. all tree weights are forced the same
     if (ndim == 1) {
@@ -1900,6 +1899,77 @@ void IQTreeMix::showLhProb(ofstream& out) {
         out << endl;
     }
     
+    // free the memory of the array
+    delete[] pattern_lh_tree;
+    delete[] post_prob;
+}
+
+// show the log-likelihoods and posterior probabilties for each tree along the patterns
+void IQTreeMix::showPatternLhProb(ofstream& out) {
+    double* pattern_lh_tree;
+    double* curr_ptn_lh;
+    double* post_prob;
+    size_t t,ptn,idx;
+    PhyloTree* ptree;
+    double sum;
+    
+    // compute likelihood for each tree
+    pattern_lh_tree = new double[nptn * ntree];
+    curr_ptn_lh = pattern_lh_tree;
+    for (t=0; t<ntree; t++) {
+        // save the site rate's tree
+        ptree = at(t)->getRate()->getTree();
+        // set the tree t as the site rate's tree
+        // and compute the likelihood values
+        at(t)->getRate()->setTree(at(t));
+        at(t)->initializeAllPartialLh();
+        at(t)->computeLikelihood(curr_ptn_lh);
+        at(t)->clearAllPartialLH();
+        // set back the prevoius site rate's tree
+        at(t)->getRate()->setTree(ptree);
+        curr_ptn_lh += nptn;
+    }
+    
+    // for posterior probabilities
+    post_prob = new double[ntree];
+    
+    // print out the log-likelihoods and posterior probabilties for each tree along the sites
+    out << "pattern,is-informative,freq,log-like";
+    for (t=0; t<ntree; t++) {
+        out << ",log-like tree " << t+1;
+    }
+    for (t=0; t<ntree; t++) {
+        out << ",post-prob tree " << t+1;
+    }
+    out << endl;
+    
+    for (ptn=0; ptn<nptn; ptn++) {
+        out << ptn+1;
+        if (aln->at(ptn).isInformative())
+            out << "," << 1;
+        else
+            out << "," << 0;
+        out << "," << patn_freqs[ptn];
+        curr_ptn_lh = pattern_lh_tree;
+        sum = 0.0;
+        for (t=0; t<ntree; t++) {
+            post_prob[t] = exp(curr_ptn_lh[ptn]) * weights[t];
+            sum += post_prob[t];
+            curr_ptn_lh += nptn;
+        }
+        out << "," << log(sum); // log-likelihood of the site
+        curr_ptn_lh = pattern_lh_tree;
+        for (t=0; t<ntree; t++) {
+            out << "," << curr_ptn_lh[ptn]; // log-likelihood of the pattern for tree t
+            curr_ptn_lh += nptn;
+        }
+        for (t=0; t<ntree; t++) {
+            post_prob[t] = post_prob[t] / sum;
+            out << "," << post_prob[t]; // posterior probability of the site for tree t
+        }
+        out << endl;
+    }
+
     // free the memory of the array
     delete[] pattern_lh_tree;
     delete[] post_prob;

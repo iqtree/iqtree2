@@ -238,6 +238,9 @@ public:
     // show the log-likelihoods and posterior probabilties for each tree along the sites
     void showLhProb(ofstream& out);
     
+    // show the log-likelihoods and posterior probabilties for each tree along the patterns
+    void showPatternLhProb(ofstream& out);
+    
     /**
             pattern frequencies
      */
