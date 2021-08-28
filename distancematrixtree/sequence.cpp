@@ -59,7 +59,7 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
             sequence.append(1, c);
         }
         else if (isOpeningBracket(c)) {
-            while (*it != ')' && *it != '}' && it != line.end()) {
+            while (it != line.end() && *it != ')' && *it != '}') {
                 it++;
             }
             if (it == line.end()) {
@@ -243,7 +243,6 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
     for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
         in_alphabet[*alpha] = 1;
     }
-    bool   last_line_was_blank = false;
     size_t num_sequences       = 0;
     size_t sequence_length     = 0;
     bool   have_read_names     = 0;
@@ -276,7 +275,6 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
                 return false;
             }
             have_read_names     = true;
-            last_line_was_blank = true;
             sequence_num        = 0;
             continue;            
         }
@@ -285,35 +283,40 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
                                       line, name_length);
         }        
         sequence_num %= num_sequences;
+        std::string& seq_string = at(sequence_num).sequenceData();
         if (!processSequenceLine(in_alphabet, unknown_char,
-                                 at(sequence_num).sequenceData(),
-                                 line, line_num)) {
+                                 seq_string, line, line_num) ||
+            !validateInterleaving(phylipFilePath, line_num, sequence_num) ) {
+            in.close();
             return false;
         }
-        if (0<sequence_num) {
-            //Should we be checking that interleaving is consistent?
-            //Or... is this being too fussy?
-            if (at(sequence_num-1).sequenceLength() !=
-                at(sequence_num).sequenceLength() ) {
-                in.close();
-                std::cerr << "Inconsistent interleaving at line " << line_num
-                          << " of phylip multi-sequence alignment " << phylipFilePath << "."
-                          << "\nSequence " << (sequence_num) << " length "
-                          << " was " << at(sequence_num-1).sequenceLength() 
-                          << " but sequence " << (sequence_num+1) << " length "
-                          << " was " << at(sequence_num).sequenceLength() << ".";
-                return false;
-            }
-        }
         ++sequence_num;
-        last_line_was_blank = true;
     }
     in.close();
     return validateLoadFromPhylip(phylipFilePath, num_sequences, 
                                   sequence_length);
 }
 
-bool Sequences::validateLoadFromPhylip(const std::string phylipFilePath,
+bool Sequences::validateInterleaving(const std::string& phylipFilePath,
+                                     size_t line_num, size_t sequence_num) {                                        
+    if (0<sequence_num) {
+        //Should we be checking that interleaving is consistent?
+        //Or... is this being too fussy?
+        if (at(sequence_num-1).sequenceLength() !=
+            at(sequence_num).sequenceLength() ) {
+            std::cerr << "Inconsistent interleaving at line " << line_num
+                        << " of phylip multi-sequence alignment " << phylipFilePath << "."
+                        << "\nSequence " << (sequence_num) << " length "
+                        << " was " << at(sequence_num-1).sequenceLength() 
+                        << " but sequence " << (sequence_num+1) << " length "
+                        << " was " << at(sequence_num).sequenceLength() << ".";
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Sequences::validateLoadFromPhylip(const std::string& phylipFilePath,
                                        size_t num_sequences, size_t sequence_length) {
     size_t sequence_num;
     if (size() != num_sequences) {

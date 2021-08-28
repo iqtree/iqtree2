@@ -56,7 +56,9 @@ public:
                                    bool unknown_char, bool report_progress);
     bool processPhylipSequenceName(int line_num, int sequence_num, 
                                    std::string& line, size_t& name_length);
-    bool validateLoadFromPhylip   (const std::string phylipFilePath,
+    bool validateInterleaving     (const std::string& phylipFilePath,
+                                   size_t line_num, size_t sequence_num);
+    bool validateLoadFromPhylip   (const std::string& phylipFilePath,
                                    size_t num_sequences, size_t sequence_length);
     bool loadAlignment            (const std::string& fastaFilePath,
                                    const std::string& phylipFilePath,
