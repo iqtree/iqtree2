@@ -153,6 +153,8 @@ std::string next_argument(int argc, char* argv[],
                           const char* desc, int& cnt );
                             //was only in tools.cpp
 
+std::string string_trimmed(const std::string& s);
+
 template <typename T>
 std::string NumberToString ( T Number )
 {
