@@ -215,15 +215,16 @@ void removeProblematicSequences(Sequences& sequences,
         << " wall-clock seconds." << std::endl;
 }
 
-bool prepInput(const std::string& alignmentInputFilePath,
+bool prepInput(const std::string& fastaFilePath,
+               const std::string& phylipFilePath,
                const std::string& matrixInputFilePath,
                bool  reportProgress,
                const std::string& distanceOutputFilePath,
                Sequences& sequences, bool loadMatrix,
                FlatMatrix& m) {
-    if (!alignmentInputFilePath.empty()) {
+    if (!fastaFilePath.empty() || !phylipFilePath.empty() ) {
         std::vector<char> is_site_variant;
-        if (!sequences.loadAlignment(alignmentInputFilePath, 
+        if (!sequences.loadAlignment(fastaFilePath, phylipFilePath,
                                      alphabet, unknown_char,
                                      reportProgress, is_site_variant)) {
             return false;
@@ -291,7 +292,8 @@ class DecentTreeOptions {
 public:
     std::stringstream problems;
     std::string algorithmName;
-    std::string alignmentFilePath;      //only .fasta format is supported
+    std::string fastaFilePath;          //fasta alignment
+    std::string phylipFilePath;         //phylip alignment 
     std::string inputFilePath;          //phylip distance matrix formats are supported
     std::string outputFilePath;         //newick tree format
     std::string distanceOutputFilePath; //phylip distance matrix format
@@ -322,9 +324,10 @@ public:
     }
 
     void initializeArgumentMap() {
-        arg_map << new StringArgument("-fasta", "fasta file path", alignmentFilePath);
-        arg_map << new StringArgument("-in",    "distance matrix file path", inputFilePath);
-        arg_map << new StringArgument("-dist",  "distance matrix file path", inputFilePath);
+        arg_map << new StringArgument("-fasta", "fasta file path",             fastaFilePath);
+        arg_map << new StringArgument("-phylip", "phylip alignment file path", phylipFilePath);
+        arg_map << new StringArgument("-in",    "distance matrix file path",   inputFilePath);
+        arg_map << new StringArgument("-dist",  "distance matrix file path",   inputFilePath);
         arg_map << new IntArgument   ("-c",     "compression level between 1 and 9", 
                                     compression_level);
         arg_map << new IntArgument   ("-f",     "precision level between 4 and 15",
@@ -401,18 +404,23 @@ public:
     }
 
     bool checkCommandLineOptions() {
-        if (inputFilePath.empty() && alignmentFilePath.empty()) {
+        if (inputFilePath.empty() && fastaFilePath.empty() && phylipFilePath.empty()) {
             PROBLEM("Input (mldist) file should be specified via -in [filepath.mldist]");
-            PROBLEM("Or alignment (fasta) file may be specified via -fasta [filepath.fasta]");
+            PROBLEM("or alignment (fasta) file may be specified via -fasta [filepath.fasta]");
+            PROBLEM("or alignment (phylip) file, via -phylip [filpeath.phy]");
+        }
+        if (!fastaFilePath.empty() && !phylipFilePath.empty()) {
+            PROBLEM("Cannot specify both a fast file path (with -fasta)");
+            PROBLEM("and a phylip file path (with -phylip)");
         }
         if (outputFilePath.empty() && !isOutputSuppressed && !isOutputToStandardOutput) {
             PROBLEM("Ouptut (newick format) filepath should be specified via -out [filepath.newick]");
-            PROBLEM("Or output can be sent to standard output, or suppressed, via -std-out or -no-out");
+            PROBLEM("or output can be sent to standard output, or suppressed, via -std-out or -no-out");
         }
         else if (!inputFilePath.empty() && inputFilePath==outputFilePath) {
             PROBLEM("Input file and output file paths are the same (" + inputFilePath + ")");
         }
-        if (alignmentFilePath.empty() && !isMatrixToBeLoaded) {
+        if (fastaFilePath.empty() && phylipFilePath.empty() && !isMatrixToBeLoaded) {
             PROBLEM("If distance matrix is not be loaded, an alignment file must be specified");
         }
         if (!problems.str().empty()) {
@@ -484,9 +492,8 @@ int obeyCommandLineOptions(DecentTreeOptions& options) {
     }
     Sequences  sequences(numbered_names);
     FlatMatrix m;
-    bool succeeded = prepInput(options.alignmentFilePath, 
-                               options.inputFilePath,
-                               !algorithm->isBenchmark(),
+    bool succeeded = prepInput(options.fastaFilePath, options.phylipFilePath,
+                               options.inputFilePath, !algorithm->isBenchmark(),
                                options.distanceOutputFilePath,
                                sequences, options.isMatrixToBeLoaded, m);
     if (options.isTreeConstructionSkipped) {
@@ -502,7 +509,8 @@ int obeyCommandLineOptions(DecentTreeOptions& options) {
                                              options.outputFilePath);
     }
     else if (!options.isMatrixToBeLoaded && 
-             !options.alignmentFilePath.empty() && 
+             !options.fastaFilePath.empty() && 
+             !options.phylipFilePath.empty() &&
              !options.outputFilePath.empty() ) {
         succeeded = algorithm->constructTree(options.distanceOutputFilePath, 
                                              options.outputFilePath);

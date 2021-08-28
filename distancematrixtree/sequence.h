@@ -48,13 +48,21 @@ public:
     intptr_t getSize() const;
     const std::string& getSequenceName(size_t i) const;
     void setSequenceName(size_t i, const std::string& new_name);
-    bool loadSequences  (const std::string& alignmentFilePath,
-                         const std::string& alphabet,
-                         bool unknown_char, bool report_progress);
-    bool loadAlignment  (const std::string& alignmentFilePath,
-                         const std::string& alphabet, char unknown_char,
-                         bool report_progress, 
-                         std::vector<char>& is_site_variant);
+    bool loadSequencesFromFasta   (const std::string& fastaFilePath,
+                                   const std::string& alphabet,
+                                   bool unknown_char, bool report_progress);
+    bool loadSequencesFromPhylip  (const std::string& fastaFilePath,
+                                   const std::string& alphabet,
+                                   bool unknown_char, bool report_progress);
+    bool processPhylipSequenceName(int line_num, int sequence_num, 
+                                   std::string& line, size_t& name_length);
+    bool validateLoadFromPhylip   (const std::string phylipFilePath,
+                                   size_t num_sequences, size_t sequence_length);
+    bool loadAlignment            (const std::string& fastaFilePath,
+                                   const std::string& phylipFilePath,
+                                   const std::string& alphabet, char unknown_char,
+                                   bool report_progress, 
+                                   std::vector<char>& is_site_variant);
 };
 
 class SequenceLoader {

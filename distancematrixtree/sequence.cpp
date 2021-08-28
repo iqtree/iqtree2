@@ -169,21 +169,21 @@ const std::string& Sequences::getSequenceName(size_t i) const {
 void Sequences::setSequenceName(size_t i, const std::string& new_name) {
     at(i).setName(new_name);
 }
-bool Sequences::loadSequences(const std::string& alignmentFilePath,
-                              const std::string& alphabet, bool unknown_char,
-                              bool report_progress) {
+bool Sequences::loadSequencesFromFasta(const std::string& fastaFilePath,
+                                       const std::string& alphabet, bool unknown_char,
+                                       bool report_progress) {
     #if USE_GZSTREAM
     pigzstream    in(report_progress ? "fasta" : "");
     #else
     std::ifstream in;
     #endif
-    in.open(alignmentFilePath.c_str(), std::ios::binary | std::ios::in);
+    in.open(fastaFilePath.c_str(), std::ios::binary | std::ios::in);
     if (!in.is_open()) {
         std::cerr << "Unable to open alignment file " 
-            << alignmentFilePath << std::endl;
+            << fastaFilePath << std::endl;
         return false;
     }
-    size_t line_num = 0;
+    size_t line_num = 1;
     std::vector<int> in_alphabet;
     in_alphabet.resize(256, 0);
     for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
@@ -208,9 +208,7 @@ bool Sequences::loadSequences(const std::string& alignmentFilePath,
         }
         // read sequence contents
         else if (empty()) {
-            std::cerr << "First line must begin with '>'"
-                << " to define sequence name" << std::endl;
-            return false;
+            //Skip over it.
         }
         else if (!processSequenceLine(in_alphabet, unknown_char,
                                       back().sequenceData(),
@@ -225,12 +223,175 @@ bool Sequences::loadSequences(const std::string& alignmentFilePath,
     return true;
 }
 
-bool Sequences::loadAlignment(const std::string& alignmentFilePath,
+bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
+                                        const std::string& alphabet, bool unknown_char,
+                                        bool report_progress) {
+    #if USE_GZSTREAM
+    pigzstream    in(report_progress ? "phylip" : "");
+    #else
+    std::ifstream in;
+    #endif
+    in.open(phylipFilePath.c_str(), std::ios::binary | std::ios::in);
+    if (!in.is_open()) {
+        std::cerr << "Unable to open alignment file " 
+            << phylipFilePath << std::endl;
+        return false;
+    }
+    size_t line_num = 1;
+    std::vector<int> in_alphabet;
+    in_alphabet.resize(256, 0);
+    for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
+        in_alphabet[*alpha] = 1;
+    }
+    bool   last_line_was_blank = false;
+    size_t num_sequences       = 0;
+    size_t sequence_length     = 0;
+    bool   have_read_names     = 0;
+    size_t name_length         = 0; //Number of characters to use for sequence name
+    size_t sequence_num        = 0; //Ordinal sequence # to read next
+
+    for (; !in.eof(); ++line_num) {
+        std::string line;
+        safeGetLine(in, line);
+        if (line_num == 1) {
+            //Read the heder line
+            std::stringstream linestream(line);
+            linestream >> num_sequences;
+            linestream >> sequence_length;
+            if (num_sequences < 1 || sequence_length < 1 ) {
+                in.close();
+                std::cerr << "Number of sequences " << num_sequences
+                          << " or Sequence length " << sequence_length
+                          << " was invalid.";
+                return false;
+            }
+            continue;
+        }
+        if (line == "") {
+            if (sequence_num!=0 && sequence_num!=num_sequences) {
+                in.close();
+                std::cerr << "Too few sequences (" << sequence_num << ") specified "
+                          << " before blank line, at line " << line_num
+                          << ". Expected " << num_sequences << ".";
+                return false;
+            }
+            have_read_names     = true;
+            last_line_was_blank = true;
+            sequence_num        = 0;
+            continue;            
+        }
+        if (!have_read_names) {
+            processPhylipSequenceName(line_num, sequence_num, 
+                                      line, name_length);
+        }        
+        sequence_num %= num_sequences;
+        if (!processSequenceLine(in_alphabet, unknown_char,
+                                 at(sequence_num).sequenceData(),
+                                 line, line_num)) {
+            return false;
+        }
+        if (0<sequence_num) {
+            //Should we be checking that interleaving is consistent?
+            //Or... is this being too fussy?
+            if (at(sequence_num-1).sequenceLength() !=
+                at(sequence_num).sequenceLength() ) {
+                in.close();
+                std::cerr << "Inconsistent interleaving at line " << line_num
+                          << " of phylip multi-sequence alignment " << phylipFilePath << "."
+                          << "\nSequence " << (sequence_num) << " length "
+                          << " was " << at(sequence_num-1).sequenceLength() 
+                          << " but sequence " << (sequence_num+1) << " length "
+                          << " was " << at(sequence_num).sequenceLength() << ".";
+                return false;
+            }
+        }
+        ++sequence_num;
+        last_line_was_blank = true;
+    }
+    in.close();
+    return validateLoadFromPhylip(phylipFilePath, num_sequences, 
+                                  sequence_length);
+}
+
+bool Sequences::validateLoadFromPhylip(const std::string phylipFilePath,
+                                       size_t num_sequences, size_t sequence_length) {
+    size_t sequence_num;
+    if (size() != num_sequences) {
+        std::cerr << "Only read " << size() << " sequences from " << phylipFilePath << "."
+                  << "\nExpected to read " << num_sequences << ".";
+        return false;
+    }
+    sequence_num = 1;
+    for (Sequence& seq : *this) {
+        if (seq.sequenceLength() != sequence_length) {
+            std::cerr << "In " << phylipFilePath << ", "
+                      << " sequence " << sequence_num << " had length "
+                      << " " << seq.sequenceLength() << ","
+                      << " but expected length " << sequence_length;
+            return false;
+        }
+        ++sequence_num;
+    }
+    return true;
+}
+
+bool Sequences::processPhylipSequenceName(int line_num, int sequence_num, 
+                                          std::string& line, size_t& name_length) {
+    auto line_length = line.length();
+    if (sequence_num==0) {
+        //Scan for first white space
+        for (name_length = 0; name_length<line_length; ++name_length) {
+            auto ch = line[name_length];
+            if (ch==' ' || ch=='\t' || ch=='\r' || ch=='\n') {
+                break;
+            }
+        }
+        //Scan for first non-white space after that
+        for (;name_length<line_length; ++name_length) {
+            auto ch = line[name_length];
+            if (ch!=' ' && ch!='\t') {
+                break;
+            }
+        }
+    } else {
+        if (line_length<name_length) {
+            std::cerr << "Sequence at line " << line_num << " did not have"
+                      << " a name with the expected length (" << name_length << ").\n";
+            return false;
+        }
+    }
+
+    std::string name(line.substr(0, name_length));
+    name.erase(name.find_last_not_of(" \n\r\t")+1);
+    name.erase(0, name.find_first_not_of(" \n\r\t"));
+    emplace_back(name);
+    line = line.substr(name_length, line_length-name_length);
+    return true;
+}
+
+bool Sequences::loadAlignment(const std::string& fastaFilePath,
+                              const std::string& phylipFilePath,
                               const std::string& alphabet, char unknown_char,
                               bool report_progress, 
                               std::vector<char>& is_site_variant) {
-    if (loadSequences(alignmentFilePath, alphabet, 
-                                 unknown_char, report_progress)) {
+    //Assumes: either fastFilePath or 
+    if (!fastaFilePath.empty()) {
+        if (!loadSequencesFromFasta(fastaFilePath, alphabet, 
+                                    unknown_char, report_progress)) {
+            return false;
+        }
+    } else if (!phylipFilePath.empty()) {
+        if (!loadSequencesFromPhylip(phylipFilePath, alphabet, 
+                                     unknown_char, report_progress)) {
+            return false;
+        }
+    } else {
+        std::cerr << "Alignment file format not recognized.\n";
+        return false;
+    }
+    if (size()<2) {
+        std::cerr << "Cannot calculate distance matrix for a matrix"
+                  << " of only " << size() << " sequences.";
         return false;
     }
     std::vector<size_t> sequence_odd_site_count;
