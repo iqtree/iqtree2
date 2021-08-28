@@ -15,7 +15,9 @@ add_executable(decentTree
     bionj2.cpp bionj2.h
     upgma.h nj.h rapidnj.h auctionmatrix.h
     clustertree.h distancematrix.h 
-    stitchup.cpp
+    stitchup.cpp  
+    sequence.cpp sequence.h
+    ../utils/argument.cpp ../utils/argument.h
     ../utils/hammingdistance.h
     ../utils/vectortypes.cpp ../utils/vectortypes.h
     ../utils/heapsort.h
