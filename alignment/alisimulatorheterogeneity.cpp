@@ -249,6 +249,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
 void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length)
 {
     new_site_specific_rate_index.resize(sequence_length);
+    site_specific_rates.resize(sequence_length, 1);
     
     // if a mixture model is supplied and it's fused with site rates -> set site_specific_rate_index equals to site_specific_model_index
     if (tree->getModel()->isMixture() && tree->getModel()->isFused())
@@ -303,100 +304,9 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
 }
 
 /**
-*  simulate sequences for all nodes in the tree
-*/
-void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa, string output_filepath){
-    // get variables
-    int sequence_length = expected_num_sites;
-    ModelSubst *model = tree->getModel();
-    ostream *out = NULL;
-    vector<string> state_mapping;
-    
-    // initialize site specific model index based on its weights (in the mixture model)
-    intializeSiteSpecificModelIndex(expected_num_sites, site_specific_model_index);
-    
-    // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
-    if (tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
-        tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
-    
-    // initialize site-specific rates
-    vector<double> site_specific_rates(sequence_length);
-    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length);
-    
-    // initialize trans_matrix
-    double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
-    
-    // write output to file (if output_filepath is specified)
-    if (output_filepath.length() > 0)
-    {
-        try {
-            // add ".phy" or ".fa" to the output_filepath
-            if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + ".phy";
-            else
-                output_filepath = output_filepath + ".fa";
-            if (params->do_compression)
-                out = new ogzstream(output_filepath.c_str());
-            else
-                out = new ofstream(output_filepath.c_str());
-            out->exceptions(ios::failbit | ios::badbit);
-
-            // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-            if (params->aln_output_format != IN_FASTA)
-            {
-                int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
-            }
-
-            // initialize state_mapping (mapping from state to characters)
-            initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, output_filepath);
-        }
-    }
-    
-    // rooting the tree if it's unrooted
-    if (!tree->rooted)
-        rootTree();
-    
-    // initialize sub_rates, J_Matrix from Q_matrix
-    int num_mixture_models = model->getNMixtures();
-    double* sub_rates = new double[num_mixture_models*max_num_states];
-    double* Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
-    extractRatesJMatrix(model, sub_rates, Jmatrix);
-    
-    // simulate sequences
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
-    
-    // close the file if neccessary
-    if (output_filepath.length() > 0)
-    {
-        if (params->do_compression)
-            ((ogzstream*)out)->close();
-        else
-            ((ofstream*)out)->close();
-        delete out;
-        
-        // show the output file name
-        cout << "An alignment has just been exported to "<<output_filepath<<endl;
-    }
-
-    // delete trans_matrix array
-    delete[] trans_matrix;
-    
-    // delete sub_rates, J_Matrix
-    delete[] sub_rates;
-    delete[] Jmatrix;
-    
-    // removing constant states if it's necessary
-    if (length_ratio > 1)
-        removeConstantSites();
-}
-
-/**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths){
+void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths){
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if (tree->getRateName().empty()
@@ -484,10 +394,14 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorHeterogeneity::initVariables(int sequence_length, vector<double> &site_specific_rates)
+void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenerate_root_sequence)
 {
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index);
+    
+    // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
+    if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
+        tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
     
     // initialize site-specific rates
     getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length);
@@ -497,7 +411,7 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, vector<double
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
+void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
 {
     // initialize new_site_specific_model_index
     vector<short int> new_site_specific_model_index;
@@ -507,7 +421,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     site_specific_model_index.insert(site_specific_model_index.begin()+position, new_site_specific_model_index.begin(), new_site_specific_model_index.end());
     
     // initialize new_site_specific_rates, and new_site_specific_rate_index for new sequence
-    vector<double> new_site_specific_rates(new_sequence.size());
+    vector<double> new_site_specific_rates;
     vector<short int> new_site_specific_rate_index;
     getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_site_specific_model_index, new_sequence.size());
     
@@ -522,5 +436,5 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
         new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, site_specific_rates);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
 }

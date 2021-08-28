@@ -109,7 +109,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, double* sub_rates, double* Jmatrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
+    virtual void simulateSeqs(int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
     
     /**
     *  validate sequence length of codon
@@ -180,12 +180,12 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, vector<double> &site_specific_rates);
+    virtual void initVariables(int sequence_length, bool regenerate_root_sequence = false);
     
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
@@ -205,43 +205,43 @@ protected:
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, double* sub_rates, double* Jmatrix, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
+    void handleIndels(ModelSubst *model, int &sequence_length, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
     
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, double* Jmatrix, vector<short int> &indel_sequence);
+    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &accummulated_rates, vector<short int> &indel_sequence);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
     
     /**
         extract array of substitution rates and Jmatrix
     */
-    double extractRatesJMatrix(ModelSubst *model, double* &sub_rates, double* &Jmatrix);
+    double extractRatesJMatrix(ModelSubst *model);
     
     /**
         compute the total substitution rate
     */
-    double computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence, double* sub_rates);
+    double computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence);
     
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<double> site_specific_rates, vector<short int> sequence, double* sub_rates);
+    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence);
     
     /**
     *  insert gaps into other nodes when processing Insertion Events
@@ -290,8 +290,11 @@ public:
     short int STATE_UNKNOWN;
     vector<short int> site_specific_model_index;
     vector<short int> site_specific_rate_index;
+    vector<double> site_specific_rates;
     const int RATE_ZERO_INDEX = -1;
     const int RATE_ONE_INDEX = 0;
+    double* sub_rates;
+    double* Jmatrix;
     
     /**
         constructor

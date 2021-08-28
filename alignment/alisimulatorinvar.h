@@ -18,18 +18,23 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, vector<double> &site_specific_rates);
+    virtual void initVariables(int sequence_length, bool regenerate_root_sequence = false);
     
     /**
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence);
+    
+    /**
+      initialize site_specific_rates
+    */
+    void initSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length);
     
 public:
     
@@ -42,11 +47,6 @@ public:
         constructor
     */
     AliSimulatorInvar(AliSimulator *alisimulator, double invar_prop);
-
-    /**
-    *  simulate sequences for all nodes in the tree
-    */
-    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath);
 };
 
 #endif /* alisimulatorinvar_h */

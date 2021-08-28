@@ -27,98 +27,11 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 }
 
 /**
-*  simulate sequences for all nodes in the tree
-*/
-void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string output_filepath)
-{
-    // get variables
-    int sequence_length = expected_num_sites;
-    ModelSubst *model = tree->getModel();
-    ostream *out = NULL;
-    vector<string> state_mapping;
-    
-    // initialize the site-specific rates
-    vector<double> site_specific_rates(sequence_length);
-    initVariables(sequence_length, site_specific_rates);
-    
-    // initialize trans_matrix
-    double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
-    
-    // write output to file (if output_filepath is specified)
-    if (output_filepath.length() > 0)
-    {
-        try {
-            // add ".phy" or ".fa" to the output_filepath
-            if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + ".phy";
-            else
-                output_filepath = output_filepath + ".fa";
-            if (params->do_compression)
-                out = new ogzstream(output_filepath.c_str());
-            else
-                out = new ofstream(output_filepath.c_str());
-            out->exceptions(ios::failbit | ios::badbit);
-
-            // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-            if (params->aln_output_format != IN_FASTA)
-            {
-                int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
-            }
-
-            // initialize state_mapping (mapping from state to characters)
-            initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, output_filepath);
-        }
-    }
-    
-    // rooting the tree if it's unrooted
-    if (!tree->rooted)
-        rootTree();
-    
-    // initialize sub_rates, J_Matrix from Q_matrix
-    int num_mixture_models = model->getNMixtures();
-    double* sub_rates = new double[num_mixture_models*max_num_states];
-    double* Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
-    extractRatesJMatrix(model, sub_rates, Jmatrix);
-    
-    // simulate sequences with only Invariant sites option
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
-    
-    // close the file if neccessary
-    if (output_filepath.length() > 0)
-    {
-        if (params->do_compression)
-            ((ogzstream*)out)->close();
-        else
-            ((ofstream*)out)->close();
-        delete out;
-        
-        // show the output file name
-        cout << "An alignment has just been exported to "<<output_filepath<<endl;
-    }
-
-    // delete trans_matrix array
-    delete[] trans_matrix;
-    
-    // delete sub_rates, J_Matrix
-    delete[] sub_rates;
-    delete[] Jmatrix;
-    
-    // removing constant states if it's necessary
-    if (length_ratio > 1)
-        removeConstantSites();
-}
-
-/**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
-    /*double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
-    model->computeTransMatrix(partition_rate*branch_length, trans_matrix);*/
     model->computeTransMatrix(partition_rate * (*it)->length, trans_matrix);
     
     // convert the probability matrix into an accumulated probability matrix
@@ -143,8 +56,17 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorInvar::initVariables(int sequence_length, vector<double> &site_specific_rates)
+void AliSimulatorInvar::initVariables(int sequence_length, bool regenerate_root_sequence)
 {
+    initSiteSpecificRates(site_specific_rates, sequence_length);
+}
+
+/**
+  initialize site_specific_rate
+*/
+void AliSimulatorInvar::initSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length)
+{
+    site_specific_rates.resize(sequence_length, 1);
     for (int i = 0; i < sequence_length; i++)
     {
         // if this site is invariant -> preserve the dad's state
@@ -159,15 +81,15 @@ void AliSimulatorInvar::initVariables(int sequence_length, vector<double> &site_
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, vector<double> &site_specific_rates)
+void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
 {
     // initialize new_site_specific_rates for new sequence
-    vector<double> new_site_specific_rates(new_sequence.size());
-    initVariables(new_sequence.size(), new_site_specific_rates);
+    vector<double> new_site_specific_rates;
+    initSiteSpecificRates(new_site_specific_rates, new_sequence.size());
     
     // insert new_site_specific_rates into site_specific_rates
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, site_specific_rates);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
 }
