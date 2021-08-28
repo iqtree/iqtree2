@@ -22,7 +22,8 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     rate_heterogeneity = tree->getRate();
     max_length_taxa_name = alisimulator->max_length_taxa_name;
     fundi_items = alisimulator->fundi_items;
-    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
+    STATE_UNKNOWN = alisimulator->STATE_UNKNOWN;
+    max_num_states = alisimulator->max_num_states;
 }
 
 /**
@@ -126,7 +127,7 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
 /**
     initialize caching accumulated_trans_matrix
 */
-void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, int max_num_states, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model)
+void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model)
 {
     bool fuse_mixture_model = (model->isMixture() && model->isFused());
     
@@ -159,7 +160,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 /**
   estimate the state from accumulated trans_matrices
 */
-int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int max_num_states, int dad_state)
+int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int dad_state)
 {
     // randomly select the state, considering it's dad states, and the accumulated trans_matrices
     int model_index = site_specific_model_index[site_index];
@@ -174,7 +175,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 /**
   estimate the state from an original trans_matrix
 */
-int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, int max_num_states, double branch_length, int dad_state)
+int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state)
 {    
     // compute the transition matrix
     model->computeTransMatrix(partition_rate*branch_length*rate, trans_matrix, model_component_index, dad_state);
@@ -308,7 +309,6 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
-    int max_num_states = tree->aln->getMaxNumStates();
     ostream *out = NULL;
     vector<string> state_mapping;
     
@@ -363,10 +363,10 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
     int num_mixture_models = model->getNMixtures();
     double* sub_rates = new double[num_mixture_models*max_num_states];
     double* Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
-    extractRatesJMatrix(model, max_num_states, sub_rates, Jmatrix);
+    extractRatesJMatrix(model, sub_rates, Jmatrix);
     
     // simulate sequences
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
     
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -396,8 +396,7 @@ void AliSimulatorHeterogeneity::simulateSeqsForTree(map<string,string> input_msa
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-//void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths){
-void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths){
+void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths){
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if (tree->getRateName().empty()
@@ -435,7 +434,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
         }*/
         
         // initialize caching accumulated trans_matrices
-        intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, max_num_states, branch_lengths, trans_matrix, model);
+        intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, branch_lengths, trans_matrix, model);
 
         // estimate the sequence
         (*it)->node->sequence.resize(sequence_length);
@@ -446,7 +445,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
                 (*it)->node->sequence[i] = STATE_UNKNOWN;
             else
             {
-                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, max_num_states, node->sequence[i]);
+                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, node->sequence[i]);
             }
         }
         
@@ -475,8 +474,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
                 else
                 {
                     // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                    //(*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix+thread_id*max_num_states*max_num_states, max_num_states, branch_length, node->sequence[i]);
-                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix+thread_id*max_num_states*max_num_states, max_num_states, (*it)->length, node->sequence[i]);
+                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix+thread_id*max_num_states*max_num_states, (*it)->length, node->sequence[i]);
                 }
             }
         }

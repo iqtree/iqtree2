@@ -78,7 +78,7 @@ protected:
     /**
     *  randomly generate the base frequencies
     */
-    void generateRandomBaseFrequencies(double *base_frequencies, int max_num_bases);
+    void generateRandomBaseFrequencies(double *base_frequencies);
     
     /**
     *  get a random item from a set of items with a probability array
@@ -109,7 +109,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, double* sub_rates, double* Jmatrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
+    virtual void simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, double* sub_rates, double* Jmatrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
     
     /**
     *  validate sequence length of codon
@@ -170,20 +170,17 @@ protected:
     /**
         branch-specific evolution
     */
-    //void branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length);
-    void branchSpecificEvolution(int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it);
+    void branchSpecificEvolution(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it);
     
     /**
         simulate a sequence for a node from a specific branch
     */
-    //void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths = "");
-    void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
+    void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    //virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths = "");
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
@@ -193,12 +190,12 @@ protected:
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
     */
-    void regenerateRootSequenceBranchSpecificModel(string freqs, int max_num_states, int sequence_length, Node* root);
+    void regenerateRootSequenceBranchSpecificModel(string freqs, int sequence_length, Node* root);
     
     /**
         generate a random sequence by state frequencies
     */
-    vector<short int> generateRandomSequenceFromStateFreqs(int max_num_states, int sequence_length, double* state_freqs, int max_prob_pos);
+    vector<short int> generateRandomSequenceFromStateFreqs(int sequence_length, double* state_freqs, int max_prob_pos);
     
     /**
     *  write a sequence of a node to an output file with gaps copied from the input sequence
@@ -208,37 +205,37 @@ protected:
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, double* sub_rates, double* Jmatrix, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
+    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, double* sub_rates, double* Jmatrix, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
     
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, vector<double> site_specific_rates, int max_num_states, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, double* Jmatrix, vector<short int> &indel_sequence);
+    void handleSubs(int sequence_length, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, double* Jmatrix, vector<short int> &indel_sequence);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, int max_num_states, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, int max_num_states, vector<short int> &indel_sequence, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
     
     /**
         extract array of substitution rates and Jmatrix
     */
-    double extractRatesJMatrix(ModelSubst *model, int max_num_states, double* &sub_rates, double* &Jmatrix);
+    double extractRatesJMatrix(ModelSubst *model, double* &sub_rates, double* &Jmatrix);
     
     /**
         compute the total substitution rate
     */
-    double computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence, double* sub_rates, int max_num_states);
+    double computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence, double* sub_rates);
     
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<double> site_specific_rates, vector<short int> sequence, double* sub_rates, int max_num_states);
+    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<double> site_specific_rates, vector<short int> sequence, double* sub_rates);
     
     /**
     *  insert a new sequence into the current sequence
@@ -283,6 +280,7 @@ public:
     
     IQTree *tree;
     Params *params;
+    int max_num_states;
     int num_sites_per_state;
     int expected_num_sites;
     double partition_rate;

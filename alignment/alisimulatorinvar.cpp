@@ -22,7 +22,8 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     invariant_proportion = invar_prop;
     max_length_taxa_name = alisimulator->max_length_taxa_name;
     fundi_items = alisimulator->fundi_items;
-    STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
+    STATE_UNKNOWN = alisimulator->STATE_UNKNOWN;
+    max_num_states = alisimulator->max_num_states;
 }
 
 /**
@@ -33,7 +34,6 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
-    int max_num_states = tree->aln->getMaxNumStates();
     ostream *out = NULL;
     vector<string> state_mapping;
     
@@ -81,10 +81,10 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
     int num_mixture_models = model->getNMixtures();
     double* sub_rates = new double[num_mixture_models*max_num_states];
     double* Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
-    extractRatesJMatrix(model, max_num_states, sub_rates, Jmatrix);
+    extractRatesJMatrix(model, sub_rates, Jmatrix);
     
     // simulate sequences with only Invariant sites option
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
     
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -114,8 +114,7 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-//void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, double indel_branch_length, string lengths)
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, int max_num_states, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, vector<double> site_specific_rates, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
     /*double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
