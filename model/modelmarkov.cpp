@@ -891,7 +891,7 @@ void ModelMarkov::adaptStateFrequency(double* freq)
     ModelSubst::setStateFrequency(freq);
 }
 
-void ModelMarkov::getQMatrix(double *q_mat) {
+void ModelMarkov::getQMatrix(double *q_mat, int mixture) {
 
     if (!is_reversible) {
         // non-reversible model

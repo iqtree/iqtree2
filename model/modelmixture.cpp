@@ -1510,6 +1510,12 @@ void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mix
     at(mixture)->computeTransMatrix(time, trans_matrix, 0, selected_row);
 }
 
+void ModelMixture::getQMatrix(double *q_mat, int mixture)
+{
+    ASSERT(mixture < getNMixtures());
+    at(mixture)->getQMatrix(q_mat);
+}
+
 void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     double *trans_derv1, double *trans_derv2, int mixture) {
     ASSERT(mixture < getNMixtures());

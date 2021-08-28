@@ -237,7 +237,7 @@ public:
 		The default is equal rate of 1 (JC Model), valid for all kind of data.
 		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
-	virtual void getQMatrix(double *q_mat);
+	virtual void getQMatrix(double *q_mat, int mixture = 0);
 
 	/**
 		compute the state frequency vector. One should override this function when defining new model.

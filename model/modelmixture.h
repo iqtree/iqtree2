@@ -141,6 +141,13 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
+    
+    /**
+        Get the rate matrix Q. One should override this function when defining new model.
+        The default is equal rate of 1 (JC Model), valid for all kind of data.
+        @param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
+    */
+    virtual void getQMatrix(double *q_mat, int mixture = 0);
 
 
 	/**

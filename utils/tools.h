@@ -159,6 +159,14 @@ enum INDEL_DIS_TYPE {
     USER_DEFINED
 };
 
+/**
+ *  Specify 2 simulation approaches.
+ */
+enum SIMULATION_METHOD {
+    TRANS_PROB_MATRIX,
+    RATE_MATRIX
+};
+
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
     double param_1 = -1, param_2 = -1;
@@ -2400,6 +2408,11 @@ public:
     *  mean of deletion-size
     */
     double alisim_mean_deletion_size;
+    
+    /**
+    *  threshold to switch between two simulation methods: Rate_Matrix and Trans_Prob_Matrix
+    */
+    double alisim_simulation_thresh;
 };
 
 /**

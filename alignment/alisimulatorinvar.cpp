@@ -77,8 +77,14 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
     if (!tree->rooted)
         rootTree();
     
+    // initialize sub_rates, J_Matrix from Q_matrix
+    int num_mixture_models = model->getNMixtures();
+    double* sub_rates = new double[num_mixture_models*max_num_states];
+    double* Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
+    extractRatesJMatrix(model, max_num_states, sub_rates, Jmatrix);
+    
     // simulate sequences with only Invariant sites option
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
     
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -95,6 +101,10 @@ void AliSimulatorInvar::simulateSeqsForTree(map<string,string> input_msa, string
 
     // delete trans_matrix array
     delete[] trans_matrix;
+    
+    // delete sub_rates, J_Matrix
+    delete[] sub_rates;
+    delete[] Jmatrix;
     
     // removing constant states if it's necessary
     if (length_ratio > 1)

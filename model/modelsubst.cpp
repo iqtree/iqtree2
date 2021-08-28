@@ -112,7 +112,7 @@ void ModelSubst::getRateMatrix(double *rate_mat) {
 		rate_mat[i] = 1.0;
 }
 
-void ModelSubst::getQMatrix(double *q_mat) {
+void ModelSubst::getQMatrix(double *q_mat, int mixture) {
 	int i, j, k;
 	for (i = 0, k = 0; i < num_states; i++)
 		for (j = 0; j < num_states; j++, k++)

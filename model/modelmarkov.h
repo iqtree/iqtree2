@@ -257,7 +257,7 @@ public:
 	 * compute Q matrix 
 	 * @param q_mat (OUT) Q matrix, assuming of size num_states * num_states
 	 */
-	virtual void getQMatrix(double *q_mat);
+	virtual void getQMatrix(double *q_mat, int mixture = 0);
 
 	/**
 		rescale the state frequencies

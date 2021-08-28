@@ -101,10 +101,15 @@ protected:
     int binarysearchItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, double random_number, int start, int end, int first);
     
     /**
+    *  binary search an item from a set with accumulated probability array
+    */
+    int binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> accumulated_probability_maxtrix, double random_number, int start, int end, int first);
+    
+    /**
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa);
+    virtual void simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, double* sub_rates, double* Jmatrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
     
     /**
     *  validate sequence length of codon
@@ -203,23 +208,37 @@ protected:
     /**
         handle indels
     */
-    //void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, double &indel_branch_length);
-    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step);
+    void handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, double* sub_rates, double* Jmatrix, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
+    
+    /**
+        handle substitution events
+    */
+    void handleSubs(int sequence_length, vector<double> site_specific_rates, int max_num_states, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, double* Jmatrix, vector<short int> &indel_sequence);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence);
+    int handleInsertion(int &sequence_length, int max_num_states, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, vector<short int> &indel_sequence);
+    int handleDeletion(int sequence_length, int max_num_states, vector<short int> &indel_sequence, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    
+    /**
+        extract array of substitution rates and Jmatrix
+    */
+    double extractRatesJMatrix(ModelSubst *model, int max_num_states, double* &sub_rates, double* &Jmatrix);
     
     /**
         compute the total substitution rate
     */
-    double computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence, int &num_gaps);
+    double computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence, double* sub_rates, int max_num_states);
+    
+    /**
+        initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
+    */
+    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<double> site_specific_rates, vector<short int> sequence, double* sub_rates, int max_num_states);
     
     /**
     *  insert a new sequence into the current sequence
@@ -271,6 +290,10 @@ public:
     short int max_length_taxa_name = 10;
     vector<FunDi_Item> fundi_items;
     short int STATE_UNKNOWN;
+    vector<short int> site_specific_model_index;
+    vector<short int> site_specific_rate_index;
+    const int RATE_ZERO_INDEX = -1;
+    const int RATE_ONE_INDEX = 0;
     
     /**
         constructor

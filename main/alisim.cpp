@@ -564,7 +564,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         else
         {
             // check whether we could write the output to file immediately after simulating it
-            if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio == -1)
+            if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio == 0)
                 generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath);
             // otherwise, writing output to file after completing the simulation
             else
@@ -578,7 +578,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // merge & write alignments to files if they have not yet been written
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
-            || super_alisimulator->params->alisim_insertion_ratio != -1)
+            || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator);
         
         // show the time spent on writing sequences to the output file
@@ -793,7 +793,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 }
                 
                 // insert redundant sites (inserted sites due to Indels) to the sequences
-                if (super_tree->params->alisim_insertion_ratio != -1)
+                if (super_tree->params->alisim_insertion_ratio > 0)
                 {
                     vector<short int> site_index_step_mapping(max_site_index+1, 0);
                     for (j = i; j < super_tree->size(); j++)
@@ -847,7 +847,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
         int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
         
         // determine the real sequence_length if Indels is used
-        if (alisimulator->params->alisim_insertion_ratio != -1)
+        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0)
         {
             bool stop = false;
             determineSequenceLength(alisimulator->tree->root, alisimulator->tree->root, stop, sequence_length);
@@ -864,7 +864,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
 */
 void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
 {
-    if ((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio != -1)) {
+    if ((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0)) {
 #ifdef _OPENMP
 #pragma omp task firstprivate(node) shared(out)
 #endif

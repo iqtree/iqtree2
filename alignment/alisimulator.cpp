@@ -427,7 +427,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
                     // keep checking if Indels is used
-                    if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == -1)
+                    if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == 0)
                         break;
                 }
             
@@ -482,7 +482,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
 void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad){
     // no need to check the further sites if num_variant_states has exceeded the expected_num_variant_states
     // keep checking if Indels is used
-    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == -1)
+    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
         return;
     
     if (node->isLeaf() && node->name!=ROOT_NAME) {
@@ -504,7 +504,7 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
                     // keep checking if Indels is used
-                    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == -1)
+                    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
                         break;
                 }
         }
@@ -659,9 +659,15 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     if (!tree->rooted)
         rootTree();
     
+    // initialize sub_rates, J_Matrix from Q_matrix
+    int num_mixture_models = model->getNMixtures();
+    double* sub_rates = new double[num_mixture_models*max_num_states];
+    double* Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
+    extractRatesJMatrix(model, max_num_states, sub_rates, Jmatrix);
+    
     // simulate Sequences
     vector<double> site_specific_rates;
-    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
+    simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, sub_rates, Jmatrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
     // close the file if neccessary
     if (output_filepath.length() > 0)
@@ -679,6 +685,10 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // delete trans_matrix array
     delete[] trans_matrix;
     
+    // delete sub_rates, J_Matrix
+    delete[] sub_rates;
+    delete[] Jmatrix;
+    
     // removing constant states if it's necessary
     if (length_ratio > 1)
         removeConstantSites();
@@ -688,7 +698,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
+void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_specific_rates, ModelSubst *model, double *trans_matrix, int max_num_states, double* sub_rates, double* Jmatrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -697,27 +707,41 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
         
-        // handle indels
+        // select the appropriate simulation method
+        SIMULATION_METHOD simulation_method = RATE_MATRIX;
+        if ((*it)->length > params->alisim_simulation_thresh
+            || tree->getRate()->isHeterotachy()
+            || (*it)->attributes["model"].length()>0)
+            simulation_method = TRANS_PROB_MATRIX;
+        
+        // dummy variables
         vector<short int> indel_sequence;
         vector<int> index_mapping_by_jump_step;
-        //double indel_branch_length = -1;
-        if (params->alisim_insertion_ratio != -1)
-            //handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step, indel_branch_length);
-            handleIndels(model, site_specific_rates, sequence_length, max_num_states, node, it, indel_sequence, index_mapping_by_jump_step);
         
-        // if branch_length = 0 -> clone the sequence from the parent's node
-        if ((*it)->length == 0)
+        // if branch_length is too short (less than 1 substitution is expected to occur) -> clone the sequence from the parent's node
+        if ((*it)->length < 1.0/sequence_length)
             (*it)->node->sequence = node->sequence;
         else
         {
-            // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
-            if ((*it)->attributes["model"].length()>0)
-                //branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length);
-                branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
-            // otherwise, simulate the sequence based on the common model
+            // handle indels
+            if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || simulation_method == RATE_MATRIX)
+                handleIndels(model, site_specific_rates, sequence_length, max_num_states, sub_rates, Jmatrix, node, it, indel_sequence, index_mapping_by_jump_step, simulation_method);
+            
+            // only simulate new sequence if the simulation type is Transition Probability Matrix approach
+            if (simulation_method == TRANS_PROB_MATRIX)
+            {
+                // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
+                if ((*it)->attributes["model"].length()>0)
+                    //branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it, indel_branch_length);
+                    branchSpecificEvolution(sequence_length, trans_matrix, max_num_states, node, it);
+                // otherwise, simulate the sequence based on the common model
+                else
+                    //simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length);
+                    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
+            }
+            // otherwise (Rate_matrix is used as the simulation method) -> use the indel_sequence
             else
-                //simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it, indel_branch_length);
-                simulateASequenceFromBranchAfterInitVariables(model, sequence_length, site_specific_rates, trans_matrix, max_num_states, node, it);
+                (*it)->node->sequence = indel_sequence;
         }
         
         // permuting selected sites for FunDi model
@@ -730,14 +754,14 @@ void AliSimulator::simulateSeqs(int &sequence_length, vector<double> &site_speci
         }
         
         // merge the simulated sequence with the indel_sequence
-        if (params->alisim_insertion_ratio != -1 && (*it)->length > 0)
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->length >= 1.0/sequence_length && simulation_method == TRANS_PROB_MATRIX)
             mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
         
         // writing and deleting simulated sequence immediately if possible
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, (*it)->node, node, out, state_mapping, input_msa);
+        simulateSeqs(sequence_length, site_specific_rates, model, trans_matrix, max_num_states, sub_rates, Jmatrix, (*it)->node, node, out, state_mapping, input_msa);
     }
 }
 
@@ -788,7 +812,7 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     node->num_children_done_simulation++;
     // remove the sequence of the current node to release the memory if it's an internal node && all of its children have done their simulation && the user does't (use indel && want to output the internal sequences)
     if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1)
-        && !(params->alisim_insertion_ratio != -1 && params->alisim_write_internal_sequences))
+        && !(params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && params->alisim_write_internal_sequences))
     {
         // convert numerical states into readable characters and write internal sequences to file if the user want to do so
         if (params->alisim_write_internal_sequences && state_mapping.size() > 0)
@@ -859,6 +883,31 @@ int AliSimulator::getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *acc
 *  binary search an item from a set with accumulated probability array
 */
 int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accumulated_probability_maxtrix, double random_number, int start, int end, int first)
+{
+    // check search range
+    if (start > end)
+        return -1; // return -1 ~ not found
+    
+    // compute the center index
+    int center = (start + end)/2;
+    
+    // if item is found at the center index -> return result
+    if ((random_number <= accumulated_probability_maxtrix[center])
+        && ((center == first)
+            || (random_number > accumulated_probability_maxtrix[center - 1])))
+        return center;
+    
+    // otherwise, search in the left/right side.
+    if (random_number <= accumulated_probability_maxtrix[center])
+        return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, start, center - 1, first);
+    else
+        return binarysearchItemWithAccumulatedProbabilityMatrix(accumulated_probability_maxtrix, random_number, center + 1, end, first);
+}
+
+/**
+*  binary search an item from a set with accumulated probability array
+*/
+int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> accumulated_probability_maxtrix, double random_number, int start, int end, int first)
 {
     // check search range
     if (start > end)
@@ -1522,31 +1571,51 @@ string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_lengt
 }
 
 /**
+    extract array of substitution rates
+*/
+double AliSimulator::extractRatesJMatrix(ModelSubst *model, int max_num_states, double* &sub_rates, double* &Jmatrix)
+{
+    // get num_mixture_models
+    int num_mixture_models = model->getNMixtures();
+    double* tmp_Q_matrix = new double[max_num_states*max_num_states];
+    
+    for (int mixture = 0; mixture <num_mixture_models; mixture++)
+    {
+        // get the Rate (Q) Matrix
+        model->getQMatrix(tmp_Q_matrix, mixture);
+        
+        // extract sub rate for each state from q_matrix
+        int starting_index_sub_rates = mixture * max_num_states;
+        for (int i = 0; i < max_num_states; i++)
+            sub_rates[starting_index_sub_rates + i] = - tmp_Q_matrix[i * (max_num_states + 1)];
+        
+        // convert Q_Matrix to J_Matrix;
+        int starting_index_J = starting_index_sub_rates * max_num_states;
+        for (int i = 0; i < max_num_states; i++)
+        for (int j = 0; j < max_num_states; j++)
+        {
+            if (i == j)
+                Jmatrix[starting_index_J+i*max_num_states+j] = 0;
+            else
+                Jmatrix[starting_index_J+i*max_num_states+j] = tmp_Q_matrix[i*max_num_states+j]/sub_rates[starting_index_sub_rates + i];
+        }
+    }
+    
+    // delete tmp_Q_matrix
+    delete[] tmp_Q_matrix;
+    
+    // convert Jmatrix to accumulated Jmatrix
+    convertProMatrixIntoAccumulatedProMatrix(Jmatrix, num_mixture_models*max_num_states, max_num_states);
+}
+
+/**
     compute the total substitution rate
 */
-double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_specific_rates, int max_num_states, vector<short int> sequence, int &num_gaps)
+double AliSimulator::computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence, double* sub_rates, int max_num_states)
 {
     // initialize variables
     double total_sub_rate = 0;
     int sequence_length = sequence.size();
-    double* q_matrix = new double[max_num_states*max_num_states];
-    
-    /*double* freqs = new double[max_num_states];
-    model->getStateFrequency(freqs);*/
-    
-    // get the Rate (Q) Matrix
-    model->getQMatrix(q_matrix);
-    
-    // extract sub rate for each state from q_matrix
-    double* sub_rate_on_state = new double[max_num_states];
-    for (int i = 0; i < max_num_states; i++)
-    sub_rate_on_state[i] = - q_matrix[i * (max_num_states + 1)];// * freqs[i];
-    
-    // delete freqs
-    // delete[] freqs;
-    
-    // delete q_matrix;
-    delete[] q_matrix;
     
     // compute the total sub rate (Notes: this method could be further optimized to reduce the running time)
     for (int i = 0; i < sequence_length; i++)
@@ -1554,34 +1623,65 @@ double AliSimulator::computeTotalSubRate(ModelSubst *model, vector<double> site_
         // not compute the substitution rate for gaps/deleted sites
         if (sequence[i] != STATE_UNKNOWN)
         {
+            // get mixture_index
+            int mixture_index = site_specific_model_index.size() == 0?0:site_specific_model_index[i];
             // if site_specific_rates is empty, the relative site rate should be 1
             if (site_specific_rates.size() > 0)
-                total_sub_rate += sub_rate_on_state[sequence[i]]*site_specific_rates[i];
+                total_sub_rate += sub_rates[mixture_index * max_num_states + sequence[i]]*site_specific_rates[i];
             else
-                total_sub_rate += sub_rate_on_state[sequence[i]];
+                total_sub_rate += sub_rates[mixture_index * max_num_states + sequence[i]];
         }
-        else
-            num_gaps++;
     }
-    
-    // delete sub_rate_on_state;
-    delete[] sub_rate_on_state;
     
     return total_sub_rate;
 }
 
 /**
+    initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
+*/
+void AliSimulator::initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<double> site_specific_rates, vector<short int> sequence, double* sub_rates, int max_num_states)
+{
+    // initialize variables
+    int sequence_length = sequence.size();
+    total_sub_rate = 0;
+    num_gaps = 0;
+    accummulated_rates.resize(sequence_length, 0);
+    
+    // compute the total sub rate (Notes: this method could be further optimized to reduce the running time)
+    for (int i = 0; i < sequence_length; i++)
+    {
+        // not compute the substitution rate for gaps/deleted sites
+        if (sequence[i] != STATE_UNKNOWN)
+        {
+            // get the mixture model index
+            int mixture_index = site_specific_model_index.size() == 0? 0:site_specific_model_index[i];
+            // if site_specific_rates is empty, the relative site rate should be 1
+            if (site_specific_rates.size() > 0)
+                total_sub_rate += sub_rates[mixture_index * max_num_states + sequence[i]]*site_specific_rates[i];
+            else
+                total_sub_rate += sub_rates[mixture_index * max_num_states + sequence[i]];
+        }
+        else
+            num_gaps++;
+        
+        // update accummulated_rates
+        accummulated_rates[i] = total_sub_rate;
+    }
+}
+
+/**
     handle indels
 */
-//void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, double &indel_branch_length)
-void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step)
+void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific_rates, int &sequence_length, int max_num_states, double* sub_rates, double* Jmatrix, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method)
 {
     int num_gaps = 0;
     double total_sub_rate = 0;
-    /* computeTotalSubRate is not used now. It shoulb be used later when implementing method 2 of Indelible
-     total_sub_rate = computeTotalSubRate(model, site_specific_rates, max_num_states, node->sequence, num_gaps);*/
-    // count the number of gaps in the sequence
-    num_gaps = count(node->sequence.begin(), node->sequence.end(), STATE_UNKNOWN);
+    vector<double> accummulated_rates;
+    // If AliSim is using RATE_MATRIX approach -> initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
+    if (simulation_method == RATE_MATRIX)
+        initVariables4RateMatrix(total_sub_rate, num_gaps, accummulated_rates, site_specific_rates, node->sequence, sub_rates, max_num_states);
+    else // otherwise, TRANS_PROB_MATRIX approach is used -> only count the number of gaps
+        num_gaps = count(node->sequence.begin(), node->sequence.end(), STATE_UNKNOWN);
     double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
     double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
     double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
@@ -1589,7 +1689,6 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
     indel_sequence = node->sequence;
     index_mapping_by_jump_step.resize(sequence_length + 1, 0);
     double branch_length = (*it)->length;
-    //indel_branch_length = branch_length;
     while (branch_length > 0)
     {
         // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
@@ -1616,24 +1715,32 @@ void AliSimulator::handleIndels(ModelSubst *model, vector<double> &site_specific
             {
                 case INSERTION:
                 {
-                    length_change = handleInsertion(sequence_length, index_mapping_by_jump_step, site_specific_rates, indel_sequence);
-                    //indel_branch_length -= waiting_time;
+                    length_change = handleInsertion(sequence_length, max_num_states, index_mapping_by_jump_step, site_specific_rates, indel_sequence, sub_rates, total_sub_rate, accummulated_rates, simulation_method);
                     break;
                 }
                 case DELETION:
                 {
-                    length_change = -handleDeletion(sequence_length, indel_sequence);
-                    //indel_branch_length -= waiting_time;
+                    length_change = -handleDeletion(sequence_length, max_num_states, indel_sequence, site_specific_rates, sub_rates, total_sub_rate, accummulated_rates, simulation_method);
+                    break;
+                }
+                case SUBSTITUTION:
+                {
+                    if (simulation_method == RATE_MATRIX)
+                    {
+                        handleSubs(sequence_length, site_specific_rates, max_num_states, sub_rates, total_sub_rate, accummulated_rates, Jmatrix, indel_sequence);
+                    }
                     break;
                 }
                 default:
-                    // ignore substitution event as it has already processed
                     break;
             }
             
             // update total_event_rate
-            total_ins_rate += params->alisim_insertion_ratio * length_change;
-            total_del_rate += params->alisim_deletion_ratio * length_change;
+            if (length_change != 0)
+            {
+                total_ins_rate += params->alisim_insertion_ratio * length_change;
+                total_del_rate += params->alisim_deletion_ratio * length_change;
+            }
             total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
         }
 
@@ -1706,7 +1813,7 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
 /**
     handle insertion events
 */
-int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence)
+int AliSimulator::handleInsertion(int &sequence_length, int max_num_states, vector<int> &index_mapping_by_jump_step, vector<double> &site_specific_rates, vector<short int> &indel_sequence, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
     int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
@@ -1729,6 +1836,44 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mappi
     vector<short int> new_sequence = generateRandomSequence(length, false);
     insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, site_specific_rates);
     
+    // if RATE_MATRIX approach is used -> update total_sub_rate and accummulated_rates
+    if (simulation_method == RATE_MATRIX)
+    {
+        // extract new_site_specific_rate
+        vector<double> new_site_specific_rates;
+        if (site_specific_rates.size() > 0)
+        {
+            for (int i = position; i < position + length; i++)
+                new_site_specific_rates.push_back(site_specific_rates[i]);
+        }
+        
+        // extract new_site_specific_model_index
+        vector<short int> new_site_specific_model_index;
+        if (site_specific_model_index.size() > 0)
+        {
+            for (int i = position; i < position + length; i++)
+                new_site_specific_model_index.push_back(site_specific_model_index[i]);
+        }
+        
+        // update total_sub_rate
+        double diff = computeTotalSubRate(new_site_specific_rates, new_site_specific_model_index, new_sequence, sub_rates, max_num_states);
+        total_sub_rate += diff;
+        
+        // update accummulated_rates
+        // update accummulated_rates of the inserted sites
+        accummulated_rates.insert(accummulated_rates.begin()+position, length, 0);
+        for (int i = position; i < position + length; i++)
+        {
+            int mixture_index = site_specific_model_index.size() == 0? 0:site_specific_model_index[i];
+            double site_rate = site_specific_rates.size() > 0?site_specific_rates[i]:1;
+            double prior_acc_rate = i > 0?accummulated_rates[i-1]:0;
+            accummulated_rates[i] = prior_acc_rate + site_rate*sub_rates[mixture_index*max_num_states + indel_sequence[i]];
+        }
+        // update accummulated_rates of the remaining sites
+        for (int i = position + length; i < accummulated_rates.size(); i++)
+            accummulated_rates[i] += diff;
+    }
+    
     // update the sequence_length
     sequence_length += length;
     
@@ -1748,7 +1893,7 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mappi
 /**
     handle deletion events
 */
-int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_sequence)
+int AliSimulator::handleDeletion(int sequence_length, int max_num_states, vector<short int> &indel_sequence, vector<double> site_specific_rates, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method)
 {
     // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
     int length = -1;
@@ -1772,11 +1917,26 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
     int real_deleted_length = 0;
-    for (int i = 0; i < length && (position + i) < indel_sequence.size(); i++)
+    vector<short int> deleted_sites;
+    vector<double> deleted_site_specific_rate;
+    vector<short int> deleted_site_specific_model_index;
+    int i;
+    for (i = 0; i < length && (position + i) < indel_sequence.size(); i++)
     {
         // if the current site is not a gap (has not been deleted) -> replacing it by a gap
         if (indel_sequence[position + i ] != STATE_UNKNOWN)
         {
+            // if RATE_MATRIX approach is used -> update deleted_sites and deleted_site_specific_rate to update total_sub_rate later
+            if (simulation_method == RATE_MATRIX)
+            {
+                deleted_sites.push_back(indel_sequence[position + i]);
+                if (site_specific_rates.size() > 0)
+                    deleted_site_specific_rate.push_back(site_specific_rates[position + i]);
+                if (site_specific_model_index.size() > 0)
+                    deleted_site_specific_model_index.push_back(site_specific_model_index[position + i]);
+            }
+            
+            // delete site
             indel_sequence[position + i ] = STATE_UNKNOWN;
             real_deleted_length++;
         }
@@ -1786,10 +1946,54 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
             i--;
             position++;
         }
+        
+        // if RATE_MATRIX approach is used -> update accummulated_rates
+        if (simulation_method == RATE_MATRIX)
+            accummulated_rates[position + i] = position + i > 0?accummulated_rates[position + i - 1]:0;
+    }
+    
+    // if RATE_MATRIX approach is used -> update total_sub_rate, and accummulated_rates
+    if (simulation_method == RATE_MATRIX)
+    {
+        // update total_sub_rate
+        double diff = -computeTotalSubRate(deleted_site_specific_rate, deleted_site_specific_model_index, deleted_sites, sub_rates, max_num_states);
+        total_sub_rate += diff;
+        
+        // update accummulated_rates
+        for (int j = position + i; j < accummulated_rates.size(); j++)
+            accummulated_rates[j] += diff;
     }
     
     // return deletion-size
     return real_deleted_length;
+}
+
+/**
+    handle substitution events
+*/
+void AliSimulator::handleSubs(int sequence_length, vector<double> site_specific_rates, int max_num_states, double* sub_rates, double &total_sub_rate, vector<double> &accummulated_rates, double* Jmatrix, vector<short int> &indel_sequence)
+{
+    // select a position where the substitution event occurs
+    double random_cumulative_rate = random_double() * total_sub_rate;
+    int pos = binarysearchItemWithAccumulatedProbabilityMatrix(accummulated_rates, random_cumulative_rate, 0, sequence_length - 1, 0);
+    
+    // extract the current state
+    short int current_state = indel_sequence[pos];
+    
+    // estimate the new state
+    int mixture_index = site_specific_model_index.size() == 0 ? 0:site_specific_model_index[pos];
+    int starting_index = mixture_index*max_num_states*max_num_states + max_num_states*current_state;
+    indel_sequence[pos] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(Jmatrix, starting_index, max_num_states, max_num_states/2);
+    
+    // update total_sub_rate
+    double current_site_rate = site_specific_rates.size() == 0 ? 1 : site_specific_rates[pos];
+    double diff = current_site_rate*(sub_rates[mixture_index*max_num_states + indel_sequence[pos]] - sub_rates[mixture_index*max_num_states + current_state]);
+    total_sub_rate += diff;
+    
+    // update accummulated_rates
+    if (diff != 0)
+        for (int i = pos; i < accummulated_rates.size(); i++)
+            accummulated_rates[i] += diff;
 }
 
 /**

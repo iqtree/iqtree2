@@ -1405,11 +1405,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_write_internal_sequences = false;
     params.alisim_only_unroot_tree = false;
     params.branch_distribution = NULL;
-    params.alisim_insertion_ratio = -1;
-    params.alisim_deletion_ratio = -1;
+    params.alisim_insertion_ratio = 0;
+    params.alisim_deletion_ratio = 0;
     params.alisim_insertion_distribution = IndelDistribution(GEO,0.5);
     params.alisim_deletion_distribution = IndelDistribution(GEO,0.5);
     params.alisim_mean_deletion_size = -1;
+    params.alisim_simulation_thresh = 0.001;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2520,13 +2521,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_deletion_ratio = convert_double(arg.c_str());
                 if (params.alisim_deletion_ratio < 0)
                     throw "<DELETION_RATE> must not be negative.";
-                
-                // reset INSERTION_RATE and DELETION_RATE if both of them are zero
-                if (params.alisim_deletion_ratio == 0 && params.alisim_insertion_ratio == 0)
-                {
-                    params.alisim_insertion_ratio = -1;
-                    params.alisim_deletion_ratio = -1;
-                }
                 
                 continue;
             }
