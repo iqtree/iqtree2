@@ -7,13 +7,7 @@ tools.cpp tools.h
 pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
-starttree.cpp starttree.h
-flatmatrix.cpp flatmatrix.h
-bionj.cpp
-bionj2.cpp bionj2.h
-stitchup.cpp
-upgma.h nj.h rapidnj.h auctionmatrix.h
-clustertree.h distancematrix.h heapsort.h
+heapsort.h
 parallel_sort.h parallel_mergesort.h
 progress.cpp progress.h
 statefrequency.cpp statefrequency.h
@@ -30,26 +24,3 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 target_link_libraries(utils lbfgsb sprng)
-
-add_executable(decentTree
-    decenttree.cpp
-    flatmatrix.cpp flatmatrix.h
-    starttree.cpp starttree.h
-    bionj.cpp
-    bionj2.cpp bionj2.h
-    upgma.h nj.h rapidnj.h auctionmatrix.h
-    clustertree.h distancematrix.h hammingdistance.h
-    stitchup.cpp
-    vectortypes.cpp vectortypes.h
-    
-    heapsort.h
-    gzstream.cpp gzstream.h
-    progress.cpp progress.h
-    my_assert.h "safe_io.h" timeutil.h operatingsystem.cpp operatingsystem.h)
-
-if(ZLIB_FOUND)
-  target_link_libraries(decentTree ${ZLIB_LIBRARIES})
-else(ZLIB_FOUND)
-  target_link_libraries(decentTree zlibstatic)
-endif(ZLIB_FOUND)
-

@@ -23,7 +23,7 @@
 
 
 #include "tools.h"
-#include "starttree.h" //for START_TREE_RECOGNIZED macro.
+#include <distancematrixtree/starttree.h> //for START_TREE_RECOGNIZED macro.
 #include "stringfunctions.h"
 #include "timeutil.h"
 #include "MPIHelper.h"

@@ -29,12 +29,12 @@
 #include <vector>      //for std::vector
 #include <math.h>      //for floor()
 #if USE_GZSTREAM
-#include "gzstream.h"  //for igzstream and pigzstream
+#include <utils/gzstream.h>  //for igzstream and pigzstream
 #else
 #include <fstream>     //for std::ifstream
 #endif
-#include "safe_io.h"   //for safeGetTrimmedLineAsStream
-#include "progress.h"  //for progress_display
+#include <utils/safe_io.h>   //for safeGetTrimmedLineAsStream
+#include <utils/progress.h>  //for progress_display
 
 #define MATRIX_ALIGNMENT 64
     //MUST be a power of 2 (else x & MATRIX_ALIGNMENT_MASK

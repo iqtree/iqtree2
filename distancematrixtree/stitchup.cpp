@@ -83,14 +83,16 @@
 //  and 24-Aug-20 (generating the newick file).
 //
 
+#include <utils/progress.h>
+#include <utils/heapsort.h> //for MinHeap template class
+#include <set>
+#include <math.h> //for floor()
+
 #include "starttree.h"
 #include "distancematrix.h"
 #include "nj.h"
 #include "clustertree.h"
-#include "progress.h"
-#include "heapsort.h" //for MinHeap template class
-#include <set>
-#include <math.h> //for floor()
+
 namespace StartTree
 {
 

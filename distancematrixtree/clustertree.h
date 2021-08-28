@@ -27,12 +27,12 @@
 #define clustertree_h
 
 #if      USE_GZSTREAM
-#include "gzstream.h"                //for igzstream
+#include <utils/gzstream.h>          //for igzstream
 #endif
 #include <fstream>
 #include <iostream>                  //for std::istream
 #include <sstream>                   //for std::stringstream
-#include "progress.h"                //for progress_display
+#include <utils/progress.h>          //for progress_display
 
 template <class T=double> struct Link {
     //

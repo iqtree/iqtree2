@@ -23,14 +23,14 @@
 #include <string>            //for std::string
 #include <iostream>          //for std::cout
 #include <math.h>            //for log
-#include "progress.h"        //for progress_display::setProgressDisplay()
+#include <utils/progress.h>        //for progress_display::setProgressDisplay()
+#include <utils/operatingsystem.h> //for getOSName
+#include <utils/hammingdistance.h> //for hammingDistance
 #include "starttree.h"       //for StartTree::Factory
-#include "operatingsystem.h" //for getOSName
 #include "flatmatrix.h"      //for FlatMatrix
 #include "distancematrix.h"  //for loadDistanceMatrixInto
-#include "hammingdistance.h" //for hammingDistance
 #if USE_GZSTREAM
-#include "gzstream.h"
+#include <utils/gzstream.h>
 #endif
 
 #define PROBLEM(x) if (1) problems << x << ".\n"; else 0

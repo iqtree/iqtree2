@@ -74,8 +74,8 @@
 #define rapidnj_h
 
 #include "nj.h"
-#include "parallel_mergesort.h"
-#include "timeutil.h"  //for getRealTime
+#include <utils/parallel_mergesort.h>
+#include <utils/timeutil.h>  //for getRealTime
 
 namespace StartTree
 {

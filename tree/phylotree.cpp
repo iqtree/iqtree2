@@ -21,8 +21,8 @@
  ***************************************************************************/
 #include "phylotree.h"
 #include "phylotreethreadingcontext.h"
+#include <distancematrixtree/starttree.h>
 #include <utils/progress.h>  //for progress_display
-#include <utils/starttree.h>
 #include <utils/stringfunctions.h> //for convert_string_vec
 //#include "rateheterogeneity.h"
 #include "alignment/alignmentpairwise.h"

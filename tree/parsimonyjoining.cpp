@@ -10,8 +10,8 @@
 #include <placement/blockallocator.h>
 #include <placement/taxontoplace.h>
 #include "phylotreethreadingcontext.h"
-#include <utils/rapidnj.h>
-#include <utils/auctionmatrix.h>
+#include <distancematrixtree/rapidnj.h>
+#include <distancematrixtree/auctionmatrix.h>
 #include <utils/timekeeper.h>
 #include <sprng/sprng.h>
 

@@ -71,7 +71,7 @@
 #define nj_h
 
 #include "upgma.h"     //for UPGMA_Matrix template class
-#include "my_assert.h" //for ASSERT macro
+#include <utils/my_assert.h> //for ASSERT macro
 
 namespace StartTree
 {

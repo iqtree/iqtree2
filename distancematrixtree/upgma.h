@@ -77,15 +77,17 @@
 #ifndef upgma_h
 #define upgma_h
 
-#include "distancematrix.h"          //for Matrix template class
-#include "vectortypes.h"             //for StrVector and IntVector
-#include "clustertree.h"             //for ClusterTree template class
+#include <utils/vectortypes.h>       //for StrVector and IntVector
+#include <utils/progress.h>          //for progress_display
+#include <utils/my_assert.h>         //for ASSERT macro
 #include <vector>                    //for std::vector
 #include <string>                    //sequence names stored as std::string
 #include <functional>                //for std::hash
 #include <algorithm>                 //for std::sort
-#include "progress.h"                //for progress_display
-#include "my_assert.h"               //for ASSERT macro
+
+#include "distancematrix.h"          //for Matrix template class
+#include "clustertree.h"             //for ClusterTree template class
+
 
 #if (!USE_PROGRESS_DISPLAY)
 typedef double progress_display;

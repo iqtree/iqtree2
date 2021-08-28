@@ -25,8 +25,8 @@
 #include <map>
 #include <iostream>
 #include <vector>
-#include "timeutil.h"       //for getRealTime()
-#include "vectortypes.h"    //for StrVector template class
+#include <utils/timeutil.h>       //for getRealTime()
+#include <utils/vectortypes.h>    //for StrVector template class
 
 namespace StartTree
 {

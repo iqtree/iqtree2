@@ -26,7 +26,7 @@
 #include <stdlib.h> //for size_t
 #include <vector>   //for std::vector
 #include <string>   //for std::string
-#include "vectortypes.h" //for StrVector
+#include <utils/vectortypes.h> //for StrVector
 
 class FlatMatrix {
 protected:

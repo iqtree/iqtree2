@@ -638,6 +638,7 @@ add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
 add_subdirectory(utils)
+add_subdirectory(distancematrixtree)
 add_subdirectory(pda)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
@@ -760,7 +761,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+target_link_libraries(iqtree2 pll ncl nclextra utils distancematrixtree pda lbfgsb whtest sprng vectorclass model
     gsl alignment tree placement yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (USE_TERRAPHAST)

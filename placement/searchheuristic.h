@@ -12,7 +12,7 @@
 #define searchheuristic_h
 
 #include <stdlib.h>
-#include <utils/distancematrix.h>
+#include <distancematrixtree/distancematrix.h>
 #include "placement.h" //for PlacementParameters
 
 class TaxonToPlace;

@@ -34,9 +34,9 @@
 #include <string.h>
 #include <time.h>
 
-#include "timeutil.h"    //JB2020-06-18 for getRealTime()
+#include <utils/timeutil.h>    //JB2020-06-18 for getRealTime()
 #include "starttree.h"
-#include "vectortypes.h" //JB2021-05-09 for StrVector
+#include <utils/vectortypes.h> //JB2021-05-09 for StrVector
 
 #define PREC 8                             /* precision of branch-lengths  */
 #define PRC  100

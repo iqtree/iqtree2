@@ -33,7 +33,7 @@
 #include <iostream>     //for std::fstream
 #include <sstream>      //for std::stringstream
 #if USE_GZSTREAM
-#include "gzstream.h"   //for ogzstream
+#include <utils/gzstream.h>   //for ogzstream
 #else
 #include <fstream>      //for std::ofstream
 #endif
