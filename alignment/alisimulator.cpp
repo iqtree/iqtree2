@@ -22,9 +22,9 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     estimateLengthRatio();
     
     if (expected_number_sites == -1)
-        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+        expected_num_sites = round(params->alisim_sequence_length/num_sites_per_state*length_ratio);
     else
-        expected_num_sites = expected_number_sites*length_ratio;
+        expected_num_sites = round(expected_number_sites*length_ratio);
     partition_rate = new_partition_rate;
     
     // check if base frequencies for DNA models are specified correctly
@@ -53,9 +53,9 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     estimateLengthRatio();
     
     if (expected_number_sites == -1)
-        expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+        expected_num_sites = round(params->alisim_sequence_length/num_sites_per_state*length_ratio);
     else
-        expected_num_sites = expected_number_sites*length_ratio;
+        expected_num_sites = round(expected_number_sites*length_ratio);
     partition_rate = new_partition_rate;
     
     // extract max length of taxa names

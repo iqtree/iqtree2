@@ -335,14 +335,6 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
                 branch_lengths[i] = (*it)->getLength(i);
         }
         
-        // update branch_lengths if Indels is used
-        /*if (indel_branch_length != -1)
-        {
-            double scale = indel_branch_length/(*it)->length;
-            for (int i = 0; i < branch_lengths.size(); i++)
-                branch_lengths[i] *= scale;
-        }*/
-        
         // initialize caching accumulated trans_matrices
         intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, branch_lengths, trans_matrix, model);
 

@@ -1008,7 +1008,7 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
         return;
     
     // determine the real sequence_length
-    if (node->sequence.size() > 0)
+    if (node->name!=ROOT_NAME && node->sequence.size() > 0)
     {
         sequence_length = node->sequence.size();
         stop = true;
