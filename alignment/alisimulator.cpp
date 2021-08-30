@@ -689,6 +689,10 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     delete[] sub_rates;
     delete[] Jmatrix;
     
+    // process delayed Fundi if it is delayed due to Insertion events
+    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio > 0)
+        processDelayedFundi(tree->root, tree->root);
+    
     // removing constant states if it's necessary
     if (length_ratio > 1)
         removeConstantSites();
@@ -742,18 +746,18 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
                 (*it)->node->sequence = indel_sequence;
         }
         
-        // permuting selected sites for FunDi model
-        if (params->alisim_fundi_taxon_set.size()>0)
+        // merge the simulated sequence with the indel_sequence
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->length >= 1.0/sequence_length && simulation_method == TRANS_PROB_MATRIX)
+            mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
+        
+        // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
+        if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
         {
             if (node->isLeaf())
                 permuteSelectedSites(fundi_items, node);
             if ((*it)->node->isLeaf())
                 permuteSelectedSites(fundi_items, (*it)->node);
         }
-        
-        // merge the simulated sequence with the indel_sequence
-        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->length >= 1.0/sequence_length && simulation_method == TRANS_PROB_MATRIX)
-            mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
         
         // writing and deleting simulated sequence immediately if possible
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
@@ -1247,6 +1251,23 @@ void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* no
             for (int i = 0; i < fundi_items.size(); i++)
                 node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
         }
+}
+
+/**
+    process delayed Fundi if it is delayed due to Insertion events
+*/
+void AliSimulator::processDelayedFundi(Node *node, Node *dad)
+{
+    // permute selected sites of the current node
+    if (node->isLeaf())
+        permuteSelectedSites(fundi_items, node);
+    
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        processDelayedFundi((*it)->node, node);
+    }
 }
 
 /**

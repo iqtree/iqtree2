@@ -163,6 +163,11 @@ protected:
     void permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node);
     
     /**
+        process delayed Fundi if it is delayed due to Insertion events
+    */
+    void processDelayedFundi(Node *node, Node *dad);
+    
+    /**
         writing and deleting simulated sequence immediately if possible
     */
     void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
