@@ -114,29 +114,36 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
                                   LikelihoodBlockPairs &blocks) {
     PhyloNeighbor* neigh1   = getLeftNeighbor();
     PhyloNeighbor* neigh2   = getRightNeighbor();
-    ParallelParsimonyCalculator c(phylo_tree, false);
-    parsimony_dirtiness    += c.schedulePartialParsimony(neigh1, first);
-    parsimony_dirtiness    += c.schedulePartialParsimony(neigh2, second);
-    c.calculate();
-    int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1);
-    int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2);
-    if ( partial_pars != nullptr ) {
-        if (0<parsimony_dirtiness) {
-            connection_cost = phylo_tree.computePartialParsimonyOutOfTree
-                              (neigh1->partial_pars, neigh2->partial_pars,
-                               partial_pars);
-        }
-    } else {
-        if (tree_parsimony_score==-1) {
-            int branch_cost_dummy = 0;
-            tree_parsimony_score  = phylo_tree.computeParsimonyOutOfTree
-                                    ( neigh1->partial_pars, neigh2->partial_pars,
-                                      &branch_cost_dummy);
-        }
-        connection_cost = tree_parsimony_score;
+    if (neigh1->partial_pars!=nullptr || 
+        neigh2->partial_pars!=nullptr) {
+        connection_cost = 0;
+        branch_cost     = 0;
     }
-    parsimony_dirtiness = 0;
-    branch_cost         = connection_cost - first_subtree_cost - second_subtree_cost;
+    else {
+        ParallelParsimonyCalculator c(phylo_tree, false);
+        parsimony_dirtiness    += c.schedulePartialParsimony(neigh1, first);
+        parsimony_dirtiness    += c.schedulePartialParsimony(neigh2, second);
+        c.calculate();
+        int second_subtree_cost = phylo_tree.getSubTreeParsimony(neigh1);
+        int first_subtree_cost  = phylo_tree.getSubTreeParsimony(neigh2);
+        if ( partial_pars != nullptr ) {
+            if (0<parsimony_dirtiness) {
+                connection_cost = phylo_tree.computePartialParsimonyOutOfTree
+                                (neigh1->partial_pars, neigh2->partial_pars,
+                                partial_pars);
+            }
+        } else {
+            if (tree_parsimony_score==-1) {
+                int branch_cost_dummy = 0;
+                tree_parsimony_score  = phylo_tree.computeParsimonyOutOfTree
+                                        ( neigh1->partial_pars, neigh2->partial_pars,
+                                        &branch_cost_dummy);
+            }
+            connection_cost = tree_parsimony_score;
+        }
+        parsimony_dirtiness = 0;
+        branch_cost         = connection_cost - first_subtree_cost - second_subtree_cost;
+    } 
     if (phylo_tree.leafNum < 50) {
         TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MAX, "TB Parsimony (net) was "
                       << connection_cost << " (" << branch_cost << ")"

@@ -12,6 +12,9 @@
 
 #include <string>
 
+#define DEFAULT_COST_FUNCTION  "MP"
+#define DEFAULT_HEURISTIC      ""
+
 class PlacementParameters {
 protected:
     std::string incremental_method;
@@ -68,6 +71,8 @@ public:
         @return the number of taxa to be removed, based on the R sub-parameter,
                 which can be specified as a number or a percentage.*/
     size_t        getNumberOfTaxaToRemoveAndReinsert(size_t countOfTaxa) const;
+
+    bool doesPlacementUseHammingDistance() const;
 
     /** indicates whether placement will use parsimony (more to the point:
         will it need to use partial parsimony vectors

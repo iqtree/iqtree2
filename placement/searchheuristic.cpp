@@ -17,6 +17,10 @@ bool SearchHeuristic::isGlobalSearch() const {
     return true;
 }
 
+bool SearchHeuristic::usesHammingDistance() const {
+    return false;
+}
+
 bool SearchHeuristic::usesLikelihood() const {
     return false;
 }
@@ -38,12 +42,16 @@ void SearchHeuristic::doneFiltering() {
 
 SearchHeuristic* SearchHeuristic::getSearchHeuristic
                  (const PlacementParameters &placement_params) {
-    auto heuristic = placement_params.getIncrementalParameter('H', "");
+    auto heuristic = placement_params.getIncrementalParameter
+                     ('H', DEFAULT_HEURISTIC);
     if (heuristic=="" || heuristic=="0") {
         return new SearchHeuristic;
     }
     else if (heuristic=="MP") {
         return new BaseballSearchHeuristic(new ParsimonyCostCalculator(false));
+    }
+    else if (heuristic=="HD") {
+        return new BaseballSearchHeuristic(new HammingDistanceCostCalculator());
     } else {
         std::stringstream s;
         s << "Did not recognize heuristic " << heuristic;
@@ -60,6 +68,10 @@ BaseballSearchHeuristic::BaseballSearchHeuristic
 
 bool BaseballSearchHeuristic::isGlobalSearch() const {
     return false;
+}
+
+bool BaseballSearchHeuristic::usesHammingDistance() const {
+    return calculator->usesHammingDistance();
 }
 
 bool BaseballSearchHeuristic::usesLikelihood() const {

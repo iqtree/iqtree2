@@ -4397,15 +4397,18 @@ double PhyloTree::computeDistanceMatrix() {
     return longest_dist;
 }
 
-void PhyloTree::decideDistanceFilePath(Params& params) {
+void PhyloTree::decideDistanceFilePath(const Params& params) {
     dist_file = params.out_prefix;
     if (!model_factory) {
-        if (params.compute_obs_dist)
+        if (params.compute_obs_dist) {
             dist_file += ".obsdist";
-        else
+        }
+        else {
             dist_file += ".mldist";
-    } else
+        }
+    } else {
         dist_file += ".mldist";
+    }
 }
 
 void PhyloTree::ensureDistanceMatrixAllocated(size_t minimum_rank) {

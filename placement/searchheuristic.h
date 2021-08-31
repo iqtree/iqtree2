@@ -25,6 +25,9 @@ class SearchHeuristic {
 public:
     virtual ~SearchHeuristic();
 
+    /** indicates if this earch heuristic makes use of hamming distances */
+    virtual bool usesHammingDistance() const;
+
     /** indicates if this earch heuristic makes use of partial likelihood vectors */
     virtual bool usesLikelihood() const;
 
@@ -94,8 +97,9 @@ public:
             (BaseballSearchHeuristic's destructor will delete it) */
     explicit BaseballSearchHeuristic(PlacementCostCalculator* calculatorToUse);
     virtual ~BaseballSearchHeuristic();
-    virtual bool isGlobalSearch() const override;
-    virtual bool usesLikelihood() const override;
+    virtual bool isGlobalSearch()      const override;
+    virtual bool usesHammingDistance() const override;
+    virtual bool usesLikelihood()      const override;
     virtual void prepareToFilter(PhyloTree& tree, TargetBranchRange& targets,
                                  intptr_t startTarget, intptr_t stopTarget,
                                  TaxaToPlace& taxa, 

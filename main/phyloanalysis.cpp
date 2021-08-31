@@ -2816,9 +2816,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 }
                 double start_bionj = getRealTime();
                 iqtree->computeBioNJ(params);
+
                 if (verbose_mode >= VerboseMode::VB_MED) {
                     cout << "Wall-clock time spent creating initial tree was "
                          << getRealTime() - start_bionj << " seconds" << endl;
+                }
+                if (params.incremental) {
+                    iqtree->setNumThreads(params.num_threads);
+                    iqtree->updateToMatchAlignment(iqtree->aln);
                 }
                 if (params.optimize_ml_tree_with_parsimony) {
                     iqtree->optimizeConstructedTree(false, VerboseMode::VB_MED);

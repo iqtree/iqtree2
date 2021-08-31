@@ -114,21 +114,29 @@ size_t  PlacementParameters::getNumberOfTaxaToRemoveAndReinsert
     return numberToRemove;
 }
 
+bool PlacementParameters::doesPlacementUseHammingDistance() const {
+    auto cf        = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
+    auto heuristic = getIncrementalParameter('H', DEFAULT_HEURISTIC);
+
+    return cf.find("HD") != std::string::npos
+        || heuristic.find("MP") != std::string::npos;
+}
+
 bool  PlacementParameters::doesPlacementUseLikelihood() const {
-    auto cf = getIncrementalParameter('C', "MP");
+    auto cf = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
     return cf.find("ML") != std::string::npos;
 }
 
 bool  PlacementParameters::doesPlacementUseParsimony() const {
-    auto cf = getIncrementalParameter('C', "MP");
-    auto heuristic = getIncrementalParameter('H', "");
+    auto cf        = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
+    auto heuristic = getIncrementalParameter('H', DEFAULT_HEURISTIC);
     return cf.find("MP") != std::string::npos
         || heuristic.find("MP") != std::string::npos;
 }
 
 bool  PlacementParameters::doesPlacementUseSankoffParsimony() const {
-    auto cf = getIncrementalParameter('C', "MP");
-    auto heuristic = getIncrementalParameter('H', "");
+    auto cf = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
+    auto heuristic = getIncrementalParameter('H', DEFAULT_HEURISTIC);
 
     return (cf == "SMP" || heuristic == "SMP");
 }

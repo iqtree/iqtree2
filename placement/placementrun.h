@@ -48,7 +48,8 @@ public:
     BlockAllocator*            block_allocator;   //
     SearchHeuristic*           heuristic;         //global? or localized?
     PlacementCostCalculator*   calculator;        //
-    bool                       use_likelihood;    //true if heuristic or calculator do
+    bool                       use_hamming_distance; //true if heuristic or calculator do
+    bool                       use_likelihood;       //true if heuristic or calculator do
 
     TaxonPlacementOptimizer*   taxon_placement_optimizer;
     BatchPlacementOptimizer*   batch_placement_optimizer;

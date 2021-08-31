@@ -192,9 +192,11 @@ void TaxonToPlace::insertIntoTree(PhyloTree& phylo_tree, BlockAllocator& b,
     bestPlacement.lenToNode2    = new_interior->findNeighbor(node_2)->length;
     bestPlacement.lenToNewTaxon = new_interior->findNeighbor(new_leaf)->length;
     
-    FOR_EACH_ADJACENT_PHYLO_NODE(new_interior, nullptr, it, node) {
-        ASSERT(node->findNeighbor(new_interior)->isParsimonyComputed());
-        ASSERT(new_interior->findNeighbor(node)->isParsimonyComputed());
+    if (calculator.usesParsimony()) {
+        FOR_EACH_ADJACENT_PHYLO_NODE(new_interior, nullptr, it, node) {
+            ASSERT(node->findNeighbor(new_interior)->isParsimonyComputed());
+            ASSERT(new_interior->findNeighbor(node)->isParsimonyComputed());
+        }
     }
     
     ++phylo_tree.leafNum;

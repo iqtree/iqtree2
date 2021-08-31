@@ -35,6 +35,7 @@ PlacementRun::PlacementRun(PhyloTree& tree, const PlacementParameters& parameter
     , block_allocator(nullptr)
     , heuristic(SearchHeuristic::getSearchHeuristic(placement_params))
     , calculator(PlacementCostCalculator::getNewCostCalculator(placement_params))
+    , use_hamming_distance(heuristic->usesHammingDistance() || calculator->usesHammingDistance())
     , use_likelihood(heuristic->usesLikelihood() || calculator->usesLikelihood())
     , taxon_placement_optimizer(TaxonPlacementOptimizer::getNewTaxonPlacementOptimizer())
     , batch_placement_optimizer(BatchPlacementOptimizer::getNewBatchPlacementOptimizer(be_silent))
@@ -43,7 +44,7 @@ PlacementRun::PlacementRun(PhyloTree& tree, const PlacementParameters& parameter
     , overall      ("adding new taxa"), initializing ("initializing")
     , refreshTime  ("Refresh"), searchTime ("Search"), rankingTime  ("Ranking")
     , insertTime   ("Insert"),  optoTime   ("Post-Batch Optimization") {
-    if (use_likelihood) {
+    if (use_likelihood || use_hamming_distance) {
         phylo_tree.prepareToComputeDistances(); //Set up state look-up vectors
     }
 }
@@ -475,7 +476,7 @@ void PlacementRun::placeCandidatesInBatches
 }
                      
 PlacementRun::~PlacementRun() {
-    if (calculator->usesLikelihood()) {
+    if (use_likelihood || use_hamming_distance) {
         phylo_tree.doneComputingDistances();
     }
     delete global_placement_optimizer;

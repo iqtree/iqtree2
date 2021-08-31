@@ -794,6 +794,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             logLine(msg.str());
         }
         if (params->incremental) {
+            setNumThreads(params->num_threads);
             updateToMatchAlignment(aln);
         } else {
             setAlignment(aln);
@@ -933,7 +934,12 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             ASSERT(0 && "Tree type not recognized by IQTree::computeInitialTree");
             break;        
         }
+        if (params->incremental) {
+            setNumThreads(params->num_threads);
+            updateToMatchAlignment(aln);
+        }
         optimizeConstructedTree(false, VerboseMode::VB_MED);
+        ensureNumberOfThreadsIsSet(params, false);
         fixNegativeBranches(true);
         initTree = getTreeString();
         CKP_SAVE(initTree);

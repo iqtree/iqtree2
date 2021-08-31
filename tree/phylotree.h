@@ -2191,7 +2191,7 @@ public:
 
     virtual double computeDist(int seq1, int seq2, double initial_dist);
 
-    void decideDistanceFilePath(Params& params);
+    void decideDistanceFilePath(const Params& params);
     
     void printDistanceFile() const;
     

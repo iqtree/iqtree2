@@ -9,14 +9,17 @@
 #include "placementcostcalculator.h"
 #include "taxontoplace.h"
 #include "placementtraversalinfo.h"
+#include <utils/hammingdistance.h>  //for hammingDistance() template function
 
 PlacementCostCalculator::~PlacementCostCalculator() = default;
 
-bool PlacementCostCalculator::usesLikelihood()       { return false; }
+bool PlacementCostCalculator::usesHammingDistance()  const { return false; }
 
-bool PlacementCostCalculator::usesParsimony()        { return false; }
+bool PlacementCostCalculator::usesLikelihood()       const { return false; }
 
-bool PlacementCostCalculator::usesSankoffParsimony() { return false; }
+bool PlacementCostCalculator::usesParsimony()        const { return false; }
+
+bool PlacementCostCalculator::usesSankoffParsimony() const { return false; }
 
 void PlacementCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
                                                   const TaxonToPlace& taxon,
@@ -28,13 +31,55 @@ void PlacementCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
     placement.lenToNode2 = placement.lenToNode1;
 }
 
+HammingDistanceCostCalculator::HammingDistanceCostCalculator() = default;
+
+bool HammingDistanceCostCalculator::usesHammingDistance() const {
+    return true;
+}
+
+void HammingDistanceCostCalculator::assessPlacementCost
+        (PhyloTree &phylo_tree, const TaxonToPlace &taxon, 
+         PossiblePlacement &placement) const {
+    auto target = placement.getTarget();
+
+    char     unk         = static_cast<char>(phylo_tree.aln->STATE_UNKNOWN);
+    auto     freq_vector = phylo_tree.getConvertedSequenceFrequencies();
+    intptr_t seq_len     = phylo_tree.getConvertedSequenceLength();
+    double   denominator = (double)phylo_tree.aln->getNSite();
+    const char* that_seq = nullptr;
+
+    if (target->first->isLeaf()) {
+        that_seq = phylo_tree.getConvertedSequenceByNumber(target->first->id);
+    } else if (target->second->isLeaf()) {
+        that_seq = phylo_tree.getConvertedSequenceByNumber(target->first->id);
+    }
+
+    if (that_seq==nullptr) {
+        placement.score = 10.0; //Don't want it here!
+    }
+    else {
+        const char* this_seq = phylo_tree.getConvertedSequenceByNumber(taxon.getTaxonId());
+        double unknown_freq  = 0;
+        double hamming_dist  = hammingDistance(unk, this_seq, that_seq,
+                                            seq_len, freq_vector, unknown_freq);
+        if (unknown_freq < denominator) {
+            placement.score = hamming_dist / (denominator - unknown_freq);
+        } else {
+            placement.score = 0;
+        }
+    }
+    placement.lenToNewTaxon = -1; //Let Parsimony &/or Likelihood decide
+    placement.lenToNode1    = -1; //Ditto
+    placement.lenToNode2    = -1; //Double Ditto
+}
+
 ParsimonyCostCalculator::ParsimonyCostCalculator(bool useSankoff)
 : sankoff(useSankoff) {
 }
 
-bool ParsimonyCostCalculator::usesParsimony()        { return true; }
+bool ParsimonyCostCalculator::usesParsimony()        const { return true; }
 
-bool ParsimonyCostCalculator::usesSankoffParsimony() { return sankoff; }
+bool ParsimonyCostCalculator::usesSankoffParsimony() const { return sankoff; }
 
 void ParsimonyCostCalculator::assessPlacementCost(PhyloTree& phylo_tree,
                                  const TaxonToPlace& taxon,
@@ -74,7 +119,7 @@ LikelihoodCostCalculator::~LikelihoodCostCalculator()
 {
 }
 
-bool LikelihoodCostCalculator::usesLikelihood() {
+bool LikelihoodCostCalculator::usesLikelihood() const {
     return true;
 }
 
@@ -239,7 +284,7 @@ void LikelihoodCostCalculator::assessPlacementCost(PhyloTree& tree, const TaxonT
 PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator
                          (const PlacementParameters& params) {
     
-    auto cf = params.getIncrementalParameter('C', "MP");
+    auto cf = params.getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
     if (cf=="ML") {
         return new LikelihoodCostCalculator(true);
     } else if (cf=="FML") {
@@ -248,6 +293,8 @@ PlacementCostCalculator* PlacementCostCalculator::getNewCostCalculator
         return new ParsimonyCostCalculator(false);
     } else if (cf=="SMP") {
         return new ParsimonyCostCalculator(true);
+    } else if (cf=="HD") {
+        return new HammingDistanceCostCalculator();
     }
     outError("No cost calculator class available for specified cost function");
     return nullptr;

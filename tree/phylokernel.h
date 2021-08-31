@@ -1841,9 +1841,9 @@ int PhyloTree::getSubTreeParsimonyFastSIMD(PhyloNeighbor* dad_branch) const {
     //records total subtree parsimony
     const size_t NUM_BITS   = VectorClass::size() * UINT_BITS;
     const size_t nstates    = aln->getMaxNumStates();
-    const size_t nsites     = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
+    const size_t nsites     = (aln->num_parsimony_sites+NUM_BITS-1) / NUM_BITS;
     const size_t VCSIZE     = VectorClass::size();
-    auto total = nstates*VCSIZE*nsites;
+    auto         total      = nstates*VCSIZE*nsites;
     return dad_branch->partial_pars[total];
 }
 

@@ -29,24 +29,30 @@ public:
     virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
                                      PossiblePlacement& p) const;
 
+    /** Indicate whether this placement cost calculator does hamming distance calculations
+        (and needs support for multi-threaded distance calculation)
+     @returns true if it does parsimony calculations, false if not
+     */
+    virtual bool usesHammingDistance() const;
+
     /** Indicate whether this placement cost calculator does parsimony calculations
      (and needs PhyloNeighbor instances, for example, to have partial parsimony vectors allocated)
      @returns true if it does parsimony calculations, false if not
      */
-    virtual bool usesParsimony();
+    virtual bool usesParsimony() const;
     
     /** Indicate whether this placement cost calculator does likelihood calculations
      (and needs PhyloNeighbor instances, for example, to have partial likelihood vectors allocated)
      @returns true if it does likelihood calculations, false if not
      */
-    virtual bool usesLikelihood();
+    virtual bool usesLikelihood() const;
 
     /** Indicate whether this placement cost calculator uses sankoff parsimony
      (and needs PhyloNeighbor instances, for example, to have partial parsimony vectors allocated)
      @returns true if it does SANKOFF parsimony calculations, false if not
      (so true if uses regular parsimony)
      */
-    virtual bool usesSankoffParsimony();
+    virtual bool usesSankoffParsimony() const;
 
     /**
      @param  the placement const function 
@@ -56,13 +62,22 @@ public:
     static PlacementCostCalculator* getNewCostCalculator(const PlacementParameters &params);
 };
 
+class HammingDistanceCostCalculator : public PlacementCostCalculator {
+public:
+    HammingDistanceCostCalculator();
+    virtual bool usesHammingDistance() const override;
+    virtual void assessPlacementCost(PhyloTree& phylo_tree,
+                                     const TaxonToPlace& taxon,
+                                     PossiblePlacement& placement) const override;
+};
+
 class ParsimonyCostCalculator : public PlacementCostCalculator {
 private:
     bool sankoff;
 public:
     explicit ParsimonyCostCalculator(bool usesSankoff);
-    virtual bool usesParsimony() override;
-    virtual bool usesSankoffParsimony() override;
+    virtual bool usesParsimony() const override;
+    virtual bool usesSankoffParsimony() const override;
     virtual void assessPlacementCost(PhyloTree& phylo_tree,
                                      const TaxonToPlace& taxon,
                                      PossiblePlacement& placement) const override;
@@ -75,7 +90,7 @@ public:
     typedef ParsimonyCostCalculator super;
     explicit LikelihoodCostCalculator(bool useMidpoint);
     ~LikelihoodCostCalculator();
-    virtual bool usesLikelihood() override;
+    virtual bool usesLikelihood() const override;
     virtual void assessPlacementCost(PhyloTree& tree, const TaxonToPlace& taxon,
                                      PossiblePlacement& placement) const override;
 };
