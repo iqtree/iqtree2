@@ -2526,16 +2526,32 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--indel-size") == 0) {
                 cnt++;
-                string err_msg = "Use --indel-size <INS_DIS>,<DEL_DIS>. Notes: <INS_DIS>,<DEL_DIS> could be names of user-defined distributions, or NB{<int_r>/<double_q>}, POW{<double_a>[/<int_max>]}, LAV{<double_a>/<int_max>}, GEO{<double_p>}, which specifies Negative Binomial, Zipfian, Lavalette, and Geometric distribution, respectively.";
+                string err_msg = "Use --indel-size <INS_DIS>,<DEL_DIS>. Notes: <INS_DIS>,<DEL_DIS> could be names of user-defined distributions, or NB{<int_r>,<double_q>}, POW{<double_a>[,<int_max>]}, LAV{<double_a>,<int_max>}, GEO{<double_p>}, which specifies Negative Binomial, Zipfian, Lavalette, and Geometric distribution, respectively.";
                 if (cnt >= argc)
                     throw err_msg;
                 
+                // seek separator position
                 string arg = argv[cnt];
-                char delimiter = ',';
+                int pos = -1;
+                bool inside_bracket = false;
+                for (int i = 0; i < arg.length(); i++)
+                {
+                    // detect brackets
+                    if (arg[i] == '{')
+                        inside_bracket = true;
+                    else if (arg[i] == '}')
+                        inside_bracket = false;
+                       
+                    // only check separator outside brackets
+                    if (!inside_bracket && (arg[i] == ',' || arg[i] == '/'))
+                    {
+                        pos = i;
+                        break;
+                    }
+                }
                 
-                // validate the input
-                size_t pos = arg.find(delimiter);
-                if (pos == std::string::npos)
+                // make sure the separator is found
+                if (pos == -1)
                     throw err_msg;
                 
                 // get INSERTION_DISTRIBUTION
@@ -6033,7 +6049,9 @@ IndelDistribution parseIndelDis(string input)
     IndelDistribution indel_dis = IndelDistribution(USER_DEFINED, -1, -1, input);
     
     // detect the seperator
-    char delimiter = '/';
+    char delimiter = ',';
+    if (input.find('/') != std::string::npos)
+        delimiter = '/';
     size_t pos;
     
     // parse negative binomial distribution
