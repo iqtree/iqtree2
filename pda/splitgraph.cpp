@@ -539,7 +539,8 @@ void SplitGraph::generateCircular(Params &params) {
     taxa = new NxsTaxaBlock();
     splits = new MSplitsBlock(this);
 
-    double threshold = (ntaxa > 3) ? (double)(num_splits - ntaxa) / (ntaxa*(ntaxa-3)/2) : 0.0;
+    double threshold = (ntaxa > 3) ? (double)(num_splits - ntaxa) / (double)(ntaxa*(ntaxa-3)/2.0) 
+                                   : 0.0;
 
     // insert all trivial splits
     for (i = 0; i < ntaxa; i++) {
@@ -776,11 +777,12 @@ bool SplitGraph::isWeaklyCompatible() {
 
 void SplitGraph::getTaxaName(StrVector &taxname) {
     taxname.clear();
-    for (int i = 0; i < getNTaxa(); i++)
+    for (int i = 0; i < getNTaxa(); i++) {
         taxname.push_back(taxa->GetTaxonLabel(i));
+    }
 }
 
-int SplitGraph::findLeafName(string &name) {
+int SplitGraph::findLeafName(const string &name) {
     for (int i = 0; i < getNTaxa(); i++)
         if (taxa->GetTaxonLabel(i) == name)
             return i;

@@ -314,6 +314,7 @@ std::string string_trimmed(const std::string& s) {
     std::string sCopy(s);
     sCopy.erase(sCopy.find_last_not_of(" \n\r\t")+1);
     sCopy.erase(0, sCopy.find_first_not_of(" \n\r\t"));
+    return sCopy;
 }
 
 //These three functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:

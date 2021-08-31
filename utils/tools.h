@@ -799,8 +799,8 @@ public:
     /** pvalue cutoff (default: 0.05) */
     double symtest_pcutoff;
 
-    /** TRUE to print all pairwise statistics */
-    double symtest_stat;
+    /** true to print all pairwise statistics */
+    bool symtest_stat;
 
     /** Times to shuffle characters within columns of the alignment */
     int symtest_shuffle;

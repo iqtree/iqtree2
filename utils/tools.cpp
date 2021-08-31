@@ -1810,10 +1810,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc) {
                     throw "Use -rcluster-max <num>";
                 }
-                params.partfinder_rcluster_max = convert_int(argv[cnt]);
+                auto rcluster_max = convert_int(argv[cnt]);
+                
                 if (params.partfinder_rcluster_max <= 0) {
                     throw "rcluster-max must be between > 0";
                 }
+                params.partfinder_rcluster_max = rcluster_max;
                 if (params.partfinder_rcluster == 100) {
                     params.partfinder_rcluster = 99.9999;
                 }
@@ -5158,16 +5160,17 @@ ALGORITHM:	Adapted from a polynomial approximation in:
  */
 
 double Normalz(double z) /*VAR returns cumulative probability from -oo to z VAR normal z value */ {
-    double y, x, w;
+    double x;
 
-    if (z == 0.0)
+    if (z == 0.0) {
         x = 0.0;
+    }
     else {
-        y = 0.5 * fabs(z);
+        double y = 0.5 * fabs(z);
         if (y >= (Z_MAX * 0.5))
             x = 1.0;
         else if (y < 1.0) {
-            w = y*y;
+            double w = y*y;
             x = ((((((((0.000124818987 * w
                     - 0.001075204047) * w + 0.005198775019) * w
                     - 0.019198292004) * w + 0.059054035642) * w
