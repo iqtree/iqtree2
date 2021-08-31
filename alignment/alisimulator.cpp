@@ -723,7 +723,7 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
         vector<int> index_mapping_by_jump_step;
         
         // if branch_length is too short (less than 1 substitution is expected to occur) -> clone the sequence from the parent's node
-        if ((*it)->length < 1.0/sequence_length)
+        if ((*it)->length < 0.5/sequence_length)
             (*it)->node->sequence = node->sequence;
         else
         {

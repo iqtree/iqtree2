@@ -2569,6 +2569,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.branch_distribution = argv[cnt];
                 continue;
             }
+            if (strcmp(argv[cnt], "--simulation-thresh") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "--simulation-thresh <threshold>";
+                params.alisim_simulation_thresh = convert_double(argv[cnt]);
+                continue;
+            }
 			if (strcmp(argv[cnt], "-st") == 0 || strcmp(argv[cnt], "--seqtype") == 0) {
 				cnt++;
 				if (cnt >= argc)
