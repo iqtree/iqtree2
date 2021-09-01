@@ -280,6 +280,10 @@ protected:
     */
     void rootTree();
     
+    /**
+        compute the simulation threshold to switch between Rate matrix and Probability matrix
+    */
+    void computeSimThresh(int seq_length);
     
 public:
     

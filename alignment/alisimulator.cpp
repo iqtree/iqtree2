@@ -660,6 +660,9 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     if (!tree->rooted)
         rootTree();
     
+    // compute the threshold to switch between Rate matrix and Probability matrix
+    computeSimThresh(expected_num_sites);
+    
     // initialize sub_rates, J_Matrix from Q_matrix
     int num_mixture_models = model->getNMixtures();
     sub_rates = new double[num_mixture_models*max_num_states];
@@ -1751,11 +1754,14 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
 
     }
     
-    // insert gaps to other nodes
+    // if insertion events occur -> insert gaps to other nodes
     if (index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1]>0)
     {
         bool stop_inserting_gaps = false;
         insertGapsForInsertionEvents(index_mapping_by_jump_step, (*it)->node->id, tree->root, tree->root, stop_inserting_gaps);
+        
+        // re-compute the threshold to switch between Rate matrix and Probability matrix
+        computeSimThresh(sequence_length);
     }
 }
 
@@ -2135,5 +2141,32 @@ void AliSimulator::rootTree()
         tree->root = new_root;
         tree->rooted = true;
         tree->leafNum++;
+    }
+}
+
+/**
+    compute the simulation threshold to switch between Rate matrix and Probability matrix
+*/
+void AliSimulator::computeSimThresh(int seq_length)
+{
+    // don't re-set the threshold if the user has specified it
+    if (params->original_params.find("--simulation-thresh") == std::string::npos) {
+        // initialize the empirical constant c to compute the threshold (threshold = c/sequence_length)
+        vector<double> empirical_c = {7,5,1,1,5,1,0.4,0.4};
+        
+        // compute the log of the sequence length (round upper)
+        int log_seq_length = ceil(log10(seq_length));
+        
+        // extract the rate type: continuous gamma is 0; other is 1
+        short int rate_type = tree->getModelFactory()->is_continuous_gamma?0:1;
+        
+        // standardize the log_seq_length as the empirical constant is recorded only for the sequence length between 10^3 and 10^6
+        if (log_seq_length > 6)
+            log_seq_length = 6;
+        if (log_seq_length < 3)
+            log_seq_length = 3;
+        
+        // extract the threshold
+        params->alisim_simulation_thresh = empirical_c[rate_type*4 + (log_seq_length - 3)]/seq_length;
     }
 }

@@ -2590,6 +2590,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "--simulation-thresh <threshold>";
                 params.alisim_simulation_thresh = convert_double(argv[cnt]);
+                if (params.alisim_simulation_thresh < 0 || params.alisim_simulation_thresh > 1)
+                    throw "<threshold> must be between 0 and 1. Please check and try again!";
                 continue;
             }
 			if (strcmp(argv[cnt], "-st") == 0 || strcmp(argv[cnt], "--seqtype") == 0) {
@@ -5105,7 +5107,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     {
         if (!params.aln_file)
         {
-            params.user_file = (char*) "randomtree.treefile";
+            string tmp_user_file = "randomtree.treefile";
+            params.user_file = new char[tmp_user_file.length() + 1];
+            strcpy(params.user_file, tmp_user_file.c_str());
         }
         else
         {
