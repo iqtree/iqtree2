@@ -64,12 +64,15 @@ namespace StartTree
     f.advertiseTreeBuilder( new Builder<type>( shortName, longName))
 
 void addBioNJ2020TreeBuilders(Factory& f) {
-    const char* defaultName = "NJ-R";
+    const char* defaultName = "RapidNJ";
     ADVERTISE(NJMatrix<NJFloat>,     "NJ",      "Neighbour Joining (Saitou, Nei [1987])");
     ADVERTISE(UNJMatrix<NJFloat>,    "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
     ADVERTISE(RapidNJ,               "NJ-R",    "Rapid Neighbour Joining"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
-    ADVERTISE(FancyNJMatrix<NJFloat>,"RapidNJ", "Rapid Neighbour Joining"
+    ADVERTISE(RapidNJ,            defaultName,  "Rapid Neighbour Joining"
+                                                " (Simonsen, Mailund, Pedersen [2011])");
+
+    ADVERTISE(FancyNJMatrix<NJFloat>,"BROKEN",  "Rapid Neighbour Joining (Broken Version)"
                                                 " (Simonsen, Mailund, Pedersen [2011]) (default)");
 
 #ifdef USE_VECTORCLASS_LIBRARY
