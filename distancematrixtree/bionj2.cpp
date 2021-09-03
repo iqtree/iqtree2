@@ -55,6 +55,7 @@
 #include "nj.h"
 #include "rapidnj.h"
 #include "auctionmatrix.h"
+#include "fancyrapidnj.h"
 
 namespace StartTree
 {
@@ -63,11 +64,14 @@ namespace StartTree
     f.advertiseTreeBuilder( new Builder<type>( shortName, longName))
 
 void addBioNJ2020TreeBuilders(Factory& f) {
-    const char* defaultName = "RapidNJ";
-    ADVERTISE(NJMatrix<NJFloat>,    "NJ",      "Neighbour Joining (Saitou, Nei [1987])");
-    ADVERTISE(UNJMatrix<NJFloat>,   "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
-    ADVERTISE(RapidNJ,              "NJ-R",    "Rapid Neighbour Joining"
-                                               " (Simonsen, Mailund, Pedersen [2011])");
+    const char* defaultName = "NJ-R";
+    ADVERTISE(NJMatrix<NJFloat>,     "NJ",      "Neighbour Joining (Saitou, Nei [1987])");
+    ADVERTISE(UNJMatrix<NJFloat>,    "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
+    ADVERTISE(RapidNJ,               "NJ-R",    "Rapid Neighbour Joining"
+                                                " (Simonsen, Mailund, Pedersen [2011])");
+    ADVERTISE(FancyNJMatrix<NJFloat>,"RapidNJ", "Rapid Neighbour Joining"
+                                                " (Simonsen, Mailund, Pedersen [2011]) (default)");
+
 #ifdef USE_VECTORCLASS_LIBRARY
     ADVERTISE(VectorNJ,             "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");
 #endif
@@ -82,7 +86,6 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     ADVERTISE(VectorizedUPGMA_Matrix<NJFloat>, "UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])");
 #endif
     ADVERTISE(BoundingMatrix<double>,"NJ-R-D", "Double precision Rapid Neighbour Joining");
-    ADVERTISE(RapidNJ,           defaultName,  "Rapid Neighbour Joining (Simonsen, Mailund, Pedersen [2011]) (default)");
     f.setNameOfDefaultTreeBuilder(defaultName);
     ADVERTISE(DistanceAuctionMatrix, "AUCTION",    "Auction Joining");
 }

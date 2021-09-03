@@ -502,7 +502,7 @@ int obeyCommandLineOptions(DecentTreeOptions& options) {
     else if (succeeded && options.isMatrixToBeLoaded) {
         succeeded = algorithm->constructTreeInMemory(m.getSequenceNames(),
                                                      m.getDistanceMatrix(),
-                                                     options.outputFilePath);    
+                                                     options.outputFilePath);
     }
     else if (!options.inputFilePath.empty()) {
         succeeded = algorithm->constructTree(options.inputFilePath, 

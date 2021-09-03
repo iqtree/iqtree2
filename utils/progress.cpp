@@ -38,14 +38,15 @@ namespace {
     bool isTerminal = false;
 }
 
-progress_display::progress_display( double workToDo, const char* doingWhat
-                                   , const char* verb, const char* unitName)
+progress_display::progress_display( double      workToDo, const char* doingWhat
+                                  , const char* verb,     const char* unitName)
     : startTime(getRealTime()),   startCPUTime(getCPUTime())
     , totalWorkToDo(workToDo),    workDone(0.0)
     , taskDescription(doingWhat), isDone(false)
     , workVerb(verb),             workUnitName(unitName)
     , atMost(false),              hidden(0)
-    , termout(CONSOLE_FILE, std::ios_base::out) {
+    , termout(CONSOLE_FILE, std::ios_base::out)
+    , failed(false) {
         lastReportedWork    = 0.0;
         lastReportedTime    = startTime;
         lastReportedCPUTime = startCPUTime;
@@ -160,13 +161,28 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
     }
 }
 
+void progress_display::markAsFailed() {
+    bool already_failed = failed;
+    failed = true;
+    if (!already_failed) {
+        double time = getRealTime();
+        double cpu  = getCPUTime();
+        reportProgress(time, cpu, false);
+    }
+}
+
 void progress_display::appendHowMuchDone(bool &verbed, std::ostringstream& progress) {
     if (!taskDescription.empty()) {
         progress << taskDescription << ":";
     }
-    if (totalWorkToDo <= workDone) {
+    if (totalWorkToDo <= workDone || failed) {
         if (!taskDescription.empty()) {
-            progress << " done";
+            if (failed) {
+                progress << " failed";
+            }
+            else {
+                progress << " done";
+            }
         }
         verbed = true;
     } else if (!workVerb.empty() && !workUnitName.empty()) {

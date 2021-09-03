@@ -40,23 +40,25 @@ public:
     void setWorkRemaining    (double newEstimate);
     void setIsEstimateABound (bool   isEstimateAnUpperBound);
     void reportProgress      (double time, double cpu, bool newline);
+    void markAsFailed        ();
     static void setProgressDisplay(bool displayIt);
     static bool getProgressDisplay();
 protected:
-    double startTime;
-    double startCPUTime;
-    double totalWorkToDo;
-    double workDone;             //Amount of work done so far
-    std::string taskDescription; //A description of the task
-    bool        isDone;          //True if the task has been completed
-    std::string workVerb;        //A past tense verb (e.g. sorted)
-    std::string workUnitName;    //A singular noun   (e.g. row)
-    double lastReportedWork;     //Last reported work done
-    double lastReportedTime;     //Last reported wall-clock time
-    double lastReportedCPUTime;  //Last reported CPU time
-    bool   atMost;               //Estimate of work to do is an upper bound
-    int    hidden;               //How many more times has hide() been called than show()
-    std::fstream termout;        //Terminal output stream (not standard output!)
+    double       startTime;
+    double       startCPUTime;
+    double       totalWorkToDo;
+    double       workDone;            //Amount of work done so far
+    std::string  taskDescription;     //A description of the task
+    bool         isDone;              //True if the task has been completed
+    std::string  workVerb;            //A past tense verb (e.g. sorted)
+    std::string  workUnitName;        //A singular noun   (e.g. row)
+    double       lastReportedWork;    //Last reported work done
+    double       lastReportedTime;    //Last reported wall-clock time
+    double       lastReportedCPUTime; //Last reported CPU time
+    bool         atMost;              //Estimate of work to do is an upper bound
+    int          hidden;              //How many more times has hide() been called than show()
+    std::fstream termout;             //Terminal output stream (not standard output!)
+    bool         failed;              //Becomes true if markAsFailed() has been called.
 
     void appendHowMuchDone  (bool &verbed, std::ostringstream& progress);
     void appendUsage        (bool verbed,  double elapsedTime, double cpu,

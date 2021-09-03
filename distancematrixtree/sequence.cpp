@@ -625,10 +625,10 @@ bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
     bool   isTriangle = output_format.find("lower") != std::string::npos ||
                         output_format.find("upper") != std::string::npos;
     double halfIfTriangle = isTriangle ? 0.5 : 1.0;
-    double calculations   = static_cast<double>(rank) 
-                            * static_cast<double>(rank) * halfIfTriangle;
 
     #if USE_PROGRESS_DISPLAY
+    double calculations   = static_cast<double>(rank) 
+                          * static_cast<double>(rank) * halfIfTriangle;
     const char* task = report_progress ? "Writing distance matrix file": "";
     progress_display progress(calculations, task );
     #else

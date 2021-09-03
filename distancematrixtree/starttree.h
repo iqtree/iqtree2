@@ -44,6 +44,7 @@ namespace StartTree
             ( const StrVector &sequenceNames
              , const double *distanceMatrix
              , const std::string & newickTreeFilePath) = 0;
+
         virtual const std::string& getName() const = 0;
         virtual const std::string& getDescription() = 0;
         virtual void beSilent() = 0;
@@ -91,6 +92,7 @@ namespace StartTree
         bool  silent;
         bool  isOutputToBeZipped;
         int   precision;
+
         bool  constructTreeWith(B& builder) {
             double buildStart    = getRealTime();
             double buildStartCPU = getCPUTime();
@@ -164,6 +166,11 @@ namespace StartTree
                 return false;
             }
             constructTreeWith(builder);
+            double rms;
+            if (!silent && builder.calculateRMSOfTMinusD(distanceMatrix, 
+                                                         sequenceNames.size(), rms)) {
+                std::cout << "Root Mean Square Error was " << rms << std::endl;
+            }
             builder.setZippedOutput(isOutputToBeZipped);
             if (newickTreeFilePath.empty()) {
                 return true;

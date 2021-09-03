@@ -33,6 +33,7 @@
 #include <iostream>                  //for std::istream
 #include <sstream>                   //for std::stringstream
 #include <utils/progress.h>          //for progress_display
+#include <utils/parallel_mergesort.h>//for MergeSorter
 
 template <class T=double> struct Link {
     //
@@ -114,6 +115,108 @@ public:
         //<< " is (" << a << ", " << b << ", " << c << ")" << std::endl;
         return cluster;
     }
+    Cluster<T>& appendToLastCluster
+    ( size_t c, T length) {
+        back().links.emplace_back(c, length);
+        back().countOfExteriorNodes += at(c).countOfExteriorNodes;
+        return back();
+    }
+    typedef std::pair<intptr_t /*taxon*/, T /*distance*/ >     LeafDistance;
+    typedef std::vector<LeafDistance> LeafDistanceVector;
+    void calculateDistancesToLeaves(intptr_t top, double branch_length,
+                                    LeafDistanceVector& ldv) {
+        //Running time proportional to subtree size
+        std::vector<LeafDistance> stack;
+        stack.emplace_back(top, branch_length);
+        while (!stack.empty()) {
+            LeafDistance b = stack.back();
+            stack.pop_back();
+            Cluster<T>& node = at(b.first);
+            if (node.links.empty()) {
+                ldv.emplace_back(b);
+                continue;
+            } 
+            for (Link<T>& link : node.links ) {
+                stack.emplace_back(link.clusterIndex, 
+                                   b.second + link.linkDistance );
+            }
+        }
+        //
+        //Hack: Reordering makes memory accesses "cache-friendlier"
+        //      for large clusters, in calculateRMSOfTMinusD().
+        //Note: Single-threaded sorting is used, here, because 
+        //      calculateRMSOfTMinusD() is already executing 
+        //      calls to this function in parallel.
+        //
+        MergeSorter<LeafDistance> sorter;
+        sorter.single_thread_sort(ldv.data(), ldv.size());
+    }
+    bool calculateRMSOfTMinusD(const double* matrix, intptr_t rank, double& rms) {
+        //Assumes: rank is at least 3.
+        //
+        //Total running time: proportional to rank*(rank-1)/2.
+        //(that's the number of additions to sum_of_squares).
+        //
+        //Total memory consumption:  depends on thread count, X.
+        //In theory, on the order of (X+1)*rank*(sizeof(intptr_t)+sizeof(T)).
+        //2 * X * (maximum sum of sizes of leaf distance vectors).
+        //The 2 is because of the use of a MergeSorter in 
+        //calculateDistancesToLeaves().  An in-place sort would 
+        //lower that to a 1.
+        //
+        intptr_t cluster_count  = size();
+        double   sum_of_squares = 0.0;
+        #ifdef _OPENMP
+        //#pragma omp parallel for reduction(+:sum_of_squares)
+        #endif
+        for (intptr_t h=rank; h<cluster_count; ++h) {
+            //For each (non-leaf) cluster...
+            //1. calculate distances to all the 
+            //   leaves, for each contributing cluster.
+            Cluster<T>& node = at(h);
+            std::vector<LeafDistanceVector> subtrees;
+            for (Link<T>& link : node.links ) {
+                LeafDistanceVector ldv;
+                calculateDistancesToLeaves(link.clusterIndex, 
+                                           link.linkDistance, ldv);
+                subtrees.emplace_back(ldv);
+            }
+            //2. for each pair of LeafDistanceVectors, A, B,
+            //   (for separate contributing clusters)...
+            size_t subtree_count = subtrees.size();
+            for (size_t i=0; i+1<subtree_count; ++i) {
+                for (size_t j=i+1; j<subtree_count; ++j) {
+                    //2b. for each leaf (a.first) from A
+                    for (LeafDistance& a: subtrees[i]) {
+                        auto row = matrix + a.first * rank;
+                        //2c. for each leaf (b.first) from B
+                        //    calculate error; difference between
+                        //    distance(a.first) + distance(b.first)
+                        //    and D[a.first * rank + b.first].
+                        for (LeafDistance& b: subtrees[j]) {
+                            double diff     = a.second + b.second
+                                            - row[b.first];
+                            sum_of_squares += (diff * diff);
+                            #if (0)
+                            std::cout << a.first << " " << b.first << " "
+                                      << a.second + b.second << " "
+                                      << row[b.first] << " "
+                                      << diff << "\n";
+                            #endif
+                        }
+                    }
+                }
+            }
+            //std::cout << "\n";
+        }
+        double double_rank = static_cast<double>(rank);
+        rms = sqrt( sum_of_squares * 2.0 / double_rank / (double_rank - 1.0) );
+        //std::cout << "rank " << (double_rank) << std::endl;
+        //std::cout << "sum " << sum_of_squares << ","
+        //          << " divisor " << double_rank*(double_rank-1)*0.5 << std::endl;
+        return true;
+    }
+
     template <class F> 
     bool writeTreeToFile(int precision, 
                          const std::string &treeFilePath, 

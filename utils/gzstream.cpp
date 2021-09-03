@@ -232,14 +232,30 @@ void pigzstream::open( const char* name, int open_mode) {
     if (progress!=nullptr) {
         delete progress;
     }
-    igzstream::open( name, open_mode);
     if (name!=nullptr && name[0]!='\0') {
-        std::stringstream task;
-        task << "Reading " << format_name << " file " << name;
         #if USE_PROGRESS_DISPLAY
+            std::stringstream task;
+            task << "Reading " << format_name << " file " << name;
             progress = new progress_display((double)getCompressedLength(),
                                             task.str().c_str(), "", "" );
             buf.setProgress(progress);
+            try {
+                igzstream::open( name, open_mode);
+            }
+            catch (...) {
+                progress->markAsFailed();
+                throw;
+            }
+            if ( !is_open() ) {
+                //Error path!  If the open failed, the task won't be "done"
+                //it will be failed
+                progress->markAsFailed();
+            }
+        #else
+            igzstream::open( name, open_mode);
+            if (!is_open() ) {
+                std::cerr << "Could not open file: " << name << std::endl;
+            }
         #endif
     }
 }

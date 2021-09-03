@@ -529,6 +529,10 @@ public:
         graph.removeThroughThroughNodes();
         return true;
     }
+    virtual bool calculateRMSOfTMinusD(const double* matrix, 
+                                           intptr_t rank, double& rms) {
+        return false; //not supported  
+    }
 protected:
     StitchupGraph<T>  graph;
     bool            isOutputToBeZipped;

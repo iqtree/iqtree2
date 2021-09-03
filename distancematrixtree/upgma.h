@@ -87,6 +87,7 @@
 
 #include "distancematrix.h"          //for Matrix template class
 #include "clustertree.h"             //for ClusterTree template class
+#include "utils/parallel_mergesort.h"
 
 
 #if (!USE_PROGRESS_DISPLAY)
@@ -138,7 +139,6 @@ public:
 template <class T> class Positions : public std::vector<Position<T>>
 {
 };
-
 
 template <class T=NJFloat> class UPGMA_Matrix: public SquareMatrix<T> {
     //UPGMA_Matrix is a D matrix (a matrix of distances).
@@ -226,6 +226,11 @@ public:
     bool writeTreeFile(int precision, const std::string &treeFilePath) const {
         return clusters.writeTreeFile(isOutputToBeZipped, precision, treeFilePath);
     }
+    bool calculateRMSOfTMinusD(const double* matrix, intptr_t rank, double& rms) {
+        return clusters.calculateRMSOfTMinusD(matrix, rank, rms);
+    }
+
+
 protected:
     void getMinimumEntry(Position<T> &best) {
         getRowMinima();
@@ -339,16 +344,14 @@ protected:
         std::vector< std::vector< intptr_t > > vvc;
         identifyDuplicateClusters(hashed_rows, vvc, show_progress);
         
-        #if (USE_PROGRESS_DISPLAY)
         size_t dupes_clustered = joinUpDuplicateClusters(vvc, show_progress);
+        #if (USE_PROGRESS_DISPLAY)
         show_progress.done();
+        #endif
         if (0<dupes_clustered && !silent) {
             std::cout << "Clustered " << dupes_clustered
                       << " identical (or near-identical) taxa." << std::endl;
         }
-        #else
-            joinUpDuplicateClusters(vvc, show_progress);
-        #endif
     }
     void calculateRowHashes(std::vector<HashRow>& hashed_rows,
                             progress_display& show_progress) {
@@ -432,14 +435,13 @@ protected:
         //5. Join up any duplicate clusters
         double work_done = 0.0;
         size_t dupes_removed = 0;
-        for (std::vector<intptr_t> vc : vvc) {
+        for (std::vector<intptr_t>& vc : vvc) {
             double work_here = static_cast<double>(vc.size()) * work_per_dupe;
-            dupes_removed += vc.size();
-            --dupes_removed;
-            while (vc.size()>1) {
-                intptr_t first_half = vc.size() / 2;
-                intptr_t second_half = vc.size()-first_half;
-                for (intptr_t i=0; i<first_half; ++i) {
+            dupes_removed += (vc.size()-1);
+            while (vc.size()>1 && 3<row_count) {
+                intptr_t first_half  = vc.size() / 2;          //half, rounded down
+                intptr_t second_half = vc.size() - first_half; //half, rounded up
+                for (intptr_t i=0; i<first_half && 3<row_count; ++i) {
                     intptr_t cluster_a = vc[i];
                     intptr_t row_a     = cluster_to_row[cluster_a];
                     intptr_t cluster_b = vc[i+second_half];
@@ -448,16 +450,16 @@ protected:
                     if (row_b<row_a) {
                         std::swap(row_a, row_b);
                     }
+                    intptr_t cluster_x = rowToCluster[row_count-1];
                     cluster(row_a, row_b);
                     vc[i] = cluster_c;
                     cluster_to_row.push_back(row_a);
-                    if (row_b < row_count) {
-                        cluster_to_row[rowToCluster[row_b]] = row_b;
-                    }
+                    cluster_to_row[cluster_x] = row_b;
                 }
                 vc.resize(second_half);
                 //Not first_half (rounded down), second_half (rounded up), 
-                //because, if there was an odd cluster, this keeps it
+                //because, if there was an odd cluster, it must be kept
+                //in play.
             }
             work_done += work_here;
             if (work_done > 1000.0) {
@@ -493,15 +495,14 @@ protected:
 public:
     VectorizedUPGMA_Matrix() : super(), blockSize(VB().size()) {
     }
-    virtual std::string getAlgorithmName() const {
+    virtual std::string getAlgorithmName() const override {
         return "Vectorized-" + super::getAlgorithmName();
     }
-    virtual void calculateRowTotals() const {
+    virtual void calculateRowTotals() const override {
         size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
         scratchColumnNumbers.resize(row_count + fluff, 0.0);
     }
-    virtual void getRowMinima() const
-    {
+    virtual void getRowMinima() const override {
         T* nums = matrixAlign ( scratchColumnNumbers.data() );
         rowMinima.resize(row_count);
         rowMinima[0].value = infiniteDistance;
@@ -510,10 +511,10 @@ public:
         #endif
         for (intptr_t row=1; row<row_count; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
-            const T* rowData = rows[row];
-            intptr_t col;
-            V minVector  = infiniteDistance;
-            V ixVector   = -1 ;
+            const T*    rowData    = rows[row];
+            intptr_t    col;
+            V           minVector  = infiniteDistance;
+            V           ixVector   = -1;
 
             for (col=0; col+blockSize<row; col+=blockSize) {
                 V  rowVector; rowVector.load_a(rowData+col);
