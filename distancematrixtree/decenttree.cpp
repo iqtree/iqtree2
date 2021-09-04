@@ -327,7 +327,7 @@ public:
         arg_map << new StringArgument("-fasta", "fasta file path",             fastaFilePath);
         arg_map << new StringArgument("-phylip", "phylip alignment file path", phylipFilePath);
         arg_map << new StringArgument("-in",    "distance matrix file path",   inputFilePath);
-        arg_map << new StringArgument("-dist",  "distance matrix file path",   inputFilePath);
+        arg_map << new StringArgument("-dist",  "distance matrix file path",   distanceOutputFilePath);
         arg_map << new IntArgument   ("-c",     "compression level between 1 and 9", 
                                     compression_level);
         arg_map << new IntArgument   ("-f",     "precision level between 4 and 15",
