@@ -52,6 +52,7 @@
 #pragma  once
 #include "distancematrixtree/upgma.h"
 #include "utils/gzstream.h"
+#include "utils/timeutil.h"
 #ifndef  fancy_rapid_nj_h
 #define  fancy_rapid_nj_h
 
@@ -130,6 +131,10 @@ public:
         #endif
         sorters.resize(threadCount);
     }
+    std::string getAlgorithmName() const {
+        return "FancyNJ";
+    }
+
     void beSilent() { 
         be_silent = true; 
     } 
@@ -158,6 +163,13 @@ public:
     }
     virtual bool loadMatrix(const StrVector& names,
                             const double* matrix) {
+        #if USE_PROGRESS_DISPLAY
+        double row_count  = names.size();
+        double work_to_do = 0.5 * row_count * (row_count - 1.0);
+        const char* taskName = be_silent
+            ? "" :  "Setting up triangular I+S and I+D matrices";
+        progress_display setupProgress(work_to_do, taskName, "loading", "row");
+        #endif
         //Assumes: matrix is symmetrical
         clusters.clear();
         for (const std::string& name : names) {
@@ -165,9 +177,9 @@ public:
         }
         setRank(names.size()); //sets original_rank
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic) if(1<threadCount)
         #endif
-        for (int r=0; r<original_rank; ++r ) {
+        for (int r=original_rank-1; 0<=r; --r ) {
             const double* row       = matrix + r * original_rank;
             MatrixEntry*  data      = cluster_sorted_start[r];
             MatrixEntry*  unsorted  = cluster_unsorted_start[r];
@@ -188,13 +200,31 @@ public:
 
             //formerly: std::sort(data, data+r);
             sorters[getThreadNumber()].single_thread_sort(data, r);
+
+            #if USE_PROGRESS_DISPLAY
+                setupProgress += ((double)r-1);
+            #endif
         }        
+        #if USE_PROGRESS_DISPLAY
+            setupProgress.done();
+        #endif
         return true;
     }
     virtual bool constructTree() {
         if (original_rank<3) {
             return false;
         }
+
+        #if USE_PROGRESS_DISPLAY
+        std::string taskName;
+        if (!be_silent) {
+            taskName = "Constructing " + getAlgorithmName() + " tree";
+        }
+        double row_count = (double)original_rank;
+        double triangle  = row_count * (row_count + 1.0) * 0.5;
+        progress_display show_progress(triangle, taskName.c_str(), "", "");
+        #endif
+
         int  n = original_rank;
         int  q = n + n - 2;
         IntVector      row_cluster(original_rank);
@@ -207,10 +237,19 @@ public:
         for (int i=0; i<original_rank; ++i) {
             row_cluster[i] = i;
         }
+
+        double previewTime = 0;
+        double mergeTime   = 0;
         for ( ; 1 < n ; --n) {
+            T best_dist;
             recalculateTotals    (n, next_cluster_number, 
                                   row_cluster, cluster_row);
-            findPreferredPartners(n, q, row_cluster, 
+            previewTime -= getRealTime();
+            previewRows          (n, q, row_cluster,
+                                  row_raw_dist, row_best_dist,
+                                  row_choice, best_dist);
+            previewTime += getRealTime();
+            findPreferredPartners(n, q, best_dist, row_cluster, 
                                   row_raw_dist, row_best_dist, 
                                   row_choice);
             int best_row      = chooseBestRow(n, q, row_best_dist, row_choice);
@@ -223,9 +262,21 @@ public:
             int high_row      = (best_row < other_row) ? other_row : best_row;
             row_cluster[low_row]  = next_cluster_number;
             row_cluster[high_row] = row_cluster[n-1];   
+            mergeTime -= getRealTime();
             mergeClusters(best_cluster, other_cluster, next_cluster_number,
                           row_raw_dist[best_row], n);
+            mergeTime += getRealTime();
             ++next_cluster_number;
+            #if USE_PROGRESS_DISPLAY
+            show_progress+=(double)n;
+            #endif
+        }
+        #if USE_PROGRESS_DISPLAY
+        show_progress.done();
+        #endif
+        if (!be_silent) {
+            std::cout << "Preview time " << previewTime << " and"
+                      << " Cluster merge time was " << mergeTime << ".\n";
         }
         return true;
     }
@@ -248,7 +299,7 @@ protected:
         size_t q = n+n-2; //number of clusters that will be needed
                           //in total, during the course of the tree
                           //construction: n leaves, n-2 interiors.
-        cluster_alive.resize         (q, true);
+        cluster_alive.resize         (q, 1);
         cluster_total.resize         (q, 0.0);
         cluster_total_scaled.resize  (q, 0.0);
         cluster_sorted_start.resize  (q, nullptr);
@@ -275,10 +326,10 @@ protected:
                            IntVector& cluster_row) {
         double cutoff           = -infiniteDistance;
         double one_on_n_minus_2 = (n<3) ? 0.0 : (1.0 / ((double)n - 2.0));
-        int    r = 0;
+        int    r                = 0;
         //std::cout << "\nRow Totals: ";
         for (int c=0; c<next_cluster_num; ++c) {
-            if (cluster_alive[c]) {
+            if (0<cluster_alive[c]) {
                 cluster_total_scaled[c] = cluster_total[c] * one_on_n_minus_2;
                 cluster_cutoff[c]       = cutoff;
                 if (cutoff < cluster_total_scaled[c] ) {
@@ -292,41 +343,116 @@ protected:
         }
         //std::cout << "\n";
     }
-    void findPreferredPartners(int n, int q, 
+    void previewRows(int n, int q,
+                     const IntVector& row_cluster,
+                     DistanceVector&  row_raw_dist,
+                     DistanceVector&  row_best_dist,
+                     IntVector&       row_choice,
+                     T&               best_dist) {
+        #ifdef _OPENMP
+        #pragma omp parallel for if(1<threadCount)
+        #endif
+        for (int r = 0; r < n; ++r ) {
+            int  c     = row_cluster[r];
+            auto scan  = cluster_sorted_start[c]; 
+            auto stop  = cluster_sorted_stop[c];
+            bool found = false;
+            for (; scan<stop; ++scan) {
+                int b = scan->cluster_num;
+                if (0<cluster_alive[b]) {
+                    row_raw_dist[r]  = scan->distance;
+                    row_best_dist[r] = scan->distance
+                                     - cluster_total_scaled[c]
+                                     - cluster_total_scaled[b];
+                    row_choice[r]    = b;
+                    cluster_sorted_start[c] = scan;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                    row_raw_dist[r]  = infiniteDistance;
+                    row_best_dist[r] = infiniteDistance;
+                    row_choice[r]    = q;
+            }
+        }
+
+        best_dist = row_best_dist[0];
+        for (int r=1; r<n; ++r) {
+            if (row_best_dist[r]<best_dist) {
+                best_dist = row_best_dist[r];
+            }
+        }
+    }
+    void findPreferredPartners(int n, int q, T global_best_dist,
                                const IntVector& row_cluster,
                                DistanceVector&  row_raw_dist,
                                DistanceVector&  row_best_dist,
                                IntVector&       row_choice) {
         //For each cluster, find preferred partner
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel for schedule(dynamic) if(1<threadCount)
         #endif
-        for (int r = 0; r < n; ++r ) {
+        for (int r = n-1; 0 <= r; --r ) {
             int c             = row_cluster[r];
-            int best_cluster  = q;
-            T   best_raw_dist = infiniteDistance;
-            T   best_dist     = infiniteDistance;
-            T   cutoff        = infiniteDistance;
-            if (cluster_alive[c]) {
-                auto dataStart = cluster_sorted_start[c];
-                auto dataStop  = cluster_sorted_stop[c];
-                for (auto scan=dataStart; scan<dataStop; ++scan) {
-                    int p                = scan->cluster_num;
-                    T   dist_raw         = scan->distance;
-                    T   dist_half_cooked = dist_raw - cluster_total_scaled[p];
-                    if (dist_half_cooked<best_dist && cluster_alive[p]) {
-                        best_raw_dist = dist_raw;
-                        best_dist     = dist_half_cooked;
-                        best_cluster  = p;
-                        cutoff        = best_raw_dist + cluster_cutoff[c];
-                    }
+            if (cluster_alive[c]==0) {
+                continue;
+            }
+            int best_cluster   = row_choice[r];    //set by previewRows().
+            T   best_raw_dist  = row_raw_dist[r];  //set by previewRows().
+            T   best_dist      = row_best_dist[r]; //set by previewRows().
+            T   cutoff         = best_raw_dist + cluster_cutoff[c];
+            T   earlier_cutoff = global_best_dist 
+                                + cluster_cutoff[c] + cluster_total[c];
+            if (earlier_cutoff < cutoff) {
+                cutoff = earlier_cutoff;
+            }
+            //Can skip the first MatrixEntry at cluster_sorted_start[c].
+            //It's already been looked at by previewRows().
+            auto dataStart = cluster_sorted_start[c] + 1; 
+            auto dataStop  = cluster_sorted_stop[c];
+
+#if (0)
+            if (r+r < dataStop-dataStart) {
+                //At most half of the information recorded for this cluster
+                //is still of any use.  Purge it.
+                auto oldStop = dataStop;
+                for (auto scan=dataStart; scan<oldStop; ++scan) {
+                    *dataStop = *scan;
+                    dataStop += cluster_alive[scan->cluster_num];
+                }
+                cluster_sorted_stop[c] = dataStop;
+            }
+#endif 
+
+            for (auto scan=dataStart; scan<dataStop; ++scan) {
+                int p                = scan->cluster_num;
+                if (cluster_alive[p]==0) {
+                    continue;
+                }
+                T   dist_raw         = scan->distance;
+                if (cutoff < dist_raw) {
+                    break;
+                }
+                T   dist_half_cooked = dist_raw - cluster_total_scaled[p];
+                if (best_dist<=dist_half_cooked) {
+                    continue;
+                }
+                best_raw_dist = dist_raw;
+                best_dist     = dist_half_cooked;
+                best_cluster  = p;
+                cutoff        = best_raw_dist + cluster_cutoff[c];
+                if (earlier_cutoff < cutoff) {
+                    cutoff = earlier_cutoff;
                 }
             }
             row_raw_dist[r]  = best_raw_dist;
             row_best_dist[r] = best_dist - cluster_total_scaled[c];
             row_choice[r]    = best_cluster;
+            if (row_best_dist[r] < global_best_dist) {
+                global_best_dist = row_best_dist[r];
+            }
         }
-
         #if (0)
         for (int r = 0; r < n; ++r ) {
             int c             = row_cluster[r];
@@ -436,7 +562,7 @@ protected:
         markClusterAsUsedUp(cluster_Y);
     }
     void markClusterAsUsedUp(int c) {
-        cluster_alive[c]         = false;
+        cluster_alive[c]         = 0;
         cluster_total[c]         = -infiniteDistance;
         cluster_sorted_stop[c]   = cluster_sorted_start[c];
         cluster_total_scaled[c]  = -infiniteDistance;
@@ -444,18 +570,24 @@ protected:
         cluster_unsorted_stop[c] = cluster_unsorted_start[c];
     }
     void getDistances(int c, int u, DistanceVector& distances) {
-        auto start = cluster_sorted_start[c];
-        auto stop  = cluster_sorted_stop[c];
+        //Have to read from cluster_unsorted_start, because 
+        //cluster_sorted_start might have "skipped" over entries
+        //that have been removed from consideration; see 
+        //the implementation of previewRows().  Besides, reading
+        //in order is cache-friendlier.
+        auto start = cluster_unsorted_start[c];
+        auto stop  = cluster_unsorted_stop[c];
+        #ifdef _OPENMP
+        #pragma omp parallel for if(1<threadCount)
+        #endif
         for (auto scan = start; scan<stop; ++scan) {
             int p = scan->cluster_num;
-            if (cluster_alive[p]) {
-                distances[p] = scan->distance;
-            }
+            distances[p] = (0<cluster_alive[p]) ? scan->distance : distances[p];
         }
         //Now, for clusters *after* c, for which 
         //distances to c were recorded.
         #ifdef _OPENMP
-        #pragma omp parallel
+        #pragma omp parallel for if(1<threadCount)
         #endif
         for (int p=c+1; p<u; ++p) {
             if (cluster_alive[p]) {
