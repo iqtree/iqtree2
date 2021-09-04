@@ -236,11 +236,11 @@ void pigzstream::open( const char* name, int open_mode) {
         #if USE_PROGRESS_DISPLAY
             std::stringstream task;
             task << "Reading " << format_name << " file " << name;
-            progress = new progress_display((double)getCompressedLength(),
-                                            task.str().c_str(), "", "" );
+            progress = new progress_display(0.0, task.str().c_str(), "", "" );
             buf.setProgress(progress);
             try {
                 igzstream::open( name, open_mode);
+                progress->setWorkRemaining((double)getCompressedLength());
             }
             catch (...) {
                 progress->markAsFailed();
