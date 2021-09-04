@@ -57,7 +57,7 @@
 
 #include "nj.h"                       //for NJFloat
 #include "clustertree.h"              //for ClusterTree template class
-#include "utils/parallel_mergesort.h" //
+#include "utils/parallel_mergesort.h" //for MergeSorter
 
 namespace StartTree {
 template <class T=NJFloat> class FancyNJMatrix {
@@ -109,9 +109,26 @@ protected:
     EntryPtrVector cluster_unsorted_stop;
     IntVector      cluster_row;
 
+    int    threadCount;
+    typedef MergeSorter<MatrixEntry> Sorter;
+    std::vector<Sorter> sorters;
+    int getThreadNumber() {
+        #ifdef _OPENMP
+            return omp_get_thread_num();
+        #else
+            return 0;
+        #endif
+    }
+
 public:
     FancyNJMatrix() : be_silent(false), zip_it(false), 
                       original_rank(0), next_cluster_number(0) {
+        #ifdef _OPENMP
+            threadCount = omp_get_max_threads();
+        #else
+            threadCount = 1;
+        #endif
+        sorters.resize(threadCount);
     }
     void beSilent() { 
         be_silent = true; 
@@ -168,7 +185,9 @@ public:
             }
             //std::cout << " ... total " << total << "\n";
             cluster_total[r] = total;
-            std::sort(data, data+r);
+
+            //formerly: std::sort(data, data+r);
+            sorters[getThreadNumber()].single_thread_sort(data, r);
         }        
         return true;
     }
@@ -394,7 +413,9 @@ protected:
         auto stop                  = cluster_sorted_stop[cluster_U];
         if (2<n) {
             ASSERT ( stop == entry );
-            std::sort(start, stop);
+            //formerly: std::sort(start, stop);
+            sorters[0].parallel_sort(start, stop-start);
+
             clusters.addCluster(cluster_X, length_to_X, 
                                 cluster_Y, length_to_Y);
         } else {
