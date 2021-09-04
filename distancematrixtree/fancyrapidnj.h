@@ -50,6 +50,7 @@
 //
 
 #pragma  once
+#include "distancematrixtree/upgma.h"
 #include "utils/gzstream.h"
 #ifndef  fancy_rapid_nj_h
 #define  fancy_rapid_nj_h
@@ -92,28 +93,21 @@ protected:
                         cluster_num <= rhs.cluster_num);
             }
     };
-    struct ClusterInfo {
-        public:
-            bool           alive;
-            T              cluster_total;
-            T              scaled_total;
-            MatrixEntry*   data;
-            MatrixEntry*   dataStop;
-            ClusterInfo(): alive(false), data(nullptr), dataStop(nullptr),
-                           cluster_total(0), scaled_total(0) {}
-    };  
-    size_t                    original_rank;
-    size_t                    next_cluster_number;
-    std::vector<MatrixEntry>  storage;
-    std::vector<char>         cluster_alive;
-    std::vector<T>            cluster_total;
-    std::vector<T>            cluster_total_scaled;
-    std::vector<T>            cluster_cutoff;
-    std::vector<MatrixEntry*> cluster_sorted_start;
-    std::vector<MatrixEntry*> cluster_sorted_stop;
-    std::vector<MatrixEntry*> cluster_unsorted_start;
-    std::vector<MatrixEntry*> cluster_unsorted_stop;
-    std::vector<int>          cluster_row;
+    typedef std::vector<MatrixEntry>  EntryVector;
+    typedef std::vector<MatrixEntry*> EntryPtrVector;
+
+    size_t         original_rank;
+    size_t         next_cluster_number;
+    EntryVector    storage;
+    IntVector      cluster_alive;
+    DistanceVector cluster_total;
+    DistanceVector cluster_total_scaled;
+    DistanceVector cluster_cutoff;
+    EntryPtrVector cluster_sorted_start;
+    EntryPtrVector cluster_sorted_stop;
+    EntryPtrVector cluster_unsorted_start;
+    EntryPtrVector cluster_unsorted_stop;
+    IntVector      cluster_row;
 
 public:
     FancyNJMatrix() : be_silent(false), zip_it(false), 
@@ -154,9 +148,9 @@ public:
         }
         setRank(names.size()); //sets original_rank
         #ifdef _OPENMP
-        //#pragma omp parallel for
+        #pragma omp parallel for
         #endif
-        for (int r=1; r<original_rank; ++r ) {
+        for (int r=0; r<original_rank; ++r ) {
             const double* row       = matrix + r * original_rank;
             MatrixEntry*  data      = cluster_sorted_start[r];
             MatrixEntry*  unsorted  = cluster_unsorted_start[r];
@@ -175,7 +169,7 @@ public:
             //std::cout << " ... total " << total << "\n";
             cluster_total[r] = total;
             std::sort(data, data+r);
-        }
+        }        
         return true;
     }
     virtual bool constructTree() {
@@ -184,10 +178,13 @@ public:
         }
         int  n = original_rank;
         int  q = n + n - 2;
-        std::vector<int> row_cluster(original_rank);
-        std::vector<T>   row_raw_dist(original_rank);
-        std::vector<T>   row_best_dist(original_rank);
-        std::vector<int> row_choice(original_rank);
+        IntVector      row_cluster(original_rank);
+        DistanceVector row_raw_dist(original_rank);
+        DistanceVector row_best_dist(original_rank);
+        IntVector      row_choice(original_rank);
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (int i=0; i<original_rank; ++i) {
             row_cluster[i] = i;
         }
@@ -201,12 +198,6 @@ public:
             int best_cluster  = row_cluster[best_row];
             int other_cluster = row_choice[best_row];
             int other_row     = cluster_row[other_cluster];
-            if (n==2) {
-                best_row      = 0;
-                best_cluster  = row_cluster[best_row];
-                other_row     = 1;
-                other_cluster = row_cluster[other_row];
-            }
             //std::cout << "br=" << best_row << ", or=" << other_row << "\n";
             //std::cout << "bc=" << best_cluster << ", oc=" << other_cluster << "\n";
             int low_row       = (best_row < other_row) ? best_row  : other_row;
@@ -261,11 +252,12 @@ protected:
         }
     }
     void recalculateTotals(int n, int next_cluster_num, 
-                           std::vector<int>& row_cluster,
-                           std::vector<int>& cluster_row) {
+                           IntVector& row_cluster,
+                           IntVector& cluster_row) {
         double cutoff           = -infiniteDistance;
         double one_on_n_minus_2 = (n<3) ? 0.0 : (1.0 / ((double)n - 2.0));
         int    r = 0;
+        //std::cout << "\nRow Totals: ";
         for (int c=0; c<next_cluster_num; ++c) {
             if (cluster_alive[c]) {
                 cluster_total_scaled[c] = cluster_total[c] * one_on_n_minus_2;
@@ -276,14 +268,16 @@ protected:
                 cluster_row[c] = r;
                 row_cluster[r] = c;
                 ++r;
+                //std::cout << "c=" << c << " t=" << cluster_total_scaled[c] << " ";
             }
         }
+        //std::cout << "\n";
     }
     void findPreferredPartners(int n, int q, 
-                               const std::vector<int>& row_cluster,
-                               std::vector<T>& row_raw_dist,
-                               std::vector<T>& row_best_dist,
-                               std::vector<int>& row_choice) {
+                               const IntVector& row_cluster,
+                               DistanceVector&  row_raw_dist,
+                               DistanceVector&  row_best_dist,
+                               IntVector&       row_choice) {
         //For each cluster, find preferred partner
         #ifdef _OPENMP
         #pragma omp parallel for
@@ -295,9 +289,9 @@ protected:
             T   best_dist     = infiniteDistance;
             T   cutoff        = infiniteDistance;
             if (cluster_alive[c]) {
-                MatrixEntry* dataStart = cluster_sorted_start[c];
-                MatrixEntry* dataStop  = cluster_sorted_stop[c];
-                for (MatrixEntry* scan=dataStart+1; scan<dataStop; ++scan) {
+                auto dataStart = cluster_sorted_start[c];
+                auto dataStop  = cluster_sorted_stop[c];
+                for (auto scan=dataStart; scan<dataStop; ++scan) {
                     int p                = scan->cluster_num;
                     T   dist_raw         = scan->distance;
                     T   dist_half_cooked = dist_raw - cluster_total_scaled[p];
@@ -313,24 +307,40 @@ protected:
             row_best_dist[r] = best_dist - cluster_total_scaled[c];
             row_choice[r]    = best_cluster;
         }
+
+        #if (0)
+        for (int r = 0; r < n; ++r ) {
+            int c             = row_cluster[r];
+            std::cout << "c=" << c << " raw=" << row_raw_dist[r]
+                      << " d=" << row_best_dist[r] << " o=" << row_choice[r] << "\n";
+        }
+        #endif
     }
     int chooseBestRow(int n, int q,
-                      const std::vector<T>& row_best_dist,
-                      const std::vector<int>& row_choice) {
+                      const DistanceVector& row_best_dist,
+                      const IntVector&      row_choice) {
+        int best_row  = q;
+        T   best_dist = infiniteDistance;
+        //std::cout << "Choose Row:";
         int r;
-        int best_row = q;
         for (r=0; r<n; ++r) {
             if (row_choice[r] < q) {
-                best_row = r;
+                best_dist = row_best_dist[r];
+                best_row  = r;
+                //std::cout << " R" << best_row << "=D" << best_dist; 
+                break;
             }
         }
         for (++r; r<n; ++r) {
-            if (row_choice[r] < q) {
-                if (row_best_dist[r] < row_best_dist[best_row]) {
-                    best_row = r;
+            if (row_best_dist[r] < best_dist) {
+                if (row_choice[r] < q) {
+                    best_dist = row_best_dist[r];
+                    best_row  = r;
+                    //std::cout << " R" << best_row << "=D" << best_dist; 
                 }    
             }
         }
+        //std::cout << "\n";
         return best_row;
     }
     void mergeClusters(int cluster_X, int cluster_Y, 
@@ -354,18 +364,22 @@ protected:
         getDistances(cluster_X, cluster_U, x_distances);
         std::vector<T> y_distances(cluster_U, infiniteDistance);
         getDistances(cluster_Y, cluster_U, y_distances);
-        MatrixEntry* start    = cluster_sorted_start[cluster_U];
-        MatrixEntry* entry    = start;
-        MatrixEntry* unsorted = cluster_unsorted_start[cluster_U];
-        T            cTotal   = 0.0;
-        //std::cout << "D+I for cluster " << cluster_U << "is:\n";
+        auto start      = cluster_sorted_start[cluster_U];
+        auto entry      = start;
+        auto unsorted   = cluster_unsorted_start[cluster_U];
+        T    cTotal     = 0.0;
+        #if (0)
+        std::cout << "Merging clusters x=" << cluster_X 
+                  << " and y=" << cluster_Y << " with dXY=" << Dxy << "\n";
+        std::cout << "D+I for cluster " << cluster_U << "is:\n";
+        #endif
         for (int c=0; c<cluster_U; ++c) {
             T Dcx = x_distances[c];
             T Dcy = y_distances[c];
             if (Dcx<infiniteDistance && Dcy<infiniteDistance &&
                 c!=cluster_X && c!=cluster_Y) {
                 T Dcu              = lambda * Dcx + mu * Dcy + dCorrection;
-                //std::cout << c << " " << Dcu << "\n";
+                //std::cout << c << " " << Dcu << " \t";
                 entry->distance    = Dcu;
                 entry->cluster_num = c;
                 cluster_total[c]  += Dcu - Dcx - Dcy;
@@ -377,14 +391,25 @@ protected:
         }
         //std::cout << "\n";
         cluster_total[cluster_U]   = cTotal;
-        MatrixEntry* stop          = cluster_sorted_stop[cluster_U];
+        auto stop                  = cluster_sorted_stop[cluster_U];
         if (2<n) {
             ASSERT ( stop == entry );
             std::sort(start, stop);
             clusters.addCluster(cluster_X, length_to_X, 
                                 cluster_Y, length_to_Y);
         } else {
-            clusters.appendToLastCluster(cluster_X, length_to_X);
+            //we're not connecting up X and Y to U,
+            //we're connecting X and Y with each other
+            //  Not this:       But rather this:
+            //  X         Y          
+            //    \      /            
+            //    dx   dy       X--(dx+dy)--Y
+            //      \ /
+            //       U
+            //       |
+            //       ?
+            //
+            clusters.appendToLastCluster(cluster_X, length_to_X + length_to_Y);
         }
         markClusterAsUsedUp(cluster_X);
         markClusterAsUsedUp(cluster_Y);
@@ -397,10 +422,10 @@ protected:
         cluster_cutoff[c]        = -infiniteDistance;
         cluster_unsorted_stop[c] = cluster_unsorted_start[c];
     }
-    void getDistances(int c, int u, std::vector<T>& distances) {
-        MatrixEntry* start = cluster_sorted_start[c];
-        MatrixEntry* stop  = cluster_sorted_stop[c];
-        for (MatrixEntry* scan = start; scan<stop; ++scan) {
+    void getDistances(int c, int u, DistanceVector& distances) {
+        auto start = cluster_sorted_start[c];
+        auto stop  = cluster_sorted_stop[c];
+        for (auto scan = start; scan<stop; ++scan) {
             int p = scan->cluster_num;
             if (cluster_alive[p]) {
                 distances[p] = scan->distance;
@@ -434,10 +459,10 @@ protected:
         //          searches only results in one or two cache 
         //          misses).
         //         
-        MatrixEntry* start = cluster_unsorted_start[b];
-        int          count = cluster_unsorted_stop[b] - start;
-        int          low   = 0;
-        int          hi    = b;
+        auto start = cluster_unsorted_start[b];
+        int  count = cluster_unsorted_stop[b] - start;
+        int  low   = 0;
+        int  hi    = b;
 
 #if (0)
         std::stringstream s;
