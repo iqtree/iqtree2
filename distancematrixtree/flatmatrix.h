@@ -41,26 +41,28 @@ public:
                double* distance_data);
     virtual ~FlatMatrix();
     
-    const StrVector&   getSequenceNames()          const;
-    size_t             getMaxSeqNameLength()       const;
-    const std::string& getSequenceName(intptr_t i) const;
-    const std::string& sequenceName(intptr_t i)    const;
+    const StrVector&   getSequenceNames()           const;
+    size_t             getMaxSeqNameLength()        const;
+    const std::string& getSequenceName(intptr_t i)  const;
+    const std::string& sequenceName(intptr_t i)     const;
     std::string&       sequenceName(intptr_t i);
     void               setSequenceName(intptr_t i, 
                                        const std::string& new_name);
     virtual void       setSize(intptr_t rows);
-    intptr_t           getSize();
-    const double*      getDistanceMatrix()      const;
+    intptr_t           getSize()                    const;
+    const double*      getDistanceMatrix()          const;
     double             cell(intptr_t r, intptr_t c) const;
     double&            cell(intptr_t r, intptr_t c);
     void               addCluster(const std::string& clusterName);
     bool               writeToDistanceFile(const std::string& format,
                                            int precision,
                                            int compression_level,
+                                           bool report_progress,
                                            const std::string& file_name) const;
-    template <class S>
+    template <class S /*stream type*/, class P /*progress display*/>
     void               writeDistancesToOpenFile(const std::string& format,
-                                                int precision, S &out) const;
+                                                int precision, S &out,
+                                                P* progress) const;
 
     virtual void appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1, 
                                          intptr_t rowStart, intptr_t rowStop,

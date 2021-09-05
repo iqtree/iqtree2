@@ -247,7 +247,7 @@ bool prepInput(const std::string& fastaFilePath,
             if (loadMatrix) {
                 useNumberedNamesIfAskedTo(numbered_names, m);
                 return m.writeToDistanceFile(format, precision,
-                                 compression_level,
+                                 compression_level, reportProgress,
                                  distanceOutputFilePath );
             }
             else {
@@ -255,7 +255,8 @@ bool prepInput(const std::string& fastaFilePath,
                                       correcting_distances, precision, 
                                       compression_level, format,
                                       is_site_variant, reportProgress);
-                bool success = loader.writeDistanceMatrixToFile(numbered_names, distanceOutputFilePath);
+                bool success = loader.writeDistanceMatrixToFile(numbered_names, 
+                                                                distanceOutputFilePath);
                 return success;
             }
         }
@@ -265,7 +266,7 @@ bool prepInput(const std::string& fastaFilePath,
             fixUpSequenceNames(truncateName, stripName, nameReplace, m);
             if (!distanceOutputFilePath.empty()) {
                 return m.writeToDistanceFile(format, precision,
-                                             compression_level,
+                                             compression_level, reportProgress,
                                              distanceOutputFilePath );
             }
             return true;

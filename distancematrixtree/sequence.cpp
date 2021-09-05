@@ -676,7 +676,7 @@ bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
     useNumberedNamesIfAskedTo(numbered_names, m);
 
     m.writeToDistanceFile(output_format, precision,
-                          compression_level,
+                          compression_level, false,
                           filePath);
     return true;
 }

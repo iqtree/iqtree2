@@ -29,6 +29,7 @@
 //
 
 #include "flatmatrix.h"
+#include "utils/progress.h"
 #include <math.h>       //for log10
 #include <iostream>     //for std::fstream
 #include <sstream>      //for std::stringstream
@@ -85,7 +86,7 @@ void FlatMatrix::setSize(intptr_t rows) {
     memset(distanceMatrix, 0, rowCount*rowCount*sizeof(double));
 }
 
-intptr_t FlatMatrix::getSize() {
+intptr_t FlatMatrix::getSize() const {
     return rowCount;
 }
 
@@ -108,13 +109,28 @@ void FlatMatrix::addCluster(const std::string& clusterName) {
 bool FlatMatrix::writeToDistanceFile(const std::string& format,
                                      int precision,
                                      int compression_level,
+                                     bool report_progress,
                                      const std::string& file_name) const {
+    #if USE_PROGRESS_DISPLAY
+    double rows           = static_cast<double>(getSize());
+    bool   isTriangle     = format.find("lower") != std::string::npos ||
+                            format.find("upper") != std::string::npos;
+    double halfIfTriangle = isTriangle ? 0.5 : 1.0;
+
+    double calculations   = rows * rows * halfIfTriangle;
+    const char* task      = report_progress ? "Writing distance matrix file": "";
+    progress_display progress(calculations, task );
+    #else
+    progress_display progress;
+    #endif
+
     try {
         if (format.find(".gz") == std::string::npos) {
             std::ofstream out;
             out.exceptions(std::ios::failbit | std::ios::badbit);
             out.open(file_name.c_str());
-            writeDistancesToOpenFile(format, precision, out);
+
+            writeDistancesToOpenFile(format, precision, out, &progress);
             out.close();
         } else {
             //Todo: Decide. Should we be insisting the file name ends with .gz too?
@@ -129,18 +145,23 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
             #else
             out.open(file_name.c_str(), std::ios::out);
             #endif
-            writeDistancesToOpenFile(format, precision, out);
+
+            writeDistancesToOpenFile(format, precision, out, &progress);
             out.close();
         }
     } catch (std::ios::failure) {
         return false;
     }
+    #if USE_PROGRESS_DISPLAY        
+    progress.done();
+    #endif
     return true;
 }
 
-template <class S>
+template <class S, class P>
 void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
-                                          int precision, S &out) const {
+                                          int precision, S &out,
+                                          P* progress) const {
     intptr_t nseqs   = sequenceNames.size();
     size_t max_len = getMaxSeqNameLength();
     if (max_len < 10) {
@@ -161,6 +182,10 @@ void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
         appendRowDistancesToLine(nseqs, seq1, rowStart, rowStop, line);
         line << "\n";
         out << line.str();
+        if (progress!=nullptr) {
+            *progress += static_cast<double>(rowStop-rowStart);
+        }
+
     }
     out.flush();
 }
