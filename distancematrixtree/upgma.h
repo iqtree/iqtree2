@@ -203,13 +203,13 @@ public:
         }
         double triangle = row_count * (row_count + 1.0) * 0.5;
         progress_display show_progress(triangle, taskName.c_str(), "", "");
-        #else
-        double show_progress = 0;
         #endif
         while ( 3 < row_count ) {
             getMinimumEntry(best);
             cluster(best.column, best.row);
+            #if USE_PROGRESS_DISPLAY
             show_progress += row_count;
+            #endif
         }
         finishClustering();
         #if USE_PROGRESS_DISPLAY

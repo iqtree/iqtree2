@@ -60,6 +60,8 @@
 #include "clustertree.h"              //for ClusterTree template class
 #include "utils/parallel_mergesort.h" //for MergeSorter
 
+#define  FNJ_TRACE(x) (0)
+
 namespace StartTree {
 template <class T=NJFloat> class FancyNJMatrix {
 protected:
@@ -100,7 +102,7 @@ protected:
     size_t         original_rank;
     size_t         next_cluster_number;
     EntryVector    storage;
-    IntVector      cluster_alive;
+    IntVector      cluster_in_play;
     DistanceVector cluster_total;
     DistanceVector cluster_total_scaled;
     DistanceVector cluster_cutoff;
@@ -110,7 +112,9 @@ protected:
     EntryPtrVector cluster_unsorted_stop;
     IntVector      cluster_row;
 
-    int    threadCount;
+    int            search_iterations;
+
+    int            threadCount;
     typedef MergeSorter<MatrixEntry> Sorter;
     std::vector<Sorter> sorters;
     int getThreadNumber() {
@@ -184,18 +188,20 @@ public:
             MatrixEntry*  data      = cluster_sorted_start[r];
             MatrixEntry*  unsorted  = cluster_unsorted_start[r];
             T             total     = 0;
-            //std::cout << "Z" << r << "...";
+            FNJ_TRACE("Z" << r << "...");
             for (int c=0; c<r; ++c) {
                 data[c].distance    = row[c];
                 data[c].cluster_num = c;
                 unsorted[c]         = data[c];
                 total              += row[c];
-                //std::cout << " " << row[c];
+                FNJ_TRACE(" " << row[c]);
             }
+            FNJ_TRACE("X");
             for (int c=r+1; c<original_rank; ++c) {
                 total              += row[c];
+                FNJ_TRACE(" " << row[c]);
             }
-            //std::cout << " ... total " << total << "\n";
+            FNJ_TRACE(" total " << total << "\n");
             cluster_total[r] = total;
 
             //formerly: std::sort(data, data+r);
@@ -211,6 +217,7 @@ public:
         return true;
     }
     virtual bool constructTree() {
+        search_iterations = 0;
         if (original_rank<3) {
             return false;
         }
@@ -238,12 +245,15 @@ public:
             row_cluster[i] = i;
         }
 
+        double recalcTime  = 0;
         double previewTime = 0;
         double mergeTime   = 0;
         for ( ; 1 < n ; --n) {
             T best_dist;
+            recalcTime  -= getRealTime();
             recalculateTotals    (n, next_cluster_number, 
                                   row_cluster, cluster_row);
+            recalcTime  += getRealTime();
             previewTime -= getRealTime();
             previewRows          (n, q, row_cluster,
                                   row_raw_dist, row_best_dist,
@@ -275,8 +285,15 @@ public:
         show_progress.done();
         #endif
         if (!be_silent) {
-            std::cout << "Preview time " << previewTime << " and"
+            double coefficient = (double)search_iterations
+                               / (double)original_rank 
+                               / (double)original_rank;
+            std::cout << "Recalc time " << recalcTime << ","
+                      << " Preview time " << previewTime << " and"
                       << " Cluster merge time was " << mergeTime << ".\n";
+            std::cout << "Number of search iterations was " 
+                      << search_iterations
+                      << " (coefficient " << coefficient << ").\n";
         }
         return true;
     }
@@ -299,7 +316,7 @@ protected:
         size_t q = n+n-2; //number of clusters that will be needed
                           //in total, during the course of the tree
                           //construction: n leaves, n-2 interiors.
-        cluster_alive.resize         (q, 1);
+        cluster_in_play.resize       (q, 1);
         cluster_total.resize         (q, 0.0);
         cluster_total_scaled.resize  (q, 0.0);
         cluster_sorted_start.resize  (q, nullptr);
@@ -327,9 +344,9 @@ protected:
         double cutoff           = -infiniteDistance;
         double one_on_n_minus_2 = (n<3) ? 0.0 : (1.0 / ((double)n - 2.0));
         int    r                = 0;
-        //std::cout << "\nRow Totals: ";
+        FNJ_TRACE("\nRow Totals: ");
         for (int c=0; c<next_cluster_num; ++c) {
-            if (0<cluster_alive[c]) {
+            if (0<cluster_in_play[c]) {
                 cluster_total_scaled[c] = cluster_total[c] * one_on_n_minus_2;
                 cluster_cutoff[c]       = cutoff;
                 if (cutoff < cluster_total_scaled[c] ) {
@@ -338,10 +355,10 @@ protected:
                 cluster_row[c] = r;
                 row_cluster[r] = c;
                 ++r;
-                //std::cout << "c=" << c << " t=" << cluster_total_scaled[c] << " ";
+                FNJ_TRACE("c=" << c << " t=" << cluster_total_scaled[c]
+                          << " s=" << cluster_total[c] << "\n");
             }
         }
-        //std::cout << "\n";
     }
     void previewRows(int n, int q,
                      const IntVector& row_cluster,
@@ -349,31 +366,45 @@ protected:
                      DistanceVector&  row_best_dist,
                      IntVector&       row_choice,
                      T&               best_dist) {
+
+        FNJ_TRACE("\nPreview for n=" << n << "\n");
+        intptr_t iterations = 0;
         #ifdef _OPENMP
-        #pragma omp parallel for if(1<threadCount)
+        #pragma omp parallel for if(1<threadCount) reduction(+:iterations)
         #endif
         for (int r = 0; r < n; ++r ) {
-            int  c     = row_cluster[r];
-            auto scan  = cluster_sorted_start[c]; 
-            auto stop  = cluster_sorted_stop[c];
+            int  y     = row_cluster[r];
+            auto scan  = cluster_sorted_start[y]; 
+            auto stop  = cluster_sorted_stop[y];
             bool found = false;
             for (; scan<stop; ++scan) {
-                int b = scan->cluster_num;
-                if (0<cluster_alive[b]) {
+                ++iterations;
+                int x = scan->cluster_num;
+                if (0<cluster_in_play[x]) {
                     row_raw_dist[r]  = scan->distance;
                     row_best_dist[r] = scan->distance
-                                     - cluster_total_scaled[c]
-                                     - cluster_total_scaled[b];
-                    row_choice[r]    = b;
-                    cluster_sorted_start[c] = scan;
+                                     - cluster_total_scaled[x]
+                                     - cluster_total_scaled[y];
+                    row_choice[r]    = x;
+                    cluster_sorted_start[y] = scan;
                     found = true;
+                    FNJ_TRACE("x=" << x << ", y=" << y
+                              << ", Dxy=" << row_raw_dist[r]
+                              << ", Rx=" << cluster_total_scaled[x]
+                              << ", Ry=" << cluster_total_scaled[y]
+                              << ", Dxy-Rx-Ry=" << row_best_dist[r]
+                              << "\n");
                     break;
+                } else {
+                    FNJ_TRACE("For y=" << y << ", cluster x=" 
+                              << x << " is no longer in play.");
                 }
             }
             if (!found) {
-                    row_raw_dist[r]  = infiniteDistance;
-                    row_best_dist[r] = infiniteDistance;
-                    row_choice[r]    = q;
+                row_raw_dist[r]  = infiniteDistance;
+                row_best_dist[r] = infiniteDistance;
+                row_choice[r]    = q;
+                cluster_sorted_start[y] = cluster_sorted_stop[y];
             }
         }
 
@@ -383,72 +414,109 @@ protected:
                 best_dist = row_best_dist[r];
             }
         }
+        search_iterations += iterations;
     }
     void findPreferredPartners(int n, int q, T global_best_dist,
                                const IntVector& row_cluster,
                                DistanceVector&  row_raw_dist,
                                DistanceVector&  row_best_dist,
                                IntVector&       row_choice) {
+
+        FNJ_TRACE("\nSearch, n=" << n << "\n");
+        //
+        //Find an ordering of rows, ordering each row (r),
+        //according to the (Dcj - Rc - Rj) "cooked" distance, 
+        //to the first entry (for cluster x) from the cluster (y)
+        //mapped to row r.
+        //
+        std::vector< std::pair<T, int> > rows_by_dist;
+        for (int r = 0; r < n; ++r ) {
+            rows_by_dist.emplace_back(row_best_dist[r], r);
+        }
+        std::sort(rows_by_dist.begin(), rows_by_dist.end());
+
+        intptr_t iterations = 0;
         //For each cluster, find preferred partner
         #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic) if(1<threadCount)
+        #pragma omp parallel for schedule(static) if(1<threadCount) reduction(+:iterations)
         #endif
-        for (int r = n-1; 0 <= r; --r ) {
-            int c             = row_cluster[r];
-            if (cluster_alive[c]==0) {
+        for (int i = 0; i < n; ++i ) {
+            int r = rows_by_dist[i].second;
+            int y = row_cluster[r];
+            if (cluster_in_play[y]==0) {
                 continue;
             }
-            int best_cluster   = row_choice[r];    //set by previewRows().
+            int best_x         = row_choice[r];    //other cluster
             T   best_raw_dist  = row_raw_dist[r];  //set by previewRows().
-            T   best_dist      = row_best_dist[r]; //set by previewRows().
-            T   cutoff         = best_raw_dist + cluster_cutoff[c];
+            T   best_hc_dist   = row_best_dist[r]  + cluster_total_scaled[y];
+            T   cutoff         = best_hc_dist      + cluster_cutoff[y];
             T   earlier_cutoff = global_best_dist 
-                                + cluster_cutoff[c] + cluster_total[c];
+                               + cluster_cutoff[y] + cluster_total_scaled[y];
             if (earlier_cutoff < cutoff) {
                 cutoff = earlier_cutoff;
             }
+            //Any MatrixEntry in the data for this cluster that has a
+            //distance, Dxy greater tan cutoff will have Dxy - Rx - Ry
+            //greater than max(global_best_dist, row_best_dist),
+            //where global_best_dist is the best Dij - Ri - Rj found
+            //for any i,j, so far, and row_best_dist is the best 
+            //Dyi - Ri - Ry found for cluster y.
+
             //Can skip the first MatrixEntry at cluster_sorted_start[c].
-            //It's already been looked at by previewRows().
-            auto dataStart = cluster_sorted_start[c] + 1; 
-            auto dataStop  = cluster_sorted_stop[c];
+            //As it has already been looked at by previewRows().
+            auto dataStart = cluster_sorted_start[y] + 1; 
+            auto dataStop  = cluster_sorted_stop[y];
 
 #if (0)
             if (r+r < dataStop-dataStart) {
                 //At most half of the information recorded for this cluster
-                //is still of any use.  Purge it.
+                //is still of any use.  Purge it of references to any cluster x
+                //that is no longer in play (for which cluster_in_play[x]==0).
                 auto oldStop = dataStop;
                 for (auto scan=dataStart; scan<oldStop; ++scan) {
+                    int x = scan->cluster_num;
                     *dataStop = *scan;
-                    dataStop += cluster_alive[scan->cluster_num];
+                    dataStop += (cluster_in_play[x]==0) ? 0 : 1;
                 }
-                cluster_sorted_stop[c] = dataStop;
+                cluster_sorted_stop[y] = dataStop;
             }
-#endif 
+#endif
 
             for (auto scan=dataStart; scan<dataStop; ++scan) {
-                int p                = scan->cluster_num;
-                if (cluster_alive[p]==0) {
+                ++iterations;
+                int x                = scan->cluster_num;
+                if (cluster_in_play[x]==0) {
                     continue;
                 }
                 T   dist_raw         = scan->distance;
                 if (cutoff < dist_raw) {
                     break;
                 }
-                T   dist_half_cooked = dist_raw - cluster_total_scaled[p];
-                if (best_dist<=dist_half_cooked) {
+                T   dist_half_cooked = dist_raw 
+                                     - cluster_total_scaled[x];
+                FNJ_TRACE("x=" << x << ",y=" << y
+                          << ", Dxy=" << dist_raw 
+                          << " versus cutoff " << cutoff
+                          << ", Dxy-Rx=" << dist_half_cooked
+                          << " versus best " << best_hc_dist << "\n");
+                if (best_hc_dist<=dist_half_cooked) {
                     continue;
                 }
                 best_raw_dist = dist_raw;
-                best_dist     = dist_half_cooked;
-                best_cluster  = p;
-                cutoff        = best_raw_dist + cluster_cutoff[c];
-                if (earlier_cutoff < cutoff) {
+                best_hc_dist  = dist_half_cooked;
+                best_x        = x; //best cluster found
+                cutoff        = dist_half_cooked
+                              + cluster_cutoff[y];
+                              
+                if (earlier_cutoff < cutoff) {                    
                     cutoff = earlier_cutoff;
                 }
+                FNJ_TRACE("New cutoff " << cutoff << "\n");
             }
             row_raw_dist[r]  = best_raw_dist;
-            row_best_dist[r] = best_dist - cluster_total_scaled[c];
-            row_choice[r]    = best_cluster;
+            row_best_dist[r] = best_hc_dist - cluster_total_scaled[y];
+            row_choice[r]    = best_x;
+            #pragma omp critical
             if (row_best_dist[r] < global_best_dist) {
                 global_best_dist = row_best_dist[r];
             }
@@ -456,10 +524,12 @@ protected:
         #if (0)
         for (int r = 0; r < n; ++r ) {
             int c             = row_cluster[r];
-            std::cout << "c=" << c << " raw=" << row_raw_dist[r]
-                      << " d=" << row_best_dist[r] << " o=" << row_choice[r] << "\n";
+            FNJ_TRACE("c=" << c << " raw=" << row_raw_dist[r]
+                      << " d=" << row_best_dist[r] 
+                      << " o=" << row_choice[r] << "\n");
         }
         #endif
+        search_iterations += iterations;
     }
     int chooseBestRow(int n, int q,
                       const DistanceVector& row_best_dist,
@@ -562,7 +632,7 @@ protected:
         markClusterAsUsedUp(cluster_Y);
     }
     void markClusterAsUsedUp(int c) {
-        cluster_alive[c]         = 0;
+        cluster_in_play[c]       = 0;
         cluster_total[c]         = -infiniteDistance;
         cluster_sorted_stop[c]   = cluster_sorted_start[c];
         cluster_total_scaled[c]  = -infiniteDistance;
@@ -581,8 +651,9 @@ protected:
         #pragma omp parallel for if(1<threadCount)
         #endif
         for (auto scan = start; scan<stop; ++scan) {
-            int p = scan->cluster_num;
-            distances[p] = (0<cluster_alive[p]) ? scan->distance : distances[p];
+            int       p  = scan->cluster_num;
+            distances[p] = (0<cluster_in_play[p]) 
+                         ? scan->distance : distances[p];
         }
         //Now, for clusters *after* c, for which 
         //distances to c were recorded.
@@ -590,7 +661,7 @@ protected:
         #pragma omp parallel for if(1<threadCount)
         #endif
         for (int p=c+1; p<u; ++p) {
-            if (cluster_alive[p]) {
+            if (0<cluster_in_play[p]) {
                 distances[p] = clusterDistance(c, p);
             }
         }
@@ -636,11 +707,7 @@ protected:
             }
             MatrixEntry* guess = start + iGuess;
             if (guess->cluster_num<a) {
-                low    = guess[1].cluster_num;
-                //looking at guess[1] would be naughty,
-                //if we did not know that there *is* a
-                //MatrixEntry with a cluster_num of a
-                //somewhere to the right of guess.
+                low    = guess->cluster_num + 1;
                 count -= (iGuess+1);
                 start  = guess + 1;
             } else if (a<guess->cluster_num) {
@@ -654,6 +721,7 @@ protected:
             //pointed to by guess (at least) is always removed 
             //from consideration.
         }
+
         //std::cout << "Did not find "<< a << " in " << b << "'s D+I row\n";
         return infiniteDistance;
     }

@@ -441,11 +441,9 @@ void SequenceLoader::setUpSerializedData() {
     unk_buffer    = new uint64_t  [ unkLen * rank ];
     unknown_data  = new uint64_t* [ rank ];
     memset(unk_buffer, 0, unkLen * rank);
-        #if USE_PROGRESS_DISPLAY
+    #if USE_PROGRESS_DISPLAY
     const char* task = report_progress ? "Extracting variant sites": "";
     progress_display extract_progress(rank, task, "extracted from", "sequence");
-    #else
-    double extract_progress = 0.0;
     #endif
     #ifdef _OPENMP
     #pragma omp parallel for
@@ -485,9 +483,11 @@ void SequenceLoader::setUpSerializedData() {
         if (bits!=0) {
             *write_unk = unk;
         }
+        #if USE_PROGRESS_DISPLAY
         if ((row%100)==0) {
             extract_progress += 100.0;
         }
+        #endif
     }
     #if USE_PROGRESS_DISPLAY
     extract_progress.done();
@@ -598,8 +598,6 @@ bool SequenceLoader::loadSequenceDistances(FlatMatrix& m) {
     #if USE_PROGRESS_DISPLAY
     const char* task = report_progress ? "Calculating distances": "";
     progress_display progress( rank*(rank-1)/2, task );
-    #else
-    double progress = 0.0;
     #endif
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -610,7 +608,9 @@ bool SequenceLoader::loadSequenceDistances(FlatMatrix& m) {
             m.cell(row, col) = distance;
             m.cell(col, row) = distance;
         }
+        #if USE_PROGRESS_DISPLAY
         progress += (rank-row);
+        #endif
     }
     #if USE_PROGRESS_DISPLAY
     progress.done();
@@ -624,9 +624,9 @@ bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
     getNumberOfStates();
     bool   isTriangle = output_format.find("lower") != std::string::npos ||
                         output_format.find("upper") != std::string::npos;
-    double halfIfTriangle = isTriangle ? 0.5 : 1.0;
 
     #if USE_PROGRESS_DISPLAY
+    double halfIfTriangle = isTriangle ? 0.5 : 1.0;
     double calculations   = static_cast<double>(rank) 
                           * static_cast<double>(rank) * halfIfTriangle;
     const char* task = report_progress ? "Writing distance matrix file": "";
