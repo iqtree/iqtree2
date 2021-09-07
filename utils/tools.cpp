@@ -5716,6 +5716,8 @@ inline T quantile(const vector<T>& v, const double q) {
 int init_random(int seed) {
     srand(seed);
     cout << "(Using rand() - Standard Random Number Generator)" << endl;
+    // init random generator for AliSim
+    Params::getInstance().generator.seed(seed);
     return seed;
 }
 
@@ -5832,6 +5834,8 @@ int init_random(int seed) /* RAND4 */ {
         }
     }
 #endif
+    // init random generator for AliSim
+    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 
@@ -5876,6 +5880,8 @@ int init_random(int seed, bool write_info, int** rstream) {
         }
     }
 #endif /* PARALLEL */
+    // init random generator for AliSim
+    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 

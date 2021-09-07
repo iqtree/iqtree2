@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sstream>
+#include <random>
 
 //#include <sys/time.h>
 //#include <time.h>
@@ -2413,6 +2414,11 @@ public:
     *  threshold to switch between two simulation methods: Rate_Matrix and Trans_Prob_Matrix
     */
     double alisim_simulation_thresh;
+    
+    /**
+    *  random generator
+    */
+    default_random_engine generator;
 };
 
 /**

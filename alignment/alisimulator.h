@@ -215,17 +215,17 @@ protected:
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &accummulated_rates, vector<short int> &indel_sequence);
+    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &accummulated_rates, SIMULATION_METHOD simulation_method);
+    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
     
     /**
         extract array of substitution rates and Jmatrix
@@ -233,14 +233,9 @@ protected:
     double extractRatesJMatrix(ModelSubst *model);
     
     /**
-        compute the total substitution rate
-    */
-    double computeTotalSubRate(vector<double> site_specific_rates, vector<short int> site_specific_model_index, vector<short int> sequence);
-    
-    /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &accummulated_rates, vector<short int> sequence);
+    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence
