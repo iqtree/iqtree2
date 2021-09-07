@@ -32,6 +32,21 @@
 
 Argument::Argument(const char* arg_name): name(arg_name) {}
 
+DoubleArgument::DoubleArgument(const char* arg_name, const char* desc, 
+                               double& var) 
+    : super(arg_name), description(desc), dbl_var(var) { }
+void DoubleArgument::accept(const std::string& arg, 
+                            const std::string& nextArg, 
+                            char* argv[], int argc, int &argNum, 
+                            std::stringstream& problems) {
+    ++argNum;
+    if (argNum==argc) {
+        problems << name << " should be followed by " << description << ".\n";
+    }
+    dbl_var = atof(nextArg.c_str());
+}
+    
+
 IntArgument::IntArgument(const char* arg_name, const char* desc, int& var) 
     : super(arg_name), description(desc), int_var(var) { }
 void IntArgument::accept(const std::string& arg, const std::string& nextArg, 

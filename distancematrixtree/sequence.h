@@ -10,10 +10,10 @@ bool isOpeningBracket     (const char c);
 bool processSequenceLine  (const std::vector<int> &in_alphabet,
                            char unknown_char, std::string &sequence,
                            std::string &line, size_t line_num);
-double correctDistance    (double char_dist, double chars_compared,
-                           double num_states);
-double uncorrectedDistance(double char_dist,
-                           double chars_compared);
+double correctedDistance  (double char_dist,  double chars_compared,
+                           double num_states, double max_distance);
+double uncorrectedDistance(double char_dist,  double chars_compared,
+                           double max_distance);
 void useNumberedNamesIfAskedTo(bool numbered_names, FlatMatrix& m);
 
 class Sequence {
@@ -69,19 +69,20 @@ public:
 
 class SequenceLoader {
 protected:
-    char unknown_char;
-    bool is_DNA;
-    bool correcting_distances;
+    char        unknown_char;
+    bool        is_DNA;
+    double      max_distance;
+    bool        correcting_distances;
     std::string output_format;
-    int  precision;
-    int  compression_level;
+    int         precision;
+    int         compression_level;
 
     Sequences&               sequences;
     const std::vector<char>& is_site_variant;
     bool                     report_progress;
-    intptr_t rank;
-    size_t   rawSeqLen;
-    size_t   seqLen    = 0; //# of characters that actually vary between two sequences
+    intptr_t   rank;
+    size_t     rawSeqLen;
+    size_t     seqLen    = 0; //# of characters that actually vary between two sequences
 
     //Serialized data drawn from the sequences (N=rank, P=number of variable sites)
     size_t     unkLen        ; //Call this U
@@ -95,7 +96,8 @@ protected:
     void getNumberOfStates();
 
 public:
-    SequenceLoader(char unknown, bool isDNA,
+    SequenceLoader(char unknown, bool isDNA, 
+                   double maximum_distance,
                    Sequences& sequences_to_load,
                    bool use_corected_distances,
                    int  precision_to_use, int compression,

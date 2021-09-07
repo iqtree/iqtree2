@@ -167,7 +167,7 @@ public:
         intptr_t cluster_count  = size();
         double   sum_of_squares = 0.0;
         #ifdef _OPENMP
-        //#pragma omp parallel for reduction(+:sum_of_squares)
+        #pragma omp parallel for reduction(+:sum_of_squares)
         #endif
         for (intptr_t h=rank; h<cluster_count; ++h) {
             //For each (non-leaf) cluster...

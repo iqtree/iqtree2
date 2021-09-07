@@ -64,7 +64,7 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
             }
             if (it == line.end()) {
                 std::cerr << "Line " << line_num 
-                    << ": No matching close-bracket ) or } found";
+                          << ": No matching close-bracket ) or } found";
                 return false;
             }
             sequence.append(1, unknown_char);
@@ -75,27 +75,29 @@ bool processSequenceLine(const std::vector<int> &in_alphabet,
             #endif
         } else {
             std::cerr << "Line " << line_num 
-                << ": Unrecognized character "  + std::string(1,*it);
+                      << ": Unrecognized character "  + std::string(1,*it);
             return false;
         }
     }
     return true;
 }
 
-double correctDistance(double char_dist, double chars_compared,
-                              double num_states) {
-    double obs_dist = (0<chars_compared)
-                    ? (char_dist/chars_compared) : 0.0;
-    double z = num_states / (num_states-1);
-    double x = 1.0 - (z * obs_dist);
-    if (x <= 0) {
-        return 10; //Todo: parameter should control this
+double correctedDistance(double char_dist,  double chars_compared,
+                         double num_states, double max_distance) {
+    double obs_dist = ( 0 < chars_compared )
+                    ? ( char_dist / chars_compared ) : 0.0;
+    double z = num_states / ( num_states - 1.0 );
+    double x = 1.0 - ( z * obs_dist );
+    double d = (x<=0) ? max_distance : -log(x)/z;
+    if (max_distance<=d) {
+        d = max_distance;
     }
-    return -log(x) / z;
+    return d;
 }
 
 double uncorrectedDistance(double char_dist,
-                                  double chars_compared) {
+                           double chars_compared,
+                           double max_distance) {
     return (0<chars_compared)
         ? (char_dist/chars_compared) : 0.0;
 }
@@ -466,21 +468,19 @@ void SequenceLoader::setUpSerializedData() {
         unknown_data[row]     = unk_buffer + unkLen * row;
         const char* read_site = sequence_data[row];
         uint64_t*   write_unk = unknown_data[row];
-        size_t           bits = 0;
-        size_t            unk = 0;
+        uint64_t          unk = 0;
         for (int col=0; col<seqLen; ++col) {
             unk <<= 1;
             if (read_site[col] == unknown_char ) {
                 ++unk;
             }
-            if (++bits == 64) {
-                bits = 0;
+            if ((col&63)==63) {
                 *write_unk = unk;
                 ++write_unk;
                 unk = 0;
             }
         }
-        if (bits!=0) {
+        if (unk!=0) {
             *write_unk = unk;
         }
         #if USE_PROGRESS_DISPLAY
@@ -519,7 +519,8 @@ void SequenceLoader::getNumberOfStates() {
     }
 }
 
-SequenceLoader::SequenceLoader(char unknown, bool isDNA,
+SequenceLoader::SequenceLoader(char unknown, bool isDNA, 
+                               double maximum_distance,
                                Sequences& sequences_to_load, 
                                bool use_corected_distances,
                                int  precision_to_use, int compression, 
@@ -527,6 +528,7 @@ SequenceLoader::SequenceLoader(char unknown, bool isDNA,
                                const std::vector<char>& site_variant,
                                bool report_progress_while_loading)
     : unknown_char(unknown), is_DNA(isDNA)
+    , max_distance(maximum_distance)
     , correcting_distances(use_corected_distances)
     , output_format(output_format_to_use)
     , precision(precision_to_use)
@@ -551,23 +553,25 @@ SequenceLoader::~SequenceLoader() {
     delete [] buffer;
 }
 
- double SequenceLoader::getDistanceBetweenSequences(intptr_t row, intptr_t col) const {
+double SequenceLoader::getDistanceBetweenSequences(intptr_t row, intptr_t col) const {
     uint64_t char_distance = vectorHammingDistance
                                 (unknown_char, sequence_data[row],
-                                sequence_data[col], seqLen);
+                                 sequence_data[col], seqLen);
     uint64_t count_unknown = countBitsSetInEither
                                 (unknown_data[row], unknown_data[col],
-                                unkLen);
+                                 unkLen);
     double   distance      = 0;
     intptr_t adjSeqLen     = rawSeqLen - count_unknown;
     if (0<adjSeqLen) {
         if (correcting_distances) {
-            distance = correctDistance(static_cast<double>(char_distance), 
-                                        static_cast<double>(adjSeqLen), 
-                                        static_cast<double>(num_states));
+            distance = correctedDistance(static_cast<double>(char_distance), 
+                                         static_cast<double>(adjSeqLen), 
+                                         static_cast<double>(num_states),
+                                         max_distance);
         } else {
             distance = uncorrectedDistance(static_cast<double>(char_distance), 
-                                            static_cast<double>(adjSeqLen));
+                                           static_cast<double>(adjSeqLen),
+                                           max_distance);
         }
         if (distance < 0) {
             distance = 0;
@@ -622,10 +626,10 @@ bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
                                                const std::string& filePath) {
     setUpSerializedData();
     getNumberOfStates();
-    bool   isTriangle = output_format.find("lower") != std::string::npos ||
-                        output_format.find("upper") != std::string::npos;
 
     #if USE_PROGRESS_DISPLAY
+    bool   isTriangle = output_format.find("lower") != std::string::npos ||
+                        output_format.find("upper") != std::string::npos;
     double halfIfTriangle = isTriangle ? 0.5 : 1.0;
     double calculations   = static_cast<double>(rank) 
                           * static_cast<double>(rank) * halfIfTriangle;

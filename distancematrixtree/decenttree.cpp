@@ -53,18 +53,19 @@ namespace {
         return answer;
     }
 
-    bool correcting_distances      = true;
-    bool is_DNA                    = true;
-    bool numbered_names            = false;
-    bool filter_problem_sequences  = false;
-    char unknown_char              = 'N';
-    int  precision                 = 8;
-    int  compression_level         = 9;
+    bool   correcting_distances     = true;
+    bool   is_DNA                   = true;
+    bool   numbered_names           = false;
+    bool   filter_problem_sequences = false;
+    char   unknown_char             = 'N';
+    double max_distance             = 10.0;
+    int    precision                = 8;
+    int    compression_level        = 9;
     std::string msaOutputPath; //write .msa formatted version of .fasta input here
     std::string alphabet;      //defaults to ACGT
     std::string unknown_chars; //defaults to .~_-?N
-    std::string format             = "square.interleaved";
-    bool        interleaved_format = true;
+    std::string format              = "square.interleaved";
+    bool        interleaved_format  = true;
 
     std::string stripName;              //characters to strip from names
     std::string nameReplace("_");       //characters to replace stripepd chars with, in names
@@ -116,7 +117,8 @@ void showUsage() {
 bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
                                      const std::vector<char>&   is_site_variant,
                                      bool report_progress, FlatMatrix& m) {
-    SequenceLoader loader(unknown_char, is_DNA, sequences, correcting_distances,
+    SequenceLoader loader(unknown_char, is_DNA, max_distance,
+                          sequences, correcting_distances,
                           precision, compression_level, format, 
                           is_site_variant, report_progress);
     bool success = loader.loadSequenceDistances(m);
@@ -251,7 +253,8 @@ bool prepInput(const std::string& fastaFilePath,
                                  distanceOutputFilePath );
             }
             else {
-                SequenceLoader loader(unknown_char, is_DNA, sequences, 
+                SequenceLoader loader(unknown_char, is_DNA, 
+                                      max_distance, sequences, 
                                       correcting_distances, precision, 
                                       compression_level, format,
                                       is_site_variant, reportProgress);
@@ -350,6 +353,7 @@ public:
         arg_map << new SwitchArgument("-gz",          isOutputZipped,           true);
         arg_map << new SwitchArgument("-no-banner",   isBannerSuppressed,       true);
         arg_map << new SwitchArgument("-uncorrected", correcting_distances,     false);
+        arg_map << new DoubleArgument("-max-dist",    "maximum distance", max_distance);
         arg_map << new IntArgument   ("-nt", "thread count", threadCount);
         arg_map << new SwitchArgument("-q",           beSilent,                 true);
         arg_map << new SwitchArgument("-filter",      filter_problem_sequences, true);
@@ -385,6 +389,9 @@ public:
                 PROBLEM("Unrecognized command-line argument, " + arg);
                 break;
             }
+        }
+        if (max_distance<=0) {
+            PROBLEM("Maximum distance (" << max_distance << ") too low");
         }
         range_restrict(0, 9,  compression_level );
         range_restrict(1, 15, precision );

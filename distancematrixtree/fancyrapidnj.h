@@ -127,7 +127,8 @@ protected:
 
 public:
     FancyNJMatrix() : be_silent(false), zip_it(false), 
-                      original_rank(0), next_cluster_number(0) {
+                      original_rank(0), next_cluster_number(0),
+                      search_iterations(0) {
         #ifdef _OPENMP
             threadCount = omp_get_max_threads();
         #else

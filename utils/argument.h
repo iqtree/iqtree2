@@ -16,6 +16,17 @@ public:
                         std::stringstream& problems) = 0;
 };
 
+class DoubleArgument: public Argument {
+    std::string description;
+    double& dbl_var;
+public: 
+    typedef Argument super;
+    DoubleArgument(const char* arg_name, const char* desc, double& var);
+    void accept(const std::string& arg, const std::string& nextArg, 
+                char* argv[], int argc, int &argNum, 
+                std::stringstream& problems) override;
+};
+
 class IntArgument: public Argument {
     std::string description;
     int& int_var;
