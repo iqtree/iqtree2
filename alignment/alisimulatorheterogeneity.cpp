@@ -430,3 +430,99 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     // insert new_sequence into the current sequence
     AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
 }
+
+/**
+    initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
+*/
+void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
+{
+    // initialize variables
+    int sequence_length = sequence.size();
+    total_sub_rate = 0;
+    num_gaps = 0;
+    sub_rate_by_site.resize(sequence_length, 0);
+    
+    // check if sub_rates could be caching (without continuous gamma) -> compute sub_rate_by_site efficiently using cache_sub_rates
+    if (!tree->getModelFactory()->is_continuous_gamma)
+    {
+        int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
+        int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
+        int total_elements = num_models*num_rate_categories*max_num_states;
+        double *cache_sub_rates = new double[total_elements];
+        vector<int> sub_rate_count(total_elements, 0);
+        
+        // initialize cache_sub_rates
+        bool fuse_mixture_model = (tree->getModel()->isMixture() && tree->getModel()->isFused());
+        for (int model_index = 0; model_index < num_models; model_index++)
+        for (int rate_category_index = 0; rate_category_index < num_rate_categories; rate_category_index++)
+        {
+            // skip computing unused cache_sub_rates if a mixture with fused site rate is used
+            if (fuse_mixture_model && model_index != rate_category_index)
+                continue;
+            
+            // extract site's rate
+            double rate = rate_heterogeneity->getNRate() == 1?1:rate_heterogeneity->getRate(rate_category_index);
+            
+            // compute cache_sub_rates
+            for (int state = 0; state < max_num_states; state++)
+                cache_sub_rates[model_index*num_rate_categories*max_num_states + rate_category_index*max_num_states + state] = sub_rates[model_index * max_num_states + state]*rate;
+        }
+        
+        // compute sub_rate_by_site
+        for (int i = 0; i < sequence_length; i++)
+        {
+            // not compute the substitution rate for gaps/deleted sites or constant sites
+            if (sequence[i] != STATE_UNKNOWN && site_specific_rates[i] != 0)
+            {
+                // get the mixture model index and site_specific_rate_index
+                int model_index = site_specific_model_index[i];
+                int rate_index = site_specific_rate_index[i];
+                
+                // update sub_rate_by_site for the current site
+                int index = model_index*num_rate_categories*max_num_states + rate_index*max_num_states + sequence[i];
+                sub_rate_count[index]++;
+                sub_rate_by_site[i] = cache_sub_rates[index];
+            }
+            else
+            {
+                sub_rate_by_site[i] = 0;
+                
+                if (sequence[i] == STATE_UNKNOWN)
+                    num_gaps++;
+            }
+        }
+        
+        // update total_sub_rate
+        for (int i = 0; i < total_elements; i++)
+            total_sub_rate += sub_rate_count[i]*cache_sub_rates[i];
+        
+        // delete cache_sub_rates
+        delete[] cache_sub_rates;
+    }
+    // otherwise, sub_rate_by_site for all sites one by one
+    else
+    {
+        for (int i = 0; i < sequence_length; i++)
+        {
+            // not compute the substitution rate for gaps/deleted sites or constant sites
+            if (sequence[i] != STATE_UNKNOWN && site_specific_rates[i] != 0)
+            {
+                // get the mixture model index
+                int model_index = site_specific_model_index[i];
+                
+                // update sub_rate_by_site for the current site
+                sub_rate_by_site[i] = sub_rates[model_index * max_num_states + sequence[i]]*site_specific_rates[i];
+            }
+            else
+            {
+                sub_rate_by_site[i] = 0;
+                
+                if (sequence[i] == STATE_UNKNOWN)
+                    num_gaps++;
+            }
+            
+            // update total_sub_rate
+            total_sub_rate += sub_rate_by_site[i];
+        }
+    }
+}

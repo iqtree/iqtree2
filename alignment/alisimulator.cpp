@@ -1627,26 +1627,29 @@ void AliSimulator::initVariables4RateMatrix(double &total_sub_rate, int &num_gap
     num_gaps = 0;
     sub_rate_by_site.resize(sequence_length, 0);
     
-    // compute the total sub rate (Notes: this method could be further optimized to reduce the running time)
+    vector<int> sub_rate_count(max_num_states, 0);
+    // compute sub_rate_by_site
     for (int i = 0; i < sequence_length; i++)
     {
         // not compute the substitution rate for gaps/deleted sites
-        if (sequence[i] != STATE_UNKNOWN)
+        if (sequence[i] != STATE_UNKNOWN && (site_specific_rates.size() == 0 || site_specific_rates[i] != 0))
         {
-            // get the mixture model index
-            int mixture_index = site_specific_model_index.size() == 0? 0:site_specific_model_index[i];
-            // if site_specific_rates is empty, the relative site rate should be 1
-            if (site_specific_rates.size() > 0)
-                sub_rate_by_site[i] = sub_rates[mixture_index * max_num_states + sequence[i]]*site_specific_rates[i];
-            else
-                sub_rate_by_site[i] = sub_rates[mixture_index * max_num_states + sequence[i]];
+            int index = sequence[i];
+            sub_rate_count[index]++;
+            sub_rate_by_site[i] = sub_rates[index];
         }
         else
-            num_gaps++;
-        
-        // update total_sub_rate
-        total_sub_rate += sub_rate_by_site[i];
+        {
+            sub_rate_by_site[i] = 0;
+            
+            if (sequence[i] == STATE_UNKNOWN)
+                num_gaps++;
+        }
     }
+    
+    // update total_sub_rate
+    for (int i = 0; i < max_num_states; i++)
+        total_sub_rate += sub_rate_count[i]*sub_rates[i];
 }
 
 /**

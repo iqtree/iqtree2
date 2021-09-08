@@ -235,7 +235,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence
