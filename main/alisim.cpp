@@ -475,8 +475,6 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
 */
 void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, map<string,string> input_msa)
 {
-    auto start = getRealTime();
-    
     // Load ancestral sequence from the input file if user has specified it
     vector<short int> ancestral_sequence;
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
@@ -571,19 +569,11 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa);
         }
         
-        // show the simulation time
-        auto end = getRealTime();
-        cout<<" - Simulation time: "<<end-start<<endl;
-        
         // merge & write alignments to files if they have not yet been written
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator);
-        
-        // show the time spent on writing sequences to the output file
-        auto end_writing = getRealTime();
-        cout<<" - Time spent on writing output: "<<end_writing-end<<endl;
     }
 }
 
