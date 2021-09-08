@@ -190,7 +190,7 @@ int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *
 */
 void AliSimulatorHeterogeneity::getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length)
 {
-    RateContinuousGamma *rate_continuous_gamma = new RateContinuousGamma(rate_heterogeneity->getGammaShape(), params->ran_seed);
+    RateContinuousGamma *rate_continuous_gamma = new RateContinuousGamma(rate_heterogeneity->getGammaShape());
     
     rate_continuous_gamma->getSiteSpecificRates(site_specific_rates, sequence_length);
     

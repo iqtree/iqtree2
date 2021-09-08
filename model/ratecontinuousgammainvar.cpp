@@ -7,8 +7,8 @@
 
 #include "ratecontinuousgammainvar.h"
 
-RateContinuousGammaInvar::RateContinuousGammaInvar(double shape, int seed, double p_invar_sites) :
-RateInvar(p_invar_sites), RateContinuousGamma(shape,seed) {
+RateContinuousGammaInvar::RateContinuousGammaInvar(double shape, double p_invar_sites) :
+RateInvar(p_invar_sites), RateContinuousGamma(shape) {
 }
 
 void RateContinuousGammaInvar::setPInvar(double pInvar) {
@@ -38,6 +38,7 @@ void RateContinuousGammaInvar::getSiteSpecificRates(vector<double> &site_specifi
 {
     // initialize gamma distribution
     gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);
+    default_random_engine generator = Params::getInstance().generator;
     
     for (int i = 0; i < sequence_length; i++)
     {

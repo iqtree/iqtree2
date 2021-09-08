@@ -25,7 +25,7 @@ public:
         constructor
         @param shape Gamma shape parameter
     */
-    RateContinuousGamma(double shape, int seed);
+    RateContinuousGamma(double shape);
 
     /**
         start structure for checkpointing
@@ -69,8 +69,6 @@ protected:
         the gamma shape parameter 'alpha'
     */
     double gamma_shape;
-    
-    default_random_engine generator;
 
 };
 

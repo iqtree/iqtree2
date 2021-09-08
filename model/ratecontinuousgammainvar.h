@@ -18,7 +18,7 @@ public:
         constructor
         @param alpha and p_invar
     */
-    RateContinuousGammaInvar(double shape, int seed, double p_invar_sites);
+    RateContinuousGammaInvar(double shape, double p_invar_sites);
 
     /**
         start structure for checkpointing

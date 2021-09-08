@@ -12,10 +12,9 @@ RateContinuousGamma::RateContinuousGamma(): RateHeterogeneity()
     
 }
 
-RateContinuousGamma::RateContinuousGamma(double shape, int seed): RateHeterogeneity()
+RateContinuousGamma::RateContinuousGamma(double shape): RateHeterogeneity()
 {
     gamma_shape = shape;
-    generator.seed(seed);
 }
 
 void RateContinuousGamma::startCheckpoint() {
@@ -44,6 +43,7 @@ void RateContinuousGamma::getSiteSpecificRates(vector<double> &site_specific_rat
 {
     // initialize gamma distribution
     gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);
+    default_random_engine generator = Params::getInstance().generator;
     
     for (int i = 0; i < sequence_length; i++)
     {
