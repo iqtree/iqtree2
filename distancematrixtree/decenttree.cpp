@@ -396,6 +396,11 @@ public:
         range_restrict(0, 9,  compression_level );
         range_restrict(1, 15, precision );
         format = string_to_lower(format);
+        if (isOutputZipped && 
+            format.find(".gz") == std::string::npos) {
+            //Ensure that distance file will be compressed
+            format += ".gz"; 
+        }
         if (isOutputToStandardOutput) {
             outputFilePath = "STDOUT";
         }
