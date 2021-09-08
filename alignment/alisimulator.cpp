@@ -498,17 +498,26 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
         else
         {
             for (int i = 0; i < node->sequence.size(); i++)
-                if (variant_state_mask[i] != -1 && variant_state_mask[i] != node->sequence[i])
+            {
+                if (variant_state_mask[i] != -1 && variant_state_mask[i] != node->sequence[i] && node->sequence[i] != STATE_UNKNOWN)
                 {
-                    // if the current state is changed -> increase num_variant_states, and disable that state
-                    variant_state_mask[i] = -1;
-                    num_variant_states++;
-                    
-                    // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    // keep checking if Indels is used
-                    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
-                        break;
+                    // if variant_state_mask is a gap -> update it by the current site of the sequence
+                    if (variant_state_mask[i] == STATE_UNKNOWN)
+                        variant_state_mask[i] = node->sequence[i];
+                    // otherwise, mask the variant_state_mask of the current site as variant
+                    else
+                    {
+                        // if the current state is changed -> increase num_variant_states, and disable that state
+                        variant_state_mask[i] = -1;
+                        num_variant_states++;
+                        
+                        // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
+                        // keep checking if Indels is used
+                        if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
+                            break;
+                    }
                 }
+            }
         }
     }
     
@@ -546,6 +555,8 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool
         // otherwise, only get the state freqs from the model without re-initializing state freqs
         else
             tree->getModel()->getStateFrequency(state_freq);
+        
+        auto end = getRealTime();
         
         // finding the max probability position
         int max_prob_pos = 0;
