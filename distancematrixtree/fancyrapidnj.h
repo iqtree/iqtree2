@@ -56,8 +56,10 @@
 #ifndef  fancy_rapid_nj_h
 #define  fancy_rapid_nj_h
 
-#include "nj.h"                       //for NJFloat
+#include "nj.h"                       //for NJFloat (should be separate header for that)
 #include "clustertree.h"              //for ClusterTree template class
+#include "flatmatrix.h"               //for FlatMatrix
+#include "hashrow.h"                  //for HashRow
 #include "utils/parallel_mergesort.h" //for MergeSorter
 
 #define  FNJ_TRACE(x) (0)
@@ -124,6 +126,7 @@ protected:
             return 0;
         #endif
     }
+    DuplicateTaxa duplicate_taxa;
 
 public:
     FancyNJMatrix() : be_silent(false), zip_it(false), 
@@ -165,6 +168,11 @@ public:
             std::cerr << "Load matrix failed: " << str << std::endl;
             return false;
         }
+    }
+    virtual bool loadMatrixFromOpenFile(InFile& in) {
+        FlatMatrix dummy;
+        loadDistanceMatrixFromOpenFile(in, !be_silent, dummy);
+        return this->loadMatrix(dummy.getSequenceNames(), dummy.getDistanceMatrix());
     }
     virtual bool loadMatrix(const StrVector& names,
                             const double* matrix) {
@@ -215,6 +223,9 @@ public:
         #if USE_PROGRESS_DISPLAY
             setupProgress.done();
         #endif
+
+        identifyDuplicateTaxa(matrix);
+
         return true;
     }
     virtual bool constructTree() {
@@ -222,16 +233,6 @@ public:
         if (original_rank<3) {
             return false;
         }
-
-        #if USE_PROGRESS_DISPLAY
-        std::string taskName;
-        if (!be_silent) {
-            taskName = "Constructing " + getAlgorithmName() + " tree";
-        }
-        double row_count = (double)original_rank;
-        double triangle  = row_count * (row_count + 1.0) * 0.5;
-        progress_display show_progress(triangle, taskName.c_str(), "", "");
-        #endif
 
         int  n = original_rank;
         int  q = n + n - 2;
@@ -249,6 +250,59 @@ public:
         double recalcTime  = 0;
         double previewTime = 0;
         double mergeTime   = 0;
+
+        #if USE_PROGRESS_DISPLAY
+        std::string taskName;
+        if (!be_silent) {
+            taskName = "Constructing " + getAlgorithmName() + " tree";
+        }
+        double row_count = (double)original_rank;
+        double triangle  = row_count * (row_count + 1.0) * 0.5;
+        progress_display show_progress(triangle, taskName.c_str(), "", "");
+        #endif
+
+        size_t duplicate_merges = 0;
+        for (std::vector<intptr_t>& cluster_members: duplicate_taxa) {
+            //cluster_members: cluster numbers of the next set 
+            //of duplicate taxa to merge...
+            while (1<cluster_members.size()) {
+                std::vector<intptr_t> next_level;
+                for (int i=0; i<cluster_members.size(); i+=2) {
+                    if (i+1==cluster_members.size()) {
+                        next_level.push_back(cluster_members[i]);
+                    } else {    
+                        int x = cluster_members[i];
+                        int y = cluster_members[i+1];
+
+                        recalcTime  -= getRealTime();
+                        recalculateTotals    (n, next_cluster_number, 
+                                            row_cluster, cluster_row);
+                        recalcTime  += getRealTime();
+
+                        int low_row  = cluster_row[x];
+                        int high_row = cluster_row[y];
+                        if (high_row<low_row) {
+                            std::swap(low_row, high_row);
+                        }
+                        row_cluster[low_row]  = next_cluster_number;
+                        row_cluster[high_row] = row_cluster[n-1];   
+                        mergeTime -= getRealTime();
+                        mergeClusters(x, y, next_cluster_number,
+                                        (T)0, n);
+                        mergeTime += getRealTime();
+                        next_level.push_back(next_cluster_number);
+                        ++next_cluster_number;
+                        #if USE_PROGRESS_DISPLAY
+                        show_progress+=(double)n;
+                        #endif
+                        --n;
+                        ++duplicate_merges;
+                    }
+                }
+                std::swap(cluster_members, next_level);
+            }
+        }
+
         for ( ; 1 < n ; --n) {
             T best_dist;
             recalcTime  -= getRealTime();
@@ -267,8 +321,6 @@ public:
             int best_cluster  = row_cluster[best_row];
             int other_cluster = row_choice[best_row];
             int other_row     = cluster_row[other_cluster];
-            //std::cout << "br=" << best_row << ", or=" << other_row << "\n";
-            //std::cout << "bc=" << best_cluster << ", oc=" << other_cluster << "\n";
             int low_row       = (best_row < other_row) ? best_row  : other_row;
             int high_row      = (best_row < other_row) ? other_row : best_row;
             row_cluster[low_row]  = next_cluster_number;
@@ -282,6 +334,7 @@ public:
             show_progress+=(double)n;
             #endif
         }
+
         #if USE_PROGRESS_DISPLAY
         show_progress.done();
         #endif
@@ -289,6 +342,10 @@ public:
             double coefficient = (double)search_iterations
                                / (double)original_rank 
                                / (double)original_rank;
+            if (0<duplicate_merges) {
+                std::cout << "Did " << duplicate_merges 
+                          << " merges of duplicate clusters.\n";
+            }
             std::cout << "Recalc time " << recalcTime << ","
                       << " Preview time " << previewTime << " and"
                       << " Cluster merge time was " << mergeTime << ".\n";
@@ -307,9 +364,6 @@ public:
         return clusters.writeTreeFile(zip_it, precision, treeFilePath);
     }
 protected:
-    virtual bool loadMatrixFromOpenFile(InFile& in) {
-        return false;
-    }
     virtual void setRank(size_t n) {
         original_rank       = n;
         next_cluster_number = n;
@@ -339,6 +393,44 @@ protected:
             cluster_unsorted_stop[c]   = data;
         }
     }
+
+    void identifyDuplicateTaxa(const double* matrix) {
+        //1. Calculate row hashes
+        #if USE_PROGRESS_DISPLAY
+        const char* task_name = "";
+        if (!be_silent) {
+            task_name = "Identifying duplcate clusters";
+        }
+        progress_display show_progress((double)original_rank, task_name, "", "");
+        #endif
+
+        std::vector< HashRow<double> > hashed_rows(original_rank);
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (intptr_t i=0; i<original_rank; ++i) {
+            hashed_rows[i] = HashRow<double>(i, matrix+original_rank*i, 
+                                             original_rank);
+            #if USE_PROGRESS_DISPLAY
+                if ((i%1000)==999) {
+                    show_progress += (double)(1000.0);
+                }
+            #endif
+        }
+        //2. Sort rows by hash (and tiebreak on row content)
+        std::sort(hashed_rows.begin(), hashed_rows.end());
+
+        //3. Now, identify any identical rows.
+        duplicate_taxa.clear();
+        HashRow<double>::identifyDuplicateClusters(hashed_rows, duplicate_taxa);
+
+        #if USE_PROGRESS_DISPLAY
+            show_progress += (double)(original_rank%1000);
+            show_progress.done();
+        #endif
+    }
+
+
     void recalculateTotals(int n, int next_cluster_num, 
                            IntVector& row_cluster,
                            IntVector& cluster_row) {

@@ -544,6 +544,11 @@ SequenceLoader::SequenceLoader(char unknown, bool isDNA,
     for (auto it=is_site_variant.begin(); it!=is_site_variant.end(); ++it) {
         seqLen += *it;
     }
+    #if (0)
+    std::cout << "Number of invariant sites " << (rawSeqLen-seqLen) << "\n";
+    std::cout << "Number of variable sites " << (seqLen) << "\n";
+    std::cout << "Total number of sites " << rawSeqLen << "\n";
+    #endif
 }
 
 SequenceLoader::~SequenceLoader() {
