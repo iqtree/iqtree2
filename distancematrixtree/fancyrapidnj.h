@@ -367,7 +367,7 @@ protected:
         #if USE_PROGRESS_DISPLAY
         const char* task_name = "";
         if (!be_silent) {
-            task_name = "Identifying duplcate clusters";
+            task_name = "Identifying duplicate clusters";
         }
         progress_display show_progress((double)original_rank, task_name, "", "");
         #endif
@@ -411,7 +411,7 @@ protected:
         }
         const char* task_name = "";
         if (!be_silent) {
-            task_name = "Merging duplcate clusters";
+            task_name = "Merging duplicate clusters";
         }
         progress_display show_progress(work_estimate, task_name, "", "");
         #endif
@@ -460,7 +460,7 @@ protected:
         #if USE_PROGRESS_DISPLAY
             show_progress.done();
         #endif
-
+        return duplicate_merges;
     }
 
     void recalculateTotals(int n, int next_cluster_num, 
@@ -610,19 +610,14 @@ protected:
                     cluster_sorted_stop[y] = dataStop;
                 }
     #endif
-
+                dataStop = findFirstGreaterDistance
+                           (dataStart, dataStop, cutoff);
                 for (auto scan=dataStart; scan<dataStop; ++scan) {
                     //++iterations;
                     int x                = scan->cluster_num;
-                    if (cluster_in_play[x]==0) {
-                        continue;
-                    }
                     T   dist_raw         = scan->distance;
-                    if (cutoff < dist_raw) {
-                        break;
-                    }
                     T   dist_half_cooked = dist_raw 
-                                        - cluster_total_scaled[x];
+                                         - cluster_total_scaled[x];
                     FNJ_TRACE("x=" << x << ",y=" << y
                             << ", Dxy=" << dist_raw 
                             << " versus cutoff " << cutoff
@@ -635,7 +630,7 @@ protected:
                     best_hc_dist  = dist_half_cooked;
                     best_x        = x; //best cluster found
                     cutoff        = dist_half_cooked
-                                + cluster_cutoff[y];
+                                  + cluster_cutoff[y];
                                 
                     if (earlier_cutoff < cutoff) {                    
                         cutoff = earlier_cutoff;
@@ -660,6 +655,23 @@ protected:
         }
         #endif
         //search_iterations += iterations;
+    }
+    MatrixEntry* findFirstGreaterDistance(MatrixEntry* start, 
+                                          MatrixEntry* stop, T dist) {
+        while (start<stop) {
+            MatrixEntry* middle  = start + (stop-start) / 2;
+            bool         greater = dist < middle->distance;
+#if (0)
+            //If two conditional moves 
+            //cheaper than one if statement
+            stop                 = greater ? middle : stop;
+            ++middle;
+            start                = greater ? start : middle;
+#else
+            if (greater) stop=middle; else start = middle+1;
+#endif
+        }
+        return start;
     }
     int chooseBestRow(int n, int q,
                       const DistanceVector& row_best_dist,
