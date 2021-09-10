@@ -114,6 +114,11 @@ protected:
     EntryPtrVector cluster_unsorted_stop;
     IntVector      cluster_row;
 
+    IntVector      row_cluster;
+    DistanceVector row_raw_dist;
+    DistanceVector row_best_dist;
+    IntVector      row_choice;
+
     //uint64_t       search_iterations;
 
     int            threadCount;
@@ -148,7 +153,6 @@ public:
     std::string getAlgorithmName() const {
         return "FancyNJ";
     }
-
     void beSilent() { 
         be_silent = true; 
     } 
@@ -242,23 +246,13 @@ public:
 
         int  n = original_rank;
         int  q = n + n - 2;
-        IntVector      row_cluster(original_rank);
-        DistanceVector row_raw_dist(original_rank);
-        DistanceVector row_best_dist(original_rank);
-        IntVector      row_choice(original_rank);
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
-        for (int i=0; i<original_rank; ++i) {
-            row_cluster[i] = i;
-        }
 
         double recalcTime  = 0;
         double previewTime = 0;
         double mergeTime   = 0;
 
-        intptr_t duplicate_merges = clusterDuplicateTaxa(row_cluster, n, 
-                                                         recalcTime, mergeTime);
+        intptr_t duplicate_merges = clusterDuplicateTaxa 
+                                    (n, recalcTime, mergeTime);
 
         #if USE_PROGRESS_DISPLAY
         std::string taskName;
@@ -272,18 +266,13 @@ public:
         for ( ; 1 < n ; --n) {
             T best_dist;
             recalcTime  -= getRealTime();
-            recalculateTotals    (n, next_cluster_number, 
-                                  row_cluster, cluster_row);
+            recalculateTotals    (n, next_cluster_number);
             recalcTime  += getRealTime();
             previewTime -= getRealTime();
-            previewRows          (n, q, row_cluster,
-                                  row_raw_dist, row_best_dist,
-                                  row_choice, best_dist);
+            previewRows          (n, q, best_dist);
             previewTime += getRealTime();
-            findPreferredPartners(n, q, best_dist, row_cluster, 
-                                  row_raw_dist, row_best_dist, 
-                                  row_choice);
-            int best_row      = chooseBestRow(n, q, row_best_dist, row_choice);
+            findPreferredPartners(n, q, best_dist);
+            int best_row      = chooseBestRow(n, q);
             int best_cluster  = row_cluster[best_row];
             int other_cluster = row_choice[best_row];
             int other_row     = cluster_row[other_cluster];
@@ -360,6 +349,19 @@ protected:
             data                      += entries;
             cluster_unsorted_stop[c]   = data;
         }
+
+        row_cluster.resize(original_rank);
+        row_raw_dist.resize(original_rank);
+        row_best_dist.resize(original_rank);
+        row_choice.resize(original_rank);
+
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
+        for (int i=0; i<original_rank; ++i) {
+            row_cluster[i] = i;
+        }
+
     }
 
     void identifyDuplicateTaxa(const double* matrix) {
@@ -398,8 +400,9 @@ protected:
         #endif
     }
 
-    intptr_t clusterDuplicateTaxa(IntVector& row_cluster, int& n,
-                                  double& recalcTime, double& mergeTime) {
+    intptr_t clusterDuplicateTaxa(int& n, double& recalcTime, 
+                                  double& mergeTime) {
+        //writes: row_cluster                                      
         if (duplicate_taxa.empty()) {
             return 0;
         }
@@ -430,8 +433,7 @@ protected:
                         int y = cluster_members[i+1];
 
                         recalcTime  -= getRealTime();
-                        recalculateTotals    (n, next_cluster_number, 
-                                            row_cluster, cluster_row);
+                        recalculateTotals (n, next_cluster_number);
                         recalcTime  += getRealTime();
 
                         int low_row  = cluster_row[x];
@@ -463,9 +465,8 @@ protected:
         return duplicate_merges;
     }
 
-    void recalculateTotals(int n, int next_cluster_num, 
-                           IntVector& row_cluster,
-                           IntVector& cluster_row) {
+    void recalculateTotals(int n, int next_cluster_num) {
+        //writes: row_cluster and cluster_row
         double cutoff           = -infiniteDistance;
         double one_on_n_minus_2 = (n<3) ? 0.0 : (1.0 / ((double)n - 2.0));
         int    r                = 0;
@@ -485,12 +486,9 @@ protected:
             }
         }
     }
-    void previewRows(int n, int q,
-                     const IntVector& row_cluster,
-                     DistanceVector&  row_raw_dist,
-                     DistanceVector&  row_best_dist,
-                     IntVector&       row_choice,
-                     T&               best_dist) {
+    void previewRows(int n, int q, T& best_dist) {
+        //reads: row_cluster
+        //writes: row_rw_dist, row_best_distance, row_choice
 
         FNJ_TRACE("\nPreview for n=" << n << "\n");
         intptr_t iterations = 0;
@@ -541,12 +539,9 @@ protected:
         }
         //search_iterations += iterations;
     }
-    void findPreferredPartners(int n, int q, T global_best_dist,
-                               const IntVector& row_cluster,
-                               DistanceVector&  row_raw_dist,
-                               DistanceVector&  row_best_dist,
-                               IntVector&       row_choice) {
-
+    void findPreferredPartners(int n, int q, T global_best_dist) {
+        //reads:   row_cluster
+        //updates: row_raw_dist, row_best_dist, row_choice
         FNJ_TRACE("\nSearch, n=" << n << "\n");
         //
         //Find an ordering of rows, ordering each row (r),
@@ -673,9 +668,8 @@ protected:
         }
         return start;
     }
-    int chooseBestRow(int n, int q,
-                      const DistanceVector& row_best_dist,
-                      const IntVector&      row_choice) {
+    int chooseBestRow(int n, int q) {
+        //reads: row_best_dist, row_choice
         int best_row  = q;
         T   best_dist = infiniteDistance;
         //std::cout << "Choose Row:";
