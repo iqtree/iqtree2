@@ -73,7 +73,10 @@ void addBioNJ2020TreeBuilders(Factory& f) {
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 
     ADVERTISE(FancyNJMatrix<NJFloat>,"BROKEN",  "Rapid Neighbour Joining (Broken Version)"
-                                                " (Simonsen, Mailund, Pedersen [2011]) (default)");
+                                                " (Simonsen, Mailund, Pedersen [2011])");
+
+    ADVERTISE(VectorizedFancyNJMatrix<NJFloat>, "BROKEN-V",  "Rapid Neighbour Joining (Broken Version)"
+                                                " (Simonsen, Mailund, Pedersen [2011]) (Vectorized)");
 
 #ifdef USE_VECTORCLASS_LIBRARY
     ADVERTISE(VectorNJ,             "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");

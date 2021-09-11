@@ -143,7 +143,7 @@ protected:
 
 public:
     FancyNJMatrix() : be_silent(false), zip_it(false), original_rank(0), 
-                      next_cluster_number(0) {
+                      next_cluster_number(0), global_best_dist(0) {
         #ifdef _OPENMP
             threadCount = omp_get_max_threads();
         #else
@@ -192,7 +192,7 @@ public:
         double work_to_do = 0.5 * row_count * (row_count - 1.0);
         const char* taskName = be_silent
             ? "" :  "Setting up triangular I+S and I+D matrices";
-        progress_display setupProgress(work_to_do, taskName, "loading", "row");
+        progress_display setupProgress(work_to_do, taskName, "", "");
         #endif
         //Assumes: matrix is symmetrical
         clusters.clear();
@@ -289,11 +289,12 @@ public:
             int other_row     = cluster_row[other_cluster];
             int low_row       = (best_row < other_row) ? best_row  : other_row;
             int high_row      = (best_row < other_row) ? other_row : best_row;
+            T   raw_Dxy       = clusterDistance(other_cluster, best_cluster);
             row_cluster[low_row]  = next_cluster_number;
             row_cluster[high_row] = row_cluster[n-1];   
             mergeTime -= getRealTime();
             mergeClusters(best_cluster, other_cluster, next_cluster_number,
-                          row_raw_dist[best_row], n);
+                          raw_Dxy, n);
             mergeTime += getRealTime();
             ++next_cluster_number;
             #if USE_PROGRESS_DISPLAY
@@ -581,7 +582,6 @@ protected:
 
     virtual void findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) {
         int best_x         = row_choice[r];    //other cluster
-        T   best_raw_dist  = row_raw_dist[r];  //set by previewRows().
         T   best_hc_dist   = row_best_dist[r]  + cluster_total_scaled[y];
         T   cutoff         = best_hc_dist      + cluster_cutoff[y];
         T   earlier_cutoff = global_best_dist 
@@ -605,29 +605,14 @@ protected:
                     (dataStart, dataStop, cutoff);
         for (auto scan=dataStart; scan<dataStop; ++scan) {
             int x                = scan->cluster_num;
-            T   dist_raw         = scan->distance;
-            T   dist_half_cooked = dist_raw 
-                                    - cluster_total_scaled[x];
-            FNJ_TRACE("x=" << x << ",y=" << y
-                    << ", Dxy=" << dist_raw 
-                    << " versus cutoff " << cutoff
-                    << ", Dxy-Rx=" << dist_half_cooked
-                    << " versus best " << best_hc_dist << "\n");
+            T   dist_half_cooked = scan->distance
+                                 - cluster_total_scaled[x];
             if (best_hc_dist<=dist_half_cooked) {
                 continue;
             }
-            best_raw_dist = dist_raw;
             best_hc_dist  = dist_half_cooked;
             best_x        = x; //best cluster found
-            cutoff        = dist_half_cooked
-                            + cluster_cutoff[y];
-                        
-            if (earlier_cutoff < cutoff) {                    
-                cutoff = earlier_cutoff;
-            }
-            FNJ_TRACE("New cutoff " << cutoff << "\n");
         }
-        row_raw_dist[r]  = best_raw_dist;
         row_best_dist[r] = best_hc_dist - cluster_total_scaled[y];
         row_choice[r]    = best_x;
     }
@@ -637,15 +622,11 @@ protected:
         while (start<stop) {
             MatrixEntry* middle  = start + (stop-start) / 2;
             bool         greater = dist < middle->distance;
-#if (0)
-            //If two conditional moves 
-            //cheaper than one if statement
-            stop                 = greater ? middle : stop;
-            ++middle;
-            start                = greater ? start : middle;
-#else
-            if (greater) stop=middle; else start = middle+1;
-#endif
+            if (greater) {
+                stop=middle; 
+            } else {
+                start = middle+1;
+            }
         }
         return start;
     }
@@ -902,6 +883,138 @@ protected:
         }
     }
 }; //FancyNJMatrix template class
-} //StartTree Namespace
 
-#endif
+#ifdef USE_VECTORCLASS_LIBRARY
+template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector> 
+class VectorizedFancyNJMatrix: public FancyNJMatrix<T> {
+public:
+    typedef FancyNJMatrix<T> super;
+    typedef typename super::DistanceVector DistanceVector;
+
+    using super::cluster_total_scaled;
+    using super::cluster_cutoff;
+    using super::cluster_sorted_start;
+    using super::cluster_sorted_stop;
+
+    using super::row_choice;
+    using super::row_raw_dist;
+    using super::row_best_dist;
+
+    using super::global_best_dist;
+
+    using super::getThreadCount;
+    using super::getThreadNumber;
+    using super::clusterDistance;
+    using super::findFirstGreaterDistance;
+
+protected:
+    const intptr_t  block_size;
+    int             thread_count;
+    std::vector<T>  vector_storage;
+    std::vector<T*> per_thread_vector_storage;
+
+public:
+    VectorizedFancyNJMatrix(): super(), block_size(VB().size()),
+        thread_count(1), 
+        vector_storage  (block_size*4) {
+        #ifdef _OPENMP
+        #pragma omp parallel
+        {
+            if (getThreadNumber()==0) {
+                thread_count = getThreadCount();
+            }
+        }
+        vector_storage.resize(thread_count*block_size*4);
+        #endif
+        for (int i=0; i<thread_count; ++i) {
+            T* ptr = vector_storage.data() + block_size * i * 4;
+            per_thread_vector_storage.push_back( ptr ) ;
+        }
+    }
+
+    virtual void findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) {
+        auto thread_num     = getThreadNumber();
+        int  best_x         = row_choice[r];    //other cluster
+        T    best_hc_dist   = row_best_dist[r]  + cluster_total_scaled[y];
+        T    cutoff         = best_hc_dist      + cluster_cutoff[y];
+        T    earlier_cutoff = global_best_dist 
+                            + cluster_cutoff[y] + cluster_total_scaled[y];
+
+        if (earlier_cutoff < cutoff) {
+            cutoff = earlier_cutoff;
+        }
+        //Any MatrixEntry in the data for this cluster that has a
+        //distance, Dxy greater tan cutoff will have Dxy - Rx - Ry
+        //greater than max(global_best_dist, row_best_dist),
+        //where global_best_dist is the best Dij - Ri - Rj found
+        //for any i,j, so far, and row_best_dist is the best 
+        //Dyi - Ri - Ry found for cluster y.
+
+        //Can skip the first MatrixEntry at cluster_sorted_start[c].
+        //As it has already been looked at by previewRows().
+        auto dataStart = cluster_sorted_start[y] + 1; 
+        auto dataStop  = cluster_sorted_stop[y];
+
+        dataStop = findFirstGreaterDistance
+                   (dataStart, dataStop, cutoff);
+        intptr_t blockCount = ( dataStop - dataStart ) / block_size;
+        auto blockStop      = dataStart + ( blockCount * block_size );
+        T*   blockRawDist   = per_thread_vector_storage[thread_num];
+        T*   blockCluster   = blockRawDist + block_size;
+        T*   blockIndex     = blockCluster + block_size;
+        T*   blockHCDist    = blockIndex   + block_size;
+
+        V    best_hc_vector = best_hc_dist;
+        V    best_ix_vector = (T)best_x;
+
+        for (auto scan=dataStart; scan<blockStop; scan+=block_size) {
+            for (int i=0; i<block_size; ++i) {
+                blockRawDist[i] = scan[i].distance;
+                blockCluster[i] = cluster_total_scaled[scan[i].cluster_num];
+                blockIndex[i]   = scan[i].cluster_num;
+            }
+
+            V  raw;  raw.load(blockRawDist);
+            V  tot;  tot.load(blockCluster);
+            V  ix;   ix.load(blockIndex);
+            V  hc   = raw - tot; //subtract cluster totals to get half-cooked distances?
+            VB less = hc < best_hc_vector; //which are improvements?
+            best_hc_vector = select(less, hc, best_hc_vector);
+            best_ix_vector = select(less, ix, best_ix_vector);
+        }
+
+        if (dataStart<blockStop) {
+            best_hc_vector.store(blockHCDist);
+            best_ix_vector.store(blockIndex);
+            bool found = false;
+            for (int i=0; i<block_size; ++i) {
+                if (blockHCDist[i] < best_hc_dist ) {
+                    best_hc_dist = blockHCDist[i];
+                    best_x       = static_cast<int>(blockIndex[i]);
+                    found        = true;
+                }
+            }
+        }
+
+        for (auto scan=blockStop; scan<dataStop; ++scan) {
+            int x                = scan->cluster_num;
+            T   dist_raw         = scan->distance;
+            T   dist_half_cooked = dist_raw 
+                                 - cluster_total_scaled[x];
+            if (best_hc_dist<=dist_half_cooked) {
+                continue;
+            }
+            best_hc_dist  = dist_half_cooked;
+            best_x        = x; //best cluster found
+        }
+
+        row_best_dist[r] = best_hc_dist - cluster_total_scaled[y];
+        row_choice[r]    = best_x;
+    } //findPartnerForOneCluster
+}; //VectorizedFancyNJMatrix
+#endif //USE_VECTORCLASS_LIBRARY
+
+
+}; //StartTree Namespace
+
+#endif //fancy_rapid_nj_h

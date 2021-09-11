@@ -205,11 +205,11 @@ public:
         clusterDuplicates();
         {
             size_t nextPurge = (row_count+row_count)/3;
+            #if USE_PROGRESS_DISPLAY
             std::string taskName;
             if (!silent) {
                 taskName = "Constructing " + getAlgorithmName() + " tree";
             }
-            #if USE_PROGRESS_DISPLAY
             double triangle = row_count * (row_count + 1.0) * 0.5;
             progress_display show_progress(triangle, taskName.c_str(), "", "");
             #else
