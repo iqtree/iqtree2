@@ -103,7 +103,6 @@ protected:
 
     size_t         original_rank;
     size_t         next_cluster_number;
-    EntryVector    storage;
     IntVector      cluster_in_play;
     DistanceVector cluster_total;
     DistanceVector cluster_total_scaled;
@@ -114,10 +113,18 @@ protected:
     EntryPtrVector cluster_unsorted_stop;
     IntVector      cluster_row;
 
-    IntVector      row_cluster;
-    DistanceVector row_raw_dist;
-    DistanceVector row_best_dist;
-    IntVector      row_choice;
+                                  //when searching for clusters to merge:...
+    IntVector      row_cluster;   //cluster number, y, of i(th) clusters still in play
+    DistanceVector row_raw_dist;  //raw distance, Dxy, between cluster y and
+                                  //the cluster x, closest to it (according to Dxy).
+    DistanceVector row_best_dist; //Dxy - Rx - Ry distance for same
+    IntVector      row_choice;    //Indicates which cluster, x<y, had 
+                                  //the best Dxy - Rx - Ry distance, for 
+                                  //cluster y.
+
+                                  //when merging clusters:...
+    DistanceVector x_distances;   //distances to cluster x
+    DistanceVector y_distances;   //distances to cluster y
 
     int            threadCount;
     typedef MergeSorter<MatrixEntry> Sorter;
@@ -150,6 +157,11 @@ public:
             threadCount = 1;
         #endif
         sorters.resize(threadCount);
+    }
+    ~FancyNJMatrix() {
+        for (int c=0; c<original_rank; ++c) {
+            deallocateCluster(c);
+        }
     }
     std::string getAlgorithmName() const {
         return "FancyNJ";
@@ -252,7 +264,7 @@ public:
         double previewTime = 0.0;
         double mergeTime   = 0.0;
 
-        int  next_purge = n * 4 / 5;
+        int  next_purge = n * 7 / 8;
 
         intptr_t duplicate_merges = clusterDuplicateTaxa 
                                     (n, recalcTime, mergeTime);
@@ -270,7 +282,7 @@ public:
             if (n<=next_purge) {
                 purgeTime -= getRealTime();
                 removeOutOfPlayClusters(next_cluster_number);
-                next_purge = n*4/5;
+                next_purge = n*7/8;
                 if (next_purge<100) {
                     next_purge = 0;
                 }
@@ -321,7 +333,6 @@ protected:
     virtual void setRank(size_t n) {
         original_rank       = n;
         next_cluster_number = n;
-        storage.resize(original_rank*original_rank*size_t(2));
         size_t q = n+n-2; //number of clusters that will be needed
                           //in total, during the course of the tree
                           //construction: n leaves, n-2 interiors.
@@ -334,19 +345,9 @@ protected:
         cluster_unsorted_stop.resize (q, nullptr);
         cluster_row.resize           (q, -1);
         cluster_cutoff.resize        (q, 0.0);
-        MatrixEntry* data   = storage.data();
-        for (int c=0; c<q; ++c) {
-            //Cluster, c, 0 through n-1, has c previous clusters
-            //When     c, n through q-1, is created, it'll have q-c
-            size_t entries = (c<n) ? c : q-c;
-            cluster_sorted_start[c]    = data;
-            data                      += entries;
-            cluster_sorted_stop[c]     = data;
-            cluster_unsorted_start[c]  = data;
-            data                      += entries;
-            cluster_unsorted_stop[c]   = data;
+        for (int c=0; c<n; ++c) {
+            allocateCluster(c);
         }
-
         row_cluster.resize(original_rank);
         row_raw_dist.resize(original_rank);
         row_best_dist.resize(original_rank);
@@ -358,6 +359,21 @@ protected:
         for (int i=0; i<original_rank; ++i) {
             row_cluster[i] = i;
         }
+    }
+
+    void allocateCluster(int c) {
+        ASSERT(cluster_sorted_start[c] == nullptr);
+        size_t       q       = original_rank + original_rank-2;
+        //Cluster, c, 0 through n-1, has c previous clusters
+        //When     c, n through q-1, is created, it'll have q-c
+        size_t       entries = (c<original_rank) ? c : q-c;
+        MatrixEntry* data    = new MatrixEntry[entries*2];
+        cluster_sorted_start[c]    = data;
+        data                      += entries;
+        cluster_sorted_stop[c]     = data;
+        cluster_unsorted_start[c]  = data;
+        data                      += entries;
+        cluster_unsorted_stop[c]   = data;
     }
 
     void identifyDuplicateTaxa(const double* matrix) {
@@ -504,7 +520,6 @@ protected:
                                      - cluster_total_scaled[x]
                                      - cluster_total_scaled[y];
                     row_choice[r]    = x;
-                    cluster_sorted_start[y] = scan;
                     found = true;
                     FNJ_TRACE("x=" << x << ", y=" << y
                               << ", Dxy=" << row_raw_dist[r]
@@ -525,7 +540,7 @@ protected:
                 row_raw_dist[r]  = infiniteDistance;
                 row_best_dist[r] = infiniteDistance;
                 row_choice[r]    = q;
-                cluster_sorted_start[y] = cluster_sorted_stop[y];
+                deallocateCluster(y);
             }
         }
     }
@@ -557,14 +572,6 @@ protected:
                 }
             }
         }
-        #if (0)
-        for (int r = 0; r < n; ++r ) {
-            int c             = row_cluster[r];
-            FNJ_TRACE("c=" << c << " raw=" << row_raw_dist[r]
-                      << " d=" << row_best_dist[r] 
-                      << " o=" << row_choice[r] << "\n");
-        }
-        #endif
     }
 
     void chooseRowSearchOrder(int n, std::vector< std::pair<T, int> >& rows_by_dist) {
@@ -597,7 +604,8 @@ protected:
         //Dyi - Ri - Ry found for cluster y.
 
         //Can skip the first MatrixEntry at cluster_sorted_start[c].
-        //As it has already been looked at by previewRows().
+        //As it has definitely been looked at, already, by 
+        //previewRows().
         auto dataStart = cluster_sorted_start[y] + 1; 
         auto dataStop  = cluster_sorted_stop[y];
 
@@ -660,6 +668,7 @@ protected:
 
     void mergeClusters(int cluster_X, int cluster_Y, 
                        int cluster_U, T Dxy, int n) {
+        allocateCluster(cluster_U);
         ASSERT(cluster_Y != cluster_X);
         if (cluster_Y<cluster_X) {
             std::swap(cluster_X, cluster_Y);
@@ -675,26 +684,19 @@ protected:
         T mu            = (T)1.0 - lambda;
         T dCorrection   = - lambda * length_to_X - mu * length_to_Y;
 
-        std::vector<T> x_distances(cluster_U, infiniteDistance);
+        x_distances.resize(cluster_U, infiniteDistance);
         getDistances(cluster_X, cluster_U, x_distances);
-        std::vector<T> y_distances(cluster_U, infiniteDistance);
+        y_distances.resize(cluster_U, infiniteDistance);
         getDistances(cluster_Y, cluster_U, y_distances);
         auto start      = cluster_sorted_start[cluster_U];
         auto entry      = start;
         auto unsorted   = cluster_unsorted_start[cluster_U];
         T    cTotal     = 0.0;
-        #if (0)
-        std::cout << "Merging clusters x=" << cluster_X 
-                  << " and y=" << cluster_Y << " with dXY=" << Dxy << "\n";
-        std::cout << "D+I for cluster " << cluster_U << "is:\n";
-        #endif
         for (int c=0; c<cluster_U; ++c) {
-            T Dcx = x_distances[c];
-            T Dcy = y_distances[c];
-            if (Dcx<infiniteDistance && Dcy<infiniteDistance &&
-                c!=cluster_X && c!=cluster_Y) {
+            if ( c!=cluster_X && c!=cluster_Y && cluster_in_play[c] ) {
+                T Dcx = x_distances[c];
+                T Dcy = y_distances[c];
                 T Dcu              = lambda * Dcx + mu * Dcy + dCorrection;
-                //std::cout << c << " " << Dcu << " \t";
                 entry->distance    = Dcu;
                 entry->cluster_num = c;
                 cluster_total[c]  += Dcu - Dcx - Dcy;
@@ -704,14 +706,11 @@ protected:
                 ++unsorted;
             }
         }
-        //std::cout << "\n";
         cluster_total[cluster_U]   = cTotal;
         auto stop                  = cluster_sorted_stop[cluster_U];
         if (2<n) {
             ASSERT ( stop == entry );
-            //formerly: std::sort(start, stop);
             sorters[0].parallel_sort(start, stop-start);
-
             clusters.addCluster(cluster_X, length_to_X, 
                                 cluster_Y, length_to_Y);
         } else {
@@ -735,18 +734,23 @@ protected:
     void markClusterAsUsedUp(int c) {
         cluster_in_play[c]       = 0;
         cluster_total[c]         = -infiniteDistance;
-        cluster_sorted_stop[c]   = cluster_sorted_start[c];
         cluster_total_scaled[c]  = -infiniteDistance;
         cluster_cutoff[c]        = -infiniteDistance;
-        cluster_unsorted_stop[c] = cluster_unsorted_start[c];
+        deallocateCluster(c);
+    }
+
+    void deallocateCluster(int c) {
+        delete [] cluster_sorted_start[c];
+        cluster_sorted_start[c]   = nullptr;
+        cluster_sorted_stop[c]    = nullptr;
+        cluster_unsorted_start[c] = nullptr;
+        cluster_unsorted_stop[c]  = nullptr;
     }
 
     void getDistances(int c, int u, DistanceVector& distances) {
-        //Have to read from cluster_unsorted_start, because 
-        //cluster_sorted_start might have "skipped" over entries
-        //that have been removed from consideration; see 
-        //the implementation of previewRows().  Besides, reading
-        //in order is cache-friendlier.
+        //It's better to read from cluster_unsorted_start, 
+        //since reading (and, more to the point, writing) 
+        //in cluster number order is cache-friendlier.
         auto start = cluster_unsorted_start[c];
         auto stop  = cluster_unsorted_stop[c];
         #ifdef _OPENMP
@@ -791,16 +795,6 @@ protected:
         int  low   = 0;
         int  hi    = b;
 
-#if (0)
-        std::stringstream s;
-        s << "Find " << a << " in " << b << "'s D+I row, which is: \n";
-        for (int i=0; i<count; ++i) {
-            s << "/" << start[i].cluster_num << "/" << start[i].distance << " ";
-        }
-        s << "\n";
-        std::cout << s.str();
-#endif
-
         while (0<count) {
             double dGuess = (double)(a-low) / (double)(hi-low) 
                           * (double)(count);
@@ -830,40 +824,27 @@ protected:
     }
 
     void removeOutOfPlayClusters(int used_cluster_count) {
-        MatrixEntry* w = storage.data();
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (int c=0; c<used_cluster_count; ++c) {
-            MatrixEntry* scan       = cluster_sorted_start[c];
-            cluster_sorted_start[c] = w;
-            if (cluster_in_play[c]) {
-                for (; scan<cluster_sorted_stop[c]; ++scan) {
-                    *w = *scan;
-                    w += cluster_in_play[scan->cluster_num];
-                }
+            if (cluster_in_play[c]==0) {
+                continue;
+            }
+            MatrixEntry* w          = cluster_sorted_start[c];
+            MatrixEntry* scan       = w;
+            for (; scan<cluster_sorted_stop[c]; ++scan) {
+                *w = *scan;
+                w += cluster_in_play[scan->cluster_num];
             }
             cluster_sorted_stop[c]    = w;
             scan                      = cluster_unsorted_start[c];
             cluster_unsorted_start[c] = w;
-            if (cluster_in_play[c]) {
-                for (; scan<cluster_unsorted_stop[c]; ++scan) {
-                    *w = *scan;
-                    w += cluster_in_play[scan->cluster_num];
-                }
+            for (; scan<cluster_unsorted_stop[c]; ++scan) {
+                *w = *scan;
+                w += cluster_in_play[scan->cluster_num];
             }
             cluster_unsorted_stop[c] = w;
-        }
-        int q = original_rank+original_rank-2;
-        for (int c=used_cluster_count; c<q; ++c) {
-            //These clusters *have* had memory allocated for them,
-            //but haven't written to it it yet...  so we need only
-            //adjust the pointers; we don't need to copy their data
-            //(because it hasn't been written yet).
-            size_t entries = (c<original_rank) ? c : (q-c);
-            cluster_sorted_start[c]   = w;
-            w += entries;
-            cluster_sorted_stop[c]    = w;
-            cluster_unsorted_start[c] = w;
-            w += entries;
-            cluster_unsorted_stop[c]  = w;
         }
     }
     void reportConstructionDone(intptr_t duplicate_merges, 
