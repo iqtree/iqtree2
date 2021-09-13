@@ -2127,7 +2127,7 @@ void AliSimulator::computeSimThresh(int seq_length)
     // don't re-set the threshold if the user has specified it
     if (params->original_params.find("--simulation-thresh") == std::string::npos) {
         // initialize the empirical constant c to compute the threshold (threshold = c/sequence_length)
-        vector<double> empirical_c = {10,10,7,7,2,2,1,1};
+        vector<double> empirical_c = {11,10,7,6,2,2,1,1};
         
         // compute the log of the sequence length (round upper)
         int log_seq_length = ceil(log10(seq_length));

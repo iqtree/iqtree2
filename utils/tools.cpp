@@ -4463,11 +4463,30 @@ void parseArg(int argc, char *argv[], Params &params) {
                         t_params = t_params.substr(0, t_params.length()-1);
                         
                         // extract model_name & #taxa
+                        // detect delimiter
                         string delimiter = ",";
+                        bool inside_bracket = false;
+                        for (int i = 0; i < t_params.length(); i++)
+                        {
+                            // detect brackets
+                            if (t_params[i] == '{')
+                                inside_bracket = true;
+                            else if (t_params[i] == '}')
+                                inside_bracket = false;
+                               
+                            // only check separator outside brackets
+                            if (!inside_bracket && (t_params[i] == ',' || t_params[i] == '/'))
+                            {
+                                delimiter = t_params[i];
+                                break;
+                            }
+                        }
+                        
                         // change the delimiter to "}," in case with birth-death model
                         if ((t_params.length() > 2)
                             && (!t_params.substr(0, 2).compare("bd")))
-                            delimiter = "},";
+                            delimiter = "}" + delimiter;
+                        
                         string model_name = t_params;
                         string num_taxa = "";
                         if (t_params.find(delimiter) != string::npos)
@@ -5100,7 +5119,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             params.partition_merge = MERGE_RCLUSTERF;
     
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
-        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<model>} <NUM_TAXA> where model is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
+        outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
     
     // set default filename for the random tree if AliSim is running in Random mode
     if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
