@@ -1836,22 +1836,6 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mappi
     // if RATE_MATRIX approach is used -> update total_sub_rate and sub_rate_by_site
     if (simulation_method == RATE_MATRIX)
     {
-        // extract new_site_specific_rate
-        vector<double> new_site_specific_rates;
-        if (site_specific_rates.size() > 0)
-        {
-            for (int i = position; i < position + length; i++)
-                new_site_specific_rates.push_back(site_specific_rates[i]);
-        }
-        
-        // extract new_site_specific_model_index
-        vector<short int> new_site_specific_model_index;
-        if (site_specific_model_index.size() > 0)
-        {
-            for (int i = position; i < position + length; i++)
-                new_site_specific_model_index.push_back(site_specific_model_index[i]);
-        }
-        
         // update sub_rate_by_site of the inserted sites
         double sub_rate_change = 0;
         sub_rate_by_site.insert(sub_rate_by_site.begin()+position, length, 0);
@@ -1910,26 +1894,12 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
     int real_deleted_length = 0;
-    vector<short int> deleted_sites;
-    vector<double> deleted_site_specific_rate;
-    vector<short int> deleted_site_specific_model_index;
     double sub_rate_change = 0;
     for (int i = 0; i < length && (position + i) < indel_sequence.size(); i++)
     {
         // if the current site is not a gap (has not been deleted) -> replacing it by a gap
         if (indel_sequence[position + i ] != STATE_UNKNOWN)
         {
-            // if RATE_MATRIX approach is used -> update deleted_sites and deleted_site_specific_rate to update total_sub_rate later
-            if (simulation_method == RATE_MATRIX)
-            {
-                deleted_sites.push_back(indel_sequence[position + i]);
-                if (site_specific_rates.size() > 0)
-                    deleted_site_specific_rate.push_back(site_specific_rates[position + i]);
-                if (site_specific_model_index.size() > 0)
-                    deleted_site_specific_model_index.push_back(site_specific_model_index[position + i]);
-            }
-            
-            // delete site
             indel_sequence[position + i ] = STATE_UNKNOWN;
             real_deleted_length++;
         }
