@@ -109,7 +109,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
+    virtual void simulateSeqs(int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, discrete_distribution<> random_discrete_dis);
     
     /**
     *  validate sequence length of codon
@@ -210,22 +210,27 @@ protected:
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, int &sequence_length, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
+    void handleIndels(ModelSubst *model, int &sequence_length, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method, discrete_distribution<> random_discrete_dis);
     
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence);
+    void handleSubs(int sequence_length, double &total_sub_rate, vector<short int> &indel_sequence, discrete_distribution<> random_discrete_dis);
+    
+    /**
+        select substitution position
+    */
+    virtual int selectSubPos(discrete_distribution<> random_discrete_dis, vector<short int> sequence);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, SIMULATION_METHOD simulation_method);
     
     /**
         extract array of substitution rates and Jmatrix
@@ -235,7 +240,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence

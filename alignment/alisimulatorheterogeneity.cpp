@@ -434,15 +434,14 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
 /**
     initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
 */
-void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
+void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<short int> sequence)
 {
     // initialize variables
     int sequence_length = sequence.size();
     total_sub_rate = 0;
     num_gaps = 0;
-    sub_rate_by_site.resize(sequence_length, 0);
     
-    // check if sub_rates could be caching (without continuous gamma) -> compute sub_rate_by_site efficiently using cache_sub_rates
+    // check if sub_rates could be caching (without continuous gamma) -> compute total_sub_rate efficiently using cache_sub_rates
     if (!tree->getModelFactory()->is_continuous_gamma)
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
@@ -468,7 +467,7 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
                 cache_sub_rates[model_index*num_rate_categories*max_num_states + rate_category_index*max_num_states + state] = sub_rates[model_index * max_num_states + state]*rate;
         }
         
-        // compute sub_rate_by_site
+        // compute sub_rate_count
         for (int i = 0; i < sequence_length; i++)
         {
             // not compute the substitution rate for gaps/deleted sites or constant sites
@@ -478,18 +477,11 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
                 int model_index = site_specific_model_index[i];
                 int rate_index = site_specific_rate_index[i];
                 
-                // update sub_rate_by_site for the current site
-                int index = model_index*num_rate_categories*max_num_states + rate_index*max_num_states + sequence[i];
-                sub_rate_count[index]++;
-                sub_rate_by_site[i] = cache_sub_rates[index];
+                // update sub_rate_count
+                sub_rate_count[model_index*num_rate_categories*max_num_states + rate_index*max_num_states + sequence[i]]++;
             }
-            else
-            {
-                sub_rate_by_site[i] = 0;
-                
-                if (sequence[i] == STATE_UNKNOWN)
+            else if (sequence[i] == STATE_UNKNOWN)
                     num_gaps++;
-            }
         }
         
         // update total_sub_rate
@@ -499,7 +491,7 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
         // delete cache_sub_rates
         delete[] cache_sub_rates;
     }
-    // otherwise, sub_rate_by_site for all sites one by one
+    // otherwise, total_sub_rate by summing the sub_rate of each site one by one
     else
     {
         for (int i = 0; i < sequence_length; i++)
@@ -510,19 +502,37 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
                 // get the mixture model index
                 int model_index = site_specific_model_index[i];
                 
-                // update sub_rate_by_site for the current site
-                sub_rate_by_site[i] = sub_rates[model_index * max_num_states + sequence[i]]*site_specific_rates[i];
+                // update total_sub_rate from the current site
+                total_sub_rate += sub_rates[model_index * max_num_states + sequence[i]]*site_specific_rates[i];
             }
-            else
-            {
-                sub_rate_by_site[i] = 0;
-                
-                if (sequence[i] == STATE_UNKNOWN)
+            else if (sequence[i] == STATE_UNKNOWN)
                     num_gaps++;
-            }
-            
-            // update total_sub_rate
-            total_sub_rate += sub_rate_by_site[i];
         }
     }
+}
+
+/**
+    select substitution position
+*/
+int AliSimulatorHeterogeneity::selectSubPos(discrete_distribution<> random_discrete_dis, vector<short int> sequence)
+{
+    int sequence_length = sequence.size();
+    int position = -1;
+    
+    // update random_discrete_dis if Indels is used
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+        random_discrete_dis = discrete_distribution<>(site_specific_rates.begin(), site_specific_rates.end());
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        position = random_discrete_dis(params->generator);
+        
+        // a valid position must not be a deleted site
+        if (sequence[position] != STATE_UNKNOWN)
+            break;
+    }
+    // validate the position
+    if (sequence[position] == STATE_UNKNOWN)
+        outError("Sorry! Could not select a valid position (not a gap) for the substitution events. You may specify a too high deletion rate, thus almost all sites were deleted. Please try again a a smaller deletion ratio!");
+    return position;
 }
