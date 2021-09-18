@@ -2011,7 +2011,7 @@ int AliSimulator::generateIndelSize(IndelDistribution indel_dis)
             random_size = random_int_lav(indel_dis.param_1, indel_dis.param_2);
             break;
         case GEO:
-            random_size = random_int_geometric(indel_dis.param_1) + 1;
+            random_size = random_int_geometric(indel_dis.param_1);
             break;
         default:
             random_size = random_number_from_distribution(indel_dis.user_defined_dis);

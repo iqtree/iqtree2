@@ -2435,7 +2435,7 @@ int main(int argc, char *argv[]) {
     
     int num_procs = countPhysicalCPUCores();
 #ifdef _OPENMP
-    if (num_procs > 1 && Params::getInstance().num_threads == 1) {
+    if (num_procs > 1 && Params::getInstance().num_threads == 1 && !Params::getInstance().alisim_active) {
         cout << endl << endl << "HINT: Use -nt option to specify number of threads because your CPU has " << num_procs << " cores!";
         cout << endl << "HINT: -nt AUTO will automatically determine the best number of threads to use.";
     }
@@ -2446,6 +2446,9 @@ int main(int argc, char *argv[]) {
 
     //cout << "sizeof(int)=" << sizeof(int) << endl;
     cout << endl << endl;
+    
+    // show msgs which are delayed to show
+    cout << Params::getInstance().delay_msgs;
 
     cout.precision(3);
     cout.setf(ios::fixed);

@@ -2419,6 +2419,11 @@ public:
     *  random generator
     */
     default_random_engine generator;
+    
+    /**
+    *  messages which are delayed to show
+    */
+    string delay_msgs;
 };
 
 /**
@@ -3048,7 +3053,7 @@ int random_int_lav(double a, int m);
 /**
  * Parse indel-size distribution
  */
-IndelDistribution parseIndelDis(string input);
+IndelDistribution parseIndelDis(string input, string event_name);
 
 template <class T>
 void my_random_shuffle (T first, T last, int *rstream = NULL)

@@ -1411,6 +1411,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_deletion_distribution = IndelDistribution(GEO,0.5);
     params.alisim_mean_deletion_size = -1;
     params.alisim_simulation_thresh = 0.001;
+    params.delay_msgs = "";
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2526,7 +2527,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--indel-size") == 0) {
                 cnt++;
-                string err_msg = "Use --indel-size <INS_DIS>,<DEL_DIS>. Notes: <INS_DIS>,<DEL_DIS> could be names of user-defined distributions, or NB{<int_r>,<double_q>}, POW{<double_a>[,<int_max>]}, LAV{<double_a>,<int_max>}, GEO{<double_p>}, which specifies Negative Binomial, Zipfian, Lavalette, and Geometric distribution, respectively.";
+                string err_msg = "Use --indel-size <INS_DIS>,<DEL_DIS>. Notes: <INS_DIS>,<DEL_DIS> could be names of user-defined distributions, or GEO{<mean>}, NB{<mean>[/<variance>]}, POW{<double_a>[/<int_max>]}, LAV{<double_a>/<int_max>}, which specifies Geometric, Negative Binomial, Zipfian, and Lavalette distribution, respectively.";
                 if (cnt >= argc)
                     throw err_msg;
                 
@@ -2558,7 +2559,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 string input = arg.substr(0, pos);
                 if (input.length() == 0)
                     throw err_msg;
-                params.alisim_insertion_distribution = parseIndelDis(input);
+                params.alisim_insertion_distribution = parseIndelDis(input, "Insertion");
                 
                 // remove "<INSERTION_DISTRIBUTION>,"
                 arg.erase(0, pos + 1);
@@ -2566,7 +2567,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // get DELETION_DISTRIBUTION
                 if (arg.length() == 0)
                     throw err_msg;
-                params.alisim_deletion_distribution = parseIndelDis(arg);
+                params.alisim_deletion_distribution = parseIndelDis(arg, "Deletion");
                 
                 continue;
             }
@@ -5976,11 +5977,11 @@ double random_double_exponential_distribution(double mean)
 }
 
 /**
- * geometric random number generation
+ * geometric random number generation (starting from 0)
  * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
  * @param p
  */
-int random_int_geometric(double p)
+int random_int_geometric_from0(double p)
 {
     if (p == 1)
         return 1;
@@ -5996,6 +5997,16 @@ int random_int_geometric(double p)
 }
 
 /**
+ * geometric random number generation (starting from 1)
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param p
+ */
+int random_int_geometric(double p)
+{
+    return random_int_geometric_from0(p) + 1;
+}
+
+/**
  * negative binomial distribution
  * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
  * @param r, q
@@ -6004,7 +6015,7 @@ int random_int_nebin(int r, double q)
 {
     int u = 0;
     while ( r-- )
-        u += random_int_geometric(1-q);
+        u += random_int_geometric_from0(1-q);
     return u + 1;
 }
 
@@ -6072,7 +6083,7 @@ int random_int_lav(double a, int m)
 /**
  * Parse indel-size distribution
  */
-IndelDistribution parseIndelDis(string input)
+IndelDistribution parseIndelDis(string input, string event_name)
 {
     // by default, using the user_defined distribution
     IndelDistribution indel_dis = IndelDistribution(USER_DEFINED, -1, -1, input);
@@ -6084,33 +6095,63 @@ IndelDistribution parseIndelDis(string input)
     size_t pos;
     
     // parse negative binomial distribution
-    if (input.rfind("nb", 0) == 0 || input.rfind("NB", 0) == 0)
+    if (input.rfind("nb{", 0) == 0 || input.rfind("NB{", 0) == 0)
     {
-        // remove "nb"
-        input.erase(0, 2);
-        
-        // determine the position of the delimiter
-        pos = input.find(delimiter);
+        // remove "nb{"
+        input.erase(0, 3);
         
         // validate the parameters
-        if ((input[0]!='{')
-            || (input[input.length()-1]!='}')
-            || (pos == std::string::npos))
-            throw "Use NB{<int_r>,<double_q>}";
+        if (input[input.length()-1]!='}')
+            throw "Use NB{<mean>[/<variance>]}";
         
-        // get param_1
-        int param_1 = convert_int(input.substr(1, pos - 1).c_str());
-        if (param_1 <= 0)
-            throw "<int_r> must be a positive number";
+        // remove "}"
+        input = input.substr(0, input.length()-1);
         
-        // get param_2
-        input.erase(0, pos + 1);
-        double param_2 = convert_double(input.substr(0, input.length()-1).c_str());
-        if (param_2 < 0 || param_2 > 1)
-            throw "<double_q> must be between 0 and 1";
+        // determine the position of the delimiter (if any)
+        pos = input.find(delimiter);
+        
+        // default value of r is 1
+        int r = 1;
+        // get mean and variance
+        double mean, variance;
+        // if users supply only a mean
+        if (pos == std::string::npos)
+        {
+            // get mean
+            mean = convert_double(input.c_str());
+            
+            // validate mean
+            if (mean < 1)
+                throw "<mean> must not less than 1";
+        }
+        // if users supply a mean and a variance
+        else
+        {
+            // get mean
+            mean = convert_double(input.substr(0, pos).c_str());
+            
+            // validate mean
+            if (mean < 1)
+                throw "<mean> must not less than 1";
+
+            // get variance
+            input.erase(0, pos + 1);
+            double variance = convert_double(input.c_str());
+            if (variance <= mean - 1)
+                throw "<variance> must be greater than mean - 1";
+            
+            // compute r = (mean-1)^2/(variance - mean + 1)
+            r = round((mean-1)*(mean-1)/(variance - mean + 1));
+        }
+        
+        // compute q = (mean - 1)/(r + mean - 1)
+        double q = (mean - 1)/(r + mean - 1);
+        
+        // show infor
+        Params::getInstance().delay_msgs += "INFO: " + event_name + "-size is generated from Negative Binomial distribution with a mean of " + convertDoubleToString(mean) + " and a variance of " +convertDoubleToString((mean - 1)/(1 - q)) + ". The variance may be different from the user-defined value (if any) due to the definition of each distribution.\n";
         
         // return indel_dis
-        return IndelDistribution(NEG_BIN, param_1, param_2);
+        return IndelDistribution(NEG_BIN, r, q);
     }
     
     // parse zipf
@@ -6125,29 +6166,37 @@ IndelDistribution parseIndelDis(string input)
         // validate the parameters
         if ((input[0]!='{')
             || (input[input.length()-1]!='}'))
-            throw "Use POW{<double_a>[,<int_max>]}";
+            throw "Use POW{<double_a>[/<int_max>]}";
         
-        // get param_1
-        double param_1;
+        // get a
+        double a;
         if (pos!= std::string::npos)
-            param_1 = convert_double(input.substr(1, pos - 1).c_str());
+            a = convert_double(input.substr(1, pos - 1).c_str());
         else
-            param_1 = convert_double(input.substr(1, input.length() - 2).c_str());
-        if (param_1 <= 1)
+            a = convert_double(input.substr(1, input.length() - 2).c_str());
+        if (a <= 1)
             throw "<double_a> must be greater than 1";
         
-        // get param_2
-        int param_2 = -1;
+        // get max (if any)
+        int max = -1;
         if (pos != std::string::npos)
         {
             input.erase(0, pos + 1);
-            param_2 = convert_int(input.substr(0, input.length()-1).c_str());
-            if (param_2 <= 0)
+            max = convert_int(input.substr(0, input.length()-1).c_str());
+            if (max <= 0)
                 throw "<int_max> must be a positive integer";
         }
         
+        // show infor
+        string msg = "INFO: " + event_name + "-size is generated from Zipfian distribution with parameter <a> of " + convertDoubleToString(a);
+        if (max != -1)
+            msg += " and <max> of " + convertDoubleToString(max);
+        msg += ".\n";
+        
+        Params::getInstance().delay_msgs += msg;
+        
         // return indel_dis
-        return IndelDistribution(ZIPF, param_1, param_2);
+        return IndelDistribution(ZIPF, a, max);
     }
     
     // parse Lavalette distribution
@@ -6163,39 +6212,61 @@ IndelDistribution parseIndelDis(string input)
         if ((input[0]!='{')
             || (input[input.length()-1]!='}')
             || (pos == std::string::npos))
-            throw "Use LAV{<double_a>,<int_max>}";
+            throw "Use LAV{<double_a>/<int_max>}";
         
-        // get param_1
-        double param_1 = convert_double(input.substr(1, pos - 1).c_str());
+        // get a
+        double a = convert_double(input.substr(1, pos - 1).c_str());
         
-        // get param_2
+        // get max
         input.erase(0, pos + 1);
-        int param_2 = convert_int(input.substr(0, input.length()-1).c_str());
-        if (param_2 <= 0)
+        int max = convert_int(input.substr(0, input.length()-1).c_str());
+        if (max <= 0)
             throw "<int_max> must be a positive integer";
         
+        // show infor
+        Params::getInstance().delay_msgs += "INFO: " + event_name + "-size is generated from Lavalette distribution with parameter <a> of " + convertDoubleToString(a) + " and <max> of " + convertDoubleToString(max) + ".\n";
+        
         // return indel_dis
-        return IndelDistribution(LAV, param_1, param_2);
+        return IndelDistribution(LAV, a, max);
     }
     
     // parse Geometric distribution
-    if (input.rfind("geo", 0) == 0 || input.rfind("GEO", 0) == 0)
+    if (input.rfind("geo{", 0) == 0 || input.rfind("GEO{", 0) == 0)
     {
-        // remove "geo"
-        input.erase(0, 3);
+        // remove "geo{"
+        input.erase(0, 4);
         
         // validate the parameters
-        if ((input[0]!='{')
-            || (input[input.length()-1]!='}'))
-            throw "Use GEO{<double_p>}";
+        if (input[input.length()-1]!='}')
+            throw "Use GEO{<mean>}";
         
-        // get param_1
-        double param_1 = convert_double(input.substr(1, input.length()-2).c_str());
-        if (param_1 <= 0 || param_1 > 1)
-            throw "<double_a> must be in the range (0, 1]";
+        // remove "}"
+        input = input.substr(0, input.length()-1);
+            
+        // determine the position of the delimiter (if any)
+        pos = input.find(delimiter);
+        
+        // show warning if users specify a variance
+        if (pos != std::string::npos)
+        {
+            Params::getInstance().delay_msgs += "In Geometric distribution, the variance could be computed from the mean. Thus, we ignore the user-specified variance.\n";
+            
+            // remove variance from the input
+            input = input.substr(0, pos);
+        }
+        
+        // get mean
+        double mean = convert_double(input.c_str());
+        if (mean < 1)
+            throw "<mean> must not less than 1";
+        // convert mean into p (of the distribution)
+        double p = 1/mean;
+        
+        // show infor
+        Params::getInstance().delay_msgs += "INFO: " + event_name + "-size is generated from Geometric distribution with a mean of " + convertDoubleToString(mean) + " and a variance of " + convertDoubleToString((1-p)/(p*p)) + ". The variance may be different from the user-defined value (if any) due to the definition of each distribution. \n";
         
         // return indel_dis
-        return IndelDistribution(GEO, param_1);
+        return IndelDistribution(GEO, p);
     }
     
     return indel_dis;
