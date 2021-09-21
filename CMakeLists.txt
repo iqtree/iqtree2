@@ -833,7 +833,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
-install (FILES "${PROJECT_SOURCE_DIR}/example/example.yaml" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/example/example_models.yaml" DESTINATION .)
 
 if (WIN32)
     install (FILES "${BINARY_DIR}/iqtree2${EXE_SUFFIX}-click.exe" DESTINATION bin)
