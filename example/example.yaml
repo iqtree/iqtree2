@@ -20,7 +20,7 @@
   description:    Binary Jukes-Cantor model
   reversible:     true
   datatype:       BIN
-  stateFrequency: [ 0.25, 0.25 ]
+  stateFrequency: [ 0.5, 0.5 ]
   rateMatrix:     
   - [ ]
   - [ 1 ]
@@ -46,6 +46,7 @@
 - substitutionmodel: YJC
   description: Jukes-Cantor model
   citation: “Jukes and Cantor, 1969”
+  datatype: DNA
   reversible: true
   stateFrequency: [ 0.25, 0.25, 0.25, 0.25 ]
   rateMatrix:
@@ -127,6 +128,7 @@
   - [ r(3)*f(1), r(5)*f(2), f(3)     ,           ]
   stateFrequency: estimate
 
+  #not supported yet
 - substitutionmodel: COV_GTR
   frommodel:   YGTR
   description: "Covarion model switching between invariant and GTR"
@@ -235,9 +237,9 @@
                     (row==column) ? 1 : (f(column)* r(i))"
 
 #Note: ratemodel is NOT supported as yet.
-#Note: A type of "calculated rate" is NOT supported as yet.
+#Note: A type of "calculated rate" is NOT fully supported as yet.
 #Rate models can be suffixed with a number 
-#(the number of rates).  G and R need a number of rates,
+#(the number of rates).  G, H, and R need a number of rates,
 #and I does not.
 
 #double perPoint_ = cmpPointChi2 (prob, 2.0 * gamma_shape) / (2.0 * gamma_shape);
@@ -308,7 +310,7 @@
 
 - substitutionmodel:   YMIX
   description:         "Model Mixture of JC and GTR"
-  ratemodel:           I+R4
+  ratemodel:           I+H4
   parameters:
   - name:              w(1..2)
     type:              weight  # type weight implies that w[1]+w[2]=1.0
