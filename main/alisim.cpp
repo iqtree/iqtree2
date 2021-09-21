@@ -666,6 +666,19 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, v
 void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator)
 {
     try {
+            // init output_stream for Indels to output aln without gaps
+            ostream *out_indels = NULL;
+            bool write_indels_output = false;
+            if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0
+                && !alisimulator->params->alisim_no_export_sequence_wo_gaps)
+            {
+                write_indels_output = true;
+                if (alisimulator->params->do_compression)
+                    out_indels = new ogzstream((file_path+"_withoutgaps.fa").c_str());
+                else
+                    out_indels = new ofstream((file_path+"_withoutgaps.fa").c_str());
+            }
+        
             // add ".phy" or ".fa" to the output_filepath
             if (alisimulator->params->aln_output_format != IN_FASTA)
                 file_path = file_path + ".phy";
@@ -694,8 +707,19 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 #pragma omp single
 #endif
             // browsing all sequences, converting each sequence & caching & writing output string to file
-            writeASequenceToFile(aln, sequence_length, *out, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
+            writeASequenceToFile(aln, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
 
+            // close the output file for Indels
+            if (write_indels_output)
+            {
+                // close the file
+                if (alisimulator->params->do_compression)
+                    ((ogzstream*)out_indels)->close();
+                else
+                    ((ofstream*)out_indels)->close();
+                delete out_indels;
+            }
+            
             // close the file
             if (alisimulator->params->do_compression)
                 ((ogzstream*)out)->close();
@@ -852,56 +876,56 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
 {
     if ((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0)) {
 #ifdef _OPENMP
-#pragma omp task firstprivate(node) shared(out)
+#pragma omp task firstprivate(node) shared(out, out_indels)
 #endif
         {
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
-            std::string output (sequence_length * num_sites_per_state+1, '-');
-            
-            // add node's name
-            // in PHYLIP format
-            if (output_format != IN_FASTA)
-            {
-                // add padding to node_name
-                string name_with_padding = node->name;
-                // write node's id if node's name is empty
-                if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
-                ASSERT(max_length_taxa_name >= name_with_padding.length());
-                std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
-                name_with_padding += padding;
-                output = name_with_padding + output;
-            }
-            // in FASTA format
-            else
-            {
-                string node_name = node->name;
-                // write node's id if node's name is empty
-                if (node_name.length() == 0) node_name = convertIntToString(node->id);
-                output = ">" + node_name + "\n" + output;
-            }
+            string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
+            string output (sequence_length * num_sites_per_state+1, '-');
             output[output.length()-1] = '\n';
             
             // convert non-empty sequence
             if (node->sequence.size() >= sequence_length)
-                output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping, output_format, max_length_taxa_name);
+                output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
+            
+            // preparing output (without gaps) for indels
+            string output_indels = "";
+            if (write_indels_output)
+            {
+                // add node's name
+                string node_name = node->name;
+                // write node's id if node's name is empty
+                if (node_name.length() == 0) node_name = convertIntToString(node->id);
+                
+                output_indels = ">" + node_name + "\n" + output;
+                output_indels.erase(remove(output_indels.begin(), output_indels.end(), '-'), output_indels.end());
+            }
+            
+            // concat pre_output & output
+            output = pre_output + output;
+            
 #ifdef _OPENMP
 #pragma omp critical
 #endif
             {
                 // write output to file
                 out << output;
+                
+                // write aln without gaps for Indels
+                if (write_indels_output)
+                    out_indels << output_indels;
             }
         }
     }
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, out, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
     }
 }
 

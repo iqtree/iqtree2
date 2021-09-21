@@ -76,7 +76,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad);
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad);
 
 /**
 *  merge and write all sequences to output files

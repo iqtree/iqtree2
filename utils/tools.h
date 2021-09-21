@@ -2424,6 +2424,11 @@ public:
     *  messages which are delayed to show
     */
     string delay_msgs;
+    
+    /**
+    *  TRUE to disable outputing sequences without gaps (when using Indels)
+    */
+    bool alisim_no_export_sequence_wo_gaps;
 };
 
 /**

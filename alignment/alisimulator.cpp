@@ -791,14 +791,17 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     {
         if ((*it)->node->isLeaf())
         {
-            string input_sequence = input_msa[(*it)->node->name];
+            // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+            string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+
             // convert numerical states into readable characters and write output to file
+            string input_sequence = input_msa[(*it)->node->name];
             if (input_sequence.length()>0)
                 // write and copying gaps from the input sequences to the output.
-                out<<writeASequenceToFileWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping, params->aln_output_format, max_length_taxa_name);
+                out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
             else
                 // write without copying gaps from the input sequences to the output.
-                out<< convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+                out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
             
             // remove the sequence to release the memory after extracting the sequence
             vector<short int>().swap((*it)->node->sequence);
@@ -809,14 +812,17 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
             // avoid writing sequence of __root__
             if (node->name!=ROOT_NAME)
             {
+                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                
                 string input_sequence = input_msa[node->name];
                 // convert numerical states into readable characters and write output to file
                 if (input_sequence.length()>0)
                     // write and copying gaps from the input sequences to the output.
-                    out<<writeASequenceToFileWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping, params->aln_output_format, max_length_taxa_name);
+                    out << pre_output << exportSequenceWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
                 else
                     // write without copying gaps from the input sequences to the output.
-                    out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+                    out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
             }
             
             // remove the sequence to release the memory after extracting the sequence
@@ -832,11 +838,38 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     {
         // convert numerical states into readable characters and write internal sequences to file if the user want to do so
         if (params->alisim_write_internal_sequences && state_mapping.size() > 0)
-            out<< convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping, params->aln_output_format, max_length_taxa_name);
+        {
+            // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+            string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+            
+            out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+        }
         
         // release the memory
         vector<short int>().swap(node->sequence);
     }
+}
+
+/**
+*  export pre_output string (contains taxon name and ">" or "space" based on the output format
+*
+*/
+string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name)
+{
+    string pre_output = "";
+    
+    // add node's name
+    pre_output = node->name;
+    // write node's id if node's name is empty
+    if (pre_output.length() == 0) pre_output = convertIntToString(node->id);
+    // in PHYLIP format
+    if (output_format != IN_FASTA)
+        pre_output.resize(max_length_taxa_name, ' ');
+    // in FASTA format
+    else
+        pre_output = ">" + pre_output + "\n";
+    
+    return pre_output;
 }
 
 /**
@@ -1064,50 +1097,25 @@ void AliSimulator::initializeStateMapping(int num_sites_per_state, Alignment *al
 *  convert numerical states into readable characters
 *
 */
-string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
+string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping)
 {
     ASSERT(sequence_length <= node->sequence.size());
     
     // dummy variables
     std::string output (sequence_length * num_sites_per_state+1, ' ');
-    int start_index;
-    
-    // add node's name
-    // in PHYLIP format
-    if (output_format != IN_FASTA)
-    {
-        // add padding to node_name
-        string name_with_padding = node->name;
-        // write node's id if node's name is empty
-        if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
-        ASSERT(max_length_taxa_name >= name_with_padding.length());
-        std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
-        name_with_padding += padding;
-        output = name_with_padding + output;
-        start_index = name_with_padding.length();
-    }
-    // in FASTA format
-    else
-    {
-        string node_name = node->name;
-        // write node's id if node's name is empty
-        if (node_name.length() == 0) node_name = convertIntToString(node->id);
-        output = ">" + node_name + "\n" + output;
-        start_index = node_name.length() + 2;
-    }
     output[output.length()-1] = '\n';
     
     // convert normal data
     if (num_sites_per_state == 1)
         for (int i = 0; i < sequence_length; i++)
-            output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+            output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
     // convert CODON
     else
         for (int i = 0; i < sequence_length; i++)
         {
-            output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-            output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
-            output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
+            output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+            output[i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
+            output[i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
         }
     
     // return output
@@ -1511,37 +1519,12 @@ vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int sequenc
 }
 
 /**
-*  write a sequence of a node to an output file with gaps copied from the input sequence
+*  export a sequence with gaps copied from the input sequence
 */
-string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
+string AliSimulator::exportSequenceWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping)
 {
     // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
     string output (sequence_length * num_sites_per_state+1, '-');
-    int start_index;
-    
-    // add node's name
-    // in PHYLIP format
-    if (output_format != IN_FASTA)
-    {
-        // add padding to node_name
-        string name_with_padding = node->name;
-        // write node's id if node's name is empty
-        if (name_with_padding.length() == 0) name_with_padding = convertIntToString(node->id);
-        ASSERT(max_length_taxa_name >= name_with_padding.length());
-        std::string padding (max_length_taxa_name - name_with_padding.length() + 1, ' ');
-        name_with_padding += padding;
-        output = name_with_padding + output;
-        start_index = name_with_padding.length();
-    }
-    // in FASTA format
-    else
-    {
-        string node_name = node->name;
-        // write node's id if node's name is empty
-        if (node_name.length() == 0) node_name = convertIntToString(node->id);
-        output = ">" + node_name + "\n" + output;
-        start_index = node_name.length() + 2;
-    }
     output[output.length()-1] = '\n';
     
     // convert non-empty sequence
@@ -1556,11 +1539,11 @@ string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_lengt
                     && input_sequence[i] == '-')
                 {
                     // insert gaps
-                    output[start_index+i*num_sites_per_state] = '-';
+                    output[i*num_sites_per_state] = '-';
                 }
                 // if it's not a gap
                 else
-                    output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+                    output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
             }
         }
         // convert CODON
@@ -1572,15 +1555,15 @@ string AliSimulator::writeASequenceToFileWithGaps(Node *node, int sequence_lengt
                             || input_sequence[i*num_sites_per_state+1] == '-'
                             || input_sequence[i*num_sites_per_state+2] == '-')){
                     // insert gaps
-                    output[start_index+i*num_sites_per_state] =  input_sequence[i*num_sites_per_state];
-                    output[start_index+i*num_sites_per_state + 1] =  input_sequence[i*num_sites_per_state+1];
-                    output[start_index+i*num_sites_per_state + 2] =  input_sequence[i*num_sites_per_state+2];
+                    output[i*num_sites_per_state] =  input_sequence[i*num_sites_per_state];
+                    output[i*num_sites_per_state + 1] =  input_sequence[i*num_sites_per_state+1];
+                    output[i*num_sites_per_state + 2] =  input_sequence[i*num_sites_per_state+2];
                 }
                 else
                 {
-                        output[start_index+i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-                        output[start_index+i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
-                        output[start_index+i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
+                        output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+                        output[i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
+                        output[i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
                 }
             }
         }

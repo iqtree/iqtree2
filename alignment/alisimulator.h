@@ -203,9 +203,9 @@ protected:
     vector<short int> generateRandomSequenceFromStateFreqs(int sequence_length, double* state_freqs, int max_prob_pos);
     
     /**
-    *  write a sequence of a node to an output file with gaps copied from the input sequence
+    *  export a sequence with gaps copied from the input sequence
     */
-    string writeASequenceToFileWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
+    string exportSequenceWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping);
     
     /**
         handle indels
@@ -345,7 +345,13 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
+    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping);
+    
+    /**
+    *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
+    *
+    */
+    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
 };
 
 #endif /* alisimulator_h */
