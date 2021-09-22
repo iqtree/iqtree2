@@ -1646,7 +1646,7 @@ double ModelMixture::optimizeWeights() {
 }
 
 double ModelMixture::optimizeWithEM(double gradient_epsilon) {
-    size_t ptn, c;
+    size_t ptn, c, k;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = size();
 
@@ -1758,6 +1758,24 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
 
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
+
+            // compute _pattern_lh_cat
+            phylo_tree->computePatternLhCat(WSL_MIXTURE);
+            // update the posterior probabilities of each category
+            for (ptn = 0; ptn < nptn; ptn++) {
+                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+                double lk_ptn = phylo_tree->ptn_invar[ptn];
+                for (k = 0; k < nmix; k++) {
+                    lk_ptn += this_lk_cat[k];
+                }
+                ASSERT(lk_ptn != 0.0);
+                lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+                // transform _pattern_lh_cat into posterior probabilities of each category
+                for (k = 0; k < nmix; k++) {
+                    this_lk_cat[k] *= lk_ptn;
+                }
+            }
+
             tree->copyPhyloTreeMixlen(phylo_tree, c, true);
             ModelMarkov *subst_model;
             subst_model = at(c);
@@ -1776,10 +1794,11 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
+            phylo_tree->clearAllPartialLH();
 
         }
 
-        phylo_tree->clearAllPartialLH();
+        // phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
 
