@@ -345,12 +345,6 @@ void executeSimulation(Params params, IQTree *&tree)
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
     
-    // report model's parameters
-    reportSubstitutionProcess(cout, *(alisimulator->params), *(alisimulator->tree));
-    // show omega/kappa/kappa2 when using codon models
-    if (alisimulator->tree->aln->seq_type == SEQ_CODON)
-        alisimulator->tree->getModel()->writeInfo(cout);
-    
     // delete alisimulator
     delete alisimulator;
     
@@ -574,6 +568,12 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             || super_alisimulator->tree->isSuperTree()
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator);
+        
+        // report model's parameters
+        reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));
+        // show omega/kappa/kappa2 when using codon models
+        if (super_alisimulator->tree->aln->seq_type == SEQ_CODON)
+            super_alisimulator->tree->getModel()->writeInfo(cout);
     }
 }
 

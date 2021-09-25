@@ -599,6 +599,7 @@ void AliSimulator::getStateFrequenciesFromModel(IQTree* tree, double *state_freq
         else
             generateRandomBaseFrequencies(state_freqs);
         tree->getModel()->setStateFrequency(state_freqs);
+        tree->getModel()->decomposeRateMatrix();
     }
 }
 
