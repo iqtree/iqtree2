@@ -69,6 +69,9 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     ADVERTISE(UNJMatrix<NJFloat>,    "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
     ADVERTISE(RapidNJ,               "NJ-R",    "Rapid Neighbour Joining"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
+    ADVERTISE(Vectorized_RapidNJ,    "NJ-R-V",  "Rapid Neighbour Joining (Vectorized)"
+                                                " (Simonsen, Mailund, Pedersen [2011])");
+
     ADVERTISE(RapidNJ,            defaultName,  "Rapid Neighbour Joining"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 

@@ -132,14 +132,14 @@ protected:
 
     volatile T     global_best_dist;
 
-    int getThreadNumber() {
+    int getThreadNumber() const {
         #ifdef _OPENMP
             return omp_get_thread_num();
         #else
             return 0;
         #endif
     }
-    int getThreadCount() {
+    int getThreadCount() const {
         #ifdef _OPENMP
             return omp_get_num_threads();
         #else
@@ -913,7 +913,7 @@ public:
         }
     }
 
-    virtual void findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) {
+    virtual void findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) override {
         auto thread_num     = getThreadNumber();
         int  best_x         = row_choice[r];    //other cluster
         T    best_hc_dist   = row_best_dist[r]  + cluster_total_scaled[y];

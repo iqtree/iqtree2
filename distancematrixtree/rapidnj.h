@@ -121,15 +121,17 @@ protected:
     //         bitfields, so the writes... *do* overlap) (ouch!).
     //
     std::vector<intptr_t> clusterToRow;   //Maps clusters to their rows (-1 means not mapped)
+                                          //for each cluster
     std::vector<T>        clusterTotals;  //"Row" totals indexed by cluster
 
-    mutable std::vector<T>       scaledClusterTotals;   //The same, multiplied by
+    mutable std::vector<intptr_t> clusterPartners;//Counts the number of possible partners,
+    mutable std::vector<T>        scaledClusterTotals;   //The same, multiplied by
                                                         //(1.0 / (n-2)).
-    mutable std::vector<T>       scaledMaxEarlierClusterTotal;
-    mutable std::vector<int>     rowOrderChosen; //Indicates if a row's scanning
+    mutable std::vector<T>        scaledMaxEarlierClusterTotal;
+    mutable std::vector<int>      rowOrderChosen; //Indicates if a row's scanning
                                                  //order chosen has been chosen.
                                                  //Only used in... getRowScanningOrder().
-    mutable std::vector<size_t>  rowScanOrder;   //Order in which rows are to be scanned
+    mutable std::vector<size_t>   rowScanOrder;   //Order in which rows are to be scanned
                                                  //Only used in... getRowMinima().
     
     SquareMatrix<T>   entriesSorted; //The S matrix: Entries in distance matrix
@@ -150,7 +152,19 @@ public:
         #endif
         sorters.resize(threadCount);
     }
-    int getThreadNumber() {
+    intptr_t getThreadCount() const {
+        intptr_t t=1;
+        #ifdef _OPENMP
+            #pragma omp parallel
+            {
+                if (omp_get_thread_num()==0) {
+                    t = omp_get_num_threads();
+                }
+            }
+        #endif
+        return t;
+    }
+    intptr_t getThreadNumber() const {
         #ifdef _OPENMP
             return omp_get_thread_num();
         #else
@@ -164,6 +178,7 @@ public:
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(row_count);
         clusterTotals.resize(row_count);
+        clusterPartners.resize(row_count*2-2);
         for (intptr_t r=0; r<row_count; ++r) {
             clusterToRow[r]  = static_cast<int>(r);
             clusterTotals[r] = rowTotals[r];
@@ -192,14 +207,17 @@ public:
             entriesSorted.setSize(row_count);
             entryToCluster.setSize(row_count);
             #ifdef _OPENMP
-            #pragma omp parallel for schedule(dynamic)
+            #pragma omp parallel num_threads(threadCount)
             #endif
-            for (intptr_t r=0; r<row_count; ++r) {
-                sortRow(r,r,false,sorters[getThreadNumber()]);
-                ++setupProgress;
-                //copies the "left of the diagonal" portion of
-                //row r from the D matrix and sorts it
-                //into ascending order.
+            {
+                int threadNum = getThreadNumber();
+                for (intptr_t r=threadNum; r<row_count; r+=threadCount) {
+                    sortRow(r,r,false,sorters[threadNum]);
+                    ++setupProgress;
+                    //copies the "left of the diagonal" portion of
+                    //row r from the D matrix and sorts it
+                    //into ascending order.
+                }
             }
         }
         clusterDuplicates();
@@ -221,10 +239,13 @@ public:
                 cluster(best.column, best.row);
                 if ( row_count == nextPurge ) {
                     #ifdef _OPENMP
-                    #pragma omp parallel for
+                    #pragma omp parallel num_threads(threadCount)
                     #endif
-                    for (intptr_t r=0; r<row_count; ++r) {
-                        purgeRow(r);
+                    {
+                        for (intptr_t r=getThreadNumber(); 
+                            r<row_count; r+=threadCount) {
+                            purgeRow(r);
+                        }
                     }
                     nextPurge = (row_count + row_count)/3;
                 }
@@ -267,6 +288,7 @@ public:
         } else {
             sorter.single_thread_mirror_sort(values, w, clusterIndices);
         }
+        clusterPartners[c] = w;
     }
     void purgeRow(intptr_t r /*row index*/) const {
         //Scan a row of the I matrix, so as to remove
@@ -275,6 +297,7 @@ public:
         //in the same row of the S matrix.
         T*    values         = entriesSorted.rows[r];
         int*  clusterIndices = entryToCluster.rows[r];
+        int   c              = rowToCluster[r];
         intptr_t w = 0;
         intptr_t i = 0;
         for (; i<row_count ; ++i ) {
@@ -290,6 +313,7 @@ public:
         if (w<row_count) {
             values[w] = infiniteDistance;
         }
+        clusterPartners[c] = w;
     }
     virtual void cluster(intptr_t a, intptr_t b) {
         size_t clusterA         = rowToCluster[a];
@@ -345,7 +369,7 @@ public:
         T* qLocalBest =  qLocalBestVector.data();
 
         #ifdef _OPEN_MP
-        #pragma omp parallel for
+        #pragma omp parallel for num_threads(threadCount)
         #endif
         for (size_t b=0; b<threadCount; ++b) {
             T      qBestForThread = qBest;
@@ -374,6 +398,7 @@ public:
             }
         }
     }
+
     void partiallySortRowMinima() const {
         intptr_t rSize     = rowMinima.size();
         #ifdef _OPENMP
@@ -386,7 +411,7 @@ public:
             intptr_t halfLen = len/2; //rounded down
             intptr_t gap     = len-halfLen;
             #ifdef _OPENMP
-            #pragma omp parallel for if(threshold<halfLen)
+            #pragma omp parallel for if(threshold<halfLen) num_threads(threadCount)
             #endif
             for ( intptr_t i = 0; i<halfLen; ++i) {
                 intptr_t j = i + gap;
@@ -416,7 +441,7 @@ public:
         partiallySortRowMinima();
 
         #ifdef _OPENMP
-        #pragma omp parallel for if((threadCount<<7)<row_count)
+        #pragma omp parallel for if((threadCount<<7)<row_count) num_threads(threadCount)
         #endif
         for (intptr_t i = 0; i < row_count; ++i) {
             rowOrderChosen[i]=0; //Not chosen yet
@@ -481,19 +506,22 @@ public:
         rowMinima.resize(row_count);
         
         #ifdef _OPENMP
-        #pragma omp parallel for
+        #pragma omp parallel num_threads(threadCount)
         #endif
-        for (intptr_t r=0; r<row_count; ++r) {
-            size_t row             = rowScanOrder[r];
-            size_t cluster_num     = rowToCluster[row];
-            T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster_num];
-            //Note: Older versions of RapidNJ used maxTot rather than
-            //      maxEarlierTotal here...
-            rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBest);
+        {
+            for (intptr_t r=getThreadNumber(); r<row_count; r+=threadCount) {
+                size_t row             = rowScanOrder[r];
+                size_t cluster_num     = rowToCluster[row];
+                T      maxEarlierTotal = scaledMaxEarlierClusterTotal[cluster_num];
+                rowMinima[r]           = getRowMinimum(row, maxEarlierTotal, qBest);
+                if (rowMinima[r].value < qBest) {
+                    qBest = rowMinima[r].value;
+                }
+            }
         }
     }
 
-    Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const {
+    virtual Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const {
         T nless2      = (T)( row_count - 2 );
         T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ( (T)1.0 / nless2 );
         auto    tot   = scaledClusterTotals.data();
@@ -534,6 +562,159 @@ public:
 
 typedef BoundingMatrix<NJFloat,   NJMatrix<NJFloat>>    RapidNJ;
 typedef BoundingMatrix<NJFloat,   BIONJMatrix<NJFloat>> RapidBIONJ;
+
+#if USE_VECTORCLASS_LIBRARY
+template <class T=NJFloat, class V=FloatVector, 
+          class VB=FloatBoolVector,
+          class M=BIONJMatrix<T>, class SUPER=BoundingMatrix<T,M> >
+class VectorizedBoundingMatrix: public SUPER
+{
+protected:
+    const intptr_t  block_size;
+    std::vector<T>  vector_storage;
+    std::vector<T*> per_thread_vector_storage;
+
+public:
+    typedef SUPER super;
+    using super::threadCount;
+    using super::getThreadNumber;
+    using super::getThreadCount;
+
+    using super::row_count;
+    using super::rowTotals;
+    using super::rowToCluster;
+
+    using super::scaledClusterTotals;
+    using super::clusterToRow;
+    using super::clusterPartners;
+
+    using super::entriesSorted;
+    using super::entryToCluster;
+
+    VectorizedBoundingMatrix(): super(), block_size(VB().size()),
+        vector_storage  (block_size*4) {
+        #ifdef _OPENMP
+        vector_storage.resize(threadCount*block_size*4);
+        #endif
+        for (int i=0; i<threadCount; ++i) {
+            T* ptr = vector_storage.data() + block_size * i * 4;
+            per_thread_vector_storage.push_back( ptr ) ;
+        }
+    }
+    size_t indexOfFirstGreater(const T* data, size_t hi, T bound) const {
+        size_t lo = 0;
+        while (lo<hi) {
+            size_t guess = lo + (hi-lo) / 2;
+            if (data[guess]<=bound) {
+                lo = guess + 1;
+            } else {
+                hi = guess;
+            }
+        }
+        return lo;
+    }
+
+    virtual Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const override {
+
+
+        T nless2        = (T)( row_count - 2 );
+        T tMultiplier   = ( row_count <= 2 ) ? (T)0.0 : ( (T)1.0 / nless2 );
+        auto tot        = scaledClusterTotals.data();
+        T rowTotal      = rowTotals[row] * tMultiplier; //scaled by (1/(n-2)).
+        T rowBound      = qBest + maxTot + rowTotal;
+                //Upper bound for distance, in this row, that
+                //could (after row totals subtracted) provide a
+                //better min(Q).
+
+        Position<T> pos(row, 0, infiniteDistance, 0);
+        const T*   rowData   = entriesSorted.rows[row];
+        const int* toCluster = entryToCluster.rows[row];
+        const int  cluster   = rowToCluster[row];
+
+
+        size_t partners   = indexOfFirstGreater
+                            (rowData, clusterPartners[cluster], rowBound);
+        size_t v_partners = (partners/block_size)*block_size;
+        auto thread_num   = getThreadNumber();
+        T*   blockRawDist = per_thread_vector_storage[thread_num];
+        T*   blockCluster = blockRawDist + block_size;
+        T*   blockIndex   = blockCluster + block_size;
+        T*   blockHCDist  = blockIndex   + block_size;
+
+        V    best_hc_vector ((T)(infiniteDistance));
+        V    best_ix_vector ((T)(-1));
+
+        for (size_t i=0; i<v_partners; i+=block_size) {
+            for (int j=0; j<block_size; ++j) {
+                int k = toCluster[i+j];
+                blockCluster[j] = tot[k];
+                blockIndex[j]   = (T)k;
+            }
+            V  raw;    raw.load(rowData+i);
+            V  c_tot;  c_tot.load(blockCluster);
+            V  ix;     ix.load(blockIndex);
+            V  hc   = raw - c_tot; //subtract cluster totals to get half-cooked distances?
+            VB less = hc < best_hc_vector; //which are improvements?
+            best_hc_vector = select(less, hc, best_hc_vector);
+            best_ix_vector = select(less, ix, best_ix_vector);
+        }
+
+        if (0<v_partners) {
+            best_hc_vector.store(blockHCDist);
+            best_ix_vector.store(blockIndex);
+            for (int j=0; j<block_size; ++j) {
+                T Qrc = blockHCDist[j] - rowTotal;
+                if (Qrc < pos.value) {
+                    size_t cluster_num = (size_t)blockIndex[j];
+                    intptr_t otherRow = clusterToRow[cluster_num];
+                    if (otherRow != notMappedToRow) {
+                        pos.column = (otherRow < row ) ? otherRow : row;
+                        pos.row    = (otherRow < row ) ? row : otherRow;
+                        pos.value  = Qrc;
+                        if (Qrc < qBest ) {
+                            qBest    = Qrc;
+                            rowBound = qBest + maxTot + rowTotal;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (size_t i=v_partners; i<partners; ++i) {
+            T Drc = rowData[i];
+            if (rowBound<Drc && 0<i) {
+                break;
+            }
+            size_t  cluster_num = toCluster[i];
+                //The cluster associated with this distance
+                //The c in Qrc and Drc.
+            T Qrc = Drc - tot[cluster_num] - rowTotal;
+            if (Qrc < pos.value) {
+                intptr_t otherRow = clusterToRow[cluster_num];
+                if (otherRow != notMappedToRow) {
+                    pos.column = (otherRow < row ) ? otherRow : row;
+                    pos.row    = (otherRow < row ) ? row : otherRow;
+                    pos.value  = Qrc;
+                    if (Qrc < qBest ) {
+                        qBest    = Qrc;
+                        rowBound = qBest + maxTot + rowTotal;
+                    }
+                }
+            }
+        }
+        return pos;
+    }
+};
+
+typedef VectorizedBoundingMatrix
+        <NJFloat, FloatVector, FloatBoolVector, NJMatrix<NJFloat> >
+        Vectorized_RapidNJ;
+typedef VectorizedBoundingMatrix
+        <NJFloat, FloatVector, FloatBoolVector, BIONJMatrix<NJFloat> >
+        Vectorized_RapidBIONJ;
+
+
+#endif //USE_VECTORCLASS_LIBRARY
 
 }
 

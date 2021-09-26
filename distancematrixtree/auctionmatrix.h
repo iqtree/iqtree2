@@ -30,10 +30,10 @@ namespace StartTree {
         using super::entryToCluster;
         using super::entriesSorted;
         using super::purgeRow;
-        virtual std::string getAlgorithmName() const {
+        virtual std::string getAlgorithmName() const override {
             return "Auction" + M::getAlgorithmName();
         }
-        StartTree::Position<T> getRowMinimum(size_t row, T maxTot, T qBest) const {
+        virtual StartTree::Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const override {
             StartTree::Position<T> pos(row, 0, infiniteDistance, 0);
             const T*   rowData   = entriesSorted.rows[row];
             const int* toCluster = entryToCluster.rows[row];
