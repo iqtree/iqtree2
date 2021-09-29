@@ -401,7 +401,7 @@ enum FileFormat {
 };
 
 enum ModelTestCriterion {
-    MTC_AIC, MTC_AICC, MTC_BIC, MTC_ALL
+    MTC_AIC, MTC_AICC, MTC_BIC, MTC_ALL, NN
 };
 
 /**
