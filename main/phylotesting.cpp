@@ -3200,6 +3200,22 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
         if (params->model_name.empty())
             part_model_name = this_tree->aln->model_name;
         CandidateModel best_model;
+
+        // added by TD
+        if (params->use_nn_model) {
+            // TD: use nn for best_model inference
+            Alignment alignment = *(this_tree->aln->removeAndFillUpGappySites());
+            NeuralNetwork nn(&alignment);
+            this_tree->aln->model_name = nn.doModelInference();
+            double alpha = nn.doAlphaInference();
+            if (alpha >= 0) { // +G
+                this_tree->aln->model_name += "+G{" + to_string(alpha) + "}";
+            }
+            // todo: what about the missing log likelihood etc.? what purpose does the NN inference have here?
+        }
+
+        // todo: make else statement here (if use-nn-model is not set)
+
         best_model = CandidateModelSet().test(*params, this_tree, part_model_info, models_block,
             (parallel_job ? 1 : nthreads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
 
