@@ -4183,8 +4183,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 
             // added by TD
+            // todo: give it a fancy name
             if (strcmp(argv[cnt], "--use-nn-model") == 0) {
                 params.use_nn_model = true;
+                params.model_test_criterion = NN;
                 continue;
             }
 
