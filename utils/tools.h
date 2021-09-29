@@ -2930,6 +2930,11 @@ bool overwriteFile(char *filename);
 void usage(char* argv[]);
 
 /**
+        print usage information of AliSim
+ */
+void usage_alisim();
+
+/**
  *   Print a string into a file
  */
 void printString2File(string myString, string filename);

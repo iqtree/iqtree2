@@ -4933,7 +4933,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
-                    throw "Use --alisim <OUTPUT_FILENAME>";
+                {
+                    usage_alisim();
+                    throw "";
+                }
                 params.alisim_output_filename = argv[cnt];
                 
                 // set default model_name
@@ -5233,6 +5236,56 @@ void usage(char* argv[]) {
     exit(0);
 }
 
+void usage_alisim(){
+    cout << endl << "ALISIM: ALIGNMENT SIMULATOR" << endl
+    << endl << "Usage: iqtree --alisim <OUTPUT_PREFIX> [-m MODEL] [-t TREE] ..." << endl << endl
+    << "  --alisim OUTPUT_PREFIX    Activate AliSim, specify the prefix for the output filename" << endl
+    << "  -t TREE_FILE              Specify the path to the input tree[s]" << endl
+    << "  --length LENGTH           Set the length of the simulated sequences" << endl
+    << "  --num-alignments NUMBER   Set the number of output datasets" << endl
+    << "  --seqtype STRING          BIN, DNA, AA, CODON, MORPH{NUM_STATES} (default: auto-detect)" << endl
+    << "                            For morphological data, 0<NUM_STATES<=32" << endl
+    << "  --m MODEL_STRING          Model name string (e.g. GTR+F+I+G) (see SUBSTITUTION MODEL)" << endl
+    << "                            AliSim supports user-specified State Frequency;" <<endl
+    << "                            Rate Heterogeneity (+G/+GC/+Rk)" << endl
+    << "                            for Discrete/Continuous Gamma/FreeRate Model; " << endl
+    << "                            Heterotachy models; Mixture Models;" << endl
+    << "                            and Ascertainment bias correction (+ASC) to simulate" << endl
+    << "                            sequences without constant sites" << endl
+    << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
+    << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
+    << "  --indel <INS>,<DEL>       Activate Indels (insertion/deletion events) and"<< endl
+    << "                            Specify the insertion/deletion rate relative to"<< endl
+    << "                            the substitution rate of 1"<< endl
+    << "  --indel-size <INS_DIS>,<DEL_DIS> Specify the distributions for generating"<< endl
+    << "                            the random number of sites to insert/delete." << endl
+    << "                            By default, a geometric distribution with p of 0.5 is used." << endl
+    << "  --no-export-sequence-wo-gaps Disable outputing sequences without gaps (when using Indels)"<< endl
+    << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
+    << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
+    << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl
+    << "  -t RANDOM{MODEL,NUM_TAXA} Specify a model and the number of taxa to generate a random tree" << endl
+    << "                            MODEL is yh, u, cat, bal, bd{BIRTH_RATE,DEATH_RATE} standing for" << endl
+    << "                            YuleHarding, Uniform, Caterpillar, Balanced, BirthDeath" << endl
+    << "                            NUM_TAXA could be a fixed number, a list (NUM_1,NUM_2,...,NUM_N)" << endl
+    << "                            or a Uniform distribution U(LOWER_BOUND,UPPER_BOUND)" << endl
+    << "  -rlen MIN MEAN MAX        Specify the min, mean, max branch lengths of a random tree" << endl
+    << "  -p FILE                   NEXUS/RAxML partition file" << endl
+    << "                            Edge-linked proportional partition model" << endl
+    << "  -q FILE                   Like -p but edge-linked equal partition model " << endl
+    << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
+    << "  --distribution FILE       Supply the distribution definition file" << endl
+    << "  --branch-distribution DIS Specify the distribution for randomly generating branch lengths" << endl
+    << "  --write-all               Enable writing internal sequences" << endl
+    << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
+    << "  --seed NUM                Random seed number (default: CPU clock)" << endl
+    << "  -nt NUM                   Set the number of threads to run the simulation" << endl
+    << "                            Be careful to make the AliSim reproducible," << endl
+    << "                            users should specify the seed number" << endl
+    << "  -gz                       Enable output compression but taking longer running time" << endl
+    << "  -af phy|fasta             Set the output format (default: phylip)" << endl;
+}
+
 void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: iqtree [-s ALIGNMENT] [-p PARTITION] [-m MODEL] [-t TREE] ..." << endl << endl;
@@ -5468,57 +5521,12 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
-    << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl
+    << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl;
     
-    << endl << "ALISIM: ALIGNMENT SIMULATOR" << endl
-    << endl << "Usage: iqtree --alisim <OUTPUT_PREFIX> [-m MODEL] [-t TREE] ..." << endl << endl
-    << "  --alisim OUTPUT_PREFIX    Activate AliSim, specify the prefix for the output filename" << endl
-    << "  -t TREE_FILE              Specify the path to the input tree[s]" << endl
-    << "  --length LENGTH           Set the length of the simulated sequences" << endl
-    << "  --num-alignments NUMBER   Set the number of output datasets" << endl
-    << "  --seqtype STRING          BIN, DNA, AA, CODON, MORPH{NUM_STATES} (default: auto-detect)" << endl
-    << "                            For morphological data, 0<NUM_STATES<=32" << endl
-    << "  --m MODEL_STRING          Model name string (e.g. GTR+F+I+G) (see SUBSTITUTION MODEL)" << endl
-    << "                            AliSim supports user-specified State Frequency;" <<endl
-    << "                            Rate Heterogeneity (+G/+GC/+Rk)" << endl
-    << "                            for Discrete/Continuous Gamma/FreeRate Model; " << endl
-    << "                            Heterotachy models; Mixture Models;" << endl
-    << "                            and Ascertainment bias correction (+ASC) to simulate" << endl
-    << "                            sequences without constant sites" << endl
-    << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
-    << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
-    << "  --indel <INS>,<DEL>       Activate Indels (insertion/deletion events) and"<< endl
-    << "                            Specify the insertion/deletion rate relative to"<< endl
-    << "                            the substitution rate of 1"<< endl
-    << "  --indel-size <INS_DIS>,<DEL_DIS> Specify the distributions for generating"<< endl
-    << "                            the random number of sites to insert/delete." << endl
-    << "                            By default, a geometric distribution with p of 0.5 is used." << endl
-    << "  --no-export-sequence-wo-gaps Disable outputing sequences without gaps (when using Indels)"<< endl
-    << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
-    << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
-    << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl
-    << "  -t RANDOM{MODEL,NUM_TAXA} Specify a model and the number of taxa to generate a random tree" << endl
-    << "                            MODEL is yh, u, cat, bal, bd{BIRTH_RATE,DEATH_RATE} standing for" << endl
-    << "                            YuleHarding, Uniform, Caterpillar, Balanced, BirthDeath" << endl
-    << "                            NUM_TAXA could be a fixed number, a list (NUM_1,NUM_2,...,NUM_N)" << endl
-    << "                            or a Uniform distribution U(LOWER_BOUND,UPPER_BOUND)" << endl
-    << "  -rlen MIN MEAN MAX        Specify the min, mean, max branch lengths of a random tree" << endl
-    << "  -p FILE                   NEXUS/RAxML partition file" << endl
-    << "                            Edge-linked proportional partition model" << endl
-    << "  -q FILE                   Like -p but edge-linked equal partition model " << endl
-    << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
-    << "  --distribution FILE       Supply the distribution definition file" << endl
-    << "  --branch-distribution DIS Specify the distribution for randomly generating branch lengths" << endl
-    << "  --write-all               Enable writing internal sequences" << endl
-    << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
-    << "  --seed NUM                Random seed number (default: CPU clock)" << endl
-    << "  -nt NUM                   Set the number of threads to run the simulation" << endl
-    << "                            Be careful to make the AliSim reproducible," << endl
-    << "                            users should specify the seed number" << endl
-    << "  -gz                       Enable output compression but taking longer running time" << endl
-    << "  -af phy|fasta             Set the output format (default: phylip)" << endl
+    usage_alisim();
+    cout
 
-
+    
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl
     << "  --date FILE          File containing dates of tips or ancestral nodes" << endl
