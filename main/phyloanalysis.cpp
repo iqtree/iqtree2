@@ -2153,8 +2153,7 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
 
-    // added by TD
-    params.use_nn_model ? runModelFinderNN(params, *iqtree, model_info) : runModelFinder(params, *iqtree, model_info);
+    runModelFinder(params, *iqtree, model_info);
 }
         
 /**
@@ -2182,7 +2181,7 @@ void optimizeConTree(Params &params, IQTree *tree) {
 }
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
-
+    // todo: skip likelihood computations if nn does model selection
     //    string dist_file;
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
