@@ -1838,6 +1838,12 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 
     /* now check data type */
     seq_type = detectSequenceType(sequences);
+
+    // added by TD
+    if (Params::getInstance().use_nn_model && seq_type != SEQ_DNA) {
+        throw "Can't use option use-nn-model with non DNA/RNA alignments!";
+    }
+
     switch (seq_type) {
     case SEQ_BINARY:
         num_states = 2;
