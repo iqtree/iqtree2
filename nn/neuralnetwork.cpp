@@ -58,7 +58,7 @@ double NeuralNetwork::doAlphaInference() {
     std::vector<float> input_tensor_(10000 * 4);
     std::vector<int64_t> input_shape_{1, 10000, 4};
 
-    std::vector<const char *> output_node_names = {"alpha"};
+    std::vector<const char *> output_node_names = {"alpha", "ev_model"};
 
     size_t num_sites = this->alignment->getNSite();
     size_t num_taxa = this->alignment->getNSeq();
@@ -87,17 +87,23 @@ double NeuralNetwork::doAlphaInference() {
 
     // do inference
     auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tensor, 1,
-                                      output_node_names.data(), 1);
-    assert(output_tensors.size() == 1 && output_tensors.front().IsTensor());
+                                      output_node_names.data(), 2);
+    assert(output_tensors.size() == 2 && output_tensors.front().IsTensor());
 
     // get pointer to output tensor float values
-    float *floatarr = output_tensors.front().GetTensorMutableData<float>();
+    //float *floatarr = output_tensors.front().GetTensorMutableData<float>();
+    float *alpha = output_tensors[0].GetTensorMutableData<float>();
+    float *check = output_tensors[1].GetTensorMutableData<float>();
+
+    printf("Check whether heterogeneous (0) or homogeneous (1) = %f\n", check[0]);
 
     // print alpha value
-    for (int i = 0; i < 1; i++)
-        printf("Alpha value [%d] =  %f\n", i, floatarr[i] / 1000);
+    printf("Alpha value =  %f\n", alpha[0] / 1000);
 
-    return floatarr[0] / 1000;
+    // TODO: check via ev_model or alpha value whether it is +G?
+    if (check[0] > 0.5)
+        return -1;
+    return alpha[0] / 1000;
 }
 
 string NeuralNetwork::doModelInference() {
