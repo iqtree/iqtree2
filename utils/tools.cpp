@@ -5135,7 +5135,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     {
         if (!params.aln_file)
         {
-            string tmp_user_file = "randomtree.treefile";
+            string tmp_user_file = params.alisim_output_filename+".treefile";
             params.user_file = new char[tmp_user_file.length() + 1];
             strcpy(params.user_file, tmp_user_file.c_str());
         }
@@ -5144,7 +5144,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             // initialize output_filepath
             std::string output_filepath(params.aln_file);
             output_filepath = output_filepath.substr(0, output_filepath.find_last_of("/\\") + 1);
-            output_filepath = output_filepath + "randomtree.treefile";
+            output_filepath = output_filepath + params.alisim_output_filename +".treefile";
             
             params.user_file = new char[output_filepath.length() + 1];
             strcpy(params.user_file, output_filepath.c_str());
