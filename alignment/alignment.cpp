@@ -21,6 +21,9 @@
 #include "utils/progress.h" //for progress_display
 #include "alignmentsummary.h"
 
+#include <random>
+#include <chrono>
+
 #include <Eigen/LU>
 #ifdef USE_BOOST
 #include <boost/math/distributions/binomial.hpp>
@@ -564,6 +567,98 @@ vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
        stats[i] /= n_sites;
     }
     return stats;
+}
+
+Alignment *Alignment::replaceAmbiguousChars() {
+
+    IntVector patterns;
+
+    for (size_t idx = 0; idx < getNPattern(); idx++) {
+        patterns.push_back(idx);
+    }
+
+    Alignment *aln = new Alignment;
+    aln->extractPatterns(this, patterns);
+
+    for (size_t idx = 0; idx < boost::size(patterns); idx++) {
+        for (size_t i = 0; i < getNSeq(); i++) {
+            if (aln->at(idx)[i] > 3) {
+                uint32_t base;
+                mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+                switch(aln->at(idx)[i]) {
+                    case 6: { // M: A or C
+                        std::uniform_int_distribution<size_t> dist(0, 1);
+                        base = dist(rng);
+                        aln->at(idx)[i] = (StateType) base;
+                    }
+                        break;
+                    case 8: { // R: A or G
+                        std::uniform_int_distribution<size_t> dist(0, 1);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) base: (StateType) 2;
+                    }
+                        break;
+                    case 9: { // S: C or G
+                        std::uniform_int_distribution<size_t> dist(1, 2);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base;
+                    }
+                        break;
+                    case 10: { // V: A or C or G
+                        std::uniform_int_distribution<size_t> dist(0, 2);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base;
+                    }
+                        break;
+                    case 12: { // W: A or T
+                        std::uniform_int_distribution<size_t> dist(0, 1);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) base: (StateType) 3;
+                    }
+                        break;
+                    case 13: { // Y: C or T
+                        std::uniform_int_distribution<size_t> dist(1, 2);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base == 1 ? (StateType) base: (StateType) 3;
+                    }
+                        break;
+                    case 14: { // H: A or C or T
+                        std::uniform_int_distribution<size_t> dist(0, 2);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base == 2 ? (StateType) 3 : (StateType) base;
+                    }
+                        break;
+                    case 15: { // K: G or T
+                        std::uniform_int_distribution<size_t> dist(2, 3);
+                        base = dist(rng);
+                        aln->at(idx)[i] = (StateType) base;
+                    }
+                        break;
+                    case 16: { // D: A or G or T
+                        std::uniform_int_distribution<size_t> dist(1, 3);
+                        base = dist(rng);
+                        aln->at(idx)[i] = base == 1 ? (StateType) 0: (StateType) base;
+                    }
+                        break;
+                    case 17: { // B: C or G or T
+                        std::uniform_int_distribution<size_t> dist(1, 3);
+                        base = dist(rng);
+                        aln->at(idx)[i] = (StateType) base;
+                    }
+                    case 18: { // N
+                        std::uniform_int_distribution<size_t> dist(0, 3);
+                        base = dist(rng);
+                        aln->at(idx)[i] = (StateType) base;
+                    }
+                        break;
+                    default:
+                        throw "Ambiguous character not known!";
+                }
+            }
+        }
+    }
+    return aln;
+
 }
 
 // added by TD
@@ -1839,11 +1934,6 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     /* now check data type */
     seq_type = detectSequenceType(sequences);
 
-    // added by TD
-    if (Params::getInstance().use_nn_model && seq_type != SEQ_DNA) {
-        throw "Can't use option use-nn-model with non DNA/RNA alignments!";
-    }
-
     switch (seq_type) {
     case SEQ_BINARY:
         num_states = 2;
@@ -1907,6 +1997,11 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
             outWarning("Your specified sequence type is different from the detected one");
         seq_type = user_seq_type;
+    }
+
+    // added by TD
+    if (Params::getInstance().use_nn_model && seq_type != SEQ_DNA) {
+        throw "Can't use option use-nn-model with non DNA/RNA alignments!";
     }
 
     //initStateSpace(seq_type);

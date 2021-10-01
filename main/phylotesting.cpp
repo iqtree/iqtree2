@@ -477,6 +477,8 @@ string criterionName(ModelTestCriterion mtc) {
 		return "AICc";
 	if (mtc == MTC_BIC)
 		return "BIC";
+	if (mtc == NN)
+	    return "the neural network";
 	return "";
 }
 
@@ -914,7 +916,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         if (params.use_nn_model) {
             cout << "We are using the neural network to select the model of sequence evolution because "
                     "option --use-nn-model is set to " << params.use_nn_model << endl;
-            Alignment alignment = *(iqtree.aln->removeAndFillUpGappySites());
+            Alignment alignment = *(iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
             NeuralNetwork nn(&alignment);
             iqtree.aln->model_name = nn.doModelInference();
             double alpha = nn.doAlphaInference();
@@ -3204,7 +3206,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
         // added by TD
         if (params->use_nn_model) {
             // TD: use nn for best_model inference
-            Alignment alignment = *(this_tree->aln->removeAndFillUpGappySites());
+            Alignment alignment = *(this_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
             NeuralNetwork nn(&alignment);
             this_tree->aln->model_name = nn.doModelInference();
             double alpha = nn.doAlphaInference();
