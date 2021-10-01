@@ -2180,8 +2180,9 @@ void optimizeConTree(Params &params, IQTree *tree) {
     tree->getCheckpoint()->put("contree", contree);
 }
 
+// todo: skip likelihood computations if nn does model selection
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
-    // todo: skip likelihood computations if nn does model selection
+
     //    string dist_file;
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();

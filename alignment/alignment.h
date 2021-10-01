@@ -941,6 +941,15 @@ public:
 
     // added by TD
     /**
+     * Replaces ambiguous characters (W, S, M, K, R, Y, B, D, H, V; N is treated like a gap). For each
+     * ambiguous character, we randomly choose one of A, C, G, T while respecting the constraints of
+     * the characters (i.e. for R we choose either A or G.
+     * @return modified (new) alignment
+     */
+    Alignment* replaceAmbiguousChars();
+
+    // added by TD
+    /**
      * Removes sites of alignments where >70% are gaps. With >0 but <=70% gaps, gaps are replaced by
      * the most frequent base. This strategy is used for the model selection and alpha inference via
      * the neural network.
