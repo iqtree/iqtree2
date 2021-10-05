@@ -147,7 +147,8 @@ protected:
     int        seq_id1;
     int        seq_id2;
 protected:
-    void setTree(PhyloTree* atree);
+    void setTree(PhyloTree* atree); //Should only ever be called once,
+                                    //from a constructor
     
     
 };

@@ -42,6 +42,9 @@ using namespace Eigen;
 #include <boost/scoped_array.hpp>
 #endif
 
+const double MIN_RATE = 1e-4;
+const double TOL_RATE = 1e-4;
+const double MAX_RATE = 100;
 
 /** number of squaring for scaling-squaring technique */
 //const int TimeSquare = 10;
@@ -308,7 +311,7 @@ void ModelMarkov::getNameParamsFreq(std::ostream &retname) const {
     }
 }
 
-uint64_t ModelMarkov::getMemoryRequired() {
+uint64_t ModelMarkov::getMemoryRequired() const {
     return super::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
 }
 
@@ -376,7 +379,7 @@ void ModelMarkov::init_state_freq(StateFreqType type,
 }
 
 void ModelMarkov::init(StateFreqType type,
-                       PhyloTree* report_to_tree) {
+                       PhyloTree*    report_to_tree) {
     init_state_freq(type, report_to_tree);
     decomposeRateMatrix();
     if (verbose_mode >= VerboseMode::VB_MAX) {
@@ -469,7 +472,8 @@ void ModelMarkov::report_state_freqs(ostream& out,
 typedef Map<Matrix<double, Dynamic, Dynamic, RowMajor> >      RowMajorMatrix;
 typedef Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned > RowMajorAlignedMatrix;
 
-void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, int mixture) {
+void ModelMarkov::computeTransMatrixNonrev
+        (double time, double *trans_matrix, int mixture) const {
     auto technique = phylo_tree->params->matrix_exp_technique;
     if (technique == MET_SCALING_SQUARING || nondiagonalizable) {
         // scaling and squaring technique
@@ -515,7 +519,7 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
 }
 
 void ModelMarkov::computeTransMatrix(double time, double *trans_matrix,
-                                     int mixture) {
+                                     int mixture) const {
     if (!is_reversible) {
         computeTransMatrixNonrev(time, trans_matrix, mixture);
         return;
@@ -546,7 +550,8 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix,
     }
 }
 
-double ModelMarkov::computeTrans(double time, int state1, int state2) {
+double ModelMarkov::computeTrans
+        (double time, int state1, int state2) const {
     if (is_reversible) {
         double evol_time = time / total_num_subst;
         double trans_prob = 0.0;
@@ -566,8 +571,9 @@ double ModelMarkov::computeTrans(double time, int state1, int state2) {
     }
 }
 
-double ModelMarkov::computeTrans(double time, int state1, int state2,
-                                 double &derv1, double &derv2) {
+double ModelMarkov::computeTrans
+        (double time, int state1, int state2,
+         double &derv1, double &derv2) const {
     double evol_time  = time / total_num_subst;
     double trans_prob = 0.0;
     derv1             = 0.0;
@@ -699,8 +705,9 @@ void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const 
 }
 
 
-void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
-                                   double *trans_derv1, double *trans_derv2, int mixture)
+void ModelMarkov::computeTransDerv
+        (double time, double *trans_matrix,
+         double *trans_derv1, double *trans_derv2, int mixture) const
 {
     if (!is_reversible) {
         computeTransMatrix(time, trans_matrix);
@@ -767,7 +774,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
     }
 }
 
-void ModelMarkov::getRateMatrix(double *rate_mat) {
+void ModelMarkov::getRateMatrix(double *rate_mat) const {
     int nrate = getNumRateEntries();
     memcpy(rate_mat, rates, nrate * sizeof(double));
 }
@@ -799,7 +806,8 @@ void ModelMarkov::setFullRateMatrix(double* rate_mat, double *freq)
     }
 }
 
-void ModelMarkov::getStateFrequency(double *freq, int mixture) {
+void ModelMarkov::getStateFrequency
+        (double *freq, int mixture) const {
     ASSERT(state_freq);
     ASSERT(freq_type != StateFreqType::FREQ_UNKNOWN);
     memcpy(freq, state_freq, sizeof(double) * num_states);
@@ -840,7 +848,7 @@ void ModelMarkov::adaptStateFrequency(double* freq)
     super::setStateFrequency(freq);
 }
 
-void ModelMarkov::getQMatrix(double *q_mat) {
+void ModelMarkov::getQMatrix(double *q_mat) const {
     if (!is_reversible) {
         // non-reversible model
         memmove(q_mat, rate_matrix, num_states*num_states*sizeof(double));
@@ -1032,7 +1040,7 @@ double ModelMarkov::targetFunk(double x[]) {
     return -phylo_tree->computeLikelihood();
 }
 
-bool ModelMarkov::isUnstableParameters() {
+bool ModelMarkov::isUnstableParameters() const {
     int nrates = getNumRateEntries();
     // NOTE: zero rates are not consider unstable anymore
     for (int i = 0; i < nrates; ++i) {

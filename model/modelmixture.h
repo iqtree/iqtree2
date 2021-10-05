@@ -127,13 +127,17 @@ public:
 	/**
 	 * @return the number of mixture model components
 	 */
-	virtual int getNMixtures() override {return static_cast<int>(models.size()); }
+	virtual int getNMixtures() const override {
+		return static_cast<int>(models.size()); 
+	}
 
  	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual double getMixtureWeight(int cat) override { return prop[cat]; }
+	virtual double getMixtureWeight(int cat) const override {
+		return prop[cat]; 
+	}
 
 	/**
 	 * @param cat mixture class
@@ -151,7 +155,9 @@ public:
 	 * @param cat mixture class ID
 	 * @return corresponding mixture model component
 	 */
-    virtual ModelSubst* getMixtureClass(int cat) override { return models.at(cat); }
+    virtual ModelSubst* getMixtureClass(int cat) const override { 
+		return models.at(cat); 
+	}
 
 	/**
 	 * @param cat mixture class ID
@@ -167,7 +173,8 @@ public:
             -1 to get weighted sum of class state frequency vector
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
-	virtual void getStateFrequency(double *state_freq, int mixture = 0) override;
+	virtual void getStateFrequency(double *state_freq, 
+	                               int mixture = 0) const override;
 
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
@@ -177,7 +184,8 @@ public:
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0) override;
+	virtual void computeTransMatrix(double time, double *trans_matrix, 
+	                                int mixture = 0) const override;
 
 
 	/**
@@ -190,7 +198,8 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0) override;
+		                          double *trans_derv1, double *trans_derv2, 
+								  int mixture = 0) const override;
 
 	/**
 		@return the number of dimensions
@@ -229,7 +238,7 @@ public:
     virtual void setOptimizeSteps(int steps) override { this->optimize_steps = steps; }
 
     /** @return true if model is fused with site_rate */
-    bool isFused();
+    bool isFused() const;
 
 	/**
 		optimize model parameters
@@ -246,7 +255,7 @@ public:
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters() override;
+	virtual bool isUnstableParameters() const override;
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
@@ -285,7 +294,7 @@ public:
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired() override;
+    virtual uint64_t getMemoryRequired() const override;
 
 	/**
 		rates of mixture components

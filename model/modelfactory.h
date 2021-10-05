@@ -72,8 +72,8 @@ protected:
 
 	typedef unordered_map<int,double*> MatrixMap;
 	typedef MatrixMap::value_type MatrixMapEntry;
-	MatrixMap matrices;
-	inline int matrixMapKey(double time) { return static_cast<int>(round(time * 1e6)); }
+	mutable MatrixMap matrices;
+	inline int matrixMapKey(double time) const { return static_cast<int>(round(time * 1e6)); }
 
 public:
 
@@ -212,7 +212,8 @@ public:
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	void computeTransMatrix(double time, double *trans_matrix, 
+	                        int mixture = 0) const;
 
 	/**
 		Wrapper for computing the transition probability between two states.
@@ -220,7 +221,7 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	double computeTrans(double time, int state1, int state2);
+	double computeTrans(double time, int state1, int state2) const;
 
 	/**
 		Wrapper for computing the transition probability between two states
@@ -230,7 +231,8 @@ public:
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2);
+	virtual double computeTrans(double time, int state1, int state2, 
+	                            double &derv1, double &derv2) const;
 
 	/**
 		Wrapper for computing the transition probability matrix and the derivative 1 and 2 from the model.
@@ -243,7 +245,8 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0);
+		                  double *trans_derv1, double *trans_derv2, 
+						  int mixture = 0) const;
 
 	/**
 		 destructor
@@ -322,7 +325,7 @@ public:
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters();
+	virtual bool isUnstableParameters() const;
 
 	/**
 		pointer to the model, will not be deleted when deleting ModelFactory object

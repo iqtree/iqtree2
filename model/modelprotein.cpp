@@ -1190,7 +1190,7 @@ std::string ModelProtein::getNameParams() const {
 }
 
 void ModelProtein::computeTipLikelihood(PML::StateType state,
-                                        double *state_lk) {
+                                        double *state_lk) const {
     const int ambi_aa[] = {
         2, 3, //4+8, // B = N or D
         5, 6, //32+64, // Z = Q or E

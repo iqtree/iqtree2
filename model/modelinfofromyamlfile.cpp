@@ -1169,10 +1169,9 @@ int  ModelInfoFromYAMLFile::getTipLikelihoodMatrixRank() const {
     return tip_likelihood_rank;
 }
 
-void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_states,
-    double* likelihoods) {
+void ModelInfoFromYAMLFile::computeTipLikelihoodsForState
+        (int state, int num_states, double* likelihoods) {
     std::stringstream complaint;
-
     int tip_states = getTipLikelihoodMatrixRank();
     if (state < 0) {
         complaint << "Cannot calculate tip likelihoods for state " << state << ".";
@@ -1190,7 +1189,7 @@ void ModelInfoFromYAMLFile::computeTipLikelihoodsForState(int state, int num_sta
         outError(complaint.str());
     }
     StrVector dummyRow;
-    StrVector& expr_row = tip_likelihood_expressions.empty()
+    const StrVector& expr_row = tip_likelihood_expressions.empty()
         ? dummyRow : tip_likelihood_expressions[state];
 
     typedef ModelExpression::InterpretedExpression Interpreter;

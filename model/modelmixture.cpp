@@ -1680,7 +1680,8 @@ void ModelMixture::restoreCheckpoint() {
     }
 }
 
-void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
+void ModelMixture::getStateFrequency
+        (double *state_freq, int mixture) const {
     ASSERT(mixture < getNMixtures());
     if (mixture >= 0) {
         models[mixture]->getStateFrequency(state_freq);
@@ -1712,7 +1713,7 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
 }
 
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, 
-                                      int mixture) {
+                                      int mixture) const {
     ASSERT(0 <= mixture);
     ASSERT(mixture < getNMixtures());
     models[mixture]->computeTransMatrix(time, trans_matrix);
@@ -1720,7 +1721,7 @@ void ModelMixture::computeTransMatrix(double time, double *trans_matrix,
 
 void ModelMixture::computeTransDerv(double time, double *trans_matrix,
                                     double *trans_derv1, double *trans_derv2, 
-                                    int mixture) {
+                                    int mixture) const {
     ASSERT(0 <= mixture);
     ASSERT(mixture < getNMixtures());
     models[mixture]->computeTransDerv(time, trans_matrix, 
@@ -1864,8 +1865,6 @@ void ModelMixture::afterWeightsChanged() {
 
 double ModelMixture::optimizeWithEM(double gradient_epsilon, 
                                     PhyloTree* report_to_tree) {
-
-
     intptr_t     nmix     = models.size();
     DoubleVector new_prop_vector(nmix);
     double*      new_prop = new_prop_vector.data();
@@ -1992,9 +1991,9 @@ bool ModelMixture::optimizeMStep(double* new_prop) {
 }
 
 void ModelMixture::optimizeEachModel(double* new_prop, PhyloTree* tree,
-                                     ModelFactory *model_fac,
-                                     double gradient_epsilon, 
-                                     PhyloTree* report_to_tree) {
+                                     ModelFactory* model_fac,
+                                     double        gradient_epsilon, 
+                                     PhyloTree*    report_to_tree) {
     // now optimize models one by one
     intptr_t nptn = phylo_tree->aln->getNPattern();
     int      nmix = static_cast<int>(models.size());
@@ -2027,7 +2026,7 @@ void ModelMixture::optimizeEachModel(double* new_prop, PhyloTree* tree,
     phylo_tree->clearAllPartialLH();
 }
 
-bool ModelMixture::isFused() {
+bool ModelMixture::isFused() const {
 	for (int i = 0; i < models.size(); ++i) {
         if (prop[i] != 1.0) {
             return false;
@@ -2080,7 +2079,7 @@ void  ModelMixture::rescaleWeights() {
     }
 }
 
-bool ModelMixture::isUnstableParameters() {
+bool ModelMixture::isUnstableParameters() const {
     int ncategory = static_cast<int>(models.size());
     for (int c = 0; c < ncategory; ++c) {
         if (prop[c] < MIN_MIXTURE_PROP*0.1) {
@@ -2243,7 +2242,7 @@ std::string ModelMixture::getNameParams() const {
     return retname;
 }
 
-uint64_t ModelMixture::getMemoryRequired() {
+uint64_t ModelMixture::getMemoryRequired() const {
     uint64_t mem = super::getMemoryRequired();
     for (auto model: models) {
         mem += model->getMemoryRequired();

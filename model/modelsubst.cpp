@@ -42,7 +42,7 @@ void ModelSubst::setNumberOfStates(int states) {
 }
 
 void ModelSubst::setTree(PhyloTree *tree) {
-    //Doesn't have a phylo_tree member variable.  But subclasses do
+    //Doesn't have a phylo_tree member variable.  But many subclasses do
 }
 
 void ModelSubst::startCheckpoint() {
@@ -79,7 +79,8 @@ void ModelSubst::restoreCheckpoint() {
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
-void ModelSubst::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelSubst::computeTransMatrix(double time, double *trans_matrix, 
+                                    int mixture) const {
     double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
     double diagonal     = 1.0 - non_diagonal * (num_states - 1);
     int    nstates_sqr  = num_states * num_states;
@@ -94,7 +95,8 @@ void ModelSubst::computeTransMatrix(double time, double *trans_matrix, int mixtu
     }
 }
 
-double ModelSubst::computeTrans(double time, int state1, int state2) {
+double ModelSubst::computeTrans
+        (double time, int state1, int state2) const {
     double expt = exp(-time * num_states / (num_states-1));
     if (state1 != state2) {
         return (1.0 - expt) / num_states;
@@ -108,12 +110,12 @@ double ModelSubst::computeTrans(double time, int state1, int state2) {
 }
 
 double ModelSubst::computeTrans(double time, int model_id,
-                                int state1, int state2) {
+                                int state1, int state2) const {
     return computeTrans(time, state1, state2);
 }
 
 double ModelSubst::computeTrans(double time, int state1, int state2,
-                                double &derv1, double &derv2) {
+                                double &derv1, double &derv2) const {
     double coef = -double(num_states) / (num_states-1);
     double expt = exp(time * coef);
     if (state1 != state2) {
@@ -128,18 +130,18 @@ double ModelSubst::computeTrans(double time, int state1, int state2,
 
 double ModelSubst::computeTrans(double time, int model_id,
                                 int state1, int state2,
-                                double &derv1, double &derv2) {
+                                double &derv1, double &derv2) const {
     return computeTrans(time, state1, state2, derv1, derv2);
 }
 
-void ModelSubst::getRateMatrix(double *rate_mat) {
+void ModelSubst::getRateMatrix(double *rate_mat) const {
     int nrate = getNumRateEntries();
     for (int i = 0; i < nrate; i++) {
         rate_mat[i] = 1.0;
     }
 }
 
-void ModelSubst::getQMatrix(double *q_mat) {
+void ModelSubst::getQMatrix(double *q_mat) const {
     for (int i = 0, k = 0; i < num_states; i++) {
         for (int j = 0; j < num_states; j++, k++) {
             if (i == j) {
@@ -153,10 +155,11 @@ void ModelSubst::getQMatrix(double *q_mat) {
 }
 
 void ModelSubst::getStateFrequency(double *state_frequency_array,
-                                   int mixture) {
+                                   int mixture) const {
     double freq = 1.0 / num_states;
-    for (int i = 0; i < num_states; i++)
+    for (int i = 0; i < num_states; i++) {
         state_frequency_array[i] = freq;
+    }
 }
 
 void ModelSubst::setStateFrequency(double *state_frequency_array) {
@@ -166,20 +169,20 @@ void ModelSubst::setStateFrequency(double *state_frequency_array) {
            sizeof(double)*num_states);
 }
 
-void ModelSubst::computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture)
+void ModelSubst::computeTransDerv(double  time,        double* trans_matrix, 
+		                          double* trans_derv1, double* trans_derv2, 
+                                  int     mixture) const
 {
-	double expf = exp(-time*num_states/(num_states - 1));
-	double non_diag = (1.0 - expf) / num_states;
-	double diag = 1.0 - non_diag * (num_states - 1);
+	double expf           = exp(-time*num_states/(num_states - 1));
+	double non_diag       = (1.0 - expf) / num_states;
+	double diag           = 1.0 - non_diag * (num_states - 1);
 	double derv1_non_diag = expf / (num_states-1);
-	double derv1_diag = -expf;
+	double derv1_diag     = -expf;
 	double derv2_non_diag = -derv1_non_diag*num_states/(num_states-1);
-	double derv2_diag = -derv1_diag*num_states/(num_states-1);
-
-	int nstates_sqr = num_states * num_states;
+	double derv2_diag     = -derv1_diag*num_states/(num_states-1);
+	int    nstates_sqr    = num_states * num_states;
 	int i;
-	for (i = 0; i < nstates_sqr; i++)
+	for (i = 0; i < nstates_sqr; i++) {
 		if (i % (num_states+1) == 0) { 
 			trans_matrix[i] = diag;
 			trans_derv1[i] = derv1_diag;
@@ -189,6 +192,7 @@ void ModelSubst::computeTransDerv(double time, double *trans_matrix,
 			trans_derv1[i] = derv1_non_diag;
 			trans_derv2[i] = derv2_non_diag;
 		}
+    }
 
 	// DEBUG
 	/*int j;
@@ -234,20 +238,18 @@ void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
     }
 }
 
-void ModelSubst::computeTipLikelihood(PML::StateType state, double *state_lk) {
+void ModelSubst::computeTipLikelihood
+        (PML::StateType state, double *state_lk) const {
     if (static_cast<int>(state) < num_states) {
         // single state
         memset(state_lk, 0, num_states*sizeof(double));
         state_lk[state] = 1.0;
     } else {
         // unknown state
-        for (int i = 0; i < num_states; i++)
+        for (int i = 0; i < num_states; i++) {
             state_lk[i] = 1.0;
+        }
     }
-}
-
-double *ModelSubst::newTransMatrix() {
-	return new double[num_states * num_states];
 }
 
 ModelSubst::~ModelSubst()

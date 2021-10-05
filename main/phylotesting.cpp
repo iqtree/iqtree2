@@ -559,7 +559,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     if (!iqtree->getModel()->isMixture() || 
         aln->seq_type == SeqType::SEQ_POMO) {
         usual_model.subst_name = iqtree->getSubstName();
-        usual_model.rate_name = iqtree->getRateName();
+        usual_model.rate_name  = iqtree->getRateName();
     }
 
     iqtree->getModelFactory()->restoreCheckpoint();
@@ -2196,8 +2196,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
 		extractModelInfo(this_tree->aln->name, model_info, part_model_info);
 		// do the computation
         string part_model_name;
-        if (params.model_name.empty())
+        if (params.model_name.empty()) {
             part_model_name = this_tree->aln->model_name;
+        }
         CandidateModel best_model;
         best_model = CandidateModelSet().test(params, this_tree, part_model_info,
                                               models_block,
@@ -2559,8 +2560,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
             extractModelInfo(this_tree->aln->name, model_info, part_model_info);
             // do the computation
             string part_model_name;
-            if (params.model_name.empty())
+            if (params.model_name.empty()) {
                 part_model_name = this_tree->aln->model_name;
+            }
             CandidateModel best_model;
             int threads = parallel_over_partitions ? 1 : num_threads;
             best_model = CandidateModelSet().test(params, this_tree,

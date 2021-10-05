@@ -27,9 +27,9 @@
 #include "utils/eigendecomposition.h"
 #include <complex>
 
-const double MIN_RATE = 1e-4;
-const double TOL_RATE = 1e-4;
-const double MAX_RATE = 100;
+extern const double MIN_RATE; 
+extern const double TOL_RATE; 
+extern const double MAX_RATE; 
 
 /**
 General Markov model of substitution (reversible or non-reversible)
@@ -62,12 +62,12 @@ public:
 	*/
     explicit ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
 
-	void setNumberOfStates(int states);
+	virtual void setNumberOfStates(int states) override;
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
-	virtual bool isReversible() override { return is_reversible; };
+	virtual bool isReversible() const override { return is_reversible; };
 
     /**
         set the reversibility of the model
@@ -150,7 +150,7 @@ public:
 		set the associated tree
 		@param tree the associated tree
 	*/
-    void setTree(PhyloTree *tree);
+    virtual void setTree(PhyloTree *tree) override;
 
 
 	/**
@@ -206,7 +206,7 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, 
-	                                int mixture = 0) override;
+	                                int mixture = 0) const override;
 
     /**
      compute the transition probability matrix for non-reversible model
@@ -215,7 +215,8 @@ public:
      @param trans_matrix (OUT) the transition matrix between all pairs of states.
      Assume trans_matrix has size of num_states * num_states.
      */
-    virtual void computeTransMatrixNonrev(double time, double *trans_matrix, int mixture = 0);
+    virtual void computeTransMatrixNonrev(double time, double *trans_matrix, 
+	                                      int mixture = 0) const;
 
 	/**
 		compute the transition probability between two states
@@ -223,7 +224,8 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int state1, int state2) override;
+	virtual double computeTrans
+					(double time, int state1, int state2) const override;
 
 	/**
 		compute the transition probability between two states
@@ -234,13 +236,14 @@ public:
 		@param derv2 (OUT) 2nd derivative
 	*/
 	virtual double computeTrans(double time, int state1, int state2, 
-	                            double &derv1, double &derv2) override;
+	                            double &derv1, double &derv2) 
+								const override;
 
 	/**
 		Get the rate matrix.
 		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
-	virtual void getRateMatrix(double *rate_mat) override;
+	virtual void getRateMatrix(double *rate_mat) const override;
 
 	/**
 		Set the rate matrix.
@@ -260,7 +263,8 @@ public:
         @param mixture (optional) class for mixture model
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
-	virtual void getStateFrequency(double *state_freq, int mixture = 0) override;
+	virtual void getStateFrequency(double *state_freq, 
+	                               int mixture = 0) const override;
 
     /**
      set the state frequency vector
@@ -272,7 +276,7 @@ public:
 	 * compute Q matrix 
 	 * @param q_mat (OUT) Q matrix, assuming of size num_states * num_states
 	 */
-	virtual void getQMatrix(double *q_mat) override;
+	virtual void getQMatrix(double *q_mat) const override;
 
     /**
      identify the highest frequency in the state_freq vector of frequencies
@@ -309,7 +313,8 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0) override;
+		                          double *trans_derv1, double *trans_derv2, 
+								  int mixture = 0) const override;
 
 	/**
 		@return the number of dimensions
@@ -333,7 +338,8 @@ public:
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+	                       bool *bound_check) override;
 
 	/**
 		optimize model parameters
@@ -345,7 +351,7 @@ public:
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters() override;
+	virtual bool isUnstableParameters() const override;
 
   // A simple helper function that prints the rates in a nice way and can be
   // reused by children. The title is necessary, because, e.g., for PoMo, the
@@ -423,7 +429,7 @@ public:
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired() override;
+    virtual uint64_t getMemoryRequired() const override;
 
     /** default TRUE: store only upper half of the rate matrix */
     bool half_matrix;
@@ -462,22 +468,7 @@ public:
   // `ModelMixture::initMem()` before.
   virtual void update_eigen_pointers(double *eval, double *evec
                                      , double *inv_evec, double *inv_evec_transposed);
-
-
-    /**
-        set num_params variable
-     */
-    virtual void setNParams(int number_of_parameters) override {
-        this->num_params = number_of_parameters;
-    }
-    
-    /**
-        get num_params variable
-     */
-    virtual int getNParams() override {
-        return num_params;
-    }
-    
+        
 	/**
 	 * Called when model variables have been updated in the YAML 
 	 * model info for this model (only relevant for YAML Models)
@@ -597,7 +588,7 @@ protected:
     /** will be set true for nondiagonalizable rate matrices,
      then will use scaled squaring method for matrix exponentiation.
     */
-    bool nondiagonalizable;
+    mutable bool nondiagonalizable;
 
 };
 

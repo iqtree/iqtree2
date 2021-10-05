@@ -30,7 +30,8 @@ ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelMarkov(tree)
 	full_name += "+site-specific state-frequency model (unpublished)";
 }
 
-void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture)
+void ModelSet::computeTransMatrix(double time, double* trans_matrix, 
+                                  int mixture) const
 {
     // TODO not working with vectorization
     ASSERT(0);
@@ -42,7 +43,7 @@ void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture
 
 void ModelSet::computeTransDerv(double time, double* trans_matrix,
                                 double* trans_derv1, double* trans_derv2,
-                                int mixture)
+                                int mixture) const
 {
     // TODO not working with vectorization
     ASSERT(0);
@@ -55,7 +56,7 @@ void ModelSet::computeTransDerv(double time, double* trans_matrix,
 	}
 }
 
-int ModelSet::getPtnModelID(int ptn)
+int ModelSet::getPtnModelID(int ptn) const
 {
 	ASSERT(ptn >= 0 && ptn < pattern_model_map.size());
 	ASSERT(pattern_model_map[ptn] >= 0 && pattern_model_map[ptn] < models.size());
@@ -64,7 +65,7 @@ int ModelSet::getPtnModelID(int ptn)
 
 
 double ModelSet::computeTrans(double time, int model_id,
-                              int state1, int state2) {
+                              int state1, int state2) const {
     if (phylo_tree->vector_size == 1) {
         return models.at(model_id)->computeTrans(time, state1, state2);
     }
@@ -87,8 +88,9 @@ double ModelSet::computeTrans(double time, int model_id,
 	return trans_prob;
 }
 
-double ModelSet::computeTrans(double time, int model_id, int state1, int state2,
-                              double &derv1, double &derv2) {
+double ModelSet::computeTrans(double time, int model_id, 
+                              int state1, int state2,
+                              double &derv1, double &derv2) const {
     if (phylo_tree->vector_size == 1) {
         return models.at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
     }
@@ -200,8 +202,9 @@ bool ModelSet::getVariables(const double* variables)
 {
 	ASSERT(models.size());
     bool changed = false;
-	for (auto it = models.begin(); it != models.end(); it++)
+	for (auto it = models.begin(); it != models.end(); ++it) {
 		changed |= (*it)->getVariables(variables);
+    }
     return changed;
 }
 

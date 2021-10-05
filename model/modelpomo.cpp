@@ -70,8 +70,9 @@ void ModelPoMo::init_mutation_model(const char *model_name,  string model_params
 
     // Set reversibility state.
     is_reversible = mutation_model->is_reversible;
-    if (!is_reversible)
+    if (!is_reversible) {
         setReversible(is_reversible);
+    }
 }
 
 string ModelPoMo::getName() const {
@@ -483,10 +484,12 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() const {
-    if (fixed_heterozygosity)
+    if (fixed_heterozygosity) {
         return mutation_model->getNDim();
-    else
+    }
+    else {
         return mutation_model->getNDim()+1;
+    }
 }
 
 int ModelPoMo::getNDimFreq() const {
@@ -637,7 +640,7 @@ void ModelPoMo::writeInfo(ostream &out) {
 
 // TODO: s_freqs is not used.
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs,
-                                  int n_states) {
+                                  int n_states) const {
     for (int i = 0; i < n_states; i++) {
         for (int j = 0; j < n_states; j++) {
             r_matrix[i][j] = rates[i*n_states+j];
@@ -655,7 +658,7 @@ double ModelPoMo::targetFunk(double x[]) {
     return -phylo_tree->computeLikelihood();
 }
 
-bool ModelPoMo::isUnstableParameters() {
+bool ModelPoMo::isUnstableParameters() const {
     // More checking could be done.
     for (int i = 0; i < num_states; i++) {
         if (state_freq[i] < eps) {
@@ -1166,7 +1169,8 @@ void ModelPoMo::set_heterozygosity_boundaries() {
 // anymore.
 
 // TODO DS: The parameter mixture is unused at the moment.
-void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, 
+                                   int mixture) const {
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || !is_reversible) {
     // Do not change the object rate_matrix, but only trans_matrix.
@@ -1220,7 +1224,8 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
   }
 }
 
-void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
+void ModelPoMo::computeTipLikelihood
+        (PML::StateType state, double *lh) const {
     Alignment *aln = phylo_tree->aln;
     if (static_cast<int>(state) < num_states 
         || static_cast<int>(state) >= num_states+aln->pomo_sampled_states.size()) {
@@ -1285,7 +1290,7 @@ void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {
 
 void ModelPoMo::computeTipLikelihoodForFixedState
         (double* lh, int nnuc, int nstates, int id1, int j,
-         bool hypergeometric) {
+         bool hypergeometric) const {
     lh[id1] = 1.0;
     // Second: Polymorphic states.
     for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
@@ -1335,7 +1340,7 @@ void ModelPoMo::computeTipLikelihoodForFixedState
 
 void ModelPoMo::computeTipLikelihoodForPolymorphicState
         (double* lh, int nnuc, int nstates, int id1, int id2, 
-         int j, int M, bool hypergeometric) {
+         int j, int M, bool hypergeometric) const {
     int k;
     if (id1 == 0) k = id2 - 1;
     else k = id1 + id2;

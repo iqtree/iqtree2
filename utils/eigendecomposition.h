@@ -101,7 +101,9 @@ protected:
 		@param state_freq state frequencies
 		@param num_state number of states
 	*/
-	virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
+	virtual void computeRateMatrix(double **rate_matrix, 
+	                               double *state_freq, 
+								   int num_state) const;
 
 	/**
 		Eliminate zero entries in the rate matrix. 

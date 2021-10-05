@@ -497,7 +497,8 @@ EigenDecomposition::~EigenDecomposition()
 }
 
 /* make rate matrix with 0.01 expected substitutions per unit time */
-void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int num_state) {
+void EigenDecomposition::computeRateMatrix
+		(double **a, double *stateFrqArr_, int num_state) const {
 	
 /*
 	if (myrate.isNsSyHeterogenous())

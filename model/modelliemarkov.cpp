@@ -615,7 +615,7 @@ bool  ModelLieMarkov::validFreqType() {
  * are given an unrooted tree and optimized by TR methods,
  * ModelFactory::getNParameters() may need changing.
  */
-bool ModelLieMarkov::isReversible() {
+bool ModelLieMarkov::isReversible() const {
     // TODO: crash when setting reversible to true
 //    ASSERT(is_reversible == TIME_REVERSIBLE[model_num]);
 //    return(TIME_REVERSIBLE[model_num]);
@@ -2231,7 +2231,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix
-		(double time, double *trans_matrix, int mixture) {
+		(double time, double *trans_matrix, int mixture) const {
     return super::computeTransMatrix(time, trans_matrix, mixture);
     /*
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;

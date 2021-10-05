@@ -236,7 +236,7 @@ void ModelGTR::writeInfo(ostream &out) {
 }
 
 void ModelGTR::computeTransMatrix(double time, double *trans_matrix, 
-                                  int mixture) {
+                                  int mixture) const {
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 	double *exptime = new double[num_states];
@@ -272,7 +272,8 @@ void ModelGTR::computeTransMatrix(double time, double *trans_matrix,
 	delete [] exptime;
 }
 
-void ModelGTR::computeTransMatrixFreq(double time, double* trans_matrix)
+void ModelGTR::computeTransMatrixFreq
+		(double time, double* trans_matrix) const
 {
 	computeTransMatrix(time, trans_matrix);
 	for (int state1 = 0; state1 < num_states; state1++) {
@@ -282,7 +283,8 @@ void ModelGTR::computeTransMatrixFreq(double time, double* trans_matrix)
 	}
 }
 
-double ModelGTR::computeTrans(double time, int state1, int state2) {
+double ModelGTR::computeTrans
+		(double time, int state1, int state2) const {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -295,7 +297,7 @@ double ModelGTR::computeTrans(double time, int state1, int state2) {
 }
 
 double ModelGTR::computeTrans(double time, int state1, int state2, 
-                              double &derv1, double &derv2) {
+                              double &derv1, double &derv2) const {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -315,7 +317,7 @@ double ModelGTR::computeTrans(double time, int state1, int state2,
 
 void ModelGTR::computeTransDerv(double  time, double *trans_matrix, 
                                 double* trans_derv1, double *trans_derv2,
-								int mixture) 
+								int mixture) const
 {
 	/* compute P(t) */
 
@@ -355,7 +357,7 @@ void ModelGTR::computeTransDerv(double  time, double *trans_matrix,
 
 void ModelGTR::computeTransDervFreq(double time, double rate_val, 
                                     double* trans_matrix, double* trans_derv1, 
-									double* trans_derv2){
+									double* trans_derv2) const {
 	int nstates = num_states;
 	double rate_sqr = rate_val*rate_val;
 	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
@@ -372,7 +374,7 @@ void ModelGTR::computeTransDervFreq(double time, double rate_val,
 }
 
 
-void ModelGTR::getRateMatrix(double *rate_mat) {
+void ModelGTR::getRateMatrix(double *rate_mat) const {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
 }
@@ -383,7 +385,7 @@ void ModelGTR::setRateMatrix(double* rate_mat)
 	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
-void ModelGTR::getQMatrix(double *q_mat) {
+void ModelGTR::getQMatrix(double *q_mat) const {
 	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
@@ -399,13 +401,14 @@ void ModelGTR::getQMatrix(double *q_mat) {
 	}
 
 	computeRateMatrix(rate_matrix, state_freq, num_states);
-	for (i = 0; i < num_states; i++)
+	for (i = 0; i < num_states; i++) {
 		memmove(q_mat + (i*num_states), rate_matrix[i], num_states * sizeof(double));
+	}
 
-	for (i = num_states-1; i >= 0; i--)
+	for (i = num_states-1; i >= 0; i--) {
 		delete [] rate_matrix[i];
+	}
 	delete [] rate_matrix;
-
 }
 
 int ModelGTR::getNDim() const { 
@@ -525,7 +528,7 @@ double ModelGTR::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-bool ModelGTR::isUnstableParameters() {
+bool ModelGTR::isUnstableParameters() const {
 	int nrates = getNumRateEntries();
 	int i;
     // NOTE: zero rates are not consider unstable anymore

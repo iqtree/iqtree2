@@ -74,9 +74,9 @@ void AlignmentPairwise::setTree(PhyloTree* atree) {
     total_size    = num_states_squared;
     pair_freq     = new double[total_size];
     
-    pairCount = 0;
+    pairCount                  = 0;
     derivativeCalculationCount = 0;
-    costCalculationCount = 0;
+    costCalculationCount       = 0;
 }
 
 AlignmentPairwise::AlignmentPairwise(PhyloTree* tree) {
@@ -148,9 +148,11 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2)
     setSequenceNumbers(seq1,seq2);
 }
     
-bool AlignmentPairwise::addPattern(int state1, int state2, int freq, int cat) {
+bool AlignmentPairwise::addPattern(int state1, int state2, 
+                                   int freq,   int cat) {
     int i;
-    if (state1 == STATE_UNKNOWN || state2 == STATE_UNKNOWN) {
+    if (state1 == STATE_UNKNOWN || 
+        state2 == STATE_UNKNOWN) {
         return true;
     }
     double *pair_pos = pair_freq;
@@ -186,7 +188,6 @@ bool AlignmentPairwise::addPattern(int state1, int state2, int freq, int cat) {
         }
         return false;
     }
-
     return true;
 }
 

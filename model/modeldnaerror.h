@@ -84,7 +84,8 @@ public:
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) override;
+    virtual void computeTipLikelihood(PML::StateType state,
+                                      double *state_lk) const override;
 
         //Supporting function
         int getErrorNucleotideState() const;

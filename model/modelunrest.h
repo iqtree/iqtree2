@@ -25,7 +25,8 @@ public:
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check) override;
+	virtual void setBounds(double* lower_bound, double* upper_bound, 
+                           bool*   bound_check) override;
     
     /**
      set the state frequency vector.

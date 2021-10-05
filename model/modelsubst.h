@@ -44,9 +44,9 @@ public:
 	*/
     explicit ModelSubst(int nstates);
 
-	void setTree(PhyloTree *tree);
+	virtual void setTree(PhyloTree *tree);
 
-	void setNumberOfStates(int states);
+	virtual void setNumberOfStates(int states);
 
 	/**
 		@return true if an ascertainment bias correction has been
@@ -81,12 +81,13 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
+
 	virtual std::string getNameParams() const { return name; }
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
-	virtual bool isReversible() { return true; };
+	virtual bool isReversible() const { return true; };
 
     /** return true if using reversible likelihood kernel, false for using non-reversible kernel */
     bool useRevKernel() {
@@ -107,30 +108,31 @@ public:
 	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
-	virtual bool isSiteSpecificModel() { return false; }
+	virtual bool isSiteSpecificModel() const { return false; }
+
 
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
 	virtual bool isMixture() const { return false; }
-
+	
     /** 
      * Confer to modelpomo.h.
      * 
      * @return TRUE if PoMo is being used, FALSE otherise.
      */
-    virtual bool isPolymorphismAware() { return false; }
+    virtual bool isPolymorphismAware() const { return false; }
 
 	/**
 	 * @return the number of mixture model components
 	 */
-	virtual int getNMixtures() { return 1; }
+	virtual int getNMixtures() const { return 1; }
 
  	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual double getMixtureWeight(int cat) { return 1.0; }
+	virtual double getMixtureWeight(int cat) const { return 1.0; }
 
 	/**
 	 * @param cat mixture class
@@ -148,7 +150,7 @@ public:
 	 * @param cat mixture class ID
 	 * @return corresponding mixture model component
 	 */
-    virtual ModelSubst* getMixtureClass(int cat) { return NULL; }
+    virtual ModelSubst* getMixtureClass(int cat) const { return nullptr; }
 
 	/**
 	 * @param cat mixture class ID
@@ -161,34 +163,24 @@ public:
      in the upper-diagonal of the rate matrix (since model is reversible)
      */
     virtual int getNumRateEntries() const { return num_states*(num_states-1)/2; }
-    
-    /**
-     set num_params variable
-     */
-    virtual void setNParams(int num_params) {}
-    
-    /**
-     get num_params variable
-     */
-    virtual int getNParams() {
-        return 0;
-    }
 
 	/**
 	 * get the size of transition matrix, default is num_states*num_states.
 	 * can be changed for e.g. site-specific model
 	 */
-	virtual int getTransMatrixSize() { return num_states * num_states; }
+	virtual int getTransMatrixSize() const { return num_states * num_states; }
 
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
 		@param time time between two events
         @param mixture (optional) class for mixture model
+		               OR subtree for divergent model
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, 
+	                                int mixture = 0) const;
 
 	/**
 		compute the transition probability between two states. 
@@ -198,7 +190,7 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int state1, int state2);
+	virtual double computeTrans(double time, int state1, int state2) const;
 
 	/**
 		compute the transition probability between two states at a specific model ID, useful for partition model 
@@ -209,7 +201,8 @@ public:
 		@param state1 first state
 		@param state2 second state
 	*/
-	virtual double computeTrans(double time, int model_id, int state1, int state2);
+	virtual double computeTrans(double time, int model_id, 
+	                            int state1, int state2) const;
 
 	/**
 		compute the transition probability and its 1st and 2nd derivatives between two states. 
@@ -221,7 +214,8 @@ public:
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int state1, int state2, double &derv1, double &derv2);
+	virtual double computeTrans(double time, int state1, int state2, 
+	                            double &derv1, double &derv2) const;
 
 	/**
 		compute the transition probability and its 1st and 2nd derivatives between two states at a specific model ID
@@ -234,14 +228,16 @@ public:
 		@param derv1 (OUT) 1st derivative
 		@param derv2 (OUT) 2nd derivative
 	*/
-	virtual double computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2);
+	virtual double computeTrans(double time, int model_id, 
+	                            int state1, int state2, 
+								double &derv1, double &derv2) const;
+
 
 	/**
 	 * @return pattern ID to model ID map, useful for e.g., partition model
 	 * @param ptn pattern ID of the alignment
 	 */
-	virtual int getPtnModelID(int ptn) { return 0; }
-	
+	virtual int getPtnModelID(int ptn) const { return 0; }
 
 	/**
 	 * Get the rate parameters like a,b,c,d,e,f for DNA model!!!
@@ -251,14 +247,14 @@ public:
 		@param rate_mat (OUT) upper-triangle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
 	
-	virtual void getRateMatrix(double *rate_mat);
+	virtual void getRateMatrix(double *rate_mat) const;
 
 	/**
 		Get the rate matrix Q. One should override this function when defining new model.
 		The default is equal rate of 1 (JC Model), valid for all kind of data.
 		@param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
 	*/
-	virtual void getQMatrix(double *q_mat);
+	virtual void getQMatrix(double *q_mat) const;
 
 	/**
 		compute the state frequency vector. One should override this function when defining new model.
@@ -266,7 +262,8 @@ public:
         @param mixture (optional) class for mixture model
 		@param[out] state_freq state frequency vector. Assume state_freq has size of num_states
 	*/
-	virtual void getStateFrequency(double *state_freq, int mixture = 0);
+	virtual void getStateFrequency(double *state_freq, 
+	                               int mixture = 0) const;
 
     /**
      set the state frequency vector.
@@ -289,17 +286,9 @@ public:
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    virtual void computeTipLikelihood
+					(PML::StateType state, double *state_lk) const;
     
-	/**
-		allocate memory for a transition matrix. One should override this function when defining new model
-		such as Gamma model. The default is to allocate a double vector of size num_states * num_states. This
-		is equivalent to the memory needed by a square matrix.
-		@return the pointer to the newly allocated transition matrix
-	*/
-	virtual double *newTransMatrix();
-
-
 	/**
 		compute the transition probability matrix.and the derivative 1 and 2
 		@param time time between two events
@@ -310,7 +299,9 @@ public:
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2, int mixture = 0);
+		                          double *trans_derv1, double *trans_derv2, 
+								  int mixture = 0) const;
+
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
@@ -324,6 +315,7 @@ public:
     */
     virtual void setOptimizeSteps(int optimize_steps) { }
 
+
 	/**
 		optimize model parameters. One should override this function when defining new model.
 		The default does nothing since it is a Juke-Cantor type model, hence no parameters involved.
@@ -336,6 +328,12 @@ public:
     }
 
 	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, 
+                           bool *bound_check) { }
+
+	/**
 	  	Called after variables are changed (by, for example optimization of parameters.
 		    
 	*/
@@ -344,7 +342,7 @@ public:
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters() { return false; }
+	virtual bool isUnstableParameters() const { return false; }
 
 	/**
 		write information
@@ -374,14 +372,15 @@ public:
         return nullptr;
     }
 
-    
+
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired() {
+    virtual uint64_t getMemoryRequired() const {
     	return num_states*sizeof(double);
     }
+
 
     /**
     * get the underlying mutation model, used with PoMo model
@@ -406,7 +405,7 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
-    
+ 
 	/**
 		number of states
 	*/
@@ -445,8 +444,6 @@ public:
 	*/
     virtual ~ModelSubst();
 
-protected:
-
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters
 		into a vector that is index from 1 (NOTE: not from 0)
@@ -462,7 +459,6 @@ protected:
 	*/
 	virtual bool getVariables(const double *variables) { return false; }
 
-    
 };
 
 #endif

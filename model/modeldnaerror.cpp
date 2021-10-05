@@ -121,7 +121,8 @@ int  ModelDNAError::getErrorNucleotideState() const {
     return -1;
 }
 
-void ModelDNAError::computeTipLikelihood(PML::StateType state, double *state_lk) {
+void ModelDNAError::computeTipLikelihood(PML::StateType state, 
+                                         double *state_lk) const {
     if (epsilon == 0.0) {
         ModelDNA::ModelSubst::computeTipLikelihood(state, state_lk);
         return;

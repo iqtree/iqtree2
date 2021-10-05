@@ -1544,7 +1544,7 @@ void ModelFactory::reportOptimizingParametersDone(bool write_info, int fixed_len
  * @return TRUE if parameters are at the boundary 
  *              hat may cause numerical unstability
  */
-bool ModelFactory::isUnstableParameters() {
+bool ModelFactory::isUnstableParameters() const {
     if (model->isUnstableParameters()) {
         return true;
     }
@@ -1567,17 +1567,18 @@ void ModelFactory::stopStoringTransMatrix() {
     }
 }
 
-double ModelFactory::computeTrans(double time, int state1, int state2) {
+double ModelFactory::computeTrans
+        (double time, int state1, int state2) const {
     return model->computeTrans(time, state1, state2);
 }
 
 double ModelFactory::computeTrans(double time, int state1, int state2,
-                                  double &derv1, double &derv2) {
+                                  double &derv1, double &derv2) const {
     return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
 void ModelFactory::computeTransMatrix(double time, double *trans_matrix,
-                                      int mixture) {
+                                      int mixture) const {
     if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
         model->computeTransMatrix(time, trans_matrix, mixture);
         return;
@@ -1599,10 +1600,14 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix,
     memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 }
 
-void ModelFactory::computeTransDerv(double time, double *trans_matrix,
-    double *trans_derv1, double *trans_derv2, int mixture) {
-    if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-        model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
+void ModelFactory::computeTransDerv
+        (double time, double *trans_matrix,
+         double *trans_derv1, double *trans_derv2, 
+         int mixture) const {
+    if (!store_trans_matrix || !is_storing ||
+        model->isSiteSpecificModel()) {
+        model->computeTransDerv(time, trans_matrix, 
+                                trans_derv1, trans_derv2, mixture);
         return;
     }
     int  mat_size = model->num_states * model->num_states;

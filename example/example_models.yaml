@@ -1,4 +1,11 @@
+#
+# example_models.yaml
+#
+
+
 #### definition for DNA data ###
+# Note: Data types are not supported: this will be ignored.
+
 - datatype: YDNA
   state: [ A, C, G, T ]
   missing: [ N, "?" ]
@@ -186,6 +193,13 @@
         - [ 0,   201, 23,  0,    0,   0,   0,  0,   27,  0,   46,  0,   0,   76,  0,  75, 0 ]
         - [ 24,  8,   95,  0,    96,  0,   22, 0,   127, 37,  28,  13,  0,   698, 0,  34, 42,  61 ]
         - [ 208, 24,  15, 18,    49,  35,  37, 54,  44,  889, 175, 10,  258, 12,  48, 30, 157, 0, 28 ]
+
+        #Ideally, we'd declare the above as a matrix, scaledratematrix,
+        #and then declare the ratematrix... with an expression.
+        # type:         matrix 
+        # value:        scaledratematrix/divisor
+        #
+
   stateFrequency:    f
 
 - substitutionmodel: YB18
@@ -236,16 +250,20 @@
                        : (column-1+(row-1)*(num_states-1)-row*(row-1)/2)), 
                     (row==column) ? 1 : (f(column)* r(i))"
 
-#Note: ratemodel is NOT supported as yet.
-#Note: A type of "calculated rate" is NOT fully supported as yet.
 #Rate models can be suffixed with a number 
-#(the number of rates).  G, H, and R need a number of rates,
-#and I does not.
+#(the number of rates). 
+#G, H, and R *need* categories to be set, and I does not.
 
-#double perPoint_ = cmpPointChi2 (prob, 2.0 * gamma_shape) / (2.0 * gamma_shape);
+
 
 - ratemodel:        G
   ratedistribution: gamma
+  #Todo: better handling of models that need categories set.
+  #Something like: a list of requirements, each with a rationale.
+  requirements:
+    - requirement:  0 < categories
+      rationale:    Number of categories must be specified 
+                    for gamma distribution
   parameters:
   - name:           gamma_shape
     type:           shape
@@ -326,9 +344,93 @@
     weight:            w(2)
     scale:             1.0   
 
-#Note: linked_models and tree_mixture are not parsed as yet.
+#Shared parameters are not supported yet (only... enabled a bit).
+#You could already hang parameters on the YMIX
+#mixture class, and have things *in* the models, in the model_mixture
+#calculated (or initialized) in terms of the parameters on the YMIX class.
+#There is *nothing* special about the w (weight) parameter here,
+#except that it gets optimized.
+#This would *work*, sort of (but the parameters on YMIX would only 
+#be read ONCE, at the beginning of model optimization).
+#And without vector and matrix assignment, it'd be cumbersome!
 
-- substitutionmodel: YTREEMIX
+#However, IF optimization ran on the parameters, of the parent
+#(in this case YMIX), those "linked" parameters *could* be 
+#optimized and then "distributed" to the models in the mixture
+#(in this case YMIX_JC and YMIX_GTR). 
+#But... Wouldn't this be very slow?  
+#Here, for example, each iteration would be
+#
+# Try one tuple of parameter settings on YMIX
+#   Optimize YMIX_JC and YMIX_GTR separately
+#   Evaluate the (obvious) objective function for YMIX.
+#   Choose new settings for YMIX... try again.
+#   Check for convergence.  Loop if not converged. 
+#
+
+#
+# this is an example only; as yet, it won't be parsed at all.
+# I'm planning to have divergence graphs passed in via command
+# line parameters too.  For that, you'd pass in a Newick 
+# format .tree file, which'd be treated as a rooted tree;
+# names on interior nodes would be treated as clade names.  
+# For any node of degree >3, the "down-clade" nodes are to be 
+# arranged into whatever bifurcating tree works best for them.
+# But all that is a *long* way off.  First, we need to get FUNDI
+# working for *fixed* input trees.  THEN we can worry about
+# honouring divergence graphs during initial tree construction,
+# maximum parsimony optimisation, and the likelihood hill-climbing
+# tree search.
+#
+
+- clades:
+  - clade:   Mammals
+    members: [ Human, Seal, Cow, Whale, Mouse, Rat, Platypus, Opossum ]
+  - clade:   Reptiles
+    members: [ Turtle, Lizard, Bird, Lizard, Sphenodon ]
+  - clade:   Fish
+    members: [ LngfishAu, LngfishSA, LngfishAf ]
+  - clade:   Amphibians
+    members: [ Frog ]
+  structure: Fish, (Amphibians, (Mammals, Reptiles) ) 
+
+#
+#this is an example only, as divergent_models not yet parsed
+#(as there is, as yet, no YAML wrapper for ModelDivergent). 
+#
+- substitutionmodel:   DIVERGENT
+  description:         "Model for sites with divergence"
+  divergent_models:    # mixture components defined in this section
+  - substitutionmodel: FISH
+    frommodel:         YGTR
+    clades:            Fish
+  - substitutionmodel: NONFISH
+    frommodel:         YGTR
+    #if clades not supplied, on one of the divergent models,
+    #it will apply to the remainder of the taxa.
+
+#
+# this is an example only, because DIVERGENT will NOT work
+# (yet!). 
+#
+- substitutionmodel:   FUNDI
+  parameters:
+  - name:              w(1..2)
+    type:              weight  # type weight implies that w[1]+w[2]=1.0
+    range:             0.01 .. 0.99
+    tolerance:         0.01
+  model_mixture:               # mixture components defined in this section
+  - subclassedmodel:   YJC
+    frommodel:         YJC     # 1st component from JC model
+    weight:            w(1)    # weight parameter
+  - substitutionmodel: DIVERGENT
+    weight:            w(2)
+
+  
+#Note: linked_models and tree_mixture are not parsed as yet.
+#(tree_mixture isn't even parsed). But they could be.  
+
+- substitutionmodel: YTREEMIX #Tree mixtures are not suported.  Yet.
   frommodel:         YMIX
   description:       "Tree Mixture"
   parameters:

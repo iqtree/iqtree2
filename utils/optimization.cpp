@@ -107,7 +107,9 @@ double *new_vector(long nl, long nh)
 	double *v;
 
 	v=(double *)malloc((size_t) ((nh-nl+1+NR_END)*sizeof(double)));
-	if (!v) nrerror("allocation failure in vector()");
+	if (!v) {
+		nrerror("allocation failure in vector()");
+	}
 	return v-nl+NR_END;
 }
 

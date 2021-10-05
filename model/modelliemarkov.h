@@ -67,7 +67,7 @@ public:
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
-	virtual bool isReversible() override;
+	virtual bool isReversible() const override;
 
 	static bool validModelName(const string& model_name);
 	void setBounds(double *lower_bound, double *upper_bound, 
@@ -92,7 +92,7 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, 
-	                                int mixture = 0) override;
+	                                int mixture = 0) const override;
 	// overrides Optimization::restartParameters
 	bool restartParameters(double guess[], int ndim, double lower[], double upper[], 
 	                       bool bound_check[], int iteration) override;

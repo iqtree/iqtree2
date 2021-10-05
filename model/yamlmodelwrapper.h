@@ -103,8 +103,8 @@ public:
         return model_info->getName();
     }
 
-    virtual void setBounds(double *lower_bound, double *upper_bound,
-                            bool *bound_check) override {
+    virtual void setBounds(double* lower_bound, double* upper_bound,
+                           bool*   bound_check) override {
         ASSERT(model_info!=nullptr);
         if (isMixtureModel()) {
             super::setBounds(lower_bound, upper_bound, bound_check);
@@ -356,10 +356,14 @@ public:
         setRateMatrix(rates.data());
     }
     
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) override {
+    virtual void computeTipLikelihood
+                    (PML::StateType state, double *state_lk) 
+                    const override {
         int state_num = static_cast<int>(state);
         if ( state_num < model_info->getTipLikelihoodMatrixRank()) {
-            model_info->computeTipLikelihoodsForState(state, num_states, state_lk);
+            auto nc_model_info = const_cast<ModelInfoFromYAMLFile*>(model_info);
+            //Problem is... it calls forceAssign per row and oclumn
+            nc_model_info->computeTipLikelihoodsForState(state, num_states, state_lk);
         } else if (state_num < num_states) {
             // single state
             memset(state_lk, 0, num_states*sizeof(double));
@@ -553,7 +557,7 @@ public:
     }
 
     virtual void setBounds(double* lower_bound, double* upper_bound,
-                            bool*  bound_check) override {
+                           bool*  bound_check) override {
         int ndim = getNDim();
         std::vector<ModelParameterType> types;
         if (isOptimizingShapes()) {

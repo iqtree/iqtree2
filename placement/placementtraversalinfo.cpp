@@ -13,7 +13,9 @@ PlacementTraversalInfo::PlacementTraversalInfo(
         : super(dad_branch,dad), phylo_tree(tree), buffers(buffersToUse) {
     size_t nstates         = phylo_tree.aln->num_states;
     size_t ncat            = phylo_tree.site_rate->getNRate();
-    size_t ncat_mix        = (phylo_tree.model_factory->fused_mix_rate) ? ncat : ncat*phylo_tree.model->getNMixtures();
+    size_t nmix            = (phylo_tree.model_factory->fused_mix_rate) 
+                           ? 1 : ncat*phylo_tree.model->getNMixtures();
+    size_t ncat_mix        = ncat    * nmix;
     size_t block           = nstates * ncat_mix;
     size_t children_size   = get_safe_upper_limit(block*nstates*2);
     size_t leaf_size_floor = (phylo_tree.aln->STATE_UNKNOWN+1)*block*2;

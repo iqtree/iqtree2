@@ -447,7 +447,8 @@ public:
 
     //Tip Likelihood matrices
     int  getTipLikelihoodMatrixRank() const;
-    void computeTipLikelihoodsForState(int state, int num_states, double* likelihoods);
+    void computeTipLikelihoodsForState(int state, int num_states, 
+                                       double* likelihoods);
 
     //Variables
     const ModelVariable* getVariableByName(const char*        name) const;

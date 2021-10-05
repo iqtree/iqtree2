@@ -654,7 +654,7 @@ PartitionModel::~PartitionModel()
 {
 }
 
-bool PartitionModel::isUnstableParameters() {
+bool PartitionModel::isUnstableParameters() const {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
 
 	for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); ++it)

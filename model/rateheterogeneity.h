@@ -253,7 +253,8 @@ public:
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {}
+	virtual void setBounds(double* lower_bound, double* upper_bound, 
+	                       bool*   bound_check) {}
 
     /** 
         set number of optimization steps

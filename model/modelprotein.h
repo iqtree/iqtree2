@@ -87,7 +87,7 @@ public:
      @param[out] state_lk state likehood vector of size num_states
      */
     virtual void computeTipLikelihood(PML::StateType state, 
-                                      double *state_lk) override;
+                                      double *state_lk) const override;
 
 private:
     ModelsBlock *models_block;

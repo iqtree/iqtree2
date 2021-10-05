@@ -275,7 +275,7 @@ void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec,
     return;
 }
 
-bool ModelPoMoMixture::isUnstableParameters() {
+bool ModelPoMoMixture::isUnstableParameters() const {
     if (super::isUnstableParameters()) {
         return true;
     }
@@ -292,7 +292,7 @@ bool ModelPoMoMixture::isUnstableParameters() {
 // led to a clash because then computeTransMatrix is defined in both,
 // ModelMixture and ModelPoMo and inheritance is flawed.
 void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix,
-                                          int mixture_num) {
+                                          int mixture_num) const {
     ASSERT(0<=mixture_num);
     ASSERT(mixture_num < getNMixtures());
     mixture.models[mixture_num]->computeTransMatrix(time, trans_matrix);

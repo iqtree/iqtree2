@@ -95,7 +95,7 @@ public:
      * @return TRUE if parameters are at the boundary that may cause
      * numerical unstability
      */
-    virtual bool isUnstableParameters() override;
+    virtual bool isUnstableParameters() const override;
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
@@ -161,7 +161,8 @@ public:
      @param trans_matrix (OUT) the transition matrix between all pairs of states.
      Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0) override;
+	virtual void computeTransMatrix(double time, double *trans_matrix, 
+	                                int mixture = 0) const override;
 
 
 protected:
@@ -193,34 +194,38 @@ protected:
 public:
 	virtual string getNameParams() const override { return mixture.getNameParams(); }
 	virtual bool isMixture()       const override { return mixture.isMixture(); }
-	virtual int getNMixtures()     override { return mixture.getNMixtures(); }
-	virtual double getMixtureWeight(int cat)              override { return mixture.getMixtureWeight(cat); }
+	virtual int getNMixtures()     const override { return mixture.getNMixtures(); }
+	virtual double getMixtureWeight(int cat)        const override { return mixture.getMixtureWeight(cat); }
 	virtual void setMixtureWeight(int cat, double weight) override { mixture.setMixtureWeight(cat, weight); }
 	virtual void setFixMixtureWeight(bool fix_weight)     override { mixture.setFixMixtureWeight(fix_weight); }
-	virtual ModelSubst* getMixtureClass(int cat)          override { return mixture.getMixtureClass(cat); }
+	virtual ModelSubst* getMixtureClass(int cat)    const override { return mixture.getMixtureClass(cat); }
 	virtual void setMixtureClass(int cat, ModelSubst* m)  override { mixture.setMixtureClass(cat, m); }
-	virtual void getStateFrequency(double* state_freq, int mixture_num = 0) override 
+	virtual void getStateFrequency(double* state_freq,
+	                               int mixture_num = 0) const override 
 	{ 
 		mixture.getStateFrequency(state_freq, mixture_num);
 	}
 	virtual void computeTransDerv(double time, double* trans_matrix,
-		double* trans_derv1, double* trans_derv2, int mixture_num = 0) {
+		double* trans_derv1, double* trans_derv2, int mixture_num = 0) const {
 		mixture.computeTransDerv(time, trans_matrix,
 			trans_derv1, trans_derv2, mixture_num) override;
 	}
 	virtual void setOptimizeSteps(int steps)   override { mixture.setOptimizeSteps(steps); }
-	virtual uint64_t getMemoryRequired()       override { return mixture.getMemoryRequired(); }
+	virtual uint64_t getMemoryRequired() const override { return mixture.getMemoryRequired(); }
 	virtual void writeParameters(ostream& out) override { mixture.writeParameters(out); }
 
-    virtual bool isPolymorphismAware()    override { return super::isPolymorphismAware(); };
-    virtual int getNumRateEntries() const override { return super::getNumRateEntries();  }
-    virtual void computeTipLikelihood(PML::StateType state, double* state_lk) override {
+    virtual bool isPolymorphismAware()   const override { return super::isPolymorphismAware(); };
+    virtual int getNumRateEntries()      const override { return super::getNumRateEntries();  }
+    virtual void computeTipLikelihood
+					(PML::StateType state, double* state_lk) 
+					const override {
 		super::computeTipLikelihood(state, state_lk);
     }
     virtual ModelSubst* getMutationModel() override { return super::getMutationModel(); }
     virtual void setRates()                override { ModelPoMo::setRates(); }
     virtual void computeRateMatrix(double** rate_matrix, 
-	                               double* state_freq, int num_state) override{
+	                               double* state_freq, 
+								   int num_state) const override{
 		super::computeRateMatrix(rate_matrix, state_freq, num_state);
     }
 #endif

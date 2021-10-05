@@ -174,9 +174,9 @@ class ModelPoMo : public ModelMarkov
      *  @return TRUE if parameters are at the boundary that may cause
      *  numerical unstability
      */
-    virtual bool isUnstableParameters() override;
+    virtual bool isUnstableParameters() const override;
 
-    virtual bool isPolymorphismAware() override { return true; };
+    virtual bool isPolymorphismAware() const override { return true; };
 
     /**
      *  @return the number of rate entries
@@ -296,7 +296,7 @@ class ModelPoMo : public ModelMarkov
      Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, 
-                                    int mixture = 0) override;
+                                    int mixture = 0) const override;
 
     /**
      *  Set the scale factor of the mutation rates to NEW_SCALE.
@@ -314,14 +314,16 @@ class ModelPoMo : public ModelMarkov
      @param state character state
      @param[out] state_lk state likehood vector of size num_states
      */
-    virtual void computeTipLikelihood(PML::StateType state, double *state_lk)  override;
+    virtual void computeTipLikelihood
+                    (PML::StateType state, double *state_lk) 
+                    const override;
         //Supporting functions
         void computeTipLikelihoodForFixedState
                 (double* lh, int nnuc, int nstates, int id1,
-                 int j, bool hypergeometric);
+                 int j, bool hypergeometric) const;
         void computeTipLikelihoodForPolymorphicState
                 (double* lh, int nnuc, int nstates, int id1, int id2, 
-                 int j, int M, bool hypergeometric);
+                 int j, int M, bool hypergeometric) const;
 
  protected:
 
@@ -333,8 +335,9 @@ class ModelPoMo : public ModelMarkov
         @param state_freq state frequencies
         @param num_state number of states
     */
-    virtual void computeRateMatrix(double **rate_matrix, double *state_freq, 
-                                   int num_state) override;
+    virtual void computeRateMatrix(double **rate_matrix, 
+                                   double *state_freq, 
+                                   int num_state) const override;
 
   // Get the current scale factor of the mutation rates.
   double getScale();

@@ -20,17 +20,17 @@ class ModelGTR : public ModelMarkov {
                                  StateFreqType freq, const std::string& freq_params,
                                  PhyloTree* report_to_tree) override;
         virtual void        writeInfo(ostream &out) override;
-        virtual void        getRateMatrix(double *rate_mat) override;
+        virtual void        getRateMatrix(double *rate_mat) const override;
         virtual void        setRateMatrix(double* rate_mat) override;
         virtual void        setStateFrequency(double* freq) override;
-        virtual void        getQMatrix(double *q_mat) override;
+        virtual void        getQMatrix(double *q_mat) const override;
         virtual int         getNDim() const override;
         virtual int         getNDimFreq() const override;
         virtual bool        scaleStateFreq() override;
         virtual void        setVariables(double *variables) override;
         virtual bool        getVariables(const double *variables) override;
         virtual double      targetFunk(double x[]) override;
-        virtual bool        isUnstableParameters() override;
+        virtual bool        isUnstableParameters() const override;
         virtual void        setBounds(double *lower_bound, double *upper_bound, 
 	                                  bool *bound_check) override;
         virtual double      optimizeParameters(double gradient_epsilon,
@@ -47,18 +47,19 @@ class ModelGTR : public ModelMarkov {
         virtual void        freeMem() override;
 
         virtual void    computeTransMatrix(double time, 
-                                   double *trans_matrix, int mixture=0) override;
+                                   double *trans_matrix, int mixture=0) 
+                                   const override;
         void    computeTransMatrixFreq(double time, 
-                                       double* trans_matrix);
-        double  computeTrans(double time, int state1, int state2) override;
+                                       double* trans_matrix) const;
+        double  computeTrans(double time, int state1, int state2) const override;
         double  computeTrans(double time, int state1, int state2, 
-                             double &derv1, double &derv2) override;
+                             double &derv1, double &derv2) const override;
         virtual void computeTransDerv(double  time, double* trans_matrix, 
 	                             double* trans_derv1, double* trans_derv2,
-                                 int mixture = 0) override;
+                                 int mixture = 0) const override;
         void    computeTransDervFreq(double time, double rate_val, 
                                      double* trans_matrix, double* trans_derv1, 
-				 					 double* trans_derv2);
+				 					 double* trans_derv2) const;
 
     protected:
         bool       half_matrix;

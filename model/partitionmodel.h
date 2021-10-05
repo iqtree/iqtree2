@@ -115,7 +115,7 @@ public:
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
-	virtual bool isUnstableParameters() override;
+	virtual bool isUnstableParameters() const override;
 
 	/** optimize linked alpha parameter of over all partitions with Gamma rate */
 	double optimizeLinkedAlpha(bool write_info, double gradient_epsilon);

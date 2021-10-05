@@ -179,7 +179,7 @@ void ModelDNA::saveCheckpoint() {
 }
 
 void ModelDNA::restoreCheckpoint() {
-    // curiously, this seems to be the only plase ModelDNA uses model_parameters.
+    // curiously, this seems to be the only place ModelDNA uses model_parameters.
     super::restoreCheckpoint();
     startCheckpoint();
     if (!fixed_parameters) {
@@ -429,7 +429,8 @@ void ModelDNA::writeParameters(ostream& out) {
     }
 }
 
-void ModelDNA::computeTipLikelihood(PML::StateType state, double *state_lk) {
+void ModelDNA::computeTipLikelihood
+        (PML::StateType state, double *state_lk) const {
     if (static_cast<int>(state) < num_states || state >= 18) {
         ModelSubst::computeTipLikelihood(state, state_lk);
         return;
