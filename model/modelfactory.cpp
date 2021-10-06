@@ -383,8 +383,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     /******************** initialize state frequency ****************************/
 
     StateFreqType freq_type = params.freq_type;
-
-    if (freq_type == FREQ_UNKNOWN) {
+    if (model_str.substr(0, 3) != "MIX" && freq_type == FREQ_UNKNOWN) {
         switch (tree->aln->seq_type) {
         case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
         case SEQ_PROTEIN: break; // let ModelProtein decide by itself

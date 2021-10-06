@@ -989,6 +989,59 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         PhyloTree* tree)
 {
 	ModelSubst *model = NULL;
+    size_t slen = model_str.length();
+    size_t fpos = model_str.find("+F");
+    string fstr;
+    if (fpos != string::npos) {
+        cout << "Model " << model_str << endl;
+        if (fpos+2 < model_str.length()) {
+            fstr = model_str.substr(fpos,3);
+            if (fstr == "+FO" || fstr == "+Fo") {
+                freq_type = FREQ_ESTIMATE;
+            } else if (fstr == "+FQ" || fstr == "+Fq") {
+                freq_type = FREQ_EQUAL;
+            } else if (fstr == "+F{") {
+                size_t tpos = model_str.find("}", fpos);
+                if (tpos != string::npos && tpos-fpos > 3) {
+                    freq_type = FREQ_USER_DEFINED;
+                    freq_params = model_str.substr(fpos+3,tpos-fpos-3);
+                } else {
+                    outError("The user defined frequency model is incorrect");
+                }
+            } else {
+                outError("Unknown frequency model " + fstr);
+            }
+        } else {
+            // "+F"
+            freq_type = FREQ_EMPIRICAL;
+        }
+        model_str = model_str.substr(0, fpos);
+    } else {
+        switch(freq_type) {
+            case FREQ_USER_DEFINED:
+                if (freq_params.length() > 0) {
+                    cout << "Model " << model_str << " => " << model_str << "+F{" << freq_params << "}" << endl;
+                } else {
+                    outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
+                }
+                break;
+            case FREQ_EQUAL:
+                cout << "Model " << model_str << " => " << model_str << "+FQ" << endl;
+                break;
+            case FREQ_EMPIRICAL:
+                cout << "Model " << model_str << " => " << model_str << "+F" << endl;
+                break;
+            case FREQ_ESTIMATE:
+                cout << "Model " << model_str << " => " << model_str << "+FO" << endl;
+                break;
+            case FREQ_UNKNOWN:
+                outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
+                break;
+            default:
+                cout << "Model " << model_str << endl;
+                break;
+        }
+    }
 	//cout << "Numstates: " << tree->aln->num_states << endl;
 	string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -1217,8 +1270,18 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     }
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
+    
+    cout << "\nMixture model" << endl;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
-		size_t pos = model_list.find(',', cur_pos);
+        size_t pos = model_list.find(',', cur_pos);
+        size_t open_pos = model_list.find('{', cur_pos);
+        size_t close_pos = model_list.find('}', cur_pos);
+        if (pos != string::npos && open_pos != string::npos && close_pos != string::npos) {
+            // consider the mixture model like: MIX{GTR+F{0.1,0.2,0.3,0.4},GTR+F{0.4,0.3,0.2,0.1}}
+            if (pos > open_pos && pos < close_pos) {
+                pos  = model_list.find(',', close_pos);
+            }
+        }
 		if (pos == string::npos)
 			pos = model_list.length();
 		if (pos <= cur_pos)
