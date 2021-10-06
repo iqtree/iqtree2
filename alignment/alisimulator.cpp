@@ -728,7 +728,7 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
         
         // select the appropriate simulation method
         SIMULATION_METHOD simulation_method = RATE_MATRIX;
-        if ((*it)->length > params->alisim_simulation_thresh
+        if (((*it)->length > params->alisim_simulation_thresh && !(model->isMixture() && params->alisim_mixture_at_sub_level))
             || tree->getRate()->isHeterotachy()
             || (*it)->attributes["model"].length()>0)
             simulation_method = TRANS_PROB_MATRIX;
@@ -1705,7 +1705,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
                 {
                     if (simulation_method == RATE_MATRIX)
                     {
-                        handleSubs(sequence_length, total_sub_rate, sub_rate_by_site, indel_sequence);
+                        handleSubs(sequence_length, total_sub_rate, sub_rate_by_site, indel_sequence, model->getNMixtures());
                     }
                     break;
                 }
@@ -1913,7 +1913,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
 /**
     handle substitution events
 */
-void AliSimulator::handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence)
+void AliSimulator::handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models)
 {
     // select a position where the substitution event occurs
     discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
@@ -1923,7 +1923,16 @@ void AliSimulator::handleSubs(int sequence_length, double &total_sub_rate, vecto
     short int current_state = indel_sequence[pos];
     
     // estimate the new state
-    int mixture_index = site_specific_model_index.size() == 0 ? 0:site_specific_model_index[pos];
+    int mixture_index = 0;
+    // randomly select a model component if mixture model at substitution level is used
+    if (site_specific_model_index.size() > pos)
+    {
+        if (params->alisim_mixture_at_sub_level)
+            mixture_index = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_mixture_models, mixture_max_weight_pos);
+        else
+            mixture_index = site_specific_model_index[pos];
+    }
+    
     int starting_index = mixture_index*max_num_states*max_num_states + max_num_states*current_state;
     indel_sequence[pos] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(Jmatrix, starting_index, max_num_states, max_num_states/2);
     

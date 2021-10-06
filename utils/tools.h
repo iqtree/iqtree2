@@ -2429,6 +2429,11 @@ public:
     *  TRUE to disable outputing sequences without gaps (when using Indels)
     */
     bool alisim_no_export_sequence_wo_gaps;
+    
+    /**
+    *  TRUE to enable mixture model at substitution level
+    */
+    bool alisim_mixture_at_sub_level;
 };
 
 /**

@@ -1413,6 +1413,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_simulation_thresh = 0.001;
     params.delay_msgs = "";
     params.alisim_no_export_sequence_wo_gaps = false;
+    params.alisim_mixture_at_sub_level = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2497,6 +2498,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--no-export-sequence-wo-gaps") == 0) {
                 params.alisim_no_export_sequence_wo_gaps = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--sub-level-mixture") == 0) {
+                params.alisim_mixture_at_sub_level = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--indel") == 0) {
@@ -5260,6 +5265,7 @@ void usage_alisim(){
     << "  --indel-size <INS_DIS>,<DEL_DIS> Specify the distributions for generating"<< endl
     << "                            the random number of sites to insert/delete." << endl
     << "                            By default, a geometric distribution with p of 0.5 is used." << endl
+    << "  --sub-level-mixture       Enable the feature to simulate substitution-level mixture model"<< endl
     << "  --no-export-sequence-wo-gaps Disable outputing sequences without gaps (when using Indels)"<< endl
     << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
     << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl

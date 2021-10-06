@@ -39,35 +39,39 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
         // get/init variables
         ModelSubst* model = tree->getModel();
         int num_models = model->getNMixtures();
-        double *model_prop = new double[num_models];
+        mixture_accumulated_weight = new double[num_models];
         
         // get the weights of model components
         bool isFused = model->isFused();
-        int max_prob_pos = 0;
+        mixture_max_weight_pos = 0;
         for (int i = 0; i < num_models; i++)
         {
             // fused model, take the weight from site_rate
             if (isFused)
-                model_prop[i] = tree->getRate()->getProp(i) / (1.0 - tree->getRate()->getPInvar());
+                mixture_accumulated_weight[i] = tree->getRate()->getProp(i) / (1.0 - tree->getRate()->getPInvar());
             else
-                model_prop[i] = model->getMixtureWeight(i);
+                mixture_accumulated_weight[i] = model->getMixtureWeight(i);
             
             // finding the max probability position
-            if (model_prop[i] > model_prop[max_prob_pos])
-                max_prob_pos = i;
+            if (mixture_accumulated_weight[i] > mixture_accumulated_weight[mixture_max_weight_pos])
+                mixture_max_weight_pos = i;
         }
             
         // convert the model_prop into an accumulated model_prop
-        convertProMatrixIntoAccumulatedProMatrix(model_prop, 1, num_models);
+        convertProMatrixIntoAccumulatedProMatrix(mixture_accumulated_weight, 1, num_models);
         
         for (int i = 0; i < sequence_length; i++)
         {
             // randomly select a model from the set of model components, considering its probability array.
-            new_site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(model_prop, 0, num_models, max_prob_pos);
+            new_site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_models, mixture_max_weight_pos);
         }
         
-        // delete the probability array of rate categories
-        delete[] model_prop;
+        // delete the mixture_accumulated_weight if mixture model at substitution level is not used
+        if (!params->alisim_mixture_at_sub_level)
+        {
+            delete[] mixture_accumulated_weight;
+            mixture_accumulated_weight = NULL;
+        }
     }
     // otherwise, if it's not a mixture model -> set model index = 0 for all sites
     else

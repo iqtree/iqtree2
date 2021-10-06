@@ -215,7 +215,7 @@ protected:
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence);
+    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models);
     
     /**
         handle insertion events, return the insertion-size
@@ -299,6 +299,8 @@ public:
     const int RATE_ONE_INDEX = 0;
     double* sub_rates;
     double* Jmatrix;
+    double* mixture_accumulated_weight = NULL;
+    int mixture_max_weight_pos = 0;
     
     /**
         constructor
