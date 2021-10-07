@@ -912,8 +912,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         if (params.use_nn_model) {
             cout << "We are using the neural network to select the model of sequence evolution because "
                     "option --use-nn-model is set to " << params.use_nn_model << endl;
-            Alignment alignment = *(iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
-            NeuralNetwork nn(&alignment);
+            Alignment *alignment = (iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+            NeuralNetwork nn(alignment);
             iqtree.aln->model_name = nn.doModelInference();
             double alpha = nn.doAlphaInference();
             if (alpha >= 0) { // +G
@@ -921,6 +921,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             }
             string best_model_NN;
             CKP_RESTORE(best_model_NN);
+            delete alignment;
         }
         else {
             if (params.openmp_by_model)
@@ -2031,8 +2032,18 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (in_model_name.empty()) {
-        generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+        // TODO: in case of Neural network, return a CandidateModel instance of the model here
+        if (params.use_nn_model) {
+            // generate models with neural network
+            string subst_name = "GTR";
+            string rate_name = "+G{0.1}"; // check if this really works
+            push_back(CandidateModel(subst_name, rate_name, in_tree->aln));
+        } else {
+            // generate all models the normal way
+            generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+        }
         if (do_modelomatic) {
+            ASSERT(!params.use_nn_model);
             // generate models for protein
             // adapter coefficient according to Whelan et al. 2015
             prot_aln = in_tree->aln->convertCodonToAA();
@@ -2735,14 +2746,12 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
 
 /**
  * Process the computation of the best model for a merge with MPI
- *
- * nthreads : number of threads available for this job
- * need_next_treeID : whether it is needed to get the next tree ID
- *
- * if need_next_treeID and (MASTER or IS_ASYN_COMM = 0)
- *    return the next Job ID from master
- * else
- *    return -1
+ * Find the best model for merging two partitions in job_id
+ * @param job_id ID of closest_pairs array
+ * @param nthreads number of threads available for this job
+ * @param need_next_jobID whether it is needed to get the next tree ID
+
+ * @return next job ID if need_next_treeID and (MASTER or IS_ASYN_COMM = 0), otherwise -1
  */
 int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt) {
     
