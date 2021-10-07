@@ -1407,8 +1407,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.branch_distribution = NULL;
     params.alisim_insertion_ratio = 0;
     params.alisim_deletion_ratio = 0;
-    params.alisim_insertion_distribution = IndelDistribution(GEO,0.5);
-    params.alisim_deletion_distribution = IndelDistribution(GEO,0.5);
+    params.alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,250);
+    params.alisim_deletion_distribution = IndelDistribution(ZIPF,1.7,250);
     params.alisim_mean_deletion_size = -1;
     params.alisim_simulation_thresh = 0.001;
     params.delay_msgs = "";
@@ -5263,8 +5263,7 @@ void usage_alisim(){
     << "                            Specify the insertion/deletion rate relative to"<< endl
     << "                            the substitution rate of 1"<< endl
     << "  --indel-size <INS_DIS>,<DEL_DIS> Specify the distributions for generating"<< endl
-    << "                            the random number of sites to insert/delete." << endl
-    << "                            By default, a geometric distribution with p of 0.5 is used." << endl
+    << "                            Indels-size (see Manual)." << endl
     << "  --sub-level-mixture       Enable the feature to simulate substitution-level mixture model"<< endl
     << "  --no-export-sequence-wo-gaps Disable outputing sequences without gaps (when using Indels)"<< endl
     << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
@@ -5289,7 +5288,8 @@ void usage_alisim(){
     << "                            Be careful to make the AliSim reproducible," << endl
     << "                            users should specify the seed number" << endl
     << "  -gz                       Enable output compression but taking longer running time" << endl
-    << "  -af phy|fasta             Set the output format (default: phylip)" << endl;
+    << "  -af phy|fasta             Set the output format (default: phylip)" << endl
+    << "  User Manual is available at http://www.iqtree.org/doc/alisim" << endl;
 }
 
 void usage_iqtree(char* argv[], bool full_command) {

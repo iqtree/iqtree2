@@ -2028,7 +2028,7 @@ double AliSimulator::computeMeanDelSize(int sequence_length)
         // randomly generate sequence_length random deletion-sizes from the deletion-distribution
         for (int i = 0; i < sequence_length; i++)
         {
-            int random_size = generateIndelSize(params->alisim_insertion_distribution);
+            int random_size = generateIndelSize(params->alisim_deletion_distribution);
             
             // only process positive random sizes
             if (random_size > 0)
