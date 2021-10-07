@@ -847,7 +847,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 
     ModelsBlock *models_block = readModelsDefinition(params);
 
-    if (!params.use_nn_model) {
+    if (!params.use_nn_model & !iqtree.isSuperTree()) {
         // compute initial tree
         // cout << "params.modelfinder_ml_tree = " << params.modelfinder_ml_tree << endl << flush;
         if (params.modelfinder_ml_tree) {
@@ -895,7 +895,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     if (iqtree.isSuperTree()) {
         // partition model selection
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        // TD: modified this function to allow for nn model selection
         testPartitionModel(params, stree, model_info, models_block, params.num_threads);
         stree->mapTrees();
         string res_models = "";
@@ -969,29 +968,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         params.min_iterations = 0;
     }
 }
-
-// added by TD
-void runModelFinderNN(Params &params, IQTree &iqtree, ModelCheckpoint &model_info) {
-/**
- * Legacy code, remove after discussion with Minh
- */
-    if (iqtree.isSuperTree()) {
-        // partition model selection
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        // testPartitionModel(params, stree, model_info, models_block, params.num_threads);
-        stree->mapTrees();
-        string res_models = "";
-        for (auto it = stree->begin(); it != stree->end(); it++) {
-            if (it != stree->begin()) res_models += ",";
-            Alignment alignment = *((*it)->aln->removeAndFillUpGappySites());
-            NeuralNetwork nn(&alignment);
-            (*it)->aln->model_name = nn.doModelInference();
-            res_models += (*it)->aln->model_name;
-        }
-        iqtree.aln->model_name = res_models;
-    }
-
-    }
 
 /**
  * get the list of substitution models

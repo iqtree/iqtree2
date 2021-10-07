@@ -42,10 +42,8 @@
 #include "genericParallelization.h"
 #include "pllInternal.h"
 #include "pll.h"
-
-#ifdef _IQTREE_MPI
-#include <mpi.h>
-#endif
+// BQM: this causes compiling error when MPI was not installed
+//#include <mpi.h>
 
 /** @file genericParallelization.c
     
