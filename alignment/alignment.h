@@ -517,6 +517,21 @@ public:
      */
     size_t getMaxSeqNameLength() const;
 
+    /**
+            @param i sequence index
+            @return sequence subset number
+     */
+
+    int  getSequenceSubset(intptr_t i) const;
+
+    /**
+     * Change which subset a sequence is in
+     *      @param i sequence index
+     *      @param set_no the number of the subset it is to be in.
+     */
+
+    void setSequenceSubset(intptr_t i, intptr_t set_no);
+
     /*
         check if some state is absent, which may cause numerical issues
         @param msg additional message into the warning
@@ -1154,6 +1169,13 @@ protected:
             sequence names
      */
     StrVector seq_names;
+
+    /**
+            maps, each sequence (same index as seq_names) to
+            a subset (note: subsets aren't necessarily 
+            subtrees)
+     */
+    IntVector seq_to_subset;
 
     /**
             Site to pattern index

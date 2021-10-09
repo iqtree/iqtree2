@@ -109,7 +109,6 @@ void Alignment::setSeqName(intptr_t i, const string& name_to_use) {
     seq_names[i] = name_to_use;
 }
 
-
 const StrVector& Alignment::getSeqNames() const {
 	return seq_names;
 }
@@ -131,6 +130,22 @@ size_t Alignment::getMaxSeqNameLength() const {
         }
     }
     return len;
+}
+
+int Alignment::getSequenceSubset(intptr_t i) const {
+    ASSERT(i >= 0 && i < (int)seq_names.size());
+    if (seq_to_subset.size() <= i) {
+        return 0;
+    }
+    return seq_to_subset[i];
+}
+
+void Alignment::setSequenceSubset(intptr_t i, intptr_t set_no) {
+    ASSERT(i >= 0 && i < (int)seq_names.size());
+    if (seq_to_subset.size() <= i) {
+        seq_to_subset.resize(i+1, 0);
+    }
+    seq_to_subset[i] = set_no;
 }
 
 /**
@@ -277,9 +292,8 @@ void Alignment::renameSequencesIfNeedBe() {
 
 void Alignment::checkSequenceNamesAreDistinct() {
     // now check that sequence names are different
-    StrVector names;
-    names.insert(names.begin(), seq_names.begin(), seq_names.end());
-    sort(names.begin(), names.end());
+    StrVector names(seq_names);
+    names.sort();
     bool ok = true;
     for (auto it = names.begin(); it != names.end(); it++) {
         if (it+1==names.end()) break;
@@ -3733,9 +3747,11 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
                                     int min_true_char, int min_taxa,
                                     IntVector *kept_partitions) {
     IntVector::iterator it;
+    seq_to_subset.resize(seq_names.size(),0);
     for (it = seq_id.begin(); it != seq_id.end(); ++it) {
         ASSERT(*it >= 0 && *it < aln->getNSeq());
         seq_names.push_back(aln->getSeqName(*it));
+        seq_to_subset.push_back(aln->getSequenceSubset(*it));
     }
     name           = aln->name;
     model_name     = aln->model_name;
@@ -3801,8 +3817,10 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
 
 void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     intptr_t nseq =  aln->getNSeq();
+    seq_to_subset.resize(seq_names.size(),0);
     for (int i = 0; i < nseq; ++i) {
         seq_names.push_back(aln->getSeqName(i));
+        seq_to_subset.push_back(aln->getSequenceSubset(i));
     }
     name           = aln->name;
     model_name     = aln->model_name;
@@ -3832,8 +3850,10 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
 
 void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     ASSERT(static_cast<intptr_t>(ptn_freq.size()) <= aln->getNPattern());
+    seq_to_subset.resize(seq_names.size(),0);
     for (int i = 0; i < aln->getNSeq(); ++i) {
         seq_names.push_back(aln->getSeqName(i));
+        seq_to_subset.push_back(aln->getSequenceSubset(i));
     }
     name          = aln->name;
     model_name    = aln->model_name;
@@ -3863,8 +3883,10 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
 }
 
 void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
+    seq_to_subset.resize(seq_names.size(),0);
     for (int i = 0; i < aln->getNSeq(); ++i) {
         seq_names.push_back(aln->getSeqName(i));
+        seq_to_subset.push_back(aln->getSequenceSubset(i));
     }
     name = aln->name;
     model_name = aln->model_name;
@@ -3907,8 +3929,10 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id,
     }
     char AA_to_state[NUM_CHAR];
     intptr_t nseqs = aln->getNSeq();
+    seq_to_subset.resize(seq_names.size(),0);
     for (intptr_t i = 0; i < nseqs ; ++i) {
         seq_names.push_back(aln->getSeqName(i));
+        seq_to_subset.push_back(aln->getSequenceSubset(i));
     }
     name          = aln->name;
     model_name    = aln->model_name;
@@ -4028,8 +4052,10 @@ Alignment *Alignment::convertCodonToAA() {
         outError("Cannot convert non-codon alignment into AA");
     char AA_to_state[NUM_CHAR];
     intptr_t nseq = getNSeq();
+    res->seq_to_subset.resize(res->seq_names.size(),0);
     for (intptr_t i = 0; i < nseq; ++i) {
         res->seq_names.push_back(getSeqName(i));
+        res->seq_to_subset.push_back(getSequenceSubset(i));
     }
     res->name = name;
     res->model_name = model_name;
@@ -4078,8 +4104,10 @@ Alignment *Alignment::convertCodonToDNA() {
         outError("Cannot convert non-codon alignment into DNA");
     }
     intptr_t nseqs = getNSeq();
+    res->seq_to_subset.resize(res->seq_names.size(),0);
     for (intptr_t i = 0; i < nseqs; ++i) {
         res->seq_names.push_back(getSeqName(i));
+        res->seq_to_subset.push_back(getSequenceSubset(i));
     }
     res->name = name;
     res->model_name = model_name;

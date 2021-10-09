@@ -217,10 +217,13 @@ void SuperAlignment::init(StrVector *sequence_names) {
          it != partitions.end(); ++it, ++site) {
 		intptr_t nseq = (*it)->getNSeq();
 		//cout << "nseq  = " << nseq << endl;
+        seq_to_subset.resize(seq_names.size(),0);
 		for (intptr_t seq = 0; seq < nseq; ++seq) {
 			intptr_t id = getSeqID((*it)->getSeqName(seq));
 			if (id < 0) {
 				seq_names.push_back((*it)->getSeqName(seq));
+                seq_to_subset.push_back((*it)->getSequenceSubset(i));
+
 				id = static_cast<int>(seq_names.size())-1;
 				IntVector vec(nsite, -1);
 				vec[site] = static_cast<int>(seq);
@@ -947,10 +950,11 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
     sequence_type = aln->sequence_type;
     position_spec = aln->position_spec;
     aln_file = aln->aln_file;
-
+    seq_to_subset.resize(seq_names.size(),0);
     for (auto it = seq_id.begin(); it != seq_id.end(); it++) {
         ASSERT(*it >= 0 && *it < aln->getNSeq());
         seq_names.push_back(aln->getSeqName(*it));
+        seq_to_subset.push_back(aln->getSequenceSubset(*it));
     }
 
 	// BUG HERE!
@@ -1001,14 +1005,18 @@ SuperAlignment *SuperAlignment::extractPartitions(IntVector &part_id) {
     newaln->sequence_type = sequence_type;
     newaln->position_spec = position_spec;
     newaln->aln_file = aln_file;
-
+    newaln->seq_to_subset.resize(newaln->seq_names.size(),0);
     unordered_set<string> seq_names_set;
     IntVector::iterator it;
     for (it = part_id.begin(); it != part_id.end(); ++it) {
-        for (auto seq = partitions[*it]->seq_names.begin(); 
-             seq != partitions[*it]->seq_names.end(); ++seq) {
+        auto seq_begin = partitions[*it]->seq_names.begin();
+        auto seq_end   = partitions[*it]->seq_names.end();
+        int  seq_no    = 0;
+        for (auto seq = seq_begin; seq != seq_end; ++seq, ++seq_no) {
             if (seq_names_set.find(*seq) == seq_names_set.end()) {
                 newaln->seq_names.push_back(*seq);
+                int subset_no = partitions[*it]->getSequenceSubset(seq_no);
+                newaln->seq_to_subset.push_back(subset_no);
                 seq_names_set.insert(*seq);
             }
         }
@@ -1051,10 +1059,14 @@ void SuperAlignment::removePartitions(set<int> &removed_id) {
     seq_names.clear();
     for (auto it = partitions.begin(); 
          it != partitions.end(); it++) {
-        for (auto seq = (*it)->seq_names.begin(); 
-                  seq != (*it)->seq_names.end(); seq++) {
+        auto seq_begin = (*it)->seq_names.begin();
+        auto seq_end   = (*it)->seq_names.end();
+        for (auto seq = seq_begin; seq != seq_end; ++seq) {
             if (seq_names_set.find(*seq) == seq_names_set.end()) {
+                intptr_t seq_no = seq - seq_begin;
+                int subset_no = (*it)->getSequenceSubset(seq_no);
                 seq_names.push_back(*seq);
+                seq_to_subset.push_back(subset_no);
                 seq_names_set.insert(*seq);
             }
         }
@@ -1816,6 +1828,7 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) const {
 	for (int i = 0; i < union_taxa.length(); i++) {
 		if (union_taxa[i] == 1) {
 			aln->seq_names.push_back(getSeqName(i));
+            aln->seq_to_subset.push_back(getSequenceSubset(i));
 		}
     }
 	aln->num_states = nstates;
