@@ -1171,6 +1171,13 @@ protected:
     StrVector seq_names;
 
     /**
+            subsets, into which sequences are to go, when a 
+            divergent model is in use (or when subsets are
+            being used to speed up initial tree construction)
+     */
+    StrVector subset_names;
+
+    /**
             maps, each sequence (same index as seq_names) to
             a subset (note: subsets aren't necessarily 
             subtrees)

@@ -383,7 +383,9 @@ void MTree::printBranchLengths(ostream &out, Node *node, Node *dad)
         }
         out << "\t";
         if ((*it)->node->name != "") {
-            out << (*it)->node->name; else out << (*it)->node->id;
+            out << (*it)->node->name; }
+        else {
+            out << (*it)->node->id;
         }
         out << "\t" << (*it)->length << endl;
         printBranchLengths(out, (*it)->node, node);

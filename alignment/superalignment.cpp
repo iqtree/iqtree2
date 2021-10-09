@@ -222,7 +222,7 @@ void SuperAlignment::init(StrVector *sequence_names) {
 			intptr_t id = getSeqID((*it)->getSeqName(seq));
 			if (id < 0) {
 				seq_names.push_back((*it)->getSeqName(seq));
-                seq_to_subset.push_back((*it)->getSequenceSubset(i));
+                seq_to_subset.push_back((*it)->getSequenceSubset(id));
 
 				id = static_cast<int>(seq_names.size())-1;
 				IntVector vec(nsite, -1);

@@ -249,8 +249,7 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
     MTree::readTree(infile, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
-    if (rooted && root)
-    {
+    if (rooted && root) {
         computeBranchDirection();
     }
 }
@@ -316,8 +315,9 @@ void PhyloTree::copyTree(MTree *tree) {
 
 void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
     MTree::copyTree(tree, taxa_set);
-    if (rooted)
+    if (rooted) {
         computeBranchDirection();
+    }
     if (aln==nullptr) {
         return;
     }
@@ -327,10 +327,12 @@ void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
 
 void PhyloTree::copyPhyloTree(PhyloTree *tree, bool borrowSummary) {
     MTree::copyTree(tree);
-    if (!tree->aln)
+    if (!tree->aln) {
         return;
+    }
     setAlignment(tree->aln);
-    if (borrowSummary && summary!=tree->summary && tree->summary!=nullptr) {
+    if (borrowSummary && summary!=tree->summary && 
+        tree->summary!=nullptr) {
         if (!isSummaryBorrowed) {
             delete summary;
         }
