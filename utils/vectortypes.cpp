@@ -36,3 +36,7 @@ std::string StrVector::join(const char* sep) const {
 std::string StrVector::join(const std::string& sep) const {
     return join(sep.c_str());
 }
+
+void StrVector::sort() {
+    std::sort(begin(), end());
+}

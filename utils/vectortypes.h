@@ -141,6 +141,7 @@ public:
     bool contains(const std::string& find_me) const;
     std::string join(const char* separator)   const;
     std::string join(const std::string& separator) const;
+    void sort();
 };
 
 /**
