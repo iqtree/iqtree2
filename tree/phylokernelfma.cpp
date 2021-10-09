@@ -95,7 +95,8 @@ void PhyloTree::setLikelihoodKernelFMA() {
         return;
     }
 
-    if ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev) {
+    if ((model_factory && !model_factory->model->isReversible()) || 
+        params->kernel_nonrev) {
         // if nonreversible model
         if (safe_numeric)
         switch (aln->num_states) {

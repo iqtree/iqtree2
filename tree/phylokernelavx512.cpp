@@ -88,7 +88,8 @@ void PhyloTree::setLikelihoodKernelAVX512() {
         return;
     }
 
-    if ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev) {
+    if ((model_factory && !model_factory->model->isReversible()) || 
+        params->kernel_nonrev) {
         // if nonreversible model
         switch (aln->num_states) {
         case 4:

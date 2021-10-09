@@ -88,7 +88,6 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	for (iterator it = begin(); it != end(); ++it, ++part) {
 		part_info[part].evalNNIs = 0;
 	}
-
 	aln = alignment;
 }
 
@@ -122,13 +121,14 @@ void PhyloSuperTree::setPartInfo(PhyloSuperTree *tree) {
     part_info.erase(part_info.begin()+size(), part_info.end());
     for (part = 0; part < part_info.size(); part++) {
         bool found = false;
-        for (int p = 0; p < tree->size(); p++)
+        for (int p = 0; p < tree->size(); p++) {
             if (tree->at(p)->aln->name == at(part)->aln->name) {
                 part_info[part] = tree->part_info[p];
                 part_info[part].evalNNIs = 0;
                 found = true;
                 break;
             }
+		}
         ASSERT(found);
     }
 }
@@ -234,9 +234,9 @@ void PhyloSuperTree::printResultTree(string suffix) {
     if (MPIHelper::getInstance().isWorker()) {
         return;
     }
-    if (params->suppress_output_flags & OUT_TREEFILE)
+    if (params->suppress_output_flags & OUT_TREEFILE) {
         return;
-    
+	}
     IQTree::printResultTree(suffix);
     
     string tree_file_name = params->out_prefix;
@@ -373,7 +373,6 @@ int PhyloSuperTree::collapseInternalBranches(Node *node, Node *dad, double thres
     return count;
 }
 
-
 SuperNode* PhyloSuperTree::newNode(int node_id, const char* node_name) {
     return new SuperNode(node_id, node_name);
 }
@@ -404,10 +403,12 @@ size_t PhyloSuperTree::getAlnNSite() const {
 double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, double &var) {
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0) {
-    	if (params->compute_obs_dist)
+    	if (params->compute_obs_dist) {
             initial_dist = aln->computeObsDist(seq1, seq2);
-    	else
+		}
+    	else {
     		initial_dist = aln->computeDist(seq1, seq2);
+		}
     }
     if (initial_dist == MAX_GENETIC_DIST) {
 		return initial_dist; // MANUEL: here no d2l is return
@@ -471,21 +472,27 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 
 void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *node, SuperNode *dad) {
 	if (!node) {
-		if (!root->isLeaf())
+		if (!root->isLeaf()) {
 			node = getRoot();
-		else
+		} else {
 			node = getRoot()->firstNeighbor()->getNode();
+		}
 		ASSERT(node);
-		if (node->isLeaf()) // two-taxa tree
+		if (node->isLeaf()) { // two-taxa tree
 			dad = node->firstNeighbor()->getNode();
+		}
 	}
 	SuperNeighbor* nei     = nullptr;
 	SuperNeighbor* dad_nei = nullptr;
 	if (dad) {
 		nei = node->findNeighbor(dad);
 		dad_nei = dad->findNeighbor(node);
-		if (nei->link_neighbors.empty()) nei->link_neighbors.resize(size());
-		if (dad_nei->link_neighbors.empty()) dad_nei->link_neighbors.resize(size());
+		if (nei->link_neighbors.empty()) {
+			nei->link_neighbors.resize(size());
+		}
+		if (dad_nei->link_neighbors.empty()) {
+			dad_nei->link_neighbors.resize(size());
+		}
 		nei->link_neighbors[part] = nullptr;
 		dad_nei->link_neighbors[part] = nullptr;
 	}
@@ -504,13 +511,16 @@ void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *n
 	FOR_EACH_ADJACENT_SUPER_NODE(node, dad, it, child) {
 		linkTree(part, part_taxa, child, node);
 	}
-	if (!dad) return;
+	if (!dad) {
+		return;
+	}
 	linkBranch(part, nei, dad_nei);
 }
 
 void PhyloSuperTree::syncRooting() {
-    if (empty() || !front()->root)
+    if (empty() || !front()->root) {
         return;
+	}
     // check if all trees are similarly rooted or unrooted
     bool same_rooting = true;
     iterator tree;
@@ -520,13 +530,13 @@ void PhyloSuperTree::syncRooting() {
             break;
         }
     }
-    
     if (same_rooting) {
         if (!empty() && rooted != front()->rooted) {
-            if (rooted)
+            if (rooted) {
                 convertToUnrooted();
-            else
+			} else {
                 convertToRooted();
+			}
         }
     } else if (!rooted) {
         // not same rooting between trees
@@ -553,22 +563,30 @@ void PhyloSuperTree::printMapInfo() {
 			cout << " -> ";
 			if (nei2) {
 				cout << nei2->id << ":";
-				if (nei2->node->isLeaf())
+				if (nei2->node->isLeaf()) {
 					cout << nei2->node->name;
-				else cout << nei2->node->id;
+				}
+				else {
+					cout << nei2->node->id;
+				}
 			}
 			else cout << -1;
 			cout << ",";
-			if (nei1)
-				if (nei1->node->isLeaf())
-					cout << nei1->node->name;
-				else cout << nei1->node->id;
-			else cout << -1;
+			if (nei1!=nullptr) {
+				if (nei1->node->isLeaf()) {
+					cout << nei1->node->name; 
+				}
+				else {
+					cout << nei1->node->id;
+				}
+			}
+			else {
+				cout << -1;
+			}
 			cout << endl;
 		}
 	}
 }
-
 
 void PhyloSuperTree::mapTrees() {
 	ASSERT(root);
@@ -583,7 +601,7 @@ void PhyloSuperTree::mapTrees() {
         Pattern taxa_pat = aln->getPattern(part);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		(*it)->copyTree(this, taxa_set);
-        if ((*it)->getModel()) {
+        if ((*it)->getModel() != nullptr) {
 			(*it)->initializeAllPartialLh();
         }
         (*it)->resetCurScore();
@@ -592,16 +610,20 @@ void PhyloSuperTree::mapTrees() {
 		part_taxa.resize(leafNum, NULL);
 		for (i = 0; i < static_cast<int>(leafNum); ++i) {
             int id;
-            if (i < aln->getNSeq())
+            if (i < aln->getNSeq()) {
                 id = ((SuperAlignment*)aln)->taxa_index[i][part];
-            else {
+            } else {
                 ASSERT(rooted);
-                if ((*it)->rooted)
+                if ((*it)->rooted) {
                     id = (*it)->leafNum-1;
-                else
+				}
+                else {
                     id = -1;
+				}
             }
-			if (id >=0) part_taxa[i] = my_taxa[id];
+			if (id >=0) {
+				part_taxa[i] = my_taxa[id];
+			}
 		}
 		if (verbose_mode >= VerboseMode::VB_DEBUG) {
 			cout << "Subtree for partition " << part << endl;
@@ -621,7 +643,7 @@ void PhyloSuperTree::linkTrees() {
 	for (it = begin(), part = 0; it != end(); ++it, ++part) {
 		(*it)->initializeTree();
 		(*it)->setAlignment((*it)->aln);
-        if ((*it)->getModel()) {
+        if ((*it)->getModel() != nullptr) {
 			(*it)->initializeAllPartialLh();
         }
         (*it)->resetCurScore();
@@ -640,7 +662,9 @@ void PhyloSuperTree::linkTrees() {
             else {
                 id = -1;
 			}
-			if (id >=0) part_taxa[i] = my_taxa[id];
+			if (id >=0) {
+				part_taxa[i] = my_taxa[id];
+			}
 		}
 		linkTree(part, part_taxa);
 	}
@@ -725,8 +749,9 @@ void PhyloSuperTree::computePartitionOrder() {
         id[i] = i;
     }
     quicksort(cost, 0, ntrees-1, id);
-    for (int i = 0; i < ntrees; i++) 
+    for (int i = 0; i < ntrees; i++) {
         part_order_by_nptn[i] = id[i];
+	}
         
     delete [] cost;
     delete [] id;
@@ -734,8 +759,11 @@ void PhyloSuperTree::computePartitionOrder() {
     if (verbose_mode >= VerboseMode::VB_MED) {
         cout << "Partitions ordered by computation costs:" << endl;
         cout << "#nexus" << endl << "begin sets;" << endl;
-        for (int i = 0; i < ntrees; i++)
-            cout << "  charset " << at(part_order[i])->aln->name << " = " << at(part_order[i])->aln->position_spec << ";" << endl;
+        for (int i = 0; i < ntrees; i++) {
+            cout << "  charset " << at(part_order[i])->aln->name 
+			     << " = " << at(part_order[i])->aln->position_spec 
+				 << ";" << endl;
+		}
         cout << "end;" << endl;
     }
 #else
@@ -782,7 +810,6 @@ int PhyloSuperTree::getNumLhCat(SiteLoglType wsl) {
 	}
     return ncat;
 }
-
 
 void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, 
                                               double *ptn_lh_cat, SiteLoglType wsl) {
@@ -843,11 +870,13 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance,
                                                             maxNRStep, were_lengths_consistent,
                                                             report_to_tree);
         tree_lh += part_info[i].cur_score;
-        if (verbose_mode >= VerboseMode::VB_MAX)
+        if (verbose_mode >= VerboseMode::VB_MAX) {
             at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);
+		}
     }
-    
-    if (my_iterations >= 100) computeBranchLengths();
+    if (my_iterations >= 100) {
+		computeBranchLengths();
+	}
     return tree_lh;
 }
 
@@ -855,15 +884,18 @@ PhyloSuperTree::~PhyloSuperTree()
 {
 	for (vector<PartitionInfo>::reverse_iterator pit = part_info.rbegin(); 
 	     pit != part_info.rend(); ++pit) {
-		if (pit->nniMoves[1].ptnlh)
+		if (pit->nniMoves[1].ptnlh) {
 			delete [] pit->nniMoves[1].ptnlh;
-		pit->nniMoves[1].ptnlh = NULL;
-		if (pit->nniMoves[0].ptnlh)
+			pit->nniMoves[1].ptnlh = nullptr;
+		}
+		if (pit->nniMoves[0].ptnlh) {
 			delete [] pit->nniMoves[0].ptnlh;
-		pit->nniMoves[0].ptnlh = NULL;
-		if (pit->cur_ptnlh)
+			pit->nniMoves[0].ptnlh = nullptr;
+		}
+		if (pit->cur_ptnlh != nullptr) {
 			delete [] pit->cur_ptnlh;
-		pit->cur_ptnlh = NULL;
+			pit->cur_ptnlh = nullptr;
+		}
 	}
 	part_info.clear();
 	for (reverse_iterator it = rbegin(); it != rend(); ++it) {
@@ -871,7 +903,6 @@ PhyloSuperTree::~PhyloSuperTree()
 	}
 	clear();
 }
-
 
 void PhyloSuperTree::initPartitionInfo() {
 	int part = 0;
@@ -926,23 +957,23 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	SuperNeighbor *node1_nei = nullptr;
 	SuperNeighbor *node2_nei = nullptr;
 	SuperNeighbor *node2_nei_other = nullptr;
-	FOR_SUPER_NEIGHBOR_DECLARE(node1, node2, node1_it)
+	FOR_SUPER_NEIGHBOR_DECLARE(node1, node2, node1_it) {
 		if ((*node1_it)->direction != TOWARD_ROOT)
 		{
 			node1_nei = *node1_it;
 			break;
 		}
+	}
 	FOR_SUPER_NEIGHBOR_DECLARE(node2, node1, node2_it) {
 		node2_nei = *node2_it;
 		break;
 	}
-
-	FOR_SUPER_NEIGHBOR_IT(node2, node1, node2_it_other)
+	FOR_SUPER_NEIGHBOR_IT(node2, node1, node2_it_other) {
 		if ((*node2_it_other) != node2_nei) {
 			node2_nei_other = (*node2_it_other);
 			break;
 		}
-
+	}
 	// check for compatibility with constraint tree
 	bool nni_ok[2] = { true, true };
 	int nniid = 0;
@@ -954,7 +985,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         nni.node2Nei_it = node2_it;
         nni_ok[nniid++] = constraintTree.isCompatible(nni);
     }
-
     ASSERT(nniid == 2);
     // return if both NNIs do not satisfy constraint
     if (!nni_ok[0] && !nni_ok[1]) {
@@ -984,22 +1014,28 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		bool is_nni = true;
 		local_totalNNIs++;
 		FOR_SUPER_NEIGHBOR_DECLARE(node1, NULL, nit) {
-			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
+			if (! (*nit)->link_neighbors[part]) { 
+				is_nni = false; 
+				break; 
+			}
 		}
 		FOR_SUPER_NEIGHBOR(node2, NULL, nit) {
-			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
+			if (! (*nit)->link_neighbors[part]) { 
+				is_nni = false; 
+				break; 
+			}
 		}
 		if (!is_nni && params->terrace_aware) {
 			if (part_info[part].cur_score == 0.0)  {
 				part_info[part].cur_score = at(part)->computeLikelihood();
-				if (save_all_trees == 2 || nniMoves)
+				if (save_all_trees == 2 || nniMoves) {
 					at(part)->computePatternLikelihood(part_info[part].cur_ptnlh, &part_info[part].cur_score);
+				}
 			}
 			nni_score1 += part_info[part].cur_score;
 			nni_score2 += part_info[part].cur_score;
 			continue;
 		}
-
 		local_evalNNIs++;
 		part_info[part].evalNNIs++;
 
@@ -1037,7 +1073,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		nni_score1 += part_info[part].nniMoves[0].newloglh;
 		nni_score2 += part_info[part].nniMoves[1].newloglh;
 		int numlen = 1;
-		if (params->nni5) numlen = 5;
+		if (params->nni5) {
+			numlen = 5;
+		}
 		for (int i = 0; i < numlen; i++) {
 			part_info[part].nni1_brlen[brid*numlen + i] = part_info[part].nniMoves[0].newLen[i];
 			part_info[part].nni2_brlen[brid*numlen + i] = part_info[part].nniMoves[1].newLen[i];
@@ -1045,11 +1083,15 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
 	}
 	totalNNIs += local_totalNNIs;
-	evalNNIs += local_evalNNIs;
+	evalNNIs  += local_evalNNIs;
 	double nni_scores[2] = {nni_score1, nni_score2};
     
-    if (!nni_ok[0]) nni_scores[0] = -DBL_MAX;
-    if (!nni_ok[1]) nni_scores[1] = -DBL_MAX;
+    if (!nni_ok[0]) {
+		nni_scores[0] = -DBL_MAX;
+	}
+    if (!nni_ok[1]) {
+		nni_scores[1] = -DBL_MAX;
+	}
 
     NNIMove myMove;
     //NNIMove constructor now sets node1 and node2 members
@@ -1066,7 +1108,6 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		myMove.node2Nei_it = node2->findNeighborIt(node2_nei_other->node);
 		myMove.newloglh = nni_scores[1];
 	}
-
     if (save_all_trees != 2 && !nniMoves) {
         return myMove;
     }
@@ -1087,10 +1128,16 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         for (int part = 0; part < ntrees; part++) {
             bool is_nni = true;
             FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, nit, neiOne) {
-                if (! neiOne->link_neighbors[part] ) { is_nni = false; break; }
+                if (! neiOne->link_neighbors[part] ) { 
+					is_nni = false; 
+					break; 
+				}
             }
             FOR_EACH_SUPER_NEIGHBOR(node2, nullptr, nit, neiTwo) {
-                if (! neiTwo->link_neighbors[part]) { is_nni = false; break; }
+                if (! neiTwo->link_neighbors[part]) { 
+					is_nni = false; 
+					break; 
+				}
             }
             if (!is_nni) {
                 memcpy(at(part)->tree_buffers._pattern_lh, part_info[part].cur_ptnlh, at(part)->getAlnNPattern() * sizeof(double));
@@ -1141,10 +1188,16 @@ void PhyloSuperTree::doNNI(const NNIMove &move, bool clearLH) {
 	for (it = begin(), part = 0; it != end(); ++it, ++part) {
 		bool is_nni = true;
 		FOR_SUPER_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
-			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
+			if (! (*nit)->link_neighbors[part]) { 
+				is_nni = false; 
+				break; 
+			}
 		}
 		FOR_SUPER_NEIGHBOR(move.node2, NULL, nit) {
-			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
+			if (! (*nit)->link_neighbors[part]) {
+				is_nni = false; 
+				break; 
+			}
 		}
 		if (!is_nni) {
 			// relink the branch if it does not correspond to NNI for partition
@@ -1167,7 +1220,7 @@ void PhyloSuperTree::doNNI(const NNIMove &move, bool clearLH) {
 }
 
 void PhyloSuperTree::changeNNIBrans(const NNIMove &move) {
-	SuperBranch branch(move.node1, move.node2);
+	SuperBranch    branch(move.node1, move.node2);
 	SuperNeighbor* nei1 = branch.lookingRight();
 	SuperNeighbor* nei2 = branch.lookingLeft();
 	iterator it;
@@ -1176,10 +1229,16 @@ void PhyloSuperTree::changeNNIBrans(const NNIMove &move) {
 	for (it = begin(), part = 0; it != end(); ++it, ++part) {
 		bool is_nni = true;
 		FOR_SUPER_NEIGHBOR_DECLARE(move.node1, NULL, nit) {
-			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
+			if (! (*nit)->link_neighbors[part]) { 
+				is_nni = false; 
+				break; 
+			}
 		}
 		FOR_SUPER_NEIGHBOR(move.node2, NULL, nit) {
-			if (! (*nit)->link_neighbors[part]) { is_nni = false; break; }
+			if (! (*nit)->link_neighbors[part]) {
+				is_nni = false; 
+				break; 
+			}
 		}
 		if (!is_nni) {
 			continue;
@@ -1192,7 +1251,9 @@ void PhyloSuperTree::changeNNIBrans(const NNIMove &move) {
 		part_move.node1 = nei2_part->getNode();
 		part_move.node2 = nei1_part->getNode();
 		int numlen = 1;
-		if (params->nni5) numlen = 5;
+		if (params->nni5) {
+			numlen = 5;
+		}
 		if (move.swap_id == 1) {
 			for (int i = 0; i < numlen; i++) {
 				part_move.newLen[i] = part_info[part].nni1_brlen[brid * numlen + i];
@@ -1219,8 +1280,11 @@ void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 }
 
 void PhyloSuperTree::computeBranchLengths() {
-	if (verbose_mode >= VerboseMode::VB_DEBUG)
-		cout << "Assigning branch lengths for full tree with weighted average..." << endl;
+	if (verbose_mode >= VerboseMode::VB_DEBUG) {
+		cout << "Assigning branch lengths" 
+		     << " for full tree with weighted average..." 
+			 << endl;
+	}
 	int part = 0, i;
     iterator it;
 
@@ -1240,12 +1304,16 @@ void PhyloSuperTree::computeBranchLengths() {
 		brfreq.resize((*it)->branchNum, 0);
 		for (i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = neighbors1[i]->link_neighbors[part];
-			if (!nei1) continue;
+			if (!nei1) {
+				continue;
+			}
 			brfreq[nei1->id]++;
 		}
 		for (i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = neighbors1[i]->link_neighbors[part];
-			if (!nei1) continue;
+			if (!nei1) {
+				continue;
+			}
             if ((*it)->aln->seq_type == SeqType::SEQ_CODON && rescale_codon_brlen) {
                 // rescale branch length by 3
                 neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
@@ -1259,8 +1327,9 @@ void PhyloSuperTree::computeBranchLengths() {
 		//cout << endl;
 	}
 	for (i = 0; i < nodes1.size(); i++) {
-		if (occurence[i])
+		if (occurence[i]) {
 			neighbors1[i]->length /= occurence[i];
+		}
 		neighbors2[i]->length = neighbors1[i]->length;
 	}
 }
@@ -1273,14 +1342,20 @@ PhyloTree *PhyloSuperTree::extractSubtree(set<int> &ids) {
 	string union_taxa;
 	for (auto it = ids.begin(); it != ids.end(); it++) {
 		int id = *it;
-		if (id < 0 || id >= size())
+		if (id < 0 || id >= size()) {
 			outError("Internal error ", __func__);
+		}
 		string taxa_set;
         Pattern taxa_pat = aln->getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
-		if (it == ids.begin()) union_taxa = taxa_set; else {
-			for (int j = 0; j < union_taxa.length(); j++)
-				if (taxa_set[j] == 1) union_taxa[j] = 1;
+		if (it == ids.begin()) {
+			union_taxa = taxa_set; 
+		} else {
+			for (int j = 0; j < union_taxa.length(); j++) {
+				if (taxa_set[j] == 1) {
+					union_taxa[j] = 1;
+				}
+			}
 		}
 	}
 	PhyloTree *tree = new PhyloTree;
@@ -1333,12 +1408,15 @@ int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
     FOR_EACH_SUPER_NEIGHBOR(node, dad, it, nei) {
     	bool isempty = true;
     	for (PhyloNeighborVec::iterator nit = nei->link_neighbors.begin(); 
-			 nit != nei->link_neighbors.end(); ++nit)
+			 nit != nei->link_neighbors.end(); ++nit) {
     		if ((*nit)) {
     			isempty = false;
     			break;
     		}
-    	if (isempty) count++;
+		}
+    	if (isempty) { 
+			count++;
+		}
     	count += countEmptyBranches(nei->getNode(), node);
     }
     return count;
@@ -1451,8 +1529,9 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
             // branch does not exist in partition tree
             double eqprob = 1.0/nstates;
             for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-                for (size_t i = 0; i < nstates; i++)
+                for (size_t i = 0; i < nstates; i++) {
                     ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+				}
                 ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
             }
         }
@@ -1511,7 +1590,6 @@ void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
 }
 
 void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
-
     int part = 1;
     for (iterator it = begin(); it != end(); ++it, ++part) {
         (*it)->writeSiteRates(out, bayes, part);
@@ -1521,32 +1599,39 @@ void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
     SuperNeighbor *nei1 = dynamic_cast<SuperNeighbor*>(node1->findNeighbor(node2));
     StrVector taxnames;
-    if (getNumTaxa(node1, node2) <= static_cast<int>(leafNum) / 2)
+    if (getNumTaxa(node1, node2) <= static_cast<int>(leafNum) / 2) {
         getTaxaName(taxnames, node1, node2);
-    else
+	} else {
         getTaxaName(taxnames, node2, node1);
+	}
     out << nei1->id+1 << ",";
     bool first = true;
-    for (int i = 0; i < taxnames.size(); i++)
+    for (int i = 0; i < taxnames.size(); i++) {
         if (!taxnames[i].empty()) {
-            if (!first) out << " ";
+            if (!first) {
+				out << " ";
+			}
             out << taxnames[i];
             first = false;
         }
+	}
     out << "," << nei1->length;
     for (int part = 0; part != size(); part++) {
         bool present = true;
         FOR_EACH_SUPER_NEIGHBOR(node1, nullptr, it, nei) {
-            if (!nei->link_neighbors[part])
+            if (!nei->link_neighbors[part]) {
                 present = false;
+			}
         }
         FOR_EACH_SUPER_NEIGHBOR(node2, nullptr, it, nei) {
-            if (!nei->link_neighbors[part])
+            if (!nei->link_neighbors[part]) {
                 present = false;
+			}
         }
         out << ",";
-        if (present)
+        if (present) {
             out << nei1->link_neighbors[part]->length;
+		}
     }
 }
 
@@ -1555,8 +1640,9 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     getBranches(nodes1, nodes2);
     int i;
     out << "ID,Taxa,Len";
-    for (i = 0; i < size(); i++)
+    for (i = 0; i < size(); i++) {
         out << "," << at(i)->aln->name;
+	}
     out << endl;
     for (i = 0; i < nodes1.size(); i++) {
         writeBranch(out, nodes1[i], nodes2[i]);
@@ -1577,9 +1663,12 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             out << "  charset " << name << " = ";
-            if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-            if (saln->partitions[part]->seq_type == SeqType::SEQ_CODON)
+            if (!saln->partitions[part]->aln_file.empty()) {
+				out << saln->partitions[part]->aln_file << ": ";
+			}
+            if (saln->partitions[part]->seq_type == SeqType::SEQ_CODON) {
                 out << "CODON, ";
+			}
             string pos = saln->partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');
             out << pos << ";" << endl;
@@ -1588,7 +1677,9 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
         for (part = 0; part < size(); part++) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
-            if (part > 0) out << "," << endl;
+            if (part > 0) {
+				out << "," << endl;
+			}
             out << "    " << at(part)->getModelNameParams() << ": " << name << "{" << at(part)->treeLength() << "}";
         }
         out << ";" << endl;

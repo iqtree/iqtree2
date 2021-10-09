@@ -1508,10 +1508,11 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
                                               int nei_id, PhyloNode *dad) {
     PhyloNode *node = dad->getNeighborByIndex(nei_id)->getNode();
     int set_id = dad->id * 3 + nei_id;
-    if (leaves_vec[set_id])
+    if (leaves_vec[set_id]) {
         return leaves_vec[set_id];
+    }
     RepresentLeafSet* leaves = new RepresentLeafSet;
-    RepresentLeafSet* leaves_it[2] = { NULL, NULL };
+    RepresentLeafSet* leaves_it[2] = { nullptr, nullptr };
     leaves_vec[set_id] = leaves;
     //double admit_height = 1000000;
 
@@ -1522,11 +1523,12 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
         leaves->insert(new RepLeaf(node, 0));
     } else {
         int j = 0;
-        for (int i = 0; i < node->neighbors.size(); i++)
+        for (int i = 0; i < node->neighbors.size(); i++) {
             if (node->neighbors[i]->node != dad) {
                 leaves_it[j++] = findRepresentLeaves(leaves_vec, i, node);
             }
-        ASSERT(j == 2 && leaves_it[0] && leaves_it[1]);
+        }
+        ASSERT(j == 2 && leaves_it[0]!=nullptr && leaves_it[1]!=nullptr);
         if ( 2 <= j && leaves_it[0]->empty() && leaves_it[1]->empty()) {
             cout << "wrong";
         }
@@ -4858,6 +4860,8 @@ void IQTree::fixNegativeBranches(bool force) {
         else {
             fixed_number = wrapperFixNegativeBranch(false);
         }
+        LOG_LINE(VerboseMode::VB_DEBUG, 
+                 "Fixed up " << fixed_number << " branch lengths.");
     }
 }
 

@@ -39,11 +39,12 @@ void ConstraintTree::readConstraint(const char *constraint_file, const StrVector
 
     bool err = false;
         
-    for(auto it = taxname.begin(); it != taxname.end(); it++)
+    for(auto it = taxname.begin(); it != taxname.end(); ++it) {
         if (fulltax_index.find(*it) == fulltax_index.end()) {
             cerr << "ERROR: Taxon " << (*it) << " in constraint tree does not appear in full tree" << endl;
             err = true;
         }
+    }
     if (err) {
         outError("Bad constraint tree (see above)");
     }
@@ -57,12 +58,12 @@ void ConstraintTree::initFromTree() {
         outWarning("Rooted constraint tree will be treated as unrooted tree");
         convertToUnrooted();
     }
-
 	// collapse any internal node of degree 2
 	NodeVector nodes;
 	getInternalNodes(nodes);
 	int num_collapsed = 0;
-	for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); ++it)
+	for (NodeVector::iterator it = nodes.begin(); 
+         it != nodes.end(); ++it) {
 		if ((*it)->degree() == 2) {
 			Node *left = (*it)->neighbors[0]->node;
 			Node *right = (*it)->neighbors[1]->node;
@@ -71,12 +72,14 @@ void ConstraintTree::initFromTree() {
 			right->updateNeighbor((*it), left, len);
 			delete (*it);
 			num_collapsed++;
-			if (verbose_mode >= VerboseMode::VB_MED)
+			if (verbose_mode >= VerboseMode::VB_MED) {
 				cout << "Node of degree 2 collapsed" << endl;
+            }
 		}
-	if (num_collapsed)
+    }
+	if (num_collapsed) {
 		initializeTree();
-    
+    }
     // build taxon name to ID index
     StrVector taxname;
     StrVector::iterator it;
@@ -91,16 +94,17 @@ void ConstraintTree::initFromTree() {
     convertSplits(taxname, sg);
     sg.removeTrivialSplits();
 
-    for (iterator mit = begin(); mit != end(); ++mit)
+    for (iterator mit = begin(); mit != end(); ++mit) {
         delete (mit->first);
+    }
     clear();
 
     for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); ++sit) {
-        if (!(*sit)->containTaxon(0))
+        if (!(*sit)->containTaxon(0)) {
             (*sit)->invert();
+        }
         insertSplit(new Split(**sit), 1);
     }
-    
 }
 
 void ConstraintTree::readConstraint(MTree &src_tree) {
@@ -128,12 +132,10 @@ int ConstraintTree::removeTaxa(const StrVector &taxa_names, bool reassignNodeIDs
 }
 
 bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
-
     ASSERT(!empty());
-    
-    if (tax1.size() <= 1 || tax2.size() <= 1)
+    if (tax1.size() <= 1 || tax2.size() <= 1) {
         return true;
-
+    }
     Split sp1(leafNum);
     Split sp2(leafNum);
     
@@ -142,41 +144,47 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
     
     int tax_count1 = 0;
     
-    for (it = tax1.begin(); it != tax1.end(); ++it)
+    for (it = tax1.begin(); it != tax1.end(); ++it) {
         if ((mit = taxname_index.find(*it)) != taxname_index.end()) {
             // taxon found
             tax_count1++;
             sp1.addTaxon(mit->second);
         }
-    if (tax_count1 <= 1)
+    }
+    if (tax_count1 <= 1) {
         return true;
-        
+    }
     int tax_count2 = 0;
-    for (it = tax2.begin(); it != tax2.end(); ++it)
+    for (it = tax2.begin(); it != tax2.end(); ++it) {
         if ((mit = taxname_index.find(*it)) != taxname_index.end()) {
             // taxon found
             tax_count2++;
             sp2.addTaxon(mit->second);
         }
-    
-    if (tax_count2 <= 1) 
+    }
+    if (tax_count2 <= 1) {
         return true;
-    
+    }
     if (tax_count1 + tax_count2 == leafNum) {
         // tax1 and tax2 form all taxa in the constraint tree
         
         // quick check if this split is contained in the tree
         Split *res = NULL;
-        if (sp1.containTaxon(0))
+        if (sp1.containTaxon(0)) {
             res = findSplit(&sp1);
-        else
+        }
+        else {
             res = findSplit(&sp2);
-        if (res) return true;
-        
+        }
+        if (res) {
+            return true;
+        }
         // otherwise, check for compatibility with all splits
-        for (iterator sit = begin(); sit != end(); ++sit)
-            if (!sit->first->compatible(sp1))
+        for (iterator sit = begin(); sit != end(); ++sit) {
+            if (!sit->first->compatible(sp1)) {
                return false;
+            }
+        }
         return true;
     } else {
         // partial split
@@ -209,8 +217,9 @@ bool ConstraintTree::isCompatible(Node *node1, Node *node2) {
 }
 
 bool ConstraintTree::isCompatible (MTree *tree) {
-    if (empty())
+    if (empty()) {
         return true;
+    }
     NodeVector nodes1, nodes2;
     tree->generateNNIBraches(nodes1, nodes2);
 //    tree->getAllInnerBranches(nodes1, nodes2);
@@ -222,13 +231,12 @@ bool ConstraintTree::isCompatible (MTree *tree) {
         taxset2.clear();
         getUnorderedTaxaName(taxset1, nodes1[i], nodes2[i]);
         getUnorderedTaxaName(taxset2, nodes2[i], nodes1[i]);
-        if (!isCompatible(taxset1, taxset2))
+        if (!isCompatible(taxset1, taxset2)) {
             return false;
+        }
     }
     return true;
 }
-
-
 
 bool ConstraintTree::isCompatible(const NNIMove &nni) {
     if (empty()) {

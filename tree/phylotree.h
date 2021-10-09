@@ -2812,18 +2812,19 @@ protected:
     /**
             associated substitution model
      */
-    ModelSubst *model;
+    ModelSubst*        model;
 
     /**
             Model factory includes SubstModel and RateHeterogeneity
-            stores transition matrices computed before for efficiency purpose, eps. AA or CODON model.
+            stores transition matrices computed before for efficiency 
+            purposes, epecially for AA or CODON models.
      */
-    ModelFactory *model_factory;
+    ModelFactory*      model_factory;
 
     /**
             among-site rates
      */
-    RateHeterogeneity *site_rate;
+    RateHeterogeneity* site_rate;
 
     /**
             current branch iterator, used by computeFunction() to optimize branch lengths
