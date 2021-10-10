@@ -258,6 +258,11 @@ ModelMarkov* ModelListFromYAMLFile::getModelByReference
                          StateFreqType freq_type,           ModelsBlock* models_block,
                          const std::string &parameter_list, 
                          PhyloTree* report_to_tree) {
+    if (model_info.isDivergentModel()) {
+        return getDivergentModel(model_info, parameter_list,
+                               freq_type, models_block, tree,  
+                               report_to_tree);
+    }
     if (model_info.isMixtureModel()) {
         return getMixtureModel(model_info, parameter_list,
                                freq_type, models_block, tree,  
@@ -421,3 +426,17 @@ ModelMarkov* ModelListFromYAMLFile::getMixtureModel(ModelInfoFromYAMLFile& model
     model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
     return model;
 }
+
+ModelMarkov* ModelListFromYAMLFile::getDivergentModel
+    ( ModelInfoFromYAMLFile& model_info, 
+      const std::string& parameter_list,
+      StateFreqType freq_type, ModelsBlock* models_block,
+      PhyloTree* tree, PhyloTree* report_to_tree) {
+    YAMLModelDivergent* model;
+    model = new YAMLModelDivergent(model_info, true, model_info.getName().c_str(),
+                                   freq_type,  models_block, tree, report_to_tree);
+    model->acceptParameterList(*tree->params, parameter_list, report_to_tree);
+    return model;
+}
+
+

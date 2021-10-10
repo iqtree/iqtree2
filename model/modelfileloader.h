@@ -118,6 +118,13 @@ public:
                                 ModelInfoFromYAMLFile& info,
                                 ModelListFromYAMLFile& list,
                                 LoggingTarget* logging_target);
+
+    void parseYAMLSubtreeModels(Params& params,
+                                const YAML::Node& mixture_models,
+                                ModelInfoFromYAMLFile& info,
+                                ModelListFromYAMLFile& list,
+                                LoggingTarget* logging_target);
+
     void dumpMatrixTo(const char* name, ModelInfoFromYAMLFile& info,
                       const StringMatrix& matrix,
                       int rank,

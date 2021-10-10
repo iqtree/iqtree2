@@ -394,6 +394,15 @@ bool ModelInfoFromName::hasRateHeterotachy() const {
     return findSubStr(model_name, "+H", "*H") != std::string::npos;
 }
 
+bool ModelInfoFromName::isDivergentModel() const {
+    return false;
+    //Todo: should be return startsWith(model_name, "DIV");
+    //But then other code needs to be written, to create
+    //a ModelDivergent for models that start with "DIV",
+    //just like the existing code that creates 
+    //a ModelMixture for models that strat with "MIV".
+}
+
 bool ModelInfoFromName::isFreeRate() const {
     return findSubStr(model_name, "+R", "*R") != std::string::npos;
 }

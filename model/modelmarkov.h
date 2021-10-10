@@ -481,8 +481,6 @@ public:
 	 */
 	virtual void setNumberOfVariableRates(int param_count);
 
-protected:
-
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 
 		into a vector that is index from 1 (NOTE: not from 0)
@@ -498,6 +496,7 @@ protected:
 	*/
 	virtual bool getVariables(const double *variables) override;
 
+protected:
 
 	/**
 	 * Called from getVariables to update the rate matrix for the new

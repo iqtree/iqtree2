@@ -420,11 +420,12 @@
     range:             0.01 .. 0.99
     tolerance:         0.01
   model_mixture:               # mixture components defined in this section
-  - subclassedmodel:   YJC
-    frommodel:         YJC     # 1st component from JC model
-    weight:            w(1)    # weight parameter
-  - substitutionmodel: DIVERGENT
-    weight:            w(2)
+  - substitution_model: F_YJC
+    frommodel:          YJC     # 1st component from JC model
+    weight:             w(1)    # weight parameter
+  - substitution_model: F_DIV
+    frommodel:          DIVERGENT
+    weight:             w(2)
 
   
 #Note: linked_models and tree_mixture are not parsed as yet.

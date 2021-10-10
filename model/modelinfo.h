@@ -46,6 +46,7 @@ public:
     virtual bool hasAscertainmentBiasCorrection()  const = 0;
     virtual bool hasRateHeterotachy()              const = 0;
     
+    virtual bool isDivergentModel()                const = 0;
     virtual bool isFreeRate()                      const = 0;
     virtual bool isFrequencyMixture()              const = 0;
     virtual bool isGammaModel()                    const = 0;
@@ -101,6 +102,7 @@ public:
     virtual bool hasAscertainmentBiasCorrection()  const override;
     virtual bool hasRateHeterotachy()              const override;
     
+    virtual bool isDivergentModel()                const override;
     virtual bool isFreeRate()                      const override;
     virtual bool isFrequencyMixture()              const override;
     virtual bool isGammaModel()                    const override;

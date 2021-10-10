@@ -289,10 +289,11 @@ private:
 
     //Only of relevance for child modules in mixtures
     ModelInfoFromYAMLFile* parent_model;
-    MapOfModels*           mixed_models;   //nullptr, except for model mixtures
     MapOfModels*           linked_models;  //nullptr, except for tree mixtures
+    MapOfModels*           mixed_models;   //nullptr, except for model mixtures
     std::string            weight_formula; //formula for deciding on weight
     double                 model_weight;   //weight
+    MapOfModels*           subtree_models; //nullptr, except for divergent models
 
     //Set if a subsitution model has a specified rate model
     ModelInfoFromYAMLFile* specified_rate_model_info;
@@ -359,6 +360,7 @@ public:
     virtual bool hasRateHeterotachy()              const override;
     virtual bool hasSpecifiedRateModel()           const;
 
+    virtual bool isDivergentModel()                const override;
     virtual bool isFreeRate()                      const override { return false; /*stub*/ }
     virtual bool isFrequencyMixture()              const override { return false; /*stub*/ }
     virtual bool isGammaModel()                    const override;
@@ -410,6 +412,7 @@ public:
     void breakAtDot(const char* name, std::string& sub_model_name,
                     const char*& remainder)                             const;
     MapOfModels::const_iterator findMixedModel(const std::string& name) const;
+    MapOfModels::const_iterator findSubtreeModel(const std::string& name) const;
 
     //Initialization helper functions
     void setNumberOfStatesAndSequenceType(int requested_num_states,
@@ -451,6 +454,7 @@ public:
                                        double* likelihoods);
 
     //Variables
+    const ModelInfoFromYAMLFile::Variables& getVariables() const;
     const ModelVariable* getVariableByName(const char*        name) const;
     const ModelVariable* getVariableByName(const std::string& name) const;
     bool   hasVariable     (const char* name)        const;
@@ -542,6 +546,10 @@ public:
     const MapOfModels& getMixedModels() const;
     void copyVariablesFrom(const ModelInfoFromYAMLFile* original);
     void setParentModel(ModelInfoFromYAMLFile* parent);
+
+    //Divergent Model stuff
+    MapOfModels& getSubtreeModels();
+    const MapOfModels& getSubtreeModels() const;
 
     //Rate-Only stuff
     const std::string& getOptimizationAlgorithm() const;
@@ -637,6 +645,12 @@ public:
                                         ModelsBlock*  models_block, 
                                         PhyloTree*    tree, 
                                         PhyloTree*    report_to_tree);
+
+    static ModelMarkov* getDivergentModel
+        ( ModelInfoFromYAMLFile& model_info,
+          const std::string& parameter_list, 
+          StateFreqType freq_type, ModelsBlock*  models_block, 
+          PhyloTree*    tree,      PhyloTree*    report_to_tree);
 
     static void insistOnAlignmentSequenceType(const Alignment* alignment, 
                                               SeqType desired_type);

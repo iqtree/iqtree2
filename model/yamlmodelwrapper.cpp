@@ -179,6 +179,64 @@ void YAMLModelMixture::afterWeightsChanged() {
     }
 }
 
+YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
+                                       bool          make_copy, const char*  model_name, 
+                                       StateFreqType freq,      ModelsBlock* models_block,
+                                       PhyloTree*    tree,      PhyloTree*   report_to_tree)
+    : super(info, make_copy, tree, report_to_tree) {
+    //as per init() and initMixture()
+    ASSERT(info.isDivergentModel());
+
+    StateFreqType old_freq = info.getFrequencyType();
+    StateFreqType new_freq = old_freq;
+    if (new_freq == StateFreqType::FREQ_UNKNOWN) {
+        new_freq = freq;
+    }
+    if (new_freq == StateFreqType::FREQ_UNKNOWN) {
+        new_freq = StateFreqType::FREQ_USER_DEFINED;
+    }
+    info.setFrequencyType(new_freq);
+
+    bool optimize_weights = false;
+
+    const std::string no_parameters; //parameters are passed to the mixture.
+    full_name  = "DIV";
+    full_name += OPEN_BRACKET;
+    const char* separator = "";
+    DoubleVector weights;
+    for (auto child: model_info->getMixedModels()) {
+        auto model = ModelListFromYAMLFile::getModelByReference
+                    (*child, tree, info.getFrequencyType(),
+                    models_block, no_parameters, 
+                    report_to_tree);
+        subtree_models.push_back(model);
+        full_name += separator;
+        full_name += child->getName();
+        separator = ",";
+    }
+    full_name += CLOSE_BRACKET;
+
+    TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity, 
+                  "optimize_weights=" << optimize_weights);
+
+    checkModelReversibility();
+    decomposeRateMatrix();
+
+    phylo_tree = tree;
+
+    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
+
+    //Copy rate variables
+    for (auto v: model_info->getVariables()) {
+        if (v.second.getType() == ModelParameterType::RATE) {
+            if (!v.second.isFixed()) {
+                own_parameters.emplace_back(v.second);
+            }
+        }
+    }
+    setRateMatrixFromModel();
+}
+
 YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
                            ModelInfoFromYAMLFile& info)
         : super(info, report_to_tree) {

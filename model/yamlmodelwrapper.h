@@ -29,6 +29,7 @@
 
 #include "modelexpression.h"       //for ModelExpression::InterpretedExpression
 
+#include "modeldivergent.h"        //for ModelDivergent
 #include "modeldna.h"              //for ModelDNA
 #include "modeldnaerror.h"         //for ModelDNAError
 #include "modelprotein.h"          //for ModelProtein
@@ -489,6 +490,17 @@ public:
     virtual void setRateMatrixFromModel() override;
     virtual void afterVariablesChanged() override;
     virtual void afterWeightsChanged() override;
+};
+
+class YAMLModelDivergent:public YAMLModelWrapper<ModelDivergent> {
+protected:
+    //Pointers to the information associated with each of the models
+public:
+    typedef YAMLModelWrapper<ModelDivergent> super;
+    YAMLModelDivergent(ModelInfoFromYAMLFile& info, bool make_copy,              
+                       const char* model_name, StateFreqType freq,
+                       ModelsBlock* models_block, PhyloTree *tree, 
+                       PhyloTree* report_to_tree);
 };
 
 template <class R> class YAMLRateModelWrapper: public R {

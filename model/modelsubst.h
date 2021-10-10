@@ -111,6 +111,8 @@ public:
 	virtual bool isSiteSpecificModel() const { return false; }
 
 
+	virtual bool isDivergentModel() const { return false; }
+
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */

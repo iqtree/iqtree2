@@ -187,8 +187,9 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
     , reversible(false), rate_matrix_rank(0)
     , tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
-    , parent_model(nullptr), mixed_models(nullptr)
-    , linked_models(nullptr), weight_formula("1"), model_weight(1.0) 
+    , parent_model(nullptr), linked_models(nullptr)
+    , mixed_models(nullptr), weight_formula("1"), model_weight(1.0)
+    , subtree_models(nullptr)
     , specified_rate_model_info(nullptr) {
 }
 
@@ -204,6 +205,12 @@ void ModelInfoFromYAMLFile::copyMixedAndLinkedModels
     linked_models = nullptr;
     if (rhs.linked_models != nullptr) {
         linked_models = new MapOfModels(*rhs.linked_models);
+    }
+
+    delete subtree_models;
+    subtree_models = nullptr;
+    if (rhs.subtree_models != nullptr) {
+        subtree_models = new MapOfModels(*rhs.subtree_models);
     }
 
     delete specified_rate_model_info;
@@ -230,9 +237,9 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , tip_likelihood_formula(rhs.tip_likelihood_formula)
     , parameters(rhs.parameters), frequency_type(rhs.frequency_type)
     , variables(rhs.variables), parent_model(rhs.parent_model)
-    , mixed_models(nullptr), linked_models(nullptr)
+    , linked_models(nullptr), mixed_models(nullptr)
     , weight_formula(rhs.weight_formula), model_weight(rhs.model_weight)
-    , specified_rate_model_info(nullptr) {
+    , subtree_models(nullptr), specified_rate_model_info(nullptr) {
     copyMixedAndLinkedModels(rhs);
 }
 
@@ -274,9 +281,9 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const std::string& path)
     , num_states(0), reversible(true)
     , rate_matrix_rank(0), tip_likelihood_rank(0)
     , frequency_type(StateFreqType::FREQ_UNKNOWN)
-    , parent_model(nullptr), mixed_models(nullptr)
-    , linked_models(nullptr), model_weight(1.0)
-    , specified_rate_model_info(nullptr) {
+    , parent_model(nullptr), linked_models(nullptr)
+    , mixed_models(nullptr), model_weight(1.0)
+    , subtree_models(nullptr), specified_rate_model_info(nullptr) {
 }
 
 ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
@@ -284,6 +291,8 @@ ModelInfoFromYAMLFile::~ModelInfoFromYAMLFile() {
     mixed_models = nullptr;
     delete linked_models;
     linked_models = nullptr;
+    delete subtree_models;
+    subtree_models = nullptr;
     delete specified_rate_model_info;
     specified_rate_model_info = nullptr;
 }
@@ -323,6 +332,10 @@ bool ModelInfoFromYAMLFile::isKategoryModel()  const {
     
 bool ModelInfoFromYAMLFile::isMixtureModel() const {
     return mixed_models != nullptr;
+}
+
+bool ModelInfoFromYAMLFile::isDivergentModel() const {
+    return subtree_models != nullptr;
 }
 
 bool ModelInfoFromYAMLFile::isModelFinder() const {
@@ -377,8 +390,21 @@ ModelInfoFromYAMLFile::findMixedModel(const std::string& name) const {
     auto it = mixed_models->find(name);
     if (it == mixed_models->end()) {
         std::stringstream complaint;
-        complaint << "Could not evaluate mixedl model name " << name
-            << " for model " << getLongName();
+        complaint << "Could not evaluate mixed model name " << name
+                  << " for model " << getLongName();
+        throw ModelExpression::ModelException(complaint.str());
+    }
+    return it;
+}
+
+MapOfModels::const_iterator
+    ModelInfoFromYAMLFile::findSubtreeModel
+        (const std::string& name) const {
+    auto it = subtree_models->find(name);
+    if (it == subtree_models->end()) {
+        std::stringstream complaint;
+        complaint << "Could not evaluate subtree model name " << name
+                  << " for model " << getLongName();
         throw ModelExpression::ModelException(complaint.str());
     }
     return it;
@@ -506,7 +532,14 @@ void  ModelInfoFromYAMLFile::moveParameterToBack
     parameters[i] = lift;
 }
 
-const ModelVariable* ModelInfoFromYAMLFile::getVariableByName(const char* name) const {
+const ModelInfoFromYAMLFile::Variables& 
+    ModelInfoFromYAMLFile::getVariables() const {
+    return variables;
+}
+
+const ModelVariable* 
+    ModelInfoFromYAMLFile::getVariableByName
+        (const char* name) const {
     //Todo: look up linked_models too
     if (hasDot(name) && mixed_models != nullptr ) {
         std::string sub_model_name;
@@ -938,14 +971,23 @@ ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,
     auto it = variables.find(var_name);
     if (it == variables.end()) {
         //Todo: look up linked_models too
-        if (hasDot(var_name.c_str()) && mixed_models != nullptr) {
+        bool dotted = hasDot(var_name.c_str());
+        if (dotted) {
             std::string sub_model_name;
             const char* sub_model_var_name = nullptr;
             breakAtDot(var_name.c_str(), sub_model_name,
-                sub_model_var_name);
-            auto it_model = findMixedModel(sub_model_name);
-            return (*it_model)->assign(std::string(sub_model_var_name),
-                                 value_to_set);
+                       sub_model_var_name);
+        
+            if (subtree_models != nullptr) {
+                auto it_model = findSubtreeModel(sub_model_name);
+                return (*it_model)->assign(std::string(sub_model_var_name),
+                                    value_to_set);
+            }
+            if (mixed_models != nullptr) {
+                auto it_model = findMixedModel(sub_model_name);
+                return (*it_model)->assign(std::string(sub_model_var_name),
+                                    value_to_set);
+            }
         }
         std::stringstream complaint;
         complaint << "Could not assign"
@@ -962,17 +1004,25 @@ ModelVariable& ModelInfoFromYAMLFile::forceAssign(const std::string& var_name,
     auto it = variables.find(var_name);
     if (it == variables.end()) {
         //Todo: look up linked_models too
-        if (hasDot(var_name.c_str()) && mixed_models != nullptr) {
+        bool dotted = hasDot(var_name.c_str());
+        if (dotted) {
             std::string sub_model_name;
             const char* sub_model_var_name = nullptr;
             breakAtDot(var_name.c_str(), sub_model_name,
                 sub_model_var_name);
-            auto it_model = findMixedModel(sub_model_name);
-            return (*it_model)->forceAssign(std::string(sub_model_var_name),
-                                          value_to_set);
+            if (subtree_models != nullptr) {
+                auto it_model = findSubtreeModel(sub_model_name);
+                return (*it_model)->forceAssign(std::string(sub_model_var_name),
+                                                value_to_set);
+            }
+            else if (mixed_models != nullptr) {
+                auto it_model = findMixedModel(sub_model_name);
+                return (*it_model)->forceAssign(std::string(sub_model_var_name),
+                                                value_to_set);
+            }
         }
         ModelVariable var(ModelParameterType::OTHER,
-            ModelParameterRange(), value_to_set);
+                          ModelParameterRange(), value_to_set);
         variables[var_name] = var;
         it = variables.find(var_name);
     }
@@ -1324,6 +1374,19 @@ bool ModelInfoFromYAMLFile::appendParameterList(ModelParameterType param_type,
                     complaint << "Variable " << var_name << " not found ";
                     outError(complaint.str());
                 }
+            }
+        }
+    }
+
+    if (this->subtree_models != nullptr) {
+        for (ModelInfoFromYAMLFile* model : *subtree_models) {
+            std::stringstream sub_list;
+            sub_list << separator << model->getName();
+            sub_list << "={";
+            if (model->appendParameterList(param_type, sub_list)) {
+                list << sub_list.str() << "}";
+                separator = ", ";
+                anything_listed = true;
             }
         }
     }
@@ -1828,6 +1891,16 @@ const MapOfModels& ModelInfoFromYAMLFile::getMixedModels() const {
     return *mixed_models;
 }
 
+MapOfModels& ModelInfoFromYAMLFile::getSubtreeModels() {
+    ASSERT(subtree_models!=nullptr);
+    return *subtree_models;
+}
+
+const MapOfModels& ModelInfoFromYAMLFile::getSubtreeModels() const {
+    ASSERT(subtree_models!=nullptr);
+    return *subtree_models;
+}
+
 void ModelInfoFromYAMLFile::copyVariablesFrom(const ModelInfoFromYAMLFile* original) {
     for (auto it = original->variables.begin();
          it != original->variables.end(); ++it) {
@@ -1998,7 +2071,6 @@ bool isYAMLRateHeterotachyModel
         (Params& params, const std::string& model_name, 
          int& num_mixlen) {
     if (model_name.empty()) {
-        //std::cout << "XX model" << std::endl;
         return false; //no model
     }
     auto yaml_path = params.yaml_model_file;

@@ -3,32 +3,43 @@
 #ifndef model_divergent_h
 #define model_divergent_h
 
-#include "modelsubst.h"
+#include "modelmarkov.h"
 #include "modelinfofromyamlfile.h" //for ModelVariable class
 
-class ModelDivergent: public ModelSubst {
+class ModelDivergent: public ModelMarkov {
 
     //Consistency restrictions: Ascertainment biases have
     //to agree, all must be reversible (or all not).
 
 protected:
-    std::vector<ModelSubst*>   subtree_models;
+    std::vector<ModelMarkov*>  subtree_models;
     std::vector<ModelVariable> own_parameters;
-    PhyloTree* phylo_tree; //Set by setTree(), and used in
-                           //decomposeRateMatrix() member function.
-    int optimize_steps;
+    //PhyloTree* phylo_tree; //Set by setTree(), and used in
+    //                       //decomposeRateMatrix() member function.
+    int        optimize_steps;
 
 public:
-    typedef ModelSubst super;
-    explicit ModelDivergent(int nstates);
+    typedef ModelMarkov super;
+    ModelDivergent();
+    ModelDivergent(PhyloTree* tree, 
+                   PhyloTree* report_to_tree);
+
     virtual ~ModelDivergent();
+
+    virtual bool isDivergentModel() const override;
 	virtual void setTree(PhyloTree *tree) override;      //for each subtree model
+
+    virtual void checkModelReversibility(); 
+
+    virtual void setNumberOfVariableRates(int param_count) override;
 	virtual void setNumberOfStates(int states) override; //for each subtree model
 	virtual bool getSpecifiedAscertainmentBiasCorrection(ASCType& asc_type) override;
 	virtual int  getNDim()           const override;
 	virtual int  getNDimFreq()       const override;
     virtual bool isReversible()      const override;
     virtual int  getNumRateEntries() const override;
+    virtual int  getNumberOfRates()  const override;
+
 	virtual double computeTrans(double time, int model_id, 
                                 int state1, int state2) const override;
 	virtual double computeTrans(double time, int model_id, 
@@ -37,22 +48,25 @@ public:
 	virtual void   getStateFrequency(double *state_freq, 
 	                                 int mixture = 0) const override;
     virtual void   setStateFrequency(double *state_freq) override;
+    virtual bool   scaleStateFreq() override;
+    virtual void   setRateMatrix(double* rate_mat) override;
+    virtual void   setRateMatrixFromModel() override;
     virtual void   decomposeRateMatrix() override;
     virtual void   setOptimizeSteps(int optimize_steps) override;
 	virtual double optimizeParameters(double gradient_epsilon,
                                       PhyloTree* report_to_tree) override;
-	virtual void setBounds(double *lower_bound, double *upper_bound, 
-                           bool *bound_check) override;
-	virtual void setVariables(double *variables) override;
-	virtual bool getVariables(const double *variables) override;
-	virtual void afterVariablesChanged() override;
-	virtual bool isUnstableParameters()  const override;
-	virtual void writeInfo(ostream &out) override;
-	virtual void report(ostream &out)    override;
+	virtual void   setBounds(double *lower_bound, double *upper_bound, 
+                             bool *bound_check) override;
+	virtual void   setVariables(double *variables) override;
+	virtual bool   getVariables(const double *variables) override;
+	virtual void   afterVariablesChanged() override;
+	virtual bool   isUnstableParameters()  const override;
+	virtual void   writeInfo(ostream &out) override;
+	virtual void   report(ostream &out)    override;
     virtual uint64_t getMemoryRequired() const override;
-    virtual void startCheckpoint()       override;
-    virtual void saveCheckpoint()        override;
-    virtual void restoreCheckpoint()     override;
+    virtual void   startCheckpoint()       override;
+    virtual void   saveCheckpoint()        override;
+    virtual void   restoreCheckpoint()     override;
 
     //Member functions that are not (as yet?) overridden:
     #if (0)

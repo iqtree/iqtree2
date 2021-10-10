@@ -3,27 +3,63 @@
 #include "modelmarkov.h"    //for RATE_TOL
 #include <tree/phylotree.h> //for PhyloTree::vector_size
 
-ModelDivergent::ModelDivergent(int nstates): super(nstates),
-    phylo_tree(nullptr), optimize_steps(0) {
+ModelDivergent::ModelDivergent(): super(), optimize_steps(0) {
     //If it's still zero when optimizeParameters() is called
 }
 
+ModelDivergent::ModelDivergent(PhyloTree* tree, 
+                               PhyloTree* report_to_tree): 
+    super(tree, report_to_tree),
+    optimize_steps(0) {
+    //If it's still zero when optimizeParameters() is called
+}
+
+
 ModelDivergent::~ModelDivergent() {
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         delete subtree_model;
     }
     subtree_models.clear();
 }
 
+bool ModelDivergent::isDivergentModel() const {
+    return true;
+}
+
 void ModelDivergent::setTree(PhyloTree *tree) {
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setTree(tree);
     }
     phylo_tree = tree;
 }
 
+void ModelDivergent::checkModelReversibility() {
+    // check reversibility
+    int subtree_count = static_cast<int>(subtree_models.size());
+    ASSERT(0<subtree_count);
+    bool rev      = subtree_models.front()->isReversible();
+    bool err      = false;
+    for (int i = 1; i < subtree_count; ++i) {
+        if (subtree_models[i]->isReversible() != rev) {
+            cerr << "ERROR: Model " << subtree_models[i]->name 
+                 << " has different reversible property" << endl;
+            err = true;
+        }
+    }
+    if (err) {
+        outError("Model reversibility is not consistent");
+    }
+    if (rev != isReversible()) {
+        setReversible(rev);
+    }
+}
+
+void ModelDivergent::setNumberOfVariableRates(int param_count) {
+    num_params = param_count;
+}
+
 void ModelDivergent::setNumberOfStates(int states) {
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setNumberOfStates(states);
     }
 }
@@ -36,7 +72,7 @@ bool ModelDivergent::getSpecifiedAscertainmentBiasCorrection
 
 int  ModelDivergent::getNDim()     const {
     int parameters = static_cast<int>(own_parameters.size());
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         parameters += subtree_model->getNDim();
     }
     return parameters;
@@ -45,7 +81,7 @@ int  ModelDivergent::getNDim()     const {
 int  ModelDivergent::getNDimFreq() const {
     int frequency_parameters = 0; 
     //Note: Can't have its own frequency parameters... yet.
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         frequency_parameters += subtree_model->getNDimFreq();
     }
     return frequency_parameters;
@@ -59,6 +95,13 @@ bool ModelDivergent::isReversible() const {
 int  ModelDivergent::getNumRateEntries() const {
     ASSERT(!subtree_models.empty());
     return subtree_models[0]->getNumRateEntries();
+}
+
+int  ModelDivergent::getNumberOfRates() const {
+    int num_rates = 0;
+    for (ModelMarkov* subtree_model : subtree_models) {
+        num_rates += subtree_model->getNumberOfRates();
+    }
 }
 
 int  ModelDivergent::getTransMatrixSize() const  { 
@@ -92,16 +135,30 @@ void ModelDivergent::getStateFrequency(double *state_freq,
 
 void ModelDivergent::setStateFrequency(double *state_freq) {
     //Todo: But... wouldn't it be better for this to ASSERT(0)
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setStateFrequency(state_freq);
     }
+}
+
+bool ModelDivergent::scaleStateFreq() {
+    return true;
+}
+
+void ModelDivergent::setRateMatrix(double* rate_mat) {
+    ASSERT(0 && "Cannot set RateMatrix of ModelDivergent");
+}
+
+void ModelDivergent::setRateMatrixFromModel() {
+     for (ModelMarkov* subtree_model : subtree_models) {
+        subtree_model->setRateMatrixFromModel();
+    }   
 }
 
 void ModelDivergent::decomposeRateMatrix() {
     if (subtree_models.empty()) {
         return;
     }
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->decomposeRateMatrix();
     }
     ASSERT(phylo_tree != nullptr);
@@ -169,7 +226,7 @@ void ModelDivergent::setBounds(double* lower_bound, double* upper_bound,
         ++i;
     }
     int offset = static_cast<int>(own_parameters.size());
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setBounds(lower_bound+offset, 
                                  upper_bound+offset,
                                  bound_check+offset);
@@ -183,7 +240,7 @@ void ModelDivergent::setVariables(double *variables) {
         variables[offset+1] = p.getValue();
         ++offset;
     }
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setVariables(variables+offset);
         offset+= subtree_model->getNDim();
     }
@@ -202,7 +259,7 @@ bool ModelDivergent::getVariables(const double *variables) {
         p.setValue(newValue);
         ++offset;
     }
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         changed |= subtree_model->getVariables(variables+offset);
         offset  += subtree_model->getNDim();
     }
@@ -211,14 +268,14 @@ bool ModelDivergent::getVariables(const double *variables) {
 
 
 void ModelDivergent::afterVariablesChanged() {
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->afterVariablesChanged();
     }
 }
 
 bool ModelDivergent::isUnstableParameters() const {
     bool unstable = false;
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         if (subtree_model->isUnstableParameters()) {
             unstable = true;
         }
@@ -236,7 +293,7 @@ void ModelDivergent::report(ostream &out) {
 
 uint64_t ModelDivergent::getMemoryRequired() const {
     uint64_t mem_needed = own_parameters.size() * sizeof(double);
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         mem_needed += subtree_model->getMemoryRequired();
     }
     return mem_needed;
@@ -251,7 +308,7 @@ void ModelDivergent::startCheckpoint() {
 void ModelDivergent::saveCheckpoint() {
     startCheckpoint();
     int model_num = 1;
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         auto model_num_string = convertIntToString(model_num);
         checkpoint->startStruct("Model" + model_num_string);
         subtree_model->saveCheckpoint();
@@ -264,7 +321,7 @@ void ModelDivergent::saveCheckpoint() {
 void ModelDivergent::restoreCheckpoint() {
     startCheckpoint();
     int model_num = 1;
-    for (ModelSubst* subtree_model : subtree_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
         auto model_num_string = convertIntToString(model_num);
         checkpoint->startStruct("Model" + model_num_string);
         subtree_model->restoreCheckpoint();

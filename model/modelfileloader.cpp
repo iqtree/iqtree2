@@ -516,6 +516,26 @@ void ModelFileLoader::parseYAMLMixtureModels(Params& params,
     }
 }
 
+void ModelFileLoader::parseYAMLSubtreeModels
+        (Params& params, const YAML::Node& subtree_models,
+         ModelInfoFromYAMLFile& info, ModelListFromYAMLFile& list,
+         LoggingTarget* logging_target) {
+    TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, 
+                  "Processing subtree models" );
+    info.subtree_models = new MapOfModels();
+    for (const YAML::Node& model: subtree_models) {
+        std::string child_model_name = 
+            stringScalar(model, "substitutionmodel", "");
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, 
+                      "Processing subtree model" );
+        ModelInfoFromYAMLFile* child_info = 
+            new ModelInfoFromYAMLFile(info.model_file_path);
+        parseYAMLModel(params, model, child_model_name, *child_info,
+                       list, &info, logging_target);
+        info.subtree_models->insert( child_model_name, child_info );
+    }
+}
+
 void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
                                                 ModelInfoFromYAMLFile& info,
                                                 LoggingTarget* logging_target) {
@@ -1016,9 +1036,10 @@ void ModelFileLoader::parseYAMLModel(Params &params,
     //
     auto rateMatrix = substitution_model["rateMatrix"];
     if (info.rate_matrix_expressions.empty() && 
-        info.rate_matrix_formula.empty() && !info.isMixtureModel() &&
-        !info.is_modifier_model && info.linked_models==nullptr && 
-        !info.is_rate_model) {
+        info.rate_matrix_formula.empty() && 
+        !info.isMixtureModel() && !info.is_modifier_model && 
+        !info.isDivergentModel() &&
+        info.linked_models==nullptr && !info.is_rate_model) {
         complainIfNot(rateMatrix, "Model " + info.model_name +
                       " in file " + file_path +
                       " does not specify a rateMatrix" );
@@ -1077,6 +1098,19 @@ void ModelFileLoader::parseYAMLSubModels(Params& params,
                                          ModelInfoFromYAMLFile& info,
                                          ModelListFromYAMLFile& list,
                                          LoggingTarget* logging_target) {
+    auto linked = substitution_model["linked_models"];
+    if (linked) {
+        complainIfSo(info.is_rate_model,
+                     "linked substitution models"
+                     " are not supported for rate models."
+                     " cannot parse model " + model_name +
+                      " in file " + file_path);
+        complainIfNot(linked.IsSequence(),
+                      "linked_models for model " + model_name +
+                      " in file " + file_path + " not a sequence");
+        //Todo: parseYAMLLinkedModels(linked, info, list, report_to_tree);
+    }
+
     //Mixtures have to be handled before constraints, as constraints
     //that are setting parameters in mixed models... would otherwise
     //not be resolved correctly.
@@ -1092,17 +1126,20 @@ void ModelFileLoader::parseYAMLSubModels(Params& params,
         parseYAMLMixtureModels(params, mixtures, info, list, logging_target);
     }
 
-    auto linked = substitution_model["linked_models"];
-    if (linked) {
+    //Subtree models have to be handled before constraints, 
+    //as constraints that are setting parameters in divergent
+    //models... would otherwise not be resolved correctly.
+    auto subtree_models = substitution_model["divergent_models"];
+    if (subtree_models) {
         complainIfSo(info.is_rate_model,
-                     "linked substitution models"
-                     " are not supported for rate models."
+                     "divergent rate models not supported."
                      " cannot parse model " + model_name +
                       " in file " + file_path);
-        complainIfNot(linked.IsSequence(),
-                      "linked_models for model " + model_name +
+        complainIfNot(subtree_models.IsSequence(),
+                      "divergent_models for model " + model_name +
                       " in file " + file_path + " not a sequence");
-        //Todo: parseYAMLLinkedModels(linked, info, list, report_to_tree);
+        parseYAMLSubtreeModels(params, subtree_models, 
+                               info, list, logging_target);
     }
 }
 
@@ -1175,7 +1212,8 @@ void ModelFileLoader::parseYAMLModelWeightAndScale
         //Todo: set the scale.
     }
 
-    if (info.parent_model!=nullptr) {
+    auto parent = info.parent_model;
+    if (parent!=nullptr && !parent->isDivergentModel()) {
         if (!scale) {
             //Default the scale
         }
