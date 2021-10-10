@@ -406,7 +406,8 @@ public:
      * @param dad node to define the subtree
      * @param nodeList (OUT) vector containing all nodes of the subtree
      */
-    void getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList);
+    void getAllNodesInSubtree(Node *node, Node *dad, 
+                              NodeVector &nodeList) const;
 
     /**
      * get number of taxa below the node

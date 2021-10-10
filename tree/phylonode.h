@@ -170,6 +170,11 @@ public:
 
     PhyloNeighbor* getNeighborByIndex(size_t index);
     
+    int  getSubsetNumber() const;
+    void setSubsetNumber(int subset_number);
+
+protected:
+    int subset;
 };
 
 class BlockAllocator;
@@ -303,7 +308,6 @@ public:
     inline void unclearPartialParsimony() {
         partial_lh_computed |= PARSIMONY_IS_COMPUTED;
     }
-
 
 	/**
 	 * true if this Neighbor is directed towards the root

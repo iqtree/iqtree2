@@ -381,7 +381,7 @@ SuperNode* PhyloSuperTree::newNode(int node_id, int node_name) {
     return new SuperNode(node_id, node_name);
 }
 
-SuperNode* PhyloSuperTree::getRoot() {
+SuperNode* PhyloSuperTree::getRoot() const {
 	return dynamic_cast<SuperNode*>(root);
 }
 

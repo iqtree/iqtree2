@@ -1330,7 +1330,7 @@ RateHeterogeneity *PhyloTree::getRate() const {
     return site_rate;
 }
 
-PhyloNode* PhyloTree::getRoot() {
+PhyloNode* PhyloTree::getRoot() const {
     return dynamic_cast<PhyloNode*>(root);
 }
 

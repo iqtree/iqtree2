@@ -196,7 +196,7 @@ public:
      */
     virtual SuperNode* newNode(int node_id, int node_name) override;
 
-    virtual SuperNode* getRoot() override;
+    virtual SuperNode* getRoot() const override;
 
 	/**
 	 *		@return number of alignment patterns

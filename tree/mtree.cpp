@@ -383,7 +383,8 @@ void MTree::printBranchLengths(ostream &out, Node *node, Node *dad)
         }
         out << "\t";
         if ((*it)->node->name != "") {
-            out << (*it)->node->name; }
+            out << (*it)->node->name; 
+        }
         else {
             out << (*it)->node->id;
         }
@@ -1169,7 +1170,8 @@ void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) const {
     }
 }
 
-void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
+void MTree::getAllNodesInSubtree(Node *node, Node *dad, 
+                                 NodeVector &nodeList) const {
     ASSERT(node);
     nodeList.push_back(node);
     if (node->isLeaf()) {

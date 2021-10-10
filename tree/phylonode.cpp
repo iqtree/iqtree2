@@ -151,31 +151,30 @@ void PhyloNode::clearAllPartialParsimony(bool set_to_null, PhyloNode* dad) {
     }
 }
 
-PhyloNode::PhyloNode()
- : Node()
+PhyloNode::PhyloNode() : Node(), subset(0)
 {
 	init();
 }
 
 
-PhyloNode::PhyloNode(int aid) : Node(aid)
+PhyloNode::PhyloNode(int aid) : Node(aid), subset(0)
 {
 	init();
 }
 
-PhyloNode::PhyloNode(int aid, int aname) : Node (aid, aname) {
+PhyloNode::PhyloNode(int aid, int aname) 
+    : Node (aid, aname), subset(0) {
 	init();
 }
 
-
-PhyloNode::PhyloNode(int aid, const char *aname) : Node(aid, aname) {
+PhyloNode::PhyloNode(int aid, const char *aname) 
+    : Node(aid, aname), subset(0) {
 	init();
 }
 
 void PhyloNode::init() {
 	//partial_lh = NULL;
 }
-
 
 void PhyloNode::addNeighbor(Node *node, double length, int id) {
 	neighbors.push_back(new PhyloNeighbor(node, length, id));
@@ -228,6 +227,14 @@ PhyloNeighbor* PhyloNode::lastNeighbor() const {
 PhyloNeighbor* PhyloNode::getNeighborByIndex(size_t index) {
     ASSERT(index < neighbors.size());
     return dynamic_cast<PhyloNeighbor*>(neighbors[index]);
+}
+
+int  PhyloNode::getSubsetNumber() const {
+    return subset;
+}
+
+void PhyloNode::setSubsetNumber(int subset_number) {
+    subset = subset_number;
 }
 
 PhyloBranch::PhyloBranch() : super(nullptr, nullptr) {}

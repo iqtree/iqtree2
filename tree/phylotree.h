@@ -332,8 +332,8 @@ Phylogenetic Tree class
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
-
+class PhyloTree : public MTree, public Optimization, 
+                  public CheckpointFactory {
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
 	friend class RateGamma;
@@ -573,7 +573,6 @@ public:
      */
     virtual void setRootNode(const char *my_root, bool multi_taxa = false);
 
-
     /**
             set the substitution model, important to compute the likelihood
             @param amodel associated substitution model
@@ -659,7 +658,7 @@ public:
     */
     virtual int getMixlen() { return 1; }
     
-    virtual PhyloNode* getRoot();
+    virtual PhyloNode* getRoot() const;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -1606,7 +1605,6 @@ public:
      *      printBranchLength true/false
      */
     string getTopologyString(bool printBranchLength);
-
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
@@ -2965,6 +2963,13 @@ protected:
     /** becomes true if/when user is warned about numerical underflow, during
         processing for this tree */
     bool warnedAboutNumericalUnderflow;
+
+
+    PhyloNodeVector getAllNodesInTree() const;
+
+    void setLeafSubsetNumbersFromAlignment();
+    
+    void computeSubsetNumbersForInternalNodes();
 
 };
         

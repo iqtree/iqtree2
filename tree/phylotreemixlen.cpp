@@ -98,7 +98,7 @@ void PhyloTreeMixlen::restoreCheckpoint() {
     }
 }
 
-PhyloNodeMixlen* PhyloTreeMixlen::getRoot() {
+PhyloNodeMixlen* PhyloTreeMixlen::getRoot() const {
     return dynamic_cast<PhyloNodeMixlen*>(root);
 }
 

@@ -58,7 +58,7 @@ public:
     */
     virtual void restoreCheckpoint() override;
 
-    virtual PhyloNodeMixlen* getRoot() override;
+    virtual PhyloNodeMixlen* getRoot() const override;
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
