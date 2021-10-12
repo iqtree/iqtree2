@@ -2373,6 +2373,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (strcmp(argv[cnt], "--modelomatic") == 0) {
+                if (params.use_nn_model)
+                    throw "Can't use options --modelomatic and --use-nn-model together";
                 params.modelomatic = true;
                 continue;
             }
@@ -4185,8 +4187,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             // added by TD
             // todo: give it a fancy name
             if (strcmp(argv[cnt], "--use-nn-model") == 0) {
+                if (params.modelomatic)
+                    throw "Can't use options --use-nn-model and --modelomatic together";
                 params.use_nn_model = true;
-                params.model_test_criterion = NN;
                 continue;
             }
 

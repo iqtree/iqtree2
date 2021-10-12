@@ -474,8 +474,6 @@ string criterionName(ModelTestCriterion mtc) {
 		return "AICc";
 	if (mtc == MTC_BIC)
 		return "BIC";
-	if (mtc == NN)
-	    return "the neural network";
 	return "";
 }
 
@@ -922,6 +920,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             string best_model_NN;
             CKP_RESTORE(best_model_NN);
             delete alignment;
+
+            cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to neural network" << endl;
         }
         else {
             if (params.openmp_by_model)
@@ -941,9 +941,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             cout << "Akaike Information Criterion:           " << best_model_AIC << endl;
             cout << "Corrected Akaike Information Criterion: " << best_model_AICc << endl;
             cout << "Bayesian Information Criterion:         " << best_model_BIC << endl;
+
+            cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
+                 << criterionName(params.model_test_criterion) << endl;
         }
-        cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
-            << criterionName(params.model_test_criterion) << endl;
     }
 
     delete models_block;
