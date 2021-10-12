@@ -98,9 +98,8 @@ double NeuralNetwork::doAlphaInference() {
     printf("Check whether heterogeneous (0) or homogeneous (1) = %f\n", check[0]);
 
     // print alpha value
-    printf("Alpha value =  %f\n", alpha[0] / 1000);
+    // printf("Alpha value =  %f\n", alpha[0] / 1000);
 
-    // TODO: check via ev_model or alpha value whether it is +G?
     if (check[0] > 0.5)
         return -1;
     return alpha[0] / 1000;
