@@ -2434,6 +2434,11 @@ public:
     *  TRUE to enable mixture model at substitution level
     */
     bool alisim_mixture_at_sub_level;
+    
+    /**
+    *  branch-scale factor
+    */
+    double alisim_branch_scale;
 };
 
 /**

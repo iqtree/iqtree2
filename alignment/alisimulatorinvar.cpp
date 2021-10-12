@@ -32,7 +32,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
-    model->computeTransMatrix(partition_rate * (*it)->length, trans_matrix);
+    model->computeTransMatrix(partition_rate * params->alisim_branch_scale * (*it)->length, trans_matrix);
     
     // convert the probability matrix into an accumulated probability matrix
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);

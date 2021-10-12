@@ -1414,6 +1414,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.delay_msgs = "";
     params.alisim_no_export_sequence_wo_gaps = false;
     params.alisim_mixture_at_sub_level = false;
+    params.alisim_branch_scale = 1.0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2502,6 +2503,15 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--sub-level-mixture") == 0) {
                 params.alisim_mixture_at_sub_level = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--branch-scale") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --branch-scale <SCALE>";
+                params.alisim_branch_scale = convert_double(argv[cnt]);
+                if (params.alisim_branch_scale <= 0)
+                    throw "<SCALE> must be positive!";
                 continue;
             }
             if (strcmp(argv[cnt], "--indel") == 0) {

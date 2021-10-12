@@ -147,7 +147,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
             double branch_length_by_category = rate_heterogeneity->isHeterotachy()?branch_lengths[category_index]:branch_lengths[0];
             
             // compute the transition matrix
-            model->computeTransMatrix(partition_rate*branch_length_by_category*rate, trans_matrix, model_index);
+            model->computeTransMatrix(partition_rate*params->alisim_branch_scale*branch_length_by_category*rate, trans_matrix, model_index);
             
             // copy the transition matrix to the cache_trans_matrix
             for (int trans_index = 0; trans_index < max_num_states*max_num_states; trans_index++)
@@ -182,7 +182,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state)
 {    
     // compute the transition matrix
-    model->computeTransMatrix(partition_rate*branch_length*rate, trans_matrix, model_component_index, dad_state);
+    model->computeTransMatrix(partition_rate*params->alisim_branch_scale*branch_length*rate, trans_matrix, model_component_index, dad_state);
     
     // iteratively select the state, considering it's dad states, and the transition_probability_matrix
     int starting_index = dad_state*max_num_states;
@@ -362,7 +362,6 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     else
     {
         (*it)->node->sequence.resize(sequence_length);
-        //double branch_length = indel_branch_length == -1 ? (*it)->length:indel_branch_length;
         int i, thread_id = 0;
 #ifdef _OPENMP
 #pragma omp parallel shared(trans_matrix) private(thread_id)

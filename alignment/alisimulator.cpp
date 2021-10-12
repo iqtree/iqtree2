@@ -728,7 +728,7 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
         
         // select the appropriate simulation method
         SIMULATION_METHOD simulation_method = RATE_MATRIX;
-        if (((*it)->length > params->alisim_simulation_thresh && !(model->isMixture() && params->alisim_mixture_at_sub_level))
+        if (((*it)->length * params->alisim_branch_scale > params->alisim_simulation_thresh && !(model->isMixture() && params->alisim_mixture_at_sub_level))
             || tree->getRate()->isHeterotachy()
             || (*it)->attributes["model"].length()>0)
             simulation_method = TRANS_PROB_MATRIX;
@@ -762,7 +762,7 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
         }
         
         // merge the simulated sequence with the indel_sequence
-        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->length >= 1.0/sequence_length && simulation_method == TRANS_PROB_MATRIX)
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->length > 0 && simulation_method == TRANS_PROB_MATRIX)
             mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
         
         // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
@@ -1422,7 +1422,7 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
 void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
 {
     // compute the transition probability matrix
-    model->computeTransMatrix(partition_rate * (*it)->length, trans_matrix);
+    model->computeTransMatrix(partition_rate * params->alisim_branch_scale * (*it)->length, trans_matrix);
     
     // convert the probability matrix into an accumulated probability matrix
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
@@ -1666,7 +1666,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
     
     indel_sequence = node->sequence;
     index_mapping_by_jump_step.resize(sequence_length + 1, 0);
-    double branch_length = (*it)->length;
+    double branch_length = (*it)->length * params->alisim_branch_scale;
     while (branch_length > 0)
     {
         // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
