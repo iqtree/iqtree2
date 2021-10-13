@@ -1407,8 +1407,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.branch_distribution = NULL;
     params.alisim_insertion_ratio = 0;
     params.alisim_deletion_ratio = 0;
-    params.alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,250);
-    params.alisim_deletion_distribution = IndelDistribution(ZIPF,1.7,250);
+    params.alisim_insertion_distribution = IndelDistribution(ZIPF,1.7,100);
+    params.alisim_deletion_distribution = IndelDistribution(ZIPF,1.7,100);
     params.alisim_mean_deletion_size = -1;
     params.alisim_simulation_thresh = 0.001;
     params.delay_msgs = "";

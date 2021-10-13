@@ -91,6 +91,16 @@ public:
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
 	virtual bool isMixture() { return false; }
+    
+    /**
+     * @return TRUE if this is a DNA error model, FALSE otherwise
+     */
+    virtual bool containDNAerror() { return false; }
+    
+    /**
+     * get the dna error probability, by default error probability = 0
+     */
+    virtual double getDNAErrProb(int mixture_index = 0) { return 0; }
 
     /** 
      * Confer to modelpomo.h.

@@ -280,6 +280,16 @@ protected:
     */
     void computeSimThresh(int seq_length);
     
+    /**
+        change state of sites due to Error model
+    */
+    void changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop);
+    
+    /**
+        handle DNA error
+    */
+    void handleDNAerr(double error_prop, vector<short int> &sequence, int model_index = -1);
+    
 public:
     
     IQTree *tree;

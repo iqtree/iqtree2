@@ -255,6 +255,30 @@ public:
     		mem += (*it)->getMemoryRequired();
     	return mem;
     }
+    
+    /**
+     * @return TRUE if this mixture model contains a DNA error model, FALSE otherwise
+     */
+    virtual bool containDNAerror()
+    {
+        if (contain_dna_error == -1)
+        {
+            contain_dna_error = 0;
+            for (iterator it = begin(); it != end(); it++)
+                if ((*it)->containDNAerror())
+                {
+                    contain_dna_error = 1;
+                    break;
+                }
+        }
+        
+        return contain_dna_error == 1;
+    }
+    
+    /**
+     * get the dna error probability, by default error probability = 0
+     */
+    virtual double getDNAErrProb(int mixture_index = 0) { return at(mixture_index)->getDNAErrProb(); }
 
 	/**
 		rates of mixture components
@@ -292,6 +316,11 @@ protected:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(double *variables);
+    
+    /**
+     * check whether the mixture model contains dna error model: -1: undefined; 0: FALSE; 1: TRUE
+     */
+    short int contain_dna_error = -1;
 
 };
 

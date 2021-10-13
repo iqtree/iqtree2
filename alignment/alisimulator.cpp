@@ -774,6 +774,24 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
                 permuteSelectedSites(fundi_items, (*it)->node);
         }
         
+        // handle dna error model
+        if (model->containDNAerror())
+        {
+            // only handle DNA error on leaf
+            if ((*it)->node->isLeaf())
+            {
+                // handle all model components one by one
+                if (model->isMixture())
+                {
+                    for (int i = 0; i < model->getNMixtures(); i++)
+                    handleDNAerr(model->getDNAErrProb(i), (*it)->node->sequence, i);
+                }
+                // otherwise, handle the DNA model
+                else
+                    handleDNAerr(model->getDNAErrProb(), (*it)->node->sequence);
+            }
+        }
+        
         // writing and deleting simulated sequence immediately if possible
         writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
         
@@ -2107,4 +2125,72 @@ void AliSimulator::computeSimThresh(int seq_length)
         // extract the threshold
         params->alisim_simulation_thresh = empirical_c[rate_type*4 + (log_seq_length - 3)]/seq_length;
     }
+}
+
+/**
+    change state of sites due to Error model
+*/
+void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop)
+{
+    // estimate the total of sites need to change
+    int num_changes = round(error_prop*sequence.size());
+    
+    // randomly select a site to change
+    for (int i = 0; i < num_changes; i++)
+    {
+        // throw error if the number of available sites is not sufficient
+        if (num_changes > sites.size())
+            outError("Cannot select a site for changing state (to simulate Sequencing Error Model). The proportion of error seems to be too high. You should try again with a smaller proportion of error!");
+        
+        // randomly select a site
+        int selected_index = random_int(sites.size());
+        int selected_site = sites[selected_index];
+        
+        // remove the selected_site from the set of available sites
+        sites.erase(sites.begin()+selected_index);
+        
+        // if the selected_site is a gap -> ignore and retry
+        if (sequence[selected_site] == STATE_UNKNOWN)
+            i--;
+        // otherwise, randomly select a new state
+        else
+        {
+            // select a new state
+            short int new_state = random_int(max_num_states);
+            while (new_state == sequence[selected_site])
+            {
+                new_state = random_int(max_num_states);
+            }
+            
+            // update the selected site
+            sequence[selected_site] = new_state;
+        }
+    }
+}
+
+/**
+    handle DNA error
+*/
+void AliSimulator::handleDNAerr(double error_prop, vector<short int> &sequence, int model_index)
+{
+    // dummy variables
+    vector<int> sites;
+    
+    // init vector of available sites
+    // extract available sites from site_specific_model if a mixture model is used
+    if (model_index >= 0 && site_specific_model_index.size()>0)
+    {
+        for (int i = 0; i < site_specific_model_index.size(); i++)
+        if (site_specific_model_index[i] == model_index)
+            sites.push_back(i);
+    }
+    // otherwise get all sites
+    else
+    {
+        sites.resize(site_specific_model_index.size());
+        std::iota(sites.begin(),sites.end(),0);
+    }
+    
+    // change state of sites due to Error model
+    changeSitesErrorModel(sites, sequence, error_prop);
 }
