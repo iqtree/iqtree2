@@ -330,6 +330,10 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
             // only set num_state if it has not yet set (noting that num_states of Morph could be set in partition file)
             if (tree->aln->num_states == 0)
                 tree->aln->num_states = params->alisim_num_states_morph;
+            
+            // throw error if users dont specify the number of states when simulating morph data
+            if (tree->aln->num_states <= 0)
+                outError("Please specify the number of states for morphological data by --seqtype MORPH{<NUM_STATES>}");
         break;
     case SEQ_POMO:
         throw "Sorry! SEQ_POMO is currently not supported";

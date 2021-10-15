@@ -1393,7 +1393,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_ancestral_sequence_aln_filepath = NULL;
     params.alisim_ancestral_sequence_name = "";
     params.alisim_max_rate_categories_for_applying_caching = 100;
-    params.alisim_num_states_morph = 32;
+    params.alisim_num_states_morph = 0;
     params.alisim_num_taxa_uniform_start = -1;
     params.alisim_num_taxa_uniform_end = -1;
     params.alisim_length_ratio = 2;
@@ -5291,6 +5291,7 @@ void usage_alisim(){
     << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
     << "  --distribution FILE       Supply the distribution definition file" << endl
     << "  --branch-distribution DIS Specify the distribution for randomly generating branch lengths" << endl
+    << "  --branch-scale SCALE      Specify a value to scale all branch lengths" << endl
     << "  --write-all               Enable writing internal sequences" << endl
     << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl

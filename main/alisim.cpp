@@ -849,6 +849,14 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 // initialize output file name
                 if (partition_count == super_tree->size())
                     partition_list = "";
+                else
+                {
+                    // instead of using partition_list, use data_type for output file names
+                    partition_list = "_"+super_tree->at(i)->aln->sequence_type;
+                    if (super_tree->at(i)->aln->seq_type == SEQ_MORPH)
+                        partition_list += convertIntToString(super_tree->at(i)->aln->getMaxNumStates());
+                }
+                
                 
                 //  get the num_leaves
                 int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);

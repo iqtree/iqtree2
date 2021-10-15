@@ -1052,8 +1052,26 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
     if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
 			outError("Close bracket not found at the end of ", model_str);
-		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-		model_str = model_str.substr(0, pos);
+        string tmp_str = model_str;
+        // extract model_name
+        model_str = model_str.substr(0, pos);
+        
+        // extract model params
+        size_t end_pos = tmp_str.find(CLOSE_BRACKET);
+		model_params = tmp_str.substr(pos+1, end_pos-pos-1);
+        
+        // extract freqs (if specified)
+        pos = tmp_str.find("+FQ");
+        if (pos != string::npos)
+            freq_type = FREQ_EQUAL;
+        pos = tmp_str.find("+F{");
+        if (pos != string::npos)
+        {
+            freq_type = FREQ_USER_DEFINED; 
+            tmp_str = tmp_str.substr(pos+3, tmp_str.length()-pos-3);
+            end_pos = tmp_str.find(CLOSE_BRACKET);
+            freq_params = tmp_str.substr(0, end_pos);
+        }
     }
 
 	/*
