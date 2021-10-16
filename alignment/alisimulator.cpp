@@ -104,6 +104,11 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             outError("Please supply a tree file by -t <TREE_FILEPATH>");
         tree->readTree(params->user_file, is_rooted);
         
+        // extract names of all taxa in the super tree if topology-unlinked partition is being used
+        vector<string> super_taxa_names;
+        if (params->partition_type == BRLEN_OPTIMIZE)
+            tree->getTaxaName(super_taxa_names);
+        
         // compute super_tree_length
         double super_tree_length = ((PhyloSuperTree*) tree)->treeLength();
         
@@ -123,11 +128,10 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             int tree_line_index = 0;
             if (params->partition_type == BRLEN_OPTIMIZE)
             {
-                tree_line_index = i+1;
+                tree_line_index = i;
                 // show information for the first time
                 if (i == 0)
                 {
-                    cout<<" The super tree (combining all taxa in all partitions) has been loaded from the first line of the input tree file."<<endl;
                     cout<<" Loading partition trees one by one. Each tree should be specified in a single line in the input tree file."<<endl;
                 }
             }
@@ -182,6 +186,58 @@ void AliSimulator::initializeIQTreeFromTreeFile()
                     num_sites += 3*current_tree->aln->getNSite();
                 else
                     num_sites += current_tree->aln->getNSite();
+            }
+            
+            // add missing taxa from the current partition tree to the super tree if topology-unlink partition is used
+            if (params->partition_type == BRLEN_OPTIMIZE && i > 0)
+            {
+                vector<string> taxa_names;
+                current_tree->getTaxaName(taxa_names);
+                
+                // iteratively check taxa (in the current tree) exist in the super tree -> if not -> adding new taxon into the super tree
+                for (string name: taxa_names)
+                    if (std::find(super_taxa_names.begin(), super_taxa_names.end(), name) == super_taxa_names.end())
+                    {
+                        
+                        // find a leaf
+                        ASSERT(super_taxa_names.size() > 0);
+                        int leaf_index = super_taxa_names.size() > 1?1:0;
+                        Node* leaf = tree->findLeafName(super_taxa_names[leaf_index]);
+                        if (!leaf || leaf->neighbors.size() == 0) continue;
+                        
+                        // extract leaf's dad
+                        Node* dad = leaf->neighbors[0]->node;
+                        
+                        // init an internal node
+                        Node *internal = new Node();
+                    
+                        // init a new node for the new taxon
+                        Node *new_taxon = new Node();
+                        new_taxon->name = name;
+                        
+                        // update neighbor of dad
+                        dad->updateNeighbor(leaf, internal, 0);
+                        leaf->updateNeighbor(dad, internal, 0);
+                        
+                        // add neighbors to internal
+                        internal->addNeighbor(dad, 0);
+                        internal->addNeighbor(leaf, 0);
+                        
+                        // add connection between the internal and the new taxon
+                        internal->addNeighbor(new_taxon, 0);
+                        new_taxon->addNeighbor(internal, 0);
+                        
+                        // update super_taxa_names
+                        super_taxa_names.push_back(name);
+                    }
+                
+                // update the super tree if new taxa were added
+                if (tree->leafNum != super_taxa_names.size())
+                {
+                    tree->leafNum = super_taxa_names.size();
+                    tree->nodeNum = tree->leafNum;
+                    tree->initializeTree();
+                }
             }
         }
         
