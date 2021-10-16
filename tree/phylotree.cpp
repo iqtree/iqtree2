@@ -19,28 +19,35 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "phylotree.h"
-#include "phylotreethreadingcontext.h"
-#include <distancematrixtree/starttree.h>
-#include <utils/progress.h>  //for progress_display
-#include <utils/stringfunctions.h> //for convert_string_vec
-//#include "rateheterogeneity.h"
-#include "alignment/alignmentpairwise.h"
-#include "alignment/alignmentsummary.h"
 #include <algorithm>
 #include <limits>
-#include "utils/timeutil.h"
-#include "utils/pllnni.h"
+
+#include "phylotree.h"
+
+#include "phylotreethreadingcontext.h"
+#include <distancematrixtree/starttree.h>
+
+#include <alignment/alignmentpairwise.h>
+#include <alignment/alignmentsummary.h>
+
+#include <utils/timeutil.h>
+#include <utils/pllnni.h>
+#include <utils/MPIHelper.h>
+#include <utils/hammingdistance.h>
+#include <utils/progress.h>  //for progress_display
+#include <utils/stringfunctions.h> //for convert_string_vec
+#include <utils/nametoidmap.h>     //for NameToIDMap
+
+#include <model/modelmixture.h>
+#include <model/modelfactory.h> //for readModelsDefinition
+
+#include <placement/parallelparsimonycalculator.h> //for ParallelParsimonyCalculator
+
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
-#include "utils/MPIHelper.h"
-#include "utils/hammingdistance.h"
-#include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
-#include "model/modelfactory.h" //for readModelsDefinition
-#include <placement/parallelparsimonycalculator.h> //for ParallelParsimonyCalculator
 
 #ifdef _MSC_VER
 #include <boost/scoped_array.hpp>
@@ -676,17 +683,6 @@ void PhyloTree::removeDeletedNodes(map<string, Node*>& mapNameToNode, bool will_
     //      (via an extra parameter to removeTaxa, perhaps?)
     doneDeletes(countRemoved, will_add);    
 }
-
-//Mapping names to ids
-class NameToIDMap: public std::map<std::string, int> {
-public:
-    explicit NameToIDMap(const vector<std::string>& src) {
-        int count = static_cast<int>(src.size());
-        for (int id = 0 ; id < count; ++id) {
-            operator[](src[id]) = id;
-        }
-    }
-};
 
 class UniqueSequenceMap: public std::map<HashedSequence,CountAndNames> {
     public:

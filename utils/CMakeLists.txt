@@ -15,7 +15,9 @@ stringfunctions.cpp stringfunctions.h
 timekeeper.cpp timekeeper.h
 timeutil.h hammingdistance.h safe_io.h
 operatingsystem.cpp operatingsystem.h my_assert.h
-vectortypes.cpp vectortypes.h)
+vectortypes.cpp vectortypes.h
+nametoidmap.cpp nametoidmap.h
+)
 
 if(ZLIB_FOUND)
   target_link_libraries(utils ${ZLIB_LIBRARIES})

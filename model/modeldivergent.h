@@ -16,7 +16,10 @@ protected:
     std::vector<ModelVariable> own_parameters;
     //PhyloTree* phylo_tree; //Set by setTree(), and used in
     //                       //decomposeRateMatrix() member function.
-    int        optimize_steps;
+    int                        catchall_model_number;
+    NameToIDMap                clade_to_model_number;
+    IntVector                  subset_to_model;
+    int                        optimize_steps;
 
 public:
     typedef ModelMarkov super;
@@ -116,7 +119,27 @@ public:
 	virtual double* getInverseEigenvectors()           const override;
     virtual double* getInverseEigenvectorsTransposed() const override;
 
+	virtual void getDivergentModels
+             (DivergentModels& div_models) override;
+
+    const std::string getSubtreeModelName(int model_number) const;
+
+    void identifyTaxonSubsets(Node* root,
+                              std::vector<IntVector>& subsets_for_models);
+
+    void identifyTaxonSubsets(intptr_t model_number,
+                              Node* node, Node* prev_node,
+                              std::vector<IntVector>& subsets_for_models);
+
+    bool mapTaxonSubsetsToModels(Node* root, int number_of_subsets,
+                                 const IntVector& taxon_to_subset);
+
+    bool mapTaxonSubsetsToModels(intptr_t model_number,
+                                 Node* root, Node* prev_node,
+                                 const char* current_clade,
+                                 const IntVector& taxon_to_subset);
 
 };
+
 
 #endif

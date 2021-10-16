@@ -20,14 +20,13 @@
 #ifndef MTREE_H
 #define MTREE_H
 
-#include "node.h"
-//#include "splitgraph.h"
-#include "pda/split.h"
 #include <iostream>
 #include <sstream>
+#include "node.h"
+#include "pda/split.h"
 #include "pda/hashsplitset.h"
 #include "pda/splitset.h"
-//#include "candidateset.h"
+#include <utils/nametoidmap.h>
 
 const char ROOT_NAME[] = "__root__"; // special name that does not occur elsewhere in the tree
 
@@ -159,7 +158,6 @@ public:
     virtual Node* newNode(int node_id = -1, const char* node_name = nullptr);
 
     virtual Node* newNode(int node_id, int node_name);
-
 
     /**
             @param node the starting node, nullptr to start from the root
@@ -326,6 +324,15 @@ public:
     virtual void readTree(istream &in, bool &is_rooted);
 
     /**
+            set ids of leaf nodes, according to the map
+            set ids of internal nodes, to number that did 
+            not appear in the map.
+            @param name_to_id map, from sequence name to id
+            @return the number of leaf nodes whose ids were set
+     */
+    intptr_t setNodeIdsFromMap(const NameToIDMap& name_to_id);
+
+    /**
             parse the tree from the input file in newick format
             @param infile the input file
             @param ch (IN/OUT) current char
@@ -466,8 +473,10 @@ public:
             @param[out] map, from taxon name to corresponding node
      */
 
-    void getMapOfTaxonNameToNode(Node* node, Node* dad
-                                 , map<string, Node*> &map);
+    typedef map<string, Node*> NameToNodeMap;
+
+    void getMapOfTaxonNameToNode(Node* node, Node* dad,
+                                 NameToNodeMap& map);
     
     /**
             get an array (indexed by id) of the leaf nodes in a subtree
@@ -861,6 +870,8 @@ public:
         @param dad dad of the node, used to direct the search
     */
     void getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad = nullptr);
+
+    Node* getRoot() const;
 
 	/********************************************************
             PROPERTIES OF TREE

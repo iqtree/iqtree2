@@ -37,19 +37,25 @@
 #define EIGEN_PARTIAL_LIKELIHOOD (1) //Set to 1 to turn it all back on
 
 #include "mtree.h"
+
 #include "alignment/alignment.h"
 #include "alignment/alignmentsummary.h"
+
 #include "model/modelsubst.h"
 #include "model/modelfactory.h"
-#include "phylonode.h"
-#include "utils/optimization.h"
 #include "model/rateheterogeneity.h"
+
+#include <pll/pll.h>
+
+#include <utils/optimization.h>
+#include <utils/checkpoint.h>
+#include <utils/nametoidmap.h>
+#include <utils/progress.h>
+
+#include "phylonode.h"
 #include "candidateset.h"
-#include "pll/pll.h"
-#include "utils/checkpoint.h"
 #include "constrainttree.h"
 #include "memslot.h"
-#include "utils/progress.h"
 #include "alignedalloc.h"
 #include "likelihoodbufferset.h"
 #include "nnimove.h"
@@ -319,7 +325,6 @@ struct SPRMove;
 class  SPRMoves;
 class  SimilarityTree;
 class  SimilarityNode;
-class  NameToIDMap;
 class  NameToNameMap;
 class  UniqueSequenceMap;
 
@@ -2971,6 +2976,7 @@ protected:
     
     void computeSubsetNumbersForInternalNodes();
 
+    void setUpSubtreesForDivergentModels(ModelSubst* top_model);
 };
         
 #endif

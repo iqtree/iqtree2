@@ -32,8 +32,7 @@ phylosupertreeunlinked.cpp
 phylosupertreeunlinked.h
 phylotree.cpp phylotreethreadingcontext.cpp
 phylotree.h   phylotreethreadingcontext.h
-phylotreemixlen.cpp
-phylotreemixlen.h
+phylotreemixlen.cpp phylotreemixlen.h
 phylotreepars.cpp parsimonyjoining.cpp similaritymatchingtree.cpp
 parsimonysearchparameters.cpp parsimonysearchparameters.h 
 phylotreesubset.cpp

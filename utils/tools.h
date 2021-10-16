@@ -746,6 +746,10 @@ public:
     /* type of starting tree */
     START_TREE_TYPE start_tree;
     std::string start_tree_subtype_name;
+
+    /* path of newick format file that describes the
+       divergence graph */
+    std::string divergence_graph_file_path;
     
     /** TRUE to infer fast ML tree for ModelFinder */
     bool modelfinder_ml_tree;

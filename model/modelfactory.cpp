@@ -499,7 +499,7 @@ void ModelFactory::initializeModel(const std::string& model_name,
                                    PhyloTree* tree,
                                    PhyloTree* report_to_tree) {
     /******************** initialize model ****************************/
-    bool is_mixture_model = model_info.isMixtureModel();
+    bool is_mixture_model   = model_info.isMixtureModel();
         
     if (tree->aln->site_state_freq.empty()) {
         if (is_mixture_model || 
@@ -516,7 +516,7 @@ void ModelFactory::initializeModel(const std::string& model_name,
             model = createModel(model_str, models_block, freq_type,
                                 freq_params, tree, report_to_tree);
         }
-        //fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+        tree->setUpSubtreesForDivergentModels(model);
     } else {
         // site-specific model
         if (model_str == "JC" || model_str == "POISSON") {
@@ -556,7 +556,9 @@ void ModelFactory::initializeModel(const std::string& model_name,
             }
             modeli->init(StateFreqType::FREQ_USER_DEFINED, 
                          report_to_tree);
+            //Note: For now, site-specific models may not be divergent
             models->addModel(modeli);
+
         }
         delete [] rates;
         delete [] state_freq;

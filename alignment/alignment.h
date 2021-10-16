@@ -17,11 +17,11 @@
 #include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
-#include "utils/gzstream.h"
+#include <utils/gzstream.h>
+#include <utils/nametoidmap.h>
 
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
-
 
 class PhyloTree;
 
@@ -153,7 +153,6 @@ public:
         */
     
     bool addPatternLazy(Pattern &pat, intptr_t site, int freq, bool& gaps_only);
-
     
     /**
             add a pattern into the alignment
@@ -164,7 +163,6 @@ public:
      */
     bool addPattern(Pattern &pat, int site, int freq = 1);
 
-    
     /**
         Update a bunch of patterns that have been added via addPatternLazy
      (by calling
@@ -172,13 +170,10 @@ public:
 
     void updatePatterns(intptr_t oldPatternCount);
     
-
-    
 	/**
 		determine if the pattern is constant. update the is_const variable.
 	*/
 	virtual void computeConst(Pattern &pat);
-
 
     void printSiteInfoHeader(ostream& out, const char* filename, bool partition = false);
     /**
@@ -310,14 +305,12 @@ public:
      */
     void ungroupSitePattern();
 
-
     /**
      * re-group site-patterns
      * @param groups number of groups
      * @param site_group group ID (0, 1, ...ngroups-1; must be continuous) of all sites
      */
     void regroupSitePattern(int groups, IntVector &site_group);
-
 
     /****************************************************************************
             output alignment 
@@ -386,8 +379,9 @@ public:
      */
     bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) const;
 
-    int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-            int exclude_sites, const char *ref_seq_name) const;
+    int  buildRetainingSites(const char *aln_site_list, 
+                             IntVector &kept_sites, int exclude_sites, 
+                             const char *ref_seq_name) const;
 
     void printAlignment(InputType format, const char *filename, bool append = false, 
                         const char *aln_site_list = nullptr, int exclude_sites = 0, 
@@ -505,6 +499,12 @@ public:
      *  @return vector containing the sequence names
      */
     const StrVector& getSeqNames() const;
+
+    /**
+    *  populate map from name to number
+     * @return number of entries added to the map
+     */
+    intptr_t  getMapFromNameToID(NameToIDMap& answer) const;
 
     /**
             @param seq_name sequence name

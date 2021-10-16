@@ -278,4 +278,10 @@ void ModelSet::addModel(ModelMarkov* model_to_add) {
 
 }
 
+void ModelSet::getDivergentModels
+        (DivergentModels& div_models) {
+    for (auto model: models) {
+        model->getDivergentModels(div_models);
+    }
+}
 

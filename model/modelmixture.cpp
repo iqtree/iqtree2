@@ -2249,3 +2249,10 @@ uint64_t ModelMixture::getMemoryRequired() const {
     }
     return mem;
 }
+
+void ModelMixture::getDivergentModels
+        (DivergentModels& div_models) {
+    for (auto model: models) {
+        model->getDivergentModels(div_models);
+    }
+}

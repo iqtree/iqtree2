@@ -24,6 +24,7 @@
 //#include <mtree.h>
 #include "pda/splitgraph.h"
 
+#include <utils/nametoidmap.h>
 #include <utils/stringfunctions.h> //for convert_double, convert_double_vec
 #include <utils/tools.h>
 
@@ -901,6 +902,58 @@ void MTree::initializeTree(Node *node, Node* dad)
         ++branchNum;
         initializeTree((*it)->node, node);
     }
+}
+
+intptr_t MTree::setNodeIdsFromMap(const NameToIDMap &name_to_id) {
+    NodeVector node_list;
+    getAllNodesInSubtree(getRoot(), nullptr, node_list);
+    for (Node* node : node_list) {
+        node->id = -1;        
+    }
+    intptr_t count_set  = 0;
+    int      max_id_set = -1;
+    NameToNodeMap name_to_node;
+    getMapOfTaxonNameToNode(nullptr, nullptr, name_to_node);
+    for (auto name_and_id : name_to_id) {
+        auto name       = name_and_id.first;
+        auto id         = name_and_id.second;
+        auto found_node = name_to_node.find ( name );
+        if (found_node != name_to_node.end()) {
+            found_node->second -> id = id;
+            ++count_set;
+            if (max_id_set < id) {
+                max_id_set = id;
+            }
+        }
+    }
+
+    for (Node* node : node_list) {
+        if (node->isLeaf()) {
+            if (node->id==-1) {
+                //Either, this node has a duplicated name 
+                //if it is found in name_to_id, or it wasn't
+                //referred to
+                if (name_to_id.contains(node->name)) {
+                    //Duplicated name. This is an error.
+                    outError("Duplicated tree");
+                } else {
+                    //Name not found.  Give it an unused number
+                    ++max_id_set;
+                    node->id = max_id_set;
+                }
+            }
+        }
+    }
+
+    //Now, set ID numbers on internal nodes
+    for (Node* node : node_list) {
+        if (!node->isLeaf()) {
+            ++max_id_set;
+            node->id = max_id_set;
+        }
+    }
+
+    return count_set;
 }
 
 void MTree::recordBranchLength(string &lenstr, DoubleVector &branch_len) {
@@ -3271,4 +3324,8 @@ void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2,
     }
 //    FOR_NEIGHBOR_IT(node, dad, it) 
 //        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
+}
+
+Node* MTree::getRoot() const {
+    return root;
 }

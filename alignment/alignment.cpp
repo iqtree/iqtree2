@@ -113,6 +113,14 @@ const StrVector& Alignment::getSeqNames() const {
 	return seq_names;
 }
 
+intptr_t Alignment::getMapFromNameToID(NameToIDMap& answer) const {
+    intptr_t before = answer.size();
+    for (intptr_t i = 0; i < getNSeq(); i++) {
+        answer[seq_names[i]] = i;
+    }
+    return answer.size() - before;
+}
+
 intptr_t Alignment::getSeqID(const string &seq_name) const {
     for (intptr_t i = 0; i < getNSeq(); i++) {
         if (seq_name == getSeqName(i)) {

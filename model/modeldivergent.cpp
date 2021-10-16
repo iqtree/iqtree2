@@ -3,17 +3,21 @@
 #include "modelmarkov.h"    //for RATE_TOL
 #include <tree/phylotree.h> //for PhyloTree::vector_size
 
-ModelDivergent::ModelDivergent(): super(), optimize_steps(0) {
+#define MODEL_UNASSIGNED (-1)
+
+ModelDivergent::ModelDivergent(): super(), 
+    catchall_model_number(MODEL_UNASSIGNED), 
+    optimize_steps(0) {
     //If it's still zero when optimizeParameters() is called
 }
 
 ModelDivergent::ModelDivergent(PhyloTree* tree, 
                                PhyloTree* report_to_tree): 
     super(tree, report_to_tree),
+    catchall_model_number(MODEL_UNASSIGNED), 
     optimize_steps(0) {
     //If it's still zero when optimizeParameters() is called
 }
-
 
 ModelDivergent::~ModelDivergent() {
     for (ModelMarkov* subtree_model : subtree_models) {
@@ -102,6 +106,7 @@ int  ModelDivergent::getNumberOfRates() const {
     for (ModelMarkov* subtree_model : subtree_models) {
         num_rates += subtree_model->getNumberOfRates();
     }
+    return num_rates;
 }
 
 int  ModelDivergent::getTransMatrixSize() const  { 
@@ -408,3 +413,116 @@ double* ModelDivergent::getInverseEigenvectorsTransposed() const {
     return nullptr;
 }
 
+void ModelDivergent::getDivergentModels
+        (DivergentModels& div_models) {
+    for (ModelMarkov* subtree_model : subtree_models) {
+        subtree_model->getDivergentModels(div_models);
+    }
+    div_models.push_back(this);
+}
+
+const std::string ModelDivergent::getSubtreeModelName
+    (int model_number) const {
+    ASSERT(0<=model_number);
+    ASSERT(model_number<subtree_models.size());
+    return subtree_models[model_number]->getName();
+}
+
+void ModelDivergent::identifyTaxonSubsets
+        (Node* root,
+         std::vector<IntVector>& subsets) {
+    ASSERT(!subtree_models.empty());
+    subsets.resize(subtree_models.size());
+    identifyTaxonSubsets(catchall_model_number, 
+                         root, nullptr, subsets);
+    for (IntVector& subset : subsets) {
+        std::sort(subset.begin(), subset.end());
+    }
+}
+
+void ModelDivergent::identifyTaxonSubsets
+        (intptr_t model_number,
+         Node* node, Node* prev_node,
+         std::vector<IntVector>& subsets_for_models) {
+    //
+    //Assumes, taxon ids are all set, and there are 
+    //no duplicated taxon ids
+    //
+    if (!node->isLeaf()) {
+        //Check if this node has a name matching a clade
+        //that is mapped to a specific subtree model
+        auto name = node->name;
+        auto it   = clade_to_model_number.find(name);
+        if (it!=clade_to_model_number.end()) {
+            model_number = it->second;
+        }
+        FOR_EACH_ADJACENT_NODE(node, prev_node, it, child) {
+            identifyTaxonSubsets(model_number, child, node, 
+                                 subsets_for_models);
+        }
+        return;
+    }
+    if (subsets_for_models.size() <= model_number ) {
+        subsets_for_models.resize(model_number+1);
+    }
+    IntVector& subset = subsets_for_models[model_number];
+    subset.push_back(node->id);
+}
+
+bool ModelDivergent::mapTaxonSubsetsToModels
+        (Node* root, 
+         int   number_of_subsets,
+         const IntVector& taxon_to_subset) {
+    subset_to_model.resize(number_of_subsets, MODEL_UNASSIGNED);
+    return mapTaxonSubsetsToModels(catchall_model_number,
+                                   root, nullptr, "", taxon_to_subset);
+}
+
+bool ModelDivergent::mapTaxonSubsetsToModels
+        (intptr_t model_number,
+         Node* node, Node* prev_node,
+         const char* current_clade,
+         const IntVector& taxon_to_subset) {
+    if (!node->isLeaf()) {
+        //Check if this node has a name matching a clade
+        //that is mapped to a specific subtree model
+        auto name = node->name;
+        auto it   = clade_to_model_number.find(name);
+        if (it!=clade_to_model_number.end()) {
+            model_number  = it->second;
+            current_clade = name.c_str();
+        }
+        FOR_EACH_ADJACENT_NODE(node, prev_node, it, child) {
+            if (!mapTaxonSubsetsToModels(model_number, child, node, 
+                                         current_clade, taxon_to_subset)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    int subset = taxon_to_subset[node->id];
+    if (model_number == subset_to_model[subset]) {
+        //All good, subset already set.
+    } else if (subset_to_model[subset] != MODEL_UNASSIGNED) {
+        //Problem.  An earlier taxon, mapped this subset
+        //to a different model
+        std::stringstream complaint;
+        int prev_mode_number = subset_to_model[subset];
+        complaint << "Taxon " << node->id 
+                  << " (" << node->name << "),"
+                  << " in subset " << subset 
+                  << " in clade " << current_clade
+                  << " cannot be mapped to model " << model_number 
+                  << " (" << getSubtreeModelName(model_number) << ")"
+                  << ", because another node in subset " << subset
+                  << " has already been mapped "
+                  << " to model " << prev_mode_number
+                  << " (" << getSubtreeModelName(prev_mode_number) << ")"
+                  << ".";
+        outError(complaint.str());
+        return false;
+    } else {
+        subset_to_model[subset] = model_number;
+    }
+    return true;
+}

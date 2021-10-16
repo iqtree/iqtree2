@@ -341,6 +341,8 @@ protected:
 	*/
 	virtual void afterWeightsChanged();
 
+	virtual void getDivergentModels
+             (DivergentModels& div_models) override;
 };
 
 #endif /* MODELMIXTURE_H_ */

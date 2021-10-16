@@ -383,17 +383,6 @@
 # tree search.
 #
 
-- clades:
-  - clade:   Mammals
-    members: [ Human, Seal, Cow, Whale, Mouse, Rat, Platypus, Opossum ]
-  - clade:   Reptiles
-    members: [ Turtle, Lizard, Bird, Lizard, Sphenodon ]
-  - clade:   Fish
-    members: [ LngfishAu, LngfishSA, LngfishAf ]
-  - clade:   Amphibians
-    members: [ Frog ]
-  structure: Fish, (Amphibians, (Mammals, Reptiles) ) 
-
 #
 #this is an example only, as divergent_models not yet parsed
 #(as there is, as yet, no YAML wrapper for ModelDivergent). 

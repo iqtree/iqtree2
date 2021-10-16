@@ -263,3 +263,9 @@ ModelSubst::~ModelSubst()
     }
 }
 
+void ModelSubst::getDivergentModels
+        (std::vector<ModelDivergent*>& div_models) {
+    //Well, there aren't any.  But this is overridden for
+    //subclasses of ModelSubst.
+}
+

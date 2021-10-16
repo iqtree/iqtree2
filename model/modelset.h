@@ -188,7 +188,9 @@ protected:
 	*/
 	virtual bool getVariables(const double *variables) override;
 
-	
+	virtual void getDivergentModels
+             (DivergentModels& div_models) override;
+
 };
 
 #endif // MODELSET_H

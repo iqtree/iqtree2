@@ -3883,6 +3883,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 continue;
             }
+            if (arg=="-divergence-graph") {
+                ++cnt;
+                if (cnt >= argc) {
+                    throw "Use -divergence-graph FILENAME";
+                }
+                else {
+                    params.divergence_graph_file_path = argv[cnt];
+                }
+            }
             if (arg=="--no-ml-tree") {
                 params.modelfinder_ml_tree = false;
                 continue;

@@ -27,6 +27,10 @@ const char CLOSE_BRACKET = '}';
 class PhyloTree;
 class RateHeterogeneity;
 
+class ModelDivergent;	//Forward declare for getDivergentModels()
+
+typedef std::vector<ModelDivergent*> DivergentModels;
+
 /**
 Substitution model abstract class
 
@@ -460,6 +464,8 @@ public:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(const double *variables) { return false; }
+
+	virtual void getDivergentModels(DivergentModels& div_models);
 
 };
 
