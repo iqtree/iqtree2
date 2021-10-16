@@ -2083,7 +2083,6 @@ bool isYAMLRateHeterotachyModel
     yaml_list.loadFromFile(params, yaml_path.c_str(), 
                            &dummy_logging_target);
 
-
     std::string subst_model_name = split_string(model_name, "+")[0];
 
     if (!yaml_list.isSubstitutionModelNameRecognized(subst_model_name)) {
@@ -2092,4 +2091,22 @@ bool isYAMLRateHeterotachyModel
     }
     return yaml_list.isRateHeterotachyRequired(params, model_name, num_mixlen,
                                             &dummy_logging_target);
+}
+
+void ModelInfoFromYAMLFile::addCladeName
+        (const std::string& clade_name) {
+    std::string lower_name = string_to_lower(clade_name);
+    if (distinct_clade_names.insert(lower_name).second) {
+        clade_names.push_back(lower_name);
+    } else {
+        std::stringstream complaint;
+        complaint << "Could not add the same clade, " << clade_name
+                  << ", twice to model " << getLongName()
+                  << ".";
+        throw ModelExpression::ModelException(complaint.str());
+    }
+}
+
+const StrVector& ModelInfoFromYAMLFile::getCladeNames() const {
+    return clade_names;
 }

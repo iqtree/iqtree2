@@ -57,6 +57,9 @@ protected:
     void parseYAMLModelStringProperties(const YAML::Node& substitution_model,
                                         ModelInfoFromYAMLFile& info,
                                         LoggingTarget*       logging_target);
+    void parseYAMLModelCladeNames(const YAML::Node& substitution_model,
+                                  ModelInfoFromYAMLFile& info,
+                                  LoggingTarget*       logging_target);
     void parseYAMLModelWeightAndScale(const YAML::Node&      substitution_model,
                                       ModelInfoFromYAMLFile& info,
                                       LoggingTarget*         logging_target);

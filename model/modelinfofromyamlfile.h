@@ -298,6 +298,9 @@ private:
     //Set if a subsitution model has a specified rate model
     ModelInfoFromYAMLFile* specified_rate_model_info;
 
+    std::set<std::string>  distinct_clade_names;
+    StrVector              clade_names;
+
 protected:
     void appendTo(const std::string& append_me,
                   const char* with_sep,
@@ -570,6 +573,10 @@ public:
     const YAMLFileParameter& getRateParameter() const;
     YAMLFileParameter&       getRateParameter();
 
+    //Clades, handled by subtree models in a divergent model
+    void  addCladeName(const std::string& clade_name);
+    const StrVector& getCladeNames() const;
+
     //Output
     void writeInfo(const char* caption, ModelParameterType type,
                    std::ostream& out) const;
@@ -577,6 +584,8 @@ public:
     //Checkpoints
     void saveToCheckpoint     (Checkpoint* checkpoint) const;
     void restoreFromCheckpoint(Checkpoint* checkpoint);
+
+
 };
 
 class LoggingTarget;

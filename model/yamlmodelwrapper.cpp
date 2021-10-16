@@ -1,5 +1,7 @@
 #include "yamlmodelwrapper.h"
+#include "model/modelexpression.h"
 #include "model/modelinfo.h"
+#include "utils/stringfunctions.h"
 
 YAMLModelBinary::YAMLModelBinary(ModelInfoFromYAMLFile& info,
                                  bool make_copy, const char *model_name, 
@@ -204,15 +206,54 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
     full_name += OPEN_BRACKET;
     const char* separator = "";
     DoubleVector weights;
-    for (auto child: model_info->getMixedModels()) {
+    int subtree_model_number = static_cast<int>(subtree_models.size());
+    for (auto child: model_info->getSubtreeModels()) {
         auto model = ModelListFromYAMLFile::getModelByReference
                     (*child, tree, info.getFrequencyType(),
                     models_block, no_parameters, 
                     report_to_tree);
         subtree_models.push_back(model);
+        auto clade_names = child->getCladeNames();
+        if (clade_names.empty()) {
+            if (catchall_model_number==MODEL_UNASSIGNED) {
+                catchall_model_number = subtree_model_number;
+            } else {
+                auto other_model = subtree_models[catchall_model_number];
+                std::stringstream complaint;
+                complaint << "Models " << catchall_model_number 
+                            << " (" << other_model->getName() << ")"
+                            << " and " << subtree_model_number
+                            << " (" << model->getName() << ")"
+                            << " of divergent model " << model_info->getName()
+                            << " cannot both be catch-all models.";
+                throw ModelExpression::ModelException(complaint.str());
+            }
+        }
+        for (auto clade_name : clade_names) {
+            auto lower_clade_name(string_to_lower(clade_name));
+            if (clade_to_model_number.contains(lower_clade_name)) {
+                auto other_model_number = clade_to_model_number
+                                          [lower_clade_name];
+                if ( other_model_number != subtree_model_number) {
+                    auto other_model = subtree_models[other_model_number];
+                    std::stringstream complaint;
+                    complaint << "Models " << other_model_number 
+                              << " (" << other_model->getName() << ")"
+                              << " and " << subtree_model_number
+                              << " (" << model->getName() << ")"
+                              << " of divergent model " << model_info->getName()
+                              << " cannot both handle the clade: "
+                              << clade_name << ".";
+                    throw ModelExpression::ModelException(complaint.str());
+                }
+                continue;
+            }
+            clade_to_model_number[lower_clade_name] = subtree_model_number;
+        }
         full_name += separator;
         full_name += child->getName();
         separator = ",";
+        ++subtree_model_number;
     }
     full_name += CLOSE_BRACKET;
 

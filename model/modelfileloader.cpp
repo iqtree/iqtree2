@@ -1055,8 +1055,10 @@ void ModelFileLoader::parseYAMLModel(Params &params,
         parseRateMatrix(rateMatrix, info, logging_target);
     }
     setModelStateFrequency        (substitution_model, info, logging_target);
+    parseYAMLModelCladeNames      (substitution_model, info, logging_target);
     parseYAMLModelStringProperties(substitution_model, info, logging_target);
     parseYAMLModelWeightAndScale  (substitution_model, info, logging_target);
+    
 }
 
 void ModelFileLoader::parseYAMLModelInheritance
@@ -1171,6 +1173,36 @@ void ModelFileLoader::parseYAMLModelStringProperties
     }
     ASCType dummyASCType;
     info.checkAscertainmentBiasCorrection(true, dummyASCType);
+}
+
+void ModelFileLoader::parseYAMLModelCladeNames
+        (const YAML::Node& substitution_model,
+         ModelInfoFromYAMLFile& info,
+         LoggingTarget* logging_target) {
+    auto clade_single = substitution_model["clade"];
+    if (clade_single) {
+        complainIfNot(clade_single.IsScalar(), 
+                      "clade for model must be a scalar, not a sequence");
+        std::string clade_name = clade_single.Scalar();
+        complainIfSo(clade_name.empty(), 
+                      "clade for model cannot be blank or empty");
+        info.addCladeName(clade_name);
+    }
+    auto clade_list   = substitution_model["clades"];
+    if (clade_list) {
+        complainIfSo(clade_single, 
+                     "cannot specify a single clade AND a list of clades");
+        complainIfNot(clade_list.IsSequence(), 
+                      "clades for model must be a sequence (if supplied)");
+        for (auto clade : clade_list ) {
+            complainIfNot(clade.IsScalar(), 
+                        "clade for model must be a scalar, not a sequence");
+            std::string clade_name = clade.Scalar();
+            complainIfSo(clade_name.empty(),
+                        "clade for model cannot be blank or empty");
+            info.addCladeName(clade_name);
+        }
+    }
 }
 
 void ModelFileLoader::parseYAMLModelWeightAndScale

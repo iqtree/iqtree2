@@ -1,9 +1,9 @@
 #include "modeldivergent.h"
+#include "utils/stringfunctions.h"
 #include "variablebounds.h" //for VariableBounds class
 #include "modelmarkov.h"    //for RATE_TOL
 #include <tree/phylotree.h> //for PhyloTree::vector_size
 
-#define MODEL_UNASSIGNED (-1)
 
 ModelDivergent::ModelDivergent(): super(), 
     catchall_model_number(MODEL_UNASSIGNED), 
@@ -451,8 +451,9 @@ void ModelDivergent::identifyTaxonSubsets
     if (!node->isLeaf()) {
         //Check if this node has a name matching a clade
         //that is mapped to a specific subtree model
-        auto name = node->name;
-        auto it   = clade_to_model_number.find(name);
+        auto name       = node->name;
+        auto lower_name = string_to_lower(name);
+        auto it         = clade_to_model_number.find(lower_name);
         if (it!=clade_to_model_number.end()) {
             model_number = it->second;
         }
@@ -486,8 +487,9 @@ bool ModelDivergent::mapTaxonSubsetsToModels
     if (!node->isLeaf()) {
         //Check if this node has a name matching a clade
         //that is mapped to a specific subtree model
-        auto name = node->name;
-        auto it   = clade_to_model_number.find(name);
+        auto name     = node->name;
+        auto low_name = string_to_lower(name);
+        auto it       = clade_to_model_number.find(low_name);
         if (it!=clade_to_model_number.end()) {
             model_number  = it->second;
             current_clade = name.c_str();

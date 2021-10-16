@@ -6,6 +6,8 @@
 #include "modelmarkov.h"
 #include "modelinfofromyamlfile.h" //for ModelVariable class
 
+#define MODEL_UNASSIGNED (-1)
+
 class ModelDivergent: public ModelMarkov {
 
     //Consistency restrictions: Ascertainment biases have
@@ -140,6 +142,5 @@ public:
                                  const IntVector& taxon_to_subset);
 
 };
-
 
 #endif
