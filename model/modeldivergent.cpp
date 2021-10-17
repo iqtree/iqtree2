@@ -448,26 +448,49 @@ void ModelDivergent::identifyTaxonSubsets
     //Assumes, taxon ids are all set, and there are 
     //no duplicated taxon ids
     //
-    if (!node->isLeaf()) {
+    bool is_root = node->name == ROOT_NAME;
+    if (is_root || !node->isLeaf()) {
         //Check if this node has a name matching a clade
         //that is mapped to a specific subtree model
-        auto name       = node->name;
-        auto lower_name = string_to_lower(name);
-        auto it         = clade_to_model_number.find(lower_name);
-        if (it!=clade_to_model_number.end()) {
+        auto name        = node->name;
+        auto lower_name  = string_to_lower(name);
+        auto it          = clade_to_model_number.find(lower_name);
+        bool found_clade = (it!=clade_to_model_number.end()) && !is_root;
+        if (found_clade) {
             model_number = it->second;
+            std::cout << "Entering clade " << lower_name << "." << std::endl;
         }
         FOR_EACH_ADJACENT_NODE(node, prev_node, it, child) {
             identifyTaxonSubsets(model_number, child, node, 
                                  subsets_for_models);
         }
+        if (found_clade) {
+            std::cout << "Leaving clade " << lower_name << "." << std::endl;
+        }
         return;
     }
+    if (model_number==MODEL_UNASSIGNED) {        
+        auto lower_name = string_to_lower(node->name);
+        auto it_by_name = clade_to_model_number.find(lower_name);
+        if (it_by_name != clade_to_model_number.end()) {
+            model_number = it_by_name->second;
+        } else {
+            std::cout << "  Couldn't map taxon " << node->id
+                      << " (" << node->name << ")"
+                      << " to a subtree model." << std::endl;
+            return;
+        }
+    } 
     if (subsets_for_models.size() <= model_number ) {
         subsets_for_models.resize(model_number+1);
     }
     IntVector& subset = subsets_for_models[model_number];
     subset.push_back(node->id);
+    std::cout << "  Mapped taxon " << node->id
+                << " (" << node->name << ")"
+                << " to model " << model_number
+                << " (" << subtree_models[model_number]->getName() << ")."
+                << std::endl;
 }
 
 bool ModelDivergent::mapTaxonSubsetsToModels
@@ -484,15 +507,19 @@ bool ModelDivergent::mapTaxonSubsetsToModels
          Node* node, Node* prev_node,
          const char* current_clade,
          const IntVector& taxon_to_subset) {
-    if (!node->isLeaf()) {
+    bool is_root = node->name == ROOT_NAME;
+    if (is_root || !node->isLeaf()) {
         //Check if this node has a name matching a clade
         //that is mapped to a specific subtree model
-        auto name     = node->name;
-        auto low_name = string_to_lower(name);
-        auto it       = clade_to_model_number.find(low_name);
-        if (it!=clade_to_model_number.end()) {
+        auto name        = node->name;
+        auto lower_name  = string_to_lower(name);
+        auto it          = clade_to_model_number.find(lower_name);
+        bool found_clade = (it!=clade_to_model_number.end()) && !is_root;
+        if (found_clade) {
             model_number  = it->second;
-            current_clade = name.c_str();
+            current_clade = lower_name.c_str();
+            //std::cout << "Entering clade " 
+            //          << lower_name << "." << std::endl;
         }
         FOR_EACH_ADJACENT_NODE(node, prev_node, it, child) {
             if (!mapTaxonSubsetsToModels(model_number, child, node, 
@@ -500,16 +527,33 @@ bool ModelDivergent::mapTaxonSubsetsToModels
                 return false;
             }
         }
+        //if (found_clade) {
+        //    std::cout << "Leaving clade " 
+        //              << lower_name << "." << std::endl;
+        //}
         return true;
     }
-    int subset = taxon_to_subset[node->id];
-    if (model_number == subset_to_model[subset]) {
-        //All good, subset already set.
-    } else if (subset_to_model[subset] != MODEL_UNASSIGNED) {
+    int subset            = taxon_to_subset[node->id];
+    int prev_model_number = subset_to_model[subset];
+
+    if (model_number == MODEL_UNASSIGNED) {
+        //This taxon might be explicitly included 
+        //by name as a clade for a model.
+        auto lower_name = string_to_lower(node->name);
+        auto it_by_name = clade_to_model_number.find(lower_name);
+        if (it_by_name != clade_to_model_number.end()) {
+            model_number = it_by_name->second;
+        }
+    }
+
+    if (model_number == MODEL_UNASSIGNED) {
+        //This taxon hasn't been assigned to a subset.
+    } else if (model_number == prev_model_number) {
+        //All good, subset already set to match this.
+    } else if (prev_model_number != MODEL_UNASSIGNED) {
         //Problem.  An earlier taxon, mapped this subset
         //to a different model
         std::stringstream complaint;
-        int prev_mode_number = subset_to_model[subset];
         complaint << "Taxon " << node->id 
                   << " (" << node->name << "),"
                   << " in subset " << subset 
@@ -518,8 +562,8 @@ bool ModelDivergent::mapTaxonSubsetsToModels
                   << " (" << getSubtreeModelName(model_number) << ")"
                   << ", because another node in subset " << subset
                   << " has already been mapped "
-                  << " to model " << prev_mode_number
-                  << " (" << getSubtreeModelName(prev_mode_number) << ")"
+                  << " to model " << prev_model_number
+                  << " (" << getSubtreeModelName(prev_model_number) << ")"
                   << ".";
         outError(complaint.str());
         return false;

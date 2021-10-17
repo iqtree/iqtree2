@@ -17,6 +17,9 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
     //Load up divergence graph
     MTree div_tree;
     bool  is_div_tree_rooted = false;
+    std::cout << "Loading divergence graph"
+              << " from file: " << div_file_path 
+              << "." << std::endl;
     div_tree.readTree(div_file_path.c_str(), is_div_tree_rooted);
     Node* div_root = div_tree.getRoot();
 
@@ -29,6 +32,7 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
         complaint << "There were " << taxa_in_alignment << " taxa"
                   << " in the alignment, but only " 
                   << taxa_in_div_graph
+                  << " of those taxa were mentioned,"
                   << " in the divergence graph.";
         outWarning(complaint.str());
     }
