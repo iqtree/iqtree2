@@ -126,18 +126,21 @@ void ModelPoMo::init_boundary_frequencies()
         break;
     case StateFreqType::FREQ_ESTIMATE:
         // '+FO'.  Start estimation at empirical frequencies.
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; i++) {
             freq_boundary_states[i] = freq_boundary_states_emp[i];
+        }
         break;
     case StateFreqType::FREQ_EMPIRICAL:
         // '+F'.
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; i++) {
             freq_boundary_states[i] = freq_boundary_states_emp[i];
+        }
         break;
     case StateFreqType::FREQ_USER_DEFINED:
         // '+FU'. ModelDNA should have set them already.
-        if (freq_boundary_states[0] == 0.0)
+        if (freq_boundary_states[0] == 0.0) {
             outError("State frequencies not specified");
+        }
         break;
     case StateFreqType::FREQ_UNKNOWN:
         outError("No frequency type given.");

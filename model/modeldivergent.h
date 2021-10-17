@@ -141,6 +141,8 @@ public:
                                  const char* current_clade,
                                  const IntVector& taxon_to_subset);
 
+    void calculateSubtreeFrequencyEstimates
+            (const Alignment* alignment, const PhyloTree* tree);
 };
 
 #endif

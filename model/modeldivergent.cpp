@@ -139,14 +139,19 @@ void ModelDivergent::getStateFrequency(double *state_freq,
 }
 
 void ModelDivergent::setStateFrequency(double *state_freq) {
-    //Todo: But... wouldn't it be better for this to ASSERT(0)
     for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setStateFrequency(state_freq);
     }
 }
 
 bool ModelDivergent::scaleStateFreq() {
-    return true;
+    bool changed = false;
+    for (ModelMarkov* subtree_model : subtree_models) {
+        if (subtree_model->scaleStateFreq()) {
+            changed = true;
+        }
+    }
+    return changed;
 }
 
 void ModelDivergent::setRateMatrix(double* rate_mat) {
@@ -571,4 +576,66 @@ bool ModelDivergent::mapTaxonSubsetsToModels
         subset_to_model[subset] = model_number;
     }
     return true;
+}
+
+void ModelDivergent::calculateSubtreeFrequencyEstimates
+        (const Alignment* alignment, const PhyloTree* for_tree) {
+
+    int taxon_count = alignment->getNSeq();
+    if (taxon_count==0) {
+        return;
+    }
+    //Dummy call.
+    alignment->getSequenceSubset(taxon_count-1);
+    
+    int model_count = subtree_models.size();
+    if (model_count==0) {
+        return;
+    }
+
+    std::vector<IntVector> taxon_subsets(model_count);
+    for (int i=0; i<taxon_count; ++i) {
+        int subset = alignment->getSequenceSubset(i);
+        if (0<=subset && subset<subset_to_model.size()) {
+            int model_number = subset_to_model[subset];
+            if (0<=model_number && model_number<model_count) {
+                taxon_subsets[model_number].push_back(i);
+            }
+        }   
+    }
+
+    int model_number = 0;
+    for (ModelMarkov* subtree_model : subtree_models) {
+        auto freq_type = subtree_model->getFreqType(); 
+        if (taxon_subsets[model_number].empty()) {
+            //No taxa mapped to subtree model.  So nothing to do!
+            continue;
+        }
+        if (freq_type!=StateFreqType::FREQ_ESTIMATE &&
+            freq_type!=StateFreqType::FREQ_EMPIRICAL) {
+            continue;
+        }
+        DoubleVector freq_vector(subtree_model->num_states);
+        alignment->computeStateFreqForSubset
+            (taxon_subsets[model_number], freq_vector.data());
+        if (VerboseMode::VB_MED <= verbose_mode ) {
+            std::stringstream message;
+            message << "Setting state frequencies for"
+                    << " subtree model " << model_number 
+                    << " (" << subtree_model->getName() << ")"
+                    << " to: [ ";
+            const char* sep = "";
+            for (double freq : freq_vector) {
+                message << sep << freq;
+                sep = ", ";
+            }
+            message << "] based on " 
+                    << taxon_subsets[model_number].size() 
+                    << " taxa.";
+            std::cout << message.str() << std::endl;
+        }
+        subtree_model->setStateFrequency(freq_vector.data());
+        subtree_model->afterVariablesChanged();
+        ++model_number;
+    }
 }

@@ -262,8 +262,6 @@ public:
         int  ndim           = getNDim();
         auto freq_variables = variables+num_params+1;
         if (freq_type == StateFreqType::FREQ_ESTIMATE) {
-            // 2015-09-07: relax the sum of state_freq to be 1.0,
-            // this will be done at the end of optimization
             memcpy(freq_variables, state_freq,
                    (num_states-1)*sizeof(double));
         } else {

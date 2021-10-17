@@ -122,8 +122,9 @@ void ModelGTR::getNameParamsFreq(std::ostream &retname) const {
 		  phylo_tree->aln->seq_type == SeqType::SEQ_DNA)) {
 		retname << "+F";
         retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
+        for (int i = 1; i < num_states; i++) {
             retname << "," << state_freq[i];
+		}
         retname << "}";
 	} else if (getFreqType() == StateFreqType::FREQ_CODON_1x4)
 		retname << "+F1X4";
@@ -134,18 +135,19 @@ void ModelGTR::getNameParamsFreq(std::ostream &retname) const {
 	else if (getFreqType() == StateFreqType::FREQ_ESTIMATE) {
 		retname << "+FO";
         retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
+        for (int i = 1; i < num_states; i++) {
             retname << "," << state_freq[i];
+		}
         retname << "}";
     } else if (getFreqType() == StateFreqType::FREQ_EQUAL && 
-		       phylo_tree->aln->seq_type != SeqType::SEQ_DNA)
+		       phylo_tree->aln->seq_type != SeqType::SEQ_DNA) {
 		retname << "+FQ";
+	}
 }
 
 void ModelGTR::init(const char *model_name, const std::string& model_params,
                     StateFreqType freq, const std::string& freq_params,
                     PhyloTree* report_to_tree) {
-	//if (type == StateFreqType::FREQ_UNKNOWN) return;
 	int i;
 	freq_type = freq;
 	assert(freq_type != StateFreqType::FREQ_UNKNOWN);
@@ -171,7 +173,6 @@ void ModelGTR::init(const char *model_name, const std::string& model_params,
 			double ntfreq[12];
 			phylo_tree->hideProgress();
 			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
-//			phylo_tree->aln->computeCodonFreq(state_freq);
 			phylo_tree->showProgress();
 		}
 		else {
@@ -179,12 +180,16 @@ void ModelGTR::init(const char *model_name, const std::string& model_params,
 			phylo_tree->aln->computeStateFreq(state_freq, false, report_to_tree);
 			phylo_tree->showProgress();
 		}
-		for (i = 0; i < num_states; i++)
-			if (state_freq[i] > state_freq[highest_freq_state])
+		for (i = 0; i < num_states; i++) {
+			if (state_freq[i] > state_freq[highest_freq_state]) {
 				highest_freq_state = i;
+			}
+		}
 		break;
 	case StateFreqType::FREQ_USER_DEFINED:
-		if (state_freq[0] == 0.0) outError("State frequencies not specified");
+		if (state_freq[0] == 0.0) {
+			outError("State frequencies not specified");
+		}
 		break;
 	default: break;
 	}
@@ -420,14 +425,16 @@ int ModelGTR::getNDim() const {
 }
 
 int ModelGTR::getNDimFreq() const { 
-	if (freq_type == StateFreqType::FREQ_EMPIRICAL) 
+	if (freq_type == StateFreqType::FREQ_EMPIRICAL) {
         return num_states-1;
-	else if (freq_type == StateFreqType::FREQ_CODON_1x4) 
+	}
+	else if (freq_type == StateFreqType::FREQ_CODON_1x4) {
         return 3;
+	}
 	else if (freq_type == StateFreqType::FREQ_CODON_3x4 || 
-		     freq_type == StateFreqType::FREQ_CODON_3x4C) 
+		     freq_type == StateFreqType::FREQ_CODON_3x4C) {
         return 9;
-    
+	}
     return 0;
 }
 
@@ -440,6 +447,7 @@ bool ModelGTR::scaleStateFreq() {
 	if (sum==1.0) {
 		return false;
 	}
+	ASSERT(sum!=0);
 	for (int i = 0; i < num_states; i++) {
 		state_freq[i] /= sum;
 	}

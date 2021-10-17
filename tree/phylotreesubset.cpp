@@ -67,16 +67,21 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
                 continue;
             }
             taxa[taxon_id]->setSubsetNumber(subset_number);
+            aln->setSequenceSubset(taxon_id, subset_number);
         }
         ++subset_number;
     }
 
     computeSubsetNumbersForInternalNodes();
 
+    hideProgress();
     for (ModelDivergent* div_model: div_models) {
         div_model->mapTaxonSubsetsToModels
             (div_root, subset_number, taxon_to_subset);
+        div_model->calculateSubtreeFrequencyEstimates
+            (aln, this);
     }
+    showProgress();
 }
 
 PhyloNodeVector PhyloTree::getAllNodesInTree() const {

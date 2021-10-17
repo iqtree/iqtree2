@@ -172,7 +172,8 @@ double chi2prob (int deg, double chi2)
 
 
 int Alignment::checkAbsentStates(const string& msg) {
-    double *state_freq = new double[num_states];
+    std::vector<double> state_freq_vector(num_states);
+    double *state_freq = state_freq_vector.data();
     computeStateFreq(state_freq, 0, nullptr);
     string absent_states, rare_states;
     int count = 0;
@@ -181,13 +182,15 @@ int Alignment::checkAbsentStates(const string& msg) {
       return 0;
     for (int i = 0; i < num_states; i++)
         if (state_freq[i] == 0.0) {
-            if (!absent_states.empty())
+            if (!absent_states.empty()) {
                 absent_states += ", ";
+            }
             absent_states += convertStateBackStr(i);
             count++;
         } else if (state_freq[i] <= Params::getInstance().min_state_freq) {
-            if (!rare_states.empty())
+            if (!rare_states.empty()) {
                 rare_states += ", ";
+            }
             rare_states += convertStateBackStr(i);
         }
     if (count >= num_states-1 &&
@@ -205,7 +208,6 @@ int Alignment::checkAbsentStates(const string& msg) {
              << " rarely appear in " << msg
              << " and may cause numerical problems" << endl;
     }
-    delete[] state_freq;
     return count;
 }
 
@@ -5385,7 +5387,7 @@ double Alignment::readDist(const char *file_name, bool is_incremental,
 
 void Alignment::countStatesForSites(size_t startPattern,
                                     size_t stopPattern,
-                                    size_t *state_count) {
+                                    size_t *state_count) const {
     memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
     for (size_t patternIndex = startPattern;
          patternIndex < stopPattern; ++patternIndex ) {
@@ -5403,12 +5405,12 @@ void Alignment::countStatesForSites(size_t startPattern,
     }
 }
 
-#define PARALLEL_STATE_COUNT 1
-void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
+void Alignment::countStates(size_t *state_count, 
+                            size_t num_unknown_states) const {
     //Note: this was suprisingly slow in Windows builds (Don't know why)
     memset(state_count, 0, sizeof(size_t)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
-#if PARALLEL_STATE_COUNT && defined(_OPENMP)
+#if defined(_OPENMP)
     int thread_count = omp_get_max_threads();
     intptr_t step    = ( size() + thread_count - 1 ) / thread_count;
     if (1<thread_count) {
@@ -5435,9 +5437,9 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
     } else
 #endif
     {
-        for (iterator it = begin(); it != end(); ++it) {
+        for (auto it = begin(); it != end(); ++it) {
             int freq = it->frequency;
-            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); ++it2) {
+            for (auto it2 = it->begin(); it2 != it->end(); ++it2) {
                 int state = convertPomoState((int)*it2);
                 if (state<0 || static_cast<int>(STATE_UNKNOWN)<state) {
                     state = STATE_UNKNOWN;
@@ -5448,10 +5450,45 @@ void Alignment::countStates(size_t *state_count, size_t num_unknown_states) {
     }
 }
 
-void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
+void Alignment::countStatesForSubset
+        (const IntVector& subset,
+         std::vector<size_t>& state_count) const {
+    //It is assumed all of the indices in the subset are
+    //valid.
+    //
+    //Todo: Multithread. Make this the single-threaded
+    //version.  Write a multi-threaded version that divides
+    //large subsets into pieces, and calls *this* version,
+    //for each of the pieces of the subsets, then adds up
+    //the answers that came back.
+    //
+    for (const Pattern& pat : *this ) {
+        int freq = pat.frequency;
+        for (int i : subset) {
+            int state = convertPomoState(pat[i]);
+            if (state<0 || static_cast<int>(STATE_UNKNOWN)<state) {
+                state = STATE_UNKNOWN;
+            }
+            state_count[state] += freq;
+        }
+    }
+    if (VerboseMode::VB_MAX <= verbose_mode ) {
+        std::stringstream message;
+        message << "State counts for subset were [ ";
+        const char* sep = "";
+        for ( auto count : state_count) {
+            message << sep << count;
+            sep = ", ";
+        }
+        message << " ].";
+        std::cout << message.str() << std::endl;
+    }
+}
+
+void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) const {
     int i, j;
-    double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
-    double *new_freq = new double[num_states];
+    double *states_app     = new double[num_states*(STATE_UNKNOWN+1)];
+    double *new_freq       = new double[num_states];
     double *new_state_freq = new double[num_states];
     
     for (i = 0; i <= static_cast<int>(STATE_UNKNOWN); i++) {
@@ -5465,7 +5502,9 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
         memset(new_state_freq, 0, sizeof(double)*num_states);
 
         for (i = 0; i <= static_cast<int>(STATE_UNKNOWN); i++) {
-            if (state_count[i] == 0) continue;
+            if (state_count[i] == 0) {
+                continue;
+            }
             double sum_freq = 0.0;
             for (j = 0; j < num_states; j++) {
                 new_freq[j] = state_freq[j] * states_app[i*num_states+j];
@@ -5477,13 +5516,16 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
             }
         }
         double sum_freq = 0.0;
-        for (j = 0; j < num_states; j++)
+        for (j = 0; j < num_states; j++) {
             sum_freq += new_state_freq[j];
-        if (sum_freq == 0.0)
+        }
+        if (sum_freq == 0.0) {
             break;
+        }
         sum_freq = 1.0/sum_freq;
-        for (j = 0; j < num_states; j++)
+        for (j = 0; j < num_states; j++) {
             state_freq[j] = new_state_freq[j]*sum_freq;
+        }
     }
 
     convfreq(state_freq);
@@ -5498,7 +5540,8 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) {
 void Alignment::computeStateFreq (double *state_freq,
                                   size_t num_unknown_states,
                                   PhyloTree* report_to_tree) {
-    size_t *state_count = new size_t[STATE_UNKNOWN+1];
+    std::vector<size_t> state_count_vector(STATE_UNKNOWN+1);
+    size_t *state_count = state_count_vector.data();
 
     countStates(state_count, num_unknown_states);
     convertCountToFreq(state_count, state_freq);
@@ -5517,7 +5560,14 @@ void Alignment::computeStateFreq (double *state_freq,
             report_to_tree->showProgress();
         }
     }
-    delete [] state_count;
+}
+
+void Alignment::computeStateFreqForSubset
+        (const IntVector& taxon_subset,
+         double* state_freq) const {
+    std::vector<size_t> state_count_vector(STATE_UNKNOWN+1, 0);
+    countStatesForSubset(taxon_subset, state_count_vector);
+    convertCountToFreq(state_count_vector.data(), state_freq);
 }
 
 int Alignment::convertPomoState(int state) const {
@@ -5665,83 +5715,15 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     delete [] states_app;
 }
 
-//void Alignment::computeStateFreq (double *stateFrqArr) {
-//    int stateNo_;
-//    int nState_ = num_states;
-//    int nseqs = getNSeq();
-//    double *timeAppArr_ = new double[num_states];
-//    double *siteAppArr_ = new double[num_states]; //App = appearance
-//    double *newSiteAppArr_ = new double[num_states];
-//
-//    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//        stateFrqArr [ stateNo_ ] = 1.0 / nState_;
-//
-//    int NUM_TIME = 8;
-//    //app = appeareance
-//    if (verbose_mode >= VerboseMode::VB_MED)
-//        cout << "Computing state frequencies..." << endl;
-//    for (int time_ = 0; time_ < NUM_TIME; time_ ++)
-//    {
-//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//            timeAppArr_[stateNo_] = 0.0;
-//
-//        for (iterator it = begin(); it != end(); it++)
-//            for (int i = 0; i < (*it).frequency; i++)
-//            {
-//                for (int seq = 0; seq < nseqs; seq++) {
-//                    int stateNo_ = (*it)[seq];
-//
-//                    getAppearance (stateNo_, siteAppArr_);
-//
-//                    double totalSiteApp_ = 0.0;
-//                    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++) {
-//                        newSiteAppArr_[stateNo_] = stateFrqArr[stateNo_] * siteAppArr_[stateNo_];
-//                        totalSiteApp_ += newSiteAppArr_[stateNo_];
-//                    }
-//                    totalSiteApp_ = 1.0 / totalSiteApp_;
-//
-//                    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//                        timeAppArr_[stateNo_] += newSiteAppArr_[stateNo_] * totalSiteApp_;
-//                }
-//            }
-//
-//        double totalTimeApp_ = 0.0;
-//        int stateNo_;
-//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//            totalTimeApp_ += timeAppArr_[stateNo_];
-//
-//
-//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//            stateFrqArr[stateNo_] = timeAppArr_[stateNo_] / totalTimeApp_;
-//
-//    } //end of for time_
-//
-//    //  std::cout << "state frequency ..." << endl;
-//    // for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//    // std::cout << stateFrqArr[stateNo_] << endl;
-//
-//	convfreq(stateFrqArr);
-//
-//    if (verbose_mode >= VerboseMode::VB_MED) {
-//        cout << "Empirical state frequencies: ";
-//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-//            cout << stateFrqArr[stateNo_] << " ";
-//        cout << endl;
-//    }
-//	delete [] newSiteAppArr_;
-//	delete [] siteAppArr_;
-//	delete [] timeAppArr_;
-//
-//}
-
-void Alignment::getAppearance(StateType state, double *state_app) {
+void Alignment::getAppearance(StateType state, 
+                              double *state_app) const {
     int i;
     if (state == STATE_UNKNOWN) {
-        for (i = 0; i < num_states; i++)
+        for (i = 0; i < num_states; i++) {
             state_app[i] = 1.0;
+        }
         return;
     }
-
     memset(state_app, 0, num_states * sizeof(double));
     if (static_cast<int>(state) < num_states) {
         state_app[(int)state] = 1.0;
@@ -5777,7 +5759,8 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 	}
 }
 
-void Alignment::getAppearance(StateType state, StateBitset &state_app) {
+void Alignment::getAppearance(StateType state, 
+                              StateBitset &state_app) const {
 	int i;
     if (state == STATE_UNKNOWN) {
     	state_app.set();
@@ -6268,7 +6251,7 @@ void Alignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym,
     vec_intsym[vecid] = intsym;
 }
 
-void Alignment::convfreq(double *stateFrqArr) {
+void Alignment::convfreq(double *stateFrqArr) const {
 
     if (Params::getInstance().keep_zero_freq) {
         return;

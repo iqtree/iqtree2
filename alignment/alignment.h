@@ -877,21 +877,26 @@ public:
         @param stopSite   ordinal of last site (assumed +ve and <= size())
         @param[out] state_count counts for all states (for a subset of sites)
      */
-    void countStatesForSites(size_t startSite, size_t stopSite, size_t *state_count);
+    void countStatesForSites(size_t startSite, size_t stopSite, 
+                             size_t *state_count) const;
     
     /**
         count occurrences for each state from 0 to STATE_UNKNOWN
         @param[out] state_count counts for all states
         @param num_unknown_states number of unknown states e.g. for missing data
      */
-    void countStates(size_t *state_count, size_t num_unknown_states);
+    void countStates(size_t *state_count, 
+                     size_t num_unknown_states) const;
+
+    void countStatesForSubset(const IntVector& subset,
+                              std::vector<size_t>& state_count) const;
     
     /**
         convert counts to frequencies using EM algorithm
         @param[in] state_count counts for all states
         @paramp[out] state_freq normalized state frequency vector
      */
-    void convertCountToFreq(size_t *state_count, double *state_freq);
+    void convertCountToFreq(size_t *state_count, double *state_freq) const;
 
     /**
             compute empirical state frequencies from the alignment
@@ -904,6 +909,18 @@ public:
     virtual void computeStateFreq(double *state_freq,
                                   size_t num_unknown_states,
                                   PhyloTree* report_to_tree);
+
+    /**
+            compute empirical state frequencies, for one subset,
+            from the alignment
+            @param taxon_subset The ids of the taxa in the subset
+            @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
+                    at least num_states entries.
+            @param report_to_tree (the tree, if any, corresponding to the alignment,
+                    for which state frequencies are being calculated)
+     */
+    virtual void computeStateFreqForSubset(const IntVector& taxon_subset,
+                                           double* state_freq) const;
 
     int convertPomoState(int state) const;
 
@@ -929,7 +946,7 @@ public:
      * Make all frequencies a little different and non-zero
      * @param stateFrqArr (IN/OUT) state frequencies
      */
-    void convfreq(double *stateFrqArr);
+    void convfreq(double *stateFrqArr) const;
 
     /**
 	 * compute special empirical frequencies for codon alignment: 1x4, 3x4, 3x4C
@@ -1131,9 +1148,9 @@ public:
             @param state the state index
             @param state_app (OUT) state appearance
      */
-    void getAppearance(StateType state, double *state_app);
+    void getAppearance(StateType state, double *state_app) const;
 
-    void getAppearance(StateType state, StateBitset &state_app);
+    void getAppearance(StateType state, StateBitset &state_app) const;
 
     UINT getCountOfSingletonParsimonyStates() const;
 

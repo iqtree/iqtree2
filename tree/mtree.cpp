@@ -830,9 +830,8 @@ void MTree::readTree(istream &in, bool &is_rooted)
         }
 
         leafNum = 0;
-
         DoubleVector branch_len;
-        Node *node;
+        Node*        node;
         parseFile(in, ch, node, branch_len);
         // 2018-01-05: assuming rooted tree if root node has two children
         if (is_rooted || (!branch_len.empty() && branch_len[0] != 0.0) || node->degree() == 2) {
@@ -2039,7 +2038,8 @@ char MTree::readNextChar(istream &in, char current_ch) {
 
 string MTree::reportInputInfo() {
     string str = " (line ";
-    str += convertIntToString(in_line) + " column " + convertIntToString(in_column-1) + ")";
+    str += convertIntToString(in_line) 
+        + " column " + convertIntToString(in_column-1) + ")";
     return str;
 }
 
