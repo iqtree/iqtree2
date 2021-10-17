@@ -671,8 +671,8 @@ void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,
     size_t row_count = info.rate_matrix_expressions.size();
     if ( row_count != column_count) {
         std::stringstream s2;
-        s2 << "Rate matrix "
-           << " for model " << info.model_name
+        s2 << "Rate matrix"
+           << " for model " << info.getQualifiedName()
            << " in " << info.model_file_path
            << " was not square: it had " << row_count << " rows"
            << " and " << column_count << " columns.";
@@ -1182,24 +1182,30 @@ void ModelFileLoader::parseYAMLModelCladeNames
     auto clade_single = substitution_model["clade"];
     if (clade_single) {
         complainIfNot(clade_single.IsScalar(), 
-                      "clade for model must be a scalar, not a sequence");
+                      "clade for model " + info.getQualifiedName() + 
+                      " must be a scalar, not a sequence.");
         std::string clade_name = clade_single.Scalar();
         complainIfSo(clade_name.empty(), 
-                      "clade for model cannot be blank or empty");
+                      "clade for model " + info.getQualifiedName() + 
+                      " cannot be blank or empty.");
         info.addCladeName(clade_name);
     }
     auto clade_list   = substitution_model["clades"];
     if (clade_list) {
         complainIfSo(clade_single, 
-                     "cannot specify a single clade AND a list of clades");
+                     "cannot specify a single clade AND a list of clades"
+                     " for model " + info.getQualifiedName() + ".");
         complainIfNot(clade_list.IsSequence(), 
-                      "clades for model must be a sequence (if supplied)");
+                      "clades for model " + info.getQualifiedName() +  
+                      " must be a sequence (if supplied).");
         for (auto clade : clade_list ) {
             complainIfNot(clade.IsScalar(), 
-                        "clade for model must be a scalar, not a sequence");
+                        "clade for model " + info.getQualifiedName() + 
+                        " must be a scalar, not a sequence.");
             std::string clade_name = clade.Scalar();
             complainIfSo(clade_name.empty(),
-                        "clade for model cannot be blank or empty");
+                        "clade for model " + info.getQualifiedName() + 
+                        " cannot be blank or empty.");
             info.addCladeName(clade_name);
         }
     }

@@ -295,11 +295,11 @@ private:
     double                 model_weight;   //weight
     MapOfModels*           subtree_models; //nullptr, except for divergent models
 
+    StrVector              clade_names;
+    std::set<std::string>  distinct_clade_names;
+
     //Set if a subsitution model has a specified rate model
     ModelInfoFromYAMLFile* specified_rate_model_info;
-
-    std::set<std::string>  distinct_clade_names;
-    StrVector              clade_names;
 
 protected:
     void appendTo(const std::string& append_me,
@@ -409,6 +409,7 @@ public:
 
 public:
     const std::string& getName()                                        const;
+    std::string        getQualifiedName()                               const;
     std::string        getLongName()                                    const;
 
     bool hasDot    (const char* name)                                   const;

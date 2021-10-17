@@ -212,6 +212,8 @@ void ModelInfoFromYAMLFile::copyMixedAndLinkedModels
     if (rhs.subtree_models != nullptr) {
         subtree_models = new MapOfModels(*rhs.subtree_models);
     }
+    clade_names          = rhs.clade_names;
+    distinct_clade_names = rhs.distinct_clade_names;
 
     delete specified_rate_model_info;
     specified_rate_model_info = nullptr;
@@ -219,6 +221,7 @@ void ModelInfoFromYAMLFile::copyMixedAndLinkedModels
         specified_rate_model_info = new ModelInfoFromYAMLFile
                                         (*rhs.specified_rate_model_info);
     }
+
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
@@ -239,7 +242,9 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
     , variables(rhs.variables), parent_model(rhs.parent_model)
     , linked_models(nullptr), mixed_models(nullptr)
     , weight_formula(rhs.weight_formula), model_weight(rhs.model_weight)
-    , subtree_models(nullptr), specified_rate_model_info(nullptr) {
+    , subtree_models(nullptr), clade_names(rhs.clade_names)
+    , distinct_clade_names(rhs.distinct_clade_names)
+    , specified_rate_model_info(nullptr) {
     copyMixedAndLinkedModels(rhs);
 }
 
@@ -360,6 +365,15 @@ int  ModelInfoFromYAMLFile::getKategoryRateCount(int rate_count, int min_count) 
 
 void ModelInfoFromYAMLFile::updateName(const std::string& name) {
     model_name = name;
+}
+
+std::string ModelInfoFromYAMLFile::getQualifiedName() const {
+    auto qualified_name = model_name;
+    for (auto ancestor=parent_model; ancestor!=nullptr;
+         ancestor=ancestor->parent_model) {
+        qualified_name = ancestor->model_name + "." + qualified_name;
+    }
+    return qualified_name;
 }
 
 std::string ModelInfoFromYAMLFile::getLongName() const {
@@ -2101,12 +2115,14 @@ void ModelInfoFromYAMLFile::addCladeName
     } else {
         std::stringstream complaint;
         complaint << "Could not add the same clade, " << clade_name
-                  << ", twice to model " << getLongName()
+                  << ", twice, to model " << getQualifiedName()
                   << ".";
         throw ModelExpression::ModelException(complaint.str());
     }
 }
 
 const StrVector& ModelInfoFromYAMLFile::getCladeNames() const {
+    //std::cout << "Clades for " << getQualifiedName()
+    //          << " are " << clade_names.join(",") << std::endl;
     return clade_names;
 }

@@ -216,6 +216,10 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
         auto clade_names = child->getCladeNames();
         if (clade_names.empty()) {
             if (catchall_model_number==MODEL_UNASSIGNED) {
+                std::cout << "Subtree model " << child->getQualifiedName()
+                          << " will be the catch-all subtree model "
+                          << " for " << model_info->getQualifiedName() 
+                          << std::endl;
                 catchall_model_number = subtree_model_number;
             } else {
                 auto other_model = subtree_models[catchall_model_number];
@@ -277,6 +281,13 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
     }
     setRateMatrixFromModel();
 }
+
+void YAMLModelDivergent::setRateMatrixFromModel() {
+     for (ModelMarkov* model : subtree_models) {
+        model->setRateMatrixFromModel();
+    }  
+}
+
 
 YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
                            ModelInfoFromYAMLFile& info)

@@ -501,6 +501,7 @@ public:
                        const char* model_name, StateFreqType freq,
                        ModelsBlock* models_block, PhyloTree *tree, 
                        PhyloTree* report_to_tree);
+    virtual void setRateMatrixFromModel() override; 
 };
 
 template <class R> class YAMLRateModelWrapper: public R {
