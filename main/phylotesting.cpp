@@ -2011,12 +2011,21 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (in_model_name.empty()) {
-        // TODO: in case of Neural network, return a CandidateModel instance of the model here
         if (params.use_nn_model) {
-            // generate models with neural network
-            string subst_name = "GTR";
-            string rate_name = "+G{0.1}"; // check if this really works
-            push_back(CandidateModel(subst_name, rate_name, in_tree->aln));
+            cout << "Using NN" << endl;
+            // determine substitution model using neural network
+            Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+            NeuralNetwork nn(alignment);
+            string model_name = nn.doModelInference();
+            string rate_name = "";
+            double alpha = nn.doAlphaInference();
+            if (alpha >= 0) { // +G
+                rate_name = "+G{" + to_string(alpha) + "}";
+            }
+            string best_model_NN;
+            CKP_RESTORE(best_model_NN);
+            delete alignment;
+            push_back(CandidateModel(model_name, rate_name, in_tree->aln));
         } else {
             // generate all models the normal way
             generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
