@@ -2013,12 +2013,13 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     if (in_model_name.empty()) {
         if (params.use_nn_model) {
             cout << "Using NN" << endl;
+            // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
             // determine substitution model using neural network
-            Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+            Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars(); // todo: here
             NeuralNetwork nn(alignment);
-            string model_name = nn.doModelInference();
+            string model_name = nn.doModelInference(); // todo: here
             string rate_name = "";
-            double alpha = nn.doAlphaInference();
+            double alpha = nn.doAlphaInference(); // todo: here
             if (alpha >= 0) { // +G
                 rate_name = "+G{" + to_string(alpha) + "}";
             }

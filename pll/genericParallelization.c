@@ -46,10 +46,6 @@
 #include <mpi.h>
 #endif
 
-#ifdef _IQTREE_MPI
-#include <mpi.h>
-#endif
-
 /** @file genericParallelization.c
     
     @brief Generic master-worker parallelization with either pthreads or MPI. 

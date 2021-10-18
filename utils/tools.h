@@ -2232,6 +2232,12 @@ public:
 
     /** flag for using neural network for model selection */
     bool use_nn_model; // added by TD
+
+    /** neural network file that determines substitution model (onnx format) */
+    string nn_path_model; // added by TD
+
+    /** neural network file that determines alpha rate (onnx format) */
+    string nn_path_rates; // added by TD
     
 };
 

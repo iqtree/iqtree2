@@ -21,9 +21,6 @@
 #include "utils/progress.h" //for progress_display
 #include "alignmentsummary.h"
 
-#include <random>
-#include <chrono>
-
 #include <Eigen/LU>
 #ifdef USE_BOOST
 #include <boost/math/distributions/binomial.hpp>
@@ -517,6 +514,7 @@ vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
             default:
                 throw "Sequence contains other characters than A, C, G, T";
         }
+        // todo: make it clear what happens here with the bitshifting
         // count transitions and transversions
         switch(bitshift_map[(*it)[seq1_idx]] << bitshift_map[(*it)[seq2_idx]]) {
             case 2: stats[0]++; // AA
@@ -584,70 +582,81 @@ Alignment *Alignment::replaceAmbiguousChars() {
         for (size_t i = 0; i < getNSeq(); i++) {
             if (aln->at(idx)[i] > 3) {
                 uint32_t base;
-                mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+                //mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
                 switch(aln->at(idx)[i]) {
                     case 6: { // M: A or C
-                        std::uniform_int_distribution<size_t> dist(0, 1);
-                        base = dist(rng);
+                        base = random_int(2); // todo: here input pointer to random number stream
+                        //std::uniform_int_distribution<size_t> dist(0, 1);
+                        //base = dist(rng);
                         aln->at(idx)[i] = (StateType) base;
                     }
                         break;
                     case 8: { // R: A or G
-                        std::uniform_int_distribution<size_t> dist(0, 1);
-                        base = dist(rng);
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(0, 1);
+                        //base = dist(rng);
                         aln->at(idx)[i] = base == 0 ? (StateType) base: (StateType) 2;
                     }
                         break;
                     case 9: { // S: C or G
-                        std::uniform_int_distribution<size_t> dist(1, 2);
-                        base = dist(rng);
-                        aln->at(idx)[i] = base;
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(1, 2);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? 2 : base;
                     }
                         break;
                     case 10: { // V: A or C or G
-                        std::uniform_int_distribution<size_t> dist(0, 2);
-                        base = dist(rng);
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(0, 2);
+                        //base = dist(rng);
                         aln->at(idx)[i] = base;
                     }
                         break;
                     case 12: { // W: A or T
-                        std::uniform_int_distribution<size_t> dist(0, 1);
-                        base = dist(rng);
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(0, 1);
+                        //base = dist(rng);
                         aln->at(idx)[i] = base == 0 ? (StateType) base: (StateType) 3;
                     }
                         break;
                     case 13: { // Y: C or T
-                        std::uniform_int_distribution<size_t> dist(1, 2);
-                        base = dist(rng);
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(1, 2);
+                        //base = dist(rng);
                         aln->at(idx)[i] = base == 1 ? (StateType) base: (StateType) 3;
                     }
                         break;
                     case 14: { // H: A or C or T
-                        std::uniform_int_distribution<size_t> dist(0, 2);
-                        base = dist(rng);
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(0, 2);
+                        //base = dist(rng);
                         aln->at(idx)[i] = base == 2 ? (StateType) 3 : (StateType) base;
                     }
                         break;
                     case 15: { // K: G or T
-                        std::uniform_int_distribution<size_t> dist(2, 3);
-                        base = dist(rng);
-                        aln->at(idx)[i] = (StateType) base;
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(2, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) 2 : (StateType) 3;
                     }
                         break;
                     case 16: { // D: A or G or T
-                        std::uniform_int_distribution<size_t> dist(1, 3);
-                        base = dist(rng);
-                        aln->at(idx)[i] = base == 1 ? (StateType) 0: (StateType) base;
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(1, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 1 ? (StateType) 3 : (StateType) base;
                     }
                         break;
                     case 17: { // B: C or G or T
-                        std::uniform_int_distribution<size_t> dist(1, 3);
-                        base = dist(rng);
-                        aln->at(idx)[i] = (StateType) base;
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(1, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) 3 : (StateType) base;
                     }
                     case 18: { // N
-                        std::uniform_int_distribution<size_t> dist(0, 3);
-                        base = dist(rng);
+                        base = random_int(4);
+                        //std::uniform_int_distribution<size_t> dist(0, 3);
+                        //base = dist(rng);
                         aln->at(idx)[i] = (StateType) base;
                     }
                         break;
@@ -662,6 +671,7 @@ Alignment *Alignment::replaceAmbiguousChars() {
 }
 
 // added by TD
+// todo: make 0.7 a parameter for the user to change
 Alignment *Alignment::removeAndFillUpGappySites() {
 
     IntVector keep_patterns;
@@ -2001,7 +2011,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 
     // added by TD
     if (Params::getInstance().use_nn_model && seq_type != SEQ_DNA) {
-        throw "Can't use option use-nn-model with non DNA/RNA alignments!";
+        throw "Can't combine neural network model selection with non DNA/RNA alignments!";
     }
 
     //initStateSpace(seq_type);

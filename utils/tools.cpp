@@ -1089,6 +1089,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     // added by TD
     params.use_nn_model = false;
+    params.nn_path_model = "../nn_models/resnet_modelfinder.onnx";
+    params.nn_path_rates = "../nn_models/lanfear_alpha_lstm.onnx";
     
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 
@@ -2373,8 +2375,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (strcmp(argv[cnt], "--modelomatic") == 0) {
-                if (params.use_nn_model)
-                    throw "Can't use options --modelomatic and --use-nn-model together";
                 params.modelomatic = true;
                 continue;
             }
@@ -4187,8 +4187,22 @@ void parseArg(int argc, char *argv[], Params &params) {
             // added by TD
             // todo: give it a fancy name
             if (strcmp(argv[cnt], "--use-nn-model") == 0) {
-                if (params.modelomatic)
-                    throw "Can't use options --use-nn-model and --modelomatic together";
+                params.use_nn_model = true;
+                continue;
+            }
+
+            // added by TD
+            if (strcmp(argv[cnt], "--nn-path-model") == 0) {
+                cnt++;
+                params.nn_path_model = argv[cnt];
+                params.use_nn_model = true;
+                continue;
+            }
+
+            // added by TD
+            if (strcmp(argv[cnt], "--nn-path-rates") == 0) {
+                cnt++;
+                params.nn_path_rates = argv[cnt];
                 params.use_nn_model = true;
                 continue;
             }
@@ -4278,6 +4292,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
         outError("-b bootstrap option does not work with -S yet.");
+
+    if (params.use_nn_model && params.modelomatic)
+        outError("--modelomatic option does not work with --use-nn-model.");
 
     if (params.dating_method != "") {
     #ifndef USE_LSD2
@@ -4496,6 +4513,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --lbp NUM            Replicates for fast local bootstrap probabilities" << endl
     << endl << "MODEL-FINDER:" << endl
     << "  --use-nn-model       Use neural network for tree inference" << endl
+    << "  --nn-path-model      Neural network file for substitution model (onnx format)" << endl
+    << "  --nn-path-rates      Neural network file for alpha value (onnx format)" << endl
     << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
     << "  -m TEST              Standard model selection followed by tree inference" << endl
     << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl

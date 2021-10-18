@@ -20,7 +20,7 @@ double NeuralNetwork::doAlphaInference() {
     session_options.SetIntraOpNumThreads(1);
     session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
-    const char *model_path = "../nn_models/lanfear_alpha_lstm.onnx";
+    const char *model_path = Params::getInstance().nn_path_rates.c_str();
 
     printf("Using Onnxruntime C++ API\n");
     Ort::Session session(env, model_path, session_options);
@@ -64,11 +64,11 @@ double NeuralNetwork::doAlphaInference() {
     size_t num_taxa = this->alignment->getNSeq();
 
     // choose 10,000 random positions (with repetition) in (0, num_sites - 1)
-    mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
-    std::uniform_int_distribution<size_t> dist(0, num_sites - 1);
+    //mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+    //std::uniform_int_distribution<size_t> dist(0, num_sites - 1);
 
     for (size_t i = 0; i < 40000; i = i + 4) {
-        size_t site_idx = dist(rng);
+        size_t site_idx = random_int(num_sites); //dist(rng);
         vector<size_t> freqs = this->alignment->getPattern(site_idx).freqs;
         // in case of gaps, adjust number of taxa
         // size_t num_taxa = accumulate(freqs.begin(), freqs.end(), 0);
@@ -111,7 +111,7 @@ string NeuralNetwork::doModelInference() {
     session_options.SetIntraOpNumThreads(1);
     session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
 
-    const char *model_path = "../nn_models/resnet_modelfinder.onnx";
+    const char *model_path = Params::getInstance().nn_path_model.c_str();
 
     printf("Using Onnxruntime C++ API\n");
     Ort::Session session(env, model_path, session_options);
@@ -154,8 +154,8 @@ string NeuralNetwork::doModelInference() {
     const size_t num_taxa = this->alignment->getNSeq();
 
     // choose 10,000 random sequence pairs (with repetition) in (0, num_sites - 1)
-    mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
-    std::uniform_int_distribution<size_t> dist_taxa(0, num_taxa - 1);
+    //mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+    //std::uniform_int_distribution<size_t> dist_taxa(0, num_taxa - 1);
 
     vector<float> summary_stats(26);
 
@@ -165,8 +165,8 @@ string NeuralNetwork::doModelInference() {
         size_t seq1_idx;
         size_t seq2_idx;
         while (true) {
-            seq1_idx = dist_taxa(rng);
-            seq2_idx = dist_taxa(rng);
+            seq1_idx = random_int(num_taxa); //dist_taxa(rng);
+            seq2_idx = random_int(num_taxa); //dist_taxa(rng);
             if (seq1_idx != seq2_idx)
                 break;
         }
@@ -207,7 +207,7 @@ string NeuralNetwork::doModelInference() {
         case 1: return "K2P";
         case 2: return "F81";
         case 3: return "HKY";
-        case 4: return "Tn";
+        case 4: return "TN";
         case 5: return "GTR";
         default: throw "Model not known";
 
