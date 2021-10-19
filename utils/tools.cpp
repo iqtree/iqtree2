@@ -1415,6 +1415,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_no_export_sequence_wo_gaps = false;
     params.alisim_mixture_at_sub_level = false;
     params.alisim_branch_scale = 1.0;
+    params.alisim_posterior_mean = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2503,6 +2504,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--sub-level-mixture") == 0) {
                 params.alisim_mixture_at_sub_level = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--posterior-mean") == 0) {
+                params.alisim_posterior_mean = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--branch-scale") == 0) {

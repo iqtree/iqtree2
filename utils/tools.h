@@ -2439,6 +2439,11 @@ public:
     *  branch-scale factor
     */
     double alisim_branch_scale;
+    
+    /**
+    *  TRUE to enable posterior mean rate (for rate heterogeneity) and posterior mean frequencies (for mixture models)
+    */
+    bool alisim_posterior_mean;
 };
 
 /**

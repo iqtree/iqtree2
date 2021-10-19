@@ -129,6 +129,46 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
 }
 
 /**
+    regenerate sequence based on posterior mean state frequencies (for mixture models)
+*/
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, bool insertion_event)
+{
+    ASSERT(tree->params->alisim_posterior_mean);
+    
+    // get pattern-specific state frequencies (ptn_state_freq)
+    int nptn = tree->aln->getNPattern();
+    int input_sequence_length = tree->aln->getNSite();
+    double *ptn_state_freq = new double[nptn*max_num_states];
+    
+    SiteFreqType tmp_site_freq_type = tree->params->print_site_state_freq;
+    tree->params->print_site_state_freq = WSF_POSTERIOR_MEAN;
+    tree->computePatternStateFreq(ptn_state_freq);
+    tree->params->print_site_state_freq = tmp_site_freq_type;
+    
+    // convert ptn_state_freq to accummulated matrix
+    convertProMatrixIntoAccumulatedProMatrix(ptn_state_freq, nptn, max_num_states);
+    
+    // re-generate the sequence
+    vector <short int> new_sequence(length, max_num_states);
+    for (int i = 0; i < length; i++)
+    {
+        double rand_num = random_double();
+        // if new sequence is generated for an insertion event or the site id is greater than the sequence length
+        int site_id = i;
+        if (insertion_event || i >= input_sequence_length)
+            site_id = random_int(input_sequence_length);
+        int site_pattern_id = tree->aln->getPatternID(site_id);
+        int starting_index = site_pattern_id*max_num_states;
+        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_state_freq, rand_num, starting_index, starting_index + max_num_states - 1, starting_index) - starting_index;
+    }
+    
+    // delete base_freqs_one_component
+    delete [] ptn_state_freq;
+    
+    return new_sequence;
+}
+
+/**
     initialize caching accumulated_trans_matrix
 */
 void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model)
@@ -396,7 +436,15 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
     
     // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
     if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
-        tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
+    {
+        // re-generate sequence based on posterior mean state frequencies if users want to do so
+        if (tree->params->alisim_posterior_mean && tree->getModel()->isMixture())
+            tree->root->sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites);
+        // otherwise re-generate sequence based on the state frequencies the model component for each site
+        else
+            tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
+    }
+
     
     // initialize site-specific rates
     getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length);
@@ -428,7 +476,14 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     
     // regenerate new_sequence if mixture model is used
     if (tree->getModel()->isMixture())
-        new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
+    {
+        // re-generate sequence based on posterior mean state frequencies if users want to do so
+        if (tree->params->alisim_posterior_mean && tree->getModel()->isMixture())
+            new_sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, true);
+        // otherwise re-generate sequence based on the state frequencies the model component for each site
+        else
+            new_sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
+    }
     
     // insert new_sequence into the current sequence
     AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);

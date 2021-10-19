@@ -316,6 +316,13 @@ void executeSimulation(Params params, IQTree *&tree)
 {
     cout << "[Alignment Simulator] Executing" <<"\n";
     
+    // disable posterior mean if users don't supply input alignment
+    if (params.alisim_posterior_mean && !params.alisim_inference_mode)
+    {
+        params.alisim_posterior_mean = false;
+        outWarning("Skipping --posterior-mean option as it can only be used if users supply an input alignment.");
+    }
+    
     // case 1 (default): without rate heterogeneity
     AliSimulator *alisimulator;
     if (tree && params.alisim_inference_mode)

@@ -49,6 +49,11 @@ protected:
     vector<short int> regenerateSequenceMixtureModel(int length, vector<short int> new_site_specific_model_index);
     
     /**
+        regenerate sequence based on posterior mean state frequencies (for mixture models)
+    */
+    vector<short int> regenerateSequenceMixtureModelPosteriorMean(int length, bool insertion_event = false);
+    
+    /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
     virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
