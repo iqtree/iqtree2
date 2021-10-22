@@ -312,6 +312,11 @@ public:
     double* mixture_accumulated_weight = NULL;
     int mixture_max_weight_pos = 0;
     
+    // variables using for posterior mean rates/state frequencies
+    bool applyPosMeanRate = false;
+    double* ptn_state_freq = NULL;
+    DoubleVector pattern_rates;
+    
     /**
         constructor
     */

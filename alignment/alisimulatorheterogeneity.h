@@ -24,6 +24,11 @@ protected:
     void getSiteSpecificRatesDiscrete(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length);
     
     /**
+        get site-specific on Posterior Mean Rates (Discrete Gamma/FreeRate)
+    */
+    void getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, bool insertion_event);
+    
+    /**
       estimate the state from accumulated trans_matrices
     */
     virtual int estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int dad_state);
@@ -74,6 +79,11 @@ protected:
     */
     virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
+    /**
+        TRUE if posterior mean rate can be used
+    */
+    bool canApplyPosteriorMeanRate();
+    
 public:
     
     RateHeterogeneity *rate_heterogeneity;
@@ -91,7 +101,7 @@ public:
     /**
         get site-specific rates
     */
-    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &new_site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length);
+    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &new_site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length, bool insertion_event = false);
 };
 
 #endif /* alisimulatorheterogeneity_h */
