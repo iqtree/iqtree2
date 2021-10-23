@@ -2399,16 +2399,16 @@ const char ERR_FEW_SPLITS[] = "Number of splits must be at least equal to the nu
 const char ERR_NEG_BRANCH[] = "Negative branch length not allowed.";
 const char ERR_NO_MEMORY[] = "Not enough memory!";
 
-const char ERR_READ_INPUT[] = "File not found or incorrect input, pls check it again.";
+const char ERR_READ_INPUT[] = "File not found or incorrect input, please check it again. ";
 const char ERR_UNEXPECTED_EOF[] = "Unexpected end of file.";
-const char ERR_READ_ANY[] = "Unidentified error while reading file, pls check it carefully again.";
+const char ERR_READ_ANY[] = "Unidentified error while reading file, please check it carefully again.";
 const char ERR_WRITE_OUTPUT[] = "Cannot write to file ";
 
 const char ERR_NO_K[] = "You must specify the number of taxa in the PD set.";
 const char ERR_TOO_SMALL_K[] = "Size of PD-set must be at least the size of initial set.";
 const char ERR_NO_BUDGET[] = "Total budget is not specified or less than zero.";
 const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the initial set of taxa.";
-const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
+const char ERR_INTERNAL[] = "Internal error, please contact authors!";
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

@@ -146,3 +146,21 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
         ASSERT(subset_number != SUBSET_UNKNOWN);
     }
 }
+
+ModelSubst* PhyloTree::getModelForBranch(PhyloNode* dad, 
+                                         PhyloNode* node) const {
+    if (!model->isDivergentModel()) {
+        return model;
+    }
+    ModelDivergent* model_div = dynamic_cast<ModelDivergent*>(model);
+    int dad_subset            = dad->getSubsetNumber();
+    ModelMarkov* dad_model    = model_div->getSubsetModel(dad_subset);
+    int child_subset          = node->getSubsetNumber();
+    ModelMarkov* child_model  = model_div->getSubsetModel(child_subset);
+
+    if (child_model == dad_model) {
+        return child_model;
+    }
+    return model_div->getBranchJoiningModel(dad_subset, child_subset);
+}
+

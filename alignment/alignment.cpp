@@ -4319,7 +4319,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln,
         // resampling also the per-site state frequency vector
         if (aln->site_state_freq.size() != aln->getNPattern() || spec)
             outError("Unsupported bootstrap feature,"
-                     " pls contact the developers");
+                     " please contact the developers");
     }
     
     if (Params::getInstance().jackknife_prop > 0.0 && spec) {

@@ -106,7 +106,7 @@ void SplitGraph::init(Params &params)
         nexus.Execute(token);
         if (trees->GetNumTrees() > 0) { 
             if (getNSplits() > 0) 
-                outError("Ambiguous input file, pls only specify either SPLITS block or TREES block");
+                outError("Ambiguous input file, please only specify either SPLITS block or TREES block");
             convertFromTreesBlock(params.tree_burnin, params.tree_max_count, params.split_threshold, 
                 static_cast<int>(params.split_weight_summary), params.split_weight_threshold, params.tree_weight_file);
         }

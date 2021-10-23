@@ -32,6 +32,7 @@
 
 #include "model/modelmarkov.h"
 #include "model/modelset.h"
+#include "model/modeldivergent.h"
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
@@ -295,8 +296,9 @@ void PhyloTree::computeTipPartialLikelihood() {
                         }
                     }
                     if (state < nstates) {
-                        for (int i = 0; i < nstates; i++)
+                        for (int i = 0; i < nstates; i++) {
                             partial_lh[i*vector_size+v] = inv_evec[(i*nstates+state)*vector_size+v];
+                        }
                     } else if (state == aln->STATE_UNKNOWN) {
                         // special treatment for unknown char
                         for (int i = 0; i < nstates; i++) {
@@ -367,10 +369,19 @@ void PhyloTree::computeTipPartialLikelihood() {
     
     // 2020-06-23: refactor to use computeTipLikelihood
     int nmixtures = 1;
-    if (getModel()->useRevKernel()) {
-        nmixtures = getModel()->getNMixtures();
+    
+    ModelSubst* model_to_use = getModel();
+    //Temporary workaround: fake model_to_use
+    //for calculating one set of tip likelihoods.
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        model_to_use = div_model->getNthSubtreeModel(0);
     }
-    int nstates = getModel()->num_states;
+    if (model_to_use->useRevKernel()) {
+        nmixtures = model_to_use->getNMixtures();
+    }
+    int nstates = model_to_use->num_states;
     int state;
     if (aln->seq_type == SeqType::SEQ_POMO) {
         if (aln->pomo_sampling_method != SamplingType::SAMPLING_WEIGHTED_BINOM &&
@@ -382,10 +393,10 @@ void PhyloTree::computeTipPartialLikelihood() {
     // assign tip_partial_lh for all admissible states
     for (state = 0; state <= static_cast<int>(aln->STATE_UNKNOWN); state++) {
         double *state_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
-        getModel()->computeTipLikelihood(state, state_partial_lh);
-        if (getModel()->useRevKernel()) {
+        model_to_use->computeTipLikelihood(state, state_partial_lh);
+        if (model_to_use->useRevKernel()) {
             // transform to inner product of tip likelihood and inverse-eigenvector
-            getModel()->multiplyWithInvEigenvector(state_partial_lh);
+            model_to_use->multiplyWithInvEigenvector(state_partial_lh);
         }
     }
     
@@ -563,35 +574,37 @@ void PhyloTree::computePtnFreq() {
 }
 
 void PhyloTree::computePtnInvar() {
-    intptr_t nptn = aln->getNPattern(), ptn;
-    intptr_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
-  // For PoMo, only consider monomorphic states and set nstates to the number of
-  // states of the underlying mutation model.
-	int nstates = model->getMutationModel()->num_states;
-    int x;
+    intptr_t nptn    = aln->getNPattern(), ptn;
+    intptr_t unobs   = model_factory->unobserved_ptns.size();
+    intptr_t maxptn  = get_safe_upper_limit(nptn)
+                     + get_safe_upper_limit(unobs);
+    // For PoMo, only consider monomorphic states and set nstates to the number of
+    // states of the underlying mutation model.
+	int      nstates = model->getMutationModel()->num_states;
+    int      x;
     // ambiguous characters
-    int ambi_aa[] = {
+    int      ambi_aa[] = {
         4+8, // B = N or D
         32+64, // Z = Q or E
         512+1024 // U = I or L
     };
 
-#ifndef _MSC_VER
-    double state_freq[nstates];
-#else
-    boost::scoped_array<double> state_freq(new double[nstates]);
-#endif
-
-    // -1 for mixture model
-
-    // Again for PoMo, the stationary frequencies are set to the stationary
-    // frequencies of the boundary states.
-    
-    model->getMutationModel()->getStateFrequency(&state_freq[0], -1);
-
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
+        #ifndef _MSC_VER
+            double state_freq[nstates];
+        #else
+            boost::scoped_array<double> state_freq(new double[nstates]);
+        #endif
+
+        // -1 for mixture model
+
+        // Again for PoMo, the stationary frequencies are set to the stationary
+        // frequencies of the boundary states.
+        
+        model->getMutationModel()->getStateFrequency(&state_freq[0], -1);
+
 		for (ptn = 0; ptn < nptn; ptn++) {
             //Todo: This bit will break if aln->STATE_UNKNOWN is bigger than... 127
             if ((*aln)[ptn].const_char > static_cast<char>(aln->STATE_UNKNOWN)) {
@@ -616,21 +629,26 @@ void PhyloTree::computePtnInvar() {
                 ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates;
                 ASSERT(cstate <= 2);
-                for (x = 0; x < 11; x++)
-                    if (ambi_aa[cstate] & (1 << x))
+                for (x = 0; x < 11; x++) {
+                    if (ambi_aa[cstate] & (1 << x)) {
                         ptn_invar[ptn] += state_freq[x];
+                    }
+                }
                 ptn_invar[ptn] *= p_invar;
-            } else ASSERT(0);
+            } 
+            else { 
+                ASSERT(0);
+            }
 		}
 //		// ascertmain bias correction
 //		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
 //			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
 //
 		// dummy values
-		for (ptn = nptn; ptn < maxptn; ptn++)
+		for (ptn = nptn; ptn < maxptn; ptn++) {
 			ptn_invar[ptn] = p_invar;
+        }
 	}
-//	aligned_free(state_freq);
 }
 
 /*******************************************************

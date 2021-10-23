@@ -172,13 +172,6 @@ void ModelDivergent::decomposeRateMatrix() {
         subtree_model->decomposeRateMatrix();
     }
     ASSERT(phylo_tree != nullptr);
-    if (phylo_tree->vector_size == 1) {
-        return;
-    }
-    ASSERT(0 && "ModelDivergent::decomposeRateMatrix"
-           "doesn't work with vectorized kernels, as yet");
-    //Todo: Can probably adapt a lot of what is done in
-    //ModelSet's version of decompareRateMatrix
 }
 
 void ModelDivergent::setOptimizeSteps(int steps) {
@@ -202,6 +195,8 @@ double ModelDivergent::optimizeParameters
                   "Optimizing " << name << " model parameters...");
     VariableBounds vb(ndim+1);
 	double score;
+
+
 
 	setVariables(vb.variables);
 	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
@@ -334,6 +329,7 @@ void ModelDivergent::restoreCheckpoint() {
     for (ModelMarkov* subtree_model : subtree_models) {
         auto model_num_string = convertIntToString(model_num);
         checkpoint->startStruct("Model" + model_num_string);
+        subtree_model->setCheckpoint(checkpoint);
         subtree_model->restoreCheckpoint();
         checkpoint->endStruct();
         ++model_num;
@@ -638,4 +634,40 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
         subtree_model->afterVariablesChanged();
         ++model_number;
     }
+}
+
+ModelMarkov* ModelDivergent::getNthSubtreeModel(int n) const {
+    ASSERT(0<=n);
+    ASSERT(n<subtree_models.size());
+    return subtree_models[n];
+}
+
+ModelMarkov* ModelDivergent::getSubsetModel
+                (int child_subset_number) const {
+    if (0<=child_subset_number && 
+        child_subset_number<subset_to_model.size()) {
+        int subtree_number = subset_to_model[child_subset_number];
+        if (subtree_number==0) {
+            subtree_number = catchall_model_number;
+            ASSERT(0<=subtree_number);
+        }
+        ASSERT (0<=subtree_number);
+        ASSERT (subtree_number<subtree_models.size());
+        return subtree_models[subtree_number];
+    } else {
+        //
+        //Todo: throw.  If we don't recognize the subset number
+        //
+        ASSERT(0<subtree_models.size());
+        return subtree_models[0];
+    }
+}
+
+ModelMarkov* ModelDivergent::getBranchJoiningModel
+                (int dad_subset_number, 
+                 int child_subset_number) const {
+    //Todo: return... a model used on subtree-joining 
+    //      branches?!
+    ASSERT(0<subtree_models.size());
+    return subtree_models[0];
 }

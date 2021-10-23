@@ -142,6 +142,7 @@ const char* AlignmentSummary::getSequence(int sequence_id) const {
     if (sequenceMatrix==nullptr) {
         return nullptr;
     }
+    ASSERT(0<=sequence_id);
     ASSERT(sequence_id < sequenceCount);
     return sequenceMatrix + static_cast<intptr_t>(sequence_id) * sequenceLength;
 }

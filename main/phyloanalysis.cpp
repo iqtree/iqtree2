@@ -94,8 +94,6 @@ void reportReferences(Params &params, ofstream &out) {
             << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
             << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
             << "https://doi.org/10.1038/nmeth.4285" << endl << endl;
-        bool modelfinder_only = info.isModelFinderOnly();
-        //And then what?!
     }
     if (info.isPolymorphismAware()) {
         out << "For polymorphism-aware models please cite:" << endl << endl
@@ -2769,7 +2767,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 }
             }
         }
-        if (params.min_iterations && !iqtree->isBifurcating()) {
+        if (0<params.min_iterations && 
+            !iqtree->isBifurcating()) {
             outError("Tree search does not work with initial multifurcating tree."
                      " Please specify `-n 0` to avoid this.");
         }

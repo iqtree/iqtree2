@@ -102,6 +102,7 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
         new_freq = StateFreqType::FREQ_USER_DEFINED;
     }
     info.setFrequencyType(new_freq);
+    freq_type = new_freq;
 
     bool optimize_weights = false;
 
@@ -198,6 +199,14 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
         new_freq = StateFreqType::FREQ_USER_DEFINED;
     }
     info.setFrequencyType(new_freq);
+    freq_type = new_freq;
+    
+    //But what if the individual sub models want to have
+    //different frequency types.  Different from this 
+    //instance isn't the problem!  It's different from 
+    //each other that is the problem!
+    //Todo: Have a think about this.  The issue is going
+    //to be in setVariables
 
     bool optimize_weights = false;
 

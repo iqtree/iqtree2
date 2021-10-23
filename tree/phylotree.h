@@ -2977,6 +2977,10 @@ protected:
     void computeSubsetNumbersForInternalNodes();
 
     void setUpSubtreesForDivergentModels(ModelSubst* top_model);
+
+    ModelSubst* getModelForBranch(PhyloNode* dad, 
+                                  PhyloNode* node) const;
+
 };
         
 #endif
