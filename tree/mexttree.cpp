@@ -126,8 +126,9 @@ void MExtTree::generateCaterpillar(int size) {
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = static_cast<unsigned int>(myleaves.size());
-	nodeNum = leafNum;
+	leafNum   = static_cast<unsigned int>(myleaves.size());
+	nodeNum   = leafNum;
+	branchNum = 0;
 	initializeTree();
 
 }
@@ -180,8 +181,9 @@ void MExtTree::generateBalanced(int size) {
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = static_cast<int>(myleaves.size());
-	nodeNum = leafNum;
+	leafNum   = static_cast<int>(myleaves.size());
+	branchNum = (0<leafNum) ? (leafNum-1) : 0;
+	nodeNum   = leafNum;
 	initializeTree();
 
 }
@@ -270,8 +272,9 @@ void MExtTree::generateUniform(int size, bool binary)
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = size;
-	nodeNum = leafNum;
+	leafNum   = size;
+	nodeNum   = leafNum;
+	branchNum = (0<leafNum) ? (leafNum-1) : 0;
 	initializeTree();
 
 }
@@ -343,8 +346,9 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 	// indexing the leaves
 	setLeavesName(myleaves);
 
-	leafNum = static_cast<unsigned int>(myleaves.size());
-	nodeNum = leafNum;
+	leafNum   = static_cast<unsigned int>(myleaves.size());
+	branchNum = (0<leafNum) ? (leafNum-1) : 0;
+	nodeNum   = leafNum;
 	initializeTree();
 
 
@@ -417,7 +421,9 @@ void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_
     }
     
 
-	nodeNum = leafNum;
+	nodeNum   = leafNum;
+	branchNum = (0<leafNum) ? (leafNum-1) : 0;
+
 	initializeTree();
 
 }

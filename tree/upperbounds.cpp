@@ -402,8 +402,9 @@ MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
 	treeR->root = myleaves[0];
 	// indexing the leaves
 	treeR->setLeavesName(myleaves);
-	treeR->leafNum = myleaves.size();
-	treeR->nodeNum = treeR->leafNum;
+	treeR->leafNum   = myleaves.size();
+	treeR->nodeNum   = treeR->leafNum;
+	treeR->branchNum = treeR->branchNum;
 	treeR->initializeTree();
 
 	NodeVector taxa;

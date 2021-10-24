@@ -1547,7 +1547,8 @@ int PhyloTree::computeParsimonyTree(Alignment* alignment,
         doing_what = "Step-wise Parsimony";
         score = computeParsimonyTreeOld(random_number_stream);
     }
-    nodeNum = 2 * leafNum - 2;
+    nodeNum   = 2 * leafNum - 2;
+    branchNum = (0<leafNum) ? (leafNum-1) : 0;
     initializeTree();
     
     // parsimony tree is always unrooted

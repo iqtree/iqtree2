@@ -47,10 +47,11 @@ void LoggingTarget::logLine(const std::string& line) const {
 *********************************************/
 
 MTree::MTree() {
-    root = nullptr;
-    leafNum = 0;
-    nodeNum = 0;
-    rooted = false;
+    root      = nullptr;
+    leafNum   = 0;
+    nodeNum   = 0;
+    branchNum = 0;
+    rooted    = false;
     if (Params::getInstance().min_branch_length <= 0) {
         num_precision = 6;
     }
@@ -61,12 +62,13 @@ MTree::MTree() {
 	fig_char = "|-+++";
 }
 
-MTree::MTree(const char *userTreeFile, bool &is_rooted)
+MTree::MTree(const char *userTreeFile, bool &is_rooted): MTree()
 {
     init(userTreeFile, is_rooted);
 }
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
+    branchNum = 0;
     if (Params::getInstance().min_branch_length <= 0) {
         num_precision = 6;
     }
@@ -105,10 +107,11 @@ MTree::MTree(const string& treeString, bool isRooted) {
 }
 
 void MTree::init(MTree &tree) {
-    root = tree.root;
-    leafNum = tree.leafNum;
-    nodeNum = tree.nodeNum;
-    rooted = tree.rooted;
+    root      = tree.root;
+    leafNum   = tree.leafNum;
+    nodeNum   = tree.nodeNum;
+    branchNum = tree.branchNum;
+    rooted    = tree.rooted;
     //userFile = tree.userFile;
     // have to delete the root when exchange to another object
     tree.root = NULL;
@@ -890,8 +893,8 @@ void MTree::readTree(istream &in, bool &is_rooted)
         // anything else
         outError(ERR_READ_ANY, reportInputInfo());
     }
-
-    nodeNum = leafNum;
+    nodeNum   = leafNum;
+    branchNum = (0<leafNum) ? (leafNum-1) : 0;
     initializeTree();
 
     //bool stop = false;
@@ -901,8 +904,8 @@ void MTree::readTree(istream &in, bool &is_rooted)
 void MTree::initializeTree(Node *node, Node* dad)
 {
     if (!node) {
-        node = root;
-        nodeNum = leafNum;
+        node      = root;
+        nodeNum   = leafNum;
         branchNum = 0;
     }
     if (!node->isLeaf()) {

@@ -3954,8 +3954,8 @@ void PhyloTree::growTreeML(Alignment *alignment) {
         added_node->clearReversePartialLh(new_taxon);
         optimizeAllBranches(10, TOL_LIKELIHOOD, 10, false); 
     }
-
-    nodeNum = 2 * leafNum - 2;
+    nodeNum   = 2 * leafNum - 2;
+    branchNum = (0<leafNum) ? (leafNum-1) : 0;
 }
 
 /****************************************************************************

@@ -3,6 +3,16 @@
 #include <model/modeldivergent.h>
 
 void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
+
+    #if (0)
+        std::cout << "Tree (in setUpSubtreesForDivergentModels):" << std::endl;
+        PhyloNodeVector all_nodes (getAllNodesInTree());
+        for (PhyloNode* node : all_nodes ) {
+            std::cout << "  " << node->id 
+                    << " (" << node->name << ")" << std::endl;
+        }
+    #endif
+
     DivergentModels div_models;
     top_model->getDivergentModels(div_models);
     if (div_models.empty()) {

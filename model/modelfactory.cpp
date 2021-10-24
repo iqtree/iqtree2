@@ -500,7 +500,18 @@ void ModelFactory::initializeModel(const std::string& model_name,
                                    PhyloTree* report_to_tree) {
     /******************** initialize model ****************************/
     bool is_mixture_model   = model_info.isMixtureModel();
-        
+
+#if (0)
+    tree->hideProgress();
+    std::cout << "Tree passed to initializeModel:" << std::endl;
+    PhyloNodeVector all_nodes (tree->getAllNodesInTree());
+    for (PhyloNode* node : all_nodes ) {
+        std::cout << "  " << node->id 
+                  << " (" << node->name << ")" << std::endl;
+    }
+    tree->showProgress();
+#endif
+
     if (tree->aln->site_state_freq.empty()) {
         if (is_mixture_model || 
             freq_type == StateFreqType::FREQ_MIXTURE) {

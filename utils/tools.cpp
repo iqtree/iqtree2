@@ -3891,6 +3891,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else {
                     params.divergence_graph_file_path = argv[cnt];
                 }
+                continue;
             }
             if (arg=="--no-ml-tree") {
                 params.modelfinder_ml_tree = false;
