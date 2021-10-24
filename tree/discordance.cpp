@@ -169,7 +169,7 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
     support.resize(3, 0);
     // reserve size for partition-wise concordant/discordant sites
     if (Params::getInstance().site_concordance_partition && aln->isSuperAlignment()) {
-        SuperAlignment *saln = (SuperAlignment*)aln;
+        auto saln = dynamic_cast<SuperAlignment*>(aln);
         support.resize(saln->partitions.size()*3+3, 0);
         // check for gene trees not decisive for this branch
         StrVector taxname;

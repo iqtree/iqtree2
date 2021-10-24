@@ -73,8 +73,8 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
     vector<Alignment*> local_partitions;
 
     if (aln->isSuperAlignment()) {
-        SuperAlignment* super_aln = (SuperAlignment*)aln;
-        partitions = &super_aln->partitions;
+        auto super_aln = dynamic_cast<SuperAlignment*>(aln);
+        partitions     = &super_aln->partitions;
     }
     else {
         local_partitions.push_back(aln);

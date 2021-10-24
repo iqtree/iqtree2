@@ -365,10 +365,12 @@ bool MTree::isBifurcating() {
 
 bool MTree::isBifurcating(Node *node, Node *dad) {
 	if (!node->isLeaf() && node->degree() != 3) {
+        #if (0)
         std::cout << "Non bifurcating node " 
                   << node->id << " (" << node->name << ")" 
                   << " has degree " << node->degree()
                   << std::endl;
+        #endif
         return false;
     }
 	FOR_NEIGHBOR_IT(node, dad, it) {

@@ -33,7 +33,7 @@ void PhyloSuperTreeUnlinked::readTree(istream &in, bool &is_rooted) {
 
 void PhyloSuperTreeUnlinked::setAlignment(Alignment *alignment) {
     ASSERT(alignment->isSuperAlignment());
-    SuperAlignment *saln = (SuperAlignment*)alignment;
+    auto saln = dynamic_cast<SuperAlignment*>(alignment);
     ASSERT(saln->partitions.size() == size());
     for (int i = 0; i < size(); i++)
         at(i)->setAlignment(saln->partitions[i]);
@@ -56,9 +56,9 @@ int PhyloSuperTreeUnlinked::computeParsimonyTree(Alignment*   alignment,
                                                  int*         rand_stream, 
                                                  const char*  out_prefix,
                                                  const char*& doing_what) {
-    SuperAlignment *saln = (SuperAlignment*)alignment;
-    int score = 0;
-    int i;
+    auto saln  = dynamic_cast<SuperAlignment*>(alignment);
+    int  score = 0;
+    int  i;
     ASSERT(saln->partitions.size() == size());
     for (i = 0; i < size(); i++) {
         score += at(i)->computeParsimonyTree(saln->partitions[i], rand_stream,

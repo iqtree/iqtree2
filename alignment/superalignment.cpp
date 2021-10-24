@@ -1408,7 +1408,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln,
                                               const char *spec) {
 	ASSERT(aln->isSuperAlignment());
 	Alignment::copyAlignment(aln);
-	SuperAlignment *super_aln = (SuperAlignment*) aln;
+	auto *super_aln = dynamic_cast<SuperAlignment*>(aln);
 	ASSERT(partitions.empty());
     name = aln->name;
     model_name = aln->model_name;

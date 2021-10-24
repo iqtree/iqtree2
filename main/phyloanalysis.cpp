@@ -191,7 +191,7 @@ void reportModelSelection(ofstream &out, Params &params,
     PhyloSuperTree *stree = nullptr;
     if (tree->isSuperTree()) {
         stree = dynamic_cast<PhyloSuperTree*>(tree);
-        SuperAlignment *saln = (SuperAlignment*)stree->aln;
+        auto saln = dynamic_cast<SuperAlignment*>(stree->aln);
         for (int part = 0; part != stree->size(); part++) {
             if (part != 0) {
                 out << ",";
@@ -957,7 +957,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
              << params.out_prefix << ".best_scheme.nex" << endl;
         bool raxml_format_printed = true;
 
-        SuperAlignment* super_aln = (SuperAlignment*)tree.aln;
+        auto super_aln = dynamic_cast<SuperAlignment*>(tree.aln);
         for (Alignment* partition_aln : super_aln->partitions) {
             if (!partition_aln->aln_file.empty()) {
                 raxml_format_printed = false;
@@ -1130,10 +1130,11 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
         if (tree.isSuperTree()) {
       // TODO DS: Changes may be needed here for PoMo.
             auto taxa_count = tree.aln->getNSeq()+tree.removed_seqs.size();
+            auto supe_tree  = dynamic_cast<SuperAlignment*>(tree.aln); 
             out << "Input data: " << taxa_count << " taxa with "
                     << tree.aln->getNSite() << " partitions and "
                     << tree.getAlnNSite() << " total sites ("
-                    << ((SuperAlignment*)tree.aln)->computeMissingData()*100
+                    << supe_tree->computeMissingData()*100
                     << "% missing data)" << endl << endl;
 
             PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&tree);
@@ -1494,7 +1495,8 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
 
             try
             {
-                Terrace terrace(tree, (SuperAlignment*)(tree.aln));
+                auto supe_align = dynamic_cast<SuperAlignment*>(tree.aln);
+                Terrace terrace(tree, supe_align);
 
                 uint64_t terrace_size = terrace.getSize();
 
@@ -2320,7 +2322,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         string aln_file = (string)params.out_prefix + ".conaln";
         string partition_info = params.out_prefix;
         partition_info += ".partinfo.nex";
-        auto super_aln = (SuperAlignment*)(iqtree.aln);
+        auto super_aln = dynamic_cast<SuperAlignment*>(iqtree.aln);
         super_aln->printPartition(partition_info.c_str(), aln_file.c_str());
         partition_info = (string)params.out_prefix + ".partitions";
         super_aln->printPartitionRaxml(partition_info.c_str());
@@ -3961,7 +3963,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
         alignment->printAlignment(params.aln_output_format,
                                   params.aln_output, false, params.aln_site_list,
                                   exclude_sites, params.ref_seq_name);
-        auto super_aln = (SuperAlignment*)alignment;
+        auto super_aln = dynamic_cast<SuperAlignment*>(alignment);
         if (params.print_subaln) {
             super_aln->printSubAlignments(params);
         }
@@ -4068,7 +4070,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 IQTree *newIQTree(Params &params, Alignment *alignment) {
     IQTree *tree;
     if (alignment->isSuperAlignment()) {
-        auto super_aln = (SuperAlignment*)alignment;
+        auto super_aln = dynamic_cast<SuperAlignment*>(alignment);
         PhyloSuperTree* supe_tree = nullptr;
         if (params.partition_type == TOPO_UNLINKED) {
             supe_tree = new PhyloSuperTreeUnlinked(super_aln);
@@ -4162,7 +4164,7 @@ void doSymTest(Alignment *alignment, Params &params) {
 
     int num_parts = 1;
     if (alignment->isSuperAlignment()) {
-        auto super_aln = (SuperAlignment*)alignment;
+        auto super_aln = dynamic_cast<SuperAlignment*>(alignment);
         num_parts = static_cast<int>(super_aln->partitions.size());
     }    
     string filename_stat = string(params.out_prefix) + ".symstat.csv";
@@ -4283,7 +4285,7 @@ void doSymTest(Alignment *alignment, Params &params) {
         << ((params.symtest_shuffle > 1) ? ",IntMax,IntPerm" : "") << endl;
     
     if (alignment->isSuperAlignment()) {
-        SuperAlignment *saln = (SuperAlignment*)alignment;
+        auto saln = dynamic_cast<SuperAlignment*>(alignment);
         for (int part = 0; part < saln->partitions.size(); part++) {
             out << saln->partitions[part]->name << ','
                 << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
@@ -4332,7 +4334,7 @@ void doSymTest(Alignment *alignment, Params &params) {
                 getSymTestID(intsym, part_id, false);
         }
         if (!part_id.empty()) {
-            SuperAlignment *saln = (SuperAlignment*)alignment;
+            auto saln = dynamic_cast<SuperAlignment*>(alignment);
             cout << "Removing " << part_id.size()
                  << ((params.symtest_remove == 1)? " bad" : " good")
                  << " partitions (pvalue cutoff = "
@@ -4682,7 +4684,7 @@ void assignBranchSupportNew(Params &params) {
         if (params.partition_file) {
             params.compute_seq_composition = false;
             aln = new SuperAlignment(params);
-            tree = new PhyloSuperTree((SuperAlignment*)aln);
+            tree = new PhyloSuperTree(dynamic_cast<SuperAlignment*>(aln));
         } else {
             aln = createAlignment(params.aln_file, params.sequence_type,
                                   params.intype, params.model_name);

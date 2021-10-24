@@ -193,7 +193,7 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
 size_t CandidateModel::getUsualModel(Alignment *alignment) {
     size_t aln_len = 0;
     if (alignment->isSuperAlignment()) {
-        SuperAlignment *super_aln = (SuperAlignment*)alignment;
+        auto super_aln = dynamic_cast<SuperAlignment*>(alignment);
         for (auto it = super_aln->partitions.begin()
              ; it != super_aln->partitions.end(); it++) {
             CandidateModel usual_model(*it);
@@ -229,7 +229,7 @@ void CandidateModel::computeICScores() {
     size_t sample_size = aln->getNSite();
     if (aln->isSuperAlignment()) {
         sample_size = 0;
-        SuperAlignment *super_aln = (SuperAlignment*)aln;
+        auto super_aln = dynamic_cast<SuperAlignment*>(aln);
         for (auto a : super_aln->partitions)
             sample_size += a->getNSite();
     }
@@ -526,16 +526,19 @@ string computeFastMLTree(Params &params, Alignment *aln,
     StrVector saved_model_names;
     
     if (aln->isSuperAlignment()) {
-        SuperAlignment *saln = (SuperAlignment*)aln;
-        if (params.partition_type == TOPO_UNLINKED)
-            iqtree = new PhyloSuperTreeUnlinked(saln);
-        else if (params.partition_type == BRLEN_OPTIMIZE)
-            iqtree = new PhyloSuperTree(saln);
-        else
-            iqtree = new PhyloSuperTreePlen(saln, brlen_type);
+        auto super_aln = dynamic_cast<SuperAlignment*>(aln);
+        if (params.partition_type == TOPO_UNLINKED) {
+            iqtree = new PhyloSuperTreeUnlinked(super_aln);
+        }
+        else if (params.partition_type == BRLEN_OPTIMIZE) {
+            iqtree = new PhyloSuperTree(super_aln);
+        }
+        else {
+            iqtree = new PhyloSuperTreePlen(super_aln, brlen_type);
+        }
         for (int part = 0; part != subst_names.size(); part++) {
-            saved_model_names.push_back(saln->partitions[part]->model_name);
-            saln->partitions[part]->model_name = subst_names[part] + rate_names[part];
+            saved_model_names.push_back(super_aln->partitions[part]->model_name);
+            super_aln->partitions[part]->model_name = subst_names[part] + rate_names[part];
         }
     } else if (ModelInfoFromName(rate_names[0]).hasRateHeterotachy()) {
         iqtree = new PhyloTreeMixlen(aln, 0);
@@ -625,7 +628,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
             (*it)->getModelFactory()->saveCheckpoint();
             model_info.endStruct();
         }
-        SuperAlignment *saln = (SuperAlignment*)aln;
+        auto saln = dynamic_cast<SuperAlignment*>(aln);
         // restore model_names
         for (int i = 0; i < saln->partitions.size(); i++)
             saln->partitions[i]->model_name = saved_model_names[i];
@@ -656,7 +659,7 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
         else
             struct_name = "PartitionModel";
         target->startStruct(struct_name);
-        SuperAlignment *super_aln = (SuperAlignment*)iqtree->aln;
+        auto super_aln = dynamic_cast<SuperAlignment*>(iqtree->aln);
         for (auto aln : super_aln->partitions) {
             source->transferSubCheckpoint(target, aln->name + CKP_SEP + "Model");
             source->transferSubCheckpoint(target, aln->name + CKP_SEP + "Rate");
@@ -1572,7 +1575,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets,
                      StrVector &model_names) {
 	cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
 	vector<set<int> >::iterator it;
-	SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
+	auto super_aln = dynamic_cast<SuperAlignment*>(super_tree->aln);
 	vector<PartitionInfo> part_info;
 	vector<PhyloTree*> tree_vec;
     SuperAlignment *new_super_aln = new SuperAlignment();
@@ -1643,7 +1646,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets,
  called when some partition is changed
  */
 void fixPartitions(PhyloSuperTree* super_tree) {
-    SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
+    auto super_aln = dynamic_cast<SuperAlignment*>(super_tree->aln);
     int part;
     bool aln_changed = false;
     for (part = 0; part < super_tree->size(); part++)
@@ -1662,7 +1665,7 @@ IQTree* CandidateModel::createEvaluationTree
             (Params& params, Alignment* in_aln, int brlen_type) {
     IQTree*    iqtree = NULL;
     if (in_aln->isSuperAlignment()) {
-        SuperAlignment *saln = (SuperAlignment*)in_aln;
+        auto saln = dynamic_cast<SuperAlignment*>(in_aln);
         if (params.partition_type == BRLEN_OPTIMIZE) {
             iqtree = new PhyloSuperTree(saln);
         }
@@ -1933,7 +1936,7 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
     double *centers = new double[ncluster];
     RunKMeans1D(npart, ncluster, lenvec.data(), weights.data(), centers, clusters);
     
-    SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
+    auto super_aln = dynamic_cast<SuperAlignment*>(in_tree->aln);
 
     double lhsum = 0.0;
     int dfsum = 0;
@@ -2150,9 +2153,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
 #endif
 
     double start_time = getRealTime();
-
-	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
-
+	auto   super_aln  = dynamic_cast<SuperAlignment*>(in_tree->aln);
     cout << "Selecting individual models for "
          << in_tree->size() << " charsets using "
          << criterionName(params.model_test_criterion) << "..." << endl;
@@ -2614,7 +2615,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
     cout << "Best partition model " << criterionName(params.model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum
          << "  df:" << dfsum << ")" << endl;
-    super_aln = (SuperAlignment*)in_tree->aln;
+    super_aln = dynamic_cast<SuperAlignment*>(in_tree->aln);
     super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
     model_info.dump();

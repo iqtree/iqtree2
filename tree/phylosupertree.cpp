@@ -612,7 +612,8 @@ void PhyloSuperTree::mapTrees() {
 		for (i = 0; i < static_cast<int>(leafNum); ++i) {
             int id;
             if (i < aln->getNSeq()) {
-                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+				auto super_aln = dynamic_cast<SuperAlignment*>(aln);
+                id = super_aln->taxa_index[i][part];
             } else {
                 ASSERT(rooted);
                 if ((*it)->rooted) {
@@ -655,7 +656,8 @@ void PhyloSuperTree::linkTrees() {
 		for (i = 0; i < static_cast<int>(leafNum); ++i) {
             int id;
             if (i < aln->getNSeq()) {
-                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+				auto super_aln = dynamic_cast<SuperAlignment*>(aln);
+                id = super_aln->taxa_index[i][part];
 			}
             else if ((*it)->rooted) {
                 id = (*it)->leafNum-1;
@@ -1430,8 +1432,8 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
 		return;
 	}
 	// now synchronize aln
-	int part = 0;
-    SuperAlignment *saln = (SuperAlignment*)aln;
+	int  part = 0;
+    auto saln = dynamic_cast<SuperAlignment*>(aln);
 	for (iterator it = begin(); it != end(); ++it, ++part) {
 		if (verbose_mode >= VerboseMode::VB_MED) {
 			cout << "Partition " << saln->partitions[part]->name 
@@ -1456,9 +1458,9 @@ void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
 
 	// now synchronize aln
 	int part = 0;
+	auto super_src_aln = dynamic_cast<SuperAlignment*>(aln);
     for (iterator it = begin(); it != end(); ++it, ++part) {
-//        (*it)->setAlignment(((SuperAlignment*)aln)->partitions[part]);
-		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
+		(*it)->aln = super_src_aln->partitions[part];
     }
 	mapTrees();
 }
@@ -1658,8 +1660,8 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
         out.open(filename);
         out << "#nexus" << endl
         << "begin sets;" << endl;
-        int part;
-        SuperAlignment *saln = (SuperAlignment*)aln;
+        int  part;
+        auto saln = dynamic_cast<SuperAlignment*>(aln);
         for (part = 0; part < size(); part++) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');

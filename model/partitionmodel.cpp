@@ -106,7 +106,8 @@ void PartitionModel::assignModelsToPartitions
             (*it)->getModel()->decomposeRateMatrix();
         }
         
-        //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
+        //auto super_aln  = dyamic_cast<SuperAlignment*>(tree->aln);
+        //string taxa_set = super_aln->getPattern(part);
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }

@@ -27,11 +27,11 @@ SuperAlignmentPairwise::SuperAlignmentPairwise()
 SuperAlignmentPairwise::SuperAlignmentPairwise(PhyloSuperTree *atree, int seq1, int seq2) 
  : AlignmentPairwise() 
 {
-	tree = atree;
+	tree    = atree;
 	seq_id1 = seq1;
 	seq_id2 = seq2;
-	SuperAlignment *aln = (SuperAlignment*) atree->aln;
-	int part = 0;
+	auto aln  = dynamic_cast<SuperAlignment*>(atree->aln);
+	int  part = 0;
     partitions.reserve(atree->size());
 	for ( auto it = atree->begin(); it != atree->end(); it++, part++ ) {
 		int id1 = aln->taxa_index[seq1][part];
