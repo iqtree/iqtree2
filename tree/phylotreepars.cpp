@@ -2083,3 +2083,29 @@ int PhyloTree::setOneBranchLengthFromParsimony(double tree_parsimony,
     leftNei->length = rightNei->length = corrected_length;
     return one_if_corrected;
 }
+
+int PhyloTree::correctShortBranchLengthsFromParsimony() {
+    deleteAllPartialParsimony();
+    initializeAllPartialPars();
+    double tree_parsimony = computeParsimony("Recalculating tree parsimony"
+                                             " to determine branch lengths",
+                                             true, false);
+    PhyloNodeVector nodes1;
+    PhyloNodeVector nodes2;
+    getBranches(nodes1, nodes2);
+    intptr_t branch_count = nodes1.size();
+    int fixes = 0;
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+:fixes)
+    #endif
+    for (intptr_t b = 0; b < branch_count; ++b) {
+        PhyloNode* left  = nodes1[b];
+        PhyloNode* right = nodes2[b];
+        if (left->findNeighbor(right)->length < 
+            params->min_branch_length) {
+            fixes += setOneBranchLengthFromParsimony(tree_parsimony,
+                                                    left, right);
+        }
+    }
+    return fixes;
+}

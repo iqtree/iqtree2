@@ -939,8 +939,12 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             updateToMatchAlignment(aln);
         }
         optimizeConstructedTree(false, VerboseMode::VB_MED);
-        ensureNumberOfThreadsIsSet(params, false);
-        fixNegativeBranches(true);
+        if (model!=nullptr) {
+            ensureNumberOfThreadsIsSet(params, false);
+            fixNegativeBranches(true);
+        } else {
+            correctShortBranchLengthsFromParsimony();
+        }
         initTree = getTreeString();
         CKP_SAVE(initTree);
         saveCheckpoint();

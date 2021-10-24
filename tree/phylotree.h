@@ -1587,6 +1587,13 @@ public:
                                                  double& tree_parsimony);
     
     /**
+     * Likewise, but always recalculate parsimony, and only set branch
+     * lengths for branches that are shorter than the minimum length.
+     * Returns the number of branches that were corrected.
+     */
+    virtual int correctShortBranchLengthsFromParsimony();
+
+    /**
      * Assign branch length for branches that have zero or negative length.  Note: assumes
      * that the parsimony vectors are up to date, will throw an ASSERT failure if they are not.
      * @param tree_parsimony the parsimony of the whole tree

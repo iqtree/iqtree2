@@ -143,6 +143,8 @@ public:
 
     void calculateSubtreeFrequencyEstimates
             (const Alignment* alignment, const PhyloTree* tree);
+
+    int          getNumberOfSubtreeModels() const;
     ModelMarkov* getNthSubtreeModel(int n) const;
 
     ModelMarkov* getSubsetModel       (int child_subset_number) const;

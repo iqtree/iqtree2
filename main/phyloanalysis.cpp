@@ -24,46 +24,51 @@
 #include <config.h>
 #endif
 #include <iqtree_config.h>
-#include "tree/phylotree.h"
-#include "tree/phylosupertree.h"
-#include "tree/phylosupertreeplen.h"
-#include "tree/phylosupertreeunlinked.h"
+
 #include "phyloanalysis.h"
+
 #include "alignment/alignment.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentunlinked.h"
-#include "tree/iqtree.h"
-#include "tree/phylotreemixlen.h"
+
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
 #include "model/modelpomo.h"
-#include "nclextra/myreader.h"
 #include "model/rateheterogeneity.h"
 #include "model/rategamma.h"
 #include "model/rateinvar.h"
 #include "model/rategammainvar.h"
-//#include "modeltest_wrapper.h"
 #include "model/modelprotein.h"
 #include "model/modelbin.h"
 #include "model/modelcodon.h"
-#include "utils/stoprule.h"
-
-#include "tree/mtreeset.h"
-#include "tree/mexttree.h"
+#include "model/modeldivergent.h"
 #include "model/ratemeyerhaeseler.h"
-#include "whtest/whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
 #include "model/modelfactorymixlen.h"
 #include "model/modelinfofromyamlfile.h" //for ModelListFromYAMLFile class
-//#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "model/modelinfo.h"
-#include "utils/timeutil.h"
-#include "tree/upperbounds.h"
-#include "utils/MPIHelper.h"
-#include "timetree.h"
 
+#include "nclextra/myreader.h"
+
+#include "tree/mtreeset.h"
+#include "tree/mexttree.h"
+#include "tree/upperbounds.h"
+#include "tree/phylotree.h"
+#include "tree/phylosupertree.h"
+#include "tree/phylosupertreeplen.h"
+#include "tree/phylosupertreeunlinked.h"
+#include "tree/iqtree.h"
+#include "tree/phylotreemixlen.h"
+
+#include "whtest/whtest_wrapper.h"
+
+#include "utils/stoprule.h"
+#include "utils/timeutil.h"
+#include "utils/MPIHelper.h"
+
+#include "timetree.h"
 
 #ifdef USE_BOOSTER
 extern "C" {
@@ -303,6 +308,21 @@ void reportModelSelection(ofstream &out, Params &params,
 }
 
 void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
+
+    if (m->isDivergentModel()) {
+        auto dm = dynamic_cast<ModelDivergent*>(m);
+        int num_models = dm->getNumberOfSubtreeModels();
+        for (int subtree=0; subtree<num_models; ++subtree) {
+            auto subtree_model = dm->getNthSubtreeModel(subtree);
+            out << endl << "Model for mixture component "  
+                << (subtree+1) << ": " << subtree_model->getName() 
+                << endl;
+            reportModel(out, aln, subtree_model);
+        }
+        return;
+    }
+
+
     ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
     if (!m->isSiteSpecificModel()) {
@@ -513,7 +533,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
             }
         }
         out << endl;
-    } else {
+    } 
+    else {
         out << "Model of substitution: "
             << tree.getModelName() << endl << endl;
         reportModel(out, tree.aln, tree.getModel());
@@ -2556,7 +2577,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     /******************** Pass the parameter object params to IQTree *******************/
     iqtree->setParams(&params);
     
-    ModelsBlock *models_block = readModelsDefinition(params);
+    ModelsBlock* models_block = readModelsDefinition(params);
     initializeParams(params, *iqtree);
     ModelInfoFromName model_info(iqtree->aln->model_name);
     bool isHeterotachy = model_info.hasRateHeterotachy();

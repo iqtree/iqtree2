@@ -134,19 +134,19 @@ public:
         void initIterationSettings(Params& params);
         void initDeletionSettings (Params& params);
         void initBootstrapSettings(Params& params);
-        void copySample(IntVector& sample, int n, float* copy_it_here);
+        void copySample           (IntVector& sample, int n, 
+                                   float* copy_it_here);
 
-    void createPLLPartition(Params &params, ostream &pllPartitionFileHandle);
-
-    void initializePLL(Params &params);
-    bool isInitializedPLL();
+    void createPLLPartition(Params &params, 
+                            ostream &pllPartitionFileHandle);
+    void initializePLL     (Params &params);
+    bool isInitializedPLL  ();
     void initializePLLIfNecessary();
     
-    void optimizeConstructedTree(bool has_spr_been_done, VerboseMode how_loud);
-    void fixNegativeBranches(bool force);
-    
-    void doPLLParsimonySPR(VerboseMode how_loud);
-    
+    void optimizeConstructedTree(bool has_spr_been_done, 
+                                 VerboseMode how_loud);
+    void fixNegativeBranches    (bool force);
+    void doPLLParsimonySPR      (VerboseMode how_loud);
     virtual void initializeModel(Params &params, string model_name,
                                  ModelsBlock *models_block,
                                  PhyloTree* report_to_tree) override;

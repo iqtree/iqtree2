@@ -648,6 +648,10 @@ ModelMarkov* ModelDivergent::getNthSubtreeModel(int n) const {
     return subtree_models[n];
 }
 
+int ModelDivergent::getNumberOfSubtreeModels() const {
+    return subtree_models.size();
+}
+
 ModelMarkov* ModelDivergent::getSubsetModel
                 (int child_subset_number) const {
     if (0<=child_subset_number && 
