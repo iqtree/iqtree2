@@ -176,7 +176,7 @@ void ModelFactoryMixlen::reorderMixtureModels(IntVector& index, DoubleVector& pr
     int num_states = model->num_states;
     int states_squared = num_states*num_states;
     for (int m = 0; m < nmix; m++) {
-        auto mix_class = ((ModelMarkov*)model->getMixtureClass(m));
+        auto mix_class = dynamic_cast<ModelMarkov*>(model->getMixtureClass(m));
         mix_class->setEigenvalues(&model->getEigenvalues()[m*num_states]);
         mix_class->setEigenvectors(&model->getEigenvectors()[m*states_squared]);
         auto i_evec = &model->getInverseEigenvectors()[m*states_squared];

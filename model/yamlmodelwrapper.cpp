@@ -339,10 +339,10 @@ void YAMLRateFree::sortUpdatedRates() {
     int rate_count = model_info.getNumberOfRateCategories();
     int prop_count = model_info.getNumberOfProportions();
     int rate_ix    = 1;
-    int prop_ix    = 1;
     model_info.updateModelVariablesByType(rates, rate_count, true,
                                           ModelParameterType::RATE, rate_ix,
                                           phylo_tree);
+    int prop_ix    = 1;
     model_info.updateModelVariablesByType(prop,  prop_count, true,
                                           ModelParameterType::PROPORTION, prop_ix,
                                           phylo_tree);

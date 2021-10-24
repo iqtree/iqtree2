@@ -197,7 +197,8 @@ void PartitionModel::linkModelsAcrossPartitions
 
         for (auto it = stree->begin(); it != stree->end(); it++) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
-                ((ModelMarkov*)(*it)->getModel())->adaptStateFrequency(&sum_state_freq[0]);
+                auto markov = dynamic_cast<ModelMarkov*>((*it)->getModel());
+                markov->adaptStateFrequency(&sum_state_freq[0]);
                 (*it)->getModel()->decomposeRateMatrix();
             }
         }

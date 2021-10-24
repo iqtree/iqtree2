@@ -203,6 +203,16 @@ public:
         }
         return changed;
     }
+
+    virtual void setStateFrequency
+                    (double *state_frequency_array) override {
+        //State frequency arrays have a zero, not a one, lower bound
+        int rate_ix = 0;
+        super::setStateFrequency(state_frequency_array);
+        model_info->updateModelVariablesByType(    
+            state_frequency_array, num_states, true,
+            ModelParameterType::FREQUENCY, rate_ix, phylo_tree);
+    }
     
     virtual bool scaleStateFreq() override {
         // make the frequencies sum to 1.0

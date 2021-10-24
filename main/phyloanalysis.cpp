@@ -502,7 +502,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
         out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
         int nmix = mmodel->getNMixtures();
         for (int i = 0; i < nmix; i++) {
-            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
+            ModelMarkov *m = dynamic_cast<ModelMarkov*>(mmodel->getMixtureClass(i));
             out.width(4);
             out << right << i+1 << "  ";
             out.width(12);
@@ -522,7 +522,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
         if (tree.aln->seq_type != SeqType::SEQ_POMO && 
             tree.aln->seq_type != SeqType::SEQ_DNA) {
             for (int i = 0; i < nmix; i++) {
-                ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
+                ModelMarkov *m = dynamic_cast<ModelMarkov*>
+                                 (mmodel->getMixtureClass(i));
                 if (m->getFreqType() == StateFreqType::FREQ_EQUAL ||
                     m->getFreqType() == StateFreqType::FREQ_USER_DEFINED) {
                     continue;
@@ -3568,8 +3569,9 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
         cout << "Testing alpha: " << initAlphas[i] << endl;
         // Initialize model parameters
         iqtree.restoreBranchLengths(lenvec);
-        ((ModelMarkov*) iqtree.getModel())->setRateMatrix(rates);
-        ((ModelMarkov*) iqtree.getModel())->setStateFrequency(state_freqs);
+        auto markov = dynamic_cast<ModelMarkov*>(iqtree.getModel());
+        markov->setRateMatrix(rates);
+        markov->setStateFrequency(state_freqs);
         iqtree.getModel()->decomposeRateMatrix();
         site_rates->setGammaShape(initAlphas[i]);
         site_rates->setPInvar(initPInvar);
@@ -3597,8 +3599,9 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     site_rates->setFixGammaShape(false);
     site_rates->setPInvar(bestPInvar);
     site_rates->setFixPInvar(false);
-    ((ModelMarkov*) iqtree.getModel())->setRateMatrix(bestRates);
-    ((ModelMarkov*) iqtree.getModel())->setStateFrequency(bestStateFreqs);
+    auto markov = dynamic_cast<ModelMarkov*>(iqtree.getModel());
+    markov->setRateMatrix(bestRates);
+    markov->setStateFrequency(bestStateFreqs);
     iqtree.restoreBranchLengths(bestLens);
     iqtree.getModel()->decomposeRateMatrix();
     iqtree.clearAllPartialLH();

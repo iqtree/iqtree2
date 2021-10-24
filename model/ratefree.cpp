@@ -675,14 +675,15 @@ void RateFree::optimizeRatesOneByOne(PhyloTree*    tree,
 
     for (int c = 0; c < nmix; c++) {
         tree->copyPhyloTree(phylo_tree, true);
+        auto model  = phylo_tree->getModel();
         ModelMarkov *subst_model;
-        if (phylo_tree->getModel()->isMixture()
+        if (model->isMixture()
             && phylo_tree->getModelFactory()->fused_mix_rate) {
-            auto model  = phylo_tree->getModel();
-            subst_model = (ModelMarkov*)model->getMixtureClass(c);
+            subst_model = dynamic_cast<ModelMarkov*>
+                          (model->getMixtureClass(c));
         }
         else {
-            subst_model = (ModelMarkov*)phylo_tree->getModel();
+            subst_model = dynamic_cast<ModelMarkov*>(model);
         }
         tree->setModel(subst_model);
         subst_model->setTree(tree);

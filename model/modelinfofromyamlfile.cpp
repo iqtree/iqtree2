@@ -33,7 +33,7 @@ VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
 VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
 VerboseMode YAMLParsingVerbosity   = VerboseMode::VB_MAX;
 VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MAX;
-VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
+VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MED;
 
 YAMLFileParameter::YAMLFileParameter()
     : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)
@@ -765,7 +765,8 @@ StateFreqType ModelInfoFromYAMLFile::getFrequencyType() const {
     return frequency_type;
 }
 
-void ModelInfoFromYAMLFile::setFrequencyType(StateFreqType new_type) {
+void ModelInfoFromYAMLFile::setFrequencyType
+        (StateFreqType new_type) {
     frequency_type = new_type;
 } 
 
@@ -897,7 +898,8 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
                 var.setValue(value);
                 anyChanges = true;
                 TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
-                            "Updated " << var_name << "=" << value
+                            "Updated " << getName() << "." << var_name 
+                            << "=" << value
                             << " (delta " << delta << ") "
                             << " from parameter " << i 
                             << " of " << param_count);

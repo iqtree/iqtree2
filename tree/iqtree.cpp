@@ -2242,11 +2242,13 @@ void IQTree::inputModelPLL2IQTree() {
     getRate()->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
         auto substRates = pllPartitions->partitionData[0]->substRates;
-        ((ModelMarkov*) getModel())->setRateMatrix(substRates);
+        auto markov     = dynamic_cast<ModelMarkov*>(getModel());
+        markov->setRateMatrix(substRates);
         getModel()->decomposeRateMatrix();
     }
     auto empirical = pllPartitions->partitionData[0]->empiricalFrequencies;
-    ((ModelMarkov*) getModel())->setStateFrequency(empirical);
+    auto markov    = dynamic_cast<ModelMarkov*>(getModel());
+    markov->setStateFrequency(empirical);
 }
 
 void IQTree::inputModelIQTree2PLL() {
