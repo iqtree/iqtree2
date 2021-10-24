@@ -106,9 +106,15 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
     PhyloNodeVector layer; //starts out with leaf nodes
     for (PhyloNode* visit: all_nodes) {
         //Mark all interior node subsets as uncalculated
+        //Add all exterior nodes to the across-the-breadth 
+        //vector of nodes to look at next.
         if (!visit->isLeaf()) {
             visit->setSubsetNumber(SUBSET_UNKNOWN);
-        } else {
+        } else {          
+            std::cout << "Edge " << visit->id 
+                      << " (" << visit->name << ")"
+                      << " in subset " << visit->getSubsetNumber()
+                      << std::endl;
             layer.push_back(visit);
         }
     }
@@ -127,6 +133,11 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
                             //in the same subset that visited was.
                             interior->setSubsetNumber(subset);
                             next_layer.push_back(interior);
+                            std::cout << "Interior " << interior->id 
+                                    << " (" << interior->name << ")"
+                                    << " in subset "
+                                    << interior->getSubsetNumber()
+                                    << std::endl;
                             break;
                         }
                     }

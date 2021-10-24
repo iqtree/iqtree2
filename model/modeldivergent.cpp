@@ -460,14 +460,16 @@ void ModelDivergent::identifyTaxonSubsets
         bool found_clade = (it!=clade_to_model_number.end()) && !is_root;
         if (found_clade) {
             model_number = it->second;
-            std::cout << "Entering clade " << lower_name << "." << std::endl;
+            TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX,
+                          "Entering clade " << lower_name << ".");
         }
         FOR_EACH_ADJACENT_NODE(node, prev_node, it, child) {
             identifyTaxonSubsets(model_number, child, node, 
                                  subsets_for_models);
         }
         if (found_clade) {
-            std::cout << "Leaving clade " << lower_name << "." << std::endl;
+            TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX,  
+                          "Leaving clade " << lower_name << ".");
         }
         return;
     }
@@ -477,9 +479,10 @@ void ModelDivergent::identifyTaxonSubsets
         if (it_by_name != clade_to_model_number.end()) {
             model_number = it_by_name->second;
         } else {
-            std::cout << "  Couldn't map taxon " << node->id
-                      << " (" << node->name << ")"
-                      << " to a subtree model." << std::endl;
+            TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MED,
+                          "  Couldn't map taxon " << node->id
+                          << " (" << node->name << ")"
+                          << " to a subtree model.");
             return;
         }
     } 
@@ -488,20 +491,22 @@ void ModelDivergent::identifyTaxonSubsets
     }
     IntVector& subset = subsets_for_models[model_number];
     subset.push_back(node->id);
-    std::cout << "  Mapped taxon " << node->id
-                << " (" << node->name << ")"
-                << " to model " << model_number
-                << " (" << subtree_models[model_number]->getName() << ")."
-                << std::endl;
+    
+    TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
+                  "  Mapped taxon " << node->id
+                  << " (" << node->name << ")"
+                  << " to model " << model_number
+                  << " (" << subtree_models[model_number]->getName() << ").");
 }
 
 bool ModelDivergent::mapTaxonSubsetsToModels
-        (Node* root, 
+        (Node* div_graph_root, 
          int   number_of_subsets,
          const IntVector& taxon_to_subset) {
     subset_to_model.resize(number_of_subsets, MODEL_UNASSIGNED);
     return mapTaxonSubsetsToModels(catchall_model_number,
-                                   root, nullptr, "", taxon_to_subset);
+                                   div_graph_root, nullptr, "", 
+                                   taxon_to_subset);
 }
 
 bool ModelDivergent::mapTaxonSubsetsToModels

@@ -2639,7 +2639,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         
         uint64_t mem_required = iqtree->getMemoryRequired();
         uint64_t mem_wanted   = mem_required;
-
         if (mem_required >= total_mem*0.95 && !iqtree->isSuperTree()) {
             // switch to memory saving mode
             if (params.lh_mem_save != LM_MEM_SAVE) {
@@ -2666,7 +2665,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             outError("Memory saving mode cannot work," 
                      " switch to another computer!!!");
         }
-
 //#if defined __APPLE__ || defined __MACH__
         cout << "NOTE: " << (mem_required / 1048576) << " MB RAM"
              << " (" << (mem_required / 1073741824) << " GB)"
@@ -3078,8 +3076,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             outError("Obsolete feature");
             //runGuidedBootstrap(params, iqtree->aln, iqtree);
         }
-        else
+        else {
             iqtree->summarizeBootstrap(params);
+        }
     }
 
     if (params.collapse_zero_branch) {
@@ -3096,8 +3095,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
 
     if (params.gbo_replicates && params.online_bootstrap &&
-        !iqtree->isSuperTreeUnlinked()) {
-        
+        !iqtree->isSuperTreeUnlinked()) {        
         cout << endl << "Computing " << RESAMPLE_NAME
              << " consensus tree..." << endl;
         string splitsfile = params.out_prefix;

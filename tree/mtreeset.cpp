@@ -172,8 +172,9 @@ void MTreeSet::init(StrVector& trees, StrVector& taxonNames,
     cout << count << " tree(s) converted" << endl;
 }
 
-void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
-	IntVector *weights, bool compressed) 
+void MTreeSet::readTrees(const char *infile, bool &is_rooted, 
+                         int burnin, int max_count,
+	                     IntVector *weights, bool compressed) 
 {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
 /*	IntVector ok_trees;
@@ -186,10 +187,20 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 	}*/
 	try {
 		istream *in;
-		if (compressed) in = new igzstream; else in = new ifstream;
+		if (compressed) {
+			in = new igzstream; 
+		} 
+		else {
+			in = new ifstream;
+		}
 		in->exceptions(ios::failbit | ios::badbit);
 		
-		if (compressed) ((igzstream*)in)->open(infile); else ((ifstream*)in)->open(infile);
+		if (compressed) {
+		 	((igzstream*)in)->open(infile); 
+		}
+		else {
+			((ifstream*)in)->open(infile);
+		}
 		if (burnin > 0) {
 			int cnt = 0;
 			while (cnt < burnin && !in->eof()) {
@@ -213,9 +224,12 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 				//tree->userFile = (char*) infile;
 				tree->readTree(*in, myrooted);
 				push_back(tree);
-				if (weights) 
+				if (weights) {
 					tree_weights.push_back(weights->at(count-1)); 
-				else tree_weights.push_back(1);
+				}
+				else {
+					tree_weights.push_back(1);
+				}
 				//cout << "Tree contains " << tree->leafNum - tree->rooted << 
 				//" taxa and " << tree->nodeNum-1-tree->rooted << " branches" << endl;
 			} else {
@@ -241,9 +255,10 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 			}
 			in->unget();
 			in->exceptions(ios::failbit | ios::badbit);
-
 		}
-		cout << size() << " tree(s) loaded (" << countRooted() << " rooted and " << countUnrooted() << " unrooted)" << endl;
+		cout << size() << " tree(s) loaded (" 
+		     << countRooted() << " rooted and " 
+			 << countUnrooted() << " unrooted)" << endl;
 		if (omitted) {
 			cout << omitted << " tree(s) omitted" << endl;
 		}
@@ -264,8 +279,9 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 
 void MTreeSet::checkConsistency() {
     equal_taxon_set = true;
-	if (empty()) 
+	if (empty()) {
 		return;
+	}
 	iterator it;
 	int i;
 	bool first = true;
@@ -305,7 +321,6 @@ void MTreeSet::checkConsistency() {
 				cout << "Trees have different number of taxa" << endl;
                 break;
             }
-	
 			for (it2 = taxa.begin(), i = 0; it2 != taxa.end(); ++it2, ++i) {
                 if ((*it2)->name != taxa1[i]->name) {
                     equal_taxon_set = false;
@@ -313,13 +328,17 @@ void MTreeSet::checkConsistency() {
                     break;
                 }
 			}
-            if (!equal_taxon_set) break;
+            if (!equal_taxon_set) {
+				break;
+			}
 		}
 	}
 }
 
 bool MTreeSet::isRooted() {
-	if (empty()) return false;
+	if (empty()) {
+		return false;
+	}
 	return (front()->rooted);
 }
 
@@ -404,7 +423,9 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 			}
 			delete sg.back();
 			sg.pop_back();
-			if (it == sg.end()) break;
+			if (it == sg.end()) {
+				break;
+			}
 			hash_ss.insertSplit(*it, num);
         } else {
             ++it;
@@ -429,11 +450,12 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type, double weight_threshold) {
 	StrVector taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
-	if (size() == 0)
+	if (size() == 0) {
 		return;
-	
+	}
 	front()->getTaxaName(taxname);
-	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold, NULL);
+	convertSplits(taxname, sg, hash_ss, weighting_type, 
+	              weight_threshold, nullptr);
 }
 
 void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
@@ -447,7 +469,6 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
 	#else
 		cout << "Using map" << endl;
 	#endif
-
 		cout << "Converting collection of tree(s) into split system..." << endl;
 	}
 /*
@@ -456,10 +477,13 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
 			taxname.erase(its);
 			break;
 		}*/
-	if (sort_taxa) sort(taxname.begin(), taxname.end());
+	if (sort_taxa) {
+		sort(taxname.begin(), taxname.end());
+	}
 	sg.createBlocks();
-	for (auto its = taxname.begin(); its != taxname.end(); its++)
+	for (auto its = taxname.begin(); its != taxname.end(); its++) {
 		sg.getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
+	}
 /*
 	if (size() == 1 && weighting_type != SW_COUNT) {
 		front()->convertSplits(taxname, sg);
@@ -472,9 +496,10 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
 //	cout << "Number of trees: " << size() << endl;
 //	cout << "Number of weight: " << tree_weights.size() << endl;
 	for (iterator it = begin(); it != end(); ++it, ++tree_id) {
-		if (tree_weights[tree_id] == 0) continue;
+		if (tree_weights[tree_id] == 0) {
+			continue;
+		}
 		MTree *tree = *it;
-
 		if (tree->leafNum != taxname.size()) {
 			outError("Tree has different number of taxa!");
 		}
@@ -504,26 +529,31 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
 			Split *sp = hash_ss.findSplit(*itg, value);
 			if (sp != NULL) {
 				//Split *sp = ass_it->first;
-				if (weighting_type != SW_COUNT)
+				if (weighting_type != SW_COUNT) {
 					sp->setWeight(sp->getWeight() + (*itg)->getWeight() * tree_weights[tree_id]);
-				else
+				}
+				else {
 					sp->setWeight(sp->getWeight() + tree_weights[tree_id]);
+				}
 				hash_ss.setValue(sp, value + tree_weights[tree_id]);
 			}
 			else {
 				sp = new Split(*(*itg));
-				if (weighting_type != SW_COUNT)
+				if (weighting_type != SW_COUNT) {
 					sp->setWeight((*itg)->getWeight() * tree_weights[tree_id]);
-				else				
+				}
+				else {
 					sp->setWeight(tree_weights[tree_id]);
+				}
 				sg.push_back(sp);
 				//SplitIntMap::value_type spair(sp, 1);
 				//hash_ss.insert(spair);
 				
 				hash_ss.insertSplit(sp, tree_weights[tree_id]);
  			}
-            if (tag_str)
+            if (tag_str) {
                 sp->name += "@" + convertIntToString(tree_id+1);
+			}
 		}
 		delete isg;
 	}
@@ -531,8 +561,9 @@ void MTreeSet::convertSplits(StrVector &taxname, SplitGraph &sg,
 	if (weighting_type == SW_AVG_PRESENT) {
 		for (auto itg = sg.begin(); itg != sg.end(); itg++) {
 			int value = 0;
-			if (!hash_ss.findSplit(*itg, value))
+			if (!hash_ss.findSplit(*itg, value)) {
 				outError("Internal error ", __func__);
+			}
 			(*itg)->setWeight((*itg)->getWeight() / value);
 		}
 	} else if (weighting_type == SW_AVG_ALL) {
@@ -571,8 +602,9 @@ MTreeSet::~MTreeSet()
 void MTreeSet::computeRFDist(double *rfdist, int mode, 
                              double weight_threshold) {
 	// exit if less than 2 trees
-	if (size() < 2)
+	if (size() < 2) {
 		return;
+	}
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
 #else
@@ -586,17 +618,18 @@ void MTreeSet::computeRFDist(double *rfdist, int mode,
 
 	front()->getTaxaName(taxname);
 
-
 	// converting trees into split system then stored in SplitIntMap for efficiency
 	for (iterator it = begin(); it != end(); ++it) {
-		SplitGraph *sg = new SplitGraph();
-		SplitIntMap *hs = new SplitIntMap();
+		SplitGraph*  sg = new SplitGraph();
+		SplitIntMap* hs = new SplitIntMap();
 
 		(*it)->convertSplits(taxname, *sg);
 		// make sure that taxon 0 is included
 		for (SplitGraph::iterator sit = sg->begin(); 
 		     sit != sg->end(); ++sit) {
-			if (!(*sit)->containTaxon(0)) (*sit)->invert();
+			if (!(*sit)->containTaxon(0)) {
+				(*sit)->invert();
+			}
 			hs->insertSplit((*sit), 1);
 		}
 		hs_vec.push_back(hs);
@@ -628,8 +661,9 @@ void MTreeSet::computeRFDist(double *rfdist, int mode,
 			}
 			//int rf_val = (*hsit)->size() + (*hsit2)->size() - 2*common_splits;
 			int rf_val = diff_splits;
-			if (mode == RF_ADJACENT_PAIR) 
+			if (mode == RF_ADJACENT_PAIR) {
 				rfdist[id] = rf_val;
+			}
 			else {
 				rfdist[id*size() + id2] = rfdist[id2*size() + id] = rf_val;
 			}
@@ -655,10 +689,15 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 
 	ofstream oinfo;
 	ofstream otree;
-	if (info_file) oinfo.open(info_file);
-	if (tree_file) otree.open(tree_file);
-	if (incomp_splits) memset(incomp_splits, 0, size()*treeset2->size()*sizeof(double));
-
+	if (info_file) {
+		oinfo.open(info_file);
+	}
+	if (tree_file) {
+		otree.open(tree_file);
+	}
+	if (incomp_splits) {
+		memset(incomp_splits, 0, size()*treeset2->size()*sizeof(double));
+	}
 	StrVector taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
 	vector<SplitGraph*> sg_vec;
@@ -666,11 +705,10 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 
 	front()->getTaxaName(taxname);
 
-
 	// converting trees into split system then stored in SplitIntMap for efficiency
 	for (iterator it = begin(); it != end(); ++it) {
-		SplitGraph *sg = new SplitGraph();
-		SplitIntMap *hs = new SplitIntMap();
+		SplitGraph*  sg = new SplitGraph();
+		SplitIntMap* hs = new SplitIntMap();
 		NodeVector nodes;
 
 		(*it)->convertSplits(taxname, *sg, &nodes);
@@ -678,7 +716,9 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 		int i = 0;
 		for (SplitGraph::iterator sit = sg->begin(); 
 		     sit != sg->end(); ++sit, ++i) {
-			if (!(*sit)->containTaxon(0)) (*sit)->invert();
+			if (!(*sit)->containTaxon(0)) {
+				(*sit)->invert();
+			}
 			hs->insertSplit((*sit), i);
 		}
 		hs_vec.push_back(hs);
@@ -689,8 +729,8 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 	// converting trees into split system then stored in SplitIntMap for efficiency
 	for (auto it = treeset2->begin(); 
 	     it != treeset2->end(); ++it) {
-		SplitGraph *sg = new SplitGraph();
-		SplitIntMap *hs = new SplitIntMap();
+		SplitGraph*  sg = new SplitGraph();
+		SplitIntMap* hs = new SplitIntMap();
 		NodeVector nodes;
 
 		(*it)->convertSplits(taxname, *sg, &nodes);
@@ -698,7 +738,9 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 		int i = 0;
 		for (SplitGraph::iterator sit = sg->begin(); 
 		     sit != sg->end(); ++sit, ++i) {
-			if (!(*sit)->containTaxon(0)) (*sit)->invert();
+			if (!(*sit)->containTaxon(0)) {
+				(*sit)->invert();
+			}
 			hs->insertSplit((*sit), i);
 		}
 		hs_vec.push_back(hs);
@@ -746,10 +788,12 @@ void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
                 non_trivial += static_cast<int>((*hsit2)->size()) - static_cast<int>(((*hsit2)->begin())->first->getNTaxa());
                 rf_val /= non_trivial;
             }
-            if (k_by_k)
+            if (k_by_k) {
                 rfdist[id] = rf_val;
-            else
+			}
+            else {
                 rfdist[id*col_size + id2] = rf_val;
+			}
 			if (info_file) { 
 				oinfo << endl;
 			}

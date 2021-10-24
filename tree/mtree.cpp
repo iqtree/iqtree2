@@ -846,7 +846,9 @@ void MTree::readTree(istream &in, bool &is_rooted)
         Node*        node;
         parseFile(in, ch, node, branch_len);
         // 2018-01-05: assuming rooted tree if root node has two children
-        if (is_rooted || (!branch_len.empty() && branch_len[0] != 0.0) || node->degree() == 2) {
+        if (is_rooted || 
+            (!branch_len.empty() && branch_len[0] != 0.0) || 
+            node->degree() == 2) {
             if (branch_len.empty()) {
                 branch_len.push_back(-1.0);
             }
@@ -1238,9 +1240,6 @@ void MTree::getAllNodesInSubtree(Node *node, Node *dad,
                                  NodeVector &nodeList) const {
     ASSERT(node);
     nodeList.push_back(node);
-    if (node->isLeaf()) {
-        return;
-    }
     FOR_NEIGHBOR_IT(node, dad, it) {
         getAllNodesInSubtree((*it)->node, node, nodeList);
     }
