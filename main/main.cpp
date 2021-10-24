@@ -2838,10 +2838,12 @@ int main(int argc, char *argv[]) {
     {
         if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
         {
-            if (params.siteLL_file)
+            if (params.siteLL_file) {
                 guidedBootstrap(params);
-            if (params.second_align)
+            }
+            if (params.second_align) {
                 computeMulProb(params);
+            }
         } else {
             runPhyloAnalysis(params, checkpoint);
         }

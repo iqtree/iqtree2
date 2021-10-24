@@ -14,7 +14,7 @@
  **********************************************************/
 
 SuperAlignmentPairwisePlen::SuperAlignmentPairwisePlen(PhyloSuperTreePlen *atree, int seq1, int seq2)
-: SuperAlignmentPairwise((PhyloSuperTree*) atree, seq1, seq2)
+: SuperAlignmentPairwise(dynamic_cast<PhyloSuperTree*>(atree), seq1, seq2)
 {
     part_info = &(atree->part_info);
 }

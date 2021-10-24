@@ -74,7 +74,7 @@ public:
     virtual int wrapperFixNegativeBranch(bool force_change) override;
 
     /** @return true if tree is bifurcating, false otherwise */
-    virtual bool isBifurcating(Node *node = NULL, Node *dad = NULL) override;
+    virtual bool isBifurcating() override;
 
     /**
      Read the tree saved with Taxon IDs and branch lengths.

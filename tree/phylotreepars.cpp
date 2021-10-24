@@ -1570,8 +1570,10 @@ int PhyloTree::computeParsimonyTree(Alignment* alignment,
         file_name += ".parstree";
         printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
-    //    if (isSuperTree())
-    //        ((PhyloSuperTree*)this)->mapTrees();
+    //    if (isSuperTree()) {
+    //        auto supe_tree = dynamic_cast<PhyloSuperTree*>(this);
+    //        supe_tree->mapTrees();
+    //    }
     return score;
 }
 

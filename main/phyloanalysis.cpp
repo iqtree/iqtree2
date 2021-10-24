@@ -190,7 +190,7 @@ void reportModelSelection(ofstream &out, Params &params,
     string best_model;
     PhyloSuperTree *stree = nullptr;
     if (tree->isSuperTree()) {
-        stree = (PhyloSuperTree*)tree;
+        stree = dynamic_cast<PhyloSuperTree*>(tree);
         SuperAlignment *saln = (SuperAlignment*)stree->aln;
         for (int part = 0; part != stree->size(); part++) {
             if (part != 0) {
@@ -767,7 +767,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree,
     }
     bool is_codon = tree.aln->seq_type == SeqType::SEQ_CODON;
     if (tree.isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+        PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&tree);
         is_codon = true;
         for (auto sit = stree->begin(); sit != stree->end(); sit++)
             if ((*sit)->aln->seq_type != SeqType::SEQ_CODON) {
@@ -1136,7 +1136,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
                     << ((SuperAlignment*)tree.aln)->computeMissingData()*100
                     << "% missing data)" << endl << endl;
 
-            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+            PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&tree);
             int namelen = stree->getMaxPartNameLength();
             int part;
             out.width(max(namelen+6,10));
@@ -1183,8 +1183,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
 
         if (!model_checkpoint.empty()) {
             out << "ModelFinder" << endl << "-----------" << endl << endl;
-//            if (tree.isSuperTree())
-//                pruneModelInfo(model_info, (PhyloSuperTree*)&tree);
+//            if (tree.isSuperTree()) {
+//                pruneModelInfo(model_info, dynamic_cast<PhyloSuperTree*>(&tree));
+//            }
             reportModelSelection(out, params, &model_checkpoint, &tree);
         }
 
@@ -1218,7 +1219,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
             }
             out << endl << endl;
 
-            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+            PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&tree);
             PhyloSuperTree::iterator it;
             if(params.partition_type == BRLEN_OPTIMIZE ||
                params.partition_type == TOPO_UNLINKED) {
@@ -1278,7 +1279,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
         out << "RATE HETEROGENEITY" << endl << "------------------" << endl
                 << endl;
         if (tree.isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+            PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&tree);
             int part = 0;
             for (PhyloSuperTree::iterator it = stree->begin();
                     it != stree->end(); it++, part++) {
@@ -1377,7 +1378,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
 
             if (tree.isSuperTree() && 
                 verbose_mode >= VerboseMode::VB_MED) {
-                PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+                PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&tree);
 //                stree->mapTrees();
 //                int empty_branches = stree->countEmptyBranches();
 //                if (empty_branches) {
@@ -1471,8 +1472,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree,
 
 //            tree.initializeAllPartialLh();
 //            tree.fixNegativeBranch(false);
-//            if (tree.isSuperTree())
-//                ((PhyloSuperTree*) &tree)->mapTrees();
+//            if (tree.isSuperTree()) {
+//                (dynamic_cast<PhyloSuperTree*>&tree)->mapTrees();
+//            }
 //            tree.optimizeAllBranches();
 //            tree.printTree(con_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 //            tree.sortTaxa();
@@ -1938,7 +1940,8 @@ void initializeParams(Params &params, IQTree &iqtree)
 //    iqtree.setCurScore(-DBL_MAX);
     bool ok_tree = iqtree.root;
     if (iqtree.isSuperTreeUnlinked()) {
-        ok_tree = ((PhyloSuperTree*)&iqtree)->front()->root;
+        auto supe = dynamic_cast<PhyloSuperTree*>(&iqtree);
+        ok_tree = supe->front()->root;
     }
     if (!ok_tree)
     {
@@ -1970,11 +1973,13 @@ void initializeParams(Params &params, IQTree &iqtree)
     }
 
     // TODO: check if necessary
-//    if (iqtree.isSuperTree())
-//        ((PhyloSuperTree*) &iqtree)->mapTrees();
+    //    if (iqtree.isSuperTree()) {
+    //        auto supe = dynamic_cast<PhyloSuperTree*>(&iqtree);
+    //        supe->mapTrees();
+    //    }
 
     // set parameter for the current tree
-//    iqtree.setParams(params);
+    //    iqtree.setParams(params);
 }
 
 
@@ -2170,8 +2175,9 @@ void printSiteRates(IQTree &iqtree, const char *rate_file,
         << "#   tab=read.table('" <<  rate_file << "',header=TRUE)" << endl
         << "# Columns are tab-separated with following meaning:" << endl;
         if (iqtree.isSuperTree()) {
+            auto supe = dynamic_cast<PhyloSuperTree*>(&iqtree);
             out << "#   Part:   Partition ID (1="
-                << ((PhyloSuperTree*)&iqtree)->front()->aln->name << ", etc)" << endl
+                << supe->front()->aln->name << ", etc)" << endl
                 << "#   Site:   Site ID within partition"
                 << " (starting from 1 for each partition)" << endl;
         } else
@@ -2373,7 +2379,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree,
     cout << "Total tree length: " << iqtree.treeLength() << endl;
 
     if (iqtree.isSuperTree() && verbose_mode >= VerboseMode::VB_MAX) {
-        PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
+        PhyloSuperTree *stree = dynamic_cast<PhyloSuperTree*>(&iqtree);
         double count_eval  = stree->evalNNIs+1.0;
         double count_total = stree->totalNNIs+1.0;
         double percent     = (count_eval/count_total)*100.0;
@@ -2450,7 +2456,7 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree,
         if (iqtree->isSuperTreeUnlinked()) {
             params.start_tree = START_TREE_TYPE::STT_PARSIMONY;
         } else if (iqtree->isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
+            auto *stree = dynamic_cast<PhyloSuperTree*>(iqtree);
             for (auto it = stree->begin(); it != stree->end(); it++) {
                 auto seq_type = (*it)->aln->seq_type;
                 if (seq_type != SeqType::SEQ_DNA && 
@@ -2518,7 +2524,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     
     int absent_states = 0;
     if (iqtree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
+        auto *stree = dynamic_cast<PhyloSuperTree*>(iqtree);
         for (PhyloTree* part_tree : *stree) {
             auto msg = "partition " + part_tree->aln->name;
             absent_states += part_tree->aln->checkAbsentStates(msg);
@@ -2759,7 +2765,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             iqtree->printResultTree();
             iqtree->intermediateTrees.update(iqtree->getTreeString(), score);
             if (iqtree->isSuperTreeUnlinked()) {
-                PhyloSuperTree* stree = (PhyloSuperTree*)iqtree;
+                PhyloSuperTree* stree = dynamic_cast<PhyloSuperTree*>(iqtree);
                 for (auto it = stree->begin(); it != stree->end(); it++) {
                     auto tree = (IQTree*)(*it);
                     tree->addTreeToCandidateSet(tree->getTreeString(), score,
@@ -2981,7 +2987,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
 
     if (iqtree->isSuperTree()) {
-        PhyloSuperTree* supertree = (PhyloSuperTree*) iqtree;
+        auto supertree = dynamic_cast<PhyloSuperTree*>(iqtree);
         supertree->computeBranchLengths();
         auto model_path = string(params.out_prefix) + ".best_model.nex";
         supertree->printBestPartitionParams(model_path.c_str());
@@ -3305,8 +3311,9 @@ void doReconstructionRun(IQTree* tree, Alignment* alignment,
     // fix bug: set the model for original tree after testing
     ModelInfoFromName model_info(tree->params->model_name);
     if (model_info.isModelFinder() && tree->isSuperTree()) {
-        PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
-        stree->part_info =  ((PhyloSuperTree*)iqtree)->part_info;
+        auto *dest_tree   = dynamic_cast<PhyloSuperTree*>(tree);
+        auto *source_tree = dynamic_cast<PhyloSuperTree*>(iqtree);
+        dest_tree->part_info  = source_tree->part_info;
     }
     runLnL.push_back(iqtree->getBestScore());
 
@@ -3345,12 +3352,12 @@ void doReconstructionRun(IQTree* tree, Alignment* alignment,
 IQTree* setUpReplicateTree(IQTree* tree, Alignment* alignment) {
     IQTree *iqtree;
     if (alignment->isSuperAlignment()){
+        auto supe_align = dynamic_cast<SuperAlignment*>(alignment);
+        auto supe_tree  = dynamic_cast<PhyloSuperTree*>(tree);
         if(tree->params->partition_type != BRLEN_OPTIMIZE){
-            iqtree = new PhyloSuperTreePlen((SuperAlignment*) alignment,
-                                            (PhyloSuperTree*) tree);
+            iqtree = new PhyloSuperTreePlen(supe_align, supe_tree);
         } else {
-            iqtree = new PhyloSuperTree((SuperAlignment*) alignment,
-                                        (PhyloSuperTree*) tree);
+            iqtree = new PhyloSuperTree(supe_align, supe_tree);
         }
     } else {
         // allocate heterotachy tree if neccessary
@@ -3739,8 +3746,8 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         }
         IQTree *boot_tree;
         if (alignment->isSuperAlignment()){
-            auto super_bootstrap_aln = (SuperAlignment*) bootstrap_alignment;
-            auto super_tree          = (PhyloSuperTree*) tree;
+            auto super_bootstrap_aln = dynamic_cast<SuperAlignment*>(bootstrap_alignment);
+            auto super_tree          = dynamic_cast<PhyloSuperTree*>(tree);
             if(params.partition_type != BRLEN_OPTIMIZE){
                 boot_tree = new PhyloSuperTreePlen(super_bootstrap_aln, super_tree);
             } else {
@@ -4062,23 +4069,24 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
     IQTree *tree;
     if (alignment->isSuperAlignment()) {
         auto super_aln = (SuperAlignment*)alignment;
+        PhyloSuperTree* supe_tree = nullptr;
         if (params.partition_type == TOPO_UNLINKED) {
-            tree = new PhyloSuperTreeUnlinked(super_aln);
+            supe_tree = new PhyloSuperTreeUnlinked(super_aln);
         } else if(params.partition_type != BRLEN_OPTIMIZE){
             // initialize supertree - Proportional Edges case
-            tree = new PhyloSuperTreePlen(super_aln, params.partition_type);
+            supe_tree = new PhyloSuperTreePlen(super_aln, params.partition_type);
         } else {
             //initialize supertree stuff
             //if user specifies partition file with -sp option
-            tree = new PhyloSuperTree(super_aln);
+            supe_tree = new PhyloSuperTree(super_aln);
         }
         // this alignment will actually be of type SuperAlignment
         //        alignment = tree->aln;
-        if (((PhyloSuperTree*)tree)->rescale_codon_brlen) {
+        if (supe_tree->rescale_codon_brlen) {
             cout << "NOTE: Mixed codon and other data, branch lengths"
                  << " of codon partitions are rescaled by 3!" << endl;
         }
-        
+        tree = supe_tree;
     } else {
         // allocate heterotachy tree if neccessary
         std::string model_name = alignment->model_name;
@@ -4696,7 +4704,8 @@ void assignBranchSupportNew(Params &params) {
     if (params.site_concordance) {
         tree->setAlignment(aln);
         if (tree->isSuperTree()) {
-            ((PhyloSuperTree*)tree)->mapTrees();
+            auto supe_tree = dynamic_cast<PhyloSuperTree*>(tree);
+            supe_tree->mapTrees();
         }
     }
     

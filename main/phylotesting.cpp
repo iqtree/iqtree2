@@ -293,7 +293,7 @@ bool  ModelCheckpoint::getBestTree(string &best_tree) {
 
 bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, CandidateModelSet &ordered_models) {
     if (tree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+        auto stree = dynamic_cast<PhyloSuperTree*>(tree);
         ordered_models.clear();
         for (int part = 0; part != stree->size(); part++) {
             startStruct(stree->at(part)->aln->name);
@@ -617,8 +617,8 @@ string computeFastMLTree(Params &params, Alignment *aln,
     
     // save information to the checkpoint for later retrieval
     if (iqtree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
-        int part = 0;
+        auto stree = dynamic_cast<PhyloSuperTree*>(iqtree);
+        int  part  = 0;
         for (auto it = stree->begin(); it != stree->end(); it++, part++) {
             model_info.startStruct((*it)->aln->name);
             (*it)->saveCheckpoint();
@@ -676,8 +676,8 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
         if (iqtree->params->partition_type == BRLEN_SCALE) {
             // now normalize the rates
-            PhyloSuperTree *tree = (PhyloSuperTree*)iqtree;
-            double sum = 0.0;
+            auto   tree  = dynamic_cast<PhyloSuperTree*>(iqtree);
+            double sum   = 0.0;
             size_t nsite = 0;
             int i;
             for (i = 0; i < tree->size(); i++) {
@@ -713,7 +713,7 @@ bool isModelNameEmpty(Params& params, IQTree& iqtree) {
     
     if (params.model_name.empty() && iqtree.isSuperTree()) {
         // check whether any partition has empty model_name
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        auto stree = dynamic_cast<PhyloSuperTree*>(&iqtree);
         for (auto i = stree->begin(); i != stree->end(); i++) {
             if ((*i)->aln->model_name.empty()) {
                 empty_model_found = true;
@@ -743,8 +743,8 @@ void computeInitialPhyloTree(Params& params, IQTree& iqtree,
         iqtree.computeInitialTree(params.SSE);
     
         if (iqtree.isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-            int part = 0;
+            auto stree = dynamic_cast<PhyloSuperTree*>(&iqtree);
+            int  part  = 0;
             for (auto it = stree->begin(); it != stree->end(); it++, part++) {
                 model_checkpoint.startStruct((*it)->aln->name);
                 (*it)->saveCheckpoint();
@@ -763,7 +763,7 @@ void selectPartitionModel(Params &params, IQTree &iqtree,
                           ModelCheckpoint& model_checkpoint, 
                           ModelsBlock*     models_block) {
     // partition model selection
-    PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+    auto stree = dynamic_cast<PhyloSuperTree*>(&iqtree);
     testPartitionModel(params, stree, model_checkpoint, 
                         models_block, params.num_threads);
     stree->mapTrees();
@@ -820,8 +820,10 @@ void runModelFinder(Params &params, IQTree &iqtree,
                  " We are currently working on" 
                  " the MPI parallelization of model selection.");
     // TODO: check if necessary
-    //        if (iqtree.isSuperTree())
-    //            ((PhyloSuperTree*) &iqtree)->mapTrees();
+    //        if (iqtree.isSuperTree()) {
+    //            auto supe_tree = dynamic_cast<PhyloSuperTree*>(&iqtree);
+    //            supe_tree->mapTrees();
+    //        }
     double cpu_time = getCPUTime();
     double real_time = getRealTime();
     model_checkpoint.setFileName((string)params.out_prefix + ".model.gz");

@@ -359,12 +359,22 @@ Node* MTree::newNode(int node_id, int node_name) {
     return new Node(node_id, node_name);
 }
 
+bool MTree::isBifurcating() {
+    return isBifurcating(root, nullptr);
+}
+
 bool MTree::isBifurcating(Node *node, Node *dad) {
-	if (!node) node = root;
-	if (!node->isLeaf() && node->degree() != 3) return false;
+	if (!node->isLeaf() && node->degree() != 3) {
+        std::cout << "Non bifurcating node " 
+                  << node->id << " (" << node->name << ")" 
+                  << " has degree " << node->degree()
+                  << std::endl;
+        return false;
+    }
 	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (!(*it)->node->isLeaf() && (*it)->node->degree() != 3) return false;
-		if (!isBifurcating((*it)->node, node)) return false;
+		if (!isBifurcating((*it)->node, node)) {
+            return false;
+        }
 	}
 	return true;
 }

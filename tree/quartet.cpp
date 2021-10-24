@@ -1204,7 +1204,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     // restore seq_states
     /*
     if (isSuperTree()) {
-        PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+        auto super_tree = dynamic_cast<PhyloSuperTree*>(this);
         for (int i = 0; i < super_tree->size(); i++) {
             super_tree->at(i)->aln->buildSeqStates(super_tree->at(i)->getModel()->seq_states);
         }

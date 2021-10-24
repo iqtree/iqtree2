@@ -91,7 +91,7 @@ int PhyloSuperTreeUnlinked::wrapperFixNegativeBranch(bool force_change) {
     return numFixed;
 }
 
-bool PhyloSuperTreeUnlinked::isBifurcating(Node *node, Node *dad) {
+bool PhyloSuperTreeUnlinked::isBifurcating() {
     for (auto it = begin(); it != end(); it++)
         if (!(*it)->isBifurcating())
             return false;

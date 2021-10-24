@@ -184,7 +184,8 @@ public:
      ********************************************************/
 
 	/** @return true if tree is bifurcating, false otherwise */
-	virtual bool isBifurcating(Node *node = nullptr, Node *dad = nullptr);
+        virtual bool isBifurcating();
+	virtual bool isBifurcating(Node *node, Node *dad );
     /**
             print information
             @param node the starting node, nullptr to start from the root

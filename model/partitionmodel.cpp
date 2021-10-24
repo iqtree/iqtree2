@@ -139,7 +139,7 @@ void PartitionModel::linkModelsAcrossPartitions
         (Params &params, PhyloSuperTree *tree) {
     for (auto mit = linked_models.begin(); 
          mit != linked_models.end(); ++mit) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)site_rate->phylo_tree;
+        auto stree = dynamic_cast<PhyloSuperTree*>(site_rate->phylo_tree);
         if (mit->second->freq_type != StateFreqType::FREQ_ESTIMATE && 
             mit->second->freq_type != StateFreqType::FREQ_EMPIRICAL) {
             continue;
@@ -215,7 +215,7 @@ void PartitionModel::disallowIfUnsupportedSequenceType(SeqType seqType) const {
 
 void PartitionModel::setCheckpoint(Checkpoint *checkpoint) {
     ModelFactory::setCheckpoint(checkpoint);
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); ++it) {
         (*it)->getModelFactory()->setCheckpoint(checkpoint);
     }
@@ -235,7 +235,7 @@ void PartitionModel::saveCheckpoint() {
         it->second->fixParameters(fixed);
         checkpoint->endStruct();
     }
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     int part = 0;
     for (auto it = tree->begin(); it != tree->end(); it++, part++) {
         checkpoint->startStruct((*it)->aln->name);
@@ -252,7 +252,7 @@ void PartitionModel::restoreCheckpoint() {
     startCheckpoint();
     CKP_RESTORE(linked_alpha);
 
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     int part = 0;
     for (auto it = tree->begin(); it != tree->end(); it++, part++) {
         checkpoint->startStruct((*it)->aln->name);
@@ -275,8 +275,8 @@ void PartitionModel::restoreCheckpoint() {
 }
 
 int PartitionModel::getNParameters(int brlen_type) const {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-	int df = 0;
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
+	int  df   = 0;
     for (auto it = tree->begin(); it != tree->end(); it++) {
     	df += (*it)->getModelFactory()->getNParameters(brlen_type);
     }
@@ -292,7 +292,7 @@ int PartitionModel::getNParameters(int brlen_type) const {
 }
 
 double PartitionModel::computeFunction(double shape) {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto   tree   = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     double res    = 0.0;
     int    ntrees = static_cast<int>(tree->size());
     linked_alpha  = shape;
@@ -338,11 +338,12 @@ int PartitionModel::getNDim() const {
 }
 
 double PartitionModel::targetFunk(double x[]) {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    
-    double res = 0;
-    int ntrees = static_cast<int>(tree->size());
-    if (tree->part_order.empty()) tree->computePartitionOrder();
+    auto   tree   = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());    
+    double res    = 0;
+    int    ntrees = static_cast<int>(tree->size());
+    if (tree->part_order.empty()) {
+        tree->computePartitionOrder();
+    }
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)
 #endif
@@ -367,7 +368,7 @@ void PartitionModel::setVariables(double *variables) {
 
 bool PartitionModel::getVariables(const double *variables) {
     bool changed = false;
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree    = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     for (auto it = tree->begin(); it != tree->end(); it++) {
         if ((*it)->getModel()->getName() == model->getName()) {
             changed |= (*it)->getModel()->getVariables(variables);
@@ -377,7 +378,7 @@ bool PartitionModel::getVariables(const double *variables) {
 }
 
 bool PartitionModel::scaleStateFreq() {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree    = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     bool changed = false;
     for (auto it = tree->begin(); it != tree->end(); ++it) {
         if ((*it)->getModel()->getName() == model->getName()) {
@@ -461,7 +462,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
         changed = scaleStateFreq();
     }
     if (changed) {
-        PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+        auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
         for (auto it = tree->begin(); it != tree->end(); it++)
             if ((*it)->getModel()->getName() == model->getName())
                 (*it)->getModel()->decomposeRateMatrix();
@@ -485,7 +486,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info,
 double PartitionModel::optimizeLinkedModels(bool write_info,
                                             double gradient_epsilon,
                                             PhyloTree* report_to_tree) {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     for (auto it = linked_models.begin(); it != linked_models.end(); ++it) {
         ModelSubst *saved_model = model;
         model = it->second;
@@ -530,7 +531,7 @@ bool PartitionModel::isLinkedModel() {
 double PartitionModel::optimizeParameters(int fixed_len, bool write_info,
                                           double logl_epsilon, double gradient_epsilon,
                                           PhyloTree* report_to_tree) {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     if (report_to_tree==nullptr) {
         report_to_tree = tree;
     }
@@ -655,8 +656,7 @@ PartitionModel::~PartitionModel()
 }
 
 bool PartitionModel::isUnstableParameters() const {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-
+    auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
 	for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); ++it)
 		if ((*it)->getModelFactory()->isUnstableParameters()) {
 			return true;

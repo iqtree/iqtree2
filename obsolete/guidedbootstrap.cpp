@@ -438,11 +438,16 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
     ModelsBlock *models_block = new ModelsBlock;
 
     try {
-        if (!tree.getModelFactory()) {
-            if (tree.isSuperTree())
-                tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree, models_block));
-            else
-                tree.setModelFactory(new ModelFactory(params, &tree, models_block));
+        if (tree.getModelFactory() != nullptr) {
+            ModelFactory* fac;
+            if (tree.isSuperTree()) {
+                auto supe_tree = dynamic_cast<PhyloSuperTree*>(&tree);
+                fac = new PartitionModel(params, supe_tree, models_block);
+            }
+            else {
+                fac = new ModelFactory(params, &tree, models_block);
+            }
+            tree.setModelFactory(fac);
         }
     } catch (string &str) {
         outError(str);
@@ -450,7 +455,10 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
     delete models_block;
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
-    if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+    if (tree.isSuperTree()) {
+        auto supe_tree = dynamic_cast<PhyloSuperTree*>(&tree);
+        supe_tree->mapTrees();
+    }
     tree.setLikelihoodKernel(params.SSE);
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
@@ -465,7 +473,10 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
 
     //Update tree score
     tree.setCurScore(bestTreeScore);
-    if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->computeBranchLengths();
+    if (tree.isSuperTree()) {
+        auto stree = dynamic_cast<PhyloSuperTree*>(&tree);
+        stree->computeBranchLengths();
+    }
     stringstream best_tree_string;
     tree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
 
@@ -518,7 +529,10 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
             tree.assignLeafNames();
             tree.initializeAllPartialLh();
             tree.clearAllPartialLH();
-            if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+            if (tree.isSuperTree()) {
+                auto supe_tree = dynamic_cast<PhyloSuperTree*>(&tree);
+                supe_tree->mapTrees();
+            }
             double *pattern_lh = new double [tree.aln->getNPattern()];
             if (!params.fixed_branch_length) {
                 tree.setCurScore(tree.optimizeAllBranches());

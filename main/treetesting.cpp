@@ -71,7 +71,7 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                       bool append, const char *linename) {
     
     ASSERT(tree->isSuperTree());
-    PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+    auto stree = dynamic_cast<PhyloSuperTree*>(tree);
     double *pattern_lh;
     if (!ptn_lh) {
         pattern_lh = new double[tree->getAlnNPattern()];
@@ -127,7 +127,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
         return;
     int ncat = tree->getNumLhCat(wsl);
     if (tree->isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+        auto stree = dynamic_cast<PhyloSuperTree*>(tree);
         for (auto it = stree->begin(); it != stree->end(); it++) {
             int part_ncat = (*it)->getNumLhCat(wsl);
             if (part_ncat > ncat)
@@ -144,7 +144,8 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
         << "#   tab=read.table('" <<  filename << "',header=TRUE,fill=TRUE)" << endl
         << "# Columns are tab-separated with following meaning:" << endl;
         if (tree->isSuperTree()) {
-            out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->at(0)->aln->name << ", etc)" << endl
+            auto supe_tree = dynamic_cast<PhyloSuperTree*>(tree);
+            out << "#   Part:   Partition ID (1=" << supe_tree->at(0)->aln->name << ", etc)" << endl
             << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
         } else {
             out << "#   Site:   Alignment site ID" << endl;
@@ -233,7 +234,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         << "# Columns are tab-separated with following meaning:" << endl
         << "#   Node:  Node name in the tree" << endl;
         if (tree->isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+            auto stree = dynamic_cast<PhyloSuperTree*>(tree);
             out << "#   Part:  Partition ID (1=" << stree->at(0)->aln->name << ", etc)" << endl
             << "#   Site:  Site ID within partition (starting from 1 for each partition)" << endl;
         } else
@@ -243,7 +244,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         << "#   p_X:   Posterior probability for state X (empirical Bayesian method)" << endl;
         
         if (tree->isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+            auto stree = dynamic_cast<PhyloSuperTree*>(tree);
             out << "Node\tPart\tSite\tState";
             for (size_t i = 0; i < stree->front()->aln->num_states; i++)
                 out << "\tp_" << stree->front()->aln->convertStateBackStr(static_cast<PML::StateType>(i));
@@ -341,8 +342,8 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
         out << endl;
         IntVector pattern_index;
         if (tree->isSuperTree()) {
-            PhyloSuperTree *super_tree = (PhyloSuperTree*)tree;
-            size_t offset = 0;
+            auto   super_tree = dynamic_cast<PhyloSuperTree*>(tree);
+            size_t offset     = 0;
             for (auto it = super_tree->begin(); 
                  it != super_tree->end(); ++it) {
                 size_t part_ncat = (*it)->getNumLhCat(wsl);
@@ -1106,8 +1107,9 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
     string part_lh_file = params.out_prefix;
     part_lh_file += ".partlh";
     if (params.print_partition_lh) {
+        auto supe_tree = dynamic_cast<PhyloSuperTree*>(tree);
         ofstream part_lh_out(part_lh_file.c_str());
-        part_lh_out << ntrees << " " << ((PhyloSuperTree*)tree)->size() << endl;
+        part_lh_out << ntrees << " " << supe_tree->size() << endl;
         part_lh_out.close();
     }
     
@@ -1207,7 +1209,8 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<Tre
         tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
         if (tree->isSuperTree()) {
-            ((PhyloSuperTree*) tree)->mapTrees();
+            auto supe_tree = dynamic_cast<PhyloSuperTree*>(tree);
+            supe_tree->mapTrees();
         }
         
         tree->initializeAllPartialLh();

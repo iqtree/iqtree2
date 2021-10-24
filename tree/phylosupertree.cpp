@@ -298,7 +298,8 @@ void PhyloSuperTree::readTreeString(const string &tree_string,
 	}
 	linkTrees();
 //	if (isSuperTree()) {
-//		((PhyloSuperTree*) this)->mapTrees();
+//      auto supe_tree = dynamic_cast<PhyloSuperTree*>(this);
+//		supe_tree->mapTrees();
 //	}
 	if (params->pll) {
 		ASSERT(0);

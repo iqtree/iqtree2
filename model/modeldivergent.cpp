@@ -430,12 +430,13 @@ const std::string ModelDivergent::getSubtreeModelName
 }
 
 void ModelDivergent::identifyTaxonSubsets
-        (Node* root,
+        (Node* divergence_graph_root,
          std::vector<IntVector>& subsets) {
     ASSERT(!subtree_models.empty());
     subsets.resize(subtree_models.size());
     identifyTaxonSubsets(catchall_model_number, 
-                         root, nullptr, subsets);
+                         divergence_graph_root, 
+                         nullptr, subsets);
     for (IntVector& subset : subsets) {
         std::sort(subset.begin(), subset.end());
     }
