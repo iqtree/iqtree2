@@ -2714,11 +2714,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -af phy|fasta";
-				if (strcmp(argv[cnt], "phy") == 0)
+                string format = argv[cnt];
+                transform(format.begin(), format.end(), format.begin(), ::toupper);
+				if (strcmp(format.c_str(), "PHY") == 0)
 					params.aln_output_format = IN_PHYLIP;
-				else if (strcmp(argv[cnt], "fasta") == 0)
+				else if (strcmp(format.c_str(), "FASTA") == 0)
 					params.aln_output_format = IN_FASTA;
-                else if (strcmp(argv[cnt], "nexus") == 0)
+                else if (strcmp(format.c_str(), "NEXUS") == 0)
                     params.aln_output_format = IN_NEXUS;
 				else
 					throw "Unknown output format";
@@ -4610,18 +4612,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                             }
                         }
                         
+                        transform(model_name.begin(), model_name.end(), model_name.begin(), ::toupper);
                         // parse model
-                        if (model_name == "yh")
+                        if (model_name == "YH")
                             params.tree_gen = YULE_HARDING;
-                        else if (model_name == "u")
+                        else if (model_name == "U")
                             params.tree_gen = UNIFORM;
-                        else if (model_name == "cat")
+                        else if (model_name == "CAT")
                             params.tree_gen = CATERPILLAR;
-                        else if (model_name == "bal")
+                        else if (model_name == "BAL")
                             params.tree_gen = BALANCED;
                         else
                         {
-                            KEYWORD = "bd";
+                            KEYWORD = "BD";
                             if ((model_name.length() > KEYWORD.length())
                                 && (!model_name.substr(0, KEYWORD.length()).compare(KEYWORD)))
                             {
