@@ -60,6 +60,9 @@ void ModelDivergent::checkModelReversibility() {
 
 void ModelDivergent::setNumberOfVariableRates(int param_count) {
     num_params = param_count;
+    for (ModelMarkov* subtree_model : subtree_models) {
+        num_params += subtree_model->getNumberOfVariableRates();
+    }
 }
 
 void ModelDivergent::setNumberOfStates(int states) {
@@ -270,7 +273,6 @@ bool ModelDivergent::getVariables(const double *variables) {
     }
     return changed;
 }
-
 
 void ModelDivergent::afterVariablesChanged() {
     for (ModelMarkov* subtree_model : subtree_models) {

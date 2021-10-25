@@ -278,7 +278,8 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
 
     phylo_tree = tree;
 
-    setNumberOfVariableRates(model_info->getNumberOfVariableRates());
+    int num_variable_rates = model_info->getNumberOfVariableRates();
+    setNumberOfVariableRates(num_variable_rates);
 
     //Copy rate variables
     for (auto v: model_info->getVariables()) {
@@ -291,12 +292,15 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
     setRateMatrixFromModel();
 }
 
+bool YAMLModelDivergent::isDivergentModel() const {
+    return true;
+}
+
 void YAMLModelDivergent::setRateMatrixFromModel() {
      for (ModelMarkov* model : subtree_models) {
         model->setRateMatrixFromModel();
     }  
 }
-
 
 YAMLRateFree::YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
                            ModelInfoFromYAMLFile& info)

@@ -249,6 +249,11 @@ int ModelMarkov::getNumberOfRates() const {
     return getNumRateEntries();
 }
 
+int ModelMarkov::getNumberOfVariableRates() const {
+    //Number of free rate *parameters* to the model
+    return num_params;
+}
+
 void ModelMarkov::setTree(PhyloTree *tree) {
     phylo_tree = tree;
 }

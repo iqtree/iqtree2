@@ -107,7 +107,7 @@ public:
     virtual void setBounds(double* lower_bound, double* upper_bound,
                            bool*   bound_check) override {
         ASSERT(model_info!=nullptr);
-        if (isMixtureModel()) {
+        if (isMixtureModel() || isDivergentModel()) {
             super::setBounds(lower_bound, upper_bound, bound_check);
             return;
         }
@@ -137,7 +137,7 @@ public:
 
     virtual bool getVariables(const double *variables) override {
         bool changed = false;
-        if (isMixtureModel()) {
+        if (isMixtureModel() || isDivergentModel()) {
             changed = super::getVariables(variables);
             if (changed) {
                 afterVariablesChanged();
@@ -244,7 +244,7 @@ public:
     }
 
     virtual void setVariables(double *variables) override {
-        if (isMixtureModel()) {
+        if (isMixtureModel() || isDivergentModel()) {
             super::setVariables(variables);
             return;
         }
@@ -394,6 +394,10 @@ public:
         model_info->writeInfo("State frequencies    ", ModelParameterType::FREQUENCY,  out);
     }
 
+    virtual bool isDivergentModel() const override {
+        return false;
+    }
+
     virtual bool isMixtureModel() const {
         return false;
     }
@@ -494,10 +498,10 @@ public:
                      ModelsBlock* models_block, PhyloTree *tree, 
                      PhyloTree* report_to_tree);
 
-    virtual bool isMixtureModel() const override;
-    virtual void setRateMatrixFromModel() override;
-    virtual void afterVariablesChanged() override;
-    virtual void afterWeightsChanged() override;
+    virtual bool isMixtureModel()         const override;
+    virtual void setRateMatrixFromModel()       override;
+    virtual void afterVariablesChanged()        override;
+    virtual void afterWeightsChanged()          override;
 };
 
 class YAMLModelDivergent:public YAMLModelWrapper<ModelDivergent> {
@@ -509,6 +513,7 @@ public:
                        const char* model_name, StateFreqType freq,
                        ModelsBlock* models_block, PhyloTree *tree, 
                        PhyloTree* report_to_tree);
+    virtual bool isDivergentModel() const override;
     virtual void setRateMatrixFromModel() override; 
 };
 

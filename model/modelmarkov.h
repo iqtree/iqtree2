@@ -145,6 +145,8 @@ public:
 	virtual int getNumRateEntries() const override;
 
     virtual int getNumberOfRates() const;
+
+	virtual int getNumberOfVariableRates() const;
     
 	/**
 		set the associated tree
