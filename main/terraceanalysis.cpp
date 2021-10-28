@@ -83,9 +83,17 @@ void runterraceanalysis(Params &params){
             cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\nConverting rooted tree to unrooted...\n";
             tree.convertToUnrooted();
         }
+        if(!tree.isBifurcating()){
+            cout<<"ERROR: The tree has multifurcations! Only bifurcating trees are allowed. Exiting...\n";
+            exit(0);
+        }
         terrace = new Terrace(tree,matrix);
     } else if(params.user_file && params.pr_ab_matrix){
         terrace = new Terrace(params.user_file,params.is_rooted,params.pr_ab_matrix);
+        if(!terrace->isBifurcating()){
+            cout<<"ERROR: The tree has multifurcations! Only bifurcating trees are allowed. Exiting...\n";
+            exit(0);
+        }
     } else if(params.user_file){
         vector<TerraceTree*> subtrees;
         read_tree_set(params.user_file, params.is_rooted, subtrees);
@@ -100,6 +108,10 @@ void runterraceanalysis(Params &params){
                 cout<<"Tree "<<ti<<": converting rooted tree to unrooted...\n";
                 t->convertToUnrooted();
                 //t->printTree(cout);
+            }
+            if(!t->isBifurcating()){
+                cout<<"ERROR: Tree "<<ti<<" has multifurcations! Only bifurcating trees are allowed. Exiting...\n";
+                exit(0);
             }
         }
         terrace = new Terrace(subtrees);
@@ -283,6 +295,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     }
     
     init_terrace->matrix->uniq_taxa_num = terrace->matrix->uniq_taxa_num;
+    init_terrace->matrix->uniq_taxa_to_insert_num = terrace->matrix->uniq_taxa_to_insert_num;
     cout<<"\n"<<"Generating terrace trees.."<<"\n";
     
     bool use_dynamic_taxon_order = true;

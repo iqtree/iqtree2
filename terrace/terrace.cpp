@@ -1081,7 +1081,7 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
         }
     }
     
-    //cout<<"INTERMEDIATE_INFO_TAXA_"<<leafNum<<"_INSERTED_"<<node_name<<"_TREE_"<<"\n";
+    //cout<<"INTERMEDIATE_INFO_TAXA_"<<leafNum<<"_INSERTED_"<<node_name<<"_TREE_";
     //printTree(cout, WT_BR_SCALE | WT_NEWLINE);
     
     intermediated_trees_num +=1;
@@ -1726,10 +1726,11 @@ string Terrace::getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *
     //NodeVector branch_end_1, branch_end_2;
     //this->getBranches(branch_end_1, branch_end_2);
     
-    int bond = 0, diff = ordered_taxa_to_insert->size()-matrix->uniq_taxa_num;
+    int bond = 0, diff = ordered_taxa_to_insert->size()-matrix->uniq_taxa_to_insert_num;
     //cout<<ordered_taxa_to_insert->size()<<"|"<<matrix->uniq_taxa_num<<"|"<<diff<<"|"<<ordered_taxa_to_insert->size()-matrix->uniq_taxa_num<<"\n";
     if(diff > 0){
-        bond=matrix->uniq_taxa_num;
+        // if there are more non-uniq taxa, only check the number of allowed branches for them, and choose one of them as the next taxon
+        bond=matrix->uniq_taxa_to_insert_num;
     }
     
     for(auto it=ordered_taxa_to_insert->begin(); it!=ordered_taxa_to_insert->end()-bond;it++){

@@ -28,6 +28,7 @@ public:
     int taxa_num{0};
     int part_num{0};
     int uniq_taxa_num{0};
+    int uniq_taxa_to_insert_num{0};
     double missing_percent{0.0};
     
     /*

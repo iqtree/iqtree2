@@ -438,7 +438,7 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
     */
     // END: ORDER TYPE 2 ====================================================================
     
-    //cout<<"Partition with maximum coverage based on non-spesific taxa is "<<ordered_partitions[0]<<" with "<<part_cov[ordered_partitions[0]]<<" taxa."<<"\n";
+    //cout<<"Partition with maximum coverage based on non-specific taxa is "<<ordered_partitions[0]<<" with "<<part_cov[ordered_partitions[0]]<<" taxa."<<"\n";
     
     // Vector for part id stores its order
     vector<int> part_order;
@@ -477,6 +477,13 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
     if(m==0){
         cout<<"Partition "<<part_max+1<<" is chosen for the initial tree."<<"\n";
         part_init = part_max;
+        // count the number of unique taxa to insert on part_init
+        uniq_taxa_to_insert_num=uniq_taxa_num;
+        for(j=0; j<taxa_num; j++){
+            if(pr_ab_matrix[j][part_init]==1 and taxon_cov[j]==1){
+                uniq_taxa_to_insert_num--;
+            }
+        }
     } else {
         cout<<"The initial tree will be created by removing from the input tree "<<m<<" leaves."<<"\n";
         cout<<"Note, that this procedure does not guarantee generating all trees from a terrace! It is only meant to investigate, if at least some trees from a terrace can be generate."<<"\n";
