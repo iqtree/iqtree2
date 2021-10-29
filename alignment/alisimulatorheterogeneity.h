@@ -41,7 +41,12 @@ protected:
     /**
         initialize site specific model index based on its weights in the mixture model
     */
-    void intializeSiteSpecificModelIndex(int length, vector<short int> &new_site_specific_model_index);
+    void intializeSiteSpecificModelIndex(int length, vector<short int> &new_site_specific_model_index, bool insertion_event = false);
+    
+    /**
+        initialize site specific model index based on posterior model probability
+    */
+    void intSiteSpecificModelIndexPosteriorProb(int length, vector<short int> &new_site_specific_model_index, bool insertion_event);
     
     /**
         initialize caching accumulated_trans_matrix
@@ -83,6 +88,11 @@ protected:
         TRUE if posterior mean rate can be used
     */
     bool canApplyPosteriorMeanRate();
+    
+    /**
+        extract pattern- posterior mean state frequencies and posterior model probability
+    */
+    void extractPatternPosteriorFreqsAndModelProb(int input_sequence_length);
     
 public:
     

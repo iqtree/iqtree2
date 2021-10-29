@@ -29,48 +29,55 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
 /**
     initialize site specific model index based on its weights in the mixture model
 */
-void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_length, vector<short int> &new_site_specific_model_index)
+void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_length, vector<short int> &new_site_specific_model_index, bool insertion_event)
 {
     new_site_specific_model_index.resize(sequence_length);
     
-    // if a mixture model is used -> randomly select a model for each site based on the weights of model components
+    // if a mixture model is used -> randomly select a model for each site
     if (tree->getModel()->isMixture())
     {
-        // get/init variables
-        ModelSubst* model = tree->getModel();
-        int num_models = model->getNMixtures();
-        mixture_accumulated_weight = new double[num_models];
-        
-        // get the weights of model components
-        bool isFused = model->isFused();
-        mixture_max_weight_pos = 0;
-        for (int i = 0; i < num_models; i++)
+        // if posterior probability is used -> randomly select a model for each site based on the posterior model probability
+        if (tree->params->alisim_posterior_mean)
+            intSiteSpecificModelIndexPosteriorProb(sequence_length, new_site_specific_model_index, insertion_event);
+        // otherwise, randomly select a model for each site based on the weights of model components
+        else
         {
-            // fused model, take the weight from site_rate
-            if (isFused)
-                mixture_accumulated_weight[i] = tree->getRate()->getProp(i) / (1.0 - tree->getRate()->getPInvar());
-            else
-                mixture_accumulated_weight[i] = model->getMixtureWeight(i);
+            // get/init variables
+            ModelSubst* model = tree->getModel();
+            int num_models = model->getNMixtures();
+            mixture_accumulated_weight = new double[num_models];
             
-            // finding the max probability position
-            if (mixture_accumulated_weight[i] > mixture_accumulated_weight[mixture_max_weight_pos])
-                mixture_max_weight_pos = i;
-        }
+            // get the weights of model components
+            bool isFused = model->isFused();
+            mixture_max_weight_pos = 0;
+            for (int i = 0; i < num_models; i++)
+            {
+                // fused model, take the weight from site_rate
+                if (isFused)
+                    mixture_accumulated_weight[i] = tree->getRate()->getProp(i) / (1.0 - tree->getRate()->getPInvar());
+                else
+                    mixture_accumulated_weight[i] = model->getMixtureWeight(i);
+                
+                // finding the max probability position
+                if (mixture_accumulated_weight[i] > mixture_accumulated_weight[mixture_max_weight_pos])
+                    mixture_max_weight_pos = i;
+            }
+                
+            // convert the model_prop into an accumulated model_prop
+            convertProMatrixIntoAccumulatedProMatrix(mixture_accumulated_weight, 1, num_models);
             
-        // convert the model_prop into an accumulated model_prop
-        convertProMatrixIntoAccumulatedProMatrix(mixture_accumulated_weight, 1, num_models);
-        
-        for (int i = 0; i < sequence_length; i++)
-        {
-            // randomly select a model from the set of model components, considering its probability array.
-            new_site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_models, mixture_max_weight_pos);
-        }
-        
-        // delete the mixture_accumulated_weight if mixture model at substitution level is not used
-        if (!params->alisim_mixture_at_sub_level)
-        {
-            delete[] mixture_accumulated_weight;
-            mixture_accumulated_weight = NULL;
+            for (int i = 0; i < sequence_length; i++)
+            {
+                // randomly select a model from the set of model components, considering its probability array.
+                new_site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_models, mixture_max_weight_pos);
+            }
+            
+            // delete the mixture_accumulated_weight if mixture model at substitution level is not used
+            if (!params->alisim_mixture_at_sub_level)
+            {
+                delete[] mixture_accumulated_weight;
+                mixture_accumulated_weight = NULL;
+            }
         }
     }
     // otherwise, if it's not a mixture model -> set model index = 0 for all sites
@@ -81,6 +88,31 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
         {
             new_site_specific_model_index[i] = 0;
         }
+    }
+}
+
+/**
+    initialize site specific model index based on posterior model probability
+*/
+void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int sequence_length, vector<short int> &new_site_specific_model_index, bool insertion_event)
+{
+    // dummy variables
+    int input_sequence_length = tree->aln->getNSite();
+    int nmixture = tree->getModel()->getNMixtures();
+    
+    // extract pattern- posterior mean state frequencies and posterior model probability
+    extractPatternPosteriorFreqsAndModelProb(input_sequence_length);
+    
+    for (int i = 0; i < sequence_length; i++)
+    {
+        double rand_num = random_double();
+        // if new_site_specific_model_index is generated for an insertion event or the site id is greater than the sequence length -> randomly select a pattern
+        int site_id = i;
+        if (insertion_event || i >= input_sequence_length)
+            site_id = random_int(input_sequence_length);
+        int site_pattern_id = tree->aln->getPatternID(site_id);
+        int starting_index = site_pattern_id*nmixture;
+        new_site_specific_model_index[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_model_dis, rand_num, starting_index, starting_index + nmixture - 1, starting_index) - starting_index;
     }
 }
 
@@ -129,15 +161,13 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
 }
 
 /**
-    regenerate sequence based on posterior mean state frequencies (for mixture models)
+    extract pattern- posterior mean state frequencies and posterior model probability
 */
-vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, bool insertion_event)
+void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb(int input_sequence_length)
 {
-    ASSERT(tree->params->alisim_posterior_mean);
-    
     // get pattern-specific state frequencies (ptn_state_freq)
     int nptn = tree->aln->getNPattern();
-    int input_sequence_length = tree->aln->getNSite();
+    int nmixture = tree->getModel()->getNMixtures();
     if (!ptn_state_freq)
     {
         ptn_state_freq = new double[nptn*max_num_states];
@@ -145,11 +175,29 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPoste
         SiteFreqType tmp_site_freq_type = tree->params->print_site_state_freq;
         tree->params->print_site_state_freq = WSF_POSTERIOR_MEAN;
         tree->computePatternStateFreq(ptn_state_freq);
+        // get pattern-specific posterior model probability
+        ptn_model_dis = new double[nptn*nmixture];
+        memcpy(ptn_model_dis, tree->getPatternLhCatPointer(), nptn*nmixture* sizeof(double));
         tree->params->print_site_state_freq = tmp_site_freq_type;
         
         // convert ptn_state_freq to accummulated matrix
         convertProMatrixIntoAccumulatedProMatrix(ptn_state_freq, nptn, max_num_states);
+        
+        // convert ptn_model_dis to accummulated matrix
+        convertProMatrixIntoAccumulatedProMatrix(ptn_model_dis, nptn, nmixture);
     }
+}
+
+/**
+    regenerate sequence based on posterior mean state frequencies (for mixture models)
+*/
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, bool insertion_event)
+{
+    ASSERT(tree->params->alisim_posterior_mean);
+    
+    // extract pattern- posterior mean state frequencies and posterior model probability
+    int input_sequence_length = tree->aln->getNSite();
+    extractPatternPosteriorFreqsAndModelProb(input_sequence_length);
     
     // re-generate the sequence
     vector <short int> new_sequence(length, max_num_states);
@@ -502,7 +550,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
 {
     // initialize new_site_specific_model_index
     vector<short int> new_site_specific_model_index;
-    intializeSiteSpecificModelIndex(new_sequence.size(), new_site_specific_model_index);
+    intializeSiteSpecificModelIndex(new_sequence.size(), new_site_specific_model_index, true);
     
     // insert new_site_specific_model_index into site_specific_model_index
     site_specific_model_index.insert(site_specific_model_index.begin()+position, new_site_specific_model_index.begin(), new_site_specific_model_index.end());
@@ -523,10 +571,10 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     {
         // re-generate sequence based on posterior mean state frequencies if users want to do so
         if (tree->params->alisim_posterior_mean && tree->getModel()->isMixture())
-            new_sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, true);
+            new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_sequence.size(), true);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
-            new_sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
+            new_sequence = regenerateSequenceMixtureModel(new_sequence.size(), site_specific_model_index);
     }
     
     // insert new_sequence into the current sequence

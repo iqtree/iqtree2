@@ -315,6 +315,7 @@ public:
     // variables using for posterior mean rates/state frequencies
     bool applyPosMeanRate = false;
     double* ptn_state_freq = NULL;
+    double* ptn_model_dis = NULL;
     DoubleVector pattern_rates;
     
     /**
