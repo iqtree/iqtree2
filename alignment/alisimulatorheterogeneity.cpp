@@ -571,10 +571,10 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     {
         // re-generate sequence based on posterior mean state frequencies if users want to do so
         if (tree->params->alisim_posterior_mean && tree->getModel()->isMixture())
-            new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_sequence.size(), true);
+            new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_site_specific_model_index.size(), true);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
-            new_sequence = regenerateSequenceMixtureModel(new_sequence.size(), site_specific_model_index);
+            new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
     }
     
     // insert new_sequence into the current sequence
