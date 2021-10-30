@@ -4674,8 +4674,8 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node,
  ****************************************************************************/
 
 /*
-void PhyloTree::doOneRandomNNI(Branch branch) {
-    assert(isInnerBranch(branch.first, branch.second));
+void PhyloTree::doOneRandomNNI(PhyloBranch branch) {
+    assert(branch.isInnerBranch());
 
     if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
@@ -4710,8 +4710,8 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
 }
 */
     
-NNIMove PhyloTree::getRandomNNI(Branch &branch) {
-    ASSERT(isInnerBranch(branch.first, branch.second));
+NNIMove PhyloTree::getRandomNNI(PhyloBranch &branch) {
+    ASSERT(branch.isInnerBranch());
     // for rooted tree
     auto first_node  = dynamic_cast<PhyloNode*>(branch.first);
     auto second_node = dynamic_cast<PhyloNode*>(branch.second);

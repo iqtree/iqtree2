@@ -2107,7 +2107,7 @@ public:
     *   @param branch the internal branch
     *   @return an NNIMove, node1 and node2 are set to NULL if not consistent with constraintTree
     */
-    NNIMove getRandomNNI(Branch& branch);
+    NNIMove getRandomNNI(PhyloBranch& branch);
 
 
     /**

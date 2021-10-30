@@ -15,7 +15,7 @@
 #include "parsimonysearch.h"
 
 ParsimonyNNIMove::ParsimonyNNIMove(): super(), left(nullptr),
-                    middle(nullptr, nullptr), right(nullptr) {
+                    middle(), right(nullptr) {
 }
 ParsimonyNNIMove::ParsimonyNNIMove(const ParsimonyNNIMove& rhs)
    : super(rhs), left(rhs.left),

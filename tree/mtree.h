@@ -590,20 +590,6 @@ public:
      */
     void getSurroundingInnerBranches(Node *node, Node *dad, int depth, Branches &surrBranches);
 
-    /**
-     * @brief: check if the branch is internal
-     * @param[in] node1 one end of the branch
-     * @param[in] node2 the other end of the branch
-     */
-    bool isInnerBranch(Node* node1, Node* node2);
-
-    /**
-     *  Check if the 2 nodes from a branch in the tree
-     *  @param node1 one of the 2 nodes
-     *  @param node2 one of the 2 nodes
-     *  return true if they are adjacent to each other
-     */
-    bool isABranch(Node* node1, Node* node2);
 
     void getBranchLengths(vector<DoubleVector> &len, Node *node = nullptr, Node *dad = nullptr);
 

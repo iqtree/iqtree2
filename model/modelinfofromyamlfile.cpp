@@ -950,7 +950,9 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
                             << " of " << param_count);
             } else {
                 TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
-                            "Did not update " << var_name << "=" << old_value
+                            "Did not update " 
+                            << getName() << "." << var_name 
+                            << "=" << old_value
                             << " (to " << value << ")"
                             << " from parameter " << i 
                             << " of " << param_count 
@@ -1002,8 +1004,7 @@ void ModelInfoFromYAMLFile::readModelVariablesByType
             TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                           "Wrote from " << var_name << "=" << v
                           << " (subscript " << sub << ")"
-                          << " to parameter " << i 
-                          << " of " << param_count);
+                          << " to parameter " << i);
             ++i;
         }
     }

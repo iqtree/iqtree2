@@ -34,9 +34,9 @@ void ParsimonyLazyTBRMove::initialize(intptr_t id_of_source_branch, bool beLazy)
     source_branch_id        = id_of_source_branch;
     first_target_branch_id  = -1;
     second_target_branch_id = -1;
-    copy_of_source          = PhyloBranch(nullptr, nullptr);
-    copy_of_first_target    = PhyloBranch(nullptr, nullptr);
-    copy_of_second_target   = PhyloBranch(nullptr, nullptr);
+    copy_of_source          = PhyloBranch();
+    copy_of_first_target    = PhyloBranch();
+    copy_of_second_target   = PhyloBranch();
     positions_considered    = 0;
     better_positions        = 0;
 }

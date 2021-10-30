@@ -144,12 +144,16 @@ public:
             }
             return changed;
         }
-        int num_rates = getNumberOfRates();
+        bool estimating_frequencies = freq_type == StateFreqType::FREQ_ESTIMATE;
+        int  num_rates       = getNumberOfRates();
+        int  num_var_freq    = (isReversible() && estimating_frequencies)  
+                               ? (num_states-1) : 0;
         TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
                         "getVariables called" 
-                        " for " << model_info->getName() <<
-                        " with num_params = " << num_params <<
-                        " and num_rates = " << num_rates);
+                        << " for " << model_info->getName() 
+                        << " with num_params = " << num_params 
+                        << " , num_rates = " << num_rates
+                        << " , num_variable_freq = " << num_var_freq);
         if (num_params > 0) {
             for (int i = 0; i < num_rates; i++) {
                 if (rates[i] != variables[i+1] ) {
@@ -166,10 +170,11 @@ public:
         int ndim = getNDim();
         int first_freq_index = (ndim-num_states+2);
         if (isReversible()) {
-            if (freq_type == StateFreqType::FREQ_ESTIMATE) {
+            if (estimating_frequencies) {
                 auto read_freq = variables+first_freq_index;
                 for (int i=0; i<num_states-1; ++i) {
-                    if (state_freq[i]!=read_freq[i]) {
+                    double freq_delta = fabs(state_freq[i]-read_freq[i]);
+                    if (freq_delta!=0) {
                         TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
                                     "  estimated freqs[" << i << "] changing"
                                     << " from " << state_freq[i]
@@ -260,8 +265,6 @@ public:
                       << " variable frequencies");
         if (num_params > 0) {
             int i = 0; //rates is 0-based
-            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
-                          "num_params was " << num_params);
             model_info->readModelVariablesByType(rates, num_params-1, false,
                                                  ModelParameterType::RATE, 
                                                  i, phylo_tree);

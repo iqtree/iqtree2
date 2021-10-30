@@ -251,7 +251,19 @@ typedef vector<Neighbor*> NeighborVec;
  */
 typedef vector<Node*> NodeVector;
 
-typedef pair<Node*, Node*> Branch;
+
+class Branch: public pair<Node*, Node*>  {
+public:
+    typedef pair<Node*, Node*> super;
+    Branch();
+    Branch(const Branch& rhs) = default;
+    Branch(Node* left, Node* right);
+    Branch& operator=(const Branch& rhs) = default;
+    ~Branch() = default;
+    bool isInnerBranch() const;
+    bool stillExists() const;
+};
+
 typedef vector<Branch> BranchVector;
 typedef map<int, Branch> Branches;
 
@@ -378,6 +390,14 @@ public:
      */
     double longestPath2(Node* &node1, Node* &node2);
 
+
+    /**
+        @param node the target node
+        @return true if there's a neighbor that references the node,
+                false otherwise
+     */
+    bool hasNeighbor(Node* node) const;
+
     /**
         @param node the target node
         @return the neighbor that has the node. If not found, return NULL
@@ -470,35 +490,6 @@ public:
 
     bool unlinkNeighbor(Node* node);
 };
-/*
-class Branch {
-public:
-    Node* node1;
-
-    Node* node2;
-
-    string key;
-
-    Branch(Node* node1, Node* node2) {
-        assert(node1->isNeighbor(node2));
-        assert(node2->isNeighbor(node1));
-
-        if (node1->id < node2->id) {
-            this->node1 = node1;
-            this->node2 = node2;
-        } else {
-            this->node1 = node2;
-            this->node2 = node1;
-        }
-
-        key = convertIntToString(this->node1->id) + convertIntToString(this->node2->id);
-    }
-
-    inline string getKey() {
-        return key;
-    }
-};
-*/
 
 /*
     some macros to transverse neighbors of a node

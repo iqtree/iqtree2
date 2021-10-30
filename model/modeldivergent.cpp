@@ -636,7 +636,7 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
                 message << sep << freq;
                 sep = ", ";
             }
-            message << "] based on " 
+            message << " ] based on " 
                     << taxon_subsets[model_number].size() 
                     << " taxa.";
             std::cout << message.str() << std::endl;

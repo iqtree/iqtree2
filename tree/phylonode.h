@@ -481,12 +481,20 @@ typedef SubclassPointerVector<PhyloNode, NodeVector> PhyloNodeVector;
 struct PhyloBranch: public pair<PhyloNode*, PhyloNode*> {
     typedef pair<PhyloNode*, PhyloNode*> super;
     PhyloBranch();
+    PhyloBranch(Node* left, Node* right);
     PhyloBranch(PhyloNode* left, PhyloNode* right);
+    PhyloBranch& operator=(const PhyloBranch& rhs) = default;
     explicit PhyloBranch(const Branch& copyMe );
-    int getBranchID() const;
-    PhyloNeighbor* getLeftNeighbor()  const;
-    PhyloNeighbor* getRightNeighbor() const;
-    bool stillExists() const;
+    PhyloBranch& operator=(const Branch& copyMe );
+    operator Branch() const;
+
+    int            getBranchID()       const;
+    PhyloNeighbor* getLeftNeighbor()   const;
+    PhyloNeighbor* getRightNeighbor()  const;
+    bool           stillExists()       const;
+    bool           isInnerBranch()     const;
+    bool           isABranch()         const;
+    bool           isDivergentBranch() const;
 };
 
 typedef CastingVector<PhyloBranch, BranchVector> PhyloBranchVector;

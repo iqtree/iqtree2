@@ -1891,18 +1891,18 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
     }
 }
 
-void IQTree::getNonTabuBranches(Branches& allBranches,
+void IQTree::getNonTabuBranches(Branches&   allBranches,
                                 SplitGraph& tabuSplits,
-                                Branches& nonTabuBranches,
-                                Branches* tabuBranches) {
+                                Branches&   nonTabuBranches,
+                                Branches*   tabuBranches) {
     if (tabuSplits.size() == 0) {
         return;
     }
     for (auto it = allBranches.begin(); it != allBranches.end(); ++it) {
-        if (isInnerBranch(it->second.first, it->second.second)) {
-            int nodeID1 = it->second.first->id;
-            int nodeID2 = it->second.second->id;
-            Branch curBranch = it->second;
+        PhyloBranch curBranch(it->second);
+        if (curBranch.isInnerBranch()) {
+            int nodeID1 = curBranch.first->id;
+            int nodeID2 = curBranch.second->id;
             Split* sp = getSplit(it->second.first, it->second.second);
             pair<int,Branch> x = pair<int,Branch>(pairInteger(nodeID1, nodeID2), curBranch);
             if (!tabuSplits.containSplit(*sp)) {
@@ -1923,10 +1923,8 @@ void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits,
         node = root;
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if (isInnerBranch((*it)->node, node)) {
-            Branch curBranch;
-            curBranch.first = (*it)->node;
-            curBranch.second = node;
+        PhyloBranch curBranch((*it)->node, node);
+        if (curBranch.isInnerBranch()) {
             Split* curSplit;
             Split *sp = (*it)->split;
             ASSERT(sp != NULL);
@@ -1979,33 +1977,31 @@ void IQTree::getNNIBranches(SplitIntMap& tabuSplits,  SplitIntMap& candSplits,
         node = root;
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
-            if (isInnerBranch((*it)->node, node)) {
-                Branch curBranch;
-                curBranch.first = (*it)->node;
-                curBranch.second = node;
-                int branchID = pairInteger(curBranch.first->id,
-                                           curBranch.second->id);
-
-                if (params->fixStableSplits) {
-                    Split *curSplit;
-                    Split *sp = (*it)->split;
-                    ASSERT(sp != NULL);
-                    curSplit = new Split(*sp);
-                    if (curSplit->shouldInvert())
-                        curSplit->invert();
-                    if (shouldEvaluate(curSplit, tabuSplits, candSplits)) {
-                        nniBranches.insert(pair<int, Branch>(branchID, curBranch));
-                    } else {
-                        nonNNIBranches.insert(pair<int, Branch>(branchID, curBranch));
-                    }
-                    delete curSplit;
-                } else {
+        PhyloBranch curBranch((*it)->node, node);
+        if (curBranch.isInnerBranch() &&
+            !curBranch.isDivergentBranch()) {
+            int branchID = pairInteger(curBranch.first->id,
+                                       curBranch.second->id);
+            if (params->fixStableSplits) {
+                Split *curSplit;
+                Split *sp = (*it)->split;
+                ASSERT(sp != NULL);
+                curSplit = new Split(*sp);
+                if (curSplit->shouldInvert())
+                    curSplit->invert();
+                if (shouldEvaluate(curSplit, tabuSplits, candSplits)) {
                     nniBranches.insert(pair<int, Branch>(branchID, curBranch));
+                } else {
+                    nonNNIBranches.insert(pair<int, Branch>(branchID, curBranch));
                 }
+                delete curSplit;
+            } else {
+                nniBranches.insert(pair<int, Branch>(branchID, curBranch));
             }
-            getNNIBranches(tabuSplits, candSplits, nonNNIBranches,
-                           nniBranches, (*it)->node, node);
         }
+        getNNIBranches(tabuSplits, candSplits, nonNNIBranches,
+                        nniBranches, (*it)->node, node);
+    }
 }
 
 void IQTree::getStableBranches(SplitIntMap &candSplits, double supportValue,
@@ -2015,29 +2011,27 @@ void IQTree::getStableBranches(SplitIntMap &candSplits, double supportValue,
     }
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-            if (isInnerBranch((*it)->node, node)) {
-                Branch curBranch;
-                curBranch.first = (*it)->node;
-                curBranch.second = node;
-                Split *curSplit;
-                Split *sp = (*it)->split;
-                ASSERT(sp != NULL);
-                curSplit = new Split(*sp);
-                if (curSplit->shouldInvert())
-                    curSplit->invert();
-                int occurences;
-                sp = candSplits.findSplit(curSplit, occurences);
-                if (sp != NULL) {
-                    if ( sp->getWeight() >= supportValue) {
-                        stableBranches.insert(
-                                pair<int, Branch>(pairInteger(curBranch.first->id,
-                                                              curBranch.second->id), curBranch));
-                    }
+        PhyloBranch curBranch((*it)->node, node);
+        if (curBranch.isInnerBranch()) {
+            Split *curSplit;
+            Split *sp = (*it)->split;
+            ASSERT(sp != NULL);
+            curSplit = new Split(*sp);
+            if (curSplit->shouldInvert())
+                curSplit->invert();
+            int occurences;
+            sp = candSplits.findSplit(curSplit, occurences);
+            if (sp != NULL) {
+                if ( sp->getWeight() >= supportValue) {
+                    stableBranches.insert(
+                            pair<int, Branch>(pairInteger(curBranch.first->id,
+                                                            curBranch.second->id), curBranch));
                 }
-                delete curSplit;
             }
-            getStableBranches(candSplits, supportValue, stableBranches, (*it)->node, node);
+            delete curSplit;
         }
+        getStableBranches(candSplits, supportValue, stableBranches, (*it)->node, node);
+    }
 }
 
 string IQTree::perturbStableSplits(double suppValue) {
@@ -2051,9 +2045,11 @@ string IQTree::perturbStableSplits(double suppValue) {
         vector<NNIMove> randomNNIs;
         vector<NNIMove> compatibleNNIs;
         for (auto it = stableBranches.begin(); it != stableBranches.end(); it++) {
-            NNIMove randNNI = getRandomNNI(it->second);
-            if (constraintTree.isCompatible(randNNI))
+            PhyloBranch stable_branch(it->second);
+            NNIMove randNNI = getRandomNNI(stable_branch);
+            if (constraintTree.isCompatible(randNNI)) {
                 randomNNIs.push_back(randNNI);
+            }
         }
         getCompatibleNNIs(randomNNIs, compatibleNNIs);
         for (auto it = compatibleNNIs.begin();
@@ -2122,7 +2118,8 @@ string IQTree::doRandomNNIs(bool storeTabu) {
             vectorNNIBranches.push_back(it->second);
         }
         int randInt = random_int((int) vectorNNIBranches.size());
-        NNIMove randNNI = getRandomNNI(vectorNNIBranches[randInt]);
+        PhyloBranch random_branch(vectorNNIBranches[randInt]);
+        NNIMove randNNI = getRandomNNI(random_branch);
         if (constraintTree.isCompatible(randNNI)) {
             // only if random NNI satisfies constraintTree
             doNNI(randNNI);
@@ -3478,6 +3475,8 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         nniBranches.clear();
         nonNNIBranches.clear();
 
+        computeSubsetNumbersForInternalNodes();
+
         bool startSpeedNNI;
         //When tabu and speednni are combined,
         //speednni is only start from third steps
@@ -3490,6 +3489,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         }
 
         if (startSpeedNNI) {
+            //Todo: filterNNIBranches
             //speedNNI option: only evaluate NNIs that are 2 branches away
             //from the previously applied NNI
             Branches filteredNNIBranches;

@@ -1361,15 +1361,6 @@ void MTree::getSurroundingInnerBranches(Node *node, Node *dad, int depth, Branch
     }
 }
 
-bool MTree::isInnerBranch(Node* node1, Node* node2) {
-    return(node1->degree() >= 3 && node2->degree() >= 3 && 
-           isABranch(node1, node2));
-}
-
-bool MTree::isABranch(Node* node1, Node* node2) {
-    return (node1->findNeighbor(node2) != nullptr && 
-            node2->findNeighbor(node1) != nullptr);
-}
 
 void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, 
                         Node *node, Node *dad, bool post_traversal) {
@@ -1471,10 +1462,8 @@ void MTree::getBranchesInIDOrder(NodeVector& v1, NodeVector& v2) const {
 void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
     if (!node) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
-    	if (isInnerBranch((*it)->node, node)) {
-            Branch branch;
-            branch.first = node;
-            branch.second = (*it)->node;
+        Branch branch(node,(*it)->node);
+    	if (branch.isInnerBranch()) {
             branches.insert(pair<int, Branch>(pairInteger(branch.first->id, branch.second->id), branch));
     	}
     	getInnerBranches(branches, (*it)->node, node);

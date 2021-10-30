@@ -14,7 +14,7 @@
 #include "searchheuristic.h"
 #include "taxontoplace.h"
 
-TargetBranch::TargetBranch() : super(nullptr, nullptr), blocker(nullptr)
+TargetBranch::TargetBranch() : super(), blocker(nullptr)
                , partial_pars(nullptr)
                , connection_cost(0), branch_cost(0), parsimony_dirtiness(1)
                , partial_lh(nullptr)

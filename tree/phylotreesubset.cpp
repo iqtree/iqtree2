@@ -120,11 +120,11 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
         //vector of nodes to look at next.
         if (!visit->isLeaf()) {
             visit->setSubsetNumber(SUBSET_UNKNOWN);
-        } else {          
-            std::cout << "Edge " << visit->id 
-                      << " (" << visit->name << ")"
-                      << " in subset " << visit->getSubsetNumber()
-                      << std::endl;
+        } else {     
+            LOG_LINE(VerboseMode::VB_MAX, 
+                     "Edge " << visit->id  
+                     << " (" << visit->name << ")"
+                     << " in subset " << visit->getSubsetNumber());
             layer.push_back(visit);
         }
     }
@@ -143,11 +143,11 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
                             //in the same subset that visited was.
                             interior->setSubsetNumber(subset);
                             next_layer.push_back(interior);
-                            std::cout << "Interior " << interior->id 
-                                    << " (" << interior->name << ")"
-                                    << " in subset "
-                                    << interior->getSubsetNumber()
-                                    << std::endl;
+                            LOG_LINE(VerboseMode::VB_MAX,
+                                      "Interior " << interior->id 
+                                      << " (" << interior->name << ")"
+                                      << " in subset "
+                                      << interior->getSubsetNumber());
                             break;
                         }
                     }
@@ -164,6 +164,12 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
 
     for (PhyloNode* visit: all_nodes) {
         int subset_number = visit->getSubsetNumber();
+        if (subset_number != SUBSET_UNKNOWN) {
+            continue;
+        }
+        LOG_LINE(VerboseMode::VB_QUIET, 
+                 "Node " << visit->id << "(" << visit->name << ")"
+                 " could not be assigned to a subset.");
         ASSERT(subset_number != SUBSET_UNKNOWN);
     }
 }

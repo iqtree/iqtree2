@@ -330,3 +330,31 @@ bool Node::unlinkNeighbor(Node* node) {
     return false;
 }
 
+bool Node::hasNeighbor(Node* node) const {
+    for (auto it=neighbors.begin();  it!=neighbors.end(); ++it) {
+        if ((*it)->node == node) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Branch::Branch(): super(nullptr, nullptr) {
+}
+
+Branch::Branch(Node* left, Node* right): super(left, right) {
+}
+
+bool Branch::isInnerBranch() const {
+    ASSERT(first!=nullptr);
+    ASSERT(second!=nullptr);
+    return first->degree() >= 3 && 
+           second->degree() >= 3 && 
+           stillExists();
+}
+
+bool Branch::stillExists() const {
+    return first->hasNeighbor(second) &&
+           second->hasNeighbor(first);
+}
+

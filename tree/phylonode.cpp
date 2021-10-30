@@ -243,8 +243,25 @@ PhyloBranch::PhyloBranch(const Branch& copyMe)
     : super(dynamic_cast<PhyloNode*>(copyMe.first), 
             dynamic_cast<PhyloNode*>(copyMe.second)) {}
 
+
+PhyloBranch::PhyloBranch(Node* left, Node* right):
+    super(dynamic_cast<PhyloNode*>(left),
+          dynamic_cast<PhyloNode*>(right)) {
+}
+
 PhyloBranch::PhyloBranch(PhyloNode* left, PhyloNode* right)
     : super(left, right) {}
+
+PhyloBranch& PhyloBranch::operator=(const Branch& rhs) {
+    first  = dynamic_cast<PhyloNode*>(rhs.first);
+    second = dynamic_cast<PhyloNode*>(rhs.second);
+}
+
+PhyloBranch::operator Branch() const {
+    Branch copy(first, second);
+    return copy;
+}
+
 
 int PhyloBranch::getBranchID() const {
     FOR_EACH_PHYLO_NEIGHBOR(first, nullptr, it, nei) {
@@ -268,6 +285,22 @@ bool PhyloBranch::stillExists() const {
     return first->hasNeighbor(second) &&
            second->hasNeighbor(first);
 }
+
+bool PhyloBranch::isInnerBranch() const {
+    ASSERT(first!=nullptr);
+    ASSERT(second!=nullptr);
+    return first->degree() >= 3 && 
+           second->degree() >= 3 && 
+           stillExists();
+}
+
+bool PhyloBranch::isDivergentBranch() const {
+    ASSERT(first!=nullptr);
+    ASSERT(second!=nullptr);
+    return first->getSubsetNumber() != 
+           second->getSubsetNumber();
+}
+
 
 
 
