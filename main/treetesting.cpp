@@ -45,7 +45,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             // tree mixture model
             IQTreeMix* treeMix = (IQTreeMix*) tree;
             treeMix->showLhProb(out);
-            
+            /*
             // also print out the pattern's likelihoods
             string pfilename = filename;
             pfilename += ".ptn";
@@ -59,8 +59,8 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             treeMix->showPatternLhProb(pout);
             pout.close();
             if (!append)
-                cout << "Pattern log-likelihoods printed to " << pfilename << endl;
-
+                cout << "pattern log-likelihoods printed to " << pfilename << endl;
+            */
         } else {
             if (!append)
                 out << 1 << " " << tree->getAlnNSite() << endl;

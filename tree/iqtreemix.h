@@ -74,7 +74,7 @@ public:
             prerequisite: computeLikelihood() has been invoked
 
      */
-    double optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradient_epsilon, int max_steps);
+    double optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradient_epsilon, int max_steps, bool& tree_weight_converge);
     double optimizeTreeWeightsByBFGS(double gradient_epsilon);
 
     double optimizeBranchLensByBFGS(double gradient_epsilon);
@@ -237,10 +237,17 @@ public:
 
     // show the log-likelihoods and posterior probabilties for each tree along the sites
     void showLhProb(ofstream& out);
+ 
+    // compute parsimony scores for each tree along the patterns
+    // results are stored in the array patn_parsimony
+    void computeParsimony();
     
     // show the log-likelihoods and posterior probabilties for each tree along the patterns
     void showPatternLhProb(ofstream& out);
     
+    // show the log-likelihoods and posterior probabilties for each tree along the patterns
+    void showOrderedPatternLhProb(ofstream& out);
+
     /**
             pattern frequencies
      */
@@ -250,7 +257,12 @@ public:
             whether pattern is constant
      */
     int* patn_isconst;
-    
+
+    /**
+            parsimony scores for each tree along the patterns
+     */
+    int* patn_parsimony;
+
     /**
             weights of trees
      */
@@ -262,6 +274,11 @@ public:
      */
     vector<double> max_posterior_ratio;
     
+    /**
+            ratios of parsimony informative sites with max high-enought likelihood for each tree
+     */
+    vector<double> max_like_ratio;
+
     /**
             pattern likelihoods for all trees
      */
@@ -303,6 +320,11 @@ public:
             branch lengths (for optimization)
      */
     vector<DoubleVector> branch_len;
+    
+    /**
+            parsimony scores are computed for each tree along the patterns
+     */
+    bool parsi_computed;
 
 private:
 
@@ -325,6 +347,11 @@ private:
      */
     void computeMaxPosteriorRatio(double* pattern_mix_lh, bool need_computePostProb, bool need_computeLike);
     
+    /**
+            compute the ratios of parsimony informative sites with max high-enough likelihood for each tree
+     */
+    void computeMaxLikeRatio();
+
     /**
             optimize each tree separately
      */
@@ -414,7 +441,12 @@ private:
             number of trees
      */
     size_t ntree;
-    
+
+    /**
+            number of tips
+     */
+    size_t ntip;
+
     /**
             number of patterns
      */
