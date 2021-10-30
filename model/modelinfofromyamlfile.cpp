@@ -59,6 +59,28 @@ bool YAMLFileParameter::isMatchFor(const std::string& match_name,
         string_to_lower(name) == match_name);
 }
 
+ModelParameterType YAMLFileParameter::getType() const {
+    return type;
+}
+
+double YAMLFileParameter::getTolerance() const {
+    return tolerance;
+}
+
+StrVector YAMLFileParameter::getVariableNames() {
+    StrVector result;
+    if (!is_subscripted) {
+        result.push_back(name);
+    } 
+    else {
+        for (int i=minimum_subscript; i<=maximum_subscript; ++i) {
+            std::string var_name = getSubscriptedVariableName(i);
+            result.push_back(var_name);
+        }
+    }
+    return result;
+}
+
 void YAMLFileParameter::logParameterState(const char* verb, 
                                           LoggingTarget* logging_target) const {
     std::stringstream msg;
@@ -140,6 +162,24 @@ double ModelVariable::getValue() const {
 
 bool ModelVariable::isFixed() const {
     return is_fixed;
+}
+
+ToleratedModelVariable::ToleratedModelVariable() : super()
+    , tolerance(0.001) {
+}
+
+ToleratedModelVariable::ToleratedModelVariable
+    (const std::string& var_name, ModelParameterType t,
+     const ModelParameterRange& r, double v, double tol)
+    : super(t, r,v), name(var_name), tolerance(tol) {
+}
+
+double ToleratedModelVariable::getTolerance() const {
+    return tolerance;
+}
+
+const std::string& ToleratedModelVariable::getName() const {
+    return name;
 }
 
 void StringMatrix::makeRectangular(size_t column_count) {
@@ -482,6 +522,11 @@ double ModelInfoFromYAMLFile::evaluateExpression(const std::string& expr,
     }
     return 0;
 }
+
+const ModelInfoFromYAMLFile::Parameters& ModelInfoFromYAMLFile::getParameters() const {
+    return parameters;
+}
+
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
 (const char* name) const {

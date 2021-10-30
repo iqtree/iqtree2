@@ -248,34 +248,46 @@ public:
             super::setVariables(variables);
             return;
         }
+        bool is_freq_estimate = freq_type == StateFreqType::FREQ_ESTIMATE;
+        int variable_frequencies = is_freq_estimate ? (num_states-1) : 0;
         TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
                       "setVariables called for " 
                       << model_info->getName() 
                       << " which has " 
                       << model_info->getNumberOfVariableRates()
-                      << " unfixed rate variables");
+                      << " unfixed rate variables and "
+                      << variable_frequencies 
+                      << " variable frequencies");
         if (num_params > 0) {
+            int i = 0; //rates is 0-based
             TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
                           "num_params was " << num_params);
-            int i = 0; //rates is 0-based
             model_info->readModelVariablesByType(rates, num_params-1, false,
                                                  ModelParameterType::RATE, 
                                                  i, phylo_tree);
             TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
                           "after calling readModelVariablesByType,"
-                          " i was " << i);
+                          " for rates, i was " << i);
             for (i = 0; i < num_params; ++i) {
                 variables[i+1] = rates[i];
                 //variables is 1-based, rates is 0-based.
             }
         }
         int  ndim           = getNDim();
-        auto freq_variables = variables+num_params+1;
         if (freq_type == StateFreqType::FREQ_ESTIMATE) {
-            memcpy(freq_variables, state_freq,
-                   (num_states-1)*sizeof(double));
+            int i=0; //state_freq is 0-based
+            model_info->readModelVariablesByType
+                (state_freq, num_states, false,
+                 ModelParameterType::FREQUENCY, i, phylo_tree);
+            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+                          "after calling readModelVariablesByType,"
+                          " for frequencies, i was " << i);
+            for (i = 0; i < variable_frequencies; ++i) {
+                variables[i+num_params+1] = state_freq[i];
+                //variables is 1-based, state_freq is 0-based.
+            }
         } else {
-            paramsFromFreqs(freq_variables,
+            paramsFromFreqs(variables+num_params+1,
                             state_freq, freq_type);
         }
         std::stringstream trace;

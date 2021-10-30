@@ -199,8 +199,6 @@ double ModelDivergent::optimizeParameters
     VariableBounds vb(ndim+1);
 	double score;
 
-
-
 	setVariables(vb.variables);
 	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
     //todo: optimization algorithm as a member variable instad.
@@ -227,7 +225,7 @@ double ModelDivergent::optimizeParameters
 void ModelDivergent::setBounds(double* lower_bound, double* upper_bound, 
                                bool*   bound_check) {
     int i = 1; //Numbering starts at 1
-    for (ModelVariable& p : own_parameters) {
+    for (ToleratedModelVariable& p : own_parameters) {
         lower_bound[i] = p.getRange().first;
         upper_bound[i] = p.getRange().second;
         bound_check[i] = p.isFixed();
@@ -235,6 +233,9 @@ void ModelDivergent::setBounds(double* lower_bound, double* upper_bound,
     }
     int offset = static_cast<int>(own_parameters.size());
     for (ModelMarkov* subtree_model : subtree_models) {
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                    "Setting bounds for subtree model " 
+                    << subtree_model->getName());
         subtree_model->setBounds(lower_bound+offset, 
                                  upper_bound+offset,
                                  bound_check+offset);
@@ -244,7 +245,7 @@ void ModelDivergent::setBounds(double* lower_bound, double* upper_bound,
 
 void ModelDivergent::setVariables(double *variables) {
     int offset = 0; 
-    for (ModelVariable& p : own_parameters) {
+    for (ToleratedModelVariable& p : own_parameters) {
         variables[offset+1] = p.getValue();
         ++offset;
     }
@@ -258,10 +259,12 @@ bool ModelDivergent::getVariables(const double *variables) {
     bool changed = false;
     int  offset  = 0;
 
-    for (ModelVariable& p : own_parameters) {
-        double newValue = variables[offset+1];
-        double delta    = fabs(p.getValue() - newValue);
-        if (delta >= TOL_RATE) {
+    for (ToleratedModelVariable& p : own_parameters) {
+        ASSERT(!p.isFixed());
+        double newValue  = variables[offset+1];
+        double delta     = fabs(p.getValue() - newValue);
+        double threshold = p.getTolerance();
+        if (delta >= threshold) {
             changed = true;
         }
         p.setValue(newValue);

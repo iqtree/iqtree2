@@ -78,6 +78,12 @@ public:
     bool isMatchFor(const std::string& match_name,        /* assumed: lower-case */
                     ModelParameterType match_type) const;
 
+    //Getters and setters
+    ModelParameterType getType() const;
+    double getTolerance() const;
+    StrVector getVariableNames();
+
+
     void logParameterState(const char* verb, LoggingTarget* logging_target) const;
 };
 
@@ -107,7 +113,29 @@ public:
     ModelParameterRange  getRange    () const;
     double               getValue    () const;
     bool                 isFixed     () const;
+};
 
+class ToleratedModelVariable: public ModelVariable {
+    //A model variable that knows what its tolerance is.
+    //Normally tolerances come from model parameters, but
+    //sometimes (e.g. in ModelDivergent) the model parameter
+    //isn't readily available.
+protected:
+    std::string name;
+    double      tolerance;
+public:
+    typedef ModelVariable super;
+
+    ToleratedModelVariable();
+    ToleratedModelVariable(const std::string& name,
+                           ModelParameterType t, 
+                           const ModelParameterRange& r, 
+                           double v, double tolerance);
+    ~ToleratedModelVariable() = default;
+    ToleratedModelVariable(const ToleratedModelVariable& rhs) = default;
+
+    double getTolerance() const;
+    const std::string& getName() const;
 };
 
 class StringMatrix : public std::vector<StrVector> {
@@ -425,6 +453,7 @@ public:
                               const std::string& context);
 
     //Parameters and variables
+    const Parameters& getParameters() const;
     const YAMLFileParameter* findParameter(const char* name)            const;
     const YAMLFileParameter* findParameter(const std::string& name)     const;
     const YAMLFileParameter* findParameter(const char* name,

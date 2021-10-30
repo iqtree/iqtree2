@@ -14,8 +14,8 @@ class ModelDivergent: public ModelMarkov {
     //to agree, all must be reversible (or all not).
 
 protected:
-    std::vector<ModelMarkov*>  subtree_models;
-    std::vector<ModelVariable> own_parameters;
+    std::vector<ModelMarkov*>           subtree_models;
+    std::vector<ToleratedModelVariable> own_parameters;
     //PhyloTree* phylo_tree; //Set by setTree(), and used in
     //                       //decomposeRateMatrix() member function.
     int                        catchall_model_number;

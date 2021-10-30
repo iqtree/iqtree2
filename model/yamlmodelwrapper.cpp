@@ -282,10 +282,18 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
     setNumberOfVariableRates(num_variable_rates);
 
     //Copy rate variables
-    for (auto v: model_info->getVariables()) {
-        if (v.second.getType() == ModelParameterType::RATE) {
-            if (!v.second.isFixed()) {
-                own_parameters.emplace_back(v.second);
+    for (auto param: model_info->getParameters()) {
+        auto var_type = param.getType();
+        if (var_type == ModelParameterType::RATE) {
+            for (auto var_name: param.getVariableNames()) {
+                const ModelVariable* var = model_info->getVariableByName(var_name);
+                ASSERT(var!=nullptr);    
+                if (!var->isFixed()) {            
+                    ToleratedModelVariable 
+                        tmv(var_name, var_type, var->getRange(),
+                            var->getValue(), param.getTolerance());
+                    own_parameters.emplace_back(tmv);
+                }
             }
         }
     }
