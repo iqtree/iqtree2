@@ -459,24 +459,15 @@ void ModelGTR::setVariables(double *variables) {
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
 		nrate -= (num_states - 1);
 	}
-	if (nrate > 0)
+	if (nrate > 0) {
 		memcpy(variables+1, rates, nrate*sizeof(double));
+	}
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, 
 		// this will be done at the end of optimization
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, 
-			   (num_states-1)*sizeof(double));
-        
-//		int i, j;
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
-//				j++;
-//			}
-		//scaleStateFreq(false);
-//		memcpy(variables+nrate+1, state_freq, (num_states-1)*sizeof(double));
-		//scaleStateFreq(true);
+			   (num_states-1)*sizeof(double));        
 	}
 }
 
@@ -499,28 +490,10 @@ bool ModelGTR::getVariables(const double *variables) {
 		int ndim = getNDim();
 		for (i = 0; i < num_states - 1; i++) {
 			changed |= (state_freq[i] != variables[i + ndim - num_states + 2]);
+			//This should have a TOL_FREQ tolerance
 		}
 		memcpy(state_freq, variables+(ndim-num_states+2), 
 			   (num_states-1)*sizeof(double));
-
-//		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
-		//state_freq[num_states-1] = 0.1;
-		//scaleStateFreq(true);
-
-//		double sum = 0.0;
-//		for (int i = 0; i < num_states-1; i++)
-//			sum += state_freq[i];
-//		state_freq[num_states-1] = 1.0 - sum;
-//		double sum = 1.0;
-//		int i, j;
-//		for (i = 1; i < num_states; i++)
-//			sum += variables[nrate+i];
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				state_freq[i] = variables[nrate+j] / sum;
-//				j++;
-//			}
-//		state_freq[highest_freq_state] = 1.0/sum;
 	}
 	return changed;
 }
