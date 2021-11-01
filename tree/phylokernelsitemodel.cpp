@@ -11,8 +11,8 @@
 #include "tree/phylotree.h"
 #include "model/modelset.h"
 
-void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-
+void PhyloTree::computeSitemodelPartialLikelihoodEigen
+        (PhyloNeighbor *dad_branch, PhyloNode *dad) {
 	ASSERT(dad);
     if (dad_branch->isLikelihoodComputed()) {
         return;
@@ -165,15 +165,19 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
                 partial_lh = dad_branch->partial_lh + ptn*block;
                 if (lh_max == 0.0) {
                     // for very shitty data
-                    for (c = 0; c < ncat; c++)
-                        memcpy(&partial_lh[c*nstates], &tip_partial_lh[ptn*nstates], nstates*sizeof(double));
+                    for (c = 0; c < ncat; c++) {
+                        memcpy(&partial_lh[c*nstates], 
+                               &tip_partial_lh[ptn*nstates], 
+                               nstates*sizeof(double));
+                    }
                     sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
                     //sum_scale += log(lh_max) * ptn_freq[ptn];
                     dad_branch->scale_num[ptn] += 4;
                     int nsite = aln->getNSite();
                     for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
                         if (aln->getPatternID(i) == ptn) {
-                            outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+                            outWarning((string)"Numerical underflow for site " + 
+                                       convertIntToString(i+1));
                             x++;
                         }
                 } else {
@@ -188,18 +192,18 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
                     dad_branch->scale_num[ptn] += 1;
                 }
             }
-
         } // for ptn
-        dad_branch->lh_scale_factor += sum_scale;               
-                
+        dad_branch->lh_scale_factor += sum_scale;   
         // end multifurcating treatment
     } else 
     if (left->node->isLeaf() && right->node->isLeaf()) {
 
         /*--------------------- TIP-TIP (cherry) case ------------------*/
 
-        double *tip_partial_lh_left = tip_partial_lh + (left->node->id * tip_block_size);
-        double *tip_partial_lh_right = tip_partial_lh + (right->node->id * tip_block_size);
+        double* tip_partial_lh_left  = tip_partial_lh 
+                                     + (left->node->id * tip_block_size);
+        double* tip_partial_lh_right = tip_partial_lh 
+                                     + (right->node->id * tip_block_size);
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
@@ -207,38 +211,37 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 #pragma omp parallel for private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
-			double partial_lh_tmp[nstates];
-			double *partial_lh = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_left = tip_partial_lh_left + ptn*nstates;
-			double *partial_lh_right = tip_partial_lh_right + ptn*nstates;
+			double  partial_lh_tmp[nstates];
+			double* partial_lh       = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_left  = tip_partial_lh_left    + ptn*nstates;
+			double* partial_lh_right = tip_partial_lh_right   + ptn*nstates;
 
             double expleft[nstates];
             double expright[nstates];
-            double *eval = models->at(ptn)->getEigenvalues();
-            double *evec = models->at(ptn)->getEigenvectors();
-            double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+            double* eval     = models->at(ptn)->getEigenvalues();
+            double* evec     = models->at(ptn)->getEigenvectors();
+            double* inv_evec = models->at(ptn)->getInverseEigenvectors();
 
 			for (c = 0; c < ncat; c++) {
-                double len_left = site_rate->getRate(c) * left->length;
+                double len_left  = site_rate->getRate(c) * left->length;
                 double len_right = site_rate->getRate(c) * right->length;
                 for (i = 0; i < nstates; i++) {
-                    expleft[i] = exp(eval[i]*len_left) * partial_lh_left[i];
+                    expleft[i]  = exp(eval[i]*len_left) * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
                 }
 
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
-                    double *this_evec = evec + x*nstates;
+					double  vleft = 0.0;
+                    double  vright = 0.0;
+                    double* this_evec = evec + x*nstates;
 					for (i = 0; i < nstates; i++) {
-						vleft += this_evec[i] * expleft[i];
+						vleft  += this_evec[i] * expleft[i];
 						vright += this_evec[i] * expright[i];
 					}
 					partial_lh_tmp[x] = vleft*vright;
 				}
-
                 // do not increase partial_lh_left and right for tips
-                
 				// compute dot-product with inv_eigenvector
                 double *inv_evec_ptr = inv_evec;
 				for (i = 0; i < nstates; i++) {
@@ -263,29 +266,30 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
-			double partial_lh_tmp[nstates];
-			double *partial_lh = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_left = tip_partial_lh_left + ptn*nstates;
-			double *partial_lh_right = right->partial_lh + ptn*block;
-            double lh_max = 0.0;
+			double  partial_lh_tmp[nstates];
+			double* partial_lh = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_left = tip_partial_lh_left + ptn*nstates;
+			double* partial_lh_right = right->partial_lh + ptn*block;
+            double  lh_max = 0.0;
 
-            double expleft[nstates];
-            double expright[nstates];
-            double *eval = models->at(ptn)->getEigenvalues();
-            double *evec = models->at(ptn)->getEigenvectors();
-            double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+            double  expleft[nstates];
+            double  expright[nstates];
+            double* eval     = models->at(ptn)->getEigenvalues();
+            double* evec     = models->at(ptn)->getEigenvectors();
+            double* inv_evec = models->at(ptn)->getInverseEigenvectors();
 
 			for (c = 0; c < ncat; c++) {
-                double len_left = site_rate->getRate(c) * left->length;
+                double len_left  = site_rate->getRate(c) * left->length;
                 double len_right = site_rate->getRate(c) * right->length;
                 for (i = 0; i < nstates; i++) {
-                    expleft[i] = exp(eval[i]*len_left) * partial_lh_left[i];
+                    expleft[i]  = exp(eval[i]*len_left)  * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
                 }
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
-                    double *this_evec = evec + x*nstates;
+					double  vleft = 0.0;
+                    double  vright = 0.0;
+                    double* this_evec = evec + x*nstates;
 					for (i = 0; i < nstates; i++) {
 						vleft += this_evec[i] * expleft[i];
 						vright += this_evec[i] * expright[i];
@@ -307,13 +311,15 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
                     lh_max = max(lh_max, fabs(res));
 				}
 			}
-
             // check if one should scale partial likelihoods
             if (lh_max < SCALING_THRESHOLD) {
             	if (lh_max == 0.0) {
             		// for very shitty data
-            		for (c = 0; c < ncat; c++)
-            			memcpy(&partial_lh[c*nstates], &tip_partial_lh[ptn*nstates], nstates*sizeof(double));
+            		for (c = 0; c < ncat; c++) {
+            			memcpy(&partial_lh[c*nstates], 
+                               &tip_partial_lh[ptn*nstates], 
+                               nstates*sizeof(double));
+                    }
 					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
 					//sum_scale += log(lh_max) * ptn_freq[ptn];
 					dad_branch->scale_num[ptn] += 4;
@@ -335,10 +341,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 					dad_branch->scale_num[ptn] += 1;
             	}
             }
-
 		}
 		dad_branch->lh_scale_factor += sum_scale;
-        
 	} else {
         /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
 
@@ -346,33 +350,34 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
-			double partial_lh_tmp[nstates];
-			double *partial_lh = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_left = left->partial_lh + ptn*block;
-			double *partial_lh_right = right->partial_lh + ptn*block;
-            double lh_max = 0.0;
+			double  partial_lh_tmp[nstates];
+			double* partial_lh       = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_left  = left->partial_lh  + ptn*block;
+			double* partial_lh_right = right->partial_lh + ptn*block;
+            double  lh_max = 0.0;
 
-            double expleft[nstates];
-            double expright[nstates];
-            double *eval = models->at(ptn)->getEigenvalues();
-            double *evec = models->at(ptn)->getEigenvectors();
-            double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+            double  expleft[nstates];
+            double  expright[nstates];
+            double* eval     = models->at(ptn)->getEigenvalues();
+            double* evec     = models->at(ptn)->getEigenvectors();
+            double* inv_evec = models->at(ptn)->getInverseEigenvectors();
 
 			dad_branch->scale_num[ptn] = left->scale_num[ptn] + right->scale_num[ptn];
 
 			for (c = 0; c < ncat; c++) {
-                double len_left = site_rate->getRate(c) * left->length;
+                double len_left  = site_rate->getRate(c) * left->length;
                 double len_right = site_rate->getRate(c) * right->length;
                 for (i = 0; i < nstates; i++) {
-                    expleft[i] = exp(eval[i]*len_left) * partial_lh_left[i];
+                    expleft[i]  = exp(eval[i]*len_left)  * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
                 }
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
-                    double *this_evec = evec + x*nstates;
+					double  vleft = 0.0;
+                    double  vright = 0.0;
+                    double* this_evec = evec + x*nstates;
 					for (i = 0; i < nstates; i++) {
-						vleft += this_evec[i] * expleft[i];
+						vleft  += this_evec[i] * expleft[i];
 						vright += this_evec[i] * expright[i];
 					}
 					partial_lh_tmp[x] = vleft*vright;
@@ -397,8 +402,11 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
             if (lh_max < SCALING_THRESHOLD) {
             	if (lh_max == 0.0) {
             		// for very shitty data
-            		for (c = 0; c < ncat; c++)
-            			memcpy(&partial_lh[c*nstates], &tip_partial_lh[ptn*nstates], nstates*sizeof(double));
+            		for (c = 0; c < ncat; c++) {
+            			memcpy(&partial_lh[c*nstates], 
+                               &tip_partial_lh[ptn*nstates], 
+                               nstates*sizeof(double));
+                    }
 					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
 					//sum_scale += log(lh_max) * ptn_freq[ptn];
 					dad_branch->scale_num[ptn] += 4;
@@ -436,18 +444,18 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
+    if ((dad_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihood(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
+    }
+    if ((node_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihood(node_branch, node);
-        
-    size_t nstates = aln->num_states;
-    size_t ncat = site_rate->getNRate();
-
-    size_t block = ncat * nstates;
+    }
+    size_t   nstates = aln->num_states;
+    size_t   ncat    = site_rate->getNRate();
+    size_t   block   = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
-    size_t c, i;
-    intptr_t nptn = aln->size();
+    size_t   c, i;
+    intptr_t nptn    = aln->size();
 
 	ASSERT(theta_all);
 	if (!theta_computed) {
@@ -462,17 +470,16 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 #pragma omp parallel for private(ptn, i, c) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
-				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-				double *theta = theta_all + ptn*block;
-				double *lh_tip = tip_partial_lh_node + ptn*nstates;
+				double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+				double* theta  = theta_all + ptn*block;
+				double* lh_tip = tip_partial_lh_node + ptn*nstates;
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates; i++) {
                         theta[i] = lh_tip[i] * partial_lh_dad[i];
                     }
                     partial_lh_dad += nstates;
-                    theta += nstates;
+                    theta          += nstates;
                 }
-
 			}
 	    } else 
         {
@@ -494,8 +501,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 		theta_computed = true;
 	}
 
-    ModelSet *models = (ModelSet*)model;
-    double my_df = 0.0, my_ddf = 0.0;
+    ModelSet* models = (ModelSet*)model;
+    double my_df  = 0.0;
+    double my_ddf = 0.0;
     
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf) private(ptn, i, c) schedule(static)
@@ -540,7 +548,6 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
         ddf = 0.0;
 //        outWarning("Numerical instability (some site-likelihood = 0)");
     }
-
 }
 
 //template <const int nstates>

@@ -2799,7 +2799,6 @@ void IQTree::initializeCandidateTreeSet() {
 }
 
 double IQTree::doTreeSearch() {
-    
     initializeCandidateTreeSet();
 
     /*==============================================================================================================

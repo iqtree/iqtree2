@@ -1087,7 +1087,10 @@ public:
      * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
      * e.g. (1,0,0,0) for A,  (0,0,0,1) for T
      */
-    double* tip_partial_lh;
+    double*  tip_partial_lh;
+    intptr_t tip_partial_lh_size;
+    intptr_t tip_partial_lh_size_per_model;
+
     int     tip_partial_lh_computed;
     UINT*   tip_partial_pars;
 
@@ -1154,10 +1157,17 @@ public:
     // Compute the partial likelihoods LH (OUT) at the leaves for an observed PoMo
     // STATE (IN). Use binomial sampling unless hyper is true, then use
     // hypergeometric sampling.
-    void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hypergeometric=false);
     void computeTipPartialLikelihood();
         bool isTipPartialLikelihoodComputed() const;
         void setTipPartialLikelihoodComputed(bool is_it);
+        void computeTipLikelihoodForOneModel
+                (ModelSubst* model_to_use, double* tip_lh);
+        void computeSiteSpecificTipLikelihood();
+        //void computeTipPartialLikelihoodPoMo
+        //      (int state, double *lh, bool hypergeometric=false);
+        //I've commented this out, because 
+        //the calls to it are all commented out.
+
     void computeTipPartialParsimony();
         //Supporting functions
         bool isTipPartialParsimonyComputed() const;
@@ -2988,6 +2998,9 @@ protected:
     void computeSubsetNumbersForInternalNodes();
 
     void setUpSubtreesForDivergentModels(ModelSubst* top_model);
+
+    int getSubTreeNumberForBranch(PhyloNode* dad, 
+                                  PhyloNode* node) const;
 
     ModelSubst* getModelForBranch(PhyloNode* dad, 
                                   PhyloNode* node) const;

@@ -6,10 +6,11 @@
  */
 
 #include "phylosupertreeplen.h"
-#include "alignment/superalignmentpairwiseplen.h"
-#include "model/partitionmodelplen.h"
 #include <string.h>
-#include "utils/timeutil.h"
+#include <alignment/superalignmentpairwiseplen.h>
+#include <model/partitionmodelplen.h>
+#include <model/modeldivergent.h>
+#include <utils/timeutil.h>
 
 #ifdef _MSC_VER
 #include <boost/scoped_array.hpp>
@@ -18,7 +19,6 @@
 /**********************************************************
  * class PhyloSuperTreePlen
 **********************************************************/
-
 
 PhyloSuperTreePlen::PhyloSuperTreePlen()
 : PhyloSuperTree()
@@ -1779,13 +1779,21 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		&& lh_addr > central_partial_lh);
     tip_partial_lh   = nullptr;
     tip_partial_pars = nullptr;
-    for (it = begin(), part = 0; it != end(); ++it, ++part) {
-        (*it)->tip_partial_lh = lh_addr;
-        (*it)->tip_partial_pars = pars_addr;
-        uint64_t tip_partial_lh_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1) * (*it)->model->getNMixtures();
-        uint64_t tip_partial_pars_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1);
-        //tip_partial_lh_size = ((tip_partial_lh_size+3)/4)*4;
-        lh_addr += get_safe_upper_limit(tip_partial_lh_size);
+	part = 0;
+    for (PhyloTree* t : *this ) {
+        t->tip_partial_lh   = lh_addr;
+        t->tip_partial_pars = pars_addr;
+		uint64_t n_states = t->aln->num_states;
+		uint64_t u_states = t->aln->STATE_UNKNOWN + 1;
+		uint64_t n_mix    = t->model->getNMixtures();
+        uint64_t tip_partial_lh_size   = n_states * u_states * n_mix;
+        uint64_t tip_partial_pars_size = n_states * u_states;
+		tip_partial_lh_size = get_safe_upper_limit(tip_partial_lh_size);
+        if (t->model->isDivergentModel()) {
+			auto div_model = static_cast<ModelDivergent*>(t->model);
+			tip_partial_lh_size *= div_model->getNumberOfSubtreeModels();
+		}
+        lh_addr   += tip_partial_lh_size;
         pars_addr += get_safe_upper_limit_float(tip_partial_pars_size);
     }
 
@@ -1843,11 +1851,11 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
                 }
             } else {
                 if (nei_part->node->isLeaf()) {
-                    nei_part->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-                    nei_part->scale_num = NULL;
+                    nei_part->partial_lh = nullptr; // do not allocate memory for tip, use tip_partial_lh instead
+                    nei_part->scale_num  = nullptr;
                 } else if (!nei_part->partial_lh) {
                     nei_part->partial_lh = lh_addr;
-                    nei_part->scale_num = scale_addr;
+                    nei_part->scale_num  = scale_addr;
                     lh_addr = lh_addr + block_size[part];
                     scale_addr = scale_addr + scale_block_size[part];
                 }
@@ -1856,8 +1864,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
 
                 nei_part = nei_back->link_neighbors[part];
                 if (nei_part->node->isLeaf()) {
-                    nei_part->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
-                    nei_part->scale_num = NULL;
+                    nei_part->partial_lh = nullptr; // do not allocate memory for tip, use tip_partial_lh instead
+                    nei_part->scale_num  = nullptr;
                 } else if (!nei_part->partial_lh) {
                     nei_part->partial_lh = lh_addr;
                     nei_part->scale_num = scale_addr;

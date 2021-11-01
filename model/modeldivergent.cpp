@@ -678,6 +678,19 @@ ModelMarkov* ModelDivergent::getSubsetModel
     }
 }
 
+int ModelDivergent::getSubtreeNumberOfSubset
+        (int child_subset_number) const {
+    if (0<=child_subset_number && 
+        child_subset_number<subset_to_model.size()) {
+        return subset_to_model[child_subset_number];
+    }
+    else {
+        ASSERT(0<=child_subset_number);
+        ASSERT(child_subset_number<subset_to_model.size());
+        return 0;
+    }
+}
+
 ModelMarkov* ModelDivergent::getBranchJoiningModel
                 (int dad_subset_number, 
                  int child_subset_number) const {

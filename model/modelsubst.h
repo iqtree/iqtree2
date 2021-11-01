@@ -9,15 +9,16 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
-#ifndef SUBSTMODEL_H
-#define SUBSTMODEL_H
+#pragma once
+#ifndef MODELSUBST_H
+#define MODELSUBST_H
 
 #include <string>
-#include "model/rateheterogeneity.h"
-#include "utils/tools.h"
-#include "utils/optimization.h"
-#include "utils/checkpoint.h"
-#include "phylo-yaml/statespace.h"
+#include <model/rateheterogeneity.h>
+#include <utils/tools.h>
+#include <utils/optimization.h>
+#include <utils/checkpoint.h>
+#include <phylo-yaml/statespace.h>
 
 using namespace std;
 
@@ -469,4 +470,4 @@ public:
 
 };
 
-#endif
+#endif //MODELSUBST_H

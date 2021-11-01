@@ -148,6 +148,7 @@ public:
     ModelMarkov* getNthSubtreeModel(int n) const;
 
     ModelMarkov* getSubsetModel       (int child_subset_number) const;
+    int          getSubtreeNumberOfSubset(int child_subset_number) const;
     ModelMarkov* getBranchJoiningModel(int dad_subset_number, 
                                        int child_subset_number) const;
 

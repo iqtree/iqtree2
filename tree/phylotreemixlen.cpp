@@ -8,9 +8,11 @@
 
 #include "phylotreemixlen.h"
 #include "phylonodemixlen.h"
-#include "model/modelfactorymixlen.h"
-#include "model/modelmixture.h"
-#include "model/ratefree.h"
+
+#include <model/modelfactorymixlen.h>
+#include <model/modeldivergent.h>
+#include <model/modelmixture.h>
+#include <model/ratefree.h>
 #include "utils/MPIHelper.h"
 
 #ifdef _MSC_VER
@@ -850,7 +852,18 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     intptr_t orig_nptn = aln->size();
     intptr_t nptn    = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn  = get_safe_upper_limit(nptn);
-    double*  eval    = model->getEigenvalues();
+
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+    double*  eval    = model_to_use->getEigenvalues();
     ASSERT(eval);
 
     ASSERT(tree_buffers.theta_all);
@@ -867,7 +880,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
                 double* theta          = tree_buffers.theta_all + ptn*block;
                 
                 // TODO: check with vectorclass!
-                double *lh_tip         = tip_partial_lh +
+                double *lh_tip         = tip_lh +
                 ((int)((ptn < orig_nptn) 
                     ? (aln->at(ptn))[dad->id] 
                     :  model_factory->unobserved_ptns[ptn-orig_nptn][dad->id]))*statemix;
@@ -909,8 +922,8 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
             double cof   = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
                            // length for heterotachy model
             double val   = exp(cof*dad_branch->getLength(cur_mixture))
-                           * prop * model->getMixtureWeight(cur_mixture);
-            double val1_ = cof*val;
+                               * prop * model_to_use->getMixtureWeight(cur_mixture);
+            double val1_ = cof * val;
             val0[(c)*nstates+i] = val;
             val1[(c)*nstates+i] = val1_;
             val2[(c)*nstates+i] = cof*val1_;

@@ -865,7 +865,6 @@ void PhyloTree::computeTipPartialParsimony() {
     }
     setTipPartialParsimonyComputed(true);
 
-    
     const int      nstates = aln->num_states;
     const intptr_t nptn    = aln->ordered_pattern.size();
     const intptr_t maxptn  = get_safe_upper_limit_float(nptn);
@@ -880,12 +879,11 @@ void PhyloTree::computeTipPartialParsimony() {
         ptn_freq_pars[ptn] = 0;
     }
 
-    ASSERT(tip_partial_pars);
+    ASSERT(tip_partial_pars!=nullptr);
     memset(tip_partial_pars, 0, (aln->STATE_UNKNOWN+1)*nstates*sizeof(UINT));
     
     // initialize real states with cost_matrix
     memcpy(tip_partial_pars, cost_matrix, nstates*nstates*sizeof(UINT));
-
     
     switch (aln->seq_type) {
         case SeqType::SEQ_DNA:

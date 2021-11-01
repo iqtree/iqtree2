@@ -56,13 +56,15 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
     }
     
     ASSERT(node->degree() >= 3);
-    
-    intptr_t orig_nptn = aln->size();
+    ModelSubst* model_to_use = getModelForBranch(dad,node);
+    intptr_t orig_nptn  = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
-    intptr_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
-    int      ncat = site_rate->getNRate();
-    int      ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t   block = nstates * ncat_mix;
+    intptr_t nptn       = max_orig_nptn+model_factory->unobserved_ptns.size();
+    int      ncat       = site_rate->getNRate();
+    bool     fused      = model_factory->fused_mix_rate;
+    int      n_mix      = model_to_use->getNMixtures();
+    int      ncat_mix   = fused ? ncat : ncat * n_mix ;
+    size_t   block      = nstates * ncat_mix;
     size_t   num_leaves = 0;
     size_t   scale_size = SAFE_NUMERIC ? (ptn_upper-ptn_lower) * ncat_mix : (ptn_upper-ptn_lower);
     
@@ -604,34 +606,48 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
 #else
     computeTraversalInfo<VectorClass>(node, dad, buffers, false);
 #endif
-
+    ModelSubst* model_to_use = getModelForBranch(dad,node);
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
 #ifndef KERNEL_FIX_STATES
     size_t   nstates = aln->num_states;
 #endif
     size_t   nstatesqr = nstates*nstates;
-    int      ncat = site_rate->getNRate();
-    int      ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    int      denom = (model_factory->fused_mix_rate) ? 1 : ncat;
-    size_t   block = ncat_mix * nstates;
+    int      ncat      = site_rate->getNRate();
+    bool     fused     = model_factory->fused_mix_rate;
+    int      n_mix     = model_to_use->getNMixtures();
+    int      ncat_mix  = fused ? ncat : ncat * n_mix;
+    int      denom     = fused ? 1 : ncat;
+    size_t   block     = ncat_mix * nstates;
     intptr_t orig_nptn = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
-    intptr_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
-    bool     isASC = model_factory->unobserved_ptns.size() > 0;
-    double*  trans_mat = buffers.buffer_partial_lh;
+    intptr_t nptn        = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool     isASC       = model_factory->unobserved_ptns.size() > 0;
+    double*  trans_mat   = buffers.buffer_partial_lh;
     double*  trans_derv1 = buffers.buffer_partial_lh + block*nstates;
     double*  trans_derv2 = trans_derv1 + block*nstates;
     double*  buffer_partial_lh_ptr = buffers.buffer_partial_lh + get_safe_upper_limit(3*block*nstates);
 
     for (int c = 0; c < ncat_mix; c++) {
         int     mycat = c%ncat;
-        int     m = c/denom;
+        int     m     = c/denom;
         double  cat_rate = site_rate->getRate(mycat);
-        double  len = cat_rate * dad_branch->length;
-        double  prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+        double  len   = cat_rate * dad_branch->length;
+        double  prop  = site_rate->getProp(mycat) 
+                      * model_to_use->getMixtureWeight(m);
         double* this_trans_mat = &trans_mat[c*nstatesqr];
         double* this_trans_derv1 = &trans_derv1[c*nstatesqr];
         double* this_trans_derv2 = &trans_derv2[c*nstatesqr];
-        model->computeTransDerv(len, this_trans_mat, this_trans_derv1, this_trans_derv2, m);
+        model_to_use->computeTransDerv(len, this_trans_mat, 
+                                       this_trans_derv1, 
+                                       this_trans_derv2, m);
         double  prop_rate = prop * cat_rate;
         double  prop_rate_2 = prop_rate * cat_rate;
         for (size_t i = 0; i < nstatesqr; i++) {
@@ -648,7 +664,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
             boost::scoped_array<double> state_freq(new double[nstates]);
             double* state_freq_ptr = state_freq.get();
 #endif
-            model->getStateFrequency(state_freq_ptr, m);
+            model_to_use->getStateFrequency(state_freq_ptr, m);
             for (size_t i = 0; i < nstates; i++) {
                 for (size_t x = 0; x < nstates; x++) {
                     this_trans_mat[x] *= state_freq[i];
@@ -680,12 +696,13 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*3);
         if (isRootLeaf(dad)) {
             for (int c = 0; c < ncat_mix; c++) {
-                double *lh_node = partial_lh_node + c*nstates;
-                double *lh_derv1 = partial_lh_derv1 + c*nstates;
-                double *lh_derv2 = partial_lh_derv2 + c*nstates;
-                int m = c/denom;
-                model->getStateFrequency(lh_node, m);
-                double prop = site_rate->getProp(c%ncat) * model->getMixtureWeight(m);
+                double* lh_node = partial_lh_node + c*nstates;
+                double* lh_derv1 = partial_lh_derv1 + c*nstates;
+                double* lh_derv2 = partial_lh_derv2 + c*nstates;
+                int     m        = c/denom;
+                model_to_use->getStateFrequency(lh_node, m);
+                double  prop     = site_rate->getProp(c%ncat) 
+                                 * model_to_use->getMixtureWeight(m);
                 for (size_t i = 0; i < nstates; i++) {
                     lh_node[i] *= prop;
                     lh_derv1[i] *= prop;
@@ -693,14 +710,14 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 }
             }
         } else {
-//            IntVector states_dad = model->seq_states[dad->id];
+//            IntVector states_dad = model_to_use->seq_states[dad->id];
 //            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
             for (int state = 0; state <= static_cast<int>(aln->STATE_UNKNOWN); state++) {
                 double *lh_node  = partial_lh_node +state*block;
                 double *lh_derv1 = partial_lh_derv1 +state*block;
                 double *lh_derv2 = partial_lh_derv2 +state*block;
-                double *lh_tip          = tip_partial_lh + state*nstates;
+                double *lh_tip          = tip_lh + state*nstates;
                 double *trans_mat_tmp   = trans_mat;
                 double *trans_derv1_tmp = trans_derv1;
                 double *trans_derv2_tmp = trans_derv2;
@@ -1084,21 +1101,32 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 #else
     computeTraversalInfo<VectorClass>(node, dad, buffers, false);
 #endif
-
-    double tree_lh = 0.0;
+    double   tree_lh = 0.0;
 #ifndef KERNEL_FIX_STATES
-    int    nstates = aln->num_states;
+    int      nstates = aln->num_states;
 #endif
-    int    nstatesqr = nstates*nstates;
-    int    ncat = site_rate->getNRate();
-    int    ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    int    denom = (model_factory->fused_mix_rate) ? 1 : ncat;
-
-    size_t block = ncat_mix * nstates;
-    intptr_t orig_nptn = aln->size();
+    int      nstatesqr = nstates*nstates;
+    int      ncat      = site_rate->getNRate();
+    bool     fused     = model_factory->fused_mix_rate;
+    int      n_mix     = model->getNMixtures();
+    int      ncat_mix  = fused ? ncat : ncat * n_mix;
+    int      denom     = fused ? 1 : ncat;
+    size_t   block     = ncat_mix * nstates;
+    intptr_t orig_nptn     = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn,VectorClass::size());
-    intptr_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
-    bool isASC = model_factory->unobserved_ptns.size() > 0;
+    intptr_t nptn  = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool     isASC = model_factory->unobserved_ptns.size() > 0;
+
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
 
     vector<intptr_t> limits;
     computePatternPacketBounds(VectorClass::size(), num_threads,
@@ -1109,10 +1137,12 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 	for (int c = 0; c < ncat_mix; c++) {
         int     mycat = c%ncat;
         int     m     = c/denom;
-		double  len   = site_rate->getRate(mycat) * dad_branch->length;
-		double  prop  = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+		double  len   = site_rate->getRate(mycat) 
+                      * dad_branch->length;
+		double  prop  = site_rate->getProp(mycat) 
+                      * model_to_use->getMixtureWeight(m);
         double* this_trans_mat = &trans_mat[c*nstatesqr];
-        model->computeTransMatrix(len, this_trans_mat, m);
+        model_to_use->computeTransMatrix(len, this_trans_mat, m);
         for (size_t i = 0; i < nstatesqr; i++) {
 			this_trans_mat[i] *= prop;
         }
@@ -1123,7 +1153,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 #else
             boost::scoped_array<double> state_freq(new double[nstates]);
 #endif
-            model->getStateFrequency(&state_freq[0], m);
+            model_to_use->getStateFrequency(&state_freq[0], m);
             for (size_t i = 0; i < nstates; i++) {
                 for (size_t x = 0; x < nstates; x++)
                     this_trans_mat[x] *= state_freq[i];
@@ -1143,20 +1173,21 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
         if (isRootLeaf(dad)) {
             for (int c = 0; c < ncat_mix; c++) {
-                double *lh_node = partial_lh_node + c*nstates;
-                int m = c/denom;
-                model->getStateFrequency(lh_node, m);
-                double prop = site_rate->getProp(c%ncat) * model->getMixtureWeight(m);
+                double* lh_node = partial_lh_node + c*nstates;
+                int     m       = c/denom;
+                model_to_use->getStateFrequency(lh_node, m);
+                double  prop    = site_rate->getProp(c%ncat) 
+                                * model_to_use->getMixtureWeight(m);
                 for (size_t i = 0; i < nstates; i++)
                     lh_node[i] *= prop;
             }
         } else {
-//            IntVector states_dad = model->seq_states[dad->id];
+//            IntVector states_dad = model_to_use->seq_states[dad->id];
 //            states_dad.push_back(aln->STATE_UNKNOWN);
             // precompute information from one tip
             for (int state = 0; state <= static_cast<int>(aln->STATE_UNKNOWN); ++state) {
-                double *lh_node = partial_lh_node + state*block;
-                double *lh_tip = tip_partial_lh + state*nstates;
+                double *lh_node       = partial_lh_node + state*block;
+                double *lh_tip        = tip_lh + state*nstates;
                 double *trans_mat_tmp = trans_mat;
                 for (size_t c = 0; c < ncat_mix; c++) {
                     for (size_t i = 0; i < nstates; i++) {
@@ -1478,7 +1509,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     	// ascertainment bias correction
         if (all_prob_const >= 1.0 || all_prob_const < 0.0) {
             printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
-            model->writeInfo(cout);
+            model_to_use->writeInfo(cout);
         }
         ASSERT(all_prob_const < 1.0 && all_prob_const >= 0.0);
 

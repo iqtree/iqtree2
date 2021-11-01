@@ -40,6 +40,7 @@
 
 #include <model/modelmixture.h>
 #include <model/modelfactory.h> //for readModelsDefinition
+#include <model/modeldivergent.h>
 
 #include <placement/parallelparsimonycalculator.h> //for ParallelParsimonyCalculator
 
@@ -77,6 +78,8 @@ void PhyloTree::init() {
     lh_block_size                   = 0; //will be set, later, by determineBlockSizes()
     nni_partial_lh                  = nullptr;
     tip_partial_lh                  = nullptr;
+    tip_partial_lh_size_per_model   = 0;
+    tip_partial_lh_size             = 0;
     tip_partial_lh_computed         = 0;
     ptn_freq_computed               = false;
     central_scale_num               = nullptr;
@@ -1738,8 +1741,10 @@ void PhyloTree::deleteAllPartialLh() {
     tree_buffers.freeBuffers();
     aligned_free(_site_lh);
 
-    ptn_freq_computed        = false;
-    tip_partial_lh           = nullptr;
+    ptn_freq_computed             = false;
+    tip_partial_lh                = nullptr;
+    tip_partial_lh_size_per_model = 0;
+    tip_partial_lh_size           = 0;
 
     setTipPartialLikelihoodComputed(false);
 
@@ -1969,8 +1974,15 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
     }
     
-    int mixtures = (model == nullptr) ? 1 : model->getNMixtures();
-    uint64_t tip_partial_lh_size = get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1) * mixtures );
+    intptr_t mixtures = (model == nullptr) ? 1 : model->getNMixtures();
+    intptr_t subtrees = 1;
+    if (model!=nullptr && model->isDivergentModel()) {
+        auto div_model = dynamic_cast<ModelDivergent*>(model);
+        subtrees = div_model->getNumberOfSubtreeModels();
+    }
+    tip_partial_lh_size_per_model =
+        get_safe_upper_limit(aln->num_states * (aln->STATE_UNKNOWN+1));
+    tip_partial_lh_size = tip_partial_lh_size_per_model * mixtures * subtrees;
     if (!central_partial_lh) {
         if (model!=nullptr && model->isSiteSpecificModel())
         {
@@ -2006,8 +2018,10 @@ void PhyloTree::allocateCentralBlocks(size_t extra_parsimony_block_count,
         // We need not treat params->lh_mem_save == LM_PER_NODE as a special case.
         tip_partial_lh = central_partial_lh + ((max_lh_slots + extra_lh_block_count) * lh_block_size);
         LOG_LINE (VerboseMode::VB_DEBUG, 
-                  "tip_partial_lh is " << pointer_to_hex(tip_partial_lh)
-                  << " through " << pointer_to_hex(tip_partial_lh + tip_partial_lh_size ));
+                  "tip_partial_lh is " 
+                  << pointer_to_hex(tip_partial_lh)
+                  << " through " 
+                  << pointer_to_hex(tip_partial_lh + tip_partial_lh_size ));
     }
 
 

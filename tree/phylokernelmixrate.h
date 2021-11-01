@@ -44,13 +44,15 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		return;
 	}
 
+
+
 	intptr_t ptn, c;
     size_t orig_ntn = aln->size();
 
     size_t ncat = site_rate->getNRate();
-    ASSERT(ncat == model->getNMixtures());
+    ASSERT(ncat == model_to_use->getNMixtures());
     ASSERT(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
-    ASSERT(model->isReversible()); // only works with reversible model!
+    ASSERT(model_to_use->isReversible()); // only works with reversible model!
     const size_t nstatesqr=nstates*nstates;
     size_t i, x, j;
     size_t block = nstates * ncat;
@@ -88,8 +90,18 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
         ASSERT(done && "partial_lh is not re-oriented");
     }
 
-	double *evec = model->getEigenvectors();
-	double *inv_evec = model->getInverseEigenvectors();
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+	double *evec     = model_to_use->getEigenvectors();
+	double *inv_evec = model_to_use->getInverseEigenvectors();
 
 	VectorClass *vc_inv_evec = aligned_alloc<VectorClass>(ncat*nstates*nstates/VCSIZE);
 	ASSERT(inv_evec && evec);
@@ -99,7 +111,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 			// inv_evec is not aligned!
 			vc_inv_evec[(c*nstates+i)*nstates/VCSIZE+x].load_a(&inv_evec[c*nstatesqr+i*nstates+x*VCSIZE]);
 	}
-	double *eval = model->getEigenvalues();
+	double *eval = model_to_use->getEigenvalues();
 
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
 
@@ -111,11 +123,11 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		VectorClass vc_evec;
 		VectorClass expleft[nstates/VCSIZE];
 		VectorClass expright[nstates/VCSIZE];
-		double len_left = site_rate->getRate(c) * left->length;
+		double len_left  = site_rate->getRate(c) * left->length;
 		double len_right = site_rate->getRate(c) * right->length;
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
-			expleft[i] = exp(VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * VectorClass(len_left));
+			expleft[i]  = exp(VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * VectorClass(len_left));
 			expright[i] = exp(VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * VectorClass(len_right));
 		}
 		for (x = 0; x < nstates; x++)
@@ -142,15 +154,18 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 			VectorClass vleft[VCSIZE];
 			for (c = 0; c < ncat; c++) {
 				size_t addrtip = state*block+c*nstates;
-				for (i = 0; i < nstates/VCSIZE; i++)
-					vc_partial_lh_tmp[i].load_a(&tip_partial_lh[addrtip+i*VCSIZE]);
+				for (i = 0; i < nstates/VCSIZE; i++) {
+					vc_partial_lh_tmp[i].load_a(&tip_lh[addrtip+i*VCSIZE]);
+				}
 				for (x = 0; x < nstates; x+=VCSIZE) {
 					size_t addr = (c*nstates+x)*nstates/VCSIZE;
-					for (j = 0; j < VCSIZE; j++)
+					for (j = 0; j < VCSIZE; j++) {
 						vleft[j] = eleft[addr+j*nstates/VCSIZE] * vc_partial_lh_tmp[0];
+					}
 					for (i = 1; i < nstates/VCSIZE; i++) {
-						for (j = 0; j < VCSIZE; j++)
+						for (j = 0; j < VCSIZE; j++) {
 							vleft[j] = mul_add(eleft[addr+j*nstates/VCSIZE+i], vc_partial_lh_tmp[i], vleft[j]);
+						}
 					}
 					horizontal_add(vleft).store_a(&partial_lh_left[addrtip+x]);
 				}
@@ -163,15 +178,18 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 			VectorClass vc_partial_lh_tmp[nstates/VCSIZE];
 			for (c = 0; c < ncat; c++) {
 				size_t addrtip = state*block+c*nstates;
-				for (i = 0; i < nstates/VCSIZE; i++)
-					vc_partial_lh_tmp[i].load_a(&tip_partial_lh[addrtip+i*VCSIZE]);
+				for (i = 0; i < nstates/VCSIZE; i++) {
+					vc_partial_lh_tmp[i].load_a(&tip_lh[addrtip+i*VCSIZE]);
+				}
 				for (x = 0; x < nstates; x+=VCSIZE) {
 					size_t addr = (c*nstates+x)*nstates/VCSIZE;
-					for (j = 0; j < VCSIZE; j++)
+					for (j = 0; j < VCSIZE; j++) {
 						vright[j] = eright[addr+j*nstates/VCSIZE] * vc_partial_lh_tmp[0];
+					}
 					for (i = 1; i < nstates/VCSIZE; i++) {
-						for (j = 0; j < VCSIZE; j++)
+						for (j = 0; j < VCSIZE; j++) {
 							vright[j] = mul_add(eright[addr+j*nstates/VCSIZE+i], vc_partial_lh_tmp[i], vright[j]);
+						}
 					}
 					horizontal_add(vright).store_a(&partial_lh_right[addrtip+x]);
 				}
@@ -180,13 +198,13 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 
 		size_t addr_unknown = aln->STATE_UNKNOWN * block;
 		for (x = 0; x < block; x++) {
-			partial_lh_left[addr_unknown+x] = 1.0;
+			partial_lh_left[addr_unknown+x]  = 1.0;
 			partial_lh_right[addr_unknown+x] = 1.0;
 		}
 
 		// assign pointers for left and right partial_lh
-		double **lh_left_ptr = aligned_alloc<double*>(nptn);
-		double **lh_right_ptr = aligned_alloc<double*>(nptn);
+		double** lh_left_ptr  = aligned_alloc<double*>(nptn);
+		double** lh_right_ptr = aligned_alloc<double*>(nptn);
 		for (ptn = 0; ptn < orig_ntn; ptn++) {
 			lh_left_ptr[ptn] = &partial_lh_left[block *  (aln->at(ptn))[left->node->id]];
 			lh_right_ptr[ptn] = &partial_lh_right[block * (aln->at(ptn))[right->node->id]];
@@ -255,7 +273,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 			for (c = 0; c < ncat; c++) {
 				size_t addrtip = state*block+c*nstates;
 				for (i = 0; i < nstates/VCSIZE; i++)
-					vc_partial_lh_tmp[i].load_a(&tip_partial_lh[addrtip+i*VCSIZE]);
+					vc_partial_lh_tmp[i].load_a(&tip_lh[addrtip+i*VCSIZE]);
 				for (x = 0; x < nstates; x+=VCSIZE) {
 					size_t addr = (c*nstates+x)*nstates/VCSIZE;
 					for (j = 0; j < VCSIZE; j++)
@@ -470,7 +488,18 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
-    double *eval = model->getEigenvalues();
+
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+    double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -504,7 +533,7 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 			for (ptn = 0; ptn < orig_nptn; ptn++) {
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
-				double *lh_dad = &tip_partial_lh[(aln->at(ptn))[dad->id] * nstates * ncat];
+				double *lh_dad = &tip_lh[(aln->at(ptn))[dad->id] * nstates * ncat];
 				for (i = 0; i < block; i+=VCSIZE) {
 					(VectorClass().load_a(&lh_dad[i]) * VectorClass().load_a(&partial_lh_dad[i])).store_a(&theta[i]);
 				}
@@ -513,7 +542,7 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 			for (ptn = orig_nptn; ptn < nptn; ptn++) {
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
-				double *lh_dad = &tip_partial_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * nstates * ncat];
+				double *lh_dad = &tip_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * nstates * ncat];
 				for (i = 0; i < block; i+=VCSIZE) {
 					(VectorClass().load_a(&lh_dad[i]) * VectorClass().load_a(&partial_lh_dad[i])).store_a(&theta[i]);
 				}
@@ -574,7 +603,8 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 				vc_ddf[j] = mul_add(vc_theta[j], vc_val2[i], vc_ddf[j]);
 			}
 		}
-		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+		lh_ptn = horizontal_add(vc_ptn) 
+		       + VectorClass().load_a(&ptn_invar[ptn]);
 
 		inv_lh_ptn = vc_unit / abs(lh_ptn);
 
@@ -701,10 +731,12 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 		std::swap(dad, node);
 		std::swap(dad_branch, node_branch);
     }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
+    if ((dad_branch->partial_lh_computed & 1) == 0) {
         computeMixratePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
+	}
+    if ((node_branch->partial_lh_computed & 1) == 0) {
         computeMixratePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+	}
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat = site_rate->getNRate();
 
@@ -715,7 +747,18 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
-    double *eval = model->getEigenvalues();
+
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+    double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
     VectorClass *vc_val = aligned_alloc<VectorClass>(block/VCSIZE);
@@ -747,35 +790,43 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
     		double *lh_node = partial_lh_node + (*it)*block;
-    		double *lh_tip = tip_partial_lh + (*it)*block;
-    		for (i = 0; i < block; i+=VCSIZE)
+    		double *lh_tip  = tip_lh + (*it)*block;
+    		for (i = 0; i < block; i+=VCSIZE) {
     			(vc_val[i/VCSIZE]*VectorClass().load_a(&lh_tip[i])).store_a(&lh_node[i]);
+			}
     	}
 
     	// now do the real computation
 
 
 //    	double **lh_states_dad = aligned_alloc<double*>(maxptn);
-//    	for (ptn = 0; ptn < orig_nptn; ptn++)
-//    		lh_states_dad[ptn] = &tip_partial_lh[(aln->at(ptn))[dad->id] * nstates * ncat];
-//    	for (ptn = orig_nptn; ptn < nptn; ptn++)
-//    		lh_states_dad[ptn] = &tip_partial_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * nstates * ncat];
+//    	for (ptn = 0; ptn < orig_nptn; ptn++) {
+//    		lh_states_dad[ptn] = &tip_lh[(aln->at(ptn))[dad->id] * nstates * ncat];
+//      }
+//    	for (ptn = orig_nptn; ptn < nptn; ptn++) {
+//    		lh_states_dad[ptn] = &tip_lh[model_factory->unobserved_ptns[ptn-orig_nptn] * nstates * ncat];
+//      }
 //    	// initialize beyond #patterns for efficiency
-//    	for (ptn = nptn; ptn < maxptn; ptn++)
-//    		lh_states_dad[ptn] = &tip_partial_lh[aln->STATE_UNKNOWN * nstates * ncat];
+//    	for (ptn = nptn; ptn < maxptn; ptn++) {
+//    		lh_states_dad[ptn] = &tip_lh[aln->STATE_UNKNOWN * nstates * ncat];
+//      }
 
 		int *ptn_states_dad = aligned_alloc<int>(maxptn);
-		for (ptn = 0; ptn < orig_nptn; ptn++)
+		for (ptn = 0; ptn < orig_nptn; ptn++) {
 			ptn_states_dad[ptn] = (aln->at(ptn))[dad->id];
-		for (ptn = orig_nptn; ptn < nptn; ptn++)
+		}
+		for (ptn = orig_nptn; ptn < nptn; ptn++) {
 			ptn_states_dad[ptn] = model_factory->unobserved_ptns[ptn-orig_nptn];
+		}
 		// initialize beyond #patterns for efficiency
-		for (ptn = nptn; ptn < maxptn; ptn++)
+		for (ptn = nptn; ptn < maxptn; ptn++) {
 			ptn_states_dad[ptn] = aln->STATE_UNKNOWN;
+		}
 
 		// copy dummy values because VectorClass will access beyond nptn
-		for (ptn = nptn; ptn < maxptn; ptn++)
+		for (ptn = nptn; ptn < maxptn; ptn++) {
 			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
+		}
 
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, j, vc_ptn, vc_freq, lh_ptn)
@@ -787,16 +838,17 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 		for (ptn = 0; ptn < orig_nptn; ptn+=VCSIZE) {
 			for (j = 0; j < VCSIZE; j++) {
 				vc_ptn[j] = 0.0;
-				double *partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
-				int state_dad = ptn_states_dad[ptn+j];
-				double *lh_node = &partial_lh_node[state_dad*block];
+				double* partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
+				int     state_dad = ptn_states_dad[ptn+j];
+				double* lh_node = &partial_lh_node[state_dad*block];
 				for (i = 0; i < block; i+=VCSIZE) {
 					vc_ptn[j] = mul_add(VectorClass().load_a(&lh_node[i]),
 							VectorClass().load_a(&partial_lh_dad[i]), vc_ptn[j]);
 				}
 			}
 			vc_freq.load_a(&ptn_freq[ptn]);
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) 
+			       + VectorClass().load_a(&ptn_invar[ptn]);
 			lh_ptn = log(abs(lh_ptn));
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 
@@ -821,7 +873,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 		// ascertainment bias correction
 		if (orig_nptn < nptn) {
 			lh_final = 0.0;
-			lh_ptn = 0.0;
+			lh_ptn   = 0.0;
 			for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
 				lh_final += lh_ptn;
 				for (j = 0; j < VCSIZE; j++) {
@@ -836,9 +888,11 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 					}
 				}
                 // bugfix 2016-01-21, prob_const can be rescaled
-                for (j = 0; j < VCSIZE; j++)
-                    if (dad_branch->scale_num[ptn+j] >= 1)
+                for (j = 0; j < VCSIZE; j++) {
+                    if (dad_branch->scale_num[ptn+j] >= 1) {
                         vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
+					}
+				}
 				// ptn_invar[ptn] is not aligned
 				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 			}
@@ -876,9 +930,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
 
-			for (j = 0; j < VCSIZE; j++)
+			for (j = 0; j < VCSIZE; j++) {
 				vc_ptn[j] = 0.0;
-
+			}
 			for (i = 0; i < block; i+=VCSIZE) {
 				for (j = 0; j < VCSIZE; j++) {
 					vc_partial_lh_node[j].load_a(&partial_lh_node[i+j*block]);
@@ -889,8 +943,8 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 
 			vc_freq.load_a(&ptn_freq[ptn]);
 
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-
+			lh_ptn = horizontal_add(vc_ptn) 
+			       + VectorClass().load_a(&ptn_invar[ptn]);
 			lh_ptn = log(abs(lh_ptn));
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP
@@ -920,9 +974,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
 				lh_final += lh_ptn;
 
-				for (j = 0; j < VCSIZE; j++)
+				for (j = 0; j < VCSIZE; j++) {
 					vc_ptn[j] = 0.0;
-
+				}
 				for (i = 0; i < block; i+=VCSIZE) {
 					for (j = 0; j < VCSIZE; j++) {
 						vc_partial_lh_node[j].load_a(&partial_lh_node[i+j*block]);
@@ -932,10 +986,11 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 				}
 
                 // bugfix 2016-01-21, prob_const can be rescaled
-                for (j = 0; j < VCSIZE; j++)
-                    if (dad_branch->scale_num[ptn+j] + node_branch->scale_num[ptn+j] >= 1)
+                for (j = 0; j < VCSIZE; j++) {
+                    if (dad_branch->scale_num[ptn+j] + node_branch->scale_num[ptn+j] >= 1) {
                         vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
-
+					}
+				}
 				// ptn_invar[ptn] is not aligned
 				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 				partial_lh_node += block*VCSIZE;
@@ -954,8 +1009,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
     	prob_const = log(1.0 - prob_const);
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
+    	for (ptn = 0; ptn < orig_nptn; ptn++) {
     		_pattern_lh[ptn] -= prob_const;
+		}
     	tree_lh -= aln->getNSite()*prob_const;
     }
 
@@ -978,7 +1034,7 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 	intptr_t orig_nptn = aln->size();
 	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 //    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    double *eval = model->getEigenvalues();
+    double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -1020,7 +1076,8 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 				vc_ptn[j] = mul_add(VectorClass().load_a(&theta[i*VCSIZE+j*block]), vc_val0[i], vc_ptn[j]);
 			}
 		}
-		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+		lh_ptn = horizontal_add(vc_ptn) 
+		       + VectorClass().load_a(&ptn_invar[ptn]);
 		lh_ptn = log(abs(lh_ptn));
 		lh_ptn.store_a(&_pattern_lh[ptn]);
 		vc_freq.load_a(&ptn_freq[ptn]);
@@ -1126,8 +1183,9 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 		}
     	prob_const = log(1.0 - prob_const);
     	tree_lh -= aln->getNSite() * prob_const;
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
+    	for (ptn = 0; ptn < orig_nptn; ptn++) {
     		_pattern_lh[ptn] -= prob_const;
+		}
 	}
 
     aligned_free(vc_val0);

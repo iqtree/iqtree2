@@ -78,7 +78,8 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computePartialLikelihoodEigenSIMD
+        (PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
 	ASSERT(dad);
     if (dad_branch->isLikelihoodComputed()) {
@@ -99,21 +100,35 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 		return;
 	}
 
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+
     intptr_t ptn, c;
     intptr_t orig_nptn = aln->size();
 
-    size_t ncat = site_rate->getNRate();
-    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    size_t ncat     = site_rate->getNRate();
+    bool   fused    = model_factory->fused_mix_rate;
+    size_t n_mix    = model_to_use->getNMixtures();
+    size_t ncat_mix = fused ? ncat : ncat * n_mix;
     ASSERT(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
-    ASSERT(model->isReversible()); // only works with reversible model!
-    const size_t nstatesqr=nstates*nstates;
+    ASSERT(model_to_use->isReversible()); // only works with reversible model!
+    const size_t nstatesqr = nstates*nstates;
     size_t i, x, j;
-    size_t block = nstates * ncat_mix;
-    size_t tip_block = nstates * model->getNMixtures();
+    size_t block      = nstates * ncat_mix;
+    size_t tip_block  = nstates * n_mix;
     size_t scale_size = nptn * ncat_mix;
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    bool   fixed = model_factory->fused_mix_rate;
+    size_t denom = fused ? 1 : ncat;
     for (c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
@@ -150,8 +165,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         ASSERT(done && "partial_lh is not re-oriented");
     }
 
-	double *evec = model->getEigenvectors();
-	double *inv_evec = model->getInverseEigenvectors();
+	double *evec     = model_to_use->getEigenvectors();
+	double *inv_evec = model_to_use->getInverseEigenvectors();
 
 	ASSERT(inv_evec && evec);
 //	for (i = 0; i < tip_block; i++) {
@@ -159,8 +174,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 //			// inv_evec is not aligned!
 //			vc_inv_evec[i*nstates/VCSIZE+x].load_a(&inv_evec[i*nstates+x*VCSIZE]);
 //	}
-	double *eval = model->getEigenvalues();
-
+	double *eval = model_to_use->getEigenvalues();
 
     VectorClass *echildren = aligned_alloc<VectorClass>(block*nstates/VCSIZE*(node->degree()-1));
     double *partial_lh_leaves = NULL;
@@ -201,7 +215,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
                 double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                 VectorClass *echild_ptr = echild;
                 for (c = 0; c < ncat_mix; c++) {
-                    VectorClass *this_tip_partial_lh = (VectorClass*)(tip_partial_lh + state*tip_block + mix_addr_nstates[c]);
+                    intptr_t offset = state*tip_block + mix_addr_nstates[c];
+                    VectorClass* this_tip_partial_lh = (VectorClass*)(tip_lh + offset);
                     for (x = 0; x < nstates; x++) {
                         VectorClass vchild = 0.0;
                         for (i = 0; i < nstates/VCSIZE; i++) {
@@ -547,14 +562,11 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 				partial_lh_left += nstates;
 				partial_lh_right += nstates;
 			}
-
-
 		}
-
 	}
-
-	if (partial_lh_leaves)
+	if (partial_lh_leaves!=nullptr) {
         aligned_free(partial_lh_leaves);
+    }
 	aligned_free(echildren);
 }
 
@@ -575,21 +587,36 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
     if ((node_branch->partial_lh_computed & 1) == 0)
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     df = ddf = 0.0;
-    size_t ncat = site_rate->getNRate();
-    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t block = ncat_mix * nstates;
-    size_t tip_block = nstates * model->getNMixtures();
+
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+
+    size_t ncat      = site_rate->getNRate();
+    bool   fused     = model_factory->fused_mix_rate;
+    size_t n_mix     = model_to_use->getNMixtures();
+    size_t ncat_mix  = fused ? ncat : ncat * n_mix;
+    size_t block     = ncat_mix * nstates;
+    size_t tip_block = nstates  * n_mix;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
     intptr_t orig_nptn = aln->size();
-    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t nptn   = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
 
     size_t mix_addr_nstates[ncat_mix];
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    bool   fused = model_factory->fused_mix_rate;
+    size_t denom = fused ? 1 : ncat;
 
-    double *eval = model->getEigenvalues();
+    double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -603,7 +630,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
         size_t mycat = c%ncat;
         double *eval_ptr = eval + m*nstates;
 		VectorClass vc_rate = site_rate->getRate(mycat);
-		VectorClass vc_prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+		VectorClass vc_prop = site_rate->getProp(mycat) 
+                            * model_to_use->getMixtureWeight(m);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;
@@ -626,14 +654,18 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 #pragma omp parallel for private(ptn, i, c) reduction(+: scale_all)
 #endif
 			for (ptn = 0; ptn < nptn; ptn++) {
-			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-                UBYTE *scale_dad = dad_branch->scale_num+ptn*ncat_mix;
-				double *theta = theta_all + ptn*block;
-                double *this_tip_partial_lh = tip_partial_lh + tip_block*((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]);
+			    double*  partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                UBYTE*   scale_dad = dad_branch->scale_num+ptn*ncat_mix;
+				double*  theta     = theta_all + ptn * block;
+                intptr_t block_num = (ptn < orig_nptn) 
+                                   ? (aln->at(ptn))[dad->id] 
+                                   : model_factory->unobserved_ptns[ptn-orig_nptn];
+                intptr_t offset    = tip_block * block_num;
+                double*  this_tip_partial_lh = tip_lh + offset;
                 UBYTE min_scale = scale_dad[0];
-                for (c = 1; c < ncat_mix; c++)
+                for (c = 1; c < ncat_mix; c++) {
                     min_scale = min(min_scale, scale_dad[c]);
-
+                }
                 scale_all += (double)min_scale;
 
                 for (c = 0; c < ncat_mix; c++) {
@@ -700,8 +732,6 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
         buffer_scale_all = scale_all*LOG_SCALING_THRESHOLD;
 	}
 
-
-
 	VectorClass vc_ptn[VCSIZE], vc_df[VCSIZE], vc_ddf[VCSIZE], vc_theta[VCSIZE];
 	VectorClass vc_unit = 1.0;
 	VectorClass vc_freq;
@@ -727,7 +757,6 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 			vc_df[i] = vc_val1[0] * vc_theta[i];
 			vc_ddf[i] = vc_val2[0] * vc_theta[i];
 		}
-
 		for (i = 1; i < block/VCSIZE; i++) {
 			for (j = 0; j < VCSIZE; j++) {
 				vc_theta[j].load_a(&theta[i*VCSIZE+j*block]);
@@ -736,8 +765,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 				vc_ddf[j] = mul_add(vc_theta[j], vc_val2[i], vc_ddf[j]);
 			}
 		}
-		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-
+		lh_ptn     = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 		inv_lh_ptn = vc_unit / abs(lh_ptn);
 
 		vc_freq.load_a(&ptn_freq[ptn]);
@@ -753,7 +781,6 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 		df_final = mul_add(df_ptn, vc_freq, df_final);
 		ddf_final = mul_add(ddf_ptn, vc_freq, ddf_final);
 #endif
-
 	}
 
 #ifdef _OPENMP
@@ -764,7 +791,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 	}
 }
 #endif
-	df = horizontal_add(df_final);
+	df  = horizontal_add(df_final);
 	ddf = horizontal_add(ddf_final);
     
     ASSERT(!isnan(df) && !isinf(df) && "Numerical underflow for SIMD lh-derivative");
@@ -859,25 +886,39 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
+    if ((dad_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
+    }
+    if ((node_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    size_t ncat = site_rate->getNRate();
-    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    }
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
+    double tree_lh  = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+    size_t ncat     = site_rate->getNRate();
+    bool   fused    = model_factory->fused_mix_rate;
+    size_t n_mix    = model_to_use->getNMixtures();
+    size_t ncat_mix = fused ? ncat : ncat*n_mix;
+    size_t denom    = fused ? 1 : ncat;
     size_t mix_addr_nstates[ncat_mix];
 
-    size_t block = ncat_mix * nstates;
-    size_t tip_block = nstates * model->getNMixtures();
+    size_t block     = ncat_mix * nstates;
+    size_t tip_block = nstates * n_mix;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
     intptr_t orig_nptn = aln->size();
-    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    intptr_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t maxptn    = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
-    double *eval = model->getEigenvalues();
+    double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
     VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
@@ -888,8 +929,10 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
         double *eval_ptr = eval + mix_addr_nstates[c];
-		VectorClass vc_len(site_rate->getRate(mycat)*dad_branch->length);
-		VectorClass vc_prop(site_rate->getProp(c) * model->getMixtureWeight(m));
+		VectorClass vc_len(site_rate->getRate(mycat)
+                           * dad_branch->length);
+		VectorClass vc_prop(site_rate->getProp(c) 
+                            * model_to_use->getMixtureWeight(m));
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
 			vc_val[c*nstates/VCSIZE+i] = exp(VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_len) * vc_prop;
@@ -908,7 +951,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     	for (IntVector::iterator it = states_dad.begin(); 
              it != states_dad.end(); ++it) {
     		double *lh_node = partial_lh_node + (*it)*block;
-    		double *lh_tip = tip_partial_lh + (*it)*tip_block;
+    		double *lh_tip = tip_lh + (*it)*tip_block;
     		VectorClass *vc_val_tmp = vc_val;
             for (c = 0; c < ncat_mix; c++) {
                 double *this_lh_tip = lh_tip + mix_addr_nstates[c];
@@ -920,7 +963,6 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
             }
     	}
 
-
     	//VectorClass vc_tip_partial_lh[nstates];
     	//VectorClass vc_partial_lh_dad[VCSIZE]
         VectorClass vc_ptn[VCSIZE];
@@ -928,17 +970,21 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 		VectorClass lh_ptn; // store likelihoods of VCSIZE consecutive patterns
 
 		int *ptn_states_dad = aligned_alloc<int>(maxptn);
-		for (ptn = 0; ptn < orig_nptn; ptn++)
+		for (ptn = 0; ptn < orig_nptn; ptn++) {
 			ptn_states_dad[ptn] = (aln->at(ptn))[dad->id];
-		for (ptn = orig_nptn; ptn < nptn; ptn++)
+        }
+		for (ptn = orig_nptn; ptn < nptn; ptn++) {
 			ptn_states_dad[ptn] = model_factory->unobserved_ptns[ptn-orig_nptn];
+        }
 		// initialize beyond #patterns for efficiency
-		for (ptn = nptn; ptn < maxptn; ptn++)
+		for (ptn = nptn; ptn < maxptn; ptn++) {
 			ptn_states_dad[ptn] = aln->STATE_UNKNOWN;
+        }
 
 		// copy dummy values because VectorClass will access beyond nptn
-		for (ptn = nptn; ptn < maxptn; ptn++)
+		for (ptn = nptn; ptn < maxptn; ptn++) {
 			memcpy(&dad_branch->partial_lh[ptn*block], dad_branch->partial_lh, block*sizeof(double));
+        }
 
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, j, vc_ptn, vc_freq, lh_ptn)
@@ -966,18 +1012,20 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                         for (i = 0; i < nstates; i+=VCSIZE) {
                             this_vc_ptn = mul_add(VectorClass().load_a(&lh_node[i]), VectorClass().load_a(&partial_lh_dad[i]), this_vc_ptn);
                         }
-                        if (scale_dad[c] == min_scale)
+                        if (scale_dad[c] == min_scale) {
                             vc_ptn[j] += this_vc_ptn;
-                        else
+                        }
+                        else {
                             vc_ptn[j] += this_vc_ptn * VectorClass(SCALING_THRESHOLD);
+                        }
                     }
                     lh_node += nstates;
                     partial_lh_dad += nstates;
                 }
 			}
-
 			vc_freq.load_a(&ptn_freq[ptn]);
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) 
+                   + VectorClass().load_a(&ptn_invar[ptn]);
 			lh_ptn = log(abs(lh_ptn)) + vc_scale*LOG_SCALING_THRESHOLD;
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 
@@ -1025,17 +1073,20 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                             for (i = 0; i < nstates; i+=VCSIZE) {
                                 this_vc_ptn = mul_add(VectorClass().load_a(&lh_node[i]), VectorClass().load_a(&partial_lh_dad[i]), this_vc_ptn);
                             }
-                            if (scale_dad[c] == min_scale)
+                            if (scale_dad[c] == min_scale) {
                                 vc_ptn[j] += this_vc_ptn;
-                            else
+                            }
+                            else {
                                 vc_ptn[j] += this_vc_ptn * VectorClass(SCALING_THRESHOLD);
+                            }
                         }
                         lh_node += nstates;
                         partial_lh_dad += nstates;
                     }
                     // bugfix 2016-01-21, prob_const can be rescaled
-                    if (min_scale >= 1)
+                    if (min_scale >= 1) {
                         vc_ptn[j] = vc_ptn[j] * VectorClass(SCALING_THRESHOLD);
+                    }
 				}
 				// ptn_invar[ptn] is not aligned
 				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
@@ -1095,22 +1146,24 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                         for (i = 0; i < nstates; i+=VCSIZE) {
                             this_vc_ptn = mul_add(VectorClass().load_a(&partial_lh_node[i]) * VectorClass().load_a(&partial_lh_dad[i]), val_tmp[i/VCSIZE], this_vc_ptn);
                         }
-                        if (sum_scale[c] == min_scale)
+                        if (sum_scale[c] == min_scale) {
                             vc_ptn[j] += this_vc_ptn;
-                        else
+                        }
+                        else {
                             vc_ptn[j] += this_vc_ptn * VectorClass(SCALING_THRESHOLD);
+                        }
                     }
                     partial_lh_node += nstates;
                     partial_lh_dad += nstates;
                     val_tmp += nstates/VCSIZE;
                 }
 			}
-
 			vc_freq.load_a(&ptn_freq[ptn]);
 
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-
-			lh_ptn = log(abs(lh_ptn)) + vc_scale*LOG_SCALING_THRESHOLD;
+			lh_ptn = horizontal_add(vc_ptn) 
+                   + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = log(abs(lh_ptn)) 
+                   + vc_scale*LOG_SCALING_THRESHOLD;
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP
 			lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
@@ -1136,7 +1189,6 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
 			for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
 				lh_final += lh_ptn;
-
                 VectorClass vc_scale;
                 for (j = 0; j < VCSIZE; j++) {
                     vc_ptn[j] = 0.0;
@@ -1160,19 +1212,21 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                             for (i = 0; i < nstates; i+=VCSIZE) {
                                 this_vc_ptn = mul_add(VectorClass().load_a(&partial_lh_node[i]) * VectorClass().load_a(&partial_lh_dad[i]), val_tmp[i/VCSIZE], this_vc_ptn);
                             }
-                            if (sum_scale[c] == min_scale)
+                            if (sum_scale[c] == min_scale) {
                                 vc_ptn[j] += this_vc_ptn;
-                            else
+                            }
+                            else {
                                 vc_ptn[j] += this_vc_ptn * VectorClass(SCALING_THRESHOLD);
+                            }
                         }
                         partial_lh_node += nstates;
-                        partial_lh_dad += nstates;
+                        partial_lh_dad  += nstates;
                         val_tmp += nstates/VCSIZE;
                     }
-                    if (min_scale >= 1)
+                    if (min_scale >= 1) {
                         vc_ptn[j] *= VectorClass(SCALING_THRESHOLD);
+                    }
                 }
-
                 /*
 				for (j = 0; j < VCSIZE; j++)
 					vc_ptn[j] = 0.0;
@@ -1208,8 +1262,9 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     	// ascertainment bias correction
         ASSERT(prob_const < 1.0 && prob_const >= 0.0);
     	prob_const = log(1.0 - prob_const);
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
+    	for (ptn = 0; ptn < orig_nptn; ptn++) {
     		_pattern_lh[ptn] -= prob_const;
+        }
     	tree_lh -= aln->getNSite()*prob_const;
     }
 
@@ -1219,23 +1274,32 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
-
-
 	ASSERT(theta_all && theta_computed);
 
-	double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+    ModelSubst* model_to_use = getModel();
+    double*     tip_lh       = tip_partial_lh;
+    if (model_to_use->isDivergentModel()) {
+        ModelDivergent* div_model = 
+            dynamic_cast<ModelDivergent*>(model_to_use);
+        int subtree_number = getSubTreeNumberForBranch(dad, node);
+        model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        tip_lh = tip_partial_lh 
+               + subtree_number * tip_partial_lh_size_per_model;
+    }
 
-    size_t ncat = site_rate->getNRate();
-    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
-
-    size_t block = ncat_mix * nstates;
+	double tree_lh  = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+    size_t ncat     = site_rate->getNRate();
+    bool   fused    = model_factory->fused_mix_rate;
+    size_t n_mix    = model_to_use->getNMixtures();
+    size_t ncat_mix = fused ? ncat : ncat * n_mix;
+    size_t denom    = fused ? 1 : ncat;
+    size_t block    = ncat_mix * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
     intptr_t orig_nptn = aln->size();
     intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 //    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    double *eval = model->getEigenvalues();
+    double*  eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -1246,7 +1310,8 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
         double *eval_ptr = eval + (m)*nstates;
         size_t mycat = c%ncat;
 		VectorClass vc_rate = site_rate->getRate(mycat);
-		VectorClass vc_prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+		VectorClass vc_prop = site_rate->getProp(mycat) 
+                            * model_to_use->getMixtureWeight(m);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;
@@ -1274,23 +1339,21 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 		for (i = 0; i < VCSIZE; i++) {
 			vc_ptn[i] = vc_val0[0] * VectorClass().load_a(theta+i*block);
 		}
-
 		for (i = 1; i < block/VCSIZE; i++) {
 			for (j = 0; j < VCSIZE; j++) {
 				vc_ptn[j] = mul_add(VectorClass().load_a(&theta[i*VCSIZE+j*block]), vc_val0[i], vc_ptn[j]);
 			}
 		}
-		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+		lh_ptn = horizontal_add(vc_ptn) 
+               + VectorClass().load_a(&ptn_invar[ptn]);
 		lh_ptn = log(abs(lh_ptn));
 		lh_ptn.store_a(&_pattern_lh[ptn]);
 		vc_freq.load_a(&ptn_freq[ptn]);
-
 #ifdef _OPENMP
 		lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
 #else
 		lh_final = mul_add(lh_ptn, vc_freq, lh_final);
 #endif
-
 	}
 
 #ifdef _OPENMP
@@ -1313,25 +1376,27 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 
         UBYTE sum_scale_num[(nstates+VCSIZE)*ncat_mix];
         memset(sum_scale_num, 0, sizeof(UBYTE)*(nstates+VCSIZE));
-        if (current_it->node->isLeaf())
+        if (current_it->node->isLeaf()) {
             memcpy(sum_scale_num, current_it_back->scale_num+orig_nptn*ncat_mix, sizeof(UBYTE)*(nptn-orig_nptn)*ncat_mix);
-        else if (current_it_back->node->isLeaf())
+        }
+        else if (current_it_back->node->isLeaf()) {
             memcpy(sum_scale_num, current_it->scale_num+orig_nptn*ncat_mix, sizeof(UBYTE)*(nptn-orig_nptn)*ncat_mix);
+        }
         else {
             UBYTE *cur_scale_num = current_it->scale_num + orig_nptn*ncat_mix;
             UBYTE *back_scale_num = current_it_back->scale_num + orig_nptn*ncat_mix;
             c = (nptn-orig_nptn)*ncat_mix;
-            for (i = 0; i < c; i++)
+            for (i = 0; i < c; i++) {
                 sum_scale_num[i] = cur_scale_num[i] + back_scale_num[i];
+            }
         }
-
         for (ptn = orig_nptn; ptn < nptn; ptn++) {
 			//lh_final += lh_ptn;
 			// initialization
             VectorClass this_vc_ptn = vc_val0[0] * VectorClass().load_a(theta);
 
             UBYTE *this_sum_scale = sum_scale_num + (ptn-orig_nptn)*ncat_mix;
-            UBYTE min_scale = *min_element(this_sum_scale, this_sum_scale + ncat_mix);
+            UBYTE min_scale       = *min_element(this_sum_scale, this_sum_scale + ncat_mix);
 
 			for (i = 1; i < block/VCSIZE; i++) {
                 this_vc_ptn = mul_add(VectorClass().load_a(&theta[i*VCSIZE]), vc_val0[i], this_vc_ptn);
@@ -1339,12 +1404,12 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 			theta += block;
 
             // bugfix 2016-01-21, prob_const can be rescaled
-            if (min_scale >= 1)
+            if (min_scale >= 1) {
                 this_vc_ptn *= VectorClass(SCALING_THRESHOLD);
+            }
 
 			// no +I for +ASC!
 			prob_const = horizontal_add(this_vc_ptn);
-
 		}
 
         /*
@@ -1368,12 +1433,11 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
         */
     	prob_const = log(1.0 - prob_const);
     	tree_lh -= aln->getNSite() * prob_const;
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
+    	for (ptn = 0; ptn < orig_nptn; ptn++) {
     		_pattern_lh[ptn] -= prob_const;
+        }
 	}
-
     aligned_free(vc_val0);
-
     return tree_lh;
 }
 
@@ -1472,9 +1536,10 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             partitions = new vector<Alignment*>;
             partitions->push_back(aln);
         }
-        if (aln->ordered_pattern.empty())
+        if (aln->ordered_pattern.empty()) {
             aln->orderPatternByNumChars();
-        int leafid = node->id;
+        }
+        int leafid    = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
     	int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
@@ -1521,9 +1586,11 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             UINT *p = x + ((site/UINT_BITS));
                             
                             UINT bit1 = (1 << (site%UINT_BITS));
-                            for (int i = 0; i < 4; i++)
-                                if (state & (1<<i))
+                            for (int i = 0; i < 4; i++) {
+                                if (state & (1<<i)) {
                                     p[i*VCSIZE] |= bit1;
+                                }
+                            }
                         }
                     }
                 }
@@ -1549,8 +1616,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             }
                             UINT bit1 = (1 << (site%UINT_BITS));
                             UINT *p = x+(site/UINT_BITS);
-                            for (int i = 0; i < 20; i++)
+                            for (int i = 0; i < 20; i++) {
                                 p[i*VCSIZE] |= bit1;
+                            }
                         }
                     } else {
                         ASSERT(state < 23);
@@ -1573,7 +1641,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 for (int patid = start_pos; patid != end_pos; patid++) {
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
-                    int freq = pat->frequency;
+                    int freq  = pat->frequency;
                     if (state < (*alnit)->num_states) {
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
@@ -1589,7 +1657,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                                 site = 0;
                             }
                             UINT bit1 = (1 << (site%UINT_BITS));
-                            UINT *p = x+(site/UINT_BITS);
+                            UINT *p   = x+(site/UINT_BITS);
                             for (int i = 0; i < (*alnit)->num_states; i++)
                                 p[i*VCSIZE] |= bit1;
                         }
@@ -1606,7 +1674,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 //        assert(site == aln->num_informative_sites % NUM_BITS);
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
-            x += site/UINT_BITS;
+            x  += site/UINT_BITS;
         	*x |= ~((1<<(site%UINT_BITS)) - 1);
             x++;
             int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
@@ -1622,11 +1690,16 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             if (nei->node->name != ROOT_NAME && (nei->partial_lh_computed & 2) == 0) {
                 computePartialParsimonyFastSIMD<VectorClass>(nei, node);
             }
-            if (!left) left = pit; else right = pit;
+            if (!left) {
+                left = pit; 
+            }
+            else {
+                right = pit;
+            }
         }
 //        VectorClass score = 0;
         UINT score = 0;
-        int nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
+        int nsites     = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
         int entry_size = nstates * VCSIZE;
         
         switch (nstates) {
@@ -1699,12 +1772,15 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);
-    if (!central_partial_pars)
+    if (!central_partial_pars) {
         initializeAllPartialPars();
-    if ((dad_branch->partial_lh_computed & 2) == 0)
+    }
+    if ((dad_branch->partial_lh_computed & 2) == 0) {
         computePartialParsimonyFastSIMD<VectorClass>(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 2) == 0)
+    }
+    if ((node_branch->partial_lh_computed & 2) == 0) {
         computePartialParsimonyFastSIMD<VectorClass>(node_branch, node);
+    }
     int site;
     int nstates = aln->getMaxNumStates();
 
@@ -1728,9 +1804,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         #endif
 		for (site = 0; site < nsites; site++) {
             size_t offset = entry_size*site;
-            VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
-            VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
-            VectorClass w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
+            VectorClass* x = (VectorClass*)(dad_branch->partial_pars + offset);
+            VectorClass* y = (VectorClass*)(node_branch->partial_pars + offset);
+            VectorClass  w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
 //			horizontal_popcount(w);
 //            score += w;
@@ -1747,9 +1823,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
         #endif
 		for (site = 0; site < nsites; site++) {
             size_t offset = entry_size*site;
-            VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
-            VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
-            VectorClass w = x[0] & y[0];
+            VectorClass* x = (VectorClass*)(dad_branch->partial_pars + offset);
+            VectorClass* y = (VectorClass*)(node_branch->partial_pars + offset);
+            VectorClass  w = x[0] & y[0];
 			for (int i = 1; i < nstates; i++) {
                 w |= x[i] & y[i];
 			}
