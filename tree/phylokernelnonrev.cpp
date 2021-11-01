@@ -32,10 +32,8 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
 //    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 
 	if (node->isLeaf()) {
-//	    dad_branch->lh_scale_factor = 0.0;
-
-//		if (!tip_partial_lh_computed)
-//			computeTipPartialLikelihood();
+        // dad_branch->lh_scale_factor = 0.0;
+        // computeTipPartialLikelihood();
 		return;
 	}
     

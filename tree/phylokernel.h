@@ -97,9 +97,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     intptr_t   nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode* node = dad_branch->getNode();
 
-    if (!tip_partial_lh_computed) {
-        computeTipPartialLikelihood();
-    }
+    computeTipPartialLikelihood();
     if (node->isLeaf()) {
         dad_branch->lh_scale_factor = 0.0;
         //memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
@@ -2228,9 +2226,7 @@ int PhyloTree::getSubTreeParsimonySankoffSIMD(PhyloNeighbor* dad_branch) const {
 template<class VectorClass>
 int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch,
                                                  PhyloNode *dad, int *branch_subst) {
-    if ((tip_partial_lh_computed & 2) == 0) {
-        computeTipPartialParsimony();
-    }
+    computeTipPartialParsimony();
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     assert(node_branch);

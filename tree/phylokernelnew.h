@@ -1056,10 +1056,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad,
                                      const LikelihoodBufferSet& buffers, 
                                      bool compute_partial_lh) {
 
-    if ((tip_partial_lh_computed & 1) == 0)
-    {
-        computeTipPartialLikelihood();
-    }
+    computeTipPartialLikelihood();
     traversal_info.clear();
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;

@@ -254,11 +254,11 @@ double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
 
 
 void PhyloTree::computeTipPartialLikelihood() {
-	if ((tip_partial_lh_computed & 1) != 0) {
-		return;
+    if (isTipPartialLikelihoodComputed()) {
+        return;
     }
-	tip_partial_lh_computed |= 1;
-        
+    setTipPartialLikelihoodComputed(true);
+       
 	//-------------------------------------------------------
 	// initialize ptn_freq and ptn_invar
 	//-------------------------------------------------------
@@ -573,6 +573,18 @@ void PhyloTree::computePtnFreq() {
     }
 }
 
+bool PhyloTree::isTipPartialLikelihoodComputed() const {
+    return (tip_partial_lh_computed & 1) != 0;
+}
+
+void PhyloTree::setTipPartialLikelihoodComputed(bool is_it) {
+    if (is_it) {
+        tip_partial_lh_computed |= 1;
+    } else {
+        tip_partial_lh_computed &= ~1;
+    }
+}
+
 void PhyloTree::computePtnInvar() {
     intptr_t nptn    = aln->getNPattern(), ptn;
     intptr_t unobs   = model_factory->unobserved_ptns.size();
@@ -674,9 +686,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
     size_t nstates  = aln->num_states;
     intptr_t nptn   = aln->size()+model_factory->unobserved_ptns.size();
 
-    if (!tip_partial_lh_computed) {
-        computeTipPartialLikelihood();
-    }
+    computeTipPartialLikelihood();
+    
     if (node->isLeaf()) {
         dad_branch->lh_scale_factor = 0.0;
         return;

@@ -1087,9 +1087,9 @@ public:
      * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
      * e.g. (1,0,0,0) for A,  (0,0,0,1) for T
      */
-    double *tip_partial_lh;
-    int tip_partial_lh_computed;
-    UINT *tip_partial_pars;
+    double* tip_partial_lh;
+    int     tip_partial_lh_computed;
+    UINT*   tip_partial_pars;
 
     bool ptn_freq_computed;
 
@@ -1156,8 +1156,12 @@ public:
     // hypergeometric sampling.
     void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hypergeometric=false);
     void computeTipPartialLikelihood();
+        bool isTipPartialLikelihoodComputed() const;
+        void setTipPartialLikelihoodComputed(bool is_it);
     void computeTipPartialParsimony();
         //Supporting functions
+        bool isTipPartialParsimonyComputed() const;
+        void setTipPartialParsimonyComputed(bool is_it);
         void computeDNATipPartialParsimony();
         void computeProteinTipPartialParsimony();
 

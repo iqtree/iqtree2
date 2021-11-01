@@ -860,10 +860,11 @@ void PhyloTree::loadCostMatrixFile(const char * file_name){
 }
 
 void PhyloTree::computeTipPartialParsimony() {
-    if ((tip_partial_lh_computed & 2) != 0) {
+    if (isTipPartialParsimonyComputed()) {
         return;
     }
-    tip_partial_lh_computed |= 2;
+    setTipPartialParsimonyComputed(true);
+
     
     const int      nstates = aln->num_states;
     const intptr_t nptn    = aln->ordered_pattern.size();
@@ -898,6 +899,18 @@ void PhyloTree::computeTipPartialParsimony() {
             break;
         default:
             break;
+    }
+}
+
+bool PhyloTree::isTipPartialParsimonyComputed() const {
+    return ((tip_partial_lh_computed & 2) != 0);
+}
+
+void PhyloTree::setTipPartialParsimonyComputed(bool is_it) {
+    if (is_it) {
+        tip_partial_lh_computed |= 2;
+    } else {
+        tip_partial_lh_computed &= ~2;
     }
 }
 
@@ -1266,9 +1279,6 @@ int PhyloTree::getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch) const {
  */
 int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch,
                                              PhyloNode *dad, int *branch_subst) {
-    if ((tip_partial_lh_computed & 2) == 0) {
-        computeTipPartialParsimony();
-    }
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     assert(node_branch);
@@ -1276,6 +1286,8 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch,
     if (!central_partial_pars) {
         initializeAllPartialPars();
     }
+    computeTipPartialParsimony();
+
     // if node is a leaf, swap node and dad
     // (so there are two cases to worry about later,
     //  rather than three).

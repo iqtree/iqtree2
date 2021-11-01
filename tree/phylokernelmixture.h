@@ -38,9 +38,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
 	    //memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-
-		if (!tip_partial_lh_computed)
-			computeTipPartialLikelihood();
+		computeTipPartialLikelihood();
 		return;
 	}
 

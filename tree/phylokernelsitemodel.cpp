@@ -35,9 +35,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 	    dad_branch->lh_scale_factor = 0.0;
 		// scale number must be ZERO
         // memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-        if (!tip_partial_lh_computed) {
-            computeTipPartialLikelihood();
-        }   
+        computeTipPartialLikelihood();
 		return;
 	}
     

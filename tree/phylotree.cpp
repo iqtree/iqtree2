@@ -1722,7 +1722,7 @@ void PhyloTree::deleteAllPartialParsimony() {
     aligned_free(central_partial_pars);
     tip_partial_pars        = nullptr;
     clearAllPartialParsimony(true);
-    tip_partial_lh_computed &= ~2;
+    setTipPartialParsimonyComputed(false);
 }
 
 void PhyloTree::deleteAllPartialLh() {
@@ -1740,7 +1740,8 @@ void PhyloTree::deleteAllPartialLh() {
 
     ptn_freq_computed        = false;
     tip_partial_lh           = nullptr;
-    tip_partial_lh_computed &= ~1; //was missing!
+
+    setTipPartialLikelihoodComputed(false);
 
     clearAllPartialLH(true);
     clearAllScaleNum(true);
