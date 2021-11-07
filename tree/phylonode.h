@@ -193,15 +193,7 @@ public:
         @param anode the other end of the branch
         @param alength length of branch
      */
-    PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
-        partial_lh = NULL;
-        scale_num = NULL;
-        partial_lh_computed = NOTHING_IS_COMPUTED;
-        lh_scale_factor = 0.0;
-        partial_pars = NULL;
-        direction = RootDirection::UNDEFINED_DIRECTION;
-        size = 0;
-    }
+    PhyloNeighbor(Node *anode, double alength);
 
     /**
         construct class with a node and length
@@ -209,37 +201,19 @@ public:
         @param alength length of branch
         @param aid branch ID
      */
-    PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
-        partial_lh = nullptr;
-        scale_num = nullptr;
-        partial_lh_computed = NOTHING_IS_COMPUTED;
-        lh_scale_factor = 0.0;
-        partial_pars = nullptr;
-        direction = RootDirection::UNDEFINED_DIRECTION;
-        size = 0;
-    }
+    PhyloNeighbor(Node *anode, double alength, int aid);
 
     /**
      construct class with another Neighbor
      @param nei another Neighbor
      */
-    PhyloNeighbor(const PhyloNeighbor& nei) : Neighbor(nei) {
-        partial_lh = nullptr;
-        scale_num = nullptr;
-        partial_lh_computed = NOTHING_IS_COMPUTED;
-        lh_scale_factor = 0.0;
-        partial_pars = nullptr;
-        direction = nei.direction;
-        size = nei.size;
-    }
+    PhyloNeighbor(const PhyloNeighbor& nei);
 
     /**
      allocate a new Neighbor by just copying from this one
      @return pointer to newly created Neighbor
      */
-    virtual PhyloNeighbor* newNeighbor() const override {
-        return (new PhyloNeighbor(*this));
-    }
+    virtual PhyloNeighbor* newNeighbor() const override;
 
     /**
         tell that the partial likelihood vector is not computed
@@ -264,15 +238,15 @@ public:
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor
 	*/
-	double* get_partial_lh(){
+	inline double* get_partial_lh(){
         return partial_lh;
 	}
 
-	double get_lh_scale_factor(){
-	return lh_scale_factor;
+	inline double get_lh_scale_factor(){
+	    return lh_scale_factor;
 	}
 
-	int get_partial_lh_computed(){
+	inline int get_partial_lh_computed(){
         return partial_lh_computed;
 	}
 
@@ -293,18 +267,16 @@ public:
 	/**
 	 * true if this Neighbor is directed towards the root
 	 */
-	bool isTowardsRoot() {
+	inline bool isTowardsRoot() {
 		ASSERT(direction != RootDirection::UNDEFINED_DIRECTION);
 		return (direction == RootDirection::TOWARD_ROOT);
 	}
 
-    int getSize() {
+    inline int getSize() {
         return size;
     }
     
-    PhyloNode* getNode() const {
-        return dynamic_cast<PhyloNode*>(node);
-    }
+    PhyloNode* getNode() const;
     
     bool isLikelihoodComputed() const;
     
@@ -365,9 +337,7 @@ private:
 
     /** size of subtree below this neighbor in terms of number of taxa */
     int size;
-
 };
-
 
 /**
     PhyloNeighbor and PhyloNode vectors

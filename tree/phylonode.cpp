@@ -19,11 +19,49 @@ std::string pointer_to_hex(const void *ptr) {
     return s.str();
 }
 
+PhyloNeighbor::PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
+    partial_lh = NULL;
+    scale_num = NULL;
+    partial_lh_computed = NOTHING_IS_COMPUTED;
+    lh_scale_factor = 0.0;
+    partial_pars = NULL;
+    direction = RootDirection::UNDEFINED_DIRECTION;
+    size = 0;
+}
+
+PhyloNeighbor::PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
+    partial_lh = nullptr;
+    scale_num = nullptr;
+    partial_lh_computed = NOTHING_IS_COMPUTED;
+    lh_scale_factor = 0.0;
+    partial_pars = nullptr;
+    direction = RootDirection::UNDEFINED_DIRECTION;
+    size = 0;
+}
+
+PhyloNeighbor::PhyloNeighbor(const PhyloNeighbor& nei) : Neighbor(nei) {
+    partial_lh = nullptr;
+    scale_num = nullptr;
+    partial_lh_computed = NOTHING_IS_COMPUTED;
+    lh_scale_factor = 0.0;
+    partial_pars = nullptr;
+    direction = nei.direction;
+    size = nei.size;
+}
+
+PhyloNeighbor* PhyloNeighbor::newNeighbor() const {
+    return (new PhyloNeighbor(*this));
+}
+
 void PhyloNeighbor::clearForwardPartialLh(PhyloNode* dad) {
     setLikelihoodComputed(false);
     FOR_EACH_PHYLO_NEIGHBOR(getNode(), dad, it, nei) {
         nei->clearForwardPartialLh(getNode());
     }
+}
+
+PhyloNode* PhyloNeighbor::getNode() const {
+    return dynamic_cast<PhyloNode*>(node);
 }
 
 bool PhyloNeighbor::isLikelihoodComputed() const {
