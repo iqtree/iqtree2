@@ -4692,7 +4692,8 @@ int PhyloTree::fixNegativeBranch(bool force, PhyloNode *node,
 void PhyloTree::doOneRandomNNI(PhyloBranch branch) {
     assert(branch.isInnerBranch());
 
-    if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
+    if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == 
+        RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
         std::swap(branch.first, branch.second);
     }
@@ -4701,7 +4702,8 @@ void PhyloTree::doOneRandomNNI(PhyloBranch branch) {
     nni.node1 = (PhyloNode*) branch.first;
     nni.node2 = (PhyloNode*) branch.second;
     FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt)
-    if (((PhyloNeighbor*)*node1NeiIt)->direction != TOWARD_ROOT)
+    if (((PhyloNeighbor*)*node1NeiIt)->direction != 
+        RootDirection::TOWARD_ROOT)
     {
         nni.node1Nei_it = node1NeiIt;
         break;
@@ -4718,7 +4720,10 @@ void PhyloTree::doOneRandomNNI(PhyloBranch branch) {
         }
     }
     assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
-    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != TOWARD_ROOT && ((PhyloNeighbor*)*nni.node2Nei_it)->direction != TOWARD_ROOT);
+    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != 
+           RootDirection::TOWARD_ROOT && 
+           ((PhyloNeighbor*)*nni.node2Nei_it)->direction != 
+           RootDirection::TOWARD_ROOT);
 
     if (constraintTree.isCompatible(nni))
         doNNI(nni, true);
@@ -4730,7 +4735,8 @@ NNIMove PhyloTree::getRandomNNI(PhyloBranch &branch) {
     // for rooted tree
     auto first_node  = dynamic_cast<PhyloNode*>(branch.first);
     auto second_node = dynamic_cast<PhyloNode*>(branch.second);
-    if ((first_node->findNeighbor(second_node))->direction == TOWARD_ROOT) {
+    if ((first_node->findNeighbor(second_node))->direction == 
+        RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
         swap(first_node, second_node);
         swap(branch.first, branch.second);
@@ -4740,7 +4746,8 @@ NNIMove PhyloTree::getRandomNNI(PhyloBranch &branch) {
     nni.node2 = second_node;
 
     FOR_NEIGHBOR_IT(first_node, second_node, node1NeiIt)
-        if (((PhyloNeighbor*)*node1NeiIt)->direction != TOWARD_ROOT) {
+        if (((PhyloNeighbor*)*node1NeiIt)->direction != 
+            RootDirection::TOWARD_ROOT) {
             nni.node1Nei_it = node1NeiIt;
             break;
         }
@@ -4756,8 +4763,10 @@ NNIMove PhyloTree::getRandomNNI(PhyloBranch &branch) {
         }
     }
     ASSERT(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
-    ASSERT(dynamic_cast<PhyloNeighbor*>(*nni.node1Nei_it)->direction != TOWARD_ROOT && 
-           dynamic_cast<PhyloNeighbor*>(*nni.node2Nei_it)->direction != TOWARD_ROOT);
+    auto neighOne = dynamic_cast<PhyloNeighbor*>(*nni.node1Nei_it);
+    auto neighTwo = dynamic_cast<PhyloNeighbor*>(*nni.node2Nei_it); 
+    ASSERT(neighOne->direction != RootDirection::TOWARD_ROOT && 
+           neighTwo->direction != RootDirection::TOWARD_ROOT);
     nni.newloglh = 0.0;
     return nni;
 }
@@ -4877,7 +4886,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     ASSERT(!node1->isLeaf() && !node2->isLeaf());
     ASSERT(node1->degree() == 3 && node2->degree() == 3);
     PhyloNeighbor* nei1 = (node1->findNeighbor(node2));
-    if (nei1->direction == TOWARD_ROOT) {
+    if (nei1->direction == RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
         std::swap(node1, node2);
     }
@@ -4900,7 +4909,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     } else {
         int cnt = 0;
         FOR_EACH_PHYLO_NEIGHBOR(node1, node2, node1_it, nei) {
-            if (nei->direction != TOWARD_ROOT)
+            if (nei->direction != RootDirection::TOWARD_ROOT)
             {
                 cnt = 0;
                 FOR_NEIGHBOR_IT(node2, node1, node2_it) {
@@ -5871,16 +5880,16 @@ void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
         node = getRoot();
     }
     if (dad) {
-        node->findNeighbor(dad)->direction = TOWARD_ROOT;
+        node->findNeighbor(dad)->direction = RootDirection::TOWARD_ROOT;
     }
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         // do not update if direction was already computed
-        ASSERT(nei->direction != TOWARD_ROOT);
-        if (nei->direction != UNDEFINED_DIRECTION) {
+        ASSERT(nei->direction != RootDirection::TOWARD_ROOT);
+        if (nei->direction != RootDirection::UNDEFINED_DIRECTION) {
             continue;
         }
         // otherwise undefined.
-        nei->direction = AWAYFROM_ROOT;
+        nei->direction = RootDirection::AWAY_FROM_ROOT;
         computeBranchDirection(nei->getNode(), node);
     }
 }
@@ -5890,10 +5899,11 @@ void PhyloTree::clearBranchDirection(PhyloNode *node, PhyloNode *dad) {
         node = getRoot();
     }
     if (dad) {
-        node->findNeighbor(dad)->direction = UNDEFINED_DIRECTION;
+        node->findNeighbor(dad)->direction 
+            = RootDirection::UNDEFINED_DIRECTION;
     }
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
-        nei->direction = UNDEFINED_DIRECTION;
+        nei->direction = RootDirection::UNDEFINED_DIRECTION;
         clearBranchDirection(nei->getNode(), node);
     }
 

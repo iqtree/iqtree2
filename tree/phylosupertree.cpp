@@ -949,7 +949,8 @@ int PhyloSuperTree::getMaxPartNameLength() {
 }
 
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves) {
-    if ((node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+    if ((node1->findNeighbor(node2))->direction == 
+	    RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
         std::swap(node1, node2);
     }
@@ -961,7 +962,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	SuperNeighbor *node2_nei = nullptr;
 	SuperNeighbor *node2_nei_other = nullptr;
 	FOR_SUPER_NEIGHBOR_DECLARE(node1, node2, node1_it) {
-		if ((*node1_it)->direction != TOWARD_ROOT)
+		if ((*node1_it)->direction != RootDirection::TOWARD_ROOT)
 		{
 			node1_nei = *node1_it;
 			break;

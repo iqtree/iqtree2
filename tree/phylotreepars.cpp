@@ -2002,7 +2002,8 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
         id[0] = -1;
         // find the neighbor toward root to preserve root
         for (i = 0; i < node->neighbors.size(); i++)
-            if (node->getNeighborByIndex(i)->direction == TOWARD_ROOT) {
+            if (node->getNeighborByIndex(i)->direction == 
+                RootDirection::TOWARD_ROOT) {
                 id[0] = i;
                 break;
             }

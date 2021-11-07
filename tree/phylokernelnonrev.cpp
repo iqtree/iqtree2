@@ -26,7 +26,8 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
 //    dad_branch->setLikelihoodComputed(true);
     PhyloNode *node = dad_branch->getNode();
 
-    ASSERT(dad_branch->direction != UNDEFINED_DIRECTION);
+    ASSERT(dad_branch->direction != 
+           RootDirection::UNDEFINED_DIRECTION);
 
     size_t nstates = aln->num_states;
 //    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
@@ -390,7 +391,9 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     if (central_partial_lh!=nullptr) {
         initializeAllPartialLh();
     }
-    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && dad != root)) {
+    if (node->isLeaf() || 
+        (dad_branch->direction == RootDirection::AWAY_FROM_ROOT 
+         && dad != root)) {
         std::swap(node, dad);
         std::swap(dad_branch, node_branch);
     }
@@ -633,7 +636,9 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh)
         initializeAllPartialLh();
-    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && dad != root)) {
+    if (node->isLeaf() || 
+        (dad_branch->direction == RootDirection::AWAYFROM_ROOT 
+         && dad != root)) {
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }

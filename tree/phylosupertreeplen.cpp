@@ -421,9 +421,10 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
     ddf_ret = -ddf;
 }
 
-NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
+NNIMove PhyloSuperTreePlen::getBestNNIForBran
+			(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
 {
-    if ((node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+    if ((node1->findNeighbor(node2))->direction == RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
 		std::swap(node1, node2);
     }
@@ -451,7 +452,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
     	}
     } else {
 		FOR_EACH_PHYLO_NEIGHBOR(node1, node2, node1_it, nei) {
-			if (nei->direction != TOWARD_ROOT)
+			if (nei->direction != RootDirection::TOWARD_ROOT)
 			{
 				cnt = 0;
 				FOR_NEIGHBOR_IT(node2, node1, node2_it) {

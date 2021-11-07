@@ -62,19 +62,22 @@ template <class T> class track_nulled_ptr {
             return *this;
         }
 };
+
 template <class T> void aligned_free(track_nulled_ptr<T>& mem) {
     //aligned_free(mem.value);
     mem.value = nullptr;
 }
-
 
 typedef unsigned short UBYTE;
 
 /**
  * direction of a Neighbor from the root, for rooted tree only
  */
-enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
-
+enum class RootDirection {
+    UNDEFINED_DIRECTION, 
+    TOWARD_ROOT, 
+    AWAY_FROM_ROOT
+};
 
 class PhyloNeighbor;
 /**
@@ -229,12 +232,12 @@ public:
         @param aid branch ID
      */
     PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
-        partial_lh = NULL;
-        scale_num = NULL;
+        partial_lh = nullptr;
+        scale_num = nullptr;
         partial_lh_computed = NOTHING_IS_COMPUTED;
         lh_scale_factor = 0.0;
-        partial_pars = NULL;
-        direction = UNDEFINED_DIRECTION;
+        partial_pars = nullptr;
+        direction = RootDirection::UNDEFINED_DIRECTION;
         size = 0;
     }
 
@@ -313,8 +316,8 @@ public:
 	 * true if this Neighbor is directed towards the root
 	 */
 	bool isTowardsRoot() {
-		ASSERT(direction != UNDEFINED_DIRECTION);
-		return (direction == TOWARD_ROOT);
+		ASSERT(direction != RootDirection::UNDEFINED_DIRECTION);
+		return (direction == RootDirection::TOWARD_ROOT);
 	}
 
     int getSize() {

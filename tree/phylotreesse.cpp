@@ -399,8 +399,9 @@ void PhyloTree::computeTipLikelihoodForOneModel
     int state;
     if (aln->seq_type == SeqType::SEQ_POMO) {
         if (aln->pomo_sampling_method != SamplingType::SAMPLING_WEIGHTED_BINOM &&
-            aln->pomo_sampling_method != SamplingType::SAMPLING_WEIGHTED_HYPER)
+            aln->pomo_sampling_method != SamplingType::SAMPLING_WEIGHTED_HYPER) {
             outError("Sampling method not supported by PoMo.");
+        }
         ASSERT(aln->STATE_UNKNOWN == nstates + aln->pomo_sampled_states.size());
     }
 

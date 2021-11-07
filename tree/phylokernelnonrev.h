@@ -45,7 +45,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
     ASSERT(dad);
     PhyloNode *node = dad_branch->getNode();
     
-    //    assert(dad_branch->direction != UNDEFINED_DIRECTION);
+    //    assert(dad_branch->direction != 
+    //           RootDirection::UNDEFINED_DIRECTION);
     
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
@@ -596,7 +597,9 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
     if (!central_partial_lh) {
         initializeAllPartialLh();
     }
-    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
+    if (node->isLeaf() || 
+        (dad_branch->direction == RootDirection::AWAY_FROM_ROOT && 
+         !isRootLeaf(dad))) {
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }
@@ -1091,7 +1094,9 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     if (!central_partial_lh) {
         initializeAllPartialLh();
     }
-    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && !isRootLeaf(dad))) {
+    if (node->isLeaf() || 
+        (dad_branch->direction == RootDirection::AWAY_FROM_ROOT && 
+         !isRootLeaf(dad))) {
         std::swap(dad,        node);
         std::swap(dad_branch, node_branch);
     }

@@ -876,7 +876,7 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
             PhyloNode* childNode = child->getNode();
             // precompute information buffer
-            if (child->direction == TOWARD_ROOT) {
+            if (child->direction == RootDirection::TOWARD_ROOT) {
                 // transpose probability matrix
 #ifndef _MSC_VER
                 double mat[nstatesqr];
