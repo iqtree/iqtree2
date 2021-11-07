@@ -12,6 +12,7 @@
 
 namespace ModelExpression {
     class Assignment;
+    class Variable;
 };
 
 class ModelFileLoader {
@@ -115,7 +116,10 @@ public:
                          ModelInfoFromYAMLFile&       info,
                          const std::string& constraint_string,
                          LoggingTarget*     logging_target);
-    
+    double setConstraintVariable(ModelExpression::Variable* v,
+                                 ModelExpression::Expression* x,
+                                 ModelInfoFromYAMLFile& info,
+                                 LoggingTarget* logging_target);
     void parseYAMLMixtureModels(Params& params,
                                 const YAML::Node& mixture_models,
                                 ModelInfoFromYAMLFile& info,

@@ -578,26 +578,21 @@ void ModelFileLoader::parseYAMLModelConstraints(const YAML::Node& constraints,
     }
 }
 
-double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
-                                      ModelInfoFromYAMLFile& info,
-                                      const std::string& constraint_string,
-                                      LoggingTarget* logging_target) {
-    ModelExpression::Expression* assigned = a->getTarget();
-    if (!assigned->isVariable()) {
-        std::stringstream complaint;
-        complaint << "Constraint setting for model " << info.model_name
-                  << " did not assign a variable: "  << constraint_string;
-        outError(complaint.str());
-    }
-    ModelExpression::Variable*   v = a->getTargetVariable();
-    ModelExpression::Expression* x = a->getExpression();
+double ModelFileLoader::setConstraintVariable
+            (ModelExpression::Variable*   v,
+             ModelExpression::Expression* x,
+             ModelInfoFromYAMLFile& info,
+             LoggingTarget* logging_target) {
     double setting;
     if (x->isAssignment()) {
         auto a2 = dynamic_cast<ModelExpression::Assignment*>(x);
+        std::stringstream constraint;        
+        a2->writeTextTo(constraint);
+        std::string constraint_string = constraint.str();
         setting = setConstraint(a2, info, constraint_string,
                                 logging_target);
     } else {
-        setting = a->getExpression()->evaluate();
+        setting = x->evaluate();
     }
     ModelVariable& mv = info.assign(v->getName(), setting);
     mv.markAsFixed();
@@ -632,8 +627,67 @@ double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
             }
         }
     }
-
     return setting;
+}
+
+double ModelFileLoader::setConstraint(ModelExpression::Assignment* a,
+                                      ModelInfoFromYAMLFile& info,
+                                      const std::string& constraint_string,
+                                      LoggingTarget* logging_target) {
+    ModelExpression::Expression* assigned = a->getTarget();
+    ModelExpression::Expression* x = a->getExpression();
+    if (x->isAssignment()) {
+        ModelExpression::Assignment* right_assign =
+            dynamic_cast<ModelExpression::Assignment*>(x);
+        setConstraint(right_assign, info, constraint_string, logging_target);
+        x = right_assign->getTarget();
+    }
+    if (assigned->isInitializedList()) {
+        if (!x->isInitializedList()) {
+            std::stringstream complaint;
+            complaint << "Constraint setting for model " << info.model_name
+                        << " cannot set a list of variables"
+                        << " to a single value";
+            //Todo: maybe support this.
+            outError(complaint.str());
+        }
+        auto list_a = dynamic_cast<ModelExpression::ListOperator*>(assigned);
+        auto list_x = dynamic_cast<ModelExpression::ListOperator*>(x);
+        int  n_a    = list_a->getEntryCount();
+        int  n_x    = list_x->getEntryCount();
+        if (n_a!=n_x) {
+            std::stringstream complaint;
+            complaint << "Constraint setting for model " << info.model_name
+                        << " cannot set " << n_a << " variables"
+                        << " to " << n_x << " values";
+            outError(complaint.str());
+        }
+        for (int i=0; i<n_a; ++i) {
+            ModelExpression::Expression* a_i =
+                list_a->getEntryExpression(i);
+            if (!a_i->isVariable()) {
+                std::stringstream complaint;
+                complaint << "Constraint setting for model " << info.model_name
+                            << " cannot set " << (i+1) << " th"
+                            << " of " << n_a << " variables"
+                            << " (as it is not a variable!)";
+                outError(complaint.str());
+            }
+            auto v = dynamic_cast<ModelExpression::Variable*>
+                        (a_i);
+            x = list_x->getEntryExpression(i);
+            setConstraintVariable(v, x, info, logging_target);
+        }
+        return 0;
+    }
+    if (!assigned->isVariable()) {
+        std::stringstream complaint;
+        complaint << "Constraint setting for model " << info.model_name
+                  << " did not assign a variable: "  << constraint_string;
+        outError(complaint.str());
+    }
+    ModelExpression::Variable* v = a->getTargetVariable();
+    return setConstraintVariable(v,x, info, logging_target);
 }
 
 void ModelFileLoader::parseRateMatrix(const YAML::Node& rate_matrix,

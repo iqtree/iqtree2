@@ -529,7 +529,7 @@ const ModelInfoFromYAMLFile::Parameters& ModelInfoFromYAMLFile::getParameters() 
 
 
 const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
-(const char* name) const {
+                            (const char* name) const {
     size_t      param_count = parameters.size();
     std::string lower_name = string_to_lower(name);
     for (size_t i = 0; i < param_count; ++i) {
@@ -537,7 +537,17 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
             return &parameters[i];
         }
     }
+    //
+    //Todo: What about references to parameters of 
+    //child models?  In linked_models, mixed_models,
+    //and subtree_models.  Shouldn't it be possible
+    //to look those up too?
+    //
     if (parent_model!=nullptr) {
+        const char *parent_prefix = "parent.";
+        if (startsWith(lower_name,parent_prefix)) {
+            name += strlen(parent_prefix);
+        }
         return parent_model->findParameter(name);    
     }
     return nullptr;
@@ -558,6 +568,10 @@ const YAMLFileParameter* ModelInfoFromYAMLFile::findParameter
         }
     }
     if (parent_model!=nullptr) {
+        const char *parent_prefix = "parent.";
+        if (startsWith(lower_name,parent_prefix)) {
+            name += strlen(parent_prefix);
+        }
         return parent_model->findParameter(name, type);    
     }
     return nullptr;
@@ -691,6 +705,12 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
     if (!p.init_expression.empty()) {
         try {
             Interpreter ix(*this, p.init_expression);
+            if (ix.evaluatesToAList()) {
+                //Expression evaluates to a list, need to select
+                //into it.
+                int list_entry_num = i - p.minimum_subscript;
+                ix.convertToListLookup(list_entry_num);
+            } 
             v = ix.evaluate();
         }
         catch (Exception& x) {
@@ -765,6 +785,12 @@ void ModelInfoFromYAMLFile::updateParameterSubscriptRange(YAMLFileParameter& p,
         if (!p.init_expression.empty()) {
             try {
                 Interpreter ix(*this, p.init_expression);
+                if (ix.evaluatesToAList()) {
+                    //Expression evaluates to a list, need to select
+                    //into it.
+                    int list_entry_num = i - p.minimum_subscript;
+                    ix.convertToListLookup(list_entry_num);
+                }
                 v = ix.evaluate();
             }
             catch (Exception& x) {
@@ -1933,6 +1959,7 @@ void ModelInfoFromYAMLFile::changeParameterSubscriptRange
     param.maximum_subscript = new_max;
     for (int i=new_min; i<=new_max; ++i) {
         if (i<old_min || old_max<i) {
+            forceAssign("subscript", i);
             setSubscriptedVariable(param, i, logging_target);
         } 
     }

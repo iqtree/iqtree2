@@ -169,6 +169,7 @@ namespace ModelExpression {
     bool   Expression::isConstant()         const { return false; }
     bool   Expression::isEstimate()         const { return false; }
     bool   Expression::isFunction()         const { return false; }
+    bool   Expression::isInitializedList()  const { return false; }
     bool   Expression::isList()             const { return false; }
     bool   Expression::isOperator()         const { return false; }
     bool   Expression::isRange()            const { return false; }
@@ -531,41 +532,139 @@ namespace ModelExpression {
     Assignment::Assignment(ModelInfoFromYAMLFile& for_model )
     : super(for_model) { }
 
+    void Assignment::checkAssignment(Expression* left, 
+                                     Expression* right) {
+        if (left==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null left-hand side");
+        }
+        if (right==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null right-hand side");
+        }
+        if (left->isList()) {
+            //Might be a vector assignment
+            auto vars = dynamic_cast<ListOperator*>(left);
+            if (vars==nullptr) {
+                throw ModelExpression::ModelException
+                    ("Assignment's left-hand side is both"
+                     " a list and NOT a list (logic error).");
+            }
+            int var_count = vars->getEntryCount();
+            if (!right->isList()) {
+                throw ModelExpression::ModelException
+                    ("Assignment's left-hand side is a list,"
+                     " but its right-hand side is not.");
+            }
+            auto vals = dynamic_cast<ListOperator*>(right);
+            if (vals==nullptr) {
+                throw ModelExpression::ModelException
+                    ("Assignment's right-hand side is both"
+                     " a list and NOT a list (logic error).");
+            }
+            int val_count = vals->getEntryCount();
+            if (var_count != val_count) {
+                std::stringstream complaint;
+                complaint << "Cannot assign a list"
+                          << " of " << var_count 
+                          << " variables from a list"
+                          << " of " << val_count << " values";
+                throw ModelExpression::ModelException
+                    (complaint.str());
+            }
+            for (int i=0; i<var_count; ++i) {
+                auto var = vars->getEntryExpression(i);
+                auto val = vals->getEntryExpression(i);
+                try {
+                    checkAssignment(var, val);
+                } 
+                catch (const ModelExpression::ModelException& ex) {
+                    std::stringstream complaint;
+                    complaint << "Could not make sense of "
+                              << " entry (with ordinal " << i << "),"
+                              << " (in a list assignment) ";
+                    var->writeTextTo(complaint);
+                    complaint << " := ";
+                    val->writeTextTo(complaint);
+                    complaint << ", because: ";
+                    throw ModelExpression::ModelException 
+                        (complaint.str() + ex.getMessage());
+                }
+            }
+            return; //All good, list assignment checked!
+        }
+        if (left->isVariable()) {
+            return;
+        }
+        throw ModelExpression::ModelException
+              ("Can only assign to variables");
+    }
+
     void Assignment::setOperands(Expression* left, 
                                  Expression* right) { //takes ownership
         super::setOperands(left, right);
-        if (rhs==nullptr) {
-            throw ModelExpression::ModelException
-                  ("Assignment has null right-hand side");
-        }
-        if (lhs==nullptr) {
-            throw ModelExpression::ModelException
-                  ("Assignment has null left-hand side");
-        }
-        if (!lhs->isVariable()) {
-            throw ModelExpression::ModelException
-                  ("Can only assign to variables");
-        }
+        checkAssignment(left, right);
     }
 
-    double Assignment::evaluate() const {
-        if (rhs==nullptr) {
+    double Assignment::doAssignment(Expression* left,
+                                    Expression *right) const {
+
+        if (left==nullptr) {
             throw ModelExpression::ModelException
                   ("Assignment has null right-hand side");
         }
-        double eval = rhs->evaluate();
-        if (lhs==nullptr) {
-            throw ModelExpression::ModelException
-                  ("Assignment has null left-hand side");
+        if (left->isList() && right->isList()) {
+            auto leftList   = dynamic_cast<ListOperator*>(left);
+            auto rightList  = dynamic_cast<ListOperator*>(right);
+            int  leftCount  = leftList->getEntryCount();
+            int  rightCount = rightList->getEntryCount();
+            if (leftCount!=rightCount) {
+                std::stringstream complaint;
+                complaint << "Cannot assign a list"
+                          << " of " << leftCount << " "
+                          << " variables to a list"
+                          << " of " << rightCount << "valeus";
+                throw ModelExpression::ModelException
+                    ( complaint.str() );
+            }
+            double eval=0;
+            for (int i=0; i<leftCount; ++i) {
+                auto var = leftList->getEntryExpression(i);
+                auto val = rightList->getEntryExpression(i);
+                try {
+                    eval = doAssignment( var, val );
+                }
+                catch (const ModelExpression::ModelException& ex) {
+                    std::stringstream complaint;
+                    complaint << "Could not perform list assignment "
+                              << " with ordinal " << i 
+                              << ", of ";
+                    var->writeTextTo(complaint);
+                    complaint << " := ";
+                    val->writeTextTo(complaint);
+                    complaint << ", because: ";
+                    throw ModelExpression::ModelException 
+                        (complaint.str() + ex.getMessage());
+                }
+            }
+            return eval;
         }
-        if (!lhs->isVariable()) {
+        if (!left->isVariable()) {
             throw ModelExpression::ModelException
                   ("Can only assign to variables");
         }
-        Variable* v = dynamic_cast<ModelExpression::Variable*>(lhs);
+        if (right==nullptr) {
+            throw ModelExpression::ModelException
+                  ("Assignment has null right-hand side");
+        }
+        double eval = right->evaluate();
+        Variable* v = dynamic_cast<ModelExpression::Variable*>(left);
         model.assign(v->getName(), eval);
         //std::cout << "VSET: " << v->getName() << "=" << eval << std::endl;
-        return eval;
+        return eval;    }
+
+    double Assignment::evaluate() const {
+        return doAssignment(lhs, rhs);
     }
 
     void  Assignment::writeTextTo(std::stringstream &text) const {
@@ -758,6 +857,10 @@ namespace ModelExpression {
         }
     }
 
+    void ListOperator::addOperand(Expression* operand) {
+        list_entries.push_back(operand);
+    }
+
     bool ListOperator::isFixed() const {
         for (Expression* entry : list_entries) {
             if (!entry->isFixed()) {
@@ -765,6 +868,10 @@ namespace ModelExpression {
             }
         }
         return true;
+    }
+
+    bool ListOperator::isInitializedList() const {
+        return 0<getEntryCount();
     }
 
     bool ListOperator::isList() const {
@@ -775,7 +882,7 @@ namespace ModelExpression {
         return static_cast<int>(list_entries.size());
     }
 
-    double  ListOperator::evaluateEntry(int index) const {
+    Expression* ListOperator::getEntryExpression(int index) const {
         if (index<0) {
             std::stringstream complaint;
             complaint << "Cannot select list element"
@@ -790,7 +897,13 @@ namespace ModelExpression {
             throw ModelException(complaint.str());
 
         }
-        return list_entries[index]->evaluate();
+        return list_entries[index];
+    }
+
+    double  ListOperator::evaluateEntry(int index) const {
+        auto expr = getEntryExpression(index);
+        ASSERT(expr!=nullptr);
+        return expr->evaluate();
     }
 
     CommaOperator::CommaOperator(ModelInfoFromYAMLFile& for_model): super(for_model) {
@@ -906,6 +1019,8 @@ namespace ModelExpression {
                 }
                 int int_index = (int) floor(index);
                 return r->evaluateEntry(int_index);
+            } else {
+                //What to do?  rhs isn't something we can select into
             }
             if (index==0) {
                 return 0.0;
@@ -1045,6 +1160,10 @@ namespace ModelExpression {
             } else if (token->isFunction()) {
                 operator_stack << token;
             } else if (token->isOperator()) {
+                if (token->isInitializedList()) {
+                    output << token;
+                    continue;
+                }
                 operator_stack.handlePrecedence(token, output);
                 operator_stack << token;
             } else if (token->isVariable()) {
@@ -1059,7 +1178,6 @@ namespace ModelExpression {
         while ( !operator_stack.empty() ) {
             output << operator_stack.pop();
         }
-
         return parseTokenizedExpressions(output);
     }
 
@@ -1068,6 +1186,10 @@ namespace ModelExpression {
         for (size_t i=0; i<tokenized.size(); ++i) {
             Expression* token = tokenized[i];
             if (token->isOperator()) {
+                if (token->isInitializedList()) {
+                    operand_stack << token;
+                    continue;
+                }
                 Expression*    rhs = operand_stack.pop();
                 Expression*    lhs = operand_stack.pop();
                 InfixOperator* op  = dynamic_cast<InfixOperator*>(token);
@@ -1157,6 +1279,22 @@ namespace ModelExpression {
                             << " for model " << model.getLongName()
                             << " was not terminated by a closing bracket:\n" << text;
                 throw ModelException(complaint.str());
+            }
+        } else {
+            auto param = model.findParameter(var_name);
+            if (param!=nullptr && param->is_subscripted) {
+                //Construct a list, containing each of the
+                //subscripted variables for the parameter.                
+                auto list_expr = new ListOperator(model);
+                for (int i=param->minimum_subscript; 
+                        i<=param->maximum_subscript; ++i) {
+                    auto indexExpr = new Constant(model, i);
+                    auto opExpr    = new ParameterSubscript
+                                        (model, param, indexExpr);
+                    list_expr->addOperand(opExpr);
+                }
+                expr = list_expr;
+                return true;
             }
         }
         expr = new Variable(model, var_name);
@@ -1349,5 +1487,15 @@ namespace ModelExpression {
                                  " " + x.getMessage());
         }
         return true;
+    }
+
+    bool InterpretedExpression::evaluatesToAList   () const {
+        return root->isList();
+    }
+
+    void InterpretedExpression::convertToListLookup(int ix) {
+        SelectOperator *new_top = new SelectOperator(model);
+        new_top->setOperands( new Constant(model, ix), root );
+        root = new_top;
     }
 }

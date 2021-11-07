@@ -48,6 +48,7 @@ namespace ModelExpression {
         virtual bool   isEstimate()         const;
         virtual bool   isFixed()            const = 0;
         virtual bool   isFunction()         const;
+        virtual bool   isInitializedList()  const;
         virtual bool   isList()             const;
         virtual bool   isOperator()         const;
         virtual bool   isRange()            const;
@@ -248,6 +249,8 @@ namespace ModelExpression {
         virtual ~Assignment() = default;
         virtual void   setOperands(Expression* left, 
                                    Expression* right) override; //takes ownership
+
+
         virtual double evaluate()           const override;
         virtual void   writeTextTo(std::stringstream &text) const override;
         virtual bool   isAssignment()       const override;
@@ -257,6 +260,14 @@ namespace ModelExpression {
         Expression*    getTarget()          const;
         Variable*      getTargetVariable()  const;
         Expression*    getExpression()      const;
+    protected:
+        void    checkAssignment(Expression* left, 
+                                Expression* right);
+        /* called from setOperands */
+        double  doAssignment(Expression* left,
+                             Expression *right) const;
+        /* called from evaluate */
+
     };
 
     class BooleanOperator: public InfixOperator {
@@ -329,14 +340,17 @@ namespace ModelExpression {
         ListOperator(ModelInfoFromYAMLFile& for_model, 
                      Expression* only); //1-entry list (takes ownership)
         virtual ~ListOperator();
-        virtual int    getPrecedence()   const override;
-        virtual double evaluate()        const override;
+        virtual int    getPrecedence()     const override;
+        virtual double evaluate()          const override;
         virtual void   writeTextTo(std::stringstream &text) const override;
         virtual void   setOperands(Expression* left, Expression* right) override; //takes ownership
-        virtual bool   isFixed()         const override;
-        virtual bool   isList()          const override;
-        virtual int    getEntryCount()   const;
+        virtual void   addOperand(Expression* op); //takes ownership
+        virtual bool   isFixed()           const override;
+        virtual bool   isInitializedList() const override;
+        virtual bool   isList()            const override;
+        virtual int    getEntryCount()     const;
         virtual double evaluateEntry(int index) const;
+        virtual Expression* getEntryExpression(int index) const;
     };
 
     class CommaOperator: public ListOperator {
@@ -439,6 +453,9 @@ namespace ModelExpression {
         Expression*    expression() const; //Does *not* yield ownership
         Expression* detatchExpression(); //*Does* yield ownership
         bool evaluateIntegerRange(std::pair<int,int>& range) const;
+        bool evaluatesToAList    () const;     
+        void convertToListLookup (int ix);                                       
+
     };
 } //ModelExpression namespace
 

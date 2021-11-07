@@ -64,7 +64,8 @@ public:
     double              tolerance;            //Tolerance
     std::string         init_expression;      //Expression for initializing parameter
                                               //(Rate models may need to evaluate)
-    double              value;
+    double              value;                //Value (either, value of parameter, if not subscripted)
+                                              //(or of first subscripted parameter, if subscripted)
 
     //Constructors
     YAMLFileParameter();
