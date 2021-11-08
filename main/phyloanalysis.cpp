@@ -492,6 +492,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
             out << treemix->weights[i];
         }
         out << endl << endl;
+        /*
         // show the proportion of parsimony informative sites with max posterior probabilities among the trees
         out << "Proportion of informative sites with max post prob over the trees: ";
         for (i=0; i<treemix->size(); i++) {
@@ -500,6 +501,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
             out << treemix->max_posterior_ratio[i];
         }
         out << endl << endl;
+        */
     } else {
         out << "Model of substitution: " << tree.getModelName() << endl << endl;
         reportModel(out, tree.aln, tree.getModel());

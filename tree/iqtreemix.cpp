@@ -77,7 +77,6 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     
     // number of optimization steps, default: number of Trees * 2
     // optimize_steps = 2 * size();
-    // optimize_steps = 100;
     optimize_steps = 1000;
     
     // initialize the variables
@@ -807,6 +806,9 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
             if (weights[c] < 1e-10) weights[c] = 1e-10;
         }
         
+        // for weight-restricted condition
+        checkWeightGrp();
+        
         // if all differences between the new weights and the old weights <= WEIGHT_EPSILON, then tree_weight_converge = true
         tree_weight_converge = true;
         for (c = 0; c< ntree && tree_weight_converge; c++)
@@ -1336,13 +1338,19 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     double gradient_epsilon = 0.0001;
     double epsilon_start = 0.0001;
     double epsilon_step = 0.1;
-    double curr_epsilon = epsilon_start;
+    double curr_epsilon;
     double prev_score, prev_score2, score, t_score;
     bool tree_weight_converge = false;
     PhyloTree *ptree;
+    
 
     n = 1;
-    
+
+    // if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
+    //    epsilon_start = 0.1; // using decreasing value of epsilon for BFGS optimization method
+    // }
+    curr_epsilon = epsilon_start;
+
     // allocate memory
     pattern_mix_lh = new double[ntree * nptn];
     
@@ -1418,7 +1426,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 for (i=0; i<models.size(); i++) {
                     models[i]->optimizeParameters(curr_epsilon);
                 }
-                score = computeLikelihood();
+                // score = computeLikelihood();
                 // cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
             }
 
@@ -1430,13 +1438,14 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         site_rates[i]->rescaleRates();
                     }
                 }
-                score = computeLikelihood();
+                // score = computeLikelihood();
                 // cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
             }
 
             // optimize tree weights
             if (!isTreeWeightFixed) {
-                if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
+                // if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
+                if (params->optimize_alg_treeweight == "BFGS") {
                     score = optimizeTreeWeightsByBFGS(curr_epsilon);
                     tree_weight_converge = true;
                 } else {
@@ -1470,10 +1479,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     setCurScore(score);
     
     // compute the proportion of sites for each tree with the maximum posterior probability
-    computeMaxPosteriorRatio(pattern_mix_lh, false, false);
+    // computeMaxPosteriorRatio(pattern_mix_lh, false, false);
     
     // compute the proportion of sites for each tree with the maximum high-enough likelihood values
-    computeMaxLikeRatio();
+    // computeMaxLikeRatio();
 
     delete[] pattern_mix_lh;
 
@@ -1521,8 +1530,10 @@ string IQTreeMix::getTreeString() {
     stringstream tree_stream;
     size_t i;
     
-    for (i=0; i<size(); i++)
+    for (i=0; i<size(); i++) {
         at(i)->printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
+        tree_stream << "\n";
+    }
     return tree_stream.str();
 }
 
@@ -1553,11 +1564,24 @@ int IQTreeMix::getNParameters() {
     for (i=0; i<site_rates.size(); i++) {
         df += site_rates[i]->getNDim();
     }
-    for (i=0; i<size(); i++) {
-        df += at(i)->getNBranchParameters(BRLEN_OPTIMIZE);
+    // for branch parameters
+    if (params->fixed_branch_length != BRLEN_FIX) {
+        if (isHighRestrict) {
+            df += branch_group.size();
+        } else {
+            for (i=0; i<size(); i++) {
+                df += at(i)->getNBranchParameters(BRLEN_OPTIMIZE);
+            }
+        }
     }
     // for tree weights
-    df += (size() - 1);
+    if (!isTreeWeightFixed) {
+        if (weightGrpExist) {
+            df += (weight_group_member.size() - 1);
+        } else {
+            df += (size() - 1);
+        }
+    }
     return df;
 }
 
