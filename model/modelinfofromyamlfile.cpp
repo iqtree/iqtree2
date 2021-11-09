@@ -686,7 +686,6 @@ void ModelInfoFromYAMLFile::addParameter(const YAMLFileParameter& p,
             //here might *add* a variable, and depending on the container
             //type of Variables... the ModelVariable& could go wrong
             //(and that'd be *nasty* insidious coupling).
-
             setSubscriptedVariable(p, i, logging_target);
         }
     }
@@ -700,8 +699,10 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
          LoggingTarget* logging_target) {
     typedef ModelExpression::InterpretedExpression Interpreter;
     typedef ModelExpression::ModelException        Exception;
-    std::string var_name = p.getSubscriptedVariableName(i);
-    double      v        = p.value;
+    std::string var_name  = p.getSubscriptedVariableName(i);
+    double      v         = p.value;
+    std::string expr_text;
+
     if (!p.init_expression.empty()) {
         try {
             Interpreter ix(*this, p.init_expression);
@@ -709,6 +710,11 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
                 //Expression evaluates to a list, need to select
                 //into it.
                 int list_entry_num = i - p.minimum_subscript;
+                auto list = 
+                    dynamic_cast<ModelExpression::ListOperator*>
+                    (ix.expression());
+                ASSERT(list!=nullptr);
+                expr_text = list->getEntryExpressionText(list_entry_num);
                 ix.convertToListLookup(list_entry_num);
             } 
             v = ix.evaluate();
@@ -716,14 +722,15 @@ void ModelInfoFromYAMLFile::setSubscriptedVariable
         catch (Exception& x) {
             std::stringstream complaint;
             complaint << "Error initializing " << p.name 
-                        << "(" << i << ")";
+                      << "(" << i << ")";
             throw Exception(complaint.str());
         }
     }
     if (i<11) {
         TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, 
                     "Setting " << getName() << "." 
-                    << var_name << "=" << p.init_expression 
+                    << var_name << "=" 
+                    << (expr_text.empty() ? p.init_expression : expr_text)
                     << (p.init_expression.empty() ? "" : "=")
                     << v );
     }

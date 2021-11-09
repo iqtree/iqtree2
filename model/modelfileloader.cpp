@@ -290,7 +290,7 @@ void ModelFileLoader::setParameterValue(const YAML::Node&      param,
     //Todo: What if name was a list, and initValue is also a list?!
     p.init_expression = stringScalar(param, "initValue", "");
     p.range           = parseRange  (param, "range", p.range, info);
-    if (p.init_expression!="") {
+    if (!p.init_expression.empty()) {
         int dummy_subscript = p.is_subscripted ? p.minimum_subscript : -1;
         info.forceAssign("subscript", dummy_subscript);
         p.value = info.evaluateExpression(p.init_expression,

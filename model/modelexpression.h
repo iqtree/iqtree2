@@ -351,6 +351,8 @@ namespace ModelExpression {
         virtual int    getEntryCount()     const;
         virtual double evaluateEntry(int index) const;
         virtual Expression* getEntryExpression(int index) const;
+        std::string    getEntryExpressionText(int ix) const;
+
     };
 
     class CommaOperator: public ListOperator {
@@ -451,11 +453,10 @@ namespace ModelExpression {
         virtual double evaluate()   const override;
         virtual void   writeTextTo(std::stringstream &text) const override;
         Expression*    expression() const; //Does *not* yield ownership
-        Expression* detatchExpression(); //*Does* yield ownership
-        bool evaluateIntegerRange(std::pair<int,int>& range) const;
-        bool evaluatesToAList    () const;     
-        void convertToListLookup (int ix);                                       
-
+        Expression*    detatchExpression(); //*Does* yield ownership
+        bool           evaluateIntegerRange(std::pair<int,int>& range) const;
+        bool           evaluatesToAList    () const;     
+        void           convertToListLookup (int ix);
     };
 } //ModelExpression namespace
 

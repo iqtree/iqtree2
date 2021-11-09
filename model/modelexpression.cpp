@@ -552,9 +552,16 @@ namespace ModelExpression {
             }
             int var_count = vars->getEntryCount();
             if (!right->isList()) {
-                throw ModelExpression::ModelException
-                    ("Assignment's left-hand side is a list,"
-                     " but its right-hand side is not.");
+                if (right->isAssignment()) {
+                    auto a_right = dynamic_cast<ModelExpression::Assignment*>(right);
+                    checkAssignment(a_right->getTarget(), 
+                                    a_right->getExpression());
+                    right = a_right->getTarget();
+                } else {
+                    throw ModelExpression::ModelException
+                        ("Assignment's left-hand side is a list,"
+                        " but its right-hand side is not.");
+                }
             }
             auto vals = dynamic_cast<ListOperator*>(right);
             if (vals==nullptr) {
@@ -899,6 +906,15 @@ namespace ModelExpression {
         }
         return list_entries[index];
     }
+
+    std::string ListOperator::getEntryExpressionText(int ix) const {
+        auto expr = getEntryExpression(ix);
+        ASSERT(expr!=nullptr);
+        std::stringstream text;
+        expr->writeTextTo(text);
+        return text.str();
+    }
+
 
     double  ListOperator::evaluateEntry(int index) const {
         auto expr = getEntryExpression(index);
@@ -1490,6 +1506,7 @@ namespace ModelExpression {
     }
 
     bool InterpretedExpression::evaluatesToAList   () const {
+        ASSERT(root!=nullptr);
         return root->isList();
     }
 
@@ -1498,4 +1515,6 @@ namespace ModelExpression {
         new_top->setOperands( new Constant(model, ix), root );
         root = new_top;
     }
+
+
 }
