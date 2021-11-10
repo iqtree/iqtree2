@@ -290,6 +290,16 @@ protected:
     */
     void handleDNAerr(double error_prop, vector<short int> &sequence, int model_index = -1);
     
+    /**
+        TRUE if posterior mean rate can be used
+    */
+    bool canApplyPosteriorMeanDisRate();
+    
+    /**
+        init Site to PatternID
+    */
+    void initSite2PatternID(int length);
+    
 public:
     
     IQTree *tree;
@@ -315,8 +325,10 @@ public:
     // variables using for posterior mean rates/state frequencies
     bool applyPosMeanRate = false;
     double* ptn_state_freq = NULL;
+    double* ptn_accumulated_state_freq = NULL;
     double* ptn_model_dis = NULL;
     DoubleVector pattern_rates;
+    IntVector site_to_patternID;
     
     /**
         constructor

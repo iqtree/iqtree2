@@ -26,7 +26,7 @@ protected:
     /**
         get site-specific on Posterior Mean Rates (Discrete Gamma/FreeRate)
     */
-    void getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, bool insertion_event);
+    void getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID);
     
     /**
       estimate the state from accumulated trans_matrices
@@ -36,17 +36,17 @@ protected:
     /**
       estimate the state from an original trans_matrix
     */
-    virtual int estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state);
+    virtual int estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index);
     
     /**
         initialize site specific model index based on its weights in the mixture model
     */
-    void intializeSiteSpecificModelIndex(int length, vector<short int> &new_site_specific_model_index, bool insertion_event = false);
+    void intializeSiteSpecificModelIndex(int length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID);
     
     /**
         initialize site specific model index based on posterior model probability
     */
-    void intSiteSpecificModelIndexPosteriorProb(int length, vector<short int> &new_site_specific_model_index, bool insertion_event);
+    void intSiteSpecificModelIndexPosteriorProb(int length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID);
     
     /**
         initialize caching accumulated_trans_matrix
@@ -61,7 +61,7 @@ protected:
     /**
         regenerate sequence based on posterior mean state frequencies (for mixture models)
     */
-    vector<short int> regenerateSequenceMixtureModelPosteriorMean(int length, bool insertion_event = false);
+    vector<short int> regenerateSequenceMixtureModelPosteriorMean(int length, IntVector site_to_patternID);
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
@@ -85,11 +85,6 @@ protected:
     virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
-        TRUE if posterior mean rate can be used
-    */
-    bool canApplyPosteriorMeanRate();
-    
-    /**
         extract pattern- posterior mean state frequencies and posterior model probability
     */
     void extractPatternPosteriorFreqsAndModelProb(int input_sequence_length);
@@ -111,7 +106,7 @@ public:
     /**
         get site-specific rates
     */
-    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &new_site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length, bool insertion_event = false);
+    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &new_site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length, IntVector site_to_patternID);
 };
 
 #endif /* alisimulatorheterogeneity_h */

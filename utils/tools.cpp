@@ -1415,7 +1415,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_no_export_sequence_wo_gaps = false;
     params.alisim_mixture_at_sub_level = false;
     params.alisim_branch_scale = 1.0;
-    params.alisim_posterior_mean = false;
+    params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
+    params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2506,10 +2507,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_mixture_at_sub_level = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--posterior-mean") == 0) {
-                params.alisim_posterior_mean = true;
-                continue;
-            }
             if (strcmp(argv[cnt], "--branch-scale") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2517,6 +2514,50 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_branch_scale = convert_double(argv[cnt]);
                 if (params.alisim_branch_scale <= 0)
                     throw "<SCALE> must be positive!";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--rate-heterogeneity") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --rate-heterogeneity POS_MEAN/POS_DIS/WEIGHTS";
+
+                // convert option to uppercase
+                string option = argv[cnt];
+                transform(option.begin(), option.end(), option.begin(), ::toupper);
+                
+                if (option.compare("POS_MEAN") == 0)
+                    params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
+                else if (option.compare("POS_DIS") == 0)
+                {
+                    params.alisim_rate_heterogeneity = POSTERIOR_DIS;
+                    outError("Sorry! Currently Posterior Distribution Rate is not yet supported!");
+                }
+                else if (option.compare("WEIGHTS") == 0)
+                    params.alisim_rate_heterogeneity = UNSPECIFIED;
+                else
+                    throw "Use --rate-heterogeneity POS_MEAN/POS_DIS/WEIGHTS";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--state-freqs") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --state-freqs POS_MEAN/POS_DIS/MODEL_SPECIFIED";
+
+                // convert option to uppercase
+                string option = argv[cnt];
+                transform(option.begin(), option.end(), option.begin(), ::toupper);
+                
+                if (option.compare("POS_MEAN") == 0)
+                    params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
+                else if (option.compare("POS_DIS") == 0)
+                {
+                    params.alisim_stationarity_heterogeneity = POSTERIOR_DIS;
+                    outError("Sorry! Currently Posterior Distribution Rate is not yet supported!");
+                }
+                else if (option.compare("MODEL_SPECIFIED") == 0)
+                    params.alisim_stationarity_heterogeneity = UNSPECIFIED;
+                else
+                    throw "Use --state-freqs POS_MEAN/POS_DIS/MODEL_SPECIFIED";
                 continue;
             }
             if (strcmp(argv[cnt], "--indel") == 0) {

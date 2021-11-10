@@ -161,6 +161,15 @@ enum INDEL_DIS_TYPE {
 };
 
 /**
+ *  Specify 3 options for assigning site freqs, substitution rate to sites
+ */
+enum ASSIGNMENT_TYPE {
+    POSTERIOR_MEAN,
+    POSTERIOR_DIS,
+    UNSPECIFIED
+};
+
+/**
  *  Specify 2 simulation approaches.
  */
 enum SIMULATION_METHOD {
@@ -2441,9 +2450,14 @@ public:
     double alisim_branch_scale;
     
     /**
-    *  TRUE to enable posterior mean rate (for rate heterogeneity) and posterior mean frequencies (for mixture models)
+    *  Type to assign rate heterogeneity to sites (default: posterior mean)
     */
-    bool alisim_posterior_mean;
+    ASSIGNMENT_TYPE alisim_rate_heterogeneity;
+    
+    /**
+    *  Type to assign site freqs (in mixture) (default: posterior mean)
+    */
+    ASSIGNMENT_TYPE alisim_stationarity_heterogeneity;
 };
 
 /**

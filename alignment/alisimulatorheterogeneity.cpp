@@ -29,16 +29,16 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
 /**
     initialize site specific model index based on its weights in the mixture model
 */
-void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_length, vector<short int> &new_site_specific_model_index, bool insertion_event)
+void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID)
 {
     new_site_specific_model_index.resize(sequence_length);
     
     // if a mixture model is used -> randomly select a model for each site
     if (tree->getModel()->isMixture())
     {
-        // if posterior probability is used -> randomly select a model for each site based on the posterior model probability
-        if (tree->params->alisim_posterior_mean)
-            intSiteSpecificModelIndexPosteriorProb(sequence_length, new_site_specific_model_index, insertion_event);
+        // if inference_mode is used -> randomly select a model for each site based on the posterior model probability
+        if (tree->params->alisim_inference_mode)
+            intSiteSpecificModelIndexPosteriorProb(sequence_length, new_site_specific_model_index, site_to_patternID);
         // otherwise, randomly select a model for each site based on the weights of model components
         else
         {
@@ -94,7 +94,7 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
 /**
     initialize site specific model index based on posterior model probability
 */
-void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int sequence_length, vector<short int> &new_site_specific_model_index, bool insertion_event)
+void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID)
 {
     // dummy variables
     int input_sequence_length = tree->aln->getNSite();
@@ -103,16 +103,22 @@ void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int seque
     // extract pattern- posterior mean state frequencies and posterior model probability
     extractPatternPosteriorFreqsAndModelProb(input_sequence_length);
     
+    ASSERT(site_to_patternID.size() >= sequence_length);
     for (int i = 0; i < sequence_length; i++)
     {
         double rand_num = random_double();
-        // if new_site_specific_model_index is generated for an insertion event or the site id is greater than the sequence length -> randomly select a pattern
-        int site_id = i;
-        if (insertion_event || i >= input_sequence_length)
-            site_id = random_int(input_sequence_length);
-        int site_pattern_id = tree->aln->getPatternID(site_id);
+        // extract pattern id from site id
+        int site_pattern_id = site_to_patternID[i];
+        
         int starting_index = site_pattern_id*nmixture;
         new_site_specific_model_index[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_model_dis, rand_num, starting_index, starting_index + nmixture - 1, starting_index) - starting_index;
+    }
+    
+    // delete ptn_model_dis if we don't need to use it for handling insertions (in Indels)
+    if (tree->params->alisim_insertion_ratio == 0)
+    {
+        delete [] ptn_model_dis;
+        ptn_model_dis = NULL;
     }
 }
 
@@ -180,9 +186,6 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb(int inp
         memcpy(ptn_model_dis, tree->getPatternLhCatPointer(), nptn*nmixture* sizeof(double));
         tree->params->print_site_state_freq = tmp_site_freq_type;
         
-        // convert ptn_state_freq to accummulated matrix
-        convertProMatrixIntoAccumulatedProMatrix(ptn_state_freq, nptn, max_num_states);
-        
         // convert ptn_model_dis to accummulated matrix
         convertProMatrixIntoAccumulatedProMatrix(ptn_model_dis, nptn, nmixture);
     }
@@ -191,33 +194,42 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb(int inp
 /**
     regenerate sequence based on posterior mean state frequencies (for mixture models)
 */
-vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, bool insertion_event)
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, IntVector site_to_patternID)
 {
-    ASSERT(tree->params->alisim_posterior_mean);
+    ASSERT(tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED);
     
     // extract pattern- posterior mean state frequencies and posterior model probability
     int input_sequence_length = tree->aln->getNSite();
     extractPatternPosteriorFreqsAndModelProb(input_sequence_length);
+    
+    // init ptn_accumulated_state_freq
+    if (!ptn_accumulated_state_freq)
+    {
+        int nptn = tree->aln->getNPattern();
+        ptn_accumulated_state_freq = new double[nptn*max_num_states];
+        memcpy(ptn_accumulated_state_freq, ptn_state_freq, nptn*max_num_states* sizeof(double));
+        
+        // convert ptn_state_freq to ptn_accumulated_state_freq
+        convertProMatrixIntoAccumulatedProMatrix(ptn_accumulated_state_freq, nptn, max_num_states);
+    }
     
     // re-generate the sequence
     vector <short int> new_sequence(length, max_num_states);
     for (int i = 0; i < length; i++)
     {
         double rand_num = random_double();
-        // if new sequence is generated for an insertion event or the site id is greater than the sequence length -> randomly select a pattern
-        int site_id = i;
-        if (insertion_event || i >= input_sequence_length)
-            site_id = random_int(input_sequence_length);
-        int site_pattern_id = tree->aln->getPatternID(site_id);
+        // extract pattern id from site id
+        int site_pattern_id = site_to_patternID[i];
+        
         int starting_index = site_pattern_id*max_num_states;
-        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_state_freq, rand_num, starting_index, starting_index + max_num_states - 1, starting_index) - starting_index;
+        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_accumulated_state_freq, rand_num, starting_index, starting_index + max_num_states - 1, starting_index) - starting_index;
     }
     
-    // delete base_freqs_one_component if we don't need to use it for handling insertions (in Indels)
+    // delete ptn_accumulated_state_freq if we don't need to use it for handling insertions (in Indels)
     if (tree->params->alisim_insertion_ratio == 0)
     {
-        delete [] ptn_state_freq;
-        ptn_state_freq = NULL;
+        delete [] ptn_accumulated_state_freq;
+        ptn_accumulated_state_freq = NULL;
     }
     
     return new_sequence;
@@ -274,8 +286,16 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 /**
   estimate the state from an original trans_matrix
 */
-int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state)
-{    
+int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index)
+{
+    // update state freqs of the model component based on posterior mean site_freqs if needed
+    if (model->isMixture() && params->alisim_stationarity_heterogeneity!=UNSPECIFIED)
+    {
+        ASSERT(site_to_patternID.size() > site_index && ptn_state_freq);
+        double *tmp_state_freqs = ptn_state_freq + site_to_patternID[site_index]*max_num_states;
+        model->setStateFrequency(tmp_state_freqs);
+    }
+    
     // compute the transition matrix
     model->computeTransMatrix(partition_rate*params->alisim_branch_scale*branch_length*rate, trans_matrix, model_component_index, dad_state);
     
@@ -345,10 +365,8 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
 /**
     get site-specific on Posterior Mean Rates (Discrete Gamma/FreeRate)
 */
-void AliSimulatorHeterogeneity::getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, bool insertion_event)
+void AliSimulatorHeterogeneity::getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID)
 {
-    ASSERT(tree->params->alisim_posterior_mean);
-    
     // get pattern-specific rate (ptn_rate)
     int input_sequence_length = tree->aln->getNSite();
     if (pattern_rates.size() == 0)
@@ -360,11 +378,8 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorMeanRates(vector<double>
     // init site-specific posterior mean rate
     for (int i = 0; i < sequence_length; i++)
     {
-        // if new sequence is generated for an insertion event or the site id is greater than the sequence length -> randomly select a pattern
-        int site_id = i;
-        if (insertion_event || i >= input_sequence_length)
-            site_id = random_int(input_sequence_length);
-        int site_pattern_id = tree->aln->getPatternID(site_id);
+        // extract pattern id from site id
+        int site_pattern_id = site_to_patternID[i];
         
         // extract posterior mean rate from pattern
         ASSERT(site_pattern_id < pattern_rates.size());
@@ -375,7 +390,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorMeanRates(vector<double>
 /**
     get site-specific rates
 */
-void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length, bool insertion_event)
+void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length, IntVector site_to_patternID)
 {
     new_site_specific_rate_index.resize(sequence_length);
     site_specific_rates.resize(sequence_length, 1);
@@ -428,7 +443,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
         else
         {
             if (applyPosMeanRate)
-                getSiteSpecificPosteriorMeanRates(site_specific_rates, sequence_length, insertion_event);
+                getSiteSpecificPosteriorMeanRates(site_specific_rates, sequence_length, site_to_patternID);
             else
                 getSiteSpecificRatesDiscrete(new_site_specific_rate_index, site_specific_rates, sequence_length);
         }
@@ -441,8 +456,9 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
 void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths){
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
-    if (tree->getRateName().empty()
+    if ((tree->getRateName().empty()
         || (!tree->getModelFactory()->is_continuous_gamma && !applyPosMeanRate && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
+        && !(model->isMixture() && params->alisim_stationarity_heterogeneity!=UNSPECIFIED))
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
         int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
@@ -507,7 +523,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
                 else
                 {
                     // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix+thread_id*max_num_states*max_num_states, (*it)->length, node->sequence[i]);
+                    (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix+thread_id*max_num_states*max_num_states, (*it)->length, node->sequence[i], i);
                 }
             }
         }
@@ -518,20 +534,16 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     initialize variables (e.g., site-specific rate)
 */
 void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenerate_root_sequence)
-{
-    // check to use Posterior Mean Rates
-    if (tree->params->alisim_posterior_mean)
-        applyPosMeanRate = canApplyPosteriorMeanRate();
-    
+{    
     // initialize site specific model index based on its weights (in the mixture model)
-    intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index);
+    intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index, site_to_patternID);
     
     // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
     if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
     {
-        // re-generate sequence based on posterior mean state frequencies if users want to do so
-        if (tree->params->alisim_posterior_mean && tree->getModel()->isMixture())
-            tree->root->sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites);
+        // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
+        if (tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED && tree->getModel()->isMixture())
+            tree->root->sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
             tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
@@ -539,7 +551,7 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
 
     
     // initialize site-specific rates
-    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length);
+    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length, site_to_patternID);
 }
 
 /**
@@ -548,9 +560,27 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
 */
 void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
 {
+    // init new_site_to_patternID
+    IntVector new_site_to_patternID;
+    if (tree->params->alisim_inference_mode && (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED || tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED))
+    {
+        new_site_to_patternID.resize(new_sequence.size());
+        
+        // randomly pick a pattern for each site
+        int site_id;
+        for (int i = 0; i < new_sequence.size(); i++)
+        {
+            site_id = random_int(site_to_patternID.size());
+            new_site_to_patternID[i] = site_to_patternID[site_id];
+        }
+        
+        // insert new_site_to_patternID into site_to_patternID
+        site_to_patternID.insert(site_to_patternID.begin()+position, new_site_to_patternID.begin(), new_site_to_patternID.end());
+    }
+    
     // initialize new_site_specific_model_index
     vector<short int> new_site_specific_model_index;
-    intializeSiteSpecificModelIndex(new_sequence.size(), new_site_specific_model_index, true);
+    intializeSiteSpecificModelIndex(new_sequence.size(), new_site_specific_model_index, new_site_to_patternID);
     
     // insert new_site_specific_model_index into site_specific_model_index
     site_specific_model_index.insert(site_specific_model_index.begin()+position, new_site_specific_model_index.begin(), new_site_specific_model_index.end());
@@ -558,7 +588,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     // initialize new_site_specific_rates, and new_site_specific_rate_index for new sequence
     vector<double> new_site_specific_rates;
     vector<short int> new_site_specific_rate_index;
-    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_site_specific_model_index, new_sequence.size(), true);
+    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_site_specific_model_index, new_sequence.size(), new_site_to_patternID);
     
     // insert new_site_specific_rates into site_specific_rates
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
@@ -569,9 +599,9 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     // regenerate new_sequence if mixture model is used
     if (tree->getModel()->isMixture())
     {
-        // re-generate sequence based on posterior mean state frequencies if users want to do so
-        if (tree->params->alisim_posterior_mean && tree->getModel()->isMixture())
-            new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_site_specific_model_index.size(), true);
+        // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
+        if (tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED && tree->getModel()->isMixture())
+            new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_site_specific_model_index.size(), new_site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
             new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);
@@ -675,40 +705,4 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
             total_sub_rate += sub_rate_by_site[i];
         }
     }
-}
-
-/**
-    TRUE if posterior mean rate can be used
-*/
-bool AliSimulatorHeterogeneity::canApplyPosteriorMeanRate()
-{
-    // without an input alignment
-    if (!tree->params->alisim_inference_mode)
-    {
-        outWarning("Skipping Posterior Mean Rates as they can only be used if users supply an input alignment.");
-        return false;
-    }
-    
-    // fused mixture models
-    if (tree->getModel()->isMixture() && tree->getModel()->isFused())
-    {
-        outWarning("Skipping Posterior Mean Rates as they cannot be used with Fused mixture models.");
-        return false;
-    }
-    
-    // without rate heterogeneity
-    if (tree->getRateName().empty())
-    {
-        outWarning("Skipping Posterior Mean Rates as they can be used with only rate heterogeneity based on a discrete Gamma/Free-rate distribution.");
-        return false;
-    }
-    
-    // continuous gamma distribution
-    if ((tree->getRateName().find("+G") != std::string::npos) && tree->getModelFactory()->is_continuous_gamma)
-    {
-        outWarning("Skipping Posterior Mean Rates as they cannot be used with rate heterogeneity based on a continuous Gamma distribution.");
-        return false;
-    }
-
-    return true;
 }

@@ -693,6 +693,14 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     ostream *out = NULL;
     vector<string> state_mapping;
     
+    // check to use Posterior Mean Rates
+    if (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED)
+        applyPosMeanRate = canApplyPosteriorMeanDisRate();
+    
+    // init site to pattern id if the user supplies an input alignment
+    if (tree->params->alisim_inference_mode)
+        initSite2PatternID(sequence_length);
+    
     // initialize variables (site_specific_rates; site_specific_rate_index; site_specific_model_index)
     initVariables(sequence_length, true);
         
@@ -2258,4 +2266,73 @@ void AliSimulator::handleDNAerr(double error_prop, vector<short int> &sequence, 
     
     // change state of sites due to Error model
     changeSitesErrorModel(sites, sequence, error_prop);
+}
+
+/**
+    TRUE if posterior mean rate can be used
+*/
+bool AliSimulator::canApplyPosteriorMeanDisRate()
+{
+    bool show_warning_msg = tree->params->original_params.find("--rate-heterogeneity") != std::string::npos;
+    
+    // without an input alignment
+    if (!tree->params->alisim_inference_mode)
+    {
+        if (show_warning_msg)
+            outWarning("Skipping Posterior Mean Rates (or sampling rates from Posterior Distribution) as they can only be used if users supply an input alignment.");
+        return false;
+    }
+    
+    // fused mixture models
+    if (tree->getModel()->isMixture() && tree->getModel()->isFused())
+    {
+        if (show_warning_msg)
+            outWarning("Skipping Posterior Mean Rates (or sampling rates from Posterior Distribution) as they cannot be used with Fused mixture models.");
+        return false;
+    }
+    
+    // without rate heterogeneity
+    if (tree->getRateName().empty())
+    {
+        if (show_warning_msg)
+            outWarning("Skipping Posterior Mean Rates (or sampling rates from Posterior Distribution) as they can be used with only rate heterogeneity based on a discrete Gamma/Free-rate distribution.");
+        return false;
+    }
+    
+    // continuous gamma distribution
+    if ((tree->getRateName().find("+G") != std::string::npos) && tree->getModelFactory()->is_continuous_gamma)
+    {
+        if (show_warning_msg)
+            outWarning("Skipping Posterior Mean Rates (or sampling rates from Posterior Distribution) as they cannot be used with rate heterogeneity based on a continuous Gamma distribution.");
+        return false;
+    }
+
+    return true;
+}
+
+/**
+    init Site to PatternID
+*/
+void AliSimulator::initSite2PatternID(int length)
+{
+    ASSERT(tree->params->alisim_inference_mode);
+    
+    // extract site to pattern id from the input alignment
+    tree->aln->getSitePatternIndex(site_to_patternID);
+    
+    // resize if the input sequence length is different from the output sequence length
+    int input_length = site_to_patternID.size();
+    if (input_length != length)
+    {
+        site_to_patternID.resize(length);
+        
+        // randomly assign a pattern to each additional sites
+        int site_id;
+        for (int i = input_length; i < length; i++)
+        {
+            site_id = random_int(input_length);
+            site_to_patternID[i] = site_to_patternID[site_id];
+        }
+        
+    }
 }

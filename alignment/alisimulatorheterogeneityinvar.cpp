@@ -45,12 +45,12 @@ int AliSimulatorHeterogeneityInvar::estimateStateFromAccumulatedTransMatrices(do
 /**
   estimate the state from an original trans_matrix
 */
-int AliSimulatorHeterogeneityInvar::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state)
+int AliSimulatorHeterogeneityInvar::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index)
 {
     // if this site is invariant -> preserve the dad's state
     if (rate == 0)
         return dad_state;
     
     // otherwise, select the state, considering it's dad states, and the transition_probability_matrix
-    return AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(model, model_component_index, rate, trans_matrix, branch_length, dad_state);
+    return AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(model, model_component_index, rate, trans_matrix, branch_length, dad_state, site_index);
 }

@@ -316,11 +316,26 @@ void executeSimulation(Params params, IQTree *&tree)
 {
     cout << "[Alignment Simulator] Executing" <<"\n";
     
-    // disable posterior mean if users don't supply input alignment
-    if (params.alisim_posterior_mean && !params.alisim_inference_mode)
+    // disable posterior mean rate (or sampling rate from posterior distribution) if users don't supply input alignment
+    if (params.alisim_rate_heterogeneity!=UNSPECIFIED && !params.alisim_inference_mode)
     {
-        params.alisim_posterior_mean = false;
-        outWarning("Skipping --posterior-mean option as it can only be used if users supply an input alignment.");
+        params.alisim_rate_heterogeneity = UNSPECIFIED;
+        
+        // show a warning if the user specifies pos_mean rate (or sampling rate from posterior distribution) but doesn't supply the input alignment
+        if (params.original_params.find("--rate-heterogeneity") != std::string::npos) {
+            outWarning("Skipping --rate-heterogeneity option as it can only be used if users supply an input alignment.");
+        }
+    }
+    
+    // disable posterior mean site freqs (or sampling site freqs from posterior distribution) if users don't supply input alignment
+    if (params.alisim_stationarity_heterogeneity!=UNSPECIFIED && !params.alisim_inference_mode)
+    {
+        params.alisim_stationarity_heterogeneity = UNSPECIFIED;
+        
+        // show a warning if the user specifies posterior mean site freqs (or sampling site freqs from posterior distribution) but doesn't supply the input alignment
+        if (params.original_params.find("--state-freqs") != std::string::npos) {
+            outWarning("Skipping --state-freqs option as it can only be used if users supply an input alignment.");
+        }
     }
     
     // case 1 (default): without rate heterogeneity

@@ -28,7 +28,7 @@ protected:
     /**
       estimate the state from an original trans_matrix
     */
-    virtual int estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state);
+    virtual int estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index);
     
 public:
     
