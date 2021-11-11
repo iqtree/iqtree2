@@ -61,7 +61,7 @@ protected:
     /**
         regenerate sequence based on posterior mean state frequencies (for mixture models)
     */
-    vector<short int> regenerateSequenceMixtureModelPosteriorMean(int length, IntVector site_to_patternID);
+    vector<short int> regenerateSequenceMixtureModelPosteriorFreqs(int length, IntVector site_to_patternID);
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
