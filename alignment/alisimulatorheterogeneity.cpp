@@ -195,7 +195,7 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
 */
 vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, IntVector site_to_patternID)
 {
-    ASSERT(tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED);
+    ASSERT(tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN);
     
     // extract pattern- posterior mean state frequencies and posterior model probability
     extractPatternPosteriorFreqsAndModelProb();
@@ -287,7 +287,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index)
 {
     // update state freqs of the model component based on posterior mean site_freqs if needed
-    if (model->isMixture() && params->alisim_stationarity_heterogeneity!=UNSPECIFIED)
+    if (model->isMixture() && params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
     {
         ASSERT(site_to_patternID.size() > site_index && ptn_state_freq);
         double *tmp_state_freqs = ptn_state_freq + site_to_patternID[site_index]*max_num_states;
@@ -499,7 +499,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if ((tree->getRateName().empty()
         || (!tree->getModelFactory()->is_continuous_gamma && !(applyPosRateHeterogeneity && params->alisim_rate_heterogeneity == POSTERIOR_MEAN) && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
-        && !(model->isMixture() && params->alisim_stationarity_heterogeneity!=UNSPECIFIED))
+        && !(model->isMixture() && params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN))
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
         int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
@@ -583,7 +583,7 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
     if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
     {
         // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
-        if (tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED && tree->getModel()->isMixture())
+        if (tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
             tree->root->sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
@@ -641,7 +641,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     if (tree->getModel()->isMixture())
     {
         // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
-        if (tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED && tree->getModel()->isMixture())
+        if (tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
             new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_site_specific_model_index.size(), new_site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
