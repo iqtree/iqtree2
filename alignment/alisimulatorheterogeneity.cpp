@@ -97,11 +97,10 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
 void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID)
 {
     // dummy variables
-    int input_sequence_length = tree->aln->getNSite();
     int nmixture = tree->getModel()->getNMixtures();
     
     // extract pattern- posterior mean state frequencies and posterior model probability
-    extractPatternPosteriorFreqsAndModelProb(input_sequence_length);
+    extractPatternPosteriorFreqsAndModelProb();
     
     ASSERT(site_to_patternID.size() >= sequence_length);
     for (int i = 0; i < sequence_length; i++)
@@ -169,7 +168,7 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
 /**
     extract pattern- posterior mean state frequencies and posterior model probability
 */
-void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb(int input_sequence_length)
+void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
 {
     // get pattern-specific state frequencies (ptn_state_freq)
     int nptn = tree->aln->getNPattern();
@@ -199,8 +198,7 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPoste
     ASSERT(tree->params->alisim_stationarity_heterogeneity!=UNSPECIFIED);
     
     // extract pattern- posterior mean state frequencies and posterior model probability
-    int input_sequence_length = tree->aln->getNSite();
-    extractPatternPosteriorFreqsAndModelProb(input_sequence_length);
+    extractPatternPosteriorFreqsAndModelProb();
     
     // init ptn_accumulated_state_freq
     if (!ptn_accumulated_state_freq)
@@ -368,7 +366,6 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
 void AliSimulatorHeterogeneity::getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID)
 {
     // get pattern-specific rate (ptn_rate)
-    int input_sequence_length = tree->aln->getNSite();
     if (pattern_rates.size() == 0)
     {
         IntVector pattern_cat;

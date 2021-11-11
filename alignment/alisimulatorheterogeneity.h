@@ -87,7 +87,7 @@ protected:
     /**
         extract pattern- posterior mean state frequencies and posterior model probability
     */
-    void extractPatternPosteriorFreqsAndModelProb(int input_sequence_length);
+    void extractPatternPosteriorFreqsAndModelProb();
     
 public:
     
