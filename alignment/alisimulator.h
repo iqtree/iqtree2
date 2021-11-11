@@ -293,7 +293,7 @@ protected:
     /**
         TRUE if posterior mean rate can be used
     */
-    bool canApplyPosteriorMeanDisRate();
+    bool canApplyPosteriorRateHeterogeneity();
     
     /**
         init Site to PatternID
@@ -323,10 +323,11 @@ public:
     int mixture_max_weight_pos = 0;
     
     // variables using for posterior mean rates/state frequencies
-    bool applyPosMeanRate = false;
+    bool applyPosRateHeterogeneity = false;
     double* ptn_state_freq = NULL;
     double* ptn_accumulated_state_freq = NULL;
     double* ptn_model_dis = NULL;
+    double* ptn_accumulated_rate_dis = NULL;
     DoubleVector pattern_rates;
     IntVector site_to_patternID;
     

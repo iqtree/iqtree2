@@ -363,24 +363,68 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
 /**
     get site-specific on Posterior Mean Rates (Discrete Gamma/FreeRate)
 */
-void AliSimulatorHeterogeneity::getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID)
+void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID)
 {
+    int num_rates = rate_heterogeneity->getNDiscreteRate();
+    
     // get pattern-specific rate (ptn_rate)
     if (pattern_rates.size() == 0)
     {
         IntVector pattern_cat;
         tree->getRate()->computePatternRates(pattern_rates, pattern_cat);
+        
+        // extract pattern rate distribution if the user wants to sample a rate for each site from posterior distribution
+        if (tree->params->alisim_rate_heterogeneity == POSTERIOR_DIS)
+        {
+            // init variables
+            int num_ptns = pattern_rates.size();
+            ptn_accumulated_rate_dis = new double[num_ptns*num_rates];
+            
+            // clone ptn_rate_dis
+            memcpy(ptn_accumulated_rate_dis, tree->getPatternLhCatPointer(), num_ptns*num_rates* sizeof(double));
+        
+            // convert ptn_rate_dis into ptn_accumulated_rate_dis
+            convertProMatrixIntoAccumulatedProMatrix(ptn_accumulated_rate_dis, num_ptns, num_rates);
+            
+            // normalize ptn_accumulated_rate_dis
+            for (int i = 0; i < num_ptns; i++)
+            {
+                double inverse_row_sum = 1/ptn_accumulated_rate_dis[(i+1)*num_rates - 1];
+                for (int j = 0; j < num_rates; j++)
+                    ptn_accumulated_rate_dis[i*num_rates+j] *= inverse_row_sum;
+            }
+        }
     }
     
-    // init site-specific posterior mean rate
-    for (int i = 0; i < sequence_length; i++)
+    // init site-specific posterior rate
+    // extract posterior mean rate from pattern
+    if (tree->params->alisim_rate_heterogeneity == POSTERIOR_MEAN)
+        for (int i = 0; i < sequence_length; i++)
+        {
+            // extract pattern id from site id
+            int site_pattern_id = site_to_patternID[i];
+
+            ASSERT(site_pattern_id < pattern_rates.size());
+            site_specific_rates[i] = pattern_rates[site_pattern_id];
+        }
+    // otherwise, sample site rate from posterior distribution
+    else if (tree->params->alisim_rate_heterogeneity == POSTERIOR_DIS)
+        for (int i = 0; i < sequence_length; i++)
+        {
+            // extract pattern id from site id
+            int site_pattern_id = site_to_patternID[i];
+            int starting_index = site_pattern_id*num_rates;
+            double rand_num = random_double();
+            int rate_cat = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_accumulated_rate_dis, rand_num, starting_index, starting_index + num_rates - 1, starting_index) - starting_index;
+            site_specific_rates[i] = rate_heterogeneity->getRate(rate_cat);
+            new_site_specific_rate_index[i] = rate_cat;
+        }
+    
+    // delete ptn_accumulated_rate_dis if we don't need to use it for handling insertions (in Indels)
+    if (ptn_accumulated_rate_dis && tree->params->alisim_insertion_ratio == 0)
     {
-        // extract pattern id from site id
-        int site_pattern_id = site_to_patternID[i];
-        
-        // extract posterior mean rate from pattern
-        ASSERT(site_pattern_id < pattern_rates.size());
-        site_specific_rates[i] = pattern_rates[site_pattern_id];
+        delete [] ptn_accumulated_rate_dis;
+        ptn_accumulated_rate_dis = NULL;
     }
 }
 
@@ -439,8 +483,8 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
         // initalize rates based on discrete distribution (gamma/freerate)
         else
         {
-            if (applyPosMeanRate)
-                getSiteSpecificPosteriorMeanRates(site_specific_rates, sequence_length, site_to_patternID);
+            if (applyPosRateHeterogeneity)
+                getSiteSpecificPosteriorRateHeterogeneity(new_site_specific_rate_index, site_specific_rates, sequence_length, site_to_patternID);
             else
                 getSiteSpecificRatesDiscrete(new_site_specific_rate_index, site_specific_rates, sequence_length);
         }
@@ -454,7 +498,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if ((tree->getRateName().empty()
-        || (!tree->getModelFactory()->is_continuous_gamma && !applyPosMeanRate && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
+        || (!tree->getModelFactory()->is_continuous_gamma && !(applyPosRateHeterogeneity && params->alisim_rate_heterogeneity == POSTERIOR_MEAN) && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
         && !(model->isMixture() && params->alisim_stationarity_heterogeneity!=UNSPECIFIED))
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
@@ -620,7 +664,7 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
     sub_rate_by_site.resize(sequence_length, 0);
     
     // check if sub_rates could be caching (without continuous gamma and not use Posterior Mean Rates) -> compute sub_rate_by_site efficiently using cache_sub_rates
-    if (!tree->getModelFactory()->is_continuous_gamma && !applyPosMeanRate)
+    if (!tree->getModelFactory()->is_continuous_gamma && !applyPosRateHeterogeneity)
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
         int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();

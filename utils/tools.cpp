@@ -2528,10 +2528,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (option.compare("POS_MEAN") == 0)
                     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
                 else if (option.compare("POS_DIS") == 0)
-                {
                     params.alisim_rate_heterogeneity = POSTERIOR_DIS;
-                    outError("Sorry! Currently Posterior Distribution Rate is not yet supported!");
-                }
                 else if (option.compare("WEIGHTS") == 0)
                     params.alisim_rate_heterogeneity = UNSPECIFIED;
                 else

@@ -26,7 +26,7 @@ protected:
     /**
         get site-specific on Posterior Mean Rates (Discrete Gamma/FreeRate)
     */
-    void getSiteSpecificPosteriorMeanRates(vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID);
+    void getSiteSpecificPosteriorRateHeterogeneity(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID);
     
     /**
       estimate the state from accumulated trans_matrices

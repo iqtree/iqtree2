@@ -695,7 +695,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     
     // check to use Posterior Mean Rates
     if (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED)
-        applyPosMeanRate = canApplyPosteriorMeanDisRate();
+        applyPosRateHeterogeneity = canApplyPosteriorRateHeterogeneity();
     
     // init site to pattern id if the user supplies an input alignment
     if (tree->params->alisim_inference_mode)
@@ -2271,7 +2271,7 @@ void AliSimulator::handleDNAerr(double error_prop, vector<short int> &sequence, 
 /**
     TRUE if posterior mean rate can be used
 */
-bool AliSimulator::canApplyPosteriorMeanDisRate()
+bool AliSimulator::canApplyPosteriorRateHeterogeneity()
 {
     bool show_warning_msg = tree->params->original_params.find("--rate-heterogeneity") != std::string::npos;
     
