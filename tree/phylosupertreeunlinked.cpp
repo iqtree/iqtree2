@@ -10,11 +10,6 @@
 #include <utils/stringfunctions.h> //for convert_time
 #include <utils/timeutil.h>
 
-
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 extern ostream cmust;
 
 PhyloSuperTreeUnlinked::PhyloSuperTreeUnlinked(SuperAlignment *alignment)
@@ -343,11 +338,8 @@ int PhyloSuperTreeUnlinked::testAllBranches(int threshold, double best_score, do
                             PhyloNode *node, PhyloNode *dad)
 {
     int num_low_support = 0;
-#ifndef _MSC_VER
-    double *ptn_lh[size()];
-#else
-    boost::scoped_array<double*> ptn_lh ( new double* [size()]);
-#endif
+    std::vector<double*> ptn_lh_vector(size());
+    double** ptn_lh = ptn_lh_vector.data();
     ptn_lh[0] = pattern_lh;
     for (int id = 1; id < size(); id++) {
         ptn_lh[id] = ptn_lh[id-1] + at(id-1)->getAlnNPattern();

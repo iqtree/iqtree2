@@ -520,8 +520,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
                 double cof = eval[i]*site_rate->getRate(c);
                 double val = exp(cof*dad_branch->length) * theta[i];
                 double val1 = cof*val;
-                lh_cat += val;
-                df_cat += val1;
+                lh_cat  += val;
+                df_cat  += val1;
                 ddf_cat += cof*val1;
             }
             double prop = site_rate->getProp(c);

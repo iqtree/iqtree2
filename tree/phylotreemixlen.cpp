@@ -248,11 +248,6 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
         RateHeterogeneity *saved_rate = getRate();
         bool saved_fused_mix_rate = model_factory->fused_mix_rate;
 
-        // create new rate model
-        // random alpha
-        // relative_rate = new RateGamma(mixlen, params->gamma_shape,
-        // params->gamma_median, this);
-
         string param;
         if (getRate()->getFixParams()) {
             stringstream ss;
@@ -263,20 +258,20 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
             }
             param = ss.str();
         }
-        RateFree *relative_rate = new RateFree(mixlen, params->gamma_shape, param, 
-                                               false, params->optimize_alg_freerate, this);
-        relative_rate->setTree(this);
+        RateFree relative_rate(mixlen, params->gamma_shape, param, 
+                               false, params->optimize_alg_freerate, 
+                               this);
+        relative_rate.setTree(this);
         
         // setup new rate model
-        setRate(relative_rate);
-        model_factory->site_rate = relative_rate;
+        setRate(&relative_rate);
+        model_factory->site_rate = &relative_rate;
         if (getModel()->isMixture()) {
-//            model_factory->fused_mix_rate = true;
             setLikelihoodKernel(sse);
         }
 
         // optimize rate model
-        /*double tree_lh =*/ (void) relative_rate->optimizeParameters
+        /*double tree_lh =*/ (void) relative_rate.optimizeParameters
                                     (tolerance, report_to_tree);
 
         //model_factory->optimizeParameters(params->fixed_branch_length,
@@ -285,30 +280,29 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
         //optimizeModelParameters();
 
         // 2016-07-22: BUGFIX should rescale rates
-        double mean_rate = relative_rate->rescaleRates();
+        double mean_rate = relative_rate.rescaleRates();
         if (fabs(mean_rate-1.0) > 1e-6 && 
             params->fixed_branch_length != BRLEN_FIX) {
             // scaleLength(mean_rate);
         }
         if (write_info) {
             cout << "Initial LogL: " << curScore << ", ";
-            // if (verbose_mode >= VerboseMode::VB_MED)
-            relative_rate->writeInfo(cout);
+            relative_rate.writeInfo(cout);
         }
         // make the rates more distinct
-        auto first_rate = relative_rate->getRate(0);
-        auto last_rate  = relative_rate->getRate(mixlen-1);
+        auto first_rate = relative_rate.getRate(0);
+        auto last_rate  = relative_rate.getRate(mixlen-1);
         if (mixlen > 1 && first_rate / last_rate > 0.9) {
             cout << "Making the rates more distinct..." << endl;
-            relative_rate->setRate(0, first_rate*0.95);
-            relative_rate->setRate(mixlen-1, last_rate*1.05);
+            relative_rate.setRate(0, first_rate*0.95);
+            relative_rate.setRate(mixlen-1, last_rate*1.05);
         }
         double treelen = treeLength();
         relative_treelen.resize(mixlen);
         // 2017-12-21: BUG: moved this out of write_info if
         // otherwise, relative_treelen is not initialized
         for (int i = 0; i < mixlen; i++) {
-            relative_treelen[i] = treelen * relative_rate->getRate(i);
+            relative_treelen[i] = treelen * relative_rate.getRate(i);
         }
         if (write_info) {
             cout << "relative_treelen:";
@@ -327,10 +321,9 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
         double pinvar = site_rate->getPInvar();
         if (!site_rate->getFixParams()) {
             for (int i = 0; i < mixlen; ++i) {
-                site_rate->setProp(i, relative_rate->getProp(i)*(1.0-pinvar));
+                site_rate->setProp(i, relative_rate.getProp(i)*(1.0-pinvar));
             }
         }       
-        delete relative_rate;
         clearAllPartialLH();
         clearAllPartialParsimony(false);
     }
@@ -368,11 +361,11 @@ void PhyloTreeMixlen::fixOneNegativeBranch
         return;
     int i;
     for (i = 0; i < dad_branch->lengths.size(); i++) {
-        dad_branch->lengths[i] = branch_length * relative_rate->getRate(i);
+        dad_branch->lengths[i] = branch_length * relative_rate.getRate(i);
     }
     PhyloNeighborMixlen *br = dad_branch->getNode()->findNeighbor(dad);
     for (i = 0; i < br->lengths.size(); i++)
-        br->lengths[i] = branch_length * relative_rate->getRate(i);
+        br->lengths[i] = branch_length * relative_rate.getRate(i);
     */
 }
 
@@ -825,7 +818,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     (this->*computeLikelihoodDervMixlenPointer)
         (current_it,  current_it_back->getNode(), 
          df, ddf, tree_buffers);
-	df = -df;
+	df  = -df;
     ddf = -ddf;
     return;
 
@@ -907,9 +900,10 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
         }
         tree_buffers.theta_computed = true;
     }
-    double *val0 = new double[statecat];
-    double *val1 = new double[statecat];
-    double *val2 = new double[statecat];
+    std::vector<double> val_vector(statecat*3);
+    double* val0 = val_vector.data();
+    double* val1 = val0 + statecat;
+    double* val2 = val1 + statecat;
     for (int c = 0; c < ncat; c++) {
         double prop = site_rate->getProp(c);
         for (size_t i = 0; i < nstates; i++) {
@@ -969,9 +963,6 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
         df += nsites * df_frac;
         ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
-    delete [] val2;
-    delete [] val1;
-    delete [] val0;
 
     df  = -df;
     ddf = -ddf;

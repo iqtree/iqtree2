@@ -17,10 +17,6 @@
 #   define _mm_popcnt_u64 __popcnt64
 #endif
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 #ifdef __SSE2__
 inline Vec2d horizontal_add(Vec2d x[2]) {
 #if  INSTRSET >= 3  // SSE3

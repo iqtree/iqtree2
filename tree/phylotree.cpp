@@ -50,10 +50,6 @@
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 const int LH_MIN_CONST = 1;
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
@@ -6088,11 +6084,7 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor* dad_branch,
     if (dad_branch->isLikelihoodComputed() || node->isLeaf()) {
         return mem_slots.lock(dad_branch);
     }
-#ifndef _MSC_VER
-    bool locked[node->degree()];
-#else
-    boost::scoped_array<bool> locked(new bool[node->degree()]);
-#endif
+    BoolVector locked(node->degree());
     size_t num_leaves = 0;
     for (int i=node->degree()-1; 0 <= i; --i) {
         locked[i] = false;

@@ -12,10 +12,6 @@
 #include <model/modeldivergent.h>
 #include <utils/timeutil.h>
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 /**********************************************************
  * class PhyloSuperTreePlen
 **********************************************************/
@@ -795,11 +791,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	Node *node_link, *nei_link;
 
 	// For ONE_epsilon case: saves "id" of the neighbors that have an empty image
-#ifndef _MSC_VER
-	int id_eps[ntrees];
-#else
-	boost::scoped_array<int> id_eps(new int[ntrees]);
-#endif
+	std::vector<int> id_eps_vector(ntrees);
+	int* id_eps = id_eps_vector.data();
+
     uint64_t lh_addr = 0, scale_addr = 0;
 	for(int partid = 0; partid < ntrees; partid++){
         int part = part_order[partid];

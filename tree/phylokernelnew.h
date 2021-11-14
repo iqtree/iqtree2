@@ -835,25 +835,24 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
     int* cat_id              = cat_id_vector.data();
     int* mix_addr_nstates    = mix_addr_nstates_vector.data();
     int* mix_addr            = mix_addr_vector.data();
-
     int  denom               = fused ? 1 : ncat;
     for (int c = 0; c < ncat_mix; c++) {
-        int m       = c/denom;
-        cat_id[c]   = c%ncat;
-        mix_addr_nstates[c] = m*nstates;
-        mix_addr[c] = mix_addr_nstates[c]*nstates;
+        int m                = c / denom;
+        cat_id[c]            = c % ncat;
+        mix_addr_nstates[c]  = m * nstates;
+        mix_addr[c]          = mix_addr_nstates[c]*nstates;
     }
-    PhyloNode* dad             = info.dad;
-    PhyloNode* node            = info.dad_branch->getNode();
-    double*    echild          = info.echildren;
-    double*    partial_lh_leaf = info.partial_lh_leaves;
+    PhyloNode*  dad          = info.dad;
+    PhyloNode*  node         = info.dad_branch->getNode();
+    double*     echild       = info.echildren;
+    double*  partial_lh_leaf = info.partial_lh_leaves;
 
     ModelSubst* model_to_use;
     double*     tip_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
-    double *evec = model_to_use->getEigenvectors();
-	double *eval = model_to_use->getEigenvalues();
+    double*     evec = model_to_use->getEigenvectors();
+	double*     eval = model_to_use->getEigenvalues();
 
     //----------- Non-reversible model --------------
 
@@ -868,10 +867,11 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
                 std::vector<double> mat_vector(nstatesqr);
                 double* mat = mat_vector.data();
                 for (int c = 0; c < ncat_mix; c++) {
-                    double len_child = site_rate->getRate(c%ncat) 
-                                     * child->length;
-                    model_factory->computeTransMatrix(len_child, &mat[0], c/denom);
-                    double *echild_ptr = &echild[c*nstatesqr];
+                    double  cat_rate   = site_rate->getRate(c%ncat);
+                    double  len_child  = cat_rate * child->length;
+                    model_factory->computeTransMatrix
+                        ( len_child, &mat[0], c/denom );
+                    double* echild_ptr = &echild[c*nstatesqr];
                     for (int i = 0; i < nstates; i++) {
                         for (int x = 0; x < nstates; x++) {
                             echild_ptr[x] = mat[x*nstates+i];
@@ -880,12 +880,13 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
                     }
                 }
             } else {
-                for (int c = 0; c < ncat_mix; c++) {
-                    double len_child = site_rate->getRate(c%ncat) * child->length;
-                    model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr], c/denom);
+                for (int c = 0; c < ncat_mix; ++c) {
+                    double cat_rate  = site_rate->getRate(c%ncat);
+                    double len_child = cat_rate * child->length;
+                    model_factory->computeTransMatrix
+                        ( len_child, &echild[c*nstatesqr], c/denom );
                 }
             }
-
             // pre compute information for tip
             if (isRootLeaf(childNode)) {
                 for (int c = 0; c < ncat_mix; c++) {
@@ -894,32 +895,32 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
                 }
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             } else if (childNode->isLeaf()) {
-                //vector<int>::iterator it;
+                int state_count = static_cast<int>(aln->STATE_UNKNOWN) + 1;
                 if (nstates % VectorClass::size() == 0) {
                     // vectorized version
-                    int state_count = static_cast<int>(aln->STATE_UNKNOWN) + 1;
-                    for (int state = 0; state < state_count ; state++) {
-                        VectorClass* this_tip_partial_lh = (VectorClass*)&tip_lh[state*nstates];
+                    int nstates_on_vsize = nstates / VectorClass::size();
+                    for (int state = 0; state < state_count ; ++state) {
+                        VectorClass* this_tip_partial_lh  = (VectorClass*)&tip_lh[state*nstates];
                         double*      this_partial_lh_leaf = &partial_lh_leaf[state*block];
-                        VectorClass *echild_ptr = (VectorClass*)echild;
-                        for (int x = 0; x < block; x++) {
+                        VectorClass* echild_ptr           = (VectorClass*)echild;
+                        for (int x = 0; x < block; ++x) {
                             VectorClass vchild = echild_ptr[0] * this_tip_partial_lh[0];
-                            for (int i = 1; i < nstates/VectorClass::size(); i++) {
+                            for (int i = 1; i < nstates_on_vsize; ++i) {
                                 vchild += echild_ptr[i] * this_tip_partial_lh[i];
                             }
-                            echild_ptr += nstates/VectorClass::size();
+                            echild_ptr += nstates_on_vsize;
                             this_partial_lh_leaf[x] = horizontal_add(vchild);
                         }
                     }
                 } else {
                     // non-vectorized version
-                    for (int state = 0; state <= static_cast<int>(aln->STATE_UNKNOWN); state++) {
+                    for (int state = 0; state < state_count; ++state) {
                         double* this_tip_partial_lh  = &tip_lh[state*nstates];
                         double* this_partial_lh_leaf = &partial_lh_leaf[state*block];
                         double* echild_ptr = echild;
-                        for (int x = 0; x < block; x++) {
+                        for (int x = 0; x < block; ++x) {
                             double vchild = 0.0;
-                            for (int i = 0; i < nstates; i++) {
+                            for (int i = 0; i < nstates; ++i) {
                                 vchild += echild_ptr[i] * this_tip_partial_lh[i];
                             }
                             echild_ptr += nstates;
@@ -947,17 +948,26 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
             VectorClass* echild_ptr = (VectorClass*)echild;
             // precompute information buffer
             for (int c = 0; c < ncat_mix; c++) {
-                VectorClass len_child = static_cast<double>(site_rate->getRate(cat_id[c]) 
-                                      * child->getLength(cat_id[c]));
-                double *eval_ptr = eval + mix_addr_nstates[c];
-                double *evec_ptr = evec + mix_addr[c];
+                int         cat         = cat_id[c];
+                double      cat_rate    = site_rate->getRate(cat);
+                double      len_for_cat = child->getLength(cat);
+                double      rated_len   = cat_rate * len_for_cat;
+                VectorClass len_child   = static_cast<double>(rated_len);
+                double*     eval_ptr    = eval + mix_addr_nstates[c];
+                double*     evec_ptr    = evec + mix_addr[c];
                 for (int i = 0; i < nstates/VectorClass::size(); i++) {
-                    // eval is not aligned!
+                    //eval_ptr is aligned (!), because mix_add_nstates[c]
+                    //is divisible by nstates, and nstates is divisible
+                    //by VectorClass::size().  So we *can* use load_a here.
                     expchild[i] = exp(VectorClass().load_a(&eval_ptr[i*VectorClass::size()]) * len_child);
                 }
-                for (int x = 0; x < nstates; x++) {
-                    for (int i = 0; i < nstates/VectorClass::size(); i++) {
-                        // evec is not be aligned!
+                for (int x = 0; x < nstates; ++x) {
+                    for (int i = 0; i < nstates/VectorClass::size(); ++i) {
+                        //evec_ptr is aligned (!), because mix_addr
+                        //is divisible, not just by nstates, but by 
+                        //nstates*nstates, and nstates is divisible
+                        //by VectorClass::size().  
+                        //So we *can* use load_a here.
                         echild_ptr[i] = (VectorClass().load_a(&evec_ptr[x*nstates+i*VectorClass::size()]) * expchild[i]);
                     }
                     echild_ptr += nstates/VectorClass::size();
@@ -965,15 +975,16 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
             }
             // pre compute information for tip
             if (childNode->isLeaf()) {
-                for (int state = 0; state <= static_cast<int>(aln->STATE_UNKNOWN); state++) {
+                int state_count = static_cast<int>(aln->STATE_UNKNOWN+1);
+                for (int state = 0; state < state_count; ++state) {
                     double *this_partial_lh_leaf = partial_lh_leaf + state*block;
                     VectorClass *echild_ptr = (VectorClass*)echild;
-                    for (int c = 0; c < ncat_mix; c++) {
+                    for (int c = 0; c < ncat_mix; ++c) {
                         intptr_t offset = state*tip_block + mix_addr_nstates[c];
                         VectorClass* this_tip_partial_lh = (VectorClass*)(tip_lh + offset);
-                        for (int x = 0; x < nstates; x++) {
+                        for (int x = 0; x < nstates; ++x) {
                             VectorClass vchild = echild_ptr[0] * this_tip_partial_lh[0];
-                            for (int i = 1; i < nstates/VectorClass::size(); i++) {
+                            for (int i = 1; i < nstates/VectorClass::size(); ++i) {
                                 vchild = mul_add(echild_ptr[i], this_tip_partial_lh[i], vchild);
                             }
                             this_partial_lh_leaf[x] = horizontal_add(vchild);
@@ -983,10 +994,10 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
                     }
                 }
                 size_t addr = aln->STATE_UNKNOWN * block;
-                for (int x = 0; x < block; x++) {
+                for (int x = 0; x < block; ++x) {
                     partial_lh_leaf[addr+x] = 1.0;
                 }
-                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+                partial_lh_leaf += state_count * block;
             }
             echild += block*nstates;
         }
@@ -997,16 +1008,19 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, child) {
             // precompute information buffer
             double *echild_ptr = echild;
-            for (int c = 0; c < ncat_mix; c++) {
-                double len_child = static_cast<double>(site_rate->getRate(cat_id[c]) 
-                                 * child->getLength(cat_id[c]));
-                double *eval_ptr = eval + mix_addr_nstates[c];
-                double *evec_ptr = evec + mix_addr[c];
-                for (int i = 0; i < nstates; i++) {
+            for (int c = 0; c < ncat_mix; ++c) {
+                int     cat         = cat_id[c];
+                double  cat_rate    = site_rate->getRate(cat);
+                double  len_for_cat = child->getLength(cat);
+                double  rated_len   = cat_rate * len_for_cat;
+                double  len_child   = static_cast<double>(rated_len);
+                double* eval_ptr    = eval + mix_addr_nstates[c];
+                double* evec_ptr    = evec + mix_addr[c];
+                for (int i = 0; i < nstates; ++i) {
                     expchild[i] = exp(eval_ptr[i]*len_child);
                 }
-                for (int x = 0; x < nstates; x++) {
-                    for (int i = 0; i < nstates; i++) {
+                for (int x = 0; x < nstates; ++x) {
+                    for (int i = 0; i < nstates; ++i) {
                         echild_ptr[i] = evec_ptr[x*nstates+i] * expchild[i];
                     }
                     echild_ptr += nstates;
@@ -1015,16 +1029,16 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
             // pre compute information for tip
             PhyloNode* childNode = child->getNode();
             if (childNode->isLeaf()) {
-                //vector<int>::iterator it;
-                for (int state = 0; state <= static_cast<int>(aln->STATE_UNKNOWN); ++state) {
-                    double *this_partial_lh_leaf = partial_lh_leaf + state*block;
-                    double *echild_ptr = echild;
-                    for (int c = 0; c < ncat_mix; c++) {
-                        intptr_t offset = state*tip_block + mix_addr_nstates[c];
+                int state_count = static_cast<int>(aln->STATE_UNKNOWN+1);
+                for (int state = 0; state < state_count; ++state) {
+                    double* this_partial_lh_leaf = partial_lh_leaf + state * block;
+                    double* echild_ptr = echild;
+                    for (int c = 0; c < ncat_mix; ++c) {
+                        intptr_t offset = state * tip_block + mix_addr_nstates[c];
                         double*  this_tip_partial_lh = tip_lh + offset;
-                        for (int x = 0; x < nstates; x++) {
+                        for (int x = 0; x < nstates; ++x) {
                             double vchild = echild_ptr[0] * this_tip_partial_lh[0];
-                            for (int i = 1; i < nstates; i++) {
+                            for (int i = 1; i < nstates; ++i) {
                                 vchild += echild_ptr[i] * this_tip_partial_lh[i];
                             }
                             this_partial_lh_leaf[x] = vchild;
@@ -1034,7 +1048,7 @@ void PhyloTree::computePartialInfo(const TraversalInfo &info, VectorClass* buffe
                     }
                 }
                 size_t addr = aln->STATE_UNKNOWN * block;
-                for (int x = 0; x < block; x++) {
+                for (int x = 0; x < block; ++x) {
                     partial_lh_leaf[addr+x] = 1.0;
                 }
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
@@ -1656,7 +1670,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                         this_vec_right += VectorClass::size();
                     }
                 }
-
                 for (size_t c = 0; c < ncat_mix; c++) {
                     const double *inv_evec_ptr = inv_evec + mix_addr[c];
                     // compute real partial likelihood vector
@@ -1778,7 +1791,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                         this_vec_left += VectorClass::size();
                     }
                 }
-
                 double *eright_ptr = eright;
                 for (size_t c = 0; c < ncat_mix; c++) {
                     if (SAFE_NUMERIC) {
@@ -1796,7 +1808,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                         eright_ptr += nstates;
                         partial_lh_tmp[x] = vleft[x] * (vright);
                     }
-
                     // compute dot-product with inv_eigenvector
     #ifdef KERNEL_FIX_STATES
                     productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
@@ -1873,7 +1884,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                     scale_dad[i] = scale_left[i] + scale_right[i];
                 }
             }
-
             double*      eleft_ptr    = eleft;
             double*      eright_ptr   = eright;
             VectorClass* expleft      = partial_lh_tmp + nstates;
@@ -1901,7 +1911,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                         expleft[i]  = exp(eval_ptr[i]*len_left[c])  * partial_lh_left[i];
                         expright[i] = exp(eval_ptr[i]*len_right[c]) * partial_lh_right[i];
                     }
-                    
                     for (size_t x = 0; x < nstates; x++) {
                         const VectorClass *this_evec = evec_ptr + x*nstates;
 #ifdef KERNEL_FIX_STATES
@@ -1927,7 +1936,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                         eleft_ptr += nstates;
                         eright_ptr += nstates;
                     }
-                    
                     // compute dot-product with inv_eigenvector
                     const double* inv_evec_ptr = inv_evec + mix_addr[c];
 #ifdef KERNEL_FIX_STATES
@@ -1961,7 +1969,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                 partial_lh_right += nstates;
                 partial_lh       += nstates;
             }
-
             if (!SAFE_NUMERIC) {
                 // check if one should scale partial likelihoods
                 auto underflown = (lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
@@ -2013,19 +2020,20 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
 #ifndef KERNEL_FIX_STATES
     int nstates = aln->num_states;
 #endif
-    intptr_t orig_nptn = aln->size();
+    intptr_t orig_nptn     = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn,VectorClass::size());
-    intptr_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    intptr_t unobs_ptn     = model_factory->unobserved_ptns.size();
+    intptr_t nptn          = max_orig_nptn + unobs_ptn;
 
     ModelSubst* model_to_use;
     double*     tip_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
-    int  ncat     = site_rate->getNRate();
-    bool fused    = model_factory->fused_mix_rate;
-    int  n_mix    = model_to_use->getNMixtures();
-    int  ncat_mix = fused ? ncat : ncat * n_mix;
-    int  block    = ncat_mix * nstates;
+    int      ncat      = site_rate->getNRate();
+    bool     fused     = model_factory->fused_mix_rate;
+    int      n_mix     = model_to_use->getNMixtures();
+    int      ncat_mix  = fused ? ncat : ncat * n_mix;
+    int      block     = ncat_mix * nstates;
     intptr_t tip_block = nstates * n_mix;
 
     std::vector<size_t> mix_addr_nstates_vector(ncat_mix);
@@ -2040,10 +2048,12 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
     }
 
     // reserve 3*block for computeLikelihoodDerv
-    double *buffer_partial_lh_ptr = buffers.buffer_partial_lh + 3*get_safe_upper_limit(block);
+    double *buffer_partial_lh_ptr = buffers.buffer_partial_lh 
+                                  + 3 * get_safe_upper_limit(block);
     if (isMixlen()) {
         size_t nmix = getMixlen();
-        buffer_partial_lh_ptr += nmix*(nmix+1)*VectorClass::size() + (nmix+3)*nmix*VectorClass::size()*num_packets;
+        buffer_partial_lh_ptr += nmix*(nmix+1)*VectorClass::size() 
+                               + (nmix+3)*nmix*VectorClass::size()*num_packets;
     }
 
     // first compute partial_lh
