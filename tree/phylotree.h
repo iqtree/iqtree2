@@ -1101,6 +1101,9 @@ public:
     
     /** vector size used by SIMD kernel */
     size_t vector_size;
+    size_t getVectorSize() const;
+    int    getVectorSizeAsInt() const;
+
 
     /** true if using safe numeric for likelihood kernel */
     bool safe_numeric;

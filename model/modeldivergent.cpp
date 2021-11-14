@@ -2,8 +2,6 @@
 #include "utils/stringfunctions.h"
 #include "variablebounds.h" //for VariableBounds class
 #include "modelmarkov.h"    //for RATE_TOL
-#include <tree/phylotree.h> //for PhyloTree::vector_size
-
 
 ModelDivergent::ModelDivergent(): super(), 
     catchall_model_number(MODEL_UNASSIGNED), 

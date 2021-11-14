@@ -25,25 +25,23 @@ PlacementTraversalInfo::PlacementTraversalInfo(
     buffer_tmp             = aligned_alloc<double>(phylo_tree.aln->num_states);
 }
 
-void PlacementTraversalInfo::computePartialLikelihood(PhyloNeighbor* nei, PhyloNode* node) {
+void PlacementTraversalInfo::computePartialLikelihood
+        (PhyloNeighbor* nei, PhyloNode* node) {
+    auto v_size = phylo_tree.getVectorSize();
     if (nei != nullptr) {
         dad_branch = nei;
     }
     if (node != nullptr) {
         dad = node;
     }
-    intptr_t orig_nptn = roundUpToMultiple(phylo_tree.aln->size(), 8);
-    intptr_t nptn = roundUpToMultiple(orig_nptn+phylo_tree.model_factory->unobserved_ptns.size(), 8);
+    intptr_t orig_nptn = roundUpToMultiple(phylo_tree.aln->size(), v_size);
+    intptr_t unobs_ptn = phylo_tree.model_factory->unobserved_ptns.size();
+    intptr_t nptn      = roundUpToMultiple(orig_nptn+unobs_ptn, v_size);
 
     phylo_tree.computePartialInfoDouble(*this, buffer_tmp);
     
-    //
-    //Note: Using 8 here is dodgy.  It would be better if we knew the
-    //      size (in doubles) of the vector class the tree is using.
-    //      Because we'd prefer to use that.
-    //
     std::vector<intptr_t> limits;
-    phylo_tree.computePatternPacketBounds(8, phylo_tree.num_threads,
+    phylo_tree.computePatternPacketBounds(v_size, phylo_tree.num_threads,
                                           phylo_tree.num_packets, nptn, limits);
     #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic,1) num_threads(phylo_tree.num_threads)

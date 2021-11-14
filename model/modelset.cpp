@@ -66,12 +66,12 @@ int ModelSet::getPtnModelID(int ptn) const
 
 double ModelSet::computeTrans(double time, int model_id,
                               int state1, int state2) const {
-    if (phylo_tree->vector_size == 1) {
+    if (phylo_tree->getVectorSize() == 1) {
         return models.at(model_id)->computeTrans(time, state1, state2);
     }
 	// temporary fix problem with vectorized eigenvectors
 	int i;
-    int vsize        = static_cast<int>(phylo_tree->vector_size);
+    int vsize        = phylo_tree->getVectorSizeAsInt();
     int states_vsize = num_states*vsize;
     int model_vec_id = model_id % vsize;
     int start_ptn    = model_id - model_vec_id;
@@ -91,11 +91,11 @@ double ModelSet::computeTrans(double time, int model_id,
 double ModelSet::computeTrans(double time, int model_id, 
                               int state1, int state2,
                               double &derv1, double &derv2) const {
-    if (phylo_tree->vector_size == 1) {
+    if (phylo_tree->getVectorSize() == 1) {
         return models.at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
     }
 	// temporary fix problem with vectorized eigenvectors
-    int     vsize        = static_cast<int>(phylo_tree->vector_size);
+    int     vsize        = phylo_tree->getVectorSizeAsInt();
     int     states_vsize = num_states*vsize;
     int     model_vec_id = model_id % vsize;
     int     start_ptn    = model_id - model_vec_id;
@@ -146,11 +146,11 @@ void ModelSet::decomposeRateMatrix()
     for (auto it = models.begin(); it != models.end(); it++) {
         (*it)->decomposeRateMatrix();
     }
-    if (phylo_tree->vector_size == 1) {
+    if (phylo_tree->getVectorSize() == 1) {
         return;
     }
 	// rearrange eigen to obey vector_size
-	int  vsize    = static_cast<int>(phylo_tree->vector_size);
+	int  vsize    = phylo_tree->getVectorSizeAsInt();
 	int  square   = num_states*num_states;
     int  max_size = static_cast<int>(get_safe_upper_limit(models.size()));
 

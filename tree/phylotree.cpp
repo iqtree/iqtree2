@@ -2143,6 +2143,16 @@ UBYTE *PhyloTree::newScaleNum() {
     return aligned_alloc<UBYTE>(getScaleNumSize());
 }
 
+size_t PhyloTree::getVectorSize() const {
+    ASSERT(0<vector_size);
+    return vector_size;
+}
+
+int    PhyloTree::getVectorSizeAsInt() const {
+    ASSERT(0<vector_size);
+    return static_cast<int>(vector_size);
+}
+
 double PhyloTree::computeLikelihood(double *pattern_lh) {
     ASSERT(model);
     ASSERT(site_rate);
