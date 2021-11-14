@@ -95,16 +95,9 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
         std::swap(eleft, eright);
     }
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
     if (node->degree() > 3) {
 
@@ -417,16 +410,9 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     double*  trans_derv1 = trans_mat   + block*nstates;
     double*  trans_derv2 = trans_derv1 + block*nstates;
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
 	for (c = 0; c < ncat; c++) {
 		double len = site_rate->getRate(c)*dad_branch->length;

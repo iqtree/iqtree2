@@ -20,7 +20,7 @@ public:
      */
     explicit PhyloSuperTreeUnlinked(SuperAlignment *alignment);
 
-    virtual bool isSuperTreeUnlinked() override {
+    virtual bool isSuperTreeUnlinked() const override {
         return true;
     }
 

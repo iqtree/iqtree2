@@ -637,19 +637,19 @@ public:
 	 */
 	virtual string getModelNameParams();
 
-    ModelSubst *getModel() {
+    ModelSubst *getModel() const {
         return model;
     }
 
-    ModelFactory *getModelFactory() {
+    ModelFactory *getModelFactory() const {
         return model_factory;
     }
 
-    virtual bool isSuperTree() {
+    virtual bool isSuperTree() const {
         return false;
     }
 
-    virtual bool isSuperTreeUnlinked() {
+    virtual bool isSuperTreeUnlinked() const {
         return false;
     }
 
@@ -3004,6 +3004,12 @@ protected:
 
     ModelSubst* getModelForBranch(PhyloNode* dad, 
                                   PhyloNode* node) const;
+    void getModelAndTipLikelihood(PhyloNode*   dad, 
+                                  PhyloNode*   node, 
+                                  ModelSubst*& model_to_use,
+                                  double*&     tip_lh) const;
+
+
 
 };
         

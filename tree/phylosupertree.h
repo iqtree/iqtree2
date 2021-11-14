@@ -136,7 +136,7 @@ public:
 
     virtual void setNumThreads(int num_threads) override;
 
-	virtual bool isSuperTree() override { return true; }
+	virtual bool isSuperTree() const override { return true; }
 
     /**
      print tree to .treefile

@@ -90,16 +90,10 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
         ASSERT(done && "partial_lh is not re-oriented");
     }
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+
 	double *evec     = model_to_use->getEigenvectors();
 	double *inv_evec = model_to_use->getInverseEigenvectors();
 
@@ -489,16 +483,10 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+
     double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
@@ -748,16 +736,10 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+
     double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 

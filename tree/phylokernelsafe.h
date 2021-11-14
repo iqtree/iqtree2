@@ -100,16 +100,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 		return;
 	}
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
     intptr_t ptn, c;
     intptr_t orig_nptn = aln->size();
@@ -582,22 +575,17 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
     }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
+    if ((dad_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
+    }
+    if ((node_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+    }
     df = ddf = 0.0;
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
     size_t ncat      = site_rate->getNRate();
     bool   fused     = model_factory->fused_mix_rate;
@@ -892,16 +880,10 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     if ((node_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     }
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+
     double tree_lh  = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t ncat     = site_rate->getNRate();
     bool   fused    = model_factory->fused_mix_rate;
@@ -1276,16 +1258,9 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 	ASSERT(theta_all && theta_computed);
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    ModelSubst* model_to_use;
+    double*     tip_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
 
 	double tree_lh  = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     size_t ncat     = site_rate->getNRate();
