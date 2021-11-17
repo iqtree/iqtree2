@@ -293,6 +293,7 @@ PhyloBranch::PhyloBranch(PhyloNode* left, PhyloNode* right)
 PhyloBranch& PhyloBranch::operator=(const Branch& rhs) {
     first  = dynamic_cast<PhyloNode*>(rhs.first);
     second = dynamic_cast<PhyloNode*>(rhs.second);
+    return *this;
 }
 
 PhyloBranch::operator Branch() const {

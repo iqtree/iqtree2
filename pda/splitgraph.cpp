@@ -194,6 +194,7 @@ void SplitGraph::restoreCheckpoint() {
         checkpoint->addListElement();
         string str;
         bool found = checkpoint->getString("", str);
+        (void)found;
         ASSERT(found);
         stringstream ss(str);
         double weight;

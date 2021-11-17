@@ -1151,6 +1151,7 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
 //        }
 //    }
    Matrix4cd eval_diag = eval.asDiagonal();
+   (void)eval_diag;
 //   cout << "eigenvalues:" << endl << eval_diag << endl;
 //   cout << "columns right eigenvectors" << endl << evec << endl;    
 //   cout << "row left eigenvectors" << endl << inv_evec << endl;    
@@ -1161,10 +1162,14 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
 //   cout << "check: " << endl << (inv_evec * mat * evec - eval_diag) << endl;
 //    Matrix4cd cmat = mat;
 //    cout << "check: " << endl << (evec * eval_diag * inv_evec) << endl;
+	#ifdef DEBUG
     Matrix4cd check = inv_evec * mat * evec - eval_diag;
-    for (int i = 0; i < 4; i++)
-        for (int j = 0; j < 4; j++)
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             ASSERT(abs(check(i,j)) < 1e-4);
+		}
+	}
+	#endif
 }
 
 const static int a2index[] = {-1, 0, 0, 0, 0, 0,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};

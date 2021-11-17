@@ -1077,7 +1077,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				// nni1:
 				// - you need to update only one link_neighbor with new PhyloNeighbor
 				//	 (either node1->findNeighbor(node2) or node2->findNeighbor(node1))
-				// - the second is already linked to some existing PhyloNeighbor after linkBranch().
+				// - the second is already linked to some existing PhyloNeighbor after 
+				//   linkBranch().
 				for(id=2; id<6; id++){
 					if(node2->isNeighbor(neighbor_nodes[id-2])){
 						// nei2_new should be updated
@@ -1339,13 +1340,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			} else if(is_nni[part]==NNI_THREE_EPSILON){
 				nei1_new->link_neighbors[part]->length = sub_saved_branch[6*part];
 				nei2_new->link_neighbors[part]->length = sub_saved_branch[6*part];
-				//linkBranch(part, nei1_new, nei2_new);
 			} else if(is_nni[part]==NNI_TWO_EPSILON){
-				//linkBranch(part, nei1_new, nei2_new);
 				saved_nei[0]->link_neighbors[part]->length = sub_saved_branch[6*part];
 				saved_nei[1]->link_neighbors[part]->length = sub_saved_branch[6*part];
-				nei1_new->link_neighbors[part] = NULL;
-				nei2_new->link_neighbors[part] = NULL;
+				nei1_new->link_neighbors[part] = nullptr;
+				nei2_new->link_neighbors[part] = nullptr;
 			} else if(is_nni[part]==NNI_MANY_EPSILON){
 				// There is no need to restore anything
 			}

@@ -150,9 +150,11 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
     } else if (optimize_alg.find("Brent") != string::npos || 
                phylo_tree->aln->frac_const_sites == 0.0 || 
                isFixPInvar() || isFixGammaShape()) {
-		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
+		double lh = phylo_tree->computeLikelihood();
+        (void)lh;
 		double gamma_lh = super::optimizeParameters(gradient_epsilon, report_to_tree);
+        (void)gamma_lh;
 		ASSERT(gamma_lh >= lh-0.1);
 		cur_optimize = 1;
 		double invar_lh = -DBL_MAX;

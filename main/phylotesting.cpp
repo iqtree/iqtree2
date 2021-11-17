@@ -812,6 +812,7 @@ void runModelFinder(Params &params, IQTree &iqtree,
     ModelInfoFromName model_info(params.model_name);
     bool test_only         = model_info.isModelFinderOnly();
     bool empty_model_found = isModelNameEmpty(params, iqtree);
+    (void)empty_model_found;
 
     // Model already specifed, nothing to do here
     if (!model_info.isModelFinder()) {
@@ -2210,6 +2211,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
                                               part_model_name, test_merge);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
+        (void)check;
         ASSERT(check);
 
 		double score = best_model.computeICScore(this_tree->getAlnNSite());
@@ -2573,8 +2575,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
                                                   threads, brlen_type,
                                                   this_tree->aln->name,
                                                   part_model_name, false);
-            
             bool check = (best_model.restoreCheckpoint(&part_model_info));
+            (void)check;
             ASSERT(check);
             
             double score = best_model.computeICScore(this_tree->getAlnNSite());

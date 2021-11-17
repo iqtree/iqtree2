@@ -500,7 +500,9 @@ void IQTree::doPLLParsimonySPR(VerboseMode how_loud) {
         PhyloNodeVector taxa;
         getTaxa(taxa);
         intptr_t seq_name_count = aln->getSeqNames().size();
+        (void)seq_name_count;
         intptr_t taxa_count     = taxa.size();
+        (void)taxa_count;
         ASSERT(taxa_count == seq_name_count);
         for (intptr_t i=0; i<taxa_count; ++i) {
             aln->setSeqName(static_cast<int>(i), oldNames[i]);

@@ -243,7 +243,8 @@ public:
 	 * @param nei pointer to branch
 	 * @param dad_nei pointer to reverse branch
 	 */
-	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
+	void linkBranch(int part, SuperNeighbor *nei, 
+                    SuperNeighbor *dad_nei);
 
     /**
         make the rooting consistent between trees

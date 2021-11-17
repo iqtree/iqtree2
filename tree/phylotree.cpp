@@ -4770,7 +4770,9 @@ NNIMove PhyloTree::getRandomNNI(PhyloBranch &branch) {
     }
     ASSERT(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
     auto neighOne = dynamic_cast<PhyloNeighbor*>(*nni.node1Nei_it);
+    (void)neighOne;
     auto neighTwo = dynamic_cast<PhyloNeighbor*>(*nni.node2Nei_it); 
+    (void)neighTwo;
     ASSERT(neighOne->direction != RootDirection::TOWARD_ROOT && 
            neighTwo->direction != RootDirection::TOWARD_ROOT);
     nni.newloglh = 0.0;

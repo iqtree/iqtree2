@@ -492,7 +492,9 @@ void ModelMarkov::computeTransMatrixNonrev
         // sanity check rows sum to 1
         VectorXd row_sum = mat.rowwise().sum();
         double mincoeff = row_sum.minCoeff();
+        (void)mincoeff;
         double maxcoeff = row_sum.maxCoeff();
+        (void)maxcoeff;
         ASSERT(maxcoeff < 1.001 && mincoeff > 0.999);
         trans_mat = mat;
     } else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
@@ -2123,6 +2125,7 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n) {
     Map<VectorXd> freq(pi, n);
     freq = A.colPivHouseholderQr().solve(b);
     double sum = freq.sum();
+    (void)sum;
     ASSERT(fabs(sum-1.0) < 1e-4);
     return 0;
 }

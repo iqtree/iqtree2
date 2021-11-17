@@ -326,6 +326,7 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info,
                             current_shape, MAX_GAMMA_SHAPE,
                             max(gradient_epsilon, TOL_GAMMA_SHAPE),
                             &negative_lh, &ferror);
+    (void)optx;
     double tree_lh = site_rate->getTree()->computeLikelihood();
     if (write_info) {
         cout << "Linked alpha across partitions: " << linked_alpha << endl;
@@ -501,6 +502,7 @@ double PartitionModel::optimizeLinkedModels(bool write_info,
         // main call to optimize linked model parameters
         double tree_lh = optimizeLinkedModel(write_info, gradient_epsilon,
                                       report_to_tree);
+        (void)tree_lh;
         
         // fix model parameters again
         for (part_tree = tree->begin(); part_tree != tree->end(); ++part_tree) {

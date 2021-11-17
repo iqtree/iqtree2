@@ -219,17 +219,18 @@ void SuperAlignment::init(StrVector *sequence_names) {
 		//cout << "nseq  = " << nseq << endl;
         seq_to_subset.resize(seq_names.size(),0);
 		for (intptr_t seq = 0; seq < nseq; ++seq) {
-			intptr_t id = getSeqID((*it)->getSeqName(seq));
+            auto seq_name = (*it)->getSeqName(seq);
+			intptr_t id = getSeqID(seq_name);
 			if (id < 0) {
-				seq_names.push_back((*it)->getSeqName(seq));
-                seq_to_subset.push_back((*it)->getSequenceSubset(id));
-
+				seq_names.push_back(seq_name);
+                seq_to_subset.push_back((*it)->getSequenceSubset(seq));
 				id = static_cast<int>(seq_names.size())-1;
 				IntVector vec(nsite, -1);
 				vec[site] = static_cast<int>(seq);
 				taxa_index.push_back(vec);
-			} else
+			} else {
 				taxa_index[id][site] = static_cast<int>(seq);
+            }
 		}
 	}
 	// now the patterns of sequence-genes presence/absence

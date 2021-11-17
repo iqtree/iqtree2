@@ -423,16 +423,17 @@ double PhyloSuperTree::computeDist(int seq1, int seq2, double initial_dist, doub
 }
 
 void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei) {
-	SuperNode *node = dad_nei->getNode();
-	SuperNode *dad  = nei->getNode();
-	nei->link_neighbors[part] = nullptr;
+	SuperNode* node = dad_nei->getNode();
+	SuperNode* dad  = nei->getNode();
+	nei->link_neighbors[part]     = nullptr;
 	dad_nei->link_neighbors[part] = nullptr;
 	PhyloNeighborVec part_vec;
 	PhyloNeighborVec child_part_vec;
 	
 	FOR_EACH_SUPER_NEIGHBOR(node, dad, it, snei) {
-		if (snei->link_neighbors[part]) {
-			part_vec.push_back(snei->link_neighbors[part]);
+		auto nei_here = snei->link_neighbors[part];
+		if ( nei_here != nullptr ) {
+			part_vec.push_back(nei_here);
 			SuperNeighbor* backnei = snei->getNode()->findNeighbor(node);
 			child_part_vec.push_back(backnei->link_neighbors[part]);
 			ASSERT(child_part_vec.back()->node == child_part_vec.front()->node 
@@ -443,7 +444,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 		return;
 	}
 	if (part_vec.size() == 1) {
-		nei->link_neighbors[part] = child_part_vec[0];
+		nei->link_neighbors[part]     = child_part_vec[0];
 		dad_nei->link_neighbors[part] = part_vec[0];
 		return;
 	}
@@ -454,16 +455,16 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 	}
 	PhyloNode* node_part = child_part_vec[0]->getNode();
 	PhyloNode* dad_part  = nullptr;
-	FOR_EACH_ADJACENT_SUPER_NODE(node_part, nullptr, it, child) {
+	FOR_EACH_ADJACENT_PHYLO_NODE(node_part, nullptr, it, child) {
 		bool appear = false;
-		for (auto it2 = part_vec.begin(); it2 != part_vec.end(); ++it2){
-			if ((*it2) == (*it)) {
+		for (PhyloNeighbor* already: part_vec ){
+			if (already == (*it)) {
 				appear = true;
                 break;
 			}
 		}
 		if (!appear) {
-			ASSERT(!dad_part);
+			ASSERT(dad_part==nullptr);
 			dad_part = child;
 		}
 	}
@@ -486,7 +487,7 @@ void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *n
 	SuperNeighbor* nei     = nullptr;
 	SuperNeighbor* dad_nei = nullptr;
 	if (dad) {
-		nei = node->findNeighbor(dad);
+		nei     = node->findNeighbor(dad);
 		dad_nei = dad->findNeighbor(node);
 		if (nei->link_neighbors.empty()) {
 			nei->link_neighbors.resize(size());
@@ -494,21 +495,20 @@ void PhyloSuperTree::linkTree(int part, PhyloNodeVector &part_taxa, SuperNode *n
 		if (dad_nei->link_neighbors.empty()) {
 			dad_nei->link_neighbors.resize(size());
 		}
-		nei->link_neighbors[part] = nullptr;
+		nei->link_neighbors[part]     = nullptr;
 		dad_nei->link_neighbors[part] = nullptr;
 	}
 	if (node->isLeaf()) {
 		ASSERT(dad);
-		PhyloNode *node_part = part_taxa[node->id];
+		PhyloNode* node_part = part_taxa[node->id];
 		if (node_part) {
-			PhyloNode *dad_part = node_part->firstNeighbor()->getNode();
+			PhyloNode* dad_part = node_part->firstNeighbor()->getNode();
 			ASSERT(node_part->isLeaf());
 			nei->link_neighbors[part]     = node_part->firstNeighbor();
 			dad_nei->link_neighbors[part] = dad_part->findNeighbor(node_part);
 		}
 		return;
 	}
-
 	FOR_EACH_ADJACENT_SUPER_NODE(node, dad, it, child) {
 		linkTree(part, part_taxa, child, node);
 	}

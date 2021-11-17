@@ -3502,6 +3502,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
     ASCType  ASC_type      = model_factory->getASC();
     bool     ASC_Holder    = isHolderAscertainmentCorrection(ASC_type);
     bool     ASC_Lewis     = isLewisAscertainmentCorrection(ASC_type);
+    (void)ASC_Holder;
     ASSERT(!ASC_Holder && "Holder's ascertainment bias correction not supported for this mixlen model");
 
 //    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];

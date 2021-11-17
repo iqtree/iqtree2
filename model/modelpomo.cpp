@@ -772,6 +772,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
                     continue;
                 state -= num_states;
                 auto sampled_states = phylo_tree->aln->pomo_sampled_states.size();
+                (void)sampled_states;
                 ASSERT((unsigned int)state < sampled_states);
                 // Decode the id and counts.
                 int id1 = phylo_tree->aln->pomo_sampled_states[state] & 3;
@@ -822,6 +823,7 @@ double ModelPoMo::estimateEmpiricalWattersonTheta()
     } else {
         auto unknown = phylo_tree->aln->STATE_UNKNOWN;
         auto sampled_states = phylo_tree->aln->pomo_sampled_states.size();
+        (void)sampled_states;
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); ++it) {
             for (Pattern::iterator it2 = it->begin();

@@ -141,7 +141,7 @@ size_t Alignment::getMaxSeqNameLength() const {
 }
 
 int Alignment::getSequenceSubset(intptr_t i) const {
-    ASSERT(i >= 0 && i < (int)seq_names.size());
+    ASSERT(0<=i && i < (int)seq_names.size());
     if (seq_to_subset.size() <= i) {
         return 0;
     }
@@ -3757,11 +3757,11 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
                                     int min_true_char, int min_taxa,
                                     IntVector *kept_partitions) {
     IntVector::iterator it;
-    seq_to_subset.resize(seq_names.size(),0);
-    for (it = seq_id.begin(); it != seq_id.end(); ++it) {
-        ASSERT(*it >= 0 && *it < aln->getNSeq());
-        seq_names.push_back(aln->getSeqName(*it));
-        seq_to_subset.push_back(aln->getSequenceSubset(*it));
+    aln->seq_to_subset.resize(aln->seq_names.size(),0);
+    for (int i : seq_id) {
+        ASSERT( 0 <= i && i < aln->getNSeq());
+        seq_names.push_back(aln->getSeqName(i));
+        seq_to_subset.push_back(aln->getSequenceSubset(i));
     }
     name           = aln->name;
     model_name     = aln->model_name;
