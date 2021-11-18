@@ -187,49 +187,15 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
         
         // convert ptn_model_dis to accummulated matrix
         convertProMatrixIntoAccumulatedProMatrix(ptn_model_dis, nptn, nmixture);
-        
-        // override pattern posterior freqs by sampling pattern freqs from posterior distribution if posterior distribution is used
-        if (tree->params->alisim_stationarity_heterogeneity == POSTERIOR_DIS)
-        {
-            double *mixture_state_freqs = new double[nmixture*max_num_states];
-            double *tmp_state_freqs = new double[max_num_states];
-            
-            // extract state_freqs of each mixture component
-            for (int i = 0; i < nmixture; i++)
-            {
-                tree->getModel()->getMixtureClass(i)->getStateFrequency(tmp_state_freqs);
-                
-                // copy tmp_state_freqs into mixture_state_freqs
-                for (int j = 0; j < max_num_states; j++)
-                    mixture_state_freqs[i*max_num_states+j] = tmp_state_freqs[j];
-            }
-            
-            // delete tmp_state_freqs
-            delete[] tmp_state_freqs;
-            
-            for (int i = 0; i < nptn; i++)
-            {
-                // select a model for the current pattern
-                int starting_index = i*nmixture;
-                int selected_model_index = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_model_dis, random_double(), starting_index, starting_index + nmixture - 1, starting_index) - starting_index;
-                
-                // clone the state freqs
-                for (int j = 0; j < max_num_states; j++)
-                    ptn_state_freq[i*max_num_states+j] = mixture_state_freqs[selected_model_index*max_num_states+j];
-            }
-            
-            // delete mixture_state_freqs
-            delete[] mixture_state_freqs;
-        }
     }
 }
 
 /**
     regenerate sequence based on posterior mean state frequencies (for mixture models)
 */
-vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorFreqs(int length, IntVector site_to_patternID)
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, IntVector site_to_patternID)
 {
-    ASSERT(tree->params->alisim_stationarity_heterogeneity != UNSPECIFIED);
+    ASSERT(tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN);
     
     // extract pattern- posterior mean state frequencies and posterior model probability
     extractPatternPosteriorFreqsAndModelProb();
@@ -321,7 +287,7 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
 int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index)
 {
     // update state freqs of the model component based on posterior mean site_freqs if needed
-    if (model->isMixture() && params->alisim_stationarity_heterogeneity != UNSPECIFIED)
+    if (model->isMixture() && model->isMixtureSameQ() && params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
     {
         ASSERT(site_to_patternID.size() > site_index && ptn_state_freq);
         double *tmp_state_freqs = ptn_state_freq + site_to_patternID[site_index]*max_num_states;
@@ -533,7 +499,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if ((tree->getRateName().empty()
         || (!tree->getModelFactory()->is_continuous_gamma && !(applyPosRateHeterogeneity && params->alisim_rate_heterogeneity == POSTERIOR_MEAN) && rate_heterogeneity && rate_heterogeneity->getNDiscreteRate() <= params->alisim_max_rate_categories_for_applying_caching))
-        && !(model->isMixture() && params->alisim_stationarity_heterogeneity != UNSPECIFIED))
+        && !(model->isMixture() && model->isMixtureSameQ() && params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN))
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
         int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
@@ -617,8 +583,8 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
     if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
     {
         // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
-        if (tree->params->alisim_stationarity_heterogeneity != UNSPECIFIED)
-            tree->root->sequence = regenerateSequenceMixtureModelPosteriorFreqs(expected_num_sites, site_to_patternID);
+        if (tree->getModel()->isMixtureSameQ() && tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
+            tree->root->sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
             tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
@@ -675,8 +641,8 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     if (tree->getModel()->isMixture())
     {
         // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
-        if (tree->params->alisim_stationarity_heterogeneity != UNSPECIFIED)
-            new_sequence = regenerateSequenceMixtureModelPosteriorFreqs(new_site_specific_model_index.size(), new_site_to_patternID);
+        if (tree->getModel()->isMixtureSameQ() && tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
+            new_sequence = regenerateSequenceMixtureModelPosteriorMean(new_site_specific_model_index.size(), new_site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
             new_sequence = regenerateSequenceMixtureModel(new_site_specific_model_index.size(), new_site_specific_model_index);

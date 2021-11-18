@@ -1058,7 +1058,16 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
         
         // extract model params
         size_t end_pos = tmp_str.find(CLOSE_BRACKET);
-		model_params = tmp_str.substr(pos+1, end_pos-pos-1);
+        
+        // handle cases that user doesn't specify model parameters but supply state frequencies
+        size_t pos_plus = model_str.find('+');
+        if (pos_plus != string::npos)
+        {
+            model_params = "";
+            model_str = model_str.substr(0, pos_plus);
+        }
+        else
+            model_params = tmp_str.substr(pos+1, end_pos-pos-1);
         
         // extract freqs (if specified)
         pos = tmp_str.find("+FQ");

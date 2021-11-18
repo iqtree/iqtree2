@@ -329,7 +329,12 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
                 highest_freq_state = i;
         break;
     case FREQ_USER_DEFINED:
-        if (state_freq[0] == 0.0) outError("State frequencies not specified");
+        {
+            double sum = 0;
+            for (i = 0; i < num_states; i++)
+                sum += state_freq[i];
+            if (fabs(sum) < 1.0e-5) outError("Sum of all state frequencies must be greater than zero!");
+        }
         break;
     default: break;
     }
@@ -1519,6 +1524,11 @@ void ModelMarkov::decomposeRateMatrix(){
             for (i = 0, ii = 0; i < num_states; i++)
                 if (state_freq[i] > ZERO_FREQ) {
                     eigenvalues[i] = eigensolver.eigenvalues()(ii);
+                    
+                    // Handle cases when eigenvalues[i] = NaN
+                    if (eigenvalues[i] != eigenvalues[i])
+                        eigenvalues[i] = 0;
+                    
                     ii++;
                 } else
                     eigenvalues[i] = 0.0;
@@ -1731,6 +1741,8 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
+    if (fabs(sum) <= 1e-5)
+        outError("Sum of all state frequencies must be greater than zero!");
 	if (fabs(sum-1.0) > 1e-2)
         outWarning("Normalizing State frequencies so that sum of them not equal to 1");
     sum = 1.0/sum;

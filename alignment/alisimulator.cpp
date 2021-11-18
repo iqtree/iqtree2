@@ -1748,7 +1748,13 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
     vector<double> sub_rate_by_site;
     // If AliSim is using RATE_MATRIX approach -> initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     if (simulation_method == RATE_MATRIX)
+    {
         initVariables4RateMatrix(total_sub_rate, num_gaps, sub_rate_by_site, node->sequence);
+        
+        // handle cases when total_sub_rate == NaN due to extreme freqs
+        if (total_sub_rate != total_sub_rate)
+            total_sub_rate = 0;
+    }
     else // otherwise, TRANS_PROB_MATRIX approach is used -> only count the number of gaps
         num_gaps = count(node->sequence.begin(), node->sequence.end(), STATE_UNKNOWN);
     double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);

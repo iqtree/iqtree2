@@ -93,6 +93,11 @@ public:
 	virtual bool isMixture() { return false; }
     
     /**
+     * @return TRUE if this is a mixture model and all model components share the same rate matrix, FALSE otherwise
+     */
+    virtual bool isMixtureSameQ() { return false; }
+    
+    /**
      * @return TRUE if this is a DNA error model, FALSE otherwise
      */
     virtual bool containDNAerror() { return false; }

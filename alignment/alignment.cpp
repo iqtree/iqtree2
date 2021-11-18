@@ -4829,6 +4829,8 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     {
                         size_t pos = freq_params.find(separator);
                         ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        if (ntfreq[i] < 0)
+                            outError("State frequency cannot be negative!");
                         
                         // delete the current from freq_params
                         freq_params.erase(0, pos + 1);
@@ -4874,6 +4876,8 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		double sum = 0;
 		for (int i = 0; i < 4; i++)
 			sum += ntfreq[i];
+        if (fabs(sum) < 1e-5)
+            outError("Sum of all state frequencies must be greater than zero!");
 		for (int i = 0; i < 4; i++)
 			ntfreq[i] /= sum;
 		if (verbose_mode >= VB_MED) {
@@ -4930,6 +4934,8 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     {
                         size_t pos = freq_params.find(separator);
                         ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        if (ntfreq[i] < 0)
+                            outError("State frequency cannot be negative!");
                         
                         // delete the current from freq_params
                         freq_params.erase(0, pos + 1);
@@ -4992,6 +4998,10 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			double sum = 0;
 			for (int i = 0; i < 4; i++)
 				sum += ntfreq[i+j];
+            
+            if (fabs(sum) < 1e-5)
+                outError("Sum of all state frequencies must be greater than zero!");
+            
 			for (int i = 0; i < 4; i++)
 				ntfreq[i+j] /= sum;
 			if (verbose_mode >= VB_MED) {

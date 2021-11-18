@@ -86,6 +86,24 @@ public:
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
 	virtual bool isMixture() { return true; }
+    
+    /**
+     * @return TRUE if this is a mixture model and all model components share the same rate matrix, FALSE otherwise
+     */
+    virtual bool isMixtureSameQ() {
+        if (share_same_Q == -1)
+        {
+            share_same_Q = 1;
+            for (iterator it = begin() + 1; it != end(); it++)
+                if ((*it)->ModelSubst::getName() != at(0)->ModelSubst::getName())
+                {
+                    share_same_Q = 0;
+                    break;
+                }
+        }
+        
+        return share_same_Q == 1;
+    }
 
 
 	/**
@@ -321,6 +339,11 @@ protected:
      * check whether the mixture model contains dna error model: -1: undefined; 0: FALSE; 1: TRUE
      */
     short int contain_dna_error = -1;
+    
+    /**
+     * check whether all the model components share the same rate matrix Q: -1: undefined; 0: FALSE; 1: TRUE
+     */
+    short int share_same_Q = -1;
 
 };
 

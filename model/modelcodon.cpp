@@ -428,6 +428,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
         }
         size_t pos = model_params.find(delimiter);
         omega = convert_double_with_distribution(model_params.substr(0, pos).c_str());
+        if (omega < 0)
+            outError("Omega cannot be negative!");
         if (!Params::getInstance().optimize_from_given_params)
             fix_omega = true;
         
@@ -449,6 +451,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             
             pos = model_params.find(delimiter);
             kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str());
+            if (kappa < 0)
+                outError("Kappa cannot be negative!");
             if (!Params::getInstance().optimize_from_given_params)
                 fix_kappa = true;
             
@@ -471,6 +475,10 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             
             pos = model_params.find(delimiter);
             kappa2 = convert_double_with_distribution(model_params.substr(0, pos).c_str());
+            if (kappa2 < 0)
+                outError("Kappa2 cannot be negative!");
+            if (kappa + kappa2 == 0)
+                outError("Transition rate + transversion rate must be greater than 0!");
             if (!Params::getInstance().optimize_from_given_params)
                 fix_kappa2 = true;
             

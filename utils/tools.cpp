@@ -748,12 +748,16 @@ void normalize_frequencies(double* freqs, int num_states, double total_freqs, bo
     }
     
     // normalize the freqs
+    if (fabs(total_freqs) < 1e-5)
+        outError("Sum of state frequencies must be greater than zero!");
+    
     if (fabs(total_freqs-1.0) > 1e-5)
     {
+        total_freqs = 1/total_freqs;
         if (show_warning)
             outWarning("Normalizing state frequencies so that sum of them equals to 1");
         for (int i = 0; i < num_states; i++)
-            freqs[i] /= total_freqs;
+            freqs[i] *= total_freqs;
     }
 }
 
@@ -766,8 +770,11 @@ void normalize_frequencies_from_index(double* freqs, int num_states, int startin
         total_freqs += freqs[i];
     
     // normalize the freqs
+    if (fabs(total_freqs) < 1e-5)
+        outError("Sum of state frequencies must be greater than zero!");
+    total_freqs = 1/total_freqs;
     for (int i = starting_index; i < starting_index+num_states; i++)
-        freqs[i] /= total_freqs;
+        freqs[i] *= total_freqs;
 }
 
 bool is_number(const std::string& s)
@@ -2516,42 +2523,42 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "<SCALE> must be positive!";
                 continue;
             }
-            if (strcmp(argv[cnt], "--rate-heterogeneity") == 0) {
+            if (strcmp(argv[cnt], "--site-rate") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --rate-heterogeneity POS_MEAN/POS_DIS/WEIGHTS";
+                    throw "Use --site-rate MEAN/SAMPLING/MODEL";
 
                 // convert option to uppercase
                 string option = argv[cnt];
                 transform(option.begin(), option.end(), option.begin(), ::toupper);
                 
-                if (option.compare("POS_MEAN") == 0)
+                if (option.compare("MEAN") == 0)
                     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
-                else if (option.compare("POS_DIS") == 0)
+                else if (option.compare("SAMPLING") == 0)
                     params.alisim_rate_heterogeneity = POSTERIOR_DIS;
-                else if (option.compare("WEIGHTS") == 0)
+                else if (option.compare("MODEL") == 0)
                     params.alisim_rate_heterogeneity = UNSPECIFIED;
                 else
-                    throw "Use --rate-heterogeneity POS_MEAN/POS_DIS/WEIGHTS";
+                    throw "Use --site-rate MEAN/SAMPLING/MODEL";
                 continue;
             }
-            if (strcmp(argv[cnt], "--state-freqs") == 0) {
+            if (strcmp(argv[cnt], "--site-freq") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --state-freqs POS_MEAN/POS_DIS/MODEL_SPECIFIED";
+                    throw "Use --site-freq MEAN/SAMPLING/MODEL";
 
                 // convert option to uppercase
                 string option = argv[cnt];
                 transform(option.begin(), option.end(), option.begin(), ::toupper);
                 
-                if (option.compare("POS_MEAN") == 0)
+                if (option.compare("MEAN") == 0)
                     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
-                else if (option.compare("POS_DIS") == 0)
+                else if (option.compare("SAMPLING") == 0)
                     params.alisim_stationarity_heterogeneity = POSTERIOR_DIS;
-                else if (option.compare("MODEL_SPECIFIED") == 0)
+                else if (option.compare("MODEL") == 0)
                     params.alisim_stationarity_heterogeneity = UNSPECIFIED;
                 else
-                    throw "Use --state-freqs POS_MEAN/POS_DIS/MODEL_SPECIFIED";
+                    throw "Use --site-freq MEAN/SAMPLING/MODEL";
                 continue;
             }
             if (strcmp(argv[cnt], "--indel") == 0) {
@@ -2663,7 +2670,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.sequence_type = argv[cnt];
                 
                 // handle MORPH{<#STATE>}
-                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.";
+                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be between 2 and 32.";
                 string t_params = argv[cnt];
                 string KEYWORD = "MORPH";
                 if ((t_params.length() > KEYWORD.length())
@@ -2684,7 +2691,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.alisim_num_states_morph = convert_int(t_params.c_str());
                     
                     // validate num_states
-                    if (params.alisim_num_states_morph < 1 || params.alisim_num_states_morph > 32)
+                    if (params.alisim_num_states_morph < 2 || params.alisim_num_states_morph > 32)
                         throw ERR_MSG;
                     
                     // set seqtype to MORPH (without {<#STATE>})
@@ -5322,6 +5329,12 @@ void usage_alisim(){
     << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
     << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
     << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl
+    << "  --site-freq <OPTION>      Specify an option to mimic the site-frequencies from the input"<< endl
+    << "                            alignment (only use with a mixture model) (see Manual)."<< endl
+    << "                            <OPTION> should be MEAN(default)/SAMPLING/MODEL"<< endl
+    << "  --site-rate <OPTION>      Specify an option to mimic the discrete rate heterogeneity"<< endl
+    << "                            from the input alignment (see Manual)."<< endl
+    << "                            <OPTION> should be MEAN(default)/SAMPLING/MODEL"<< endl
     << "  -t RANDOM{MODEL,NUM_TAXA} Specify a model and the number of taxa to generate a random tree" << endl
     << "                            MODEL is yh, u, cat, bal, bd{BIRTH_RATE,DEATH_RATE} standing for" << endl
     << "                            YuleHarding, Uniform, Caterpillar, Balanced, BirthDeath" << endl
