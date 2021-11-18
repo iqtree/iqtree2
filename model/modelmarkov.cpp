@@ -1709,10 +1709,12 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
-		outWarning("Normalizing state frequencies so that they sum up to 1.0");
-    sum = 1.0/sum;
-    for (i = 0; i < num_states; i++)
-        state_freq[i] *= sum;
+    {
+		outWarning("Normalizing state frequencies so that sum of them equals to 1");
+        sum = 1.0/sum;
+        for (i = 0; i < num_states; i++)
+            state_freq[i] *= sum;
+    }
 }
 
 void ModelMarkov::readStateFreq(string str) throw(const char*) {
@@ -1744,10 +1746,12 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
     if (fabs(sum) <= 1e-5)
         outError("Sum of all state frequencies must be greater than zero!");
 	if (fabs(sum-1.0) > 1e-2)
-        outWarning("Normalizing State frequencies so that sum of them not equal to 1");
-    sum = 1.0/sum;
-    for (i = 0; i < num_states; i++)
-        state_freq[i] *= sum;
+    {
+        outWarning("Normalizing State frequencies so that sum of them equals to 1");
+        sum = 1.0/sum;
+        for (i = 0; i < num_states; i++)
+            state_freq[i] *= sum;
+    }
 }
 
 void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
@@ -1908,7 +1912,7 @@ void ModelMarkov::setRates() {
 
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params) {
 	if (ModelUnrest::validModelName(model_name)) {
-		return (new ModelUnrest(tree, model_params));
+		return (new ModelUnrest(tree, model_params, freq_type, freq_params));
 	} else if (ModelLieMarkov::validModelName(model_name)) {
 	        return (new ModelLieMarkov(model_name, tree, model_params, freq_type, freq_params));
 	} else {

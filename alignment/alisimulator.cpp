@@ -1581,7 +1581,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
     // make sure the sum of all frequencies is equal to 1
     if (fabs(total_freq-1.0) > 1e-5)
     {
-        outWarning("Normalizing state frequencies so that sum of them is equal to 1.");
+        outWarning("Normalizing state frequencies so that sum of them equals to 1.");
         normalize_frequencies(state_freqs, max_num_states, total_freq);
     }
     

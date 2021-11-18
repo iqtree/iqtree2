@@ -7,7 +7,7 @@
 
 #include "modelunrest.h"
 
-ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
+ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false)
 {
     num_params = getNumRateEntries() - 1;
@@ -17,12 +17,44 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
         rates[i] = 1.0;
     }
 	if (model_params != "") {
-		cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
+		//cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
+        // detect the seperator
+        char separator = ',';
+        if (model_params.find('/') != std::string::npos)
+            separator = '/';
+        
+        // parse input into vector
+        DoubleVector tmp_rates;
+        convert_double_vec_with_distributions(model_params.c_str(), tmp_rates, separator);
+        
+        // validate the number of params
+        if (tmp_rates.size() != num_params)
+            outError("Model UNREST requires "+convertIntToString(num_params)+" parameters. Please check and try again!");
+        
+        // set rates from input params
+        for (int i=0; i <= num_params; i++) {
+            rates[i] = tmp_rates[i];
+            
+            // check to fix parameters
+            fixed_parameters = !Params::getInstance().optimize_from_given_params;
+        }
+        
+        // call setRates()
+        setRates();
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
-    ModelMarkov::init(FREQ_ESTIMATE);
+    
+    // parse state_freqs if specified
+    freq_type = FREQ_ESTIMATE;
+    if (freq_params != "")
+    {
+        freq_type = FREQ_USER_DEFINED;
+        readStateFreq(freq_params);
+    }
+    
+    ModelMarkov::init(freq_type);
 }
 
 /* static */ bool ModelUnrest::validModelName(string model_name) {
@@ -47,6 +79,13 @@ void ModelUnrest::setRates() {
 	rates[num_params]=1;
 }
 */
+
+void ModelUnrest::setRates() {
+    // For UNREST, parameters are simply the off-diagonal rate matrix entries
+    // (except [4,3] = rates[11], which is constrained to be 1)
+    rates[num_params] = 1;
+    return;
+}
 
 void ModelUnrest::setStateFrequency(double* freq) {
     // DOES NOTHING
