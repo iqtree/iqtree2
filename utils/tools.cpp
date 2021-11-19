@@ -2670,7 +2670,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.sequence_type = argv[cnt];
                 
                 // handle MORPH{<#STATE>}
-                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be between 2 and 32.";
+                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be between 1 and 32.";
                 string t_params = argv[cnt];
                 string KEYWORD = "MORPH";
                 if ((t_params.length() > KEYWORD.length())
@@ -2691,7 +2691,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.alisim_num_states_morph = convert_int(t_params.c_str());
                     
                     // validate num_states
-                    if (params.alisim_num_states_morph < 2 || params.alisim_num_states_morph > 32)
+                    if (params.alisim_num_states_morph < 1 || params.alisim_num_states_morph > 32)
                         throw ERR_MSG;
                     
                     // set seqtype to MORPH (without {<#STATE>})

@@ -39,6 +39,14 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
         num_params = 0;
         freq = FREQ_USER_DEFINED;
 	}
+    
+    // parse user-specified state frequencies (if any)
+    if (freq_params != "")
+    {
+        freq_type = FREQ_USER_DEFINED;
+        readStateFreq(freq_params);
+    }
+    
 	ModelMarkov::init(freq);
 }
 

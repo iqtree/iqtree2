@@ -1512,6 +1512,11 @@ void ModelMarkov::decomposeRateMatrix(){
         if (n == num_states) {
             Map<VectorXd,Aligned> eval(eigenvalues,num_states);
             eval = eigensolver.eigenvalues();
+            
+            // Handle cases when eigenvalues[0] = NaN -> MORPH{1}
+            if (eigenvalues[0] != eigenvalues[0])
+                eigenvalues[0] = 0;
+            
             if (verbose_mode >= VB_DEBUG)
                 cout << "eval: " << eval << endl;
 
@@ -1735,7 +1740,7 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 		if (state_freq[i] < 0.0 || state_freq[i] > 1)
 			outError("State frequency must be in [0,1] in ", str);
 		if (i == num_states-1 && end_pos < str.length())
-			outError("Unexpected end of string ", str);
+			outError("Unexpected end of string ", str + ". You may supply more frequencies than the number of states.");
 		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ' && str[end_pos] != '/')
 			outError("Comma/Space/Forward slash to separate state frequencies not found in ", str);
 		end_pos++;
