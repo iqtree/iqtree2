@@ -1342,8 +1342,7 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
             }
         }
         
-        if (inv_eigenvectors && inv_eigenvectors_transposed)
-            calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
                                        , inv_eigenvectors_transposed);
     }
     // sanity check

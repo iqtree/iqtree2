@@ -47,14 +47,10 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
     full_name = "Unrestricted model (non-reversible)";
     
     // parse state_freqs if specified
-    freq_type = FREQ_ESTIMATE;
     if (freq_params != "")
-    {
-        freq_type = FREQ_USER_DEFINED;
-        readStateFreq(freq_params);
-    }
+        outWarning("In the UNREST model, state frequencies should be embedded into the substitution rates. Thus, AliSim skips the user-specified state frequencies.");
     
-    ModelMarkov::init(freq_type);
+    ModelMarkov::init(FREQ_ESTIMATE);
 }
 
 /* static */ bool ModelUnrest::validModelName(string model_name) {
