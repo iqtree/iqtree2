@@ -2297,8 +2297,8 @@ bool AliSimulator::canApplyPosteriorRateHeterogeneity()
         return false;
     }
     
-    // without rate heterogeneity
-    if (tree->getRateName().empty())
+    // without discrete rate heterogeneity
+    if (tree->getRateName().find("+G") == std::string::npos && tree->getRateName().find("+R") == std::string::npos)
     {
         if (show_warning_msg)
             outWarning("Skipping Posterior Mean Rates (or sampling rates from Posterior Distribution) as they can be used with only rate heterogeneity based on a discrete Gamma/Free-rate distribution.");
