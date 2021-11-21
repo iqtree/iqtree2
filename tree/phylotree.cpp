@@ -1531,13 +1531,18 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         node  = getRoot();
         index = 0;
     }
-    if (dad) {
+    if (dad!=nullptr) {
         // assign blocks in central_partial_lh to both Neighbors (dad->node, and node->dad)
         PhyloNeighbor* backNei = node->findNeighbor(dad);
-        backNei->partial_pars  = central_partial_pars + (index * pars_block_size);
-        PhyloNeighbor* nei     = dad->findNeighbor(node);
-        nei->partial_pars      = central_partial_pars + ((index + 1) * pars_block_size);
-        index                 += 2;
+        if (backNei->partial_pars == nullptr ) {
+            backNei->partial_pars  = central_partial_pars + (index * pars_block_size);
+            ++index;
+        }
+        PhyloNeighbor* nei = dad->findNeighbor(node);
+        if (nei->partial_pars == nullptr) {
+            nei->partial_pars = central_partial_pars + (index * pars_block_size);
+            ++index;
+        }
         ASSERT( tip_partial_pars==nullptr || nei->partial_pars < tip_partial_pars );
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {

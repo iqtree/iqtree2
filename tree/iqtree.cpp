@@ -2583,6 +2583,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon,
                      << " seconds (logl: " << curScore << ")");
         }
     } else {
+        double oldScore = curScore;
         double modOptScore;
         auto   factory = getModelFactory();
         if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
@@ -2606,16 +2607,18 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon,
                        " that can cause numerical instability!");
             logLine("");
         }
-        if (modOptScore < curScore - 1.0 &&
+        if (modOptScore < oldScore - 1.0 &&
             params->partition_type != TOPO_UNLINKED) {
             logLine("  BUG: Tree logl gets worse after model optimization!");
-            LOG_LINE(VerboseMode::VB_QUIET, "  Old logl: " << curScore
+            LOG_LINE(VerboseMode::VB_QUIET, "  Old logl: " << oldScore
                      << " / " << "new logl: " << modOptScore);
-            printTree("debug.tree");
-            abort();
+            if (!params->ignore_any_errors) {
+                printTree("debug.tree");
+                abort();
+            }
         } else {
             curScore = modOptScore;
-            newTree = getTreeString();
+            newTree  = getTreeString();
         }
         if (params->print_trees_site_posterior) {
             computePatternCategories();

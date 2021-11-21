@@ -1601,7 +1601,7 @@ void PhyloSuperTreePlen::printNNIcasesNUM(){
 
 void PhyloSuperTreePlen::computeBranchLengths()
 {
-	}
+}
 
 int PhyloSuperTreePlen::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
 
