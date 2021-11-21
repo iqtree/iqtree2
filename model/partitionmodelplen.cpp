@@ -47,12 +47,12 @@ void PartitionModelPlen::saveCheckpoint() {
     ASSERT(tree!=nullptr);
     if (!tree->fixed_rates) {
         int nrates = static_cast<int>(tree->part_info.size());
-        double *part_rates = new double[nrates];
+        std::vector<double> part_rates_vector(nrates);
+        double *part_rates = part_rates_vector.data();
         for (size_t i = 0; i < nrates; i++) {
             part_rates[i] = tree->part_info[i].part_rate;
         }
         CKP_ARRAY_SAVE(nrates, part_rates);
-        delete [] part_rates;
     }
     endCheckpoint();
     PartitionModel::saveCheckpoint();
@@ -64,14 +64,14 @@ void PartitionModelPlen::restoreCheckpoint() {
     ASSERT(tree!=nullptr);
     if (!tree->fixed_rates) {
         int nrates = static_cast<int>(tree->part_info.size());
-        double *part_rates = new double[nrates];
+        std::vector<double> part_rates_vector(nrates);
+        double *part_rates = part_rates_vector.data();
         if (CKP_ARRAY_RESTORE(nrates, part_rates)) {
             for (size_t i = 0; i < nrates; i++) {
                 tree->part_info[i].part_rate = part_rates[i];
             }
             tree->mapTrees();
         }
-        delete [] part_rates;
     }
     endCheckpoint();
     PartitionModel::restoreCheckpoint();
@@ -105,9 +105,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
 //    }
     tree_lh = tree->computeLikelihood();
     
-    report_to_tree->hideProgress();
-    cout<<"Initial log-likelihood: "<<tree_lh<<endl;
-    report_to_tree->showProgress();
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET, 
+                  "Initial log-likelihood: " <<tree_lh);
     double begin_time = getRealTime();
     int i;
     for(i = 1; i < tree->params->num_param_iterations; i++) {
@@ -127,7 +126,6 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
             ASSERT(new_cur_lh > cur_lh - 0.1);
             cur_lh = new_cur_lh;
         }
-
         if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
         }
@@ -139,22 +137,33 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
         ASSERT(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
         
         tree->clearAllPartialLH();
-
         cur_lh  = optimizeGeneRate(tree, tree_lh, cur_lh, 
                                    gradient_epsilon);
-        
         tree_lh = optimizeBranchLengthsIfRequested(tree, fixed_len, i, cur_lh,
                                                    logl_epsilon, gradient_epsilon);
         
-        report_to_tree->hideProgress();
-        cout<<"Current log-likelihood at step " << i << ": " << cur_lh<<endl;
+        TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,
+                      "Current log-likelihood"
+                      " at step " << i << ":"
+                      " " << cur_lh);
         report_to_tree->showProgress();
         if(fabs(cur_lh-tree_lh) < logl_epsilon) {
             tree_lh = cur_lh;
             break;
         }
-        // make sure that the new logl is not so bad compared with previous logl
-        ASSERT(cur_lh > tree_lh - 1.0 && "branch length opt reduces LnL");
+        if (report_to_tree->params->ignore_any_errors) {
+            if (tree_lh <= cur_lh - 1.0) {
+                std::stringstream complaint;
+                complaint << "Branch length optimization reduced "
+                        << " log-likelihood, from " << cur_lh
+                        << " to " << tree_lh << " (a drop of "
+                        << fabs(cur_lh > tree_lh) << ")\n";
+                outWarning(complaint.str());
+            }
+        } else {
+            // make sure that the new logl is not so bad compared with previous logl
+            ASSERT(tree_lh > cur_lh - 1.0 && "branch length opt reduces LnL");
+        }
         tree_lh = cur_lh;
     }
     logResultOfParameterOptimization(write_info, begin_time,
@@ -256,9 +265,10 @@ void PartitionModelPlen::logResultOfParameterOptimization
             it->second->writeInfo(cout);
         }
     }
-    report_to_tree->hideProgress();
-    cout << "Parameters optimization took " << iteration-1 << " rounds"
-         << " (" << getRealTime()-begin_time << " sec)" << endl << endl;
+    TREE_LOG_LINE(*report_to_tree, VerboseMode::VB_QUIET,  
+                  "Parameters optimization"
+                  " took " << iteration-1 << " rounds "
+                  << " (" << getRealTime()-begin_time << " sec)\n");
     report_to_tree->showProgress();
 }
 
@@ -271,7 +281,8 @@ double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool writ
 }
 
 void PartitionModelPlen::writeInfo(ostream &out) {
-    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>
+                (site_rate->getTree());
     ASSERT(tree!=nullptr);
     auto ntrees = tree->size();
     if (!tree->fixed_rates) {
@@ -285,7 +296,8 @@ void PartitionModelPlen::writeInfo(ostream &out) {
 
 double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 {
-    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>
+                (site_rate->getTree());
     ASSERT(tree!=nullptr);
     // BQM 22-05-2015: change to optimize individual rates
     double score = 0.0;
@@ -302,8 +314,9 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
             }
         }
     }
-    if (tree->part_order.empty()) tree->computePartitionOrder();
-    
+    if (tree->part_order.empty()) {
+        tree->computePartitionOrder();
+    }
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: score) schedule(dynamic) if(tree->num_threads > 1)
 #endif
@@ -311,10 +324,12 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
         int i = tree->part_order[j];
         double min_scaling = 1.0/tree->at(i)->getAlnNSite();
         double max_scaling = static_cast<double>(nsites / (double)tree->at(i)->getAlnNSite());
-        if (max_scaling < tree->part_info[i].part_rate)
+        if (max_scaling < tree->part_info[i].part_rate) {
             max_scaling = tree->part_info[i].part_rate;
-        if (min_scaling > tree->part_info[i].part_rate)
+        }
+        if (min_scaling > tree->part_info[i].part_rate) {
             min_scaling = tree->part_info[i].part_rate;
+        }
         auto t_score = tree->at(i)->optimizeTreeLengthScaling(min_scaling, tree->part_info[i].part_rate, 
                                                               max_scaling, gradient_epsilon);
         tree->part_info[i].cur_score = t_score;
@@ -324,12 +339,16 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     double sum = 0.0;
     size_t nsite = 0;
     for (size_t i = 0; i < tree->size(); ++i) {
-        sum += tree->part_info[i].part_rate * tree->at(i)->aln->getNSite();
+        sum += tree->part_info[i].part_rate 
+             * tree->at(i)->aln->getNSite();
         auto seq = tree->at(i)->aln->seq_type;
-        if (seq == SeqType::SEQ_CODON && tree->rescale_codon_brlen)
+        if (seq == SeqType::SEQ_CODON && 
+            tree->rescale_codon_brlen) {
             nsite += 3*tree->at(i)->aln->getNSite();
-        else
+        }
+        else {
             nsite += tree->at(i)->aln->getNSite();
+        }
     }
     sum /= nsite;
     
@@ -342,14 +361,16 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     }
     tree->scaleLength(sum);
     sum = 1.0/sum;
-    for (size_t i = 0; i < tree->size(); ++i)
+    for (size_t i = 0; i < tree->size(); ++i) {
         tree->part_info[i].part_rate *= sum;
+    }
     return score;
 }
 
 
 int PartitionModelPlen::getNParameters(int brlen_type) const {
-    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>
+                (site_rate->getTree());
     ASSERT(tree!=nullptr);
     int df = 0;
     for (auto it = tree->begin(); it != tree->end(); it++) {
@@ -361,8 +382,9 @@ int PartitionModelPlen::getNParameters(int brlen_type) const {
     if (!tree->fixed_rates) {
         df += static_cast<int>(tree->size()) - 1;
     }
-    if (linked_alpha > 0.0)
+    if (linked_alpha > 0.0) {
         df ++;
+    }
     for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
         bool fixed = it->second->fixParameters(false);
         df += it->second->getNDim() + it->second->getNDimFreq();
