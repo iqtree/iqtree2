@@ -1427,7 +1427,8 @@ void IQTree::initializeModel(Params &params, string model_name,
                     new_model = new PartitionModel(params, super_tree,
                                                    models_block, report_to_tree);
                 } else {
-                    PhyloSuperTreePlen *tree = dynamic_cast<PhyloSuperTreePlen*>(this);
+                    auto tree = dynamic_cast<PhyloSuperTreePlen*>(this);
+                    ASSERT(tree!=nullptr);
                     new_model = new PartitionModelPlen(params, tree,
                                                        models_block, report_to_tree);
                 }
@@ -2953,8 +2954,11 @@ double IQTree::doTreeSearch() {
             printBestCandidateTree();
             bestcandidate_changed = false;
         }
-        //if (params->partition_type)
-        //     ((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
+        //if (params->partition_type) {
+        //   auto stree = dynamic_cast<PhyloSuperTreePlen*>(this);
+        //   ASSERT(stree!=nullptr);
+        //   stree->printNNIcasesNUM();
+        //}
     }
 
     // 2019-06-03: check convergence here to avoid effect of refineBootTrees

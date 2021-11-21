@@ -43,7 +43,8 @@ void PartitionModelPlen::startCheckpoint() {
 
 void PartitionModelPlen::saveCheckpoint() {
     startCheckpoint();
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     if (!tree->fixed_rates) {
         int nrates = static_cast<int>(tree->part_info.size());
         double *part_rates = new double[nrates];
@@ -59,7 +60,8 @@ void PartitionModelPlen::saveCheckpoint() {
 
 void PartitionModelPlen::restoreCheckpoint() {
     startCheckpoint();
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     if (!tree->fixed_rates) {
         int nrates = static_cast<int>(tree->part_info.size());
         double *part_rates = new double[nrates];
@@ -79,7 +81,8 @@ void PartitionModelPlen::restoreCheckpoint() {
 double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info,
                                               double logl_epsilon, double gradient_epsilon,
                                               PhyloTree* report_to_tree) {
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     if (report_to_tree==nullptr) {
         report_to_tree = tree;
     }
@@ -268,7 +271,8 @@ double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool writ
 }
 
 void PartitionModelPlen::writeInfo(ostream &out) {
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     auto ntrees = tree->size();
     if (!tree->fixed_rates) {
         out << "Partition-specific rates: ";
@@ -281,7 +285,8 @@ void PartitionModelPlen::writeInfo(ostream &out) {
 
 double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 {
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     // BQM 22-05-2015: change to optimize individual rates
     double score = 0.0;
     size_t nsites = tree->getAlnNSite();
@@ -344,7 +349,8 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 
 
 int PartitionModelPlen::getNParameters(int brlen_type) const {
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     int df = 0;
     for (auto it = tree->begin(); it != tree->end(); it++) {
         df += (*it)->getModelFactory()->model->getNDim() +
@@ -367,7 +373,8 @@ int PartitionModelPlen::getNParameters(int brlen_type) const {
 
 /*
 int PartitionModelPlen::getNDim() const{
-    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    auto tree = dynamic_cast<PhyloSuperTreePlen*>(site_rate->getTree());
+    ASSERT(tree!=nullptr);
     int ndim = tree->size() -1;
     return ndim;
 }

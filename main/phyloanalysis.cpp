@@ -4589,7 +4589,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     if (verbose_mode >= VerboseMode::VB_MED) {
         if (tree->isSuperTree() &&
             params.partition_type != BRLEN_OPTIMIZE) {
-            ((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
+            auto stree = dynamic_cast<PhyloSuperTreePlen*>(tree);
+            stree->printNNIcasesNUM();
         }
     }
     // 2015-09-22: bug fix, move this line to before deleting tree
