@@ -6355,7 +6355,9 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
         }
         out << i+1 << "\t";
         if (pattern_rates[ptn] >= MAX_SITE_RATE) {
-            out << "100.0"; else out << pattern_rates[ptn];
+            out << "100.0"; }
+        else {
+            out << pattern_rates[ptn];
         }
         //cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
         if (!pattern_cat.empty()) {
