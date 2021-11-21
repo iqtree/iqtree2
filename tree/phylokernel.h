@@ -2257,7 +2257,7 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch,
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     assert(node_branch);
     
-    if (!central_partial_pars) {
+    if (central_partial_pars==nullptr) {
         initializeAllPartialPars();
     }
     

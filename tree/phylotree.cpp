@@ -215,6 +215,7 @@ PhyloTree::~PhyloTree() {
     aligned_free(central_partial_lh);
     aligned_free(central_scale_num);
     aligned_free(central_partial_pars);
+    tip_partial_pars = nullptr;
     aligned_free(cost_matrix);
 
     delete model_factory;
@@ -1491,15 +1492,16 @@ int PhyloTree::initializeAllPartialPars() {
 }
 
 void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_count) {
+    determineBlockSizes();
     if (central_partial_pars != nullptr) {
         return;
     }
-    determineBlockSizes();
     uint64_t tip_partial_pars_size = get_safe_upper_limit_float(aln->num_states * (aln->STATE_UNKNOWN+1));
     uint64_t vector_count          = aln->getNSeq() * 4 - 2 + extra_vector_count;
     //2N-3 branches in an unrooted tree, 2N-1 in a rooted tree, and each branch needs
     //two vectors, so allocate 4N-2, just in case the tree is rooted.
-    total_parsimony_mem_size       = vector_count * pars_block_size + tip_partial_pars_size;
+    total_parsimony_mem_size = vector_count * pars_block_size 
+                             + tip_partial_pars_size;
 
     LOG_LINE(VerboseMode::VB_DEBUG, "Allocating " << total_parsimony_mem_size * sizeof(UINT)
              << " bytes for " << vector_count << " partial parsimony vectors"
@@ -1511,12 +1513,13 @@ void PhyloTree::ensureCentralPartialParsimonyIsAllocated(size_t extra_vector_cou
     } catch (std::bad_alloc &) {
         outError("Not enough memory for partial parsimony vectors (bad_alloc)");
     }
-    if (!central_partial_pars) {
+    if ( central_partial_pars == nullptr ) {
         outError("Not enough memory for partial parsimony vectors");
     }
     tip_partial_pars = central_partial_pars + total_parsimony_mem_size - tip_partial_pars_size;
     
-    LOG_LINE(VerboseMode::VB_MAX, "central_partial_pars is " << pointer_to_hex(central_partial_pars)
+    LOG_LINE(VerboseMode::VB_MAX, "central_partial_pars"
+             << " is " << pointer_to_hex(central_partial_pars)
              << ", tip_partial_pars is " << pointer_to_hex(tip_partial_pars)
              << ", end of allocation is " << pointer_to_hex(tip_partial_pars+tip_partial_pars_size));
     LOG_LINE(VerboseMode::VB_MAX, "parsimony_index upper bound is "
@@ -1533,17 +1536,10 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     }
     if (dad!=nullptr) {
         // assign blocks in central_partial_lh to both Neighbors (dad->node, and node->dad)
+        PhyloNeighbor* nei     = dad->findNeighbor(node);
         PhyloNeighbor* backNei = node->findNeighbor(dad);
-        if (backNei->partial_pars == nullptr ) {
-            backNei->partial_pars  = central_partial_pars + (index * pars_block_size);
-            ++index;
-        }
-        PhyloNeighbor* nei = dad->findNeighbor(node);
-        if (nei->partial_pars == nullptr) {
-            nei->partial_pars = central_partial_pars + (index * pars_block_size);
-            ++index;
-        }
-        ASSERT( tip_partial_pars==nullptr || nei->partial_pars < tip_partial_pars );
+        initializePartialParsimonyForOneNeighbor(nei, index);
+        initializePartialParsimonyForOneNeighbor(backNei, index);
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
         initializeAllPartialPars(index, child, node);
@@ -1612,7 +1608,7 @@ int PhyloTree::computeParsimony(const char* taskDescription,
                                 bool bidirectional, bool countProgress,
                                 PhyloNeighbor* neighbor,
                                 PhyloNode* starting_node) {
-    if (central_partial_pars == nullptr) {
+    if (central_partial_pars == nullptr || tip_partial_pars == nullptr) {
         initializeAllPartialPars();
     }
     PhyloNode*     r   = (starting_node!=nullptr) ? starting_node : getRoot();
@@ -1927,8 +1923,9 @@ void PhyloTree::determineParsimonyBlockSizes() {
         pars_block_size = aln->getMaxNumStates() * uints_per_state + 1;
     }
     pars_block_size = get_safe_upper_limit_float(pars_block_size);
-    if (0 < old_pars_block_size && old_pars_block_size < pars_block_size
-        && this->central_partial_pars != nullptr) {
+    if (0 < old_pars_block_size && 
+        old_pars_block_size < pars_block_size && 
+        this->central_partial_pars != nullptr) {
         deleteAllPartialParsimony();
     }
 }
@@ -2097,8 +2094,11 @@ void PhyloTree::initializeAllPartialLh(int &index_pars, int &index_lh,
 void PhyloTree::initializePartialParsimonyForOneNeighbor
         (PhyloNeighbor* nei, int& index_pars) {
     if (nei!=nullptr && nei->partial_pars==nullptr) {
-        nei->partial_pars = central_partial_pars + (index_pars * pars_block_size);
+        nei->partial_pars = central_partial_pars
+                          + (index_pars * pars_block_size);
         ++index_pars;
+        ASSERT( tip_partial_pars==nullptr || 
+                nei->partial_pars < tip_partial_pars );
     }
 }
 

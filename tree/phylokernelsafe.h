@@ -1747,7 +1747,7 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);
-    if (!central_partial_pars) {
+    if (central_partial_pars==nullptr) {
         initializeAllPartialPars();
     }
     if ((dad_branch->partial_lh_computed & 2) == 0) {

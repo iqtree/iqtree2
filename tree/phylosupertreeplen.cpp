@@ -1651,12 +1651,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         total_lh_cat_size = 0,
         total_buffer_size = 0;
 
-	if (part_order.empty())
+	if (part_order.empty()) {
 		computePartitionOrder();
-
+	}
 	for (partid = 0; partid < ntrees; partid++) {
 		part = part_order[partid];
-        it = begin() + part;
+        it   = begin() + part;
         // extra #numStates for ascertainment bias correction
 		mem_size[part] = get_safe_upper_limit((*it)->getAlnNPattern()) + get_safe_upper_limit((*it)->aln->num_states);
         size_t mem_cat_size = mem_size[part] * (*it)->getRate()->getNRate() *
@@ -1667,11 +1667,11 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
 		lh_cat_size[part] = mem_size[part] * (*it)->getRate()->getNDiscreteRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
-		total_mem_size += mem_size[part];
-		total_block_size += block_size[part];
+		total_mem_size         += mem_size[part];
+		total_block_size       += block_size[part];
         total_scale_block_size += scale_block_size[part];
-		total_lh_cat_size += lh_cat_size[part];
-        total_buffer_size += (buffer_size[part] = (*it)->getBufferPartialLhSize());
+		total_lh_cat_size      += lh_cat_size[part];
+        total_buffer_size      += (buffer_size[part] = (*it)->getBufferPartialLhSize());
 	}
     
     tree_buffers.ensurePatternLhAllocated(total_mem_size);
@@ -1696,14 +1696,14 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     if (ptn_freq_pars == nullptr) {
         ptn_freq_pars = aligned_alloc<UINT>(total_mem_size);
     }
-    at(part_order[0])->ptn_freq = ptn_freq;
-    at(part_order[0])->ptn_freq_pars = ptn_freq_pars;
+    at(part_order[0])->ptn_freq          = ptn_freq;
+    at(part_order[0])->ptn_freq_pars     = ptn_freq_pars;
     at(part_order[0])->ptn_freq_computed = false;
-    if (!ptn_invar)
+    if (ptn_invar==nullptr) {
         ptn_invar = aligned_alloc<double>(total_mem_size);
-    at(part_order[0])->ptn_invar = ptn_invar;
+	}
+    at(part_order[0])->ptn_invar         = ptn_invar;
 
-//    size_t IT_NUM = (params->nni5) ? 6 : 2;
     size_t IT_NUM = 2;
     if ( nni_partial_lh == nullptr ) {
         nni_partial_lh = aligned_alloc<double>(IT_NUM*total_block_size);
@@ -1717,7 +1717,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
 	for (partid = 1; partid < ntrees; partid++) {
         part = part_order[partid-1];
-        it = begin() + part_order[partid];
+        it   = begin() + part_order[partid];
         iterator prev_it = begin()+part_order[partid-1];
         int here = part_order[partid];
         (*it)->tree_buffers.borrowPatternLh((*prev_it)->tree_buffers._pattern_lh + mem_size[part], mem_size[here]);
@@ -1742,8 +1742,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	partial_pars_entries.resize(ntrees);
 	for (it = begin(), part = 0; it != end(); ++it, ++part) {
 		(*it)->getMemoryRequired(partial_lh_entries[part], scale_num_entries[part], partial_pars_entries[part]);
-		total_partial_lh_entries += partial_lh_entries[part];
-		total_scale_num_entries += scale_num_entries[part];
+		total_partial_lh_entries   += partial_lh_entries[part];
+		total_scale_num_entries    += scale_num_entries[part];
 		total_partial_pars_entries += partial_pars_entries[part];
 	}
 
@@ -1760,7 +1760,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     // assign individual chunk just to prevent reallocation of memory, they will not be used
 	for (it = begin(); it != end(); ++it) {
 		(*it)->central_partial_lh = central_partial_lh;
-		(*it)->central_scale_num = central_scale_num;
+		(*it)->central_scale_num  = central_scale_num;
 	}
 
 	double* lh_addr    = central_partial_lh;
@@ -1774,7 +1774,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     tip_partial_lh   = nullptr;
     tip_partial_pars = nullptr;
 	part = 0;
-    for (PhyloTree* t : *this ) {
+    for (PhyloTree* t : *this ) {		
         t->tip_partial_lh   = lh_addr;
         t->tip_partial_pars = pars_addr;
 		uint64_t n_states = t->aln->num_states;
@@ -1817,10 +1817,13 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     }
 }
 
-void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node, PhyloNode *dad) {
-    if (!node)
+void PhyloSuperTreePlen::initializeAllPartialLh
+		(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, 
+		 PhyloNode *node, PhyloNode *dad) {
+    if (node==nullptr) {
         node = getRoot();
-    if (dad) {
+	}
+    if (dad!=nullptr) {
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
 		SuperBranch    branch(node, dad);
 		SuperNeighbor* nei      = branch.lookingRight();
@@ -1828,7 +1831,9 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
         for (int partid = 0; partid < size(); partid++) {
             int part = part_order[partid];
         	PhyloNeighbor *nei_part = nei->link_neighbors[part];
-        	if (!nei_part) continue;
+        	if (!nei_part) {
+				continue;
+			}
         	PhyloNeighbor *nei_part_back = nei_back->link_neighbors[part];
 
             if (params->lh_mem_save == LM_PER_NODE) {
@@ -1866,9 +1871,15 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
                     lh_addr = lh_addr + block_size[part];
                     scale_addr = scale_addr + scale_block_size[part];
                 }
-    //			nei_part->partial_pars = pars_addr;
-    //			pars_addr += partial_pars_entries[part];
             }
+			if (nei_part->partial_pars==nullptr) {
+				nei_part->partial_pars = pars_addr;
+				pars_addr += partial_pars_entries[part];
+			}
+			if (nei_part_back->partial_pars==nullptr) {
+				nei_part_back->partial_pars = pars_addr;
+				pars_addr += partial_pars_entries[part];
+			}
         }
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, adj) {

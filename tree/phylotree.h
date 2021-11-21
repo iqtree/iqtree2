@@ -757,21 +757,26 @@ public:
      ****************************************************************************/
 
     /**
-     * 		Return the approximated branch length estimation using corrected parsimony branch length
-     * 		This is usually used as the starting point before using Newton-Raphson
+     * 		Return the approximated branch length estimation using 
+     *      corrected parsimony branch length.
+     * 		This is usually used as the starting point before using 
+     *      Newton-Raphson.
      */
 //    double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
-            initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
-            @return the number of partial parsimony blocks that were used by existing nodes of the tree
+            initialize partial_pars vector of all PhyloNeighbors, 
+            allocating central_partial_pars
+            @return the number of partial parsimony blocks 
+                    that were used by existing nodes of the tree
      */
     virtual int initializeAllPartialPars();
 
     void ensureCentralPartialParsimonyIsAllocated(size_t extra_block_count);
     
     /**
-            initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
+            initialize partial_pars vector of all PhyloNeighbors, 
+            allocating central_partial_pars
             @param node the current node
             @param dad dad of the node, used to direct the search
             @param index the index
@@ -993,12 +998,14 @@ public:
     virtual void initializeAllPartialLh();
 
     /**
-            de-allocate central_partial_lh, central_scale_num and parsimony vectors
+            de-allocate central_partial_lh, central_scale_num 
+            and parsimony vectors
      */
     virtual void deleteAllPartialLh();
     
     /**
-            de-allocate central_partial_pars, tip_partial_pars, and parsimony vectors
+            de-allocate central_partial_pars, tip_partial_pars, 
+            and parsimony vectors
      */
     virtual void deleteAllPartialParsimony();
 
@@ -1034,7 +1041,7 @@ public:
             @param index the index
      */
     virtual void initializeAllPartialLh(int &index, int &indexlh,
-                                        PhyloNode *node = NULL, PhyloNode *dad = NULL);
+                                        PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
         void initializePartialParsimonyForOneNeighbor(PhyloNeighbor* nei, int &index_pars);
         void initializePartialLikelihoodForOneNeighbor(PhyloNeighbor* nei, int &index_lh);
     /**

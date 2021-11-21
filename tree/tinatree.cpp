@@ -126,14 +126,11 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh,
     }
     if (dad) {
         // assign a region in central_partial_lh to both Neighbours (dad->node, and node->dad)
-        PhyloNeighbor *nei = node->findNeighbor(dad);
-        //assert(!nei->partial_lh);
-        nei->partial_pars = central_partial_pars + (index * pars_block_size);
-        nei = dad->findNeighbor(node);
-        //assert(!nei->partial_lh);
-        nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
-        index += 2;
-        ASSERT(index < nodeNum * 2 - 1);
+        PhyloNeighbor* nei1 = node->findNeighbor(dad);
+        initializePartialParsimonyForOneNeighbor(nei1, index);
+
+        PhyloNeighbor* nei2 = dad->findNeighbor(node);
+        initializePartialParsimonyForOneNeighbor(nei2, index);
     }
     FOR_EACH_ADJACENT_PHYLO_NODE(node, dad, it, child) {
         initializeAllPartialLh(index, indexlh, child, node);

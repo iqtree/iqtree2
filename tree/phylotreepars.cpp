@@ -612,12 +612,12 @@ int PhyloTree::setParsimonyBranchLengths() {
         sum_score += aln->getCountOfSingletonParsimonyStates();
     }
     if (pars_score!=sum_score ) {
-        hideProgress();
         LOG_LINE(VerboseMode::VB_MIN, "pars_score " << pars_score
                  << " but sum_score " << sum_score);
-        showProgress();
+        if (!params->ignore_any_errors) {
+            ASSERT(pars_score == sum_score);
+        }
     }
-    ASSERT(pars_score == sum_score);
     return static_cast<int>(nodes1.size());
 }
 
@@ -634,10 +634,10 @@ intptr_t PhyloTree::assignStatesForFirstTwoNodes
     //#endif
     for (intptr_t site = 0; site < nsites; ++site) {
         intptr_t real_site = site*UINT_BITS;
-        size_t   offset = nstates*site;
-        UINT*    x      = dad_partial_pars  + offset;
-        UINT*    y      = node_partial_pars + offset;
-        UINT     w      = x[0] & y[0];
+        size_t   offset    = nstates*site;
+        UINT*    x         = dad_partial_pars  + offset;
+        UINT*    y         = node_partial_pars + offset;
+        UINT     w         = x[0] & y[0];
         for (int state = 1; state < nstates; state++) {
             w |= x[state] & y[state];
         }
@@ -707,19 +707,21 @@ intptr_t PhyloTree::assignStatesForOneNode(intptr_t nsites, UINT* dad_partial_pa
         for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites;
                 s++, bit = bit << 1, real_site++) {
             StateType dad_state = dadSeq[real_site];
-            ASSERT(static_cast<int>(dad_state) < nstates);
-            if (x[dad_state] & bit) {
-                // same state as dad
-                nodeSeq[real_site] = dad_state;
-            } else {
+            if (dad_state != aln->STATE_UNKNOWN) {
+                ASSERT(static_cast<int>(dad_state) < nstates);            
+                if (x[dad_state] & bit) {
+                    // same state as dad
+                    nodeSeq[real_site] = dad_state;
+                    continue;
+                }
                 // different state from dad
                 subst++;
-                for (int state = 0; state < nstates; state++) {
-                    if (x[state] & bit) {
-                        // assign the first admissible state
-                        nodeSeq[real_site] = state;
-                        break;
-                    }
+            } 
+            for (int state = 0; state < nstates; state++) {
+                if (x[state] & bit) {
+                    // assign the first admissible state
+                    nodeSeq[real_site] = state;
+                    break;
                 }
             }
         }
@@ -1281,7 +1283,7 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch,
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     assert(node_branch);
         
-    if (!central_partial_pars) {
+    if (central_partial_pars==nullptr) {
         initializeAllPartialPars();
     }
     computeTipPartialParsimony();
@@ -1816,7 +1818,7 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
     PhyloNodeVector  attached_node; // node attached to removed Neighbor
     PhyloNodeVector  added_nodes; // newly added nodes
     intptr_t         newNodeID;
-    size_t           index;
+    int              index;
 
     PhyloTreeThreadingContext context(*this, params->parsimony_uses_max_threads);
     setParsimonyKernel(params->SSE);
@@ -1903,8 +1905,11 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
             new_taxon->addNeighbor(added_node, -1.0);
             
             // allocate memory
-            new_taxon->findNeighbor(added_node)->partial_pars = central_partial_pars + ((index++) * pars_block_size);
-            added_node->findNeighbor(new_taxon)->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+
+            auto nei1 = new_taxon->findNeighbor(added_node);
+            auto nei2 = added_node->findNeighbor(new_taxon);
+            initializePartialParsimonyForOneNeighbor(nei1, index);
+            initializePartialParsimonyForOneNeighbor(nei2, index);
         }
         // preserve two neighbors
         added_node->addNeighbor(DUMMY_NODE_1, -1.0);
@@ -1932,11 +1937,11 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
         // assign partial_pars storage
         PhyloNeighbor* neiDown = target_dad->findNeighbor(added_node);
         neiDown->clearComputedFlags();
-        neiDown->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        initializePartialParsimonyForOneNeighbor(neiDown, index);
         
         PhyloNeighbor* neiUp = target_node->findNeighbor(added_node);
         neiUp->clearComputedFlags();
-        neiUp->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        initializePartialParsimonyForOneNeighbor(neiUp, index);
         
         ASSERT(neiUp->partial_pars < tip_partial_pars);
 
