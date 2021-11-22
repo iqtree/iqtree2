@@ -2212,13 +2212,13 @@ void AliSimulator::computeSimThresh(int seq_length)
 void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop)
 {
     // estimate the total of sites need to change
-    int num_changes = round(error_prop*sequence.size());
+    int num_changes = round(error_prop*sites.size());
     
     // randomly select a site to change
     for (int i = 0; i < num_changes; i++)
     {
         // throw error if the number of available sites is not sufficient
-        if (num_changes > sites.size())
+        if (num_changes - i > sites.size())
             outError("Cannot select a site for changing state (to simulate Sequencing Error Model). The proportion of error seems to be too high. You should try again with a smaller proportion of error!");
         
         // randomly select a site
@@ -2236,7 +2236,7 @@ void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &s
         {
             // select a new state
             short int new_state = random_int(max_num_states);
-            while (new_state == sequence[selected_site])
+            while (new_state == sequence[selected_site] && max_num_states > 1)
             {
                 new_state = random_int(max_num_states);
             }
@@ -2266,7 +2266,7 @@ void AliSimulator::handleDNAerr(double error_prop, vector<short int> &sequence, 
     // otherwise get all sites
     else
     {
-        sites.resize(site_specific_model_index.size());
+        sites.resize(sequence.size());
         std::iota(sites.begin(),sites.end(),0);
     }
     
