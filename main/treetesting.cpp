@@ -17,7 +17,36 @@
 #include "tree/phylosupertree.h"
 #include "gsl/mygsl.h"
 #include "utils/timeutil.h"
+#include "vectorclass/vectorclass.h"
 
+
+class PhyloMemory: public Optimization {
+    public:
+        PhyloMemory(double m1, double m2, double bl, double e);
+        virtual double computeFunction(double value);
+        virtual void computeFuncDerv(double value, double &df, double &ddf);
+        double memory1;
+        double memory2;
+        double brlen;
+        double eval;
+
+};
+
+PhyloMemory::PhyloMemory(double m1, double m2, double bl, double e) {
+    memory1 = m1;
+    memory2 = m2;
+    brlen = bl;
+    eval = e;
+}
+
+double PhyloMemory::computeFunction(double value) {
+    return exp(2*eval*value)*memory1 + exp(2*eval*(brlen-value))*memory2;
+}
+
+void PhyloMemory::computeFuncDerv(double value, double &df, double &ddf) {
+    df = 2*eval*exp(2*eval*value)*memory1 - 2*eval*exp(2*eval*(brlen-value))*memory2;
+    ddf = 4*eval*eval*exp(2*eval*value)*memory1 + 4*eval*eval*exp(2*eval*(brlen-value))*memory2;
+}
 
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                  bool append, const char *linename) {
@@ -206,7 +235,9 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         tree->getInternalNodes(nodes);
         
         double *marginal_ancestral_prob;
+        double *marginal_ancestral_prob2;
         int *marginal_ancestral_seq;
+        int *marginal_ancestral_seq2;
         
         //        if (tree->params->print_ancestral_sequence == AST_JOINT)
         //            outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
@@ -241,17 +272,79 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                 out << "\tp_" << tree->aln->convertStateBackStr(i);
         }
         out << endl;
+
+        double *eval = tree->getModel()->getEigenvalues();
+        double *evec = tree->getModel()->getEigenvectors();
+        size_t nptn = tree->getAlnNPattern();
+        size_t nstates = tree->getModel()->num_states;
+        size_t len = nptn * nstates;
+        size_t nsites = tree->getAlnNSite();
+        double *ptn_freq = tree->ptn_freq;
+
+        // Transpose eigenvectors
+        double evec_transposed[nstates][nstates];
+        for (int j = 0; j < nstates; j++) {
+            for (int k = 0; k < nstates; k++) {
+                evec_transposed[j][k] = evec[k*nstates+j];
+            }
+        }
+
+        // Cast into vectorclass
+        Vec4d *evec_ptr = (Vec4d*) evec_transposed;
+
+        // Find the largest nonzero eigenvalue biggest_eval
+        double tolerance = 1e-6;
+        double biggest_eval = -1000;
+        int position_zero = -1;
+        for (int i = 0; i < nstates; ++i) {
+            if (fabs(eval[i]) < tolerance) {
+                if (position_zero > -1) cout << endl << "Warning: There are at least two zero eigenvalues." << endl;
+                position_zero = i;
+                } else if (eval[i] > biggest_eval) {
+                    biggest_eval = eval[i];
+            }
+        }
+        if (position_zero == -1) cout << endl << "Warning: There is no zero eigenvalue." << endl;
+
+        // Compute the algebraic multiplicity (number of times repeated) of eigenvalue biggest_eval
+        int amount_of_equal_eigenvalues = 0;
+        for (int i = 0; i < nstates; ++i) {
+            if (fabs (biggest_eval - eval[i]) < tolerance)
+                ++amount_of_equal_eigenvalues;
+            }
+
+        // Find the position(s) of biggest_eval
+        vector<int> positions_of_biggest(amount_of_equal_eigenvalues, 0);
+        int aux = 0;
+        for (int i = 0; i < nstates; ++i) {
+        if (fabs (biggest_eval - eval[i]) < tolerance) {
+                positions_of_biggest[aux] = i;
+                ++aux;
+            }
+        }
         
         
+        int div = nsites * amount_of_equal_eigenvalues;
         bool orig_kernel_nonrev;
         tree->initMarginalAncestralState(out, orig_kernel_nonrev, marginal_ancestral_prob, marginal_ancestral_seq);
+        tree->initMarginalAncestralState(out, orig_kernel_nonrev, marginal_ancestral_prob2, marginal_ancestral_seq2);
         
-        for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
-            PhyloNode *node = (PhyloNode*)(*it);
-            PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
+        //for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
+        BranchVector branches;
+        tree->getBranches(branches);
+        BranchVector::iterator brit;
+        for (brit = branches.begin(); brit != branches.end(); brit++) {
+            //PhyloNode *node = (PhyloNode*)(*it);
+            //PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
+            PhyloNode *node = (PhyloNode*)(brit->first);
+            PhyloNode *dad = (PhyloNode*)(brit->second);
+            double brlen = node->findNeighbor(dad)->length;
             
             tree->computeMarginalAncestralState((PhyloNeighbor*)dad->findNeighbor(node), dad,
                                                 marginal_ancestral_prob, marginal_ancestral_seq);
+
+            tree->computeMarginalAncestralState((PhyloNeighbor*)node->findNeighbor(dad), node,
+                                                marginal_ancestral_prob2, marginal_ancestral_seq2);
             
             //            int *joint_ancestral_node = joint_ancestral + (node->id - tree->leafNum)*nptn;
             
@@ -259,6 +352,72 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             if (node->name.empty() || !isalpha(node->name[0])) {
                 node->name = "Node" + convertIntToString(node->id-tree->leafNum+1);
             }
+
+            if (dad->name.empty() || !isalpha(dad->name[0])) {
+                dad
+                ->name = "Node" + convertIntToString(dad->id-tree->leafNum+1);
+            }
+
+            double memory1 = 0;
+            for (int l = 0; l < len; l += nstates) {
+                Vec4d prob_vec;
+                double prob[nstates] = {marginal_ancestral_prob[l], marginal_ancestral_prob[l+1], marginal_ancestral_prob[l+2], marginal_ancestral_prob[l+3]};
+                prob_vec.load(prob);
+                double addto = 0;
+                for (int j = 0; j < amount_of_equal_eigenvalues; j++) {
+                    addto += pow(horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec), 2);
+                }
+                int ptn_idx = l / nstates;
+                memory1 += addto * ptn_freq[ptn_idx];
+            }
+            memory1 /= div;
+            double tnode = log(memory1) / eval[positions_of_biggest[0]];
+            cout << node->name << " memory: " << memory1 << ", t: " << tnode << endl;
+
+            double memory2 = 0;
+            for (int l = 0; l < len; l += nstates) {
+                Vec4d prob_vec;
+                double prob[nstates] = {marginal_ancestral_prob2[l], marginal_ancestral_prob2[l+1], marginal_ancestral_prob2[l+2], marginal_ancestral_prob2[l+3]};
+                prob_vec.load(prob);
+                double addto = 0;
+                for (int j = 0; j < amount_of_equal_eigenvalues; j++) {
+                    addto += pow(horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec), 2);
+                }
+                int ptn_idx = l / nstates;
+                memory2 += addto * ptn_freq[ptn_idx];
+            }
+            memory2 /= div;
+            double tdad = log(memory2) / eval[positions_of_biggest[0]];
+            cout << dad->name << " memory: "<< memory2 << ", t: " << tdad << endl;
+
+            double coherence = 0;
+            for (int l = 0; l < len; l += nstates) {
+                Vec4d prob_vec; 
+                Vec4d prob_vec2;
+                double prob[nstates] = {marginal_ancestral_prob[l], marginal_ancestral_prob[l+1], marginal_ancestral_prob[l+2], marginal_ancestral_prob[l+3]};
+                double prob2[nstates] = {marginal_ancestral_prob2[l], marginal_ancestral_prob2[l+1], marginal_ancestral_prob2[l+2], marginal_ancestral_prob2[l+3]};
+                prob_vec.load(prob);
+                prob_vec2.load(prob2);
+                double addto = 0;
+                for (int j = 0; j < amount_of_equal_eigenvalues; j++) {
+                    addto += horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec) * horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec2) ;
+                }
+                int ptn_idx = l / nstates;
+                coherence += addto * ptn_freq[ptn_idx];
+            }
+            coherence /= div;
+            double dede = log(coherence) / eval[positions_of_biggest[0]];
+            cout << dad->name << "-" << node->name << " coherence: " << coherence << ", t: " << dede << endl;
+
+            double start = (brlen - tdad + tnode) / 2;
+            start = (start < 0) ? 0 : start;
+            start = (start > brlen) ? brlen : start; 
+            PhyloMemory MemoryObj(memory1, memory2, brlen, biggest_eval);
+            double estimate;
+            double optx = MemoryObj.minimizeNewton(0.0, start, brlen, tolerance, estimate);
+
+            cout << "Optimizing memory of branch " << node->name << " - " << dad->name << " from " << start <<  " (brlen: " << brlen << ")" << endl;
+            cout << "Optimized memory" << " at " << optx << " : " << estimate << endl;
             
             // print ancestral state probabilities
             tree->writeMarginalAncestralState(out, node, marginal_ancestral_prob, marginal_ancestral_seq);
