@@ -105,9 +105,11 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 #define LOG_SCALING_THRESHOLD -177.4456782233459932741
 
 #ifdef __AVX512KNL
-#define SIMD_BITS 512
+#define SIMD_BITS      512
+#define UINTS_PER_SIMD 16
 #else
-#define SIMD_BITS 256
+#define SIMD_BITS      256
+#define UINTS_PER_SIMD 8
 #endif
 
 
@@ -821,18 +823,24 @@ public:
 //    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
         //Supporting functions
-        int computeDNAPartialParsimonyFast
-                (Alignment* sub_aln, int leafid, int start_pos, int end_pos,
-                 PhyloNeighbor* dad_branch, int site);
-        int computeProteinPartialParsimonyFast
-                (Alignment* sub_aln, int leafid, int start_pos, int end_pos,
-                 PhyloNeighbor* dad_branch, int site);
-        int computeOtherPartialParsimonyFast
-                (Alignment* sub_aln, int leafid, int start_pos, int end_pos,
-                 PhyloNeighbor* dad_branch, int site);
-        void computeInternalNodePartialParsimonyFast
-                (PhyloNode* node, PhyloNode* dad, PhyloNeighbor* dad_branch);
-
+        intptr_t computeDNAPartialParsimonyFast
+                 (Alignment* sub_aln, int leafid, 
+                  int start_pos, int end_pos,
+                  PhyloNeighbor* dad_branch, intptr_t site);
+        intptr_t computeProteinPartialParsimonyFast
+                 (Alignment* sub_aln, int leafid, 
+                  int start_pos, int end_pos,
+                  PhyloNeighbor* dad_branch, intptr_t site);
+        intptr_t computeOtherPartialParsimonyFast
+                 (Alignment* sub_aln, int leafid, 
+                  int start_pos, int end_pos,
+                  PhyloNeighbor* dad_branch, intptr_t site);
+        void     addDummySiteAdmissibilities
+                 (intptr_t site, intptr_t max_sites, 
+                  UINT* partial_pars);
+        void     computeInternalNodePartialParsimonyFast
+                 (PhyloNode* node, PhyloNode* dad, 
+                  PhyloNeighbor* dad_branch);
 
     int  computeMarginalParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
@@ -2031,7 +2039,7 @@ public:
     void printTreeLengthScaling(const char *filename);
 
     /**
-     optimize pattern-specific rates by maxmimum likelihood given the tree with fixed branch lengths
+     optimize pattern-specific rates by maximum likelihood given the tree with fixed branch lengths
      This function will call optimizeTreeLengthScaling
      */
     void optimizePatternRates(DoubleVector &pattern_rates);
@@ -2312,11 +2320,11 @@ public:
      */
     int setParsimonyBranchLengths();
         //Supporting functions
-        intptr_t assignStatesForFirstTwoNodes(intptr_t nsites, UINT* dad_partial_pars, 
+        intptr_t assignStatesForFirstTwoNodes(intptr_t nsite_blocks, UINT* dad_partial_pars, 
                                               UINT* node_partial_pars,
                                               int dad_id, int node_id, 
                                               vector<vector<StateType> >& sequences);
-        intptr_t assignStatesForOneNode      (intptr_t nsites, UINT* dad_partial_pars, 
+        intptr_t assignStatesForOneNode      (intptr_t nsite_blocks, UINT* dad_partial_pars, 
                                               UINT* node_partial_pars,
                                               int dad_id, int node_id,
                                               vector<vector<StateType> >& sequences);
