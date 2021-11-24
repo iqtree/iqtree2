@@ -1184,12 +1184,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     if (sayHowLong) {
         size_t treeCount = initTreeStrings.size() - init_size;
         if (params->compute_likelihood) {
-            LOG_LINE(VerboseMode::VB_QUIET, "Computing log-likelihood of "
-                    << treeCount << " initial trees ... ");
+            LOG_LINE(VerboseMode::VB_QUIET, 
+                     "Computing log-likelihood of "
+                     << treeCount << " initial trees ... ");
         }
         else {
-            LOG_LINE(VerboseMode::VB_QUIET, "Computing parsimony scores of "
-                    << treeCount << " initial trees ... ");
+            LOG_LINE(VerboseMode::VB_QUIET, 
+                     "Computing parsimony scores of "
+                     << treeCount << " initial trees ... ");
         }
     }
     startTime = getRealTime();
@@ -1254,7 +1256,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     size_t initialTreeCount = bestInitTrees.size();
 
     if (noisy) {
-        LOG_LINE(VerboseMode::VB_QUIET, "Do NNI search on " << initialTreeCount
+        LOG_LINE(VerboseMode::VB_QUIET, 
+                 "Do NNI search on " << initialTreeCount
                  << " best initial trees");
     }
     stop_rule.setCurIt(0);

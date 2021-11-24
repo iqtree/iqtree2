@@ -1919,7 +1919,8 @@ void PhyloTree::determineParsimonyBlockSizes() {
         //Otherwise, parsimony tracks a bit per site per state
         //(and should have 1 additional UINTs for a total score)
         size_t bits_per_state  = max(aln->size(), (size_t)aln->num_variant_sites);
-        size_t uints_per_state = (bits_per_state + SIMD_BITS - 1) / UINT_BITS;
+        size_t uints_per_state = (bits_per_state + SIMD_BITS - 1) 
+                               / SIMD_BITS * UINTS_PER_SIMD;
         pars_block_size = aln->getMaxNumStates() * uints_per_state + 1;
     }
     pars_block_size = get_safe_upper_limit_float(pars_block_size);
@@ -2408,7 +2409,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         memmove(ptn_lh, tree_buffers._pattern_lh, nptn * sizeof(double));
     }
 
-    if (ptn_lh_cat!=nullptr) {
+    if (ptn_lh_cat==nullptr) {
         return;
     }
 
@@ -2638,28 +2639,26 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
 }
 
 double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
-    intptr_t nptn       = getAlnNPattern();
-    size_t   nsite      = getAlnNSite();
-    double*  pattern_lh = ptn_lh;
-    if (!ptn_lh) {
-        pattern_lh = new double[nptn];
-        computePatternLikelihood(pattern_lh);
+    intptr_t    nptn       = getAlnNPattern();
+    size_t      nsite      = getAlnNSite();
+    std::vector<double> pattern_lh_vector;
+    if (ptn_lh==nullptr) {
+        pattern_lh_vector.resize(nptn);
+        ptn_lh = pattern_lh_vector.data();
+        computePatternLikelihood(ptn_lh);
     }
     IntVector pattern_freq;
     aln->getPatternFreq(pattern_freq);
     if (tree_lh == 0.0) {
         for (intptr_t i = 0; i < nptn; ++i) {
-            tree_lh += pattern_lh[i] * pattern_freq[i];
+            tree_lh += ptn_lh[i] * pattern_freq[i];
         }
     }
     double avg_site_lh = tree_lh / nsite;
     double variance = 0.0;
     for (intptr_t i = 0; i < nptn; ++i) {
-        double diff = (pattern_lh[i] - avg_site_lh);
+        double diff = (ptn_lh[i] - avg_site_lh);
         variance += diff * diff * pattern_freq[i];
-    }
-    if (!ptn_lh) {
-        delete[] pattern_lh;
     }
     if (nsite <= 1) {
         return 0.0;
@@ -6338,7 +6337,8 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
     int ncategory = 1;
     
     if (bayes) {
-        ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
+        ncategory = site_rate->computePatternRates
+                    (pattern_rates, pattern_cat);
     }
     else {
         optimizePatternRates(pattern_rates);

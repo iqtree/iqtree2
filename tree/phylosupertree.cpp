@@ -703,13 +703,13 @@ int PhyloSuperTree::computeParsimonyBranchObsolete
     SuperNeighbor* dad_nei  = dynamic_cast<SuperNeighbor*>(dad_branch);
     SuperNeighbor* node_nei = dad_nei->getNode()->findNeighbor(dad);
         
-    if (branch_subst) {
+    if (branch_subst!=nullptr) {
         branch_subst = 0;
     }
     for (iterator it = begin(); it != end(); ++it, ++part) {
         int this_subst = 0;
         if (dad_nei->link_neighbors[part]) {
-            if (branch_subst) {
+            if (branch_subst!=nullptr) {
                 score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], node_nei->link_neighbors[part]->getNode(), &this_subst);
 			}
             else {
@@ -718,7 +718,7 @@ int PhyloSuperTree::computeParsimonyBranchObsolete
         } else {
             score += (*it)->computeParsimony();
 		}
-        if (branch_subst) {
+        if (branch_subst!=nullptr) {
             branch_subst += this_subst;
 		}
     }
@@ -820,7 +820,7 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 	iterator it;
 	for (it = begin(); it != end(); ++it) {
 		if (ptn_lh_cat) {
-			(*it)->computePatternLikelihood(pattern_lh + offset, NULL, ptn_lh_cat + offset_lh_cat, wsl);
+			(*it)->computePatternLikelihood(pattern_lh + offset, nullptr, ptn_lh_cat + offset_lh_cat, wsl);
 		}
 		else {
 			(*it)->computePatternLikelihood(pattern_lh + offset);

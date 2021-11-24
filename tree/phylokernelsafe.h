@@ -1743,7 +1743,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 }
 
 template<class VectorClass>
-int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+int PhyloTree::computeParsimonyBranchFastSIMD
+        (PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);
@@ -1762,16 +1763,20 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
 //    VectorClass score = 0;
 //    VectorClass w;
 
-    const int NUM_BITS = VectorClass::size() * UINT_BITS;
-    int nsites = (aln->num_informative_sites + NUM_BITS - 1)/NUM_BITS;
-    int entry_size = nstates * VectorClass::size();
+    const int NUM_BITS   = VectorClass::size() * UINT_BITS;
+    int       nsites     = (aln->num_informative_sites + NUM_BITS - 1)
+                         / NUM_BITS;
+    int       entry_size = nstates * VectorClass::size();
     
-    int scoreid = nsites*entry_size;
-    UINT sum_end_node = (dad_branch->partial_pars[scoreid] + node_branch->partial_pars[scoreid]);
-    UINT score = sum_end_node;
-    UINT lower_bound = best_pars_score;
-    if (branch_subst) lower_bound = INT_MAX;
-    
+    int  scoreid      = nsites * entry_size;
+    UINT sum_end_node = dad_branch->partial_pars[scoreid] 
+                      + node_branch->partial_pars[scoreid];
+    UINT score        = sum_end_node;
+    UINT lower_bound  = best_pars_score;
+
+    if (branch_subst!=nullptr) {
+        lower_bound = INT_MAX;
+    }
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
@@ -1783,8 +1788,6 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
             VectorClass* y = (VectorClass*)(node_branch->partial_pars + offset);
             VectorClass  w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
-//			horizontal_popcount(w);
-//            score += w;
             score += fast_popcount(w);
             #ifndef _OPENMP
             if (score >= lower_bound) 
@@ -1816,10 +1819,12 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
 		break;
     }
 //    UINT sum_score = horizontal_add(score);
-//    if (branch_subst)
+//    if (branch_subst!=nullptr) {
 //        *branch_subst = sum_score;
-    if (branch_subst)
+//    }
+    if (branch_subst!=nullptr) {
         *branch_subst = score - sum_end_node;
+    }
 //    UINT *xscore = (UINT*)x;
 //    UINT *yscore = (UINT*)y;
 //    sum_score += *xscore + *yscore;

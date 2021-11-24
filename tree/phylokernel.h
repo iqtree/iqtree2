@@ -1549,11 +1549,13 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
     if (dad_branch->isParsimonyComputed()) {
         return;
     }
-    PhyloNode* node     = dad_branch->getNode();
-    int        nstates  = aln->getMaxNumStates();
-    int        site     = 0;
-    const int  VCSIZE   = VectorClass::size();
-    const int  NUM_BITS = VectorClass::size() * UINT_BITS;
+    PhyloNode*   node     = dad_branch->getNode();
+    int          site     = 0;
+    const size_t NUM_BITS = VectorClass::size() * UINT_BITS;
+    const size_t nstates  = aln->getMaxNumStates();
+    const size_t nsites   = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
+    const size_t VCSIZE   = VectorClass::size();
+    auto  total           = nstates * VCSIZE * nsites;
 
     dad_branch->setParsimonyComputed(true);
 
@@ -1564,8 +1566,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 //            aln->orderPatternByNumChars();
 //        ASSERT(!aln->ordered_pattern.empty());
         memset(dad_branch->partial_pars, 255, pars_block_size*sizeof(UINT));
-        size_t nsites = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
-        dad_branch->partial_pars[nstates*VCSIZE*nsites] = 0;
+        dad_branch->partial_pars[total] = 0;
     } else if (node->isLeaf() && dad) {
         // external node
         vector<Alignment*> *partitions = NULL;
@@ -1697,12 +1698,15 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                     // value1 = value1*N/(value1+value2);
                     int real_state;
 
-                    if (weight1 < 1.0/4)
+                    if (weight1 < 1.0/4) {
                         real_state = id2;
-                    else if (weight1 > 3.0/4)
+                    }
+                    else if (weight1 > 3.0/4) {
                         real_state = id1;
-                    else
+                    }
+                    else {
                         real_state = (*alnit)->STATE_UNKNOWN;
+                    }
                     /*
                     if (value1 == 0) 
                         real_state = id2;
@@ -1735,8 +1739,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                         }
                         UINT bit1 = (1 << (site%UINT_BITS));
                         UINT *p = x+(site/UINT_BITS);
-                        for (int i = 0; i < (*alnit)->num_states; i++)
+                        for (int i = 0; i < (*alnit)->num_states; i++) {
                             p[i*VCSIZE] |= bit1;
+                        }
                     }
                 } else {
                     ASSERT(0);
@@ -1769,11 +1774,6 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             // many of them there are, per taxon, potentially makes
             // parsimony branch lengths more accurate).
             //
-            const size_t NUM_BITS = VectorClass::size() * UINT_BITS;
-            const size_t nstates  = aln->getMaxNumStates();
-            const size_t nsites   = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
-            const size_t VCSIZE   = VectorClass::size();
-            auto  total           = nstates*VCSIZE*nsites;
             if ( 0 <= leafid && leafid < aln->singleton_parsimony_states.size() ) {
                 UINT onesuch_site_count = aln->singleton_parsimony_states[leafid];
                 dad_branch->partial_pars[total] = onesuch_site_count;
@@ -1785,14 +1785,19 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
     } else {
         // internal node
         ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  ); // it works only for strictly bifurcating tree
-        PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
+        PhyloNeighbor* left  = nullptr;
+        PhyloNeighbor* right = nullptr; // left & right are two neighbors leading to 2 subtrees
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, pit) {
             if (!pit->isParsimonyComputed()) {
                 computePartialParsimonyFastSIMD<VectorClass>(pit, node);
             }
-            if (!left) left = pit; else right = pit;
+            if (!left) {
+                left = pit; 
+            } 
+            else {
+                right = pit;
+            }
         }
-        
         computePartialParsimonyOutOfTreeSIMD<VectorClass>(left->partial_pars,
                                                           right->partial_pars,
                                                           dad_branch->partial_pars);
@@ -1809,7 +1814,8 @@ double PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_
     size_t    nsites     = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
     const int VCSIZE     = VectorClass::size();
     int       entry_size = nstates * VCSIZE;
-    
+    auto      total      = entry_size * nsites;
+
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
@@ -1857,7 +1863,6 @@ double PhyloTree::computePartialParsimonyOutOfTreeSIMD(const UINT* left_partial_
         }
         break;
     }
-    auto total = nstates*VCSIZE*nsites;
     dad_partial_pars[total] = score + left_partial_pars[total] + right_partial_pars[total];
     return dad_partial_pars[total];
 }
@@ -1870,12 +1875,14 @@ int PhyloTree::getSubTreeParsimonyFastSIMD(PhyloNeighbor* dad_branch) const {
     const size_t nstates  = aln->getMaxNumStates();
     const size_t nsites   = (aln->num_parsimony_sites+NUM_BITS-1) / NUM_BITS;
     const size_t VCSIZE   = VectorClass::size();
-    auto         total    = nstates*VCSIZE*nsites;
+    auto         total    = nstates * VCSIZE * nsites;
     return dad_branch->partial_pars[total];
 }
 
 template<class VectorClass>
-int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+int PhyloTree::computeParsimonyBranchFastSIMD
+        (PhyloNeighbor *dad_branch, PhyloNode *dad, 
+         int *branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);
@@ -1897,20 +1904,16 @@ template<class VectorClass>
 int PhyloTree::computeParsimonyOutOfTreeSIMD(const UINT* dad_partial_pars,
                                              const UINT* node_partial_pars,
                                              int* branch_subst) const {
-    int nstates = aln->getMaxNumStates();
-
-//    VectorClass score = 0;
-//    VectorClass w;
-
-    const int NUM_BITS = VectorClass::size() * UINT_BITS;
-    int nsites         = (aln->num_parsimony_sites + NUM_BITS - 1)/NUM_BITS;
-    int entry_size     = nstates * VectorClass::size();
-    
-    int  scoreid        = nsites*entry_size;
-    UINT sum_end_node  = (dad_partial_pars[scoreid] + node_partial_pars[scoreid]);
-    UINT score         = sum_end_node;
-    UINT lower_bound   = best_pars_score;
-    if (branch_subst) {
+    int       nstates      = aln->getMaxNumStates();
+    const int NUM_BITS     = VectorClass::size() * UINT_BITS;
+    int       nsites       = (aln->num_parsimony_sites + NUM_BITS - 1)/NUM_BITS;
+    int       entry_size   = nstates * VectorClass::size();
+    int       scoreid      = nsites * entry_size;
+    UINT      sum_end_node = dad_partial_pars[scoreid] 
+                           + node_partial_pars[scoreid];
+    UINT      score        = sum_end_node;
+    UINT      lower_bound  = best_pars_score;
+    if (branch_subst!=nullptr) {
         lower_bound = INT_MAX;
     }
     switch (nstates) {
@@ -1950,7 +1953,7 @@ int PhyloTree::computeParsimonyOutOfTreeSIMD(const UINT* dad_partial_pars,
         }
         break;
     }
-    if (branch_subst) {
+    if (branch_subst!=nullptr) {
         *branch_subst = score - sum_end_node;
     }
     return score;
@@ -1996,7 +1999,8 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch,
     intptr_t ptnCount     = aln->ordered_pattern.size();
     size_t   total_offset = ptnCount*nstates;
     UINT     score        = 0;
-    if (left==nullptr && right==nullptr && 0<=node->id && node->id<aln->getNSeq()) {
+    if (left==nullptr && right==nullptr && 0<=node->id && 
+         node->id<aln->getNSeq()) {
         //
         //James B. This calculates a partial parsimony vector oriented
         //         at a leaf (as these are needed during parsimony placement,
