@@ -53,8 +53,10 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
     readFromParams(params);
     
     init();
-
-    cout << "Degree of missing data: " << computeMissingData() << endl;
+    
+    // only show Degree of missing data if AliSim is inactive or an input alignment is supplied
+    if (!(Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode))
+        cout << "Degree of missing data: " << computeMissingData() << endl;
     
 #ifdef _OPENMP
     if (params.num_threads > partitions.size()) {
@@ -129,6 +131,16 @@ void SuperAlignment::readFromParams(Params &params) {
         partitions = keep_partitions;
     }
     
+    // if AliSim is activated without an input alignment -> just shows "Subset\tType\tModel\tName
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode)
+    {
+        cout << "Subset\tType\tModel\tName" << endl;
+        int part = 0;
+        for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
+            cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->model_name << "\t" << (*it)->name << endl;
+        }
+    }
+    else {
     // Initialize the counter for evaluated NNIs on subtrees
     cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
     int part = 0;
@@ -142,7 +154,7 @@ void SuperAlignment::readFromParams(Params &params) {
         } else if ((*it)->num_informative_sites == 0) {
             outWarning("No parsimony-informative sites in partition " + (*it)->name);
         }
-    }
+    }}
 }
 
 void SuperAlignment::init(StrVector *sequence_names) {
