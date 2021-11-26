@@ -504,11 +504,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
-        // initialize output_filepath
-        std::string output_filepath(super_alisimulator->params->user_file);
-        output_filepath = output_filepath.substr(0, output_filepath.find_last_of("/\\") + 1);
-        output_filepath = output_filepath
-        +super_alisimulator->params->alisim_output_filename;
+        // output the simulated aln at the current execution localtion
+        string output_filepath = super_alisimulator->params->alisim_output_filename;
         
         // only add alignment id if users want to generate multiple alignments
         if (super_alisimulator->params->alisim_dataset_num > 1)
