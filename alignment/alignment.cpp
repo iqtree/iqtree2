@@ -2370,7 +2370,9 @@ int Alignment::readPhylip(const char *filename, const char *sequence_type) {
         else { // read sequence contents
             if (seq_names[seq_id] == "") { // cut out the sequence name
                 string::size_type pos = line.find_first_of(" \t");
-                if (pos == string::npos) pos = 10; //  assume standard phylip
+                if (pos == string::npos) {
+                    pos = 10; //  assume standard phylip
+                }
                 seq_names[seq_id] = line.substr(0, pos);
                 line.erase(0, pos);
             }
@@ -2473,7 +2475,9 @@ int Alignment::readPhylipSequential(const char *filename,
             }
             if (seq_names[seq_id] == "") { // cut out the sequence name
                 string::size_type pos = line.find_first_of(" \t");
-                if (pos == string::npos) pos = 10; //  assume standard phylip
+                if (pos == string::npos) {
+                    pos = 10; //  assume standard phylip
+                }
                 seq_names[seq_id] = line.substr(0, pos);
                 line.erase(0, pos);
             }
@@ -2642,7 +2646,8 @@ int Alignment::readClustal(const char *filename,
         size_t pos = line.find_first_of(" \t");
         if (pos == string::npos) {
             throw "Line " + convertIntToString(line_num) +
-                  ": whitespace not found between sequence name and content";
+                  ": whitespace not found between" 
+                  " sequence name and content";
         }
         string seq_name = line.substr(0, pos);
         if (seq_count == seq_names.size()) {
@@ -2693,7 +2698,7 @@ int Alignment::readMSF(const char *filename, const char *sequence_type) {
     // remove the failbit
     in.exceptions(ios::badbit);
     safeGetLine(in, line);
-    if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
+    if (!contains(line,"MULTIPLE_ALIGNMENT")) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
 
@@ -2733,7 +2738,8 @@ int Alignment::readMSF(const char *filename, const char *sequence_type) {
         size_t pos = line.find_first_of(" \t");
         if (pos == string::npos) {
             throw "Line " + convertIntToString(line_num) 
-            + ": whitespace not found between sequence name and content - " + line;
+            + ": whitespace not found between" 
+            + " sequence name and content - " + line;
         }
         string seq_name = line.substr(0, pos);
         if (seq_name != seq_names[seq_count]) {
@@ -3196,10 +3202,12 @@ void Alignment::checkForCustomVirtualPopulationSize
     size_t n_pos_end   = model_name.find_first_of("+", n_pos_start+1);
     if (n_pos_start != string::npos) {
         intptr_t length;
-        if (n_pos_end != string::npos)
+        if (n_pos_end != string::npos) {
             length = n_pos_end - n_pos_start - 2;
-        else
+        }
+        else {
             length = model_name.length() - n_pos_start - 2;
+        }
         try {
             N = convert_int(model_name.substr(n_pos_start+2,length).c_str());
         }
@@ -5076,7 +5084,7 @@ template <class S> void Alignment::printDist(const std::string& format,
 void Alignment::printDist ( const std::string& format, int compression_level
                            , const char *file_name, double *dist_mat) const {
     try {
-        if (format.find("gz") == string::npos) {
+        if (!contains(format,"gz")) {
             ofstream out;
             out.exceptions(ios::failbit | ios::badbit);
             out.open(file_name);

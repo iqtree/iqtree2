@@ -382,7 +382,8 @@ void PhyloTreeMixlen::optimizeOneBranch
     tree_buffers.theta_computed = false;
 
 #ifdef USE_CPPOPTLIB
-    if (params->optimize_alg_mixlen.find("cppopt") != string::npos) {
+    auto alg = params->optimize_alg_mixlen;
+    if (contains(alg,"cppopt")) {
         //----- using cppoptlib ------//
 
         TVector lower_bound(mixlen), upper_bound(mixlen), variables(mixlen);
@@ -406,7 +407,8 @@ void PhyloTreeMixlen::optimizeOneBranch
     } else
 #endif
 
-    if (params->optimize_alg_mixlen.find("newton") != string::npos) {
+    auto alg = params->optimize_alg_mixlen;
+    if (contains(alg,"newton")) {
 
         //----- Newton-Raphson -----//
 #ifndef _MSC_VER
@@ -420,7 +422,7 @@ void PhyloTreeMixlen::optimizeOneBranch
 #endif
         for (int i = 0; i < mixlen; i++) {
             lower_bound[i] = params->min_branch_length;
-            variables[i] = current_it->getLength(i);
+            variables[i]   = current_it->getLength(i);
             upper_bound[i] = params->max_branch_length;
         }
         minimizeNewtonMulti(&lower_bound[0], &variables[0], 
@@ -437,10 +439,10 @@ void PhyloTreeMixlen::optimizeOneBranch
         // It is often better than the true Newton method 
         // (Numerical Recipes in C++, chap. 10.7)
 #ifndef _MSC_VER
-        double variables[mixlen+1];
+        double variables  [mixlen+1];
         double upper_bound[mixlen+1];
         double lower_bound[mixlen+1];
-        bool bound_check[mixlen+1];
+        bool   bound_check[mixlen+1];
 #else 
         boost::scoped_array<double> variables ( new double [mixlen + 1]);
         boost::scoped_array<double> upper_bound ( new double [mixlen + 1]);
@@ -483,7 +485,6 @@ void PhyloTreeMixlen::optimizeOneBranch
         if (!model_factory->fused_mix_rate && getModel()->isMixture()) {
             outError("Please use option -optlen BFGS to disable EM algorithm");
         }
-        
         // EM algorithm
         intptr_t nptn = aln->getNPattern();
         size_t nmix = site_rate->getNRate();

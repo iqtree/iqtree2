@@ -1921,9 +1921,9 @@ public:
     virtual void reconstructExpression( std::string& dest ) const CATCH_OVERRIDE {
         std::string lhs = Catch::toString( m_lhs );
         std::string rhs = Catch::toString( m_rhs );
-        char delim = lhs.size() + rhs.size() < 40 &&
-                     lhs.find('\n') == std::string::npos &&
-                     rhs.find('\n') == std::string::npos ? ' ' : '\n';
+        char delim = (lhs.size() + rhs.size() < 40 &&
+                     !contains(lhs,"\n") &&
+                     !contains(rhs,"\n")) ? ' ' : '\n';
         dest.reserve( 7 + lhs.size() + rhs.size() );
                    // 2 for spaces around operator
                    // 2 for operator
@@ -5015,8 +5015,9 @@ namespace Clara {
         std::vector<Parser::Token> parseInto( std::vector<std::string> const& args, ConfigT& config ) const {
             std::string processName = args.empty() ? std::string() : args[0];
             std::size_t lastSlash = processName.find_last_of( "/\\" );
-            if( lastSlash != std::string::npos )
+            if( lastSlash != std::string::npos ) {
                 processName = processName.substr( lastSlash+1 );
+            }
             m_boundProcessName.set( config, processName );
             std::vector<Parser::Token> tokens;
             Parser parser;

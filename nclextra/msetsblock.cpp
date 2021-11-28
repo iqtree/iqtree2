@@ -227,7 +227,8 @@ void MSetsBlock::Read(NxsToken &token)
 				myset->position_spec = myset->position_spec.substr(pos+1);
 			}
             trimString(myset->position_spec);
-            if ((pos=myset->position_spec.find(',')) != string::npos && isalpha(myset->position_spec[0])) {
+			pos = myset->position_spec.find(',');
+            if (pos != string::npos && isalpha(myset->position_spec[0])) {
                 myset->sequence_type = myset->position_spec.substr(0, pos);
                 myset->position_spec = myset->position_spec.substr(pos+1);
             }

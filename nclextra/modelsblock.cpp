@@ -6,6 +6,7 @@
  */
 
 #include "modelsblock.h"
+#include <utils/stringfunctions.h> //for contains()
 
 ModelsBlock::ModelsBlock()  : NxsBlock(), unordered_map<string, NxsModel>()
 {
@@ -49,7 +50,8 @@ void ModelsBlock::Read(NxsToken &token)
 			if (!token.Equals(";"))
 				throw NxsException("Expecting ';' to terminate MODEL command", token);
 
-			model.flag |= (NM_ATOMIC*(model.description.find_first_of("+*") == string::npos && model.description.find("MIX") == string::npos));
+			model.flag |= (NM_ATOMIC*(model.description.find_first_of("+*") == string::npos && 
+			              !contains(model.description,"MIX")));
 
 			insert({model.name, model});
 

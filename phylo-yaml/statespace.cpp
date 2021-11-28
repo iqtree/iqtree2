@@ -278,8 +278,8 @@ string StateSpace::toString(StateType state) {
  parse a string with range (e.g. 1..5) to a vector of string
  */
 void parseRange(string str, StrVector &list) {
-    size_t pos;
-    if ((pos = str.find("..")) == string::npos) {
+    size_t pos = str.find("..");
+    if (pos == string::npos) {
         list.push_back(str);
         return;
     }

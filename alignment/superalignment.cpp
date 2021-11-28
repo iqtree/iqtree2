@@ -30,7 +30,7 @@
 Alignment *createAlignment(string aln_file, const char *sequence_type,
                            InputType intype, string model_name) {
     bool is_dir = isDirectory(aln_file.c_str());
-    if (!is_dir && aln_file.find(',') == string::npos) {
+    if (!is_dir && !contains(aln_file,",")) {
         return new Alignment(aln_file.c_str(),
                              sequence_type, intype, model_name);
     }
@@ -903,10 +903,10 @@ void SuperAlignment::printBestPartitionRaxml(const char *filename) {
                     break;
                 default: out << model_name; break;
             }
-            if (model_name.find("+FO") != string::npos) {
+            if (contains(model_name,"+FO")) {
                 out << "X";
             }
-            else if (model_name.find("+F") != string::npos) {
+            else if (contains(model_name,"+F")) {
                 out << "F";
             }
             out << ", " << name << " = " 

@@ -118,20 +118,18 @@ bool PlacementParameters::doesPlacementUseHammingDistance() const {
     auto cf        = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
     auto heuristic = getIncrementalParameter('H', DEFAULT_HEURISTIC);
 
-    return cf.find("HD") != std::string::npos
-        || heuristic.find("MP") != std::string::npos;
+    return contains(cf,"HD") || contains(heuristic, "MP");
 }
 
 bool  PlacementParameters::doesPlacementUseLikelihood() const {
     auto cf = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
-    return cf.find("ML") != std::string::npos;
+    return contains(cf,"ML");
 }
 
 bool  PlacementParameters::doesPlacementUseParsimony() const {
     auto cf        = getIncrementalParameter('C', DEFAULT_COST_FUNCTION);
     auto heuristic = getIncrementalParameter('H', DEFAULT_HEURISTIC);
-    return cf.find("MP") != std::string::npos
-        || heuristic.find("MP") != std::string::npos;
+    return contains(cf,"MP") || contains(heuristic,"MP") ;
 }
 
 bool  PlacementParameters::doesPlacementUseSankoffParsimony() const {
