@@ -332,6 +332,10 @@ bool endsWith(const std::string& s, const char* suffix) {
     return s.substr(s.length() - suffixLen, suffixLen) == suffix;
 }
 
+bool contains  (const std::string& s, const std::string& pattern) {
+    return s.find(pattern) != std::string::npos;
+}
+
 bool contains(const std::string &s, const char* pattern) {
     return s.find(pattern) != std::string::npos;
 }

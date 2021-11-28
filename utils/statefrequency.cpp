@@ -6,8 +6,8 @@
 //
 
 #include "statefrequency.h"
+#include "stringfunctions.h" //for contains()
 #include "tools.h" //for outError function, and ASSERT macro
-
 
 //This function came from main/phylotesting.cpp
 std::string getSeqTypeName(SeqType seq_type) {
@@ -99,28 +99,29 @@ StateFreqType parseStateFreqFromPlusF(std::string model_name) {
     // to resemble old behavior
     StateFreqType freq_type = StateFreqType::FREQ_UNKNOWN;
     size_t plusFPos;
-    if (model_name.find("+F1X4") != std::string::npos)
+    if (contains(model_name,"+F1X4"))
         freq_type = StateFreqType::FREQ_CODON_1x4;
-    else if (model_name.find("+F3X4C") != std::string::npos)
+    else if (contains(model_name,"+F3X4C"))
         freq_type = StateFreqType::FREQ_CODON_3x4C;
-    else if (model_name.find("+F3X4") != std::string::npos)
+    else if (contains(model_name,"+F3X4"))
         freq_type = StateFreqType::FREQ_CODON_3x4;
-    else if (model_name.find("+FQ") != std::string::npos)
+    else if (contains(model_name,"+FQ"))
         freq_type = StateFreqType::FREQ_EQUAL;
-    else if (model_name.find("+FO") != std::string::npos)
+    else if (contains(model_name,"+FO"))
         freq_type = StateFreqType::FREQ_ESTIMATE;
-    else if (model_name.find("+FU") != std::string::npos)
+    else if (contains(model_name,"+FU"))
         freq_type = StateFreqType::FREQ_USER_DEFINED;
-    else if (model_name.find("+FRY") != std::string::npos)
+    else if (contains(model_name,"+FRY"))
         freq_type = StateFreqType::FREQ_DNA_RY;
-    else if (model_name.find("+FWS") != std::string::npos)
+    else if (contains(model_name,"+FWS"))
         freq_type = StateFreqType::FREQ_DNA_WS;
-    else if (model_name.find("+FMK") != std::string::npos)
+    else if (contains(model_name,"+FMK"))
         freq_type = StateFreqType::FREQ_DNA_MK;
     else if ((plusFPos = model_name.find("+F")) != std::string::npos) {
         freq_type = StateFreqType::FREQ_EMPIRICAL;
         // Now look for +F#### where #s are digits
-        if (model_name.length() > plusFPos+2 && isdigit(model_name[plusFPos+2]))
+        if (model_name.length() > plusFPos+2 && 
+            isdigit(model_name[plusFPos+2]))
         try {
             // throws if string is not 4 digits
             freq_type = parseStateFreqDigits(model_name.substr(plusFPos+2,4));

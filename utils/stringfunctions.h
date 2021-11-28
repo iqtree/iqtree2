@@ -174,6 +174,7 @@ T StringToNumber ( const std::string &Text )
 //These three functions moved here from model/modelinfofromyamlfile.cpp, 30-Apr-2021:
 bool startsWith(const std::string& s, const char* front);
 bool endsWith  (const std::string& s, const char* suffix);
+bool contains  (const std::string& s, const std::string& pattern);
 bool contains  (const std::string& s, const char* pattern);
 bool contains  (const char*        s, const char* pattern);
 

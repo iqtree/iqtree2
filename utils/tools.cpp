@@ -4225,7 +4225,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.gbo_replicates && params.num_bootstrap_samples) {
         outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
     }
-    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples)) {
+    if (contains(params.model_name,"ONLY") || 
+        (startsWith(params.model_name, "MF") && 
+         !startsWith(params.model_name,"MFP") && 
+         (params.gbo_replicates || params.num_bootstrap_samples)) {
         outError("ModelFinder only cannot be combined with bootstrap analysis");
     }
     if (params.num_runs > 1 && !params.treeset_file.empty()) {
@@ -4293,8 +4296,8 @@ void parseArg(int argc, char *argv[], Params &params) {
         }
     }
 
-    if (params.model_name.find("LINK") != string::npos ||
-        params.model_name.find("MERGE") != string::npos) {
+    if (contains(params.model_name,"LINK")  ||
+        contains(params.model_name,"MERGE")) {
         if (params.partition_merge == MERGE_NONE) {
             params.partition_merge = MERGE_RCLUSTERF;
         }

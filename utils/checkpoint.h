@@ -278,9 +278,9 @@ public:
         if (it == end()) {
             return false;
         }
-        size_t pos = 0;
         value.clear();
-        if ((pos = it->second.find('[')) == string::npos) {
+        size_t pos = it->second.find('[');
+        if (pos == string::npos) {
             outError(key + " vector not starting with [");
         }
         for (int i = 0; ; i++) {
