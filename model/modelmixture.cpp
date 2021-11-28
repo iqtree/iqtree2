@@ -1275,8 +1275,8 @@ void ModelMixture::initMixture(string orig_model_name, const string& model_name,
                                PhyloTree *tree, bool optimize_weights,
                                PhyloTree* report_to_tree)
 {
-    NxsModel* nxs_freq_empirical = new NxsModel("empirical");
-    NxsModel* nxs_freq_optimize  = new NxsModel("optimize");
+    NxsModel nxs_freq_empirical("empirical");
+    NxsModel nxs_freq_optimize("optimize");
 
 	DoubleVector          freq_rates;
 	DoubleVector          freq_weights;
@@ -1288,7 +1288,7 @@ void ModelMixture::initMixture(string orig_model_name, const string& model_name,
 	optimizing_submodels = false;
 
 	if (freq == StateFreqType::FREQ_MIXTURE) {
-        initMixtureFrequencies(nxs_freq_empirical, nxs_freq_optimize,
+        initMixtureFrequencies(&nxs_freq_empirical, &nxs_freq_optimize,
                                freq_params, freq_rates, freq_weights, 
                                freq_vec, freq_type, freq_desc,
                                models_block, report_to_tree);
@@ -1345,8 +1345,6 @@ void ModelMixture::initMixture(string orig_model_name, const string& model_name,
 		}
 	}
 	full_name += CLOSE_BRACKET;
-    delete nxs_freq_optimize;
-    delete nxs_freq_empirical;
 
     checkProportionsAndWeights(weights);
     setOptimizationSteps(optimize_weights);
@@ -1674,7 +1672,6 @@ void ModelMixture::restoreCheckpoint() {
         ++part;
     }
     endCheckpoint();
-
     decomposeRateMatrix();
     if (phylo_tree) {
         phylo_tree->clearAllPartialLH();
@@ -1803,8 +1800,8 @@ double ModelMixture::optimizeWeights() {
     DoubleVector new_prop_vector      (nmix, 0.0);
     DoubleVector new_ratio_prop_vector(nmix, 0.0);
 
-    double *new_prop   = new_prop_vector.data();
-    double *ratio_prop = new_ratio_prop_vector.data();
+    double* new_prop   = new_prop_vector.data();
+    double* ratio_prop = new_ratio_prop_vector.data();
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     bool converged = false;
