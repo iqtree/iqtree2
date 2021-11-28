@@ -147,8 +147,8 @@ public:
     bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
         const char *rates[] = {"+R", "*R", "+H", "*H"};
         for (int i = 0; i < element_count(rates); i++) {
-            size_t posR;
-            if ((posR = model->rate_name.find(rates[i])) != string::npos) {
+            size_t posR = model->rate_name.find(rates[i]);
+            if (posR != string::npos) {
                 int cat = convert_int(model->rate_name.substr(posR+2).c_str());
                 subst_name = model->subst_name;
                 rate_name = model->rate_name.substr(0, posR+2) + convertIntToString(cat-1);
@@ -300,9 +300,9 @@ public:
             for (int next_model = model+1; next_model < size(); next_model++, cat++) {
 //                if (at(next_model).name.substr(0, posR) != orig_name.substr(0, posR))
 //                    break;
-                string rate_name = at(model).rate_name.substr(posR, 2) 
+                std::string rate_name = at(model).rate_name.substr(posR, 2) 
                                  + convertIntToString(cat+1);
-                if (at(next_model).rate_name.find(rate_name) == string::npos) {
+                if (!contains(at(next_model).rate_name,rate_name)) {
                     break;
                 }
                 return next_model;

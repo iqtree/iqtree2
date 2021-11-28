@@ -989,18 +989,18 @@ void getDNASubstitutionModels(const std::string& model_set,
 void getAdditionalDNASubstitutionModels(const std::string& model_set,
                                         const std::string& model_name,
                                         StrVector& model_names) {
-    if (model_name.find("+LMRY") != string::npos) {
+    if (contains(model_name,"+LMRY")) {
         model_names.appendLiterals(dna_model_names_lie_markov_fullsym);
         model_names.appendLiterals(dna_model_names_lie_markov_ry);
-    } else if (model_name.find("+LMWS") != string::npos) {
+    } else if (contains(model_name,"+LMWS")) {
         model_names.appendLiterals(dna_model_names_lie_markov_fullsym);
         model_names.appendLiterals(dna_model_names_lie_markov_ws);
-    } else if (model_name.find("+LMMK") != string::npos) {
+    } else if (contains(model_name,"+LMMK")) {
         model_names.appendLiterals(dna_model_names_lie_markov_fullsym);
         model_names.appendLiterals(dna_model_names_lie_markov_mk);
-    } else if (model_name.find("+LMSS") != string::npos) {
+    } else if (contains(model_name,"+LMSS")) {
         model_names.appendLiterals(dna_model_names_lie_markov_strsym);
-    } else if (model_name.find("+LM") != string::npos) {
+    } else if (contains(model_name,"+LM")) {
         model_names.appendLiterals(dna_model_names_lie_markov_fullsym);
         model_names.appendLiterals(dna_model_names_lie_markov_ry);
         model_names.appendLiterals(dna_model_names_lie_markov_ws);
@@ -1173,9 +1173,10 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
     const int noptions = element_count(rate_options);
     
-    bool with_new = (model_name.find("NEW") != string::npos || 
-                     model_name.substr(0,2) == "MF" || model_name.empty());
-    bool with_asc = (model_name.find("ASC") != string::npos);
+    bool with_new = contains(model_name,"NEW") || 
+                    model_name.substr(0,2) == "MF" || 
+                    model_name.empty();
+    bool with_asc = contains(model_name,"ASC");
 
     if (seq_type == SeqType::SEQ_POMO) {
         for (int i = 0; i < noptions; i++) {
@@ -1278,11 +1279,12 @@ void CandidateModelSet::combineModelNamesWithFrequencyNames
             if (aln->seq_type == SeqType::SEQ_CODON) {
                 SeqType seq_type;
                 int model_type = detectSeqType(orig_model_names[j].c_str(), seq_type);
-                bool hasMG = orig_model_names[j].find("MG") != string::npos;
                 for (int i = 0; i < freq_names.size(); i++) {
+                    bool hasMG = contains(orig_model_names[i], "MG");
                     // disallow MG+F
-                    if (freq_names[i] == "+F" && hasMG)
+                    if (freq_names[i] == "+F" && hasMG) {
                         continue;
+                    }
                     if (freq_names[i] != "" || (model_type == 2 && !hasMG)) 
                         // empirical model also allow ""
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
@@ -1306,12 +1308,11 @@ void CandidateModelSet::getRateHetorotachyCategories
         }
     }
 
-    size_t      pos;
     flags.resize(ratehet.size(), 0);
-    
     for (int i = 0; i < element_count(rates); i++) {
         for (int j = 0; j < ratehet.size(); j++) {
-            if ((pos = ratehet[j].find(rates[i])) != string::npos &&
+            size_t pos = ratehet[j].find(rates[i]);
+            if (pos != string::npos &&
                 (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
             {
                 string str = ratehet[j];
@@ -2628,10 +2629,12 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     for (mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
         size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
         string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
-        if (models_block->findMixModel(sub_model_str))
+        if (models_block->findMixModel(sub_model_str)) {
             return true;
-        if (next_mix_pos == string::npos)
+        }
+        if (next_mix_pos == string::npos) {
             break;
+        }
         mix_pos = next_mix_pos;
     }
     return false;
@@ -2980,7 +2983,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree,
             const char *rates[] = {"+R", "*R", "+H", "*H"};
             size_t posR = std::string::npos;
             for (int i = 0; i < element_count(rates); i++) {
-                if ((posR = orig_model_name.find(rates[i])) != std::string::npos) {
+                posR = orig_model_name.find(rates[i]);
+                if (posR != std::string::npos) {
                     break;
                 }
             }

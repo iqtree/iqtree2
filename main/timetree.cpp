@@ -28,7 +28,7 @@ typedef unordered_map<string, string> TaxonDateMap;
  */
 string convertDate(string date) {
     // check for range in x:y format
-    if (date.find(':') != string::npos) {
+    if (contains(date,":")) {
         StrVector vec;
         convert_string_vec(date.c_str(), vec, ':');
         if (vec.size() != 2)
@@ -65,14 +65,17 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
         for (line_num = 1; !in.eof(); line_num++) {
             string line_out = "Line " + convertIntToString(line_num) + ": ";
             string line;
-            if (!safeGetLine(in, line))
+            if (!safeGetLine(in, line)) {
                 break;
+            }
             // ignore comment
-            if (line.find('#') != string::npos)
+            if (contains(line,"#")) {
                 line = line.substr(0, line.find('#'));
+            }
             trimString(line);
-            if (line.empty()) // ignore empty line
+            if (line.empty()) { // ignore empty line
                 continue;
+            }
             string name, date;
             istringstream line_in(line);
             if (!(line_in >> name >> date))
@@ -114,8 +117,9 @@ void readDateTaxName(const set<string> &nodenames, TaxonDateMap &dates) {
     for (string name : nodenames) {
         // get the date in the taxon name after the '|' sign
         auto pos = name.rfind('|');
-        if (pos == string::npos)
+        if (pos == string::npos) {
             continue;
+        }
         string date = name.substr(pos+1);
         try {
             // try to parse
@@ -188,7 +192,7 @@ void writeDate(string date_file, ostream &out, set<string> &nodenames) {
     for (auto date : dates) {
         if (date.first.substr(0,4) == "mrca" || date.first.substr(0,8) == "ancestor")
             retained_dates[date.first] = date.second;
-        else if (date.first.find(',') != string::npos) {
+        else if (contains(date.first,",")) {
             retained_dates["ancestor(" + date.first + ")"] = date.second;
         } else if (outgroup_set.find(date.first) == outgroup_set.end() || 
                    Params::getInstance().date_with_outgroup) {
