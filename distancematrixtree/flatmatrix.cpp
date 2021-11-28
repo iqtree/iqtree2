@@ -29,7 +29,8 @@
 //
 
 #include "flatmatrix.h"
-#include "utils/progress.h"
+#include <utils/progress.h>
+#include <utils/stringfunctions.h> //for contains
 #include <math.h>       //for log10
 #include <iostream>     //for std::fstream
 #include <sstream>      //for std::stringstream
@@ -113,8 +114,8 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
                                      const std::string& file_name) const {
     #if USE_PROGRESS_DISPLAY
     double rows           = static_cast<double>(getSize());
-    bool   isTriangle     = format.find("lower") != std::string::npos ||
-                            format.find("upper") != std::string::npos;
+    bool   isTriangle     = contains(format,"lower") ||
+                            contains(format,"upper");
     double halfIfTriangle = isTriangle ? 0.5 : 1.0;
 
     double calculations   = rows * rows * halfIfTriangle;
@@ -125,7 +126,7 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
     #endif
 
     try {
-        if (format.find(".gz") == std::string::npos) {
+        if (!contains(format,".gz")) {
             std::ofstream out;
             out.exceptions(std::ios::failbit | std::ios::badbit);
             out.open(file_name.c_str());

@@ -31,6 +31,7 @@
 #include <utils/hammingdistance.h> //for vectorHamingDistance()
 #include <utils/gzstream.h>        //for pigzstream class
 #include <utils/safe_io.h>         //for safeGetLine()
+#include <utils/stringfunctions.h> //for contains()
 
 bool isNucleotideOrMissing(const char c) {
     return isalnum(c) ||  c == '-' || c == '?'|| 
@@ -633,8 +634,8 @@ bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
     getNumberOfStates();
 
     #if USE_PROGRESS_DISPLAY
-    bool   isTriangle = output_format.find("lower") != std::string::npos ||
-                        output_format.find("upper") != std::string::npos;
+    bool   isTriangle = contains(output_format,"lower") ||
+                        contains(output_format,"upper");
     double halfIfTriangle = isTriangle ? 0.5 : 1.0;
     double calculations   = static_cast<double>(rank) 
                           * static_cast<double>(rank) * halfIfTriangle;

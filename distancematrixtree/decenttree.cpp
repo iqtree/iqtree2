@@ -23,10 +23,11 @@
 #include <string>            //for std::string
 #include <iostream>          //for std::cout
 #include <math.h>            //for log
+#include <utils/argument.h>        //for Argument, ArgumentMap, et al.
 #include <utils/progress.h>        //for progress_display::setProgressDisplay()
 #include <utils/operatingsystem.h> //for getOSName
 #include <utils/hammingdistance.h> //for hammingDistance
-#include <utils/argument.h>        //for Argument, ArgumentMap, et al.
+#include <utils/stringfunctions.h> //for contains
 #include "starttree.h"       //for StartTree::Factory
 #include "flatmatrix.h"      //for FlatMatrix
 #include "distancematrix.h"  //for loadDistanceMatrixInto
@@ -38,20 +39,6 @@
 #define PROBLEM(x) if (1) problems << x << ".\n"; else 0
 
 namespace {
-    bool endsWith(const std::string& s, const char* suffix) {
-        auto suffixLen = strlen(suffix);
-        if (s.length() < suffixLen) {
-            return false;
-        }
-        return s.substr(s.length()-suffixLen, suffixLen) == suffix;
-    }
-
-    std::string string_to_lower(const std::string& input_string) {
-        std::string answer = input_string;
-        std::transform(answer.begin(), answer.end(), answer.begin(),
-                    []( char c){ return std::tolower(c); });
-        return answer;
-    }
 
     bool   correcting_distances     = true;
     bool   is_DNA                   = true;
@@ -396,8 +383,7 @@ public:
         range_restrict(0, 9,  compression_level );
         range_restrict(1, 15, precision );
         format = string_to_lower(format);
-        if (isOutputZipped && 
-            format.find(".gz") == std::string::npos) {
+        if (isOutputZipped && !contains(format, ".gz")) {
             //Ensure that distance file will be compressed
             format += ".gz"; 
         }

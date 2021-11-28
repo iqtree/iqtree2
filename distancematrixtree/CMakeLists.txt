@@ -5,7 +5,8 @@ bionj.cpp
 bionj2.cpp bionj2.h
 stitchup.cpp
 upgma.h nj.h rapidnj.h auctionmatrix.h
-clustertree.h distancematrix.h)
+clustertree.h distancematrix.h
+../utils/stringfunctions.h ../utils/stringfunctions.cpp)
 
 add_executable(decentTree
     decenttree.cpp
@@ -23,7 +24,9 @@ add_executable(decentTree
     ../utils/heapsort.h
     ../utils/gzstream.cpp ../utils/gzstream.h
     ../utils/progress.cpp ../utils/progress.h
-    ../utils/my_assert.h ../utils/safe_io.h ../utils/timeutil.h 
+    ../utils/my_assert.h ../utils/safe_io.h 
+    ../utils/stringfunctions.cpp ../utils/stringfunctions.h 
+    ../utils/timeutil.h 
     ../utils/operatingsystem.cpp ../utils/operatingsystem.h)
 
 if(ZLIB_FOUND)
