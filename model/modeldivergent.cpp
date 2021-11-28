@@ -200,16 +200,17 @@ double ModelDivergent::optimizeParameters
 	setVariables(vb.variables);
 	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
     //todo: optimization algorithm as a member variable instad.
-    if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos) {
+    auto alg = phylo_tree->params->optimize_alg_freerate;
+    if (contains(alg,"BFGS-B")) {
+        score = -L_BFGS_B(ndim, vb.variables + 1, 
+                          vb.lower_bound + 1, vb.upper_bound + 1, 
+                          max(gradient_epsilon, TOL_RATE));
+    }
+    else {
         score = -minimizeMultiDimen(vb.variables, ndim, 
                                     vb.lower_bound, vb.upper_bound, 
                                     vb.bound_check, max(gradient_epsilon, 
                                     TOL_RATE));
-    }
-    else {
-        score = -L_BFGS_B(ndim, vb.variables + 1, 
-                          vb.lower_bound + 1, vb.upper_bound + 1, 
-                          max(gradient_epsilon, TOL_RATE));
     }
 	bool changed = getVariables(vb.variables);
     if (changed) {

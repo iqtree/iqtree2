@@ -1204,7 +1204,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     
     // following code is from Cassius
     
-    if (name.find("1.1") != string::npos) {
+    if (contains(name,"1.1")) {
     	a = 1./3.;
     	//Eigenvalues = {0, -4*a, -4*a, -4*a}
         ceval[0] = 0.0;
@@ -1234,8 +1234,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cinv_evec[11] = cinv_evec[14] = cinv_evec[15] = -0.25;
 		cinv_evec[0]  = cinv_evec[4]  = cinv_evec[8]  = cinv_evec[12] = 0.25;
 		cinv_evec[7]  = cinv_evec[10] = cinv_evec[13] = 0.75;
-
-    } else if (name.find("2.2b") != string::npos) {
+    } else if (contains(name,"2.2b")) {
         /******** eigenvalues *********/
         //Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
     	a = 1./3.;
@@ -1273,7 +1272,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cinv_evec[3] = cinv_evec[6] = -0.5;
 		cinv_evec[14] = cinv_evec[11] = 0.5;
 
-    }  else if (name.find("3.3a") != string::npos) {
+    }  else if (contains(name,"3.3a")) {
         a = -rate_matrix[0]/3.;
         a2 = (rate_matrix[2] - a)/2.;
         b = rate_matrix[1] + a2 - a;
@@ -1312,9 +1311,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cinv_evec[15] = 0.25;
 		cinv_evec[1]  = cinv_evec[2]  = cinv_evec[6]  = -0.25;
 		cinv_evec[7]  = cinv_evec[9]  = cinv_evec[11] = -0.25;
-
-     }else if (name.find("3.3b") != string::npos) {
-
+     }
+	 else if (contains(name,"3.3b")) {
     	a = -rate_matrix[0]/3.;
 		a2 = (rate_matrix[2] - a)/2.;
 		c = -rate_matrix[1] - a2 + a;
@@ -1357,7 +1355,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cinv_evec[2]  = cinv_evec[11] = complex<double> (0., -0.25);
 		cinv_evec[3]  = cinv_evec[10] = complex<double> (0., 0.25);
 
-     } else if (name.find("3.3c") != string::npos) {
+     } else if (contains(name,"3.3c")) {
 		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
 		d1 = -rate_matrix[0] - 3.*a;
 		a2 = -rate_matrix[1] + a;
@@ -1399,7 +1397,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cinv_evec[3]  = cinv_evec[6]  = -0.5;
 		cinv_evec[11] = cinv_evec[14] = 0.5;
 
-     } else if (name.find("3.4") != string::npos) {
+     } else if (contains(name,"3.4")) {
 		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
 		d = rate_matrix[0] + 3.*a;
 		a2 = -rate_matrix[1] + a - d;
@@ -1445,7 +1443,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[2]  = cinv_evec[7]  = cinv_evec[10] =cinv_evec[15] = 0.;
 		}
 
-    } else if (name.find("4.4a") != string::npos) {
+    } else if (contains(name,"4.4a")) {
 		e1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		e2 = (rate_matrix[5] - rate_matrix[15])*0.5;
 		a = (-rate_matrix[0] + rate_matrix[4])*0.25;
@@ -1503,7 +1501,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[14] = cinv_evec[15] = -cinv_evec[12];
 			cinv_evec[13] = cinv_evec[14] + 1.;
 		}
-    } else if (name.find("4.4b") != string::npos) {
+    } else if (contains(name,"4.4b")) {
 		d = (rate_matrix[4] - rate_matrix[3])/2.;
 		d1 = (-rate_matrix[0] + rate_matrix[5] + 2.*d)/2.;
 		a = (-rate_matrix[0] + d - d1)/3.;
@@ -1556,7 +1554,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[12] = cinv_evec[4];
 		}
 
-    } else if (name.find("4.5a") != string::npos) {
+    } else if (contains(name,"4.5a")) {
 
 		d = (rate_matrix[0] - rate_matrix[5])/2.;
 		a = -(rate_matrix[0] - d)/3.;
@@ -1603,7 +1601,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
             cinv_evec[1] = cinv_evec[9]  = -cinv_evec[0];
             cinv_evec[4] = cinv_evec[12] = 0.25 - auxd;
         }
-	} else if (name.find("4.5b") != string::npos) {
+	} else if (contains(name,"4.5b")) {
 		d = (rate_matrix[0] - rate_matrix[5])/2.;
 		a = -(rate_matrix[0] + rate_matrix[5])/6.;
 		c = (rate_matrix[3] - rate_matrix[1])/2.;
@@ -1653,11 +1651,11 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[14] = cinv_evec[15] = 0.25;
 		}
 
-    } else if (name.find("5.6a") != string::npos) {
+    } else if (contains(name,"5.6a")) {
     	/*Cassius note: The formulas are complex; I think they are not worth it to be computed*/
     	nondiagonalizable = true;
 
-	} else if (name.find("5.6b") != string::npos) {
+	} else if (contains(name,"5.6b")) {
         e1 = (rate_matrix[0] - rate_matrix[10])*0.5;
         e2 = (rate_matrix[5] - rate_matrix[15])*0.5;
         a = -(rate_matrix[0] + rate_matrix[5] -e1 - e2)/6.;
@@ -1721,7 +1719,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
         }
     }
 
-    else if (name.find("5.7a") != string::npos) {
+    else if (contains(name,"5.7a")) {
 		a = -(rate_matrix[0] + rate_matrix[10])/6.;
 		e1 = rate_matrix[0] + 3.*a;
 		e2 = rate_matrix[5] + 3.*a;
@@ -1781,7 +1779,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[1] = cinv_evec[9] = -0.25;
 			cinv_evec[5] = cinv_evec[13] = 0.25;
 		}
-     } else if (name.find("5.7b") != string::npos) {
+     } else if (contains(name,"5.7b")) {
 		f1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		f2 = (rate_matrix[15] - rate_matrix[5])*0.5;
 		a = (-rate_matrix[0] + f1)/3.;
@@ -1843,7 +1841,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[13] = -cinv_evec[5] +0.5;
 		}
 
-	} else if (name.find("5.7c") != string::npos) {
+	} else if (contains(name,"5.7c")) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
 		a = (-rate_matrix[0] + g1)/3.;
@@ -1911,7 +1909,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[5]  = cinv_evec[13] = -cinv_evec[1];
 		}
 
-	} else if (name.find("5.11a") != string::npos) {
+	} else if (contains(name,"5.11a")) {
 
 		e2 = (rate_matrix[1] - rate_matrix[3])*0.5;
 		e1 = (rate_matrix[4] - rate_matrix[6])*0.5;
@@ -1972,7 +1970,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[11] = -cinv_evec[3];
 			cinv_evec[14] = -cinv_evec[6];
 		}
-	} else if (name.find("5.11b") != string::npos) {
+	} else if (contains(name,"5.11b")) {
 		f2 = (rate_matrix[1] - rate_matrix[3])*0.5;
 		f1 = (rate_matrix[6] - rate_matrix[4])*0.5;
 		a = -(rate_matrix[0] + rate_matrix[5] -f1 + f2)/6.;
@@ -2030,7 +2028,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[13] = 0.25 + auxf2;
 			cinv_evec[14] = 0.5 - auxf2;
 		}
-	} else if (name.find("5.11c") != string::npos) {
+	} else if (contains(name,"5.11c")) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
 		d1 =(rate_matrix[5] - rate_matrix[0] + g2 + g1)*0.5;
@@ -2093,7 +2091,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 			cinv_evec[14] = 0.5 - cinv_evec[2];
 		}
 	} 
-	else if (name.find("5.16") != string::npos) {
+	else if (contains(name,"5.16")) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
 		d = (-rate_matrix[5] + rate_matrix[0] - g2 - g1)*0.5;

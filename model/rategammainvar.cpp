@@ -145,9 +145,9 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
                   "Optimizing " << name << " model parameters" 
                   " by " << optimize_alg << " algorithm...");
 
-	if (optimize_alg.find("EM_RR") != string::npos) {
+	if (contains(optimize_alg,"EM_RR")) {
         return randomRestartOptimization(gradient_epsilon, report_to_tree);
-    } else if (optimize_alg.find("Brent") != string::npos || 
+    } else if (contains(optimize_alg,"Brent") || 
                phylo_tree->aln->frac_const_sites == 0.0 || 
                isFixPInvar() || isFixGammaShape()) {
 		cur_optimize = 0;
@@ -162,9 +162,9 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
 		ASSERT(invar_lh >= gamma_lh-0.1);
         cur_optimize = 0;
         return invar_lh;
-	} else if (optimize_alg.find("EM") != string::npos) {
+	} else if (contains(optimize_alg,"EM")) {
         return optimizeWithEM(gradient_epsilon, report_to_tree);
-    } else if (optimize_alg.find("BFGS") != string::npos) {
+    } else if (contains(optimize_alg,"BFGS")) {
         double* variables = new double[ndim+1];
         double* upper_bound = new double[ndim+1];
         double* lower_bound = new double[ndim+1];

@@ -30,11 +30,12 @@ ModelDNAError::ModelDNAError(const char *model_name, const string& model_params,
     epsilon = 0.05;
     fix_epsilon = false;
     // now parse the epsilon parameter
-    string::size_type pos;
-    if ((pos = seqerr.find(OPEN_BRACKET)) != string::npos) {
+    string::size_type pos = seqerr.find(OPEN_BRACKET);
+    if (pos != string::npos) {
         auto end_pos = seqerr.find(CLOSE_BRACKET);
-        if (end_pos == string::npos)
+        if (end_pos == string::npos) {
             outError("Missing closing bracket in " + seqerr);
+        }
         epsilon = convert_double(seqerr.substr(pos+1, end_pos-pos-1).c_str());
         if (epsilon < 0.0 || epsilon > 1.0) {
             outError("Sequencing error probability " +

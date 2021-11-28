@@ -124,7 +124,6 @@ std::string ModelInfoFromName::getFrequencyMixtureParams
     if (posfreq != string::npos) {
         string fmix_str;
         size_t last_pos = freq_str.find_first_of("+*", posfreq + 1);
-
         if (last_pos == string::npos) {
             fmix_str = freq_str.substr(posfreq);
             freq_str = freq_str.substr(0, posfreq);
@@ -348,8 +347,6 @@ std::string ModelInfoFromName::getHeterotachyParameters
         posH = posH2;
         fused_mix_rate = true;
     }
-
-
     int end_pos = 0;
     // Heterotachy model
     num_rate_cats = getNumberOfCategories(model_name, posH, is_mixture_model,
@@ -387,7 +384,7 @@ double ModelInfoFromName::getProportionOfInvariantSites() const {
 }
 
 bool ModelInfoFromName::hasAscertainmentBiasCorrection() const {
-    return model_name.find("+ASC") != std::string::npos;
+    return contains(model_name,"+ASC");
 }
 
 bool ModelInfoFromName::hasRateHeterotachy() const {
@@ -408,7 +405,7 @@ bool ModelInfoFromName::isFreeRate() const {
 }
 
 bool ModelInfoFromName::isFrequencyMixture() const {
-    return model_name.find("+FMIX") != string::npos;
+    return contains(model_name,"+FMIX");
 }
 
 bool ModelInfoFromName::isGammaModel() const {
@@ -431,11 +428,11 @@ bool ModelInfoFromName::isGammaModel() const {
 }
 
 bool ModelInfoFromName::isInvariantModel() const {
-    return model_name.find("+I") != std::string::npos;
+    return contains(model_name,"+I");
 }
 
 bool ModelInfoFromName::isKategoryModel() const {
-    return model_name.find("+K") != string::npos;
+    return contains(model_name,"+K");
 }
 
 bool ModelInfoFromName::isMixtureModel() const {

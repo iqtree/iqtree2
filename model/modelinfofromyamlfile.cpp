@@ -1055,7 +1055,7 @@ void ModelInfoFromYAMLFile::logVariablesTo
         sep = ", ";
     }
     std::string list = var_list.str();
-    if (list.find("nan") != std::string::npos) {
+    if (contains(list,"nan")) {
         list += " ...?";
     }
     TREE_LOG_LINE(*logging_target, YAMLModelVerbosity, list);

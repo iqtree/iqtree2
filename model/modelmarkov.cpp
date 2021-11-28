@@ -1659,7 +1659,7 @@ void ModelMarkov::readRates(string str) {
     int nrates = getNumRateEntries();
     int end_pos = 0;
     cout << __func__ << " " << str << endl;
-    if (str.find("equalrate") != string::npos) {
+    if (contains(str,"equalrate")) {
         for (int i = 0; i < nrates; i++) {
             rates[i] = 1.0;
         }

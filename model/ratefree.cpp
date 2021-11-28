@@ -285,8 +285,8 @@ double RateFree::optimizeParameters(double gradient_epsilon,
                   "Optimizing " << name << " model parameters by "
                   << optimize_alg << " algorithm...");
     // TODO: turn off EM algorithm for +ASC model
-    if ((optimize_alg.find("EM") != string::npos
-         && phylo_tree->getModelFactory()->unobserved_ptns.empty())) {
+    if (contains(optimize_alg,"EM") 
+         && phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         if (fix_params == 0) {
             return optimizeWithEM(report_to_tree);
         }
@@ -302,7 +302,7 @@ double RateFree::optimizeParameters(double gradient_epsilon,
         // fix proportions
         right = 1;
     }
-    if (optimize_alg.find("1-BFGS") != string::npos) {
+    if (contains(optimize_alg,"1-BFGS")) {
         left  = 0; 
         right = 0;
     }
@@ -314,7 +314,7 @@ double RateFree::optimizeParameters(double gradient_epsilon,
         setVariables(vb.variables);
         setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
 
-        if (optimize_alg.find("BFGS-B") != string::npos) {
+        if (contains(optimize_alg,"BFGS-B")) {
             score = -L_BFGS_B(ndim, vb.variables+1, 
                               vb.lower_bound+1, vb.upper_bound+1,
                               max(gradient_epsilon, TOL_FREE_RATE));

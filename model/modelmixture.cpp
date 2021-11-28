@@ -1182,8 +1182,8 @@ void getPomoRateAndModel(ModelInfoFromName& model_info, std::string& model_str,
 void getSequencingErrorModel(PhyloTree* tree, std::string& model_str, 
                              std::string& seqerr) {
     // sequencing error model
-    string::size_type spec_pos;
-    while ((spec_pos = model_str.find("+E")) != string::npos) {
+    string::size_type spec_pos = model_str.find("+E");
+    while (spec_pos != string::npos) {
         string::size_type end_pos = model_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
             seqerr    = model_str.substr(spec_pos);
@@ -1192,6 +1192,7 @@ void getSequencingErrorModel(PhyloTree* tree, std::string& model_str,
             seqerr    = model_str.substr(spec_pos, end_pos - spec_pos);
             model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
         }
+        spec_pos = model_str.find("+E");
     }
     if (!seqerr.empty() && tree->aln->seq_type != SeqType::SEQ_DNA) {
         outError("Sequencing error model " + seqerr +

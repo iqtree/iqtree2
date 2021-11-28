@@ -304,8 +304,8 @@ void ModelFactory::moveRateParameters(string& model_str, string& rate_str) {
 void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
                                            string& freq_str) {
     // decompose +F from rate_str
-    size_t spec_pos;
-    while ((spec_pos = rate_str.find("+F")) != string::npos) {
+    size_t spec_pos = rate_str.find("+F");
+    while (spec_pos != string::npos) {
         size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
             freq_str += rate_str.substr(spec_pos);
@@ -314,6 +314,7 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
             freq_str += rate_str.substr(spec_pos, end_pos - spec_pos);
             rate_str  = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
         }
+        spec_pos = rate_str.find("+F");
     }
 
     // set to model_joint if set
@@ -321,7 +322,8 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
     if (params.model_joint) {
         model_str = params.model_joint;
         freq_str = "";
-        while ((spec_pos = model_str.find("+F")) != string::npos) {
+        spec_pos = model_str.find("+F");
+        while (spec_pos != string::npos) {
             size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
             if (end_pos == string::npos) {
                 freq_str += model_str.substr(spec_pos);
@@ -330,6 +332,7 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
                 freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
                 model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
             }
+            spec_pos = model_str.find("+F");
         }
     }
 }
@@ -337,8 +340,8 @@ void ModelFactory::moveFrequencyParameters(string& rate_str, string& model_str,
 void ModelFactory::moveErrorModelParameter(string& rate_str, string& model_str) {
     // move error model +E from rate_str to model_str
     //string seqerr_str = "";
-    size_t spec_pos;
-    while ((spec_pos = rate_str.find("+E")) != string::npos) {
+    size_t spec_pos = rate_str.find("+E");
+    while (spec_pos != string::npos) {
         size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
         if (end_pos == string::npos) {
             model_str += rate_str.substr(spec_pos);
@@ -347,6 +350,7 @@ void ModelFactory::moveErrorModelParameter(string& rate_str, string& model_str) 
             model_str += rate_str.substr(spec_pos, end_pos - spec_pos);
             rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
         }
+        spec_pos = rate_str.find("+E");
     }
 }
 
@@ -357,8 +361,9 @@ void ModelFactory::removeSamplingParametersFromRateString(bool pomo,
     size_t n_pos_start = rate_str.find("+N");
     size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
     if (n_pos_start != string::npos) {
-        if (!pomo)
+        if (!pomo) {
             outError("Virtual population size can only be set with PoMo.");
+        }
         if (n_pos_end != string::npos) {
             rate_str = rate_str.substr(0, n_pos_start)
                 + rate_str.substr(n_pos_end);
@@ -434,8 +439,8 @@ void ModelFactory::initializePoMo(bool pomo, const ModelInfo& rate_info,
         }
 
         // +G flag.
-        size_t pomo_rate_start_pos;
-        if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
+        size_t pomo_rate_start_pos = rate_str.find("+G");
+        if (pomo_rate_start_pos != string::npos) {
             string pomo_rate_str = "";
             size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
             if (pomo_rate_end_pos == string::npos) {
@@ -730,7 +735,7 @@ void ModelFactory::initializeRateHeterogeneity(const ModelInfo& rate_info,
                       num_rate_cats, p_invar_sites, gamma_shape,
                       freerate_params, heterotachy_params);
 
-    if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
+    if (contains(rate_str,"+") || contains(rate_str,"*")) {
         if (isHeterotarchicRate) {
             site_rate = getHeterotarchicRate(isInvariantModel, num_rate_cats, 
                                              heterotachy_params, p_invar_sites, tree);

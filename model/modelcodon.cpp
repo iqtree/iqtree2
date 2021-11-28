@@ -1131,7 +1131,8 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 	// by BFGS algorithm
 	setVariables(vb.variables);
 	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
-    if (phylo_tree->params->optimize_alg_freerate.find("BFGS-B") == string::npos) {
+    auto alg = phylo_tree->params->optimize_alg_freerate;
+    if (!contains(alg,"BFGS-B")) {
         score = -minimizeMultiDimen(vb.variables, ndim, 
                                     vb.lower_bound, vb.upper_bound, 
                                     vb.bound_check, max(gradient_epsilon, 
@@ -1157,7 +1158,7 @@ double ModelCodon::optimizeParameters(double gradient_epsilon,
 
 
 void ModelCodon::writeInfo(ostream &out) {
-    if (name.find('_') == string::npos) {
+    if (!contains(name,"_")) {
         out << "Nonsynonymous/synonymous ratio (omega): " << omega << endl;
     }
     else {

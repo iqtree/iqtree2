@@ -761,9 +761,10 @@ void ModelGTR::readRates(istream &in) {
 void ModelGTR::readRates(string str) {
 	int nrates = getNumRateEntries();
 	cout << __func__ << " " << str << endl;
-	if (str.find("equalrate") != string::npos) {
-		for (int i = 0; i < nrates; i++)
+	if (contains(str,"equalrate")) {
+		for (int i = 0; i < nrates; i++) {
 			rates[i] = 1.0;
+		}
 	} else for (int i = 0; i < nrates; i++) {
 		int end_pos = 0;
 		int new_end_pos;
