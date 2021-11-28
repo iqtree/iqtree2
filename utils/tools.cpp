@@ -4228,7 +4228,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (contains(params.model_name,"ONLY") || 
         (startsWith(params.model_name, "MF") && 
          !startsWith(params.model_name,"MFP") && 
-         (params.gbo_replicates || params.num_bootstrap_samples)) {
+         (params.gbo_replicates || params.num_bootstrap_samples))) {
         outError("ModelFinder only cannot be combined with bootstrap analysis");
     }
     if (params.num_runs > 1 && !params.treeset_file.empty()) {
