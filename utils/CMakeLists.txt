@@ -12,6 +12,7 @@ bionj.cpp bionj2.cpp
 progress.cpp progress.h
 timeutil.h hammingdistance.h
 operatingsystem.cpp operatingsystem.h
+heapsort.h
 )
 
 if(ZLIB_FOUND)
