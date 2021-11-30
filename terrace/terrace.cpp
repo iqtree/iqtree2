@@ -155,7 +155,12 @@ void Terrace::get_part_trees(){
         for(it2=taxa_nodes.begin();it2!=taxa_nodes.end();it2++){
             taxon_name=(*it2)->name;
             id=matrix->findTaxonID(taxon_name);
-            assert(id != -1 && "Not all of the taxa appear in the pr_ab_matrix!");
+            if(id==-1){
+                cout<<"INPUT ERROR: taxon "<<taxon_name<<" does not appear in presence-absence matrix! Fix it to perform the analysis... Exiting...\n";
+                cout<<"\n---------------------------------------------------------\n";
+                assert(id != -1 && "Not all of the taxa appear in the pr_ab_matrix!");
+            }
+            
             check_int[(*it2)->id] = matrix->pr_ab_matrix[id][part];
             //cout<<"Taxon["<<(*it2)->name<<"|"<<(*it2)->id<<"|"<<id<<"] in partition "<<part<<" is "<<check_int[(*it2)->id]<<"||MATRIX_INFO:"<<matrix->taxa_names[id]<<"-"<<matrix->pr_ab_matrix[id][part]<<"\n";
             if(check_int[(*it2)->id]==1){
@@ -208,8 +213,8 @@ void Terrace::unset_part_trees(){
 void Terrace::printInfo(ostream &out){
 
     //out<<"\n"<<"=================================================="<<"\n";
-    out<<"Printing terrace information:"<<"\n"<<"\n";
-    out<<"Terrace representative tree:"<<"\n";
+    out<<"Printing information about the stand:"<<"\n"<<"\n";
+    out<<"Stand representative (input) tree:"<<"\n";
     print_terrace_tree(false,out);
     out<<"\n";
     
@@ -1087,9 +1092,9 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     intermediated_trees_num +=1;
     if(verbose_mode>=VB_MED){
         if((intermediated_trees_num+terrace_trees_num) % 100000 == 0 and terrace_trees_num < 10000000){
-            cout<<"... trees generated - "<<intermediated_trees_num + terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; terrace - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
+            cout<<"... trees generated - "<<intermediated_trees_num + terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; stand - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
         }else if(terrace_trees_num == 10000000){
-            cout<<"Since the terrace size already reached 10MLN, no intermediate results will be printed, but the calculations continue...\n";
+            cout<<"Since the stand size already reached 10 million trees, no intermediate results will be printed, but the generation continues...\n";
         }
     }
     
@@ -1587,16 +1592,16 @@ bool Terrace::check_two_trees(MTree* query_tree){
 void Terrace::write_terrace_trees_to_file(){
  
     cout<<"Wall-clock time used so far: "<<getRealTime()-Params::getInstance().start_real_time<<" seconds ("<<convert_time(getRealTime()-Params::getInstance().start_real_time)<<")"<<"\n";
-    cout<<"CPU time used on generation of terrace trees: "
+    cout<<"CPU time used on generation of trees from the stand: "
     << getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")" << "\n";
     cout<<"---------------------------------------------------------"<<"\n";
     
-    cout<<"Printing "<<terrace_trees_num<<" terrace trees to file "<<"\n"<<out_file<<"..."<<"\n";
+    cout<<"Printing "<<terrace_trees_num<<" trees from the stand to file "<<"\n"<<out_file<<"..."<<"\n";
         
     if(trees_out_lim==0 or trees_out_lim > terrace_trees_num){
         trees_out_lim = terrace_trees_num;
     } else {
-        cout<<"WARNING: The number of generated trees from the terrace ("<<terrace_trees_num<<") is larger than the output treshold ("<<trees_out_lim<<" trees). Only "<<trees_out_lim<<" trees will be written to the file."<<"\n";
+        cout<<"WARNING: The number of generated trees from the stand ("<<terrace_trees_num<<") is larger than the output treshold ("<<trees_out_lim<<" trees). Only "<<trees_out_lim<<" trees will be written to the file."<<"\n";
     }
     
     ofstream out;
@@ -1616,12 +1621,12 @@ void Terrace::write_summary_generation(){
     
     if(rm_leaves > 0){
         cout<<"---------------------------------------------------------"<<"\n";
-        cout<<"WARNING: Note, that the terrace trees were generated using BACKWARD approach.\nIt DOES NOT guarantee to generate all terrace trees and is only provided for exploratory purposes.\nIn current setting "<<rm_leaves<<" were removed from the input tree and used to generate terrace trees. \nYou can increase this number via option -t_rm_leaves <num> to explore terrace further.\n";
+        cout<<"WARNING: Note, that the trees from the stand were generated using BACKWARD approach.\nIt DOES NOT guarantee to generate all stand trees and is only provided for exploratory purposes.\nIn current setting "<<rm_leaves<<" were removed from the input tree and used to generate trees from the stand. \nYou can increase this number via option -g_rm_leaves <num> to explore the stand further.\n";
     }
     
     cout<<"---------------------------------------------------------"<<"\n";
     cout<<"SUMMARY:"<<"\n";
-    cout<<"Number of trees on terrace: "<<terrace_trees_num<<"\n";
+    cout<<"Number of trees on stand: "<<terrace_trees_num<<"\n";
     cout<<"Number of intermediated trees visited: "<<intermediated_trees_num<<"\n";
     cout<<"Number of dead ends encountered: "<<dead_ends_num<<"\n";
     cout<<"---------------------------------------------------------"<<"\n";
@@ -1639,7 +1644,7 @@ void Terrace::write_summary_generation(){
             cout<<"\n";
             
             cout<<"---------------------------------------------------------"<<"\n";
-            cout<<"WARNING: Due to complexity of the input data, the FORWARD approach could not generate terrace trees.\nThe BACKWARD approach is triggered for exploratory purposes.\nThis approach DOES NOT guarantee generating all terrace trees.\n";
+            cout<<"WARNING: Due to complexity of the input data, the FORWARD approach could not generate trees from the stand.\nThe BACKWARD approach is triggered for exploratory purposes.\nThis approach DOES NOT guarantee generating all trees from the stand.\n";
             cout<<"---------------------------------------------------------"<<"\n";
             
             Terrace *master = master_terrace;
@@ -1668,11 +1673,11 @@ void Terrace::write_warning_stop(int type){
     
     cout<<"\n"<<"=========================================="<<"\n";
     cout<<"WARNING: stopping condition is active!"<<"\n";
-    cout<<"The total number of trees on the terrace is NOT yet computed!"<<"\n";
+    cout<<"The total number of trees on the stand is NOT yet computed!"<<"\n";
     cout<<"Check summary at the current step.";
     if(terrace_trees_num==UINT_MAX){
         type=4;
-        cout<<"The number of terrace trees reached maximum value for unsigned int.\n";
+        cout<<"The number of trees on the stand reached maximum value for unsigned int.\n";
     }else if (intermediated_trees_num==UINT_MAX){
         type=4;
         cout<<"The number of intermediate trees reached maximum value for unsigned int.\n";
@@ -1690,11 +1695,11 @@ void Terrace::write_warning_stop(int type){
             cout<<"The number of considered intermediated trees already reached "<<intermediate_max_trees<<". Exiting generation process..."<<"\n";
             break;
         case 2:
-            cout<<"Type of stopping rule: terrace size"<<"\n";
-            cout<<"Current setting: stop if the number of trees on the terrace reached "<<terrace_max_trees<<"\n";
-            cout<<"To change the value use -g_stop_t <number_of_terrace_trees_to_stop>"<<"\n";
+            cout<<"Type of stopping rule: stand size"<<"\n";
+            cout<<"Current setting: stop if the number of trees on the stand reached "<<terrace_max_trees<<"\n";
+            cout<<"To change the value use -g_stop_t <number_of_stand_trees_to_stop>"<<"\n";
             cout<<"------------------------------------------"<<"\n";
-            cout<<"Considered terrace already contains "<<terrace_max_trees<<" trees."<<"\n"<<"Exiting generation process..."<<"\n";
+            cout<<"Considered stand already contains "<<terrace_max_trees<<" trees."<<"\n"<<"Exiting generation process..."<<"\n";
             break;
             
         case 3:

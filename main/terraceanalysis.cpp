@@ -21,7 +21,7 @@ void runterraceanalysis(Params &params){
     params.start_real_time = getRealTime();
 
     cout<<"---------------------------------------------------------\n";
-    cout<<"Starting species-tree/terrace analysis...\n";
+    cout<<"\nBegin analysis with Gentrius...\n\n";
     cout<<"---------------------------------------------------------\n";
     
     if(params.matrix_order){
@@ -80,7 +80,7 @@ void runterraceanalysis(Params &params){
         TerraceTree tree;
         tree.readTree(params.user_file, params.is_rooted);
         if(tree.rooted){
-            cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\nConverting rooted tree to unrooted...\n";
+            cout<<"WARNING: Gentrius is only used with unrooted trees!\nConverting rooted tree to unrooted...\n";
             tree.convertToUnrooted();
         }
         if(!tree.isBifurcating()){
@@ -88,6 +88,8 @@ void runterraceanalysis(Params &params){
             exit(0);
         }
         terrace = new Terrace(tree,matrix);
+        params.print_pr_ab_matrix=true;
+        cout<<"\n---------------------------------------------------------\n";
     } else if(params.user_file && params.pr_ab_matrix){
         terrace = new Terrace(params.user_file,params.is_rooted,params.pr_ab_matrix);
         if(!terrace->isBifurcating()){
@@ -97,9 +99,9 @@ void runterraceanalysis(Params &params){
     } else if(params.user_file){
         vector<TerraceTree*> subtrees;
         read_tree_set(params.user_file, params.is_rooted, subtrees);
-        assert(subtrees.size()>1 && "ERROR: the input set of trees must be larger than 1 to be considered for the analysis.");
+        assert(subtrees.size()>1 && "ERROR: the input set of subtrees must be larger than 1 to be considered for the analysis.");
         if(subtrees[0]->rooted){
-            cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\n";
+            cout<<"WARNING: Gentrius is only used with unrooted trees!\n";
         }
         int ti=0;
         for(const auto &t: subtrees){
@@ -132,6 +134,12 @@ void runterraceanalysis(Params &params){
     if(params.terrace_query_set){
         run_terrace_check(terrace,params);
     }else{
+        //cout<<"---------------------------------------------------------\n";
+        cout<<"Notes:\n";
+        cout<<"- Gentrius generates a stand, i.e. a collection of species-trees, which display (also compatible with) the same loci subtrees\n";
+        cout<<"- If one of the stopping rules is triggered, the stand was not generated completely. You can change the thresholds or even turn them off to try generating all trees.\n";
+        cout<<"- If with default thresholds Gentrius did not generate any species-tree, use alternative exploratory approach (see manual).\n";
+        cout<<"---------------------------------------------------------\n";
         /*
          *  Create an auxiliary terrace:
          *  - main tree - is the initial tree to be expanded by adding taxa to obtain a tree from the considered terrace (or to reach dead end)
@@ -149,7 +157,7 @@ void runterraceanalysis(Params &params){
             string out_file;
             ofstream out;
             out_file = params.out_prefix;
-            out_file += ".terrace_info";
+            out_file += ".stand_info";
             out.open(out_file);
             terrace->printInfo(out);
             out.close();
@@ -212,11 +220,11 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     //init_terrace->matrix->print_pr_ab_matrix();
     
     init_terrace->out_file = params.out_prefix;
-    init_terrace->out_file += ".all_gen_terrace_trees";
+    init_terrace->out_file += ".stand_trees";
     
     if(params.terrace_non_stop){
-        cout<<"All stopping rules for terrace generation are turned off.\n";
-        cout<<"For the number of intermediate trees and terrace trees the hard stopping rule is the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
+        cout<<"All stopping rules for stand generation are turned off.\n";
+        cout<<"For the number of intermediate trees and stand trees the hard stopping rule is the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
         init_terrace->intermediate_max_trees = UINT_MAX;
         init_terrace->terrace_max_trees = UINT_MAX;
         init_terrace->seconds_max = -1;
@@ -230,7 +238,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
         if(params.terrace_stop_terrace_trees_num > 0){
             init_terrace->terrace_max_trees = params.terrace_stop_terrace_trees_num;
         } else if(params.terrace_stop_terrace_trees_num == 0){
-            cout<<"The stopping rule based on the size of a terrace: the threshold is set to the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
+            cout<<"The stopping rule based on the size of a stand: the threshold is set to the maximum value of unsigned integer: "<<UINT_MAX<<"\n";
             init_terrace->terrace_max_trees = UINT_MAX;
         }
         
@@ -244,7 +252,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     
     cout<<"---------------------------------------------------------"<<"\n";
     cout<<"Current stopping thresholds:\n";
-    cout<<"1. Stop if terrace size reached: "<<init_terrace->terrace_max_trees<<"\n";
+    cout<<"1. Stop if stand size reached: "<<init_terrace->terrace_max_trees<<"\n";
     cout<<"2. Stop if the number of intermediate visited trees reached: "<<init_terrace->intermediate_max_trees<<"\n";
     cout<<"3. Stop if the CPU time reached: "<<init_terrace->seconds_max<<" seconds"<<"\n";
     
@@ -261,24 +269,25 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     }*/
     
     init_terrace->fillbrNodes();
-    cout<<"\n"<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
-    cout<<"\n"<<"READY TO GENERATE TREES FROM A TERRACE"<<"\n";
+    cout<<"---------------------------------------------------------"<<"\n";
+    cout<<"\n"<<"READY TO GENERATE TREES FROM A STAND"<<"\n";
     if(terrace->rm_leaves>0){
-        cout<<"using BACKWARD approach (does not guarantee generating all terrace trees!)\n";
+        cout<<"using BACKWARD approach (exploratory only! does not guarantee generating all trees)\n";
     }else{
-        cout<<"using FORWARD approach (generates all terrace trees, if feasible)\n";
+        cout<<"using FORWARD approach (generates all trees, can be exponentially many)\n";
     }
     
-    cout<<"\n"<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
+    cout<<"\n"<<"---------------------------------------------------------"<<"\n";
     cout<<"INPUT INFO:"<<"\n";
     cout<<"---------------------------------------------------------"<<"\n";
     cout<<"Number of taxa: "<<terrace->taxa_num<<"\n";
-    cout<<"Number of partitions: "<<terrace->part_num<<"\n";
-    cout<<"Number of special taxa (row sum = 1): "<<terrace->matrix->uniq_taxa_num<<"\n";
+    cout<<"Number of loci: "<<terrace->part_num<<"\n";
+    cout<<"Number of taxa with minimal coverage (row sum = 1): "<<terrace->matrix->uniq_taxa_num<<"\n";
     terrace->matrix->percent_missing();
-    cout<<"% of missing entries in supermatrix: "<<terrace->matrix->missing_percent<<"\n";
+    cout<<"% of missing entries in taxon per locus presence-absence matrix: "<<terrace->matrix->missing_percent<<"\n";
     cout<<"Number of taxa on initial tree: "<<init_terrace->taxa_num<<"\n";
     cout<<"Number of taxa to be inserted: "<<list_taxa_to_insert.size()<<"\n";
+    cout<<"---------------------------------------------------------"<<"\n";
     
     //init_terrace->print_ALL_DATA(part_tree_pairs);
     if(params.print_terrace_trees){
@@ -296,7 +305,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
     
     init_terrace->matrix->uniq_taxa_num = terrace->matrix->uniq_taxa_num;
     init_terrace->matrix->uniq_taxa_to_insert_num = terrace->matrix->uniq_taxa_to_insert_num;
-    cout<<"\n"<<"Generating terrace trees.."<<"\n";
+    cout<<"\n"<<"Generating trees from a stand...."<<"\n";
     
     bool use_dynamic_taxon_order = true;
     if(use_dynamic_taxon_order){
@@ -309,7 +318,7 @@ void run_generate_trees(Terrace *terrace, Params &params,const int m){
         // Taxon order is fixed. Taxa inserted in order they appear in list_taxa_to_insert
         init_terrace->generateTerraceTrees(terrace, part_tree_pairs, list_taxa_to_insert, 0, nullptr);
     }
-    cout<<"\n"<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
+    cout<<"\n"<<"---------------------------------------------------------"<<"\n";
     cout<<"\n"<<"Done!"<<"\n"<<"\n";
 
     init_terrace->write_summary_generation();
@@ -329,10 +338,10 @@ void run_terrace_check(Terrace *terrace,Params &params){
         MTree *tree = new MTree();
         tree->readTree(in, params.is_rooted);
         if(terrace->check_two_trees(tree)){
-            cout<<"Checking query tree "<<count<<"..."<<"on the terrace."<<"\n";
+            cout<<"Checking query tree "<<count<<"..."<<"ON the stand."<<"\n";
             trees_on.push_back(tree);
         }else{
-            cout<<"Checking query tree "<<count<<"..."<<"NOT on the terrace!"<<"\n";
+            cout<<"Checking query tree "<<count<<"..."<<"DOES NOT lie on the stand!"<<"\n";
             trees_off.push_back(tree);
         }
         delete tree;
@@ -346,7 +355,7 @@ void run_terrace_check(Terrace *terrace,Params &params){
     
     if(!trees_on.empty() and !trees_off.empty()){
         string out_file_on = params.out_prefix;
-        out_file_on += ".on_terrace";
+        out_file_on += ".on_stand";
         
         ofstream out_on;
         out_on.exceptions(ios::failbit | ios::badbit);
@@ -361,7 +370,7 @@ void run_terrace_check(Terrace *terrace,Params &params){
 
     if(!trees_off.empty()){
         string out_file_off = params.out_prefix;
-        out_file_off += ".off_terrace";
+        out_file_off += ".off_stand";
     
         ofstream out_off;
         out_off.exceptions(ios::failbit | ios::badbit);
@@ -378,12 +387,12 @@ void run_terrace_check(Terrace *terrace,Params &params){
     cout<<"Done."<<"\n";
     cout<<"Checked "<<count<<" trees:"<<"\n";
     if(trees_on.size() == count){
-        cout<<"- all trees belong to the same terrace"<<"\n";
+        cout<<"- all trees belong to the same stand"<<"\n";
     }else if(trees_off.size() == count){
-        cout<<"- none of the trees belongs to considered terrace"<<"\n";
+        cout<<"- none of the trees belongs to considered stand"<<"\n";
     }else{
-        cout<<" - "<<trees_on.size()<<" trees belong to considered terrace"<<"\n";
-        cout<<" - "<<trees_off.size()<<" trees do not belong to considered terrace"<<"\n";
+        cout<<" - "<<trees_on.size()<<" trees belong to considered stand"<<"\n";
+        cout<<" - "<<trees_off.size()<<" trees do not belong to considered stand"<<"\n";
     }
     cout<<"----------------------------------------------------------------------------"<<"\n"<<"\n";
 }

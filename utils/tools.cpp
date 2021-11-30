@@ -2106,7 +2106,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 
             if (strcmp(argv[cnt], "--terrace") == 0) {
-                params.terrace_check = false;
+                params.terrace_check = true;
                 continue;
             }
             
@@ -2123,7 +2123,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "-gentrius") == 0) {
+            if (strcmp(argv[cnt], "--gentrius") == 0) {
                 params.terrace_analysis = true;
                 continue;
             }
@@ -2201,10 +2201,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-g_stop_t") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -g_stop_t <number_of_terrace_trees_to_stop>";
+                    throw "Use -g_stop_t <number_of_stand_trees_to_stop>";
                 params.terrace_stop_terrace_trees_num = convert_int(argv[cnt]);
                 if(params.terrace_stop_terrace_trees_num<0){
-                    throw "Invalid value! Use -g_stop_t <trees_num> with trees_num>0 to stop after trees_num terrace trees were generated, or use trees_num == 0 to turn off this stopping rule. Default: 1MLN trees.";
+                    throw "Invalid value! Use -g_stop_t <trees_num> with trees_num>0 to stop after trees_num trees from the stand were generated, or use trees_num == 0 to turn off this stopping rule. Default: 1MLN trees.";
                 }
                 continue;
             }
@@ -4770,7 +4770,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --cf-quartet         Write sCF for all resampled quartets to .cf.quartet" << endl
 
     << endl << "ANALYSIS WITH GENTRIUS ALGORITHM:" << endl
-    << "  -gentrius FILE       File must contain either a single species-tree or a set of subtrees." << endl
+    << "  --gentrius FILE      File must contain either a single species-tree or a set of subtrees." << endl
     << "  -pr_ab_matrix FILE   Presence-absence matrix of loci coverage." << endl
     << "  -s FILE              PHYLIP/FASTA/NEXUS/CLUSTAL/MSF alignment file(s)" << endl
     << "  -p FILE              NEXUS/RAxML partition file" << endl

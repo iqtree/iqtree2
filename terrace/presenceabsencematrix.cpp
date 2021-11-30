@@ -486,7 +486,7 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
         }
     } else {
         cout<<"The initial tree will be created by removing from the input tree "<<m<<" leaves."<<"\n";
-        cout<<"Note, that this procedure does not guarantee generating all trees from a terrace! It is only meant to investigate, if at least some trees from a terrace can be generate."<<"\n";
+        cout<<"Note, that this procedure does not guarantee generating all trees from a stand! It is only meant to investigate, if at least some trees from a stand can be generated."<<"\n";
     }
     
     IntVector ordered_ids;

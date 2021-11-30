@@ -1330,11 +1330,17 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         
         if (params.terrace_check && params.partition_file && params.compute_ml_tree) {
             
-            out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
-            cout << "Running additional analysis: Phylogenetic Terraces ..."<< endl;
+            cout<<"\n-------------------------------------------------------------------\n";
+            cout<<"The --terrace option is currently not available. Please, perform terrace analysis in a separate run using the following command line:\n";
+            cout<<"iqtree2 --gentrius <tree_file> -s <aln_file> -p <part_info_file>\n";
+            cout<<"For more information refer to the manual.\n";
+            cout<<"-------------------------------------------------------------------\n";
             
-            string filename = params.out_prefix;
-            filename += ".terrace";
+            //out << "TERRACE ANALYSIS" << endl << "----------------" << endl << endl;
+            //cout << "Running additional analysis: Phylogenetic Terraces ..."<< endl;
+            
+            //string filename = params.out_prefix;
+            //filename += ".terrace";
             
             // Integrate a terrace check for partitioned analysis
         }
