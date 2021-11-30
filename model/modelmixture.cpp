@@ -1052,8 +1052,35 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
     if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
 			outError("Close bracket not found at the end of ", model_str);
-		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
-		model_str = model_str.substr(0, pos);
+        string tmp_str = model_str;
+        // extract model_name
+        model_str = model_str.substr(0, pos);
+        
+        // extract model params
+        size_t end_pos = tmp_str.find(CLOSE_BRACKET);
+        
+        // handle cases that user doesn't specify model parameters but supply state frequencies
+        size_t pos_plus = model_str.find('+');
+        if (pos_plus != string::npos)
+        {
+            model_params = "";
+            model_str = model_str.substr(0, pos_plus);
+        }
+        else
+            model_params = tmp_str.substr(pos+1, end_pos-pos-1);
+        
+        // extract freqs (if specified)
+        pos = tmp_str.find("+FQ");
+        if (pos != string::npos)
+            freq_type = FREQ_EQUAL;
+        pos = tmp_str.find("+F{");
+        if (pos != string::npos)
+        {
+            freq_type = FREQ_USER_DEFINED; 
+            tmp_str = tmp_str.substr(pos+3, tmp_str.length()-pos-3);
+            end_pos = tmp_str.find(CLOSE_BRACKET);
+            freq_params = tmp_str.substr(0, end_pos);
+        }
     }
 
 	/*
@@ -1157,10 +1184,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			if (pos_rate != string::npos) {
 				size_t pos_weight = this_name.find(':', pos_rate+1);
 				if (pos_weight == string::npos) {
-					rate = convert_double(this_name.substr(pos_rate+1).c_str());
+					rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str());
 				} else {
-					rate = convert_double(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-					weight = convert_double(this_name.substr(pos_weight+1).c_str());
+					rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
+					weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str());
 					fix_prop = true;
 					if (weight <= 0.0)
 						outError("Mixture component weight is negative!");
@@ -1229,10 +1256,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		if (pos_rate != string::npos) {
 			size_t pos_weight = this_name.find(':', pos_rate+1);
 			if (pos_weight == string::npos) {
-				rate = convert_double(this_name.substr(pos_rate+1).c_str());
+				rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str());
 			} else {
-				rate = convert_double(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-				weight = convert_double(this_name.substr(pos_weight+1).c_str());
+				rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
+				weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str());
 				fix_prop = true;
 				if (weight <= 0.0)
 					outError("Mixture component weight is negative!");
@@ -1345,7 +1372,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     }
     // forgot to call this after refactoring
     if (isReversible()) {
-        initMem();
+        if (!Params::getInstance().alisim_skip_checking_memory)
+            initMem();
     }
 	decomposeRateMatrix();
 
@@ -1369,10 +1397,12 @@ void ModelMixture::initMem() {
     aligned_free(eigenvectors);
     aligned_free(inv_eigenvectors);
     aligned_free(inv_eigenvectors_transposed);
-    ensure_aligned_allocated(eigenvalues, num_states_total*nmixtures);
-    ensure_aligned_allocated(eigenvectors, num_states_total*num_states_total*nmixtures);
-    ensure_aligned_allocated(inv_eigenvectors, num_states_total*num_states_total*nmixtures);
-    ensure_aligned_allocated(inv_eigenvectors_transposed, num_states_total*num_states_total*nmixtures);
+    unsigned long long int tmp_size = num_states_total*nmixtures;
+    ensure_aligned_allocated(eigenvalues, tmp_size);
+    tmp_size *= num_states_total;
+    ensure_aligned_allocated(eigenvectors, tmp_size);
+    ensure_aligned_allocated(inv_eigenvectors, tmp_size);
+    ensure_aligned_allocated(inv_eigenvectors_transposed, tmp_size);
     
     // assigning memory for individual models
     int m = 0;
@@ -1502,9 +1532,15 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     // cout << endl;
 }
 
-void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
     ASSERT(mixture < getNMixtures());
-    at(mixture)->computeTransMatrix(time, trans_matrix);
+    at(mixture)->computeTransMatrix(time, trans_matrix, 0, selected_row);
+}
+
+void ModelMixture::getQMatrix(double *q_mat, int mixture)
+{
+    ASSERT(mixture < getNMixtures());
+    at(mixture)->getQMatrix(q_mat);
 }
 
 void ModelMixture::computeTransDerv(double time, double *trans_matrix,

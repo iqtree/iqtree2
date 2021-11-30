@@ -744,7 +744,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             PhyloTree::readTreeStringSeqName(curParsTree);
             wrapperFixNegativeBranch(true);
         } else if (params->start_tree == STT_RANDOM_TREE) {
-            generateRandomTree(YULE_HARDING);
+            if (params->tree_gen!=NONE)
+                generateRandomTree(params->tree_gen);
+            else
+                generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
             if (rooted) {
                 rooted = false;
@@ -883,7 +886,10 @@ string IQTree::generateParsimonyTree(int randomSeed) {
         wrapperFixNegativeBranch(true);
         parsimonyTreeString = getTreeString();
     } else if (params->start_tree == STT_RANDOM_TREE) {
-        generateRandomTree(YULE_HARDING);
+        if (params->tree_gen!=NONE)
+            generateRandomTree(params->tree_gen);
+        else
+            generateRandomTree(YULE_HARDING);
         wrapperFixNegativeBranch(true);
         parsimonyTreeString = getTreeString();
     } else {
@@ -4282,7 +4288,10 @@ int PhyloTree::testNumThreads() {
                 // time not reached, add more tree
 //                readTreeString(trees[0]);
 //                doRandomNNIs();
-                generateRandomTree(YULE_HARDING);
+                if (params->tree_gen!=NONE)
+                    generateRandomTree(params->tree_gen);
+                else
+                    generateRandomTree(YULE_HARDING);
                 wrapperFixNegativeBranch(true);
                 trees.push_back(getTreeString());
             }

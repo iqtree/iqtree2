@@ -58,7 +58,7 @@ void ModelSubst::restoreCheckpoint() {
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
-void ModelSubst::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelSubst::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
 	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
 	double diagonal = 1.0 - non_diagonal * (num_states - 1);
 	int nstates_sqr = num_states * num_states;
@@ -112,7 +112,7 @@ void ModelSubst::getRateMatrix(double *rate_mat) {
 		rate_mat[i] = 1.0;
 }
 
-void ModelSubst::getQMatrix(double *q_mat) {
+void ModelSubst::getQMatrix(double *q_mat, int mixture) {
 	int i, j, k;
 	for (i = 0, k = 0; i < num_states; i++)
 		for (j = 0; j < num_states; j++, k++)

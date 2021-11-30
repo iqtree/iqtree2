@@ -53,8 +53,10 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
     readFromParams(params);
     
     init();
-
-    cout << "Degree of missing data: " << computeMissingData() << endl;
+    
+    // only show Degree of missing data if AliSim is inactive or an input alignment is supplied
+    if (!(Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode))
+        cout << "Degree of missing data: " << computeMissingData() << endl;
     
 #ifdef _OPENMP
     if (params.num_threads > partitions.size()) {
@@ -129,6 +131,16 @@ void SuperAlignment::readFromParams(Params &params) {
         partitions = keep_partitions;
     }
     
+    // if AliSim is activated without an input alignment -> just shows "Subset\tType\tModel\tName
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode)
+    {
+        cout << "Subset\tType\tModel\tName" << endl;
+        int part = 0;
+        for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
+            cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->model_name << "\t" << (*it)->name << endl;
+        }
+    }
+    else {
     // Initialize the counter for evaluated NNIs on subtrees
     cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
     int part = 0;
@@ -142,7 +154,7 @@ void SuperAlignment::readFromParams(Params &params) {
         } else if ((*it)->num_informative_sites == 0) {
             outWarning("No parsimony-informative sites in partition " + (*it)->name);
         }
-    }
+    }}
 }
 
 void SuperAlignment::init(StrVector *sequence_names) {
@@ -271,10 +283,21 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
         in.exceptions(ios::badbit);
 //        PartitionInfo info;
         Alignment *input_aln = NULL;
-        if (!params.aln_file)
+        // only show error if alisim is inactive but aln_file is not specified
+        if (!params.aln_file && !params.alisim_active)
             outError("Please supply an alignment with -s option");
-        
-        input_aln = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+        // if aln_file is specified -> create a new alignment
+        if (params.aln_file)
+            input_aln = createAlignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+        // otherwise, if alisim is active -> create a default alignment
+        else if (params.alisim_active)
+        {
+            input_aln = new SuperAlignment;
+            input_aln->model_name = params.model_name;
+            if (params.sequence_type)
+                input_aln->sequence_type = params.sequence_type;
+            ((SuperAlignment*) input_aln)->init();
+        }
         
         cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
         
@@ -302,6 +325,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
                 }
             }
             
+            // dummy variable to record num of states
+            int num_states_morph = -1;
+            
             if (info.model_name.empty())
                 outError("Please give model names in partition file!");
             if (info.model_name == "BIN") {
@@ -310,18 +336,48 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             } else if (info.model_name == "DNA") {
                 info.sequence_type = "DNA";
                 info.model_name = "GTR";
-            } else if (info.model_name == "MULTI") {
+            } else if (info.model_name == "MULTI" || info.model_name == "MORPH") {
                 info.sequence_type = "MORPH";
                 info.model_name = "MK";
-            } else if (info.model_name.substr(0,5) == "CODON") {
+            } else {
+                // handle MORPH{<#STATE>} (alisim)
+                string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.";
+                string t_params = info.model_name;
+                string KEYWORD = "MORPH";
+                if ((t_params.length() > KEYWORD.length())
+                    && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+                {
+                    // validate the input
+                    if ((t_params[KEYWORD.length()]!='{')
+                        ||(t_params[t_params.length()-1]!='}'))
+                        throw ERR_MSG;
+                    
+                    // remove "MORPH{"
+                    t_params.erase(0, KEYWORD.length() + 1);
+                    
+                    // remove "}"
+                    t_params = t_params.substr(0, t_params.length()-1);
+                    
+                    // extract num_states
+                    num_states_morph = convert_int(t_params.c_str());
+                    
+                    // validate num_states
+                    if (num_states_morph < 1 || num_states_morph > 32)
+                        throw ERR_MSG;
+                    
+                    // set seqtype to MORPH (without {<#STATE>})
+                    info.sequence_type = "MORPH";
+                    info.model_name = "MK";
+                } else if (info.model_name.substr(0,5) == "CODON") {
                 info.sequence_type = info.model_name;
                 info.model_name = "GY";
-            } else {
-                info.sequence_type = "AA";
-                if (*info.model_name.begin() == '[') {
-                    if (*info.model_name.rbegin() != ']')
-                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
-                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
+                } else {
+                    info.sequence_type = "AA";
+                    if (*info.model_name.begin() == '[') {
+                        if (*info.model_name.rbegin() != ']')
+                            outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
+                        info.model_name = info.model_name.substr(1, info.model_name.length()-2);
+                    }
                 }
             }
             
@@ -352,7 +408,8 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
 //            info.cur_ptnlh = NULL;
 //            part_info.push_back(info);
             Alignment *part_aln = new Alignment();
-            part_aln->extractSites(input_aln, info.position_spec.c_str());
+            if (params.aln_file)
+                part_aln->extractSites(input_aln, info.position_spec.c_str());
             
             Alignment *new_aln;
             if (params.remove_empty_seq)
@@ -369,6 +426,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
             new_aln->position_spec = info.position_spec;
             new_aln->aln_file = info.aln_file;
             new_aln->sequence_type = info.sequence_type;
+            // set num_states for morph if it has been specified
+            if (num_states_morph > -1)
+                new_aln->num_states = num_states_morph;
             partitions.push_back(new_aln);
             // TODO move to supertree
 //            PhyloTree *tree = new PhyloTree(new_aln);
@@ -440,7 +500,8 @@ void SuperAlignment::readPartitionNexus(Params &params) {
         if (empty_partition || (*it)->char_partition != "") {
             if ((*it)->model_name == "")
                 (*it)->model_name = params.model_name;
-            if ((*it)->aln_file == "" && !input_aln) {
+            // // only show error if alisim is inactive but aln_file is not specified
+            if ((*it)->aln_file == "" && !input_aln && !params.alisim_active) {
                 if (!(*it)->position_spec.empty()) {
                     (*it)->aln_file = (*it)->position_spec;
                     (*it)->position_spec = "";
@@ -450,10 +511,40 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             if ((*it)->sequence_type=="" && params.sequence_type)
                 (*it)->sequence_type = params.sequence_type;
             
+            // handle MORPH{<#STATE>} (alisim)
+            int num_states_morph = -1;
+            string ERR_MSG = "Please use MORPH{<#STATE>} to specify the number of states for MORPH. <#STATE> should be positive and no greater than 32.";
+            string t_params = (*it)->sequence_type;
+            string KEYWORD = "MORPH";
+            if ((t_params.length() > KEYWORD.length())
+                && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
+            {
+                // validate the input
+                if ((t_params[KEYWORD.length()]!='{')
+                    ||(t_params[t_params.length()-1]!='}'))
+                    throw ERR_MSG;
+                
+                // remove "MORPH{"
+                t_params.erase(0, KEYWORD.length() + 1);
+                
+                // remove "}"
+                t_params = t_params.substr(0, t_params.length()-1);
+                
+                // extract num_states
+                num_states_morph = convert_int(t_params.c_str());
+                
+                // validate num_states
+                if (num_states_morph < 1 || num_states_morph > 32)
+                    throw ERR_MSG;
+                
+                // set seqtype to MORPH (without {<#STATE>})
+                (*it)->sequence_type = KEYWORD;
+            }
+            
             if ((*it)->sequence_type == "" && !(*it)->model_name.empty()) {
                 // try to get sequence type from model
             //TODO: why compile error?
-                (*it)->sequence_type = detectSeqTypeName((*it)->model_name.substr(0, (*it)->model_name.find_first_of("+*")));
+                (*it)->sequence_type = detectSeqTypeName((*it)->model_name.substr(0, (*it)->model_name.find_first_of("+*{")));
             }
             if ((*it)->aln_file == "" && ((*it)->position_spec == "" || (*it)->position_spec == "*"))
                 outError("Empty position range for partition ", (*it)->name);
@@ -474,17 +565,25 @@ void SuperAlignment::readPartitionNexus(Params &params) {
             } else {
                 part_aln = input_aln;
             }
-            if (!(*it)->position_spec.empty() && (*it)->position_spec != "*") {
-                Alignment *new_aln = new Alignment();
-                new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
-            }
-            if (part_aln->seq_type == SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
-                Alignment *new_aln = new Alignment();
-                new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], (*it)->sequence_type.substr(0, 5) == "NT2AA");
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
+            
+            // initialize a default part_aln for the current partition if alisim is active without inference
+            if (params.alisim_active && !part_aln)
+                part_aln = new Alignment();
+            // otherwise, initialize new_aln normally
+            else
+            {
+                if (!(*it)->position_spec.empty() && (*it)->position_spec != "*") {
+                    Alignment *new_aln = new Alignment();
+                    new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
+                    if (part_aln != input_aln) delete part_aln;
+                    part_aln = new_aln;
+                }
+                if (part_aln->seq_type == SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
+                    Alignment *new_aln = new Alignment();
+                    new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], (*it)->sequence_type.substr(0, 5) == "NT2AA");
+                    if (part_aln != input_aln) delete part_aln;
+                    part_aln = new_aln;
+                }
             }
             Alignment *new_aln;
             if (params.remove_empty_seq)
@@ -495,12 +594,16 @@ void SuperAlignment::readPartitionNexus(Params &params) {
 //            new_aln->buildSeqStates();
             
             if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
+            
             new_aln->name = (*it)->name;
             new_aln->model_name = (*it)->model_name;
             new_aln->aln_file = (*it)->aln_file;
             new_aln->position_spec = (*it)->position_spec;
             new_aln->sequence_type = (*it)->sequence_type;
             new_aln->tree_len = (*it)->tree_len;
+            // set num_states for morph if it has been specified
+            if (num_states_morph > -1)
+                new_aln->num_states = num_states_morph;
             partitions.push_back(new_aln);
 //            PhyloTree *tree = new PhyloTree(new_aln);
 //            push_back(tree);

@@ -29,6 +29,13 @@ ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType fr
 : ModelMarkov(tree)
 {
   init(model_name, model_params, freq, freq_params);
+
+    // show warning if the user is running AliSim without inference mode but has not yet specified model parameters
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && model_params.length() == 0 && getNParams()>0)
+    {
+        std::string model_name_str(model_name);
+        outWarning("Without Inference Mode, we strongly recommend users to specify model parameters for more accuracy simulations. Users could use <Model_Name>{<param_0>/.../<param_n>} to specify the model parameters. For the model "+model_name_str+", users should provide "+convertIntToString(getNParams())+" params (see User Manuals).");
+    }
 }
 
 string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
@@ -83,7 +90,7 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 	} else if (name_upper == "TPM2") {
 		name = "TPM2";
 		rate_type = "121020";
-		def_freq = FREQ_ESTIMATE;
+		def_freq = FREQ_EQUAL;
 		full_name = "TPM2 ()";
 	} else if (name_upper == "TPM2U" || name_upper == "TPM2UF") {
 		name = "TPM2u";
@@ -93,7 +100,7 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 	} else if (name_upper == "TPM3") {
 		name = "TPM3";
 		rate_type = "120120";
-		def_freq = FREQ_ESTIMATE;
+		def_freq = FREQ_EQUAL;
 		full_name = "TPM3 ()";
 	} else if (name_upper == "TPM3U" || name_upper == "TPM3UF") {
 		name = "TPM3u";
@@ -243,6 +250,12 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	int nrates = *max_element(param_spec.begin(), param_spec.end());
 	int end_pos = 0;
 	int i, j;
+    
+    // detect the seperator
+    char separator = ',';
+    if (str.find('/') != std::string::npos)
+        separator = '/';
+    
 	for (j = 0; j < param_spec.length(); j++)
 		rates[j] = 1.0;
 	num_params = 0;
@@ -267,7 +280,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	            param_fixed[id] = true;
 	        }
 			try {
-				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+				rate = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
 			} catch (string str) {
 				outError(str);
 			}
@@ -279,7 +292,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 			outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != '/')
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
 		for (j = 0; j < param_spec.length(); j++)

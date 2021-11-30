@@ -257,8 +257,8 @@ PhyloTree::~PhyloTree() {
     progressStackDepth = 0;
 }
 
-void PhyloTree::readTree(const char *infile, bool &is_rooted) {
-    MTree::readTree(infile, is_rooted);
+void PhyloTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
+    MTree::readTree(infile, is_rooted, tree_line_index);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
     if (rooted && root)
@@ -5489,16 +5489,19 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
             ext_tree.generateYuleHarding(*params);
             break;
         case UNIFORM:
-            ext_tree.generateUniform(params->sub_size);
+            ext_tree.generateUniform(*params);
             break;
         case CATERPILLAR:
-            ext_tree.generateCaterpillar(params->sub_size);
+            ext_tree.generateCaterpillar(*params);
             break;
         case BALANCED:
-            ext_tree.generateBalanced(params->sub_size);
+            ext_tree.generateBalanced(*params);
             break;
         case STAR_TREE:
             ext_tree.generateStarTree(*params);
+            break;
+        case BIRTH_DEATH:
+            ext_tree.generateBirthDeath(*params);
             break;
         default:
             break;
@@ -5634,6 +5637,17 @@ void PhyloTree::convertToRooted() {
 }
 
 void PhyloTree::convertToUnrooted() {
+    // keep rooted tree if running AliSim without inference mode
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode)
+        return;
+    forceConvertingToUnrooted();
+}
+    
+/**
+    force converting from rooted to unrooted tree
+*/
+void PhyloTree::forceConvertingToUnrooted()
+{
     ASSERT(rooted);
     if (aln)
         ASSERT(leafNum == aln->getNSeq()+1);
@@ -5650,12 +5664,18 @@ void PhyloTree::convertToUnrooted() {
         // delete and join adjacent branches
         Node *node1 = NULL, *node2 = NULL;
         double len = 0.0;
+        // merge attributes
+        map<string,string> attributes;
         FOR_NEIGHBOR_IT(node, root, it) {
             if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
             len += (*it)->length;
+            attributes.insert((*it)->attributes.begin(),(*it)->attributes.end());
         }
         node1->updateNeighbor(node, node2, len);
         node2->updateNeighbor(node, node1, len);
+        node1->findNeighbor(node2)->attributes = attributes;
+        node2->findNeighbor(node1)->attributes = attributes;
+        
         delete node;
     } else {
         // only delete root node

@@ -37,6 +37,7 @@
 #include "ncl/ncl.h"
 #include "utils/tools.h"
 #include "pda/split.h"
+#include "model/modelsubst.h"
 
 using namespace std;
 
@@ -266,6 +267,16 @@ public:
         node name
      */
     string name;
+    
+    /**
+        sequence
+     */
+    vector<short int> sequence;
+    
+    /**
+        number of children which have completed simulating the sequence (for AliSim)
+     */
+    short int num_children_done_simulation = 0;
 
     /**
         list of neighbors

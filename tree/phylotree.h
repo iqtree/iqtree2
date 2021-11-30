@@ -120,7 +120,7 @@ inline T *aligned_alloc(size_t size) {
     return (T*)mem;
 }
 
-template <class T> T* ensure_aligned_allocated(T* & ptr, size_t size) {
+template <class T> T* ensure_aligned_allocated(T* & ptr, long long int size) {
     if (ptr == nullptr) {
         ptr = aligned_alloc<T>(size);
     }
@@ -401,8 +401,9 @@ public:
             read the tree from the input file in newick format
             @param infile the input file file.
             @param is_rooted (IN/OUT) true if tree is rooted
+            @param tree_line_index the line_index to read the tree (in case with multiple trees *.parttrees)
      */
-    virtual void readTree(const char *infile, bool &is_rooted);
+    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0);
 
     /**
             read the tree from the ifstream in newick format
@@ -2161,6 +2162,11 @@ public:
         convert from rooted to unrooted tree
     */
     void convertToUnrooted();
+    
+    /**
+        force converting from rooted to unrooted tree
+    */
+    void forceConvertingToUnrooted();
 
 
 	/**

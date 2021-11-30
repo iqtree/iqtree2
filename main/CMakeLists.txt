@@ -8,6 +8,8 @@ treetesting.cpp
 treetesting.h
 timetree.cpp
 timetree.h
+alisim.cpp
+alisim.h
 terraceanalysis.cpp
 terraceanalysis.h
 )

@@ -289,7 +289,7 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
-void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
+void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
     ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
@@ -436,7 +436,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
     }
 }
 
-void reportModel(ofstream &out, PhyloTree &tree) {
+void reportModel(ostream &out, PhyloTree &tree) {
 //    int i, j, k;
     int i;
 
@@ -473,6 +473,21 @@ void reportModel(ofstream &out, PhyloTree &tree) {
         }
         out << endl;
     } else {
+        // Update rate name if continuous gamma is used.
+        if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)
+        {
+            if (tree.getRate()->getPInvar()>0)
+            {
+                tree.getRate()->name = "+I+GC";
+                tree.getRate()->full_name = "Invar+Continuous Gamma";
+            }
+            else
+            {
+                tree.getRate()->name = "+GC";
+                tree.getRate()->full_name = "Continuous Gamma";
+            }
+        }
+
         out << "Model of substitution: " << tree.getModelName() << endl << endl;
         reportModel(out, tree.aln, tree.getModel());
     }
@@ -513,12 +528,13 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 prop[i] /= tree.aln->getNSite();
             }
         }
-        for (size_t i = 0; i < cats; i++) {
-            out << "  " << i + 1 << "         ";
-            out.width(14);
-            out << left << rate_model->getRate(i) << " " << prop[i];
-            out << endl;
-        }
+        if (tree.getModelFactory() && !tree.getModelFactory()->is_continuous_gamma)
+            for (size_t i = 0; i < cats; i++) {
+                out << "  " << i + 1 << "         ";
+                out.width(14);
+                out << left << rate_model->getRate(i) << " " << prop[i];
+                out << endl;
+            }
         if (rate_model->isGammaRate()) {
             out << "Relative rates are computed as " << ((rate_model->isGammaRate() == GAMMA_CUT_MEDIAN) ? "MEDIAN" : "MEAN") <<
                 " of the portion of the Gamma distribution falling in the category." << endl;
@@ -901,6 +917,71 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
 
 }
 
+void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
+{
+    out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
+            << endl;
+    if (tree.isSuperTree()) {
+        if(params.partition_type == BRLEN_SCALE)
+            out << "Edge-linked-proportional partition model with ";
+        else if(params.partition_type == BRLEN_FIX)
+            out << "Edge-linked-equal partition model with ";
+        else if (params.partition_type == BRLEN_OPTIMIZE)
+            out << "Edge-unlinked partition model with ";
+        else
+            out << "Topology-unlinked partition model with ";
+        
+        if (params.model_joint)
+            out << "joint substitution model ";
+        else
+            out << "separate substitution models ";
+        if (params.link_alpha)
+            out << "and joint gamma shape";
+        else
+            out << "and separate rates across sites";
+        out << endl << endl;
+
+        PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+        PhyloSuperTree::iterator it;
+        int part;
+        if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
+            out << "  ID  Model         TreeLen  Parameters" << endl;
+        else
+            out << "  ID  Model           Speed  Parameters" << endl;
+        //out << "-------------------------------------" << endl;
+        for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
+            out.width(4);
+            out << right << (part+1) << "  ";
+            out.width(14);
+            if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
+                out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
+            else
+                out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
+        }
+        out << endl;
+        /*
+        for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
+            reportModel(out, *(*it));
+            reportRate(out, *(*it));
+        }*/
+        PartitionModel *part_model = (PartitionModel*)tree.getModelFactory();
+        if (part_model)
+            for (auto itm = part_model->linked_models.begin(); itm != part_model->linked_models.end(); itm++) {
+                for (it = stree->begin(); it != stree->end(); it++)
+                    if ((*it)->getModel() == itm->second) {
+                        out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
+                        bool fixed = (*it)->getModel()->fixParameters(false);
+                        reportModel(out, (*it)->aln, (*it)->getModel());
+                        (*it)->getModel()->fixParameters(fixed);
+                        break;
+                    }
+            }
+    } else {
+        reportModel(out, tree);
+        reportRate(out, tree);
+    }
+}
+
 void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_info) {
     if (!MPIHelper::getInstance().isMaster()) {
         return;
@@ -1023,66 +1104,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             reportModelSelection(out, params, &model_info, &tree);
         }
 
-        out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
-                << endl;
-        if (tree.isSuperTree()) {
-            if(params.partition_type == BRLEN_SCALE)
-                out << "Edge-linked-proportional partition model with ";
-            else if(params.partition_type == BRLEN_FIX)
-                out << "Edge-linked-equal partition model with ";
-            else if (params.partition_type == BRLEN_OPTIMIZE)
-                out << "Edge-unlinked partition model with ";
-            else
-                out << "Topology-unlinked partition model with ";
-            
-            if (params.model_joint)
-                out << "joint substitution model ";
-            else
-                out << "separate substitution models ";
-            if (params.link_alpha)
-                out << "and joint gamma shape";
-            else
-                out << "and separate rates across sites";
-            out << endl << endl;
-
-            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
-            PhyloSuperTree::iterator it;
-            int part;
-            if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
-                out << "  ID  Model         TreeLen  Parameters" << endl;
-            else
-                out << "  ID  Model           Speed  Parameters" << endl;
-            //out << "-------------------------------------" << endl;
-            for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-                out.width(4);
-                out << right << (part+1) << "  ";
-                out.width(14);
-                if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
-                    out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
-                else
-                    out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
-            }
-            out << endl;
-            /*
-            for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
-                reportModel(out, *(*it));
-                reportRate(out, *(*it));
-            }*/
-            PartitionModel *part_model = (PartitionModel*)tree.getModelFactory();
-            for (auto itm = part_model->linked_models.begin(); itm != part_model->linked_models.end(); itm++) {
-                for (it = stree->begin(); it != stree->end(); it++)
-                    if ((*it)->getModel() == itm->second) {
-                        out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
-                        bool fixed = (*it)->getModel()->fixParameters(false);
-                        reportModel(out, (*it)->aln, (*it)->getModel());
-                        (*it)->getModel()->fixParameters(fixed);
-                        break;
-                    }
-            }
-        } else {
-            reportModel(out, tree);
-            reportRate(out, tree);
-        }
+        reportSubstitutionProcess(out, params, tree);
 
             if (params.lmap_num_quartets >= 0) {
             tree.reportLikelihoodMapping(out);
@@ -2394,8 +2416,15 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         
         // now overwrite with random tree
         if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
-            cout << "Generate random initial Yule-Harding tree..." << endl;
-            iqtree->generateRandomTree(YULE_HARDING);
+            if (params.tree_gen != NONE)
+            {
+                iqtree->generateRandomTree(params.tree_gen);
+            }
+            else
+            {
+                cout << "Generate random initial Yule-Harding tree..." << endl;
+                iqtree->generateRandomTree(YULE_HARDING);
+            }
             iqtree->wrapperFixNegativeBranch(true);
             iqtree->initializeAllPartialLh();
             initTree = iqtree->optimizeBranches(params.brlen_num_traversal);
@@ -3727,9 +3756,8 @@ void doSymTest(Alignment *alignment, Params &params) {
         exit(EXIT_SUCCESS);
 }
 
-void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
-    Alignment *alignment;
-
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&alignment)
+{
     checkpoint->putBool("finished", false);
     checkpoint->setDumpInterval(params.checkpoint_dump_interval);
 
@@ -3777,7 +3805,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     /*************** initialize tree ********************/
-    IQTree *tree = newIQTree(params, alignment);
+    tree = newIQTree(params, alignment);
     
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
@@ -3913,6 +3941,17 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             ((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
         }
     }
+
+    checkpoint->putBool("finished", true);
+    checkpoint->dump(true);
+}
+
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
+    IQTree *tree;
+    Alignment *alignment;
+    
+    runPhyloAnalysis(params, checkpoint, tree, alignment);
+
     // 2015-09-22: bug fix, move this line to before deleting tree
     alignment = tree->aln;
     delete tree;
@@ -3920,9 +3959,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
 //    alignment = tree->aln;
     delete alignment;
-
-    checkpoint->putBool("finished", true);
-    checkpoint->dump(true);
 }
 
 /**

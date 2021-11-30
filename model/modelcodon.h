@@ -77,7 +77,7 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
-	StateFreqType initCodon(const char *model_name, StateFreqType freq, bool reset_params);
+	StateFreqType initCodon(const char *model_name, StateFreqType freq, bool reset_params, string freq_params="");
 
 
 	/**
@@ -183,9 +183,10 @@ protected:
 	/** initialize Muse-Gaut 1994 model 
         @param fix_kappa whether or not to fix kappa
         @param freq input frequency
+        @param freq_params is user-specified frequency params (assuming 4 params for F1x4 and 12 params for F3x4).
         @return default frequency type
     */
-	StateFreqType initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style);
+	StateFreqType initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style, string freq_params="");
 
 	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa 
         @param fix_kappa whether or not to fix kappa
