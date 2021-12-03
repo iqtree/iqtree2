@@ -1014,27 +1014,26 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
 */
 void unrootTree(AliSimulator *alisimulator)
 {
+    // initialize output_filepath
+    string output_filepath(alisimulator->params->user_file);
+    output_filepath = output_filepath.substr(0, output_filepath.find_last_of(".") + 1);
+    output_filepath = output_filepath + "unrooted.treefile";
+    
     if (alisimulator->tree->rooted)
     {
         cout<<"Unrooting the input tree"<<endl;
         alisimulator->tree->PhyloTree::forceConvertingToUnrooted();
-        // initialize output_filepath
-        string output_filepath(alisimulator->params->user_file);
-        output_filepath = output_filepath.substr(0, output_filepath.find_last_of(".") + 1);
-        output_filepath = output_filepath + "unrooted.treefile";
-        
-        ofstream *out = new ofstream(output_filepath.c_str());
-        
-        alisimulator->tree->PhyloTree::printTree(*out);
-        
-        ((ofstream*)out)->close();
-        
-        delete out;
-        
-        cout<<"An unrooted tree has been writen to "+output_filepath<<endl;
+    
+        cout<<"Outputting the unrooted tree to "+output_filepath<<endl;
     }
     else
-        outError("The input tree is unrooted, thus, doesn't need to unroot it.");
+        outWarning("The input tree is unrooted, thus, not needing to unroot it.");
+    
+    // write output to file
+    ofstream *out = new ofstream(output_filepath.c_str());
+    alisimulator->tree->PhyloTree::printTree(*out);
+    ((ofstream*)out)->close();
+    delete out;
 }
 
 /**
