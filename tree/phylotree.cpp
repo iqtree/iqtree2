@@ -3363,8 +3363,12 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     #pragma omp parallel for schedule(dynamic)
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
-        int threadNum = omp_get_thread_num();
-        AlignmentPairwise* processor = distanceProcessors[threadNum];
+        #ifdef _OPENMP
+            int threadNum = omp_get_thread_num();
+            AlignmentPairwise* processor = distanceProcessors[threadNum];
+        #else
+            AlignmentPairwise* processor = distanceProcessors[1];
+        #endif
         int rowStartPos = seq1 * nseqs;
         for (size_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
             size_t sym_pos = rowStartPos + seq2;
@@ -5955,3 +5959,88 @@ void PhyloTree::doneProgress() {
         }
     }
 }
+
+void PhyloTree::gen_all_nni_trees(){
+    
+    cout<<"Gonna get you all NNI trees!:)"<<endl;
+    
+    NodeVector nodes1, nodes2;
+    generateNNIBraches(nodes1,nodes2);
+    
+    for(int i=0; i<nodes1.size();i++){
+        
+        NNIMove move;
+        move.node1=(PhyloNode*)nodes1[i];
+        move.node2=(PhyloNode*)nodes2[i];
+        
+        // Getting details for first NNI
+        FOR_NEIGHBOR_DECLARE(nodes1[i], nodes2[i], it){
+            move.node1Nei_it = it;
+            break;
+        }
+        
+        FOR_NEIGHBOR(nodes2[i], nodes1[i], it){
+            move.node2Nei_it = it;
+            break;
+        }
+
+        // Do first NNI on branch
+        doNNI_simple(move);
+        printTree(cout, WT_BR_SCALE | WT_NEWLINE);
+        doNNI_simple(move);
+        
+        // Getting details for second NNI
+        FOR_NEIGHBOR(nodes1[i], nodes2[i], it){
+            if(it != move.node1Nei_it){
+                move.node1Nei_it = it;
+                break;
+            }
+        }
+        
+        // Do second NNI on branch
+        doNNI_simple(move);
+        printTree(cout, WT_BR_SCALE | WT_NEWLINE);
+        doNNI_simple(move);
+        
+    }
+}
+
+void PhyloTree::doNNI_simple(NNIMove &move) {
+    PhyloNode *node1 = move.node1;
+    PhyloNode *node2 = move.node2;
+    NeighborVec::iterator node1Nei_it = move.node1Nei_it;
+    NeighborVec::iterator node2Nei_it = move.node2Nei_it;
+    Neighbor *node1Nei = *(node1Nei_it);
+    Neighbor *node2Nei = *(node2Nei_it);
+
+
+    ASSERT(node1->degree() == 3 && node2->degree() == 3);
+
+    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+
+    // do the NNI swap
+    node1->updateNeighbor(node1Nei_it, node2Nei);
+    node2Nei->node->updateNeighbor(node2, node1);
+
+    node2->updateNeighbor(node2Nei_it, node1Nei);
+    node1Nei->node->updateNeighbor(node1, node2);
+
+    PhyloNeighbor *nei12 = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *nei21 = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+
+    // update split store in node
+    if (nei12->split != NULL || nei21->split != NULL) {
+        delete nei12->split;
+        nei12->split = new Split(leafNum);
+        delete nei21->split;
+        nei21->split = new Split(leafNum);
+
+        FOR_NEIGHBOR_IT(nei12->node, node1, it)
+                *(nei12->split) += *((*it)->split);
+
+        FOR_NEIGHBOR_IT(nei21->node, node2, it)
+                *(nei21->split) += *((*it)->split);
+    }
+}
+
