@@ -28,20 +28,21 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
         DoubleVector tmp_rates;
         convert_double_vec_with_distributions(model_params.c_str(), tmp_rates, separator);
         
-        // validate the number of params
-        if (tmp_rates.size() != num_params)
+        // validate the number of params (11 or 12)
+        if (tmp_rates.size() != num_params && tmp_rates.size() != num_params + 1)
             outError("Model UNREST requires "+convertIntToString(num_params)+" parameters. Please check and try again!");
         
         // set rates from input params
-        for (int i=0; i <= num_params; i++) {
+        for (int i = 0; i < tmp_rates.size(); i++) {
             rates[i] = tmp_rates[i];
             
             // check to fix parameters
             fixed_parameters = !Params::getInstance().optimize_from_given_params;
         }
         
-        // call setRates()
-        setRates();
+        // if the user supplies 11 params -> set the last rate at 1.0
+        if (tmp_rates.size() == num_params)
+            setRates();
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
