@@ -45,16 +45,16 @@ public:
             or related functions. Note that scaling factors are not incorporated here.
             If you want to get real pattern log-likelihoods, please use computePatternLikelihood()
      */
-    double *_pattern_lh; 
-    size_t pattern_lh_block_size; //
-    bool   pattern_lh_borrowed;   //True if it belongs to something else
+    double* _pattern_lh; 
+    size_t  pattern_lh_block_size; //
+    bool    pattern_lh_borrowed;   //True if it belongs to something else
 
     /**
             internal pattern likelihoods per category,
     */
-    double *_pattern_lh_cat; 
-    size_t pattern_lh_cat_block_size;
-    bool   pattern_lh_cat_borrowed;
+    double* _pattern_lh_cat; 
+    size_t  pattern_lh_cat_block_size;
+    bool    pattern_lh_cat_borrowed;
     
     /** buffer used when computing partial_lh, to avoid repeated mem allocation */
     double *buffer_partial_lh; 

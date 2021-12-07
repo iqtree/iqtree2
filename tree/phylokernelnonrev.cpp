@@ -42,10 +42,10 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
     
     intptr_t ptn, c;
     size_t orig_ntn = aln->size();
-    size_t ncat = site_rate->getNRate();
+    size_t ncat     = rate_model->getNRate();
 //    const size_t nstatesqr=nstates*nstates;
     size_t i, x;
-    size_t block = nstates * ncat;
+    size_t block    = nstates * ncat;
 
 //    dad_branch->lh_scale_factor = 0.0;
 
@@ -95,9 +95,11 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
         std::swap(eleft, eright);
     }
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     if (node->degree() > 3) {
 
@@ -397,11 +399,11 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 //        computeNonrevPartialLikelihood(dad_branch, dad);
 //    if ((node_branch->partial_lh_computed & 1) == 0)
 //        computeNonrevPartialLikelihood(node_branch, node);
-    size_t nstates   = aln->num_states;
-    size_t nstatesqr = nstates*nstates;
-    size_t ncat      = site_rate->getNRate();
+    size_t nstates       = aln->num_states;
+    size_t nstatesqr     = nstates*nstates;
+    size_t ncat          = rate_model->getNRate();
 
-    size_t block = ncat * nstates;
+    size_t block         = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, x;
     intptr_t orig_nptn   = aln->size();
@@ -410,20 +412,22 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     double*  trans_derv1 = trans_mat   + block*nstates;
     double*  trans_derv2 = trans_derv1 + block*nstates;
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
 	for (c = 0; c < ncat; c++) {
-		double len = site_rate->getRate(c)*dad_branch->length;
-		double prop = site_rate->getProp(c);
+		double len  = rate_model->getRate(c)*dad_branch->length;
+		double prop = rate_model->getProp(c);
         double *this_trans_mat   = &trans_mat[c*nstatesqr];
         double *this_trans_derv1 = &trans_derv1[c*nstatesqr];
         double *this_trans_derv2 = &trans_derv2[c*nstatesqr];
         model_to_use->computeTransDerv(len, this_trans_mat, 
                                        this_trans_derv1, this_trans_derv2);
-        double prop_rate = prop*site_rate->getRate(c);
-        double prop_rate_2 = prop_rate * site_rate->getRate(c); 
+        double prop_rate   = prop *      rate_model->getRate(c);
+        double prop_rate_2 = prop_rate * rate_model->getRate(c); 
 		for (i = 0; i < nstatesqr; i++) {
 			this_trans_mat[i] *= prop;
             this_trans_derv1[i] *= prop_rate;
@@ -636,24 +640,24 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 //    if ((node_branch->partial_lh_computed & 1) == 0)
 //        computeNonrevPartialLikelihood(node_branch, node);
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    double tree_lh = 0.0;
-    size_t nstates = aln->num_states;
-    size_t nstatesqr = nstates*nstates;
-    size_t ncat = site_rate->getNRate();
+    double   tree_lh   = 0.0;
+    size_t   nstates   = aln->num_states;
+    size_t   nstatesqr = nstates*nstates;
+    size_t   ncat      = rate_model->getNRate();
 
-    size_t block = ncat * nstates;
+    size_t   block     = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, x;
     intptr_t orig_nptn = aln->size();
-    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    intptr_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
 
     vector<size_t> limits;
     computeBounds<Vec1d>(num_threads, nptn, limits);
 
     double *trans_mat = new double[block*nstates];
 	for (c = 0; c < ncat; c++) {
-		double len = site_rate->getRate(c)*dad_branch->length;
-		double prop = site_rate->getProp(c);
+		double len  = rate_model->getRate(c)*dad_branch->length;
+		double prop = rate_model->getProp(c);
         double *this_trans_mat = &trans_mat[c*nstatesqr];
         model_to_use->computeTransMatrix(len, this_trans_mat);
 		for (i = 0; i < nstatesqr; i++)

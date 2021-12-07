@@ -665,8 +665,8 @@ NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree)
     int nsite = tree->aln->getNSite();
     UB = nsite*logC(node1->findNeighbor(node2)->length,tree); // coefficient c
 
-    //int ncat = tree->site_rate->getNDiscreteRate();
-    int nptn = tree->aln->getNPattern();
+    //int ncat = tree->rate_model->getNDiscreteRate();
+    int nptn    = tree->aln->getNPattern();
     int nstates = tree->aln->num_states;
     int i,x;
     //int cat;

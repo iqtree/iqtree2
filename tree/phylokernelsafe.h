@@ -89,8 +89,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 
     num_partial_lh_computations++;
 
-    intptr_t nptn = aln->size() + model_factory->unobserved_ptns.size();
-    PhyloNode *node = dad_branch->getNode();
+    intptr_t   nptn = aln->size() 
+                    + model_factory->unobserved_ptns.size();
+    PhyloNode* node = dad_branch->getNode();
 
     computeTipPartialLikelihood();
 
@@ -100,28 +101,30 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 		return;
 	}
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     intptr_t ptn, c;
     intptr_t orig_nptn = aln->size();
 
-    size_t ncat     = site_rate->getNRate();
-    bool   fused    = model_factory->fused_mix_rate;
-    size_t n_mix    = model_to_use->getNMixtures();
-    size_t ncat_mix = fused ? ncat : ncat * n_mix;
+    size_t ncat        = rate_model->getNRate();
+    bool   fused       = model_factory->fused_mix_rate;
+    size_t n_mix       = model_to_use->getNMixtures();
+    size_t ncat_mix    = fused ? ncat : ncat * n_mix;
     ASSERT(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
     ASSERT(model_to_use->isReversible()); // only works with reversible model!
     const size_t nstatesqr = nstates*nstates;
     size_t i, x, j;
-    size_t block      = nstates * ncat_mix;
-    size_t tip_block  = nstates * n_mix;
-    size_t scale_size = nptn * ncat_mix;
-
-    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
-    bool   fixed = model_factory->fused_mix_rate;
-    size_t denom = fused ? 1 : ncat;
+    size_t block       = nstates * ncat_mix;
+    size_t tip_block   = nstates * n_mix;
+    size_t scale_size  = nptn * ncat_mix;
+    size_t mix_addr_nstates[ncat_mix];
+    size_t mix_addr[ncat_mix];
+    bool   fixed       = model_factory->fused_mix_rate;
+    size_t denom       = fused ? 1 : ncat;
     for (c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
@@ -182,9 +185,10 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
         VectorClass *echild_ptr = echild;
         // precompute information buffer
         for (c = 0; c < ncat_mix; c++) {
-            VectorClass len_child = site_rate->getRate(c%ncat) * nei->length;
-            double *eval_ptr = eval + mix_addr_nstates[c];
-            double *evec_ptr = evec + mix_addr[c];
+            VectorClass len_child = sitrate_modele_rate->getRate(c%ncat) 
+                                  * nei->length;
+            double* eval_ptr = eval + mix_addr_nstates[c];
+            double* evec_ptr = evec + mix_addr[c];
             for (i = 0; i < nstates/VCSIZE; i++) {
                 // eval is not aligned!
                 expchild[i] = exp(VectorClass().load_a(&eval_ptr[i*VCSIZE]) * len_child);
@@ -583,11 +587,13 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
     }
     df = ddf = 0.0;
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
-    size_t ncat      = site_rate->getNRate();
+    size_t ncat      = rate_model->getNRate();
     bool   fused     = model_factory->fused_mix_rate;
     size_t n_mix     = model_to_use->getNMixtures();
     size_t ncat_mix  = fused ? ncat : ncat * n_mix;
@@ -617,8 +623,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
         mix_addr_nstates[c] = m*nstates;
         size_t mycat = c%ncat;
         double *eval_ptr = eval + m*nstates;
-		VectorClass vc_rate = site_rate->getRate(mycat);
-		VectorClass vc_prop = site_rate->getProp(mycat) 
+		VectorClass vc_rate = rate_model->getRate(mycat);
+		VectorClass vc_prop = rate_model->getProp(mycat) 
                             * model_to_use->getMixtureWeight(m);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_rate;
@@ -880,12 +886,14 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     if ((node_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     }
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     double tree_lh  = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    size_t ncat     = site_rate->getNRate();
+    size_t ncat     = rate_model->getNRate();
     bool   fused    = model_factory->fused_mix_rate;
     size_t n_mix    = model_to_use->getNMixtures();
     size_t ncat_mix = fused ? ncat : ncat*n_mix;
@@ -911,9 +919,9 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
         double *eval_ptr = eval + mix_addr_nstates[c];
-		VectorClass vc_len(site_rate->getRate(mycat)
+		VectorClass vc_len(rate_model->getRate(mycat)
                            * dad_branch->length);
-		VectorClass vc_prop(site_rate->getProp(c) 
+		VectorClass vc_prop(rate_model->getProp(c) 
                             * model_to_use->getMixtureWeight(m));
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
@@ -1258,34 +1266,37 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 	ASSERT(theta_all && theta_computed);
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
-	double tree_lh  = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
-    size_t ncat     = site_rate->getNRate();
-    bool   fused    = model_factory->fused_mix_rate;
-    size_t n_mix    = model_to_use->getNMixtures();
-    size_t ncat_mix = fused ? ncat : ncat * n_mix;
-    size_t denom    = fused ? 1 : ncat;
-    size_t block    = ncat_mix * nstates;
+	double tree_lh     = current_it->lh_scale_factor 
+                       + current_it_back->lh_scale_factor;
+    size_t ncat        = rate_model->getNRate();
+    bool   fused       = model_factory->fused_mix_rate;
+    size_t n_mix       = model_to_use->getNMixtures();
+    size_t ncat_mix    = fused ? ncat : ncat * n_mix;
+    size_t denom       = fused ? 1 : ncat;
+    size_t block       = ncat_mix * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
     intptr_t orig_nptn = aln->size();
-    intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-//    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    double*  eval = model_to_use->getEigenvalues();
+    intptr_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
+    //intptr_t maxptn  = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    double*  eval      = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
 	VectorClass vc_len = current_it->length;
 	for (c = 0; c < ncat_mix; c++) {
-        size_t m = c/denom;
-        double *eval_ptr = eval + (m)*nstates;
-        size_t mycat = c%ncat;
-		VectorClass vc_rate = site_rate->getRate(mycat);
-		VectorClass vc_prop = site_rate->getProp(mycat) 
+        size_t  m        = c / denom;
+        double* eval_ptr = eval + (m)*nstates;
+        size_t  mycat    = c % ncat;
+		VectorClass vc_rate = rate_model->getRate(mycat);
+		VectorClass vc_prop = rate_model->getProp(mycat) 
                             * model_to_use->getMixtureWeight(m);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_rate;

@@ -208,7 +208,8 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNodeMixlen* node,
 
         double mean_len = 0.0;
         for (int i = 0; i < mixlen; i++) {
-            mean_len += nei->lengths[i] * site_rate->getProp(i);
+            mean_len += nei->lengths[i] 
+                      * site_rate->getProp(i);
         }
         // mean_len /= mixlen;
         nei->length = back_nei->length = mean_len;
@@ -223,10 +224,11 @@ void PhyloTreeMixlen::assignMeanMixBranches(PhyloNodeMixlen* node,
     if (!node) {
         node = getRoot();
     }
+    auto rate_model = getRateModelForBranch(node, dad);
     FOR_EACH_PHYLO_NEIGHBOR_MIXLEN(node, dad, it, nei) {
         double mean_len = 0.0;
         for (int i = 0; i < nei->lengths.size(); ++i) {
-            mean_len += nei->lengths[i] * site_rate->getProp(i);
+            mean_len += nei->lengths[i] * rate_model->getProp(i);
         }
         //mean_len /= nei->lengths.size();
         nei->length      = mean_len;
@@ -487,7 +489,7 @@ void PhyloTreeMixlen::optimizeOneBranch
         }
         // EM algorithm
         intptr_t nptn = aln->getNPattern();
-        size_t nmix = site_rate->getNRate();
+        size_t   nmix = site_rate->getNRate();
         ASSERT(nmix == mixlen);
 
         // first compute _pattern_lh_cat
@@ -847,9 +849,11 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     intptr_t nptn    = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn  = get_safe_upper_limit(nptn);
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     double*  eval    = model_to_use->getEigenvalues();
     ASSERT(eval);
@@ -906,9 +910,9 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     double* val1 = val0 + statecat;
     double* val2 = val1 + statecat;
     for (int c = 0; c < ncat; c++) {
-        double prop = site_rate->getProp(c);
+        double prop = rate_model->getProp(c);
         for (size_t i = 0; i < nstates; i++) {
-            double cof   = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
+            double cof   = eval[cur_mixture*nstates+i]*rate_model->getRate(c);
                            // length for heterotachy model
             double val   = exp(cof*dad_branch->getLength(cur_mixture))
                                * prop * model_to_use->getMixtureWeight(cur_mixture);

@@ -623,15 +623,17 @@ void RateFree::doEStep(intptr_t nptn, double* new_prop, size_t nmix) {
     // to obtain L_ci and compute pattern likelihood L_i
     memset(new_prop, 0, nmix*sizeof(double));
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-        double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
-        double lk_ptn = phylo_tree->ptn_invar[ptn];
+        double* this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat 
+                            + ptn * nmix;
+        double  lk_ptn      = phylo_tree->ptn_invar[ptn];
         for (size_t c = 0; c < nmix; c++) {
             lk_ptn += this_lk_cat[c];
         }
         ASSERT(lk_ptn != 0.0);
         lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
         
-        // transform _pattern_lh_cat into posterior probabilities of each category
+        //transform _pattern_lh_cat into posterior probabilities 
+        //of each category
         for (size_t c = 0; c < nmix; c++) {
             this_lk_cat[c] *= lk_ptn;
             new_prop[c]    += this_lk_cat[c];
@@ -671,7 +673,7 @@ void RateFree::optimizeRatesOneByOne(PhyloTree*    tree,
                                      bool&         converged,
                                      ModelFactory* model_fac) {
     size_t nmix = ncategory;
-    double sum = 0.0;
+    double sum  = 0.0;
 
     for (int c = 0; c < nmix; c++) {
         tree->copyPhyloTree(phylo_tree, true);
@@ -706,8 +708,8 @@ void RateFree::optimizeRatesOneByOne(PhyloTree*    tree,
         tree->scaleLength(scaling);
         tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
         converged = converged && (fabs(rates[c] - scaling) < rate_tolerance);
-        rates[c] = scaling;
-        sum += prop[c] * rates[c];
+        rates[c]  = scaling;
+        sum      += prop[c] * rates[c];
         // reset subst model
         tree->setModel(nullptr);
         subst_model->setTree(phylo_tree);

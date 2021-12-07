@@ -39,8 +39,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
                                                           const LikelihoodBufferSet& buffers) {
 #endif
     
-    PhyloNeighbor *dad_branch = info.dad_branch;
-    PhyloNode *dad = info.dad;
+    PhyloNeighbor* dad_branch = info.dad_branch;
+    PhyloNode*     dad = info.dad;
     
     ASSERT(dad);
     PhyloNode *node = dad_branch->getNode();
@@ -57,11 +57,14 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
     }
     
     ASSERT(node->degree() >= 3);
-    ModelSubst* model_to_use = getModelForBranch(dad,node);
+    ModelSubst*        model_to_use = getModelForBranch(dad,node);
+    RateHeterogeneity* rate_model   = getRateModelForBranch(dad,node);
+
+    //Todo: get rate_model too.
     intptr_t orig_nptn  = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
     intptr_t nptn       = max_orig_nptn+model_factory->unobserved_ptns.size();
-    int      ncat       = site_rate->getNRate();
+    int      ncat       = rate_model->getNRate();
     bool     fused      = model_factory->fused_mix_rate;
     int      n_mix      = model_to_use->getNMixtures();
     int      ncat_mix   = fused ? ncat : ncat * n_mix ;
@@ -610,15 +613,17 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
     computeTraversalInfo<VectorClass>(node, dad, buffers, false);
 #endif
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
 #ifndef KERNEL_FIX_STATES
     size_t   nstates = aln->num_states;
 #endif
     size_t   nstatesqr = nstates*nstates;
-    int      ncat      = site_rate->getNRate();
+    int      ncat      = rate_model->getNRate();
     bool     fused     = model_factory->fused_mix_rate;
     int      n_mix     = model_to_use->getNMixtures();
     int      ncat_mix  = fused ? ncat : ncat * n_mix;
@@ -636,10 +641,10 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
     for (int c = 0; c < ncat_mix; c++) {
         int     mycat = c%ncat;
         int     m     = c/denom;
-        double  cat_rate = site_rate->getRate(mycat);
-        double  len   = cat_rate * dad_branch->length;
-        double  prop  = site_rate->getProp(mycat) 
-                      * model_to_use->getMixtureWeight(m);
+        double  cat_rate = rate_model->getRate(mycat);
+        double  len      = cat_rate * dad_branch->length;
+        double  prop     = rate_model->getProp(mycat) 
+                         * model_to_use->getMixtureWeight(m);
         double* this_trans_mat = &trans_mat[c*nstatesqr];
         double* this_trans_derv1 = &trans_derv1[c*nstatesqr];
         double* this_trans_derv2 = &trans_derv2[c*nstatesqr];
@@ -699,7 +704,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 double* lh_derv2 = partial_lh_derv2 + c*nstates;
                 int     m        = c/denom;
                 model_to_use->getStateFrequency(lh_node, m);
-                double  prop     = site_rate->getProp(c%ncat) 
+                double  prop     = rate_model->getProp(c%ncat) 
                                  * model_to_use->getMixtureWeight(m);
                 for (size_t i = 0; i < nstates; i++) {
                     lh_node[i] *= prop;
@@ -1101,25 +1106,27 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 #else
     computeTraversalInfo<VectorClass>(node, dad, buffers, false);
 #endif
-    double   tree_lh = 0.0;
+    double   tree_lh       = 0.0;
 #ifndef KERNEL_FIX_STATES
-    int      nstates = aln->num_states;
+    int      nstates       = aln->num_states;
 #endif
-    int      nstatesqr = nstates*nstates;
-    int      ncat      = site_rate->getNRate();
-    bool     fused     = model_factory->fused_mix_rate;
-    int      n_mix     = model->getNMixtures();
-    int      ncat_mix  = fused ? ncat : ncat * n_mix;
-    int      denom     = fused ? 1 : ncat;
-    size_t   block     = ncat_mix * nstates;
+    int      nstatesqr     = nstates*nstates;
+    int      ncat          = site_rate->getNRate();
+    bool     fused         = model_factory->fused_mix_rate;
+    int      n_mix         = model->getNMixtures();
+    int      ncat_mix      = fused ? ncat : ncat * n_mix;
+    int      denom         = fused ? 1 : ncat;
+    size_t   block         = ncat_mix * nstates;
     intptr_t orig_nptn     = aln->size();
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn,VectorClass::size());
-    intptr_t nptn  = max_orig_nptn+model_factory->unobserved_ptns.size();
-    bool     isASC = model_factory->unobserved_ptns.size() > 0;
+    intptr_t nptn          = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool     isASC         = model_factory->unobserved_ptns.size() > 0;
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     vector<intptr_t> limits;
     computePatternPacketBounds(VectorClass::size(), num_threads,

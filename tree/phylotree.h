@@ -2798,6 +2798,9 @@ public:
     /** report that a task is complete*/
     virtual void doneProgress() override;
     
+    ModelSubst*        getModelForCurrentBranch() const;
+    RateHeterogeneity* getRateModelForCurrentBranch() const;
+
 protected:
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
@@ -3022,9 +3025,14 @@ protected:
 
     ModelSubst* getModelForBranch(PhyloNode* dad, 
                                   PhyloNode* node) const;
+
+    RateHeterogeneity* getRateModelForBranch(PhyloNode* dad, 
+                                             PhyloNode* node) const;
+
     void getModelAndTipLikelihood(PhyloNode*   dad, 
                                   PhyloNode*   node, 
                                   ModelSubst*& model_to_use,
+                                  RateHeterogeneity*& rate_model,
                                   double*&     tip_lh) const;
 
 

@@ -44,18 +44,15 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		return;
 	}
 
-
-
 	intptr_t ptn, c;
-    size_t orig_ntn = aln->size();
-
-    size_t ncat = site_rate->getNRate();
+    size_t   orig_ntn = aln->size();
+    size_t   ncat     = rate_model->getNRate();
     ASSERT(ncat == model_to_use->getNMixtures());
     ASSERT(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
     ASSERT(model_to_use->isReversible()); // only works with reversible model!
     const size_t nstatesqr=nstates*nstates;
-    size_t i, x, j;
-    size_t block = nstates * ncat;
+    size_t   i, x, j;
+    size_t   block   = nstates * ncat;
 
 	// internal node
 	ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
@@ -90,9 +87,11 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
         ASSERT(done && "partial_lh is not re-oriented");
     }
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
 	double *evec     = model_to_use->getEigenvectors();
 	double *inv_evec = model_to_use->getInverseEigenvectors();
@@ -117,8 +116,8 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		VectorClass vc_evec;
 		VectorClass expleft[nstates/VCSIZE];
 		VectorClass expright[nstates/VCSIZE];
-		double len_left  = site_rate->getRate(c) * left->length;
-		double len_right = site_rate->getRate(c) * right->length;
+		double len_left  = rate_model->getRate(c) * left->length;
+		double len_right = rate_model->getRate(c) * right->length;
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
 			expleft[i]  = exp(VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * VectorClass(len_left));
@@ -473,21 +472,23 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
     if ((node_branch->partial_lh_computed & 1) == 0)
         computeMixratePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     df = ddf = 0.0;
-    size_t ncat = site_rate->getNRate();
+    size_t   ncat  = rate_model->getNRate();
 
-    size_t block = ncat * nstates;
+    size_t   block = ncat * nstates;
 	intptr_t ptn; // for big data size > 4GB memory required
-    size_t c, i, j;
+    size_t   c, i, j;
 	intptr_t orig_nptn = aln->size();
-	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+	intptr_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
+	intptr_t maxptn    = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
-    double *eval = model_to_use->getEigenvalues();
+    double* eval = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -496,8 +497,8 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 
 	VectorClass vc_len = dad_branch->length;
 	for (c = 0; c < ncat; c++) {
-		VectorClass vc_rate = site_rate->getRate(c);
-		VectorClass vc_prop = site_rate->getProp(c);
+		VectorClass vc_rate = rate_model->getRate(c);
+		VectorClass vc_prop = rate_model->getProp(c);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;
@@ -726,9 +727,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
         computeMixratePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
 	}
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    size_t ncat = site_rate->getNRate();
+    size_t ncat    = rate_model->getNRate();
 
-    size_t block = ncat * nstates;
+    size_t block   = ncat * nstates;
 	intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
 	intptr_t orig_nptn = aln->size();
@@ -736,9 +737,11 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     double *eval = model_to_use->getEigenvalues();
     ASSERT(eval);
@@ -747,9 +750,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 
 
 	for (c = 0; c < ncat; c++) {
-		double len = site_rate->getRate(c)*dad_branch->length;
+		double len = rate_model->getRate(c)*dad_branch->length;
 		VectorClass vc_len(len);
-		VectorClass vc_prop(site_rate->getProp(c));
+		VectorClass vc_prop(rate_model->getProp(c));
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			// eval is not aligned!
 			vc_val[c*nstates/VCSIZE+i] = exp(VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * vc_len) * vc_prop;
@@ -1007,24 +1010,24 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 
 	ASSERT(theta_all && theta_computed);
 
-	double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
-
-    size_t ncat = site_rate->getNRate();
-    size_t block = ncat * nstates;
+	double   tree_lh = current_it->lh_scale_factor  
+	                 + current_it_back->lh_scale_factor;
+    size_t   ncat    = rate_model->getNRate();
+    size_t   block   = ncat * nstates;
 	intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i, j;
 	intptr_t orig_nptn = aln->size();
-	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+	intptr_t nptn    = aln->size()+model_factory->unobserved_ptns.size();
 //    intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    double *eval = model_to_use->getEigenvalues();
+    double*  eval    = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
 	VectorClass vc_len = current_it->length;
 	for (c = 0; c < ncat; c++) {
-		VectorClass vc_rate = site_rate->getRate(c);
-		VectorClass vc_prop = site_rate->getProp(c);
+		VectorClass vc_rate = rate_model->getRate(c);
+		VectorClass vc_prop = rate_model->getProp(c);
 		for (i = 0; i < nstates/VCSIZE; i++) {
 			VectorClass cof = VectorClass().load_a(&eval[c*nstates+i*VCSIZE]) * vc_rate;
 			VectorClass val = exp(cof*vc_len) * vc_prop;

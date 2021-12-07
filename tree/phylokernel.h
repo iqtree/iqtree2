@@ -99,12 +99,15 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         //memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
         return;
     }
-    ModelSubst* model_to_use = nullptr;
-    double*     tip_lh       = tip_partial_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     intptr_t orig_nptn = aln->size();
-    size_t   ncat      = site_rate->getNRate();
+    size_t   ncat      = rate_model->getNRate();
     bool     fused     = model_factory->fused_mix_rate;
     int      nmix      = model_to_use->getNMixtures();
     size_t   ncat_mix  = fused ? ncat : ncat*nmix;
@@ -179,7 +182,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         VectorClass *echild_ptr = echild;
         // precompute information buffer
         for (int c = 0; c < ncat_mix; c++) {
-            VectorClass len_child = site_rate->getRate(c%ncat) * child->length;
+            VectorClass len_child = rate_model->getRate(c%ncat) * child->length;
             double *eval_ptr = eval + mix_addr_nstates[c];
             double *evec_ptr = evec + mix_addr[c];
             for (int i = 0; i < nstates/VCSIZE; i++) {
@@ -642,11 +645,13 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     }
     df = ddf = 0.0;
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
-    size_t   ncat      = site_rate->getNRate();
+    size_t   ncat      = rate_model->getNRate();
     bool     fused     = model_factory->fused_mix_rate;
     size_t   n_mix     = model_to_use->getNMixtures();
     size_t   ncat_mix  = fused ? ncat : ncat*n_mix;
@@ -672,8 +677,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
         mix_addr_nstates[c] = m*nstates;
         size_t mycat = c%ncat;
         double *eval_ptr = eval + m*nstates;
-        VectorClass vc_rate = site_rate->getRate(mycat);
-        VectorClass vc_prop = site_rate->getProp(mycat) 
+        VectorClass vc_rate = rate_model->getRate(mycat);
+        VectorClass vc_prop = rate_model->getProp(mycat) 
                             * model_to_use->getMixtureWeight(m);
         for (int i = 0; i < nstates/VCSIZE; i++) {
             VectorClass cof = VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_rate;
@@ -908,13 +913,15 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node, buffers);
     }
 
-    ModelSubst* model_to_use;
-    double*     tip_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, tip_lh);
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
 
     double   tree_lh   = node_branch->lh_scale_factor 
                        + dad_branch->lh_scale_factor;
-    size_t   ncat      = site_rate->getNRate();
+    size_t   ncat      = rate_model->getNRate();
     bool     fused     = model_factory->fused_mix_rate;
     size_t   n_mix     = model_to_use->getNMixtures();
     size_t   ncat_mix  = fused ? ncat : ncat*n_mix;
@@ -937,8 +944,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
         size_t m     = c/denom;
         mix_addr_nstates[c] = m*nstates;
         double *eval_ptr = eval + mix_addr_nstates[c];
-        VectorClass vc_len(site_rate->getRate(mycat)*dad_branch->length);
-        VectorClass vc_prop(site_rate->getProp(c) * model_to_use->getMixtureWeight(m));
+        VectorClass vc_len (rate_model->getRate(mycat)*dad_branch->length);
+        VectorClass vc_prop(rate_model->getProp(c) * model_to_use->getMixtureWeight(m));
         for (int i = 0; i < nstates/VCSIZE; i++) {
             // eval is not aligned!
             vc_val[c*nstates/VCSIZE+i] = exp(VectorClass().load_a(&eval_ptr[i*VCSIZE]) * vc_len) * vc_prop;
@@ -1295,21 +1302,18 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buffers) {
     assert(buffers.theta_all && buffers.theta_computed);
 
-    ModelSubst* model_to_use = getModel();
-    double*     tip_lh       = tip_partial_lh;
-    if (model_to_use->isDivergentModel()) {
-        ModelDivergent* div_model = 
-            dynamic_cast<ModelDivergent*>(model_to_use);
-        PhyloNode*  dad  = current_it_back->getNode();
-        PhyloNode*  node = current_it->getNode();
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
-    }
+    PhyloNode*         dad           = current_it_back->getNode();
+    PhyloNode*         node          = current_it->getNode();
+    ModelSubst*        model_to_use  = nullptr;
+    RateHeterogeneity* rate_model    = nullptr;
+    double*            tip_lh        = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, 
+                             rate_model, tip_lh);
+
+
     double   tree_lh   = current_it->lh_scale_factor 
                        + current_it_back->lh_scale_factor;
-    size_t   ncat      = site_rate->getNRate();
+    size_t   ncat      = rate_model->getNRate();
     size_t   fused     = model_factory->fused_mix_rate;
     size_t   n_mix     = model_to_use->getNMixtures();
     size_t   ncat_mix  = fused ? ncat : ncat * n_mix;
@@ -1325,9 +1329,9 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buff
 
     VectorClass vc_len = current_it->length;
     for (int c = 0; c < ncat_mix; c++) {
-        size_t  m        = c/denom;
-        double* eval_ptr = eval + (m)*nstates;
-        size_t  mycat    = c%ncat;
+        size_t  m           = c/denom;
+        double* eval_ptr    = eval + (m)*nstates;
+        size_t  mycat       = c%ncat;
         VectorClass vc_rate = site_rate->getRate(mycat);
         VectorClass vc_prop = site_rate->getProp(mycat) 
                             * model_to_use->getMixtureWeight(m);

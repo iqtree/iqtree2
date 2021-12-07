@@ -15,6 +15,7 @@ class ModelDivergent: public ModelMarkov {
 
 protected:
     std::vector<ModelMarkov*>           subtree_models;
+    std::vector<RateHeterogeneity*>     subtree_rate_models;
     std::vector<ToleratedModelVariable> own_parameters;
     //PhyloTree* phylo_tree; //Set by setTree(), and used in
     //                       //decomposeRateMatrix() member function.
@@ -144,15 +145,18 @@ public:
     void calculateSubtreeFrequencyEstimates
             (const Alignment* alignment, const PhyloTree* tree);
 
-    int          getNumberOfSubtreeModels() const;
-    ModelMarkov* getNthSubtreeModel(int n) const;
+    int                getNumberOfSubtreeModels() const;
+    ModelMarkov*       getNthSubtreeModel      (int n) const;
+    RateHeterogeneity* getNthSubtreeRateModel  (int n) const;
 
-    ModelMarkov* getSubsetModel       (int child_subset_number) const;
+    ModelMarkov*       getSubsetModel    (int child_subset_number) const;
+    RateHeterogeneity* getSubsetRateModel(int child_subset_number) const;
     int          getSubtreeNumberOfSubset(int child_subset_number) const;
-    ModelMarkov* getBranchJoiningModel(int dad_subset_number, 
-                                       int child_subset_number) const;
+    ModelMarkov*    getBranchJoiningModel(int dad_subset_number, 
+                                          int child_subset_number) const;
 
-
+    const std::vector<ModelMarkov*>&       getSubtreeModels() const;
+    const std::vector<RateHeterogeneity*>& getSubtreeRateModels() const;                                    
 };
 
 #endif

@@ -297,7 +297,7 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates,
 
 	intptr_t npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
-	pattern_cat.resize(npattern);
+	pattern_cat.resize  (npattern);
 
     double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (intptr_t i = 0; i < npattern; i++) {

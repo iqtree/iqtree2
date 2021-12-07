@@ -1811,7 +1811,7 @@ double ModelMixture::optimizeWeights() {
         if (step > 0) {
             // convert _pattern_lh_cat taking into account new weights
             for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
-                double *this_lk_cat = lh_cat + ptn*nmix;
+                double *this_lk_cat = lh_cat + ptn * nmix;
                 for (size_t c = 0; c < nmix; ++c) {
                     this_lk_cat[c] *= ratio_prop[c];
                 }
@@ -2009,7 +2009,7 @@ void ModelMixture::optimizeEachModel(double* new_prop, PhyloTree* tree,
 
             // copy posterior probability into ptn_freq
             tree->computePtnFreq();
-            double *this_lk_cat = lh_cat+c;
+            double *this_lk_cat = lh_cat + c;
             for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             }

@@ -431,10 +431,10 @@ NGSTreeCat::NGSTreeCat(Params &params, NGSAlignment *alignment) : NGSTree(params
 }
 
 double NGSTreeCat::computeLikelihood(double *pattern_lh) {
-    int num_states = getModel()->num_states;
-    int trans_size = num_states*num_states;
-    double *sum_trans_mat = new double[trans_size];
-    double *trans_mat = new double[trans_size];
+    int     num_states    = getModel()->num_states;
+    int     trans_size    = num_states*num_states;
+    double* sum_trans_mat = new double[trans_size];
+    double* trans_mat     = new double[trans_size];
     int i, cat;
     NGSRateCat *site_rate = (NGSRateCat*)getRate();
 

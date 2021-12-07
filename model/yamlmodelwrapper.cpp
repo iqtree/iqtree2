@@ -221,7 +221,15 @@ YAMLModelDivergent::YAMLModelDivergent(ModelInfoFromYAMLFile& info,
                     (*child, tree, info.getFrequencyType(),
                     models_block, no_parameters, 
                     report_to_tree);
+        auto rate_model = child->getSpecifiedRateModel(tree);
         subtree_models.push_back(model);
+        subtree_rate_models.push_back(rate_model);
+
+        //Todo: What if the caller asked that the rate models
+        //      be linked.
+        //Todo: What if the rate models are incompatible 
+        //      (e.g. in terms of, number of categories).
+
         auto clade_names = child->getCladeNames();
         if (clade_names.empty()) {
             if (catchall_model_number==MODEL_UNASSIGNED) {

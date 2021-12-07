@@ -28,6 +28,7 @@
 #include "modelprotein.h"
 #include "modelbin.h"
 #include "modelcodon.h"
+#include "modeldivergent.h"
 #include "modelmorphology.h"
 #include "modelpomo.h"
 #include "modelset.h"
@@ -943,13 +944,6 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
         model->setMixtureWeight(mix, 1.0);
     }
     model->decomposeRateMatrix();
-    //} else {
-    //    site_rate->setFixParams(1);
-    //    int c, ncat = site_rate->getNRate();
-    //    for (c = 0; c < ncat; c++) {
-    //        site_rate->setProp(c, 1.0);
-    //        }
-    //}
 }
 
 void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
@@ -984,9 +978,10 @@ void ModelFactory::restoreCheckpoint() {
 }
 
 int ModelFactory::getNParameters(int brlen_type) const {
-    int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
-        site_rate->getTree()->getNBranchParameters(brlen_type);
-
+    int df = model->getNDim() 
+           + model->getNDimFreq() 
+           + site_rate->getNDim() 
+           + site_rate->getTree()->getNBranchParameters(brlen_type);
     return df;
 }
 
@@ -1007,18 +1002,27 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         }
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
-            // only optimized if model is not linked
+            //only optimized if model is not linked
             double model_lh = model->optimizeParameters(gradient_epsilon,
                                                         report_to_tree);
             model->afterVariablesChanged();
-            double rate_lh  = site_rate->optimizeParameters(gradient_epsilon,
-                                                            report_to_tree);
-            site_rate->afterVariablesChanged();
-            if (rate_lh == 0.0) {
-                logl = model_lh;
+            std::vector<RateHeterogeneity*> rate_models;
+            if (model->isDivergentModel()) {
+                auto div_model = dynamic_cast<ModelDivergent*>(model);
+                rate_models = div_model->getSubtreeRateModels();
+            } else {
+                rate_models.push_back(site_rate);
             }
-            else {
-                logl = rate_lh;
+            for (RateHeterogeneity* rate_model: rate_models) {
+                double rate_lh = rate_model->optimizeParameters(gradient_epsilon,
+                                                                report_to_tree);
+                rate_model->afterVariablesChanged();
+                if (rate_lh == 0.0) {
+                    logl = model_lh;
+                }
+                else {
+                    logl = rate_lh;
+                }
             }
             if (logl <= prev_logl + gradient_epsilon) {
                 break;
@@ -1026,7 +1030,8 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
             prev_logl = logl;
         }
     } else {
-        /* Optimize substitution and heterogeneity rates jointly using BFGS */
+        /* Optimize substitution and heterogeneity rates 
+           jointly using BFGS */
         logl = optimizeAllParameters(gradient_epsilon);
     }
     return logl;

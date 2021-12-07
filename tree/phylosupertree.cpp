@@ -94,7 +94,8 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
     PhyloTree::setModelFactory(model_fac);
     if (model_fac) {
-        PhyloSuperTree *tree = dynamic_cast<PhyloSuperTree*>(model_fac->site_rate->phylo_tree);
+        PhyloSuperTree *tree = dynamic_cast<PhyloSuperTree*>
+							   (model_fac->site_rate->phylo_tree);
         for (int part = 0; part != size(); part++) {
             at(part)->setModelFactory(tree->at(part)->getModelFactory());
         }

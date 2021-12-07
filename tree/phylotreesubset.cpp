@@ -208,16 +208,55 @@ ModelSubst* PhyloTree::getModelForBranch(PhyloNode* dad,
     return model_div->getBranchJoiningModel(dad_subset, child_subset);
 }
 
+RateHeterogeneity* PhyloTree::getRateModelForBranch
+    (PhyloNode* dad, PhyloNode* node) const {
+    if (!model->isDivergentModel()) {
+        return site_rate;
+    }
+    auto model_div         = dynamic_cast<ModelDivergent*>(model);
+    int  dad_subset        = dad->getSubsetNumber();
+    auto rate_models       = model_div->getSubtreeRateModels();
+    auto dad_rate_model    = rate_models[dad_subset];
+    int  child_subset      = node->getSubsetNumber();
+    auto child_rate_model  = rate_models[child_subset];
+
+    if (child_rate_model == dad_rate_model) {
+        return child_rate_model;
+    }
+    return child_rate_model;
+    //todo: return model_div->getBranchJoiningRateModel(dad_subset, child_subset);
+}
+
+ModelSubst* PhyloTree::getModelForCurrentBranch() const {
+    PhyloNode*  dad  = current_it_back->getNode();
+    PhyloNode*  node = current_it->getNode();
+    ASSERT(dad!=nullptr);
+    ASSERT(node!=nullptr);
+    return getModelForBranch(dad, node);
+}
+
+RateHeterogeneity* PhyloTree::getRateModelForCurrentBranch() const {
+    PhyloNode*  dad  = current_it_back->getNode();
+    PhyloNode*  node = current_it->getNode();
+    ASSERT(dad!=nullptr);
+    ASSERT(node!=nullptr);
+    return getRateModelForBranch(dad, node);
+}
+
 void PhyloTree::getModelAndTipLikelihood
         (PhyloNode*   dad, PhyloNode*   node, 
-         ModelSubst*& model_to_use, double*&     tip_lh) const {
+         ModelSubst*& model_to_use, 
+         RateHeterogeneity*& rate_model,
+         double*&     tip_lh) const {
     model_to_use = model;
+    rate_model   = site_rate;
     tip_lh       = tip_partial_lh;
     if (model_to_use->isDivergentModel()) {
         ModelDivergent* div_model = 
             dynamic_cast<ModelDivergent*>(model_to_use);
         int subtree_number = getSubTreeNumberForBranch(dad, node);
         model_to_use = div_model->getNthSubtreeModel(subtree_number);
+        rate_model   = div_model->getNthSubtreeRateModel(subtree_number);
         tip_lh = tip_partial_lh 
                + subtree_number * tip_partial_lh_size_per_model;
     }

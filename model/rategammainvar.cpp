@@ -197,34 +197,37 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
 }
 
 
-int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates,
-                                        IntVector &pattern_cat) {
+int RateGammaInvar::computePatternRates(DoubleVector& pattern_rates,
+                                        IntVector&    pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
 	phylo_tree->computePatternLhCat(WSL_RATECAT);
 
 	auto npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
-	pattern_cat.resize(npattern);
+	pattern_cat.resize  (npattern);
 
     double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
-		double sum_rate = 0.0, sum_lh = phylo_tree->ptn_invar[i];
-		int best = 0;
-        double best_lh = phylo_tree->ptn_invar[i];
+		double sum_rate = 0.0;
+        double sum_lh   = phylo_tree->ptn_invar[i];
+		int    best     = 0;
+        double best_lh  = phylo_tree->ptn_invar[i];
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
-			sum_lh += lh_cat[c];
+			sum_lh   += lh_cat[c];
+            //Todo: tiebreaking code is wrong, if there
+            //is a three(or more)-way-tie.
 			if (lh_cat[c] > best_lh
                 || (lh_cat[c] == best_lh && 
                     random_double()<0.5)) { // break tie at random
-                best = c+1;
+                best    = c + 1;
                 best_lh = lh_cat[c];
             }
 		}
 		pattern_rates[i] = sum_rate / sum_lh;
-		pattern_cat[i] = best;
-		lh_cat += ncategory;
+		pattern_cat[i]   = best;
+		lh_cat          += ncategory;
 	}
     return ncategory+1;
 }
@@ -251,15 +254,16 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
 
     double ppInvar = 0;
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-        double *this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn * ncat;
-        double lk_ptn = phylo_tree->ptn_invar[ptn];
-        for (size_t cat = 0; cat < ncat; cat++) {
+        double* this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat 
+                            + ptn * ncat;
+        double  lk_ptn      = phylo_tree->ptn_invar[ptn];
+        for (size_t cat = 0; cat < ncat; ++cat) {
             lk_ptn += this_lk_cat[cat];
         }
         ASSERT(lk_ptn != 0.0);
-        ppInvar += (phylo_tree->ptn_invar[ptn]) * phylo_tree->ptn_freq[ptn] / lk_ptn;
+        ppInvar += phylo_tree->ptn_invar[ptn]
+                 * phylo_tree->ptn_freq[ptn] / lk_ptn;
     }
-
     double newPInvar = ppInvar / nSites;
     ASSERT(newPInvar < 1.0);
     invar.setPInvar(newPInvar);

@@ -173,13 +173,13 @@ void ModelFactoryMixlen::reorderMixtureModels(IntVector& index, DoubleVector& pr
         model->setMixtureWeight(j, prop[j]);
     }
     // assigning memory for individual models
-    int num_states = model->num_states;
+    int num_states     = model->num_states;
     int states_squared = num_states*num_states;
     for (int m = 0; m < nmix; m++) {
         auto mix_class = dynamic_cast<ModelMarkov*>(model->getMixtureClass(m));
         mix_class->setEigenvalues(&model->getEigenvalues()[m*num_states]);
         mix_class->setEigenvectors(&model->getEigenvectors()[m*states_squared]);
-        auto i_evec = &model->getInverseEigenvectors()[m*states_squared];
+        auto i_evec   = &model->getInverseEigenvectors()[m*states_squared];
         mix_class->setInverseEigenvectors(i_evec);
         auto i_evec_t = &model->getInverseEigenvectorsTransposed()[m*states_squared];
         mix_class->setInverseEigenvectorsTransposed(i_evec_t);

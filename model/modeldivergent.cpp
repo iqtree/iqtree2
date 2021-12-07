@@ -22,6 +22,10 @@ ModelDivergent::~ModelDivergent() {
         delete subtree_model;
     }
     subtree_models.clear();
+    for (RateHeterogeneity* subtree_rate_model: subtree_rate_models) {
+        delete subtree_rate_model;
+    }
+    subtree_rate_models.clear();
 }
 
 bool ModelDivergent::isDivergentModel() const {
@@ -652,6 +656,12 @@ ModelMarkov* ModelDivergent::getNthSubtreeModel(int n) const {
     return subtree_models[n];
 }
 
+RateHeterogeneity* ModelDivergent::getNthSubtreeRateModel(int n) const {
+    ASSERT(0<=n);
+    ASSERT(n<subtree_models.size());
+    return subtree_rate_models[n];
+}
+
 int ModelDivergent::getNumberOfSubtreeModels() const {
     return subtree_models.size();
 }
@@ -677,6 +687,12 @@ ModelMarkov* ModelDivergent::getSubsetModel
     }
 }
 
+RateHeterogeneity* ModelDivergent::getSubsetRateModel
+                (int child_subset_number) const {
+    int model_num = getSubtreeNumberOfSubset(child_subset_number);
+    return subtree_rate_models[model_num];
+}
+
 int ModelDivergent::getSubtreeNumberOfSubset
         (int child_subset_number) const {
     if (0<=child_subset_number && 
@@ -698,3 +714,12 @@ ModelMarkov* ModelDivergent::getBranchJoiningModel
     ASSERT(0<subtree_models.size());
     return subtree_models[0];
 }
+
+const std::vector<ModelMarkov*>& ModelDivergent::getSubtreeModels() const {
+    return subtree_models;
+}
+
+const std::vector<RateHeterogeneity*>& ModelDivergent::getSubtreeRateModels() const {
+    return subtree_rate_models;
+}                                   
+

@@ -155,16 +155,14 @@ double RateHeterotachy::optimizeParameters(double gradient_epsilon,
 }
 
 double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
-
     // first compute _pattern_lh_cat
     phylo_tree->computePatternLhCat(WSL_RATECAT);
-    intptr_t nptn      = phylo_tree->aln->getNPattern();
-    size_t   nmix      = ncategory;    
-    double* new_prop   = aligned_alloc<double>(nmix);
-    double* ratio_prop = aligned_alloc<double>(nmix);
+    intptr_t nptn       = phylo_tree->aln->getNPattern();
+    size_t   nmix       = ncategory;    
+    double*  new_prop   = aligned_alloc<double>(nmix);
+    double*  ratio_prop = aligned_alloc<double>(nmix);
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-
     for (int step = 0; step < optimize_steps; ++step) {
         // E-step
         if (step > 0) {
@@ -179,7 +177,7 @@ double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
         memset(new_prop, 0, nmix*sizeof(double));
         for (intptr_t ptn = 0; ptn < nptn; ptn++) {
             double* this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
-            double  lk_ptn = phylo_tree->ptn_invar[ptn];
+            double  lk_ptn      = phylo_tree->ptn_invar[ptn];
             for (size_t c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -189,7 +187,7 @@ double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
                 new_prop[c] += this_lk_cat[c] * lk_ptn;
             }
         } 
-        bool converged = true;
+        bool   converged  = true;
         double total_prop = 0.0;    
         for (size_t c = 0; c < nmix; c++) {
             new_prop[c] /= phylo_tree->getAlnNSite();

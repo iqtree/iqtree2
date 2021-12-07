@@ -193,25 +193,25 @@ bool AlignmentPairwise::addPattern(int state1, int state2,
 
 double AlignmentPairwise::computeFunction(double value) {
     ++costCalculationCount;
-    RateHeterogeneity* site_rate = tree->getRate();
-    int         ncat  = site_rate->getNDiscreteRate();
+    RateHeterogeneity* rate_model = tree->getRateModelForCurrentBranch();
+    int                ncat       = rate_model->getNDiscreteRate();
 
-    if (site_rate->isSiteSpecificRate()) {
+    if (rate_model->isSiteSpecificRate()) {
         return computeFunctionSiteSpecificRates(value);
     } 
     else if (tree->getModel()->isSiteSpecificModel()) {
         return computeFunctionSiteSpecificModel(value);
     } 
-    else if (site_rate->getPtnCat(0) >= 0) {
+    else if (rate_model->getPtnCat(0) >= 0) {
         return computeFunctionCategorizedRates(value);
     }
-    
-    if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
+    if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0) {
         tree->getModelFactory()->computeTransMatrix(value, sum_trans_mat);
+    }
     else {
-        tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(0), sum_trans_mat);
+        tree->getModelFactory()->computeTransMatrix(value * rate_model->getRate(0), sum_trans_mat);
         for (int cat = 1; cat < ncat; cat++) {
-            tree->getModelFactory()->computeTransMatrix(value * site_rate->getRate(cat), trans_mat);
+            tree->getModelFactory()->computeTransMatrix(value * rate_model->getRate(cat), trans_mat);
             for (int i = 0; i < trans_size; i++) {
                 sum_trans_mat[i] += trans_mat[i];
             }
@@ -226,7 +226,7 @@ double AlignmentPairwise::computeFunction(double value) {
 }
 
 double AlignmentPairwise::computeFunctionSiteSpecificRates(double value) {
-    RateHeterogeneity* site_rate = tree->getRate();
+    RateHeterogeneity* rate_model = tree->getRateModelForCurrentBranch();
     intptr_t    nptn  = tree->aln->getNPattern();
     double      lh    = 0.0;
 
@@ -242,17 +242,19 @@ double AlignmentPairwise::computeFunctionSiteSpecificRates(double value) {
             if (state1 >= num_states || state2 >= num_states) {
                 continue;
             }
-            double trans = tree->getModelFactory()->computeTrans(value * site_rate->getPtnRate(i), state1, state2);
+            double vr    = value * rate_model->getPtnRate(i);
+            double trans = tree->getModelFactory()->computeTrans(vr, state1, state2);
             lh -= log(trans) * frequencies[i];
         }
         return lh;
     }
     for (int i = 0; i < nptn; i++) {
-        int state1 = tree->aln->at(i)[seq_id1];
-        int state2 = tree->aln->at(i)[seq_id2];
+        int state1   = tree->aln->at(i)[seq_id1];
+        int state2   = tree->aln->at(i)[seq_id2];
         if (state1 >= num_states || state2 >= num_states) continue;
-        double trans = tree->getModelFactory()->computeTrans(value * site_rate->getPtnRate(i), state1, state2);
-        lh -= log(trans) * tree->aln->at(i).frequency;
+        double vr    = value * rate_model->getPtnRate(i);
+        double trans = tree->getModelFactory()->computeTrans(vr, state1, state2);
+        lh          -= log(trans) * tree->aln->at(i).frequency;
     }
     return lh;
 }
@@ -275,7 +277,8 @@ double AlignmentPairwise::computeFunctionSiteSpecificModel(double value) {
             if (state1 >= num_states || state2 >= num_states) {
                 continue;
             }
-            double trans = tree->getModelFactory()->computeTrans(value * site_rate->getPtnRate(i), state1, state2);
+            double vr    = value * site_rate->getPtnRate(i);
+            double trans = tree->getModelFactory()->computeTrans(vr, state1, state2);
             lh -= log(trans) * frequencies[i];
         }
         return lh;
@@ -291,12 +294,12 @@ double AlignmentPairwise::computeFunctionSiteSpecificModel(double value) {
 }
 
 double AlignmentPairwise::computeFunctionCategorizedRates(double value) {
-    RateHeterogeneity* site_rate = tree->getRate();
-    int    ncat = site_rate->getNDiscreteRate();
+    RateHeterogeneity* rate_model = tree->getRateModelForCurrentBranch();
+    int    ncat = rate_model->getNDiscreteRate();
     double lh   = 0.0;
-
     for (int cat = 0; cat < ncat; cat++) {
-        tree->getModelFactory()->computeTransMatrix(value*site_rate->getRate(cat), trans_mat);
+        double vr = value*rate_model->getRate(cat);
+        tree->getModelFactory()->computeTransMatrix(vr, trans_mat);
         double *pair_pos = pair_freq + cat*trans_size;
         for (int i = 0; i < trans_size; i++)
             if (pair_pos[i] > Params::getInstance().min_branch_length) {
@@ -312,16 +315,14 @@ double AlignmentPairwise::computeFunctionCategorizedRates(double value) {
 
 void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     ++derivativeCalculationCount;
-    RateHeterogeneity *site_rate = tree->getRate();
-    
-
-    if (site_rate->isSiteSpecificRate()) {
+    RateHeterogeneity* rate_model = tree->getRateModelForCurrentBranch();
+    if (rate_model->isSiteSpecificRate()) {
         computeFuncDervSiteSpecificRate(value, df, ddf);
     }
     else if (tree->getModel()->isSiteSpecificModel()) {
         computeFuncDervSiteSpecificModel(value, df, ddf);
     }
-    else if (site_rate->getPtnCat(0) >= 0) {
+    else if (rate_model->getPtnCat(0) >= 0) {
         computeFuncDervCategorizedRates(value, df, ddf);
     }
     else {
@@ -329,8 +330,8 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
     }
 }
 
-void AlignmentPairwise::computeFuncDervSiteSpecificRate(double value, 
-                                                    double &df, double &ddf) {
+void AlignmentPairwise::computeFuncDervSiteSpecificRate
+        (double value, double &df, double &ddf) {
     RateHeterogeneity *site_rate = tree->getRate();
     intptr_t nptn           = tree->aln->getNPattern();
     auto     sequence1      = tree->getConvertedSequenceByNumber(seq_id1);
@@ -357,14 +358,14 @@ void AlignmentPairwise::computeFuncDervSiteSpecificRate(double value,
             if (num_states<=state2) {
                 continue;
             }
-            double freq = frequencies[i];
+            double freq     = frequencies[i];
             double rate_val = site_rate->getPtnRate(static_cast<int>(i));
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
-            double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
-            double d1 = derv1 / trans;
-            local_df  -= rate_val * d1 * freq;
-            local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+            double trans    = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
+            double d1       = derv1 / trans;
+            local_df       -= rate_val * d1 * freq;
+            local_ddf      -= rate_sqr * (derv2/trans - d1*d1) * freq;
         }
     } else {
         #ifdef _OPENMP
@@ -382,11 +383,11 @@ void AlignmentPairwise::computeFuncDervSiteSpecificRate(double value,
             double rate_val = site_rate->getPtnRate(static_cast<int>(i));
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
-            double trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
-            double d1 = derv1 / trans;
-            double freq = tree->aln->at(i).frequency;
-            local_df  -= rate_val * d1 * freq;
-            local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+            double trans    = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
+            double d1       = derv1 / trans;
+            double freq     = tree->aln->at(i).frequency;
+            local_df       -= rate_val * d1 * freq;
+            local_ddf      -= rate_sqr * (derv2/trans - d1*d1) * freq;
         }
     }
     df  = local_df;
@@ -423,14 +424,14 @@ void AlignmentPairwise::computeFuncDervSiteSpecificModel(double value, double& d
             if (num_states<=state2) {
                 continue;
             }
-            double freq = frequencies[i];
+            double freq     = frequencies[i];
             double rate_val = site_rate->getPtnRate(static_cast<int>(i));
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
-            double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(static_cast<int>(i)), state1, state2, derv1, derv2);
-            double d1 = derv1 / trans;
-            local_df  -= rate_val * d1 * freq;
-            local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+            double trans    = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(static_cast<int>(i)), state1, state2, derv1, derv2);
+            double d1       = derv1 / trans;
+            local_df       -= rate_val * d1 * freq;
+            local_ddf      -= rate_sqr * (derv2/trans - d1*d1) * freq;
         }
     } else {
         #ifdef _OPENMP
@@ -448,11 +449,11 @@ void AlignmentPairwise::computeFuncDervSiteSpecificModel(double value, double& d
             double rate_val = site_rate->getPtnRate(static_cast<int>(i));
             double rate_sqr = rate_val * rate_val;
             double derv1, derv2;
-            double trans = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(static_cast<int>(i)), state1, state2, derv1, derv2);
-            double d1 = derv1 / trans;
-            double freq = tree->aln->at(i).frequency;
-            local_df -= rate_val * d1 * freq;
-            local_ddf -= rate_sqr * (derv2/trans - d1*d1) * freq;
+            double trans    = tree->getModel()->computeTrans(value * rate_val,model->getPtnModelID(static_cast<int>(i)), state1, state2, derv1, derv2);
+            double d1       = derv1 / trans;
+            double freq     = tree->aln->at(i).frequency;
+            local_df       -= rate_val * d1 * freq;
+            local_ddf      -= rate_sqr * (derv2/trans - d1*d1) * freq;
         }
     }
     df = local_df;
@@ -490,8 +491,8 @@ void AlignmentPairwise::computeFuncDervCategorizedRates(double value, double& df
 }
 
 void AlignmentPairwise::computeFuncDervAsUsual(double value, double& df, double& ddf) {
-    RateHeterogeneity* site_rate = tree->getRate();
-    int ncat = site_rate->getNDiscreteRate();
+    RateHeterogeneity* rate_model = tree->getRateModelForCurrentBranch();
+    int    ncat      = rate_model->getNDiscreteRate();
     double local_df  = 0.0; //MSVC insists that variables in reduction clauses
     double local_ddf = 0.0; //may not be reference types.
 
@@ -500,10 +501,9 @@ void AlignmentPairwise::computeFuncDervAsUsual(double value, double& df, double&
     memset(sum_derv2, 0, sizeof(double) * trans_size);
 
     for (int cat = 0; cat < ncat; cat++) {
-        double rate_val = site_rate->getRate(cat);
-        double prop_val = site_rate->getProp(cat);
-        if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0)
-        {
+        double rate_val = rate_model->getRate(cat);
+        double prop_val = rate_model->getProp(cat);
+        if (tree->getModelFactory()->site_rate->getGammaShape() == 0.0) {
             rate_val = 1.0;
         }
         double coeff1 = rate_val * prop_val;
@@ -518,7 +518,7 @@ void AlignmentPairwise::computeFuncDervAsUsual(double value, double& df, double&
     }
     
     // 2019-07-03: incorporate p_invar
-    double p_invar = site_rate->getPInvar();
+    double p_invar = rate_model->getPInvar();
     if (p_invar > 0.0) {
         for (int i = 0; i < num_states; i++) {
             sum_trans[i*num_states+i] += p_invar;

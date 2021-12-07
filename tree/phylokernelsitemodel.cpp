@@ -24,7 +24,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
     size_t     nptn    = aln->size();
     size_t     tip_block_size = get_safe_upper_limit(nptn) * nstates;
     size_t     ptn, c;
-    size_t     ncat    = site_rate->getNRate();
+    size_t     ncat    = rate_model->getNRate();
     size_t     i, x;
     size_t     block   = nstates * ncat;
     ModelSet*  models  = (ModelSet*) model;
@@ -101,7 +101,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
                     double *tip_partial_lh_child = tip_partial_lh + (child->id*tip_block_size)+ptn*nstates;
                     double *partial_lh = partial_lh_all;
                     for (c = 0; c < ncat; c++) {
-                        double len_child = site_rate->getRate(c) * nei->length;
+                        double len_child = rate_model->getRate(c) * nei->length;
                         for (i = 0; i < nstates; i++) {
                             expchild[i] = exp(eval[i]*len_child) * tip_partial_lh_child[i];
                         }
@@ -123,7 +123,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
                     double* partial_lh_child = nei->partial_lh + ptn*block;
                     double* partial_lh       = partial_lh_all;
                     for (c = 0; c < ncat; c++) {
-                        double len_child = site_rate->getRate(c) * nei->length;
+                        double len_child = rate_model->getRate(c) * nei->length;
                         for (i = 0; i < nstates; i++) {
                             expchild[i] = exp(eval[i]*len_child) * partial_lh_child[i];
                         }
@@ -223,8 +223,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
             double* inv_evec = models->at(ptn)->getInverseEigenvectors();
 
 			for (c = 0; c < ncat; c++) {
-                double len_left  = site_rate->getRate(c) * left->length;
-                double len_right = site_rate->getRate(c) * right->length;
+                double len_left  = rate_model->getRate(c) * left->length;
+                double len_right = rate_model->getRate(c) * right->length;
                 for (i = 0; i < nstates; i++) {
                     expleft[i]  = exp(eval[i]*len_left) * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
@@ -279,8 +279,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
             double* inv_evec = models->at(ptn)->getInverseEigenvectors();
 
 			for (c = 0; c < ncat; c++) {
-                double len_left  = site_rate->getRate(c) * left->length;
-                double len_right = site_rate->getRate(c) * right->length;
+                double len_left  = rate_model->getRate(c) * left->length;
+                double len_right = rate_model->getRate(c) * right->length;
                 for (i = 0; i < nstates; i++) {
                     expleft[i]  = exp(eval[i]*len_left)  * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
@@ -365,8 +365,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
 			dad_branch->scale_num[ptn] = left->scale_num[ptn] + right->scale_num[ptn];
 
 			for (c = 0; c < ncat; c++) {
-                double len_left  = site_rate->getRate(c) * left->length;
-                double len_right = site_rate->getRate(c) * right->length;
+                double len_left  = rate_model->getRate(c) * left->length;
+                double len_right = rate_model->getRate(c) * right->length;
                 for (i = 0; i < nstates; i++) {
                     expleft[i]  = exp(eval[i]*len_left)  * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
@@ -451,7 +451,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
         computePartialLikelihood(node_branch, node);
     }
     size_t   nstates = aln->num_states;
-    size_t   ncat    = site_rate->getNRate();
+    size_t   ncat    = rate_model->getNRate();
     size_t   block   = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t   c, i;
@@ -517,18 +517,18 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
         for (c = 0; c < ncat; c++) {
             double lh_cat = 0.0, df_cat = 0.0, ddf_cat = 0.0;
             for (i = 0; i < nstates; i++) {
-                double cof = eval[i]*site_rate->getRate(c);
+                double cof = eval[i]*rate_model->getRate(c);
                 double val = exp(cof*dad_branch->length) * theta[i];
                 double val1 = cof*val;
                 lh_cat  += val;
                 df_cat  += val1;
                 ddf_cat += cof*val1;
             }
-            double prop = site_rate->getProp(c);
-            lh_ptn += prop * lh_cat;
-            df_ptn += prop * df_cat;
+            double prop = rate_model->getProp(c);
+            lh_ptn  += prop * lh_cat;
+            df_ptn  += prop * df_cat;
             ddf_ptn += prop * ddf_cat;
-            theta += nstates;
+            theta   += nstates;
         }
 
         lh_ptn = 1.0/fabs(lh_ptn);
@@ -568,9 +568,9 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
         computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
-    size_t ncat = site_rate->getNRate();
+    size_t ncat    = rate_model->getNRate();
 
-    size_t block = ncat * nstates;
+    size_t block   = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i;
     intptr_t nptn = aln->size();
@@ -586,20 +586,20 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_node = tip_partial_lh_node + ptn*nstates;
-            double *eval = models->at(ptn)->getEigenvalues();
+			double  lh_ptn = ptn_invar[ptn];
+			double* lh_cat = _pattern_lh_cat + ptn*ncat;
+			double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_node = tip_partial_lh_node + ptn*nstates;
+            double* eval   = models->at(ptn)->getEigenvalues();
 
 			for (c = 0; c < ncat; c++) {
-                double len = site_rate->getRate(c)*dad_branch->length;
-                double prop = site_rate->getProp(c);
+                double len  = rate_model->getRate(c)*dad_branch->length;
+                double prop = rate_model->getProp(c);
 				for (i = 0; i < nstates; i++) {
 					*lh_cat +=  (exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
 				}
                 *lh_cat *= prop;
-				lh_ptn += *lh_cat;
+				lh_ptn  += *lh_cat;
                 // don't increase partial_lh_node pointer
 				partial_lh_dad += nstates;
 				lh_cat++;
@@ -616,22 +616,22 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn = ptn_invar[ptn];
+			double lh_ptn  = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			double *partial_lh_dad  = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
             double *eval = models->at(ptn)->getEigenvalues();
 
 			for (c = 0; c < ncat; c++) {
-                double len = site_rate->getRate(c)*dad_branch->length;
-                double prop = site_rate->getProp(c);
+                double len  = rate_model->getRate(c)*dad_branch->length;
+                double prop = rate_model->getProp(c);
 				for (i = 0; i < nstates; i++) {
 					*lh_cat +=  (exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
 				}
                 *lh_cat *= prop;
-				lh_ptn += *lh_cat;
+				lh_ptn  += *lh_cat;
 				partial_lh_node += nstates;
-				partial_lh_dad += nstates;
+				partial_lh_dad  += nstates;
 				lh_cat++;
 			}
 
@@ -676,12 +676,12 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
 	ASSERT(theta_all && theta_computed);
 
     size_t nstates = aln->num_states;
-    size_t ncat = site_rate->getNRate();
+    size_t ncat    = rate_model->getNRate();
 
-    size_t block = ncat * nstates;
+    size_t block   = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required
     size_t c, i;
-    intptr_t nptn = aln->size();
+    intptr_t nptn  = aln->size();
 
     ModelSet *models = (ModelSet*)model;
     
@@ -698,12 +698,12 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
         
         for (c = 0; c < ncat; c++) {
             double lh_cat = 0.0;
-            double len = site_rate->getRate(c)*current_it->length;
+            double len = rate_model->getRate(c)*current_it->length;
             for (i = 0; i < nstates; i++) {
                 lh_cat += exp(eval[i]*len) * theta[i];
             }
-            lh_ptn += lh_cat * site_rate->getProp(c);
-            theta += nstates;
+            lh_ptn += lh_cat * rate_model->getProp(c);
+            theta  += nstates;
         }
 
         lh_ptn = log(fabs(lh_ptn));

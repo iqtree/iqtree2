@@ -1388,7 +1388,8 @@ RateHeterogeneity* ModelInfoFromYAMLFile::getSpecifiedRateModel(PhyloTree* tree)
     return specified_rate_model_info->getRateHeterogeneity(tree);
 }
 
-RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity(PhyloTree* tree) {
+RateHeterogeneity* ModelInfoFromYAMLFile::getRateHeterogeneity
+    (PhyloTree* tree) {
     ASSERT(is_rate_model);
 
     if (false) {

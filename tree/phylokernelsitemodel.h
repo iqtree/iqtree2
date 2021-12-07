@@ -34,7 +34,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
 
     intptr_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
     intptr_t ptn, c;
-    size_t ncat = site_rate->getNRate();
+    size_t   ncat = rate_model->getNRate();
     size_t i, x, j;
     size_t block = nstates * ncat;
     ModelSet *models = (ModelSet*) model;
@@ -118,8 +118,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
             VectorClass *this_evec;
 
 			for (c = 0; c < ncat; c++) {
-                len_left = site_rate->getRate(c) * left->length;
-                len_right = site_rate->getRate(c) * right->length;
+                len_left  = rate_model->getRate(c) * left->length;
+                len_right = rate_model->getRate(c) * right->length;
                 for (i = 0; i < nstates/VCSIZE; i++) {
                     expleft[i] = exp(eval[i]*len_left) * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
@@ -189,8 +189,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
             VectorClass *this_evec;
             
 			for (c = 0; c < ncat; c++) {
-                len_left = site_rate->getRate(c) * left->length;
-                len_right = site_rate->getRate(c) * right->length;
+                len_left  = rate_model->getRate(c) * left->length;
+                len_right = rate_model->getRate(c) * right->length;
                 for (i = 0; i < nstates/VCSIZE; i++) {
                     expleft[i] = exp(eval[i]*len_left) * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
@@ -292,8 +292,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
 			dad_branch->scale_num[ptn] = left->scale_num[ptn] + right->scale_num[ptn];
 
 			for (c = 0; c < ncat; c++) {
-                len_left = site_rate->getRate(c) * left->length;
-                len_right = site_rate->getRate(c) * right->length;
+                len_left  = rate_model->getRate(c) * left->length;
+                len_right = rate_model->getRate(c) * right->length;
                 for (i = 0; i < nstates/VCSIZE; i++) {
                     expleft[i] = exp(eval[i]*len_left) * partial_lh_left[i];
                     expright[i] = exp(eval[i]*len_right) * partial_lh_right[i];
@@ -389,7 +389,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         computeSitemodelPartialLikelihoodEigenSIMD<VectorClass,VCSIZE,nstates>(node_branch, node);
         
 //    size_t nstates = aln->num_states;
-    size_t ncat = site_rate->getNRate();
+    size_t ncat = rate_model->getNRate();
 
     size_t block = ncat * nstates;
     intptr_t ptn; // for big data size > 4GB memory required

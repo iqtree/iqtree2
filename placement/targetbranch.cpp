@@ -61,7 +61,7 @@ TargetBranch::TargetBranch(BlockAllocator* allocator,
                PhyloNode* node1, PhyloNode* node2,
                bool parsimony_wanted, bool likelihood_wanted)
     : super(node1, node2), blocker(allocator), partial_pars(nullptr)
-    , connection_cost(0), branch_cost(0), parsimony_dirtiness(1)
+    , connection_cost(0),  branch_cost(0), parsimony_dirtiness(1)
     , partial_lh(nullptr), scale_num(nullptr)
     , branch_lh_scale_factor(0), used(false)
     , replacements(nullptr) {
