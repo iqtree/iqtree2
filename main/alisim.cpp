@@ -6,6 +6,8 @@
  */
 
 #include "alisim.h"
+#include <chrono>
+using namespace std::chrono;
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
@@ -360,8 +362,22 @@ void executeSimulation(Params params, IQTree *&tree)
     // load input MSA if any
     map<string,string> input_msa = loadInputMSA(alisimulator);
     
+    auto start_time = high_resolution_clock::now();
+    
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
+
+    if (params.outputfile_runtime.length() > 0)
+    {
+        auto end_time = high_resolution_clock::now();
+        
+        /* Getting number of milliseconds as a double. */
+        duration<double, std::milli> ms_double = end_time - start_time;
+
+        std::ofstream outfile;
+        outfile.open(params.outputfile_runtime+".txt", std::ios_base::app); // append instead of overwrite
+        outfile << "Model "+params.model_id+": "+convertDoubleToString(ms_double.count())+"\n";
+    }
     
     // delete alisimulator
     delete alisimulator;

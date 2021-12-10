@@ -878,17 +878,20 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     {
         if ((*it)->node->isLeaf())
         {
-            // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-            string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+            if (params->outputfile_runtime.length() == 0)
+            {
+                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
 
-            // convert numerical states into readable characters and write output to file
-            string input_sequence = input_msa[(*it)->node->name];
-            if (input_sequence.length()>0)
-                // write and copying gaps from the input sequences to the output.
-                out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
-            else
-                // write without copying gaps from the input sequences to the output.
-                out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                // convert numerical states into readable characters and write output to file
+                string input_sequence = input_msa[(*it)->node->name];
+                if (input_sequence.length()>0)
+                    // write and copying gaps from the input sequences to the output.
+                    out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                else
+                    // write without copying gaps from the input sequences to the output.
+                    out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+            }
             
             // remove the sequence to release the memory after extracting the sequence
             vector<short int>().swap((*it)->node->sequence);
@@ -897,7 +900,7 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
         if (node->isLeaf())
         {
             // avoid writing sequence of __root__
-            if (node->name!=ROOT_NAME)
+            if (node->name!=ROOT_NAME && params->outputfile_runtime.length() == 0)
             {
                 // export pre_output string (containing taxon name and ">" or "space" based on the output format)
                 string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
@@ -1579,7 +1582,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
         outError("The number of frequencies ("+convertIntToString(i)+") is different from the number of states ("+convertIntToString(max_num_states)+"). Please check and try again!");
     
     // make sure the sum of all frequencies is equal to 1
-    if (fabs(total_freq-1.0) > 1e-5)
+    if (fabs(total_freq-1.0) >= 1e-7)
     {
         outWarning("Normalizing state frequencies so that sum of them equals to 1.");
         normalize_frequencies(state_freqs, max_num_states, total_freq);

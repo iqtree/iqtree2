@@ -2511,6 +2511,16 @@ public:
     *  Type to assign site freqs (in mixture) (default: posterior mean)
     */
     ASSIGNMENT_TYPE alisim_stationarity_heterogeneity;
+    
+    /**
+    *  path to output the simulation time
+    */
+    string outputfile_runtime;
+    
+    /**
+    *  model id
+    */
+    string model_id;
 };
 
 /**

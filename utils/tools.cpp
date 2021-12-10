@@ -751,7 +751,7 @@ void normalize_frequencies(double* freqs, int num_states, double total_freqs, bo
     if (fabs(total_freqs) < 1e-5)
         outError("Sum of state frequencies must be greater than zero!");
     
-    if (fabs(total_freqs-1.0) > 1e-5)
+    if (fabs(total_freqs-1.0) >= 1e-7)
     {
         total_freqs = 1/total_freqs;
         if (show_warning)
@@ -1446,6 +1446,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_branch_scale = 1.0;
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
+    params.outputfile_runtime = "";
+    params.model_id = "";
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2796,6 +2798,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use --branch-distribution <distribution_name> to specify a distribution, from which branch lengths will be randomly generated.";
                 params.branch_distribution = argv[cnt];
                 continue;
+            }
+            if (strcmp(argv[cnt], "--output-simulation-time") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "--output-simulation-time <file_name>,<model_id>";
+                string tmp = argv[cnt];
+                size_t pos = tmp.find(',');
+                if (pos != std::string::npos) {
+                    params.outputfile_runtime = tmp.substr(0, pos);
+                    params.model_id = tmp.substr(pos+1, tmp.length()-pos-1);
+                }
+                else
+                    outError("--output-simulation-time <file_name>,<model_id>");
             }
             if (strcmp(argv[cnt], "--simulation-thresh") == 0) {
                 cnt++;
