@@ -276,9 +276,9 @@ protected:
     void rootTree();
     
     /**
-        compute the simulation threshold to switch between Rate matrix and Probability matrix
+        compute the switching param to switch between Rate matrix and Probability matrix
     */
-    void computeSimThresh(int seq_length);
+    void computeSwitchingParam(int seq_length);
     
     /**
         change state of sites due to Error model
