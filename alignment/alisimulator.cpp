@@ -2189,22 +2189,14 @@ void AliSimulator::computeSwitchingParam(int seq_length)
 {
     // don't re-set the switching param if the user has specified it
     if (params->original_params.find("--simulation-thresh") == std::string::npos) {
-        // init lamda and min_sub_per_seq for simulations with continuous rate heterogeneity
-        double lamda = 0.00021923140236940905;
-        int min_sub_per_seq = 7;
-        // update lamda and min_sub_per_seq for other simulations
+        // init 'a' with continuous rate heterogeneity
+        double a = 13.3073605;
+        // update 'a' for other simulations
         if (!tree->getModelFactory()->is_continuous_gamma)
-        {
-            lamda = 0.00021644404499953512;
-            min_sub_per_seq = 1;
-        }
+            a = 2.226224503;
         
         // compute the switching param
-        // only apply the probability density function of the exponentialdistribution if seq_length >= 1000
-        if (seq_length >= 1000)
-            params->alisim_simulation_thresh = lamda*exp(-lamda*(seq_length-1000)) + min_sub_per_seq*pow(10,-log10(seq_length));
-        else
-            params->alisim_simulation_thresh = min_sub_per_seq*pow(10,-log10(seq_length));
+        params->alisim_simulation_thresh = a/seq_length;
     }
 }
 
