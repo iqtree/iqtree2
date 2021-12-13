@@ -105,22 +105,6 @@ inline void progressLocalDone(progress_display_ptr& progress,
         progress = nullptr;
     }
 }
-
-#else
-typedef double  progress_display;
-typedef double* progress_display_ptr;
-inline void progressLocal(bool wantProgress, double workToDo,
-                          const char* description, const char* verb,
-                          const char* noun, progress_display_ptr& progress,
-                          progress_display_ptr& progress_here ) {}
-inline void progressHide(progress_display_ptr) {}
-inline void progressShow(progress_display_ptr) {}
-inline void progressDone(progress_display_ptr) {}
-inline void progressDelete(progress_display_ptr p) {}
-inline void progressLocalDone(progress_display_ptr& progress,
-                              progress_display_ptr& progress_here) {}
-#endif
-
 template <class S>
 void appendTimeDescription(double elapsed_time, S &s) {
     if (elapsed_time < 60.0) /* less than a minute */ {
@@ -128,7 +112,7 @@ void appendTimeDescription(double elapsed_time, S &s) {
         s << elapsed_time << " secs";
     }
     else {
-        int64_t seconds = (int)floor(elapsed_time);
+        int64_t seconds = static_cast<int>(floor(elapsed_time));
         int64_t minutes = seconds / 60;
         int64_t hours   = minutes / 60;
         int64_t days    = hours / 24;
@@ -149,6 +133,20 @@ void appendTimeDescription(double elapsed_time, S &s) {
           << seconds << " sec";
     }
 }
+#else
+typedef double  progress_display;
+typedef double* progress_display_ptr;
+inline void progressLocal(bool wantProgress, double workToDo,
+                          const char* description, const char* verb,
+                          const char* noun, progress_display_ptr& progress,
+                          progress_display_ptr& progress_here ) {}
+inline void progressHide(progress_display_ptr) {}
+inline void progressShow(progress_display_ptr) {}
+inline void progressDone(progress_display_ptr) {}
+inline void progressDelete(progress_display_ptr p) {}
+inline void progressLocalDone(progress_display_ptr& progress,
+                              progress_display_ptr& progress_here) {}
+#endif
 
 
 #endif /* progress_h */

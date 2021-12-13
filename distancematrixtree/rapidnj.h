@@ -96,6 +96,7 @@ protected:
     using super::silent;
     using super::finishClustering;
     using super::clusterDuplicates;
+    using super::prepareToConstructTree;
     //
     //Note 1: mutable members are calculated repeatedly, from
     //        others, in member functions marked as const.
@@ -175,6 +176,9 @@ public:
         return "Rapid" + super::getAlgorithmName();
     }
     virtual bool constructTree() {
+        //0. Ensure variance matrix is initialized
+        prepareToConstructTree();
+
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(row_count);
         clusterTotals.resize(row_count);

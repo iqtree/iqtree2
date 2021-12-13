@@ -298,6 +298,7 @@ public:
     bool isMatrixToBeLoaded        = true;  //set to false if caller passes -no-matrix
     bool isTreeConstructionSkipped = false;
     bool beVerbose                 = false;
+    bool showBar                   = false;
 
     ArgumentMap arg_map;
 
@@ -309,6 +310,7 @@ public:
         isBannerSuppressed        = false;
         threadCount               = 0;
         beSilent                  = false;
+        showBar                   = false;
         isMatrixToBeLoaded        = true;  //set to false if caller passes -no-matrix
         isTreeConstructionSkipped = false;
         initializeArgumentMap();
@@ -349,6 +351,7 @@ public:
         arg_map << new SwitchArgument("-num",         numbered_names,           true);
         arg_map << new SwitchArgument("-not-dna",     is_DNA,                   false);
         arg_map << new SwitchArgument("-v",           beVerbose,                true);
+        arg_map << new SwitchArgument("-bar",         showBar,                  true);
     }
 
     void processCommandLineOptions(int argc, char* argv[]) {
@@ -451,9 +454,6 @@ public:
 int obeyCommandLineOptions(DecentTreeOptions& options);
 
 int main(int argc, char* argv[]) {
-    #if USE_PROGRESS_DISPLAY
-    progress_display::setProgressDisplay(true); //Displaying progress bars
-    #endif
     DecentTreeOptions options;
 
     options.processCommandLineOptions(argc, argv);
@@ -474,6 +474,11 @@ int main(int argc, char* argv[]) {
 }
 
 int obeyCommandLineOptions(DecentTreeOptions& options) {
+
+    #if USE_PROGRESS_DISPLAY
+    progress_display::setProgressDisplay(options.showBar);
+    #endif
+
     StartTree::BuilderInterface* algorithm = 
         StartTree::Factory::getTreeBuilderByName(options.algorithmName);
     if (!options.isTreeConstructionSkipped) {

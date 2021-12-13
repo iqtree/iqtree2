@@ -50,7 +50,7 @@
 //
 
 #pragma  once
-#include "distancematrixtree/upgma.h"
+#include "upgma.h"
 #include "utils/gzstream.h"
 #include "utils/timeutil.h"
 #ifndef  fancy_rapid_nj_h
@@ -251,7 +251,10 @@ public:
 
         return true;
     }
+    virtual void prepareToConstructTree() {
+    }
     virtual bool constructTree() {
+        prepareToConstructTree();
         if (original_rank<3) {
             return false;
         }
@@ -967,10 +970,12 @@ public:
         if (dataStart<blockStop) {
             best_hc_vector.store(blockHCDist);
             best_ix_vector.store(blockIndex);
+            bool found = false;
             for (int i=0; i<block_size; ++i) {
                 if (blockHCDist[i] < best_hc_dist ) {
                     best_hc_dist = blockHCDist[i];
                     best_x       = static_cast<int>(blockIndex[i]);
+                    found        = true;
                 }
             }
         }

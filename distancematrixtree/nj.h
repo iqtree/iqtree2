@@ -305,13 +305,11 @@ public:
     virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) override
     {
         bool rc = super::loadMatrixFromFile(distanceMatrixFilePath);
-        variance = *this;
         return rc;
     }
     virtual bool loadMatrix(const StrVector& names, 
                             const double* matrix) override {
         bool rc = super::loadMatrix(names, matrix);
-        variance = *this;
         return rc;
     }
     inline T chooseLambda(intptr_t a, intptr_t b, T Vab) {
@@ -384,6 +382,9 @@ public:
         rowToCluster[b] = rowToCluster[row_count-1];
         removeRowAndColumn(b);
         variance.removeRowAndColumn(b); //BIO
+    }
+    virtual void prepareToConstructTree() override {
+        variance = *this;
     }
 };
 

@@ -193,7 +193,12 @@ public:
         calculateRowTotals();
         return true;
     }
+    virtual void prepareToConstructTree() {
+        //RapidNJ implementations use this to ensure that their
+        //variance matrix is properly initialized.
+    }
     virtual bool constructTree() {
+        prepareToConstructTree();
         clusterDuplicates();
 
         Position<T> best;
