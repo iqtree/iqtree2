@@ -344,7 +344,6 @@ void run_terrace_check(Terrace *terrace,Params &params){
             cout<<"Checking query tree "<<count<<"..."<<"DOES NOT lie on the stand!"<<"\n";
             trees_off.push_back(tree);
         }
-        delete tree;
         
         char ch;
         (in) >> ch;
