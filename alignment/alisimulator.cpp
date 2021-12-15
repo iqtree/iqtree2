@@ -146,7 +146,7 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             
             // extract num_sites from partition
             IntVector siteIDs;
-            current_tree->aln->extractSiteID(current_tree->aln, current_tree->aln->position_spec.c_str(), siteIDs, -1, true);
+            extractSiteID(current_tree->aln, current_tree->aln->position_spec.c_str(), siteIDs, false, -1, true);
             current_tree->aln->setExpectedNumSites(siteIDs.size());
             
             // initialize the model for the current partition

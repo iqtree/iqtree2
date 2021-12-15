@@ -2584,6 +2584,8 @@ int main(int argc, char *argv[]) {
             case CT_NONE: break;
             /**MINH ANH: for some comparison*/
             case COMPARE: compare(Params::getInstance()); break; //MA
+            case CT_ROOTSTRAP:
+                runRootstrap(Params::getInstance()); break;
         }
     } else if (Params::getInstance().split_threshold_str) {
         // for Ricardo: keep those splits from input tree above given support threshold

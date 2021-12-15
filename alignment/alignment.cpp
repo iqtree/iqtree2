@@ -3588,11 +3588,12 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     step_size = d;
 }
 
-void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id, bool test_num_sites) {
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, bool nt2aa, int max_id, bool test_num_sites ) {
     if (max_id < aln->getNSite()) max_id = aln->getNSite();
     int i;
     char *str = (char*)spec;
     int nchars = 0;
+    bool converted_to_codon_or_aa = (aln->seq_type == SEQ_CODON || nt2aa);
     try {
         for (; *str != 0; ) {
             int lower, upper, step;
@@ -3603,7 +3604,7 @@ void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_
             lower--;
             upper--;
             nchars += (upper-lower+1)/step;
-            if (aln->seq_type == SEQ_CODON) {
+            if (converted_to_codon_or_aa) {
                 lower /= 3;
                 upper /= 3;
             }
@@ -3616,7 +3617,7 @@ void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_
             if (*str == ',' || *str == ' ') str++;
             //else break;
         }
-        if (aln->seq_type == SEQ_CODON && nchars % 3 != 0)
+        if (converted_to_codon_or_aa && nchars % 3 != 0)
             throw (string)"Range " + spec + " length is not multiple of 3 (necessary for codon data)";
     } catch (const char* err) {
         outError(err);
@@ -3625,9 +3626,9 @@ void Alignment::extractSiteID(Alignment *aln, const char* spec, IntVector &site_
     }
 }
 
-void Alignment::extractSites(Alignment *aln, const char* spec) {
+void Alignment::extractSites(Alignment *aln, const char* spec, bool nt2aa) {
     IntVector site_id;
-    extractSiteID(aln, spec, site_id);
+    extractSiteID(aln, spec, site_id, nt2aa);
     extractSites(aln, site_id);
 }
 

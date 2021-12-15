@@ -637,8 +637,9 @@ public:
             extract a sub-set of sites
             @param aln original input alignment
             @param spec specification of positions, e.g. "1-100,101-200\2"
+            @return the modified site spec if nt2aa is true, otherwise same as spec
      */
-    void extractSites(Alignment *aln, const char* spec);
+    void extractSites(Alignment *aln, const char* spec, bool nt2aa = false);
 
     /**
         convert a DNA alignment into codon or AA alignment
@@ -998,8 +999,6 @@ public:
      */
     void initCodon(char *gene_code_id);
     
-    void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, int max_id=0, bool test_num_sites=false);
-    
     /**
      * set the expected_num_sites (for alisim)
      * @param the expected_num_sites
@@ -1036,6 +1035,9 @@ protected:
 
 };
 
+
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, bool nt2aa = false, int max_id=0, bool test_num_sites=false);
+
 /**
  create a new Alignment object with possibility of comma-separated file names
  @param aln_file alignment file name, can be a comma-separated list of file names
@@ -1044,5 +1046,6 @@ protected:
  @param model_name model name
  */
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
+
 
 #endif

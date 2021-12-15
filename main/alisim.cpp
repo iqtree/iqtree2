@@ -566,7 +566,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 
                 const char* info_spec = info_spec_str.c_str();
                 IntVector site_ids;
-                current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, total_expected_num_states);
+                extractSiteID(current_tree->aln, info_spec, site_ids, false, total_expected_num_states);
 
                 // extract the ancestral sequence for the current partition from the full ancestral_sequence
                 vector<short int> ancestral_sequence_current_tree;
@@ -816,7 +816,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                         // extract site_ids of the partition
                         const char* info_spec = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::position_spec.c_str();
                         IntVector site_ids;
-                        current_tree->aln->extractSiteID(current_tree->aln, info_spec, site_ids, total_expected_num_states);
+                        extractSiteID(current_tree->aln, info_spec, site_ids, false, total_expected_num_states);
                         
                         // copy alignment from the current tree to the super_tree
                         copySequencesToSuperTree(site_ids, total_expected_num_states, current_tree, current_tree->aln->STATE_UNKNOWN, super_tree->root, super_tree->root);

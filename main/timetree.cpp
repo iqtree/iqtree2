@@ -79,6 +79,7 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
             // error checking, make sure is date is valid
             if (date.empty())
                 throw line_out + "date is empty";
+            if (date.substr(0,2) != "NA")
             try {
                 int end_pos;
                 convert_double(date.c_str(), end_pos);

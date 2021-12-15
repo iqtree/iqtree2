@@ -468,6 +468,18 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     if (brtype & WT_BR_LEN_SHORT) prec = 6;
     if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
     out.precision(prec);
+    
+    if (brtype & WT_BR_LEN) {
+        if (brtype & WT_BR_LEN_FIXED_WIDTH)
+            out << ":" << fixed << length;
+        else
+            out << ":" << length;
+    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
+    	if (print_slash)
+    		out << "/";
+        out << length;
+    }
+
     if ((brtype & WT_BR_ATTR) && !length_nei->attributes.empty()) {
         // print branch attributes
         out << "[&";
@@ -479,17 +491,6 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
             first = false;
         }
         out << "]";
-    }
-    
-    if (brtype & WT_BR_LEN) {
-        if (brtype & WT_BR_LEN_FIXED_WIDTH)
-            out << ":" << fixed << length;
-        else
-            out << ":" << length;
-    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
-    	if (print_slash)
-    		out << "/";
-        out << length;
     }
 }
 
@@ -1490,6 +1491,32 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
         resp->addTaxon(node->id);
 }
 
+void MTree::convertSplits(SplitGraph &sg, Split *resp, BranchVector *branches, Node *node, Node *dad) {
+    if (!node) node = root;
+    ASSERT(resp->getNTaxa() == leafNum);
+    bool has_child = false;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        //vector<int> taxa;
+        //getTaxaID((*it)->node, node, taxa);
+
+        Split *sp = new Split(leafNum, (*it)->length);
+        convertSplits(sg, sp, branches, (*it)->node, node);
+        *resp += *sp;
+        if (sp->shouldInvert())
+            sp->invert();
+         /* ignore nodes with degree of 2 because such split will be added before */
+        if (node->degree() != 2) {
+            sg.push_back(sp);
+            if (branches) {
+                branches->push_back(make_pair(node, (*it)->node));
+            }
+        }
+        has_child = true;
+    }
+    if (!has_child)
+        resp->addTaxon(node->id);
+}
+
 void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
     if (!sg.taxa) {
         sg.taxa = new NxsTaxaBlock();
@@ -1638,21 +1665,25 @@ bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*>
         }
     }
     // all presence or absence
-    if (presence == node->neighbors.size()-1)
-        return true;
     if (presence == 0)
         return false;
     // inbetween: detect it!
-    res.first = node;
-    res.second = target;
-    if (target != node->neighbors[0]) {
-        // move target into the first neighbor
-        FOR_NEIGHBOR_IT(node, NULL, it)
-        if ((*it) == target) {
-            (*it) = node->neighbors[0];
-            node->neighbors[0] = target;
-            break;
+    if (!res.first) {
+        res.first = node;
+        res.second = target;
+        if (target != node->neighbors[0]) {
+            // move target into the first neighbor
+            FOR_NEIGHBOR_IT(node, NULL, it)
+            if ((*it) == target) {
+                (*it) = node->neighbors[0];
+                node->neighbors[0] = target;
+                break;
+            }
         }
+    }
+
+    if (presence == node->neighbors.size()-1) {
+        return true;
     }
     return false;
 }

@@ -94,9 +94,11 @@ void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqT
  * @param info (OUT) output information
  * @param distinct_ids IDs of distinct trees
  */
+void evaluateTrees(istream &in, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
+
 void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
 
-void evaluateTrees(string treeset_file, Params &params, IQTree *tree);
 
+void printTreeTestResults(vector<TreeInfo> &info, IntVector &distinct_ids, IntVector &branch_ids, string out_file);
 
 #endif // TREETESTING_H_

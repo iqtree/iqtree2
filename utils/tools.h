@@ -411,7 +411,8 @@ extern VerboseMode verbose_mode;
  */
 enum ConsensusType {
     CT_NONE, CT_CONSENSUS_TREE, CT_CONSENSUS_NETWORK,
-    CT_ASSIGN_SUPPORT, CT_ASSIGN_SUPPORT_EXTENDED, COMPARE
+    CT_ASSIGN_SUPPORT, CT_ASSIGN_SUPPORT_EXTENDED, COMPARE,
+    CT_ROOTSTRAP
 };
 
 enum TestType {
@@ -2268,6 +2269,9 @@ public:
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
+    
+    /** TRUE to print checkpoints to 1.ckp.gz, 2.ckp.gz,... */
+    bool print_all_checkpoints;
 
     /** control output files to be written
      * OUT_LOG
