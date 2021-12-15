@@ -448,6 +448,9 @@ protected:
     /** dumping time interval */
     double dump_interval;
     
+    /** count number of dumping times */
+    int dump_count;
+    
     /** true (default) to compress checkpoint file, false: no compression */
     bool compression;
     

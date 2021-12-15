@@ -8,7 +8,7 @@ pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
-bionj.cpp bionj2.cpp
+bionj.cpp bionj2.cpp bionj2.h
 progress.cpp progress.h
 timeutil.h hammingdistance.h
 operatingsystem.cpp operatingsystem.h

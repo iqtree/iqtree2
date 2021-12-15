@@ -55,7 +55,7 @@
 #
 #
 
-cmake_minimum_required(VERSION 2.8.10 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 set(GCC_MIN_VERSION "4.8")
@@ -82,7 +82,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH ".0")
+set (iqtree_VERSION_PATCH ".0-beta")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 

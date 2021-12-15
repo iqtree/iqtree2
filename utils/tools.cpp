@@ -1355,6 +1355,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
+    params.print_all_checkpoints = false;
     params.suppress_output_flags = 0;
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
@@ -1931,6 +1932,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "-sup2") == 0) {
                 outError("Deprecated -sup2 option, please use --gcf --tree FILE");
+            }
+            
+            if (strcmp(argv[cnt], "--rootstrap") == 0) {
+                params.consensus_type = CT_ROOTSTRAP;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --rootstrap <user_trees_file>";
+                params.treeset_file = argv[cnt];
+                continue;
             }
             
             if (strcmp(argv[cnt], "--gcf") == 0) {
@@ -4894,6 +4904,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 params.min_iterations = 0;
                 params.stop_condition = SC_FIXED_ITERATION;
+                continue;
             }
                 
             if (strcmp(argv[cnt], "-g") == 0) {
@@ -4995,6 +5006,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--all-checkpoint") == 0) {
+                params.print_all_checkpoints = true;
+                continue;
+            }
             
 			if (strcmp(argv[cnt], "--no-log") == 0) {
 				params.suppress_output_flags |= OUT_LOG;

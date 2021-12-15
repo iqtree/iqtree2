@@ -107,4 +107,7 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
 
 void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree);
 
+/** compute rootstrap for a user defined tree from a set of trees */
+void runRootstrap(Params &params);
+
 #endif

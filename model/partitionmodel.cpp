@@ -219,6 +219,16 @@ void PartitionModel::restoreCheckpoint() {
     endCheckpoint();
 }
 
+bool PartitionModel::isReversible() {
+    // check that all sub-models must be reversible
+    PhyloSuperTree *super_tree = (PhyloSuperTree*)site_rate->getTree();
+    for (auto tree : *super_tree) {
+        if (!tree->getModelFactory()->isReversible())
+            return false; // at least one sub-model is non-reversible
+    }
+    return true;
+}
+
 int PartitionModel::getNParameters(int brlen_type) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
 	int df = 0;

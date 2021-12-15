@@ -109,6 +109,13 @@ public:
 
 	virtual void writeInfo(ostream &out) {}
 
+    /**
+            return true if model is reversible, false otherwise
+     */
+    virtual bool isReversible() {
+        return model->isReversible();
+    }
+    
 	/**
 		Start to store transition matrix for efficiency
 	*/

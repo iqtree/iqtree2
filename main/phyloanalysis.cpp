@@ -892,6 +892,13 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         if (!tree.isSuperTreeUnlinked())
             cout << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
              << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
+        if (tree.rooted) {
+            cout << "  ML tree with rootstrap:        " << params.out_prefix << ".rootstrap.nex" << endl;
+
+        }
+        if (params.root_test) {
+            cout << "  Root testing results:          " << params.out_prefix << ".roottest.csv" << endl;
+        }
         if (params.print_ufboot_trees)
         cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
 
@@ -2646,7 +2653,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
-        iqtree->testRootPosition(true, params.loglh_epsilon);
+        string out_file = (string)params.out_prefix + ".roottest.trees";
+        IntVector branch_ids;
+        iqtree->testRootPosition(true, params.loglh_epsilon, branch_ids, out_file);
+        vector<TreeInfo> info;
+        IntVector distinct_ids;
+        evaluateTrees(out_file, params, iqtree, info, distinct_ids);
+        out_file = (string)params.out_prefix + ".roottest.csv";
+        printTreeTestResults(info, distinct_ids, branch_ids, out_file);
     }
     
     /****** perform SH-aLRT test ******************/
@@ -2694,6 +2708,24 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (params.gbo_replicates && params.online_bootstrap && params.print_ufboot_trees)
         iqtree->writeUFBootTrees(params);
 
+    if (iqtree->rooted && params.gbo_replicates && params.online_bootstrap) {
+        cout << "Computing rootstrap supports..." << endl;
+        string saved = iqtree->getTreeString();
+        MTreeSet trees;
+        trees.init(iqtree->boot_trees, iqtree->rooted);
+        iqtree->computeRootstrap(trees, true);
+        iqtree->readTreeString(saved);
+    }
+
+    /*
+    if (!iqtree->rooted && params.root && params.gbo_replicates && params.online_bootstrap) {
+        cout << "Computing rootstrap supports using outgroup..." << endl;
+        string saved = iqtree->getTreeString();
+        iqtree->computeRootstrapUnrooted(iqtree->boot_trees, params.root);
+        iqtree->readTreeString(saved);
+    }
+    */
+    
     if (params.gbo_replicates && params.online_bootstrap && !iqtree->isSuperTreeUnlinked()) {
         
         cout << endl << "Computing " << RESAMPLE_NAME << " consensus tree..." << endl;
@@ -3295,7 +3327,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
     if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
 
         cout << endl << "===> COMPUTE CONSENSUS TREE FROM " << params.num_bootstrap_samples
-            << RESAMPLE_NAME_UPPER << " TREES" << endl << endl;
+            << " " << RESAMPLE_NAME_UPPER << " TREES" << endl << endl;
         string root_name = (params.root) ? params.root : alignment->getSeqName(0);
         const char* saved_root = params.root;
         params.root = root_name.c_str();
@@ -3330,7 +3362,15 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
                     treefile_name.c_str(), false, treefile_name.c_str(),
                     params.out_prefix, ext_tree, NULL, &params);
             tree->copyTree(&ext_tree);
+            if (tree->rooted) {
+                cout << "Computing rootstrap supports from " << params.num_bootstrap_samples << " bootstrap trees..." << endl;
+                string saved = tree->getTreeString();
+                MTreeSet trees(boottrees_name.c_str(), tree->rooted, 0, params.num_bootstrap_samples);
+                tree->computeRootstrap(trees, false);
+                tree->readTreeString(saved);
+            }
             reportPhyloAnalysis(params, *tree, *model_info);
+
         }
     } else if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
         int mi = params.min_iterations;
@@ -3372,7 +3412,7 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
     cout << "Non-parametric " << RESAMPLE_NAME << " results written to:" << endl;
     if (params.print_bootaln)
         cout << RESAMPLE_NAME_I << " alignments:     " << params.out_prefix << ".bootaln" << endl;
-    cout << RESAMPLE_NAME_I << " trees:          " << params.out_prefix << ".boottrees" << endl;
+    cout << "  " << RESAMPLE_NAME_I << " trees:          " << params.out_prefix << ".boottrees" << endl;
     if (params.consensus_type == CT_CONSENSUS_TREE)
         cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
     cout << endl;
@@ -4576,4 +4616,50 @@ void computeConsensusNetwork(const char *input_trees, int burnin, int max_count,
         cout << "Non-trivial split supports printed to star-dot file " << out_file << endl;
     }
 
+}
+
+void runRootstrap(Params &params) {
+    if (!params.user_file)
+        outError("No target tree file provided");
+    if (params.treeset_file.empty())
+        outError("No tree set file provided");
+    IQTree tree;
+    tree.setParams(&params);
+
+    cout << "Reading tree " << params.user_file << " ..." << endl;
+    bool rooted = params.is_rooted;
+    tree.readTree(params.user_file, rooted);
+
+    cout << ((tree.rooted) ? "rooted" : "un-rooted") << " tree with "
+        << tree.leafNum - tree.rooted << " taxa and " << tree.branchNum << " branches" << endl;
+    
+    if (!tree.rooted && !params.root)
+        outError("For unrooted tree please provide an outgroup via -o option");
+
+    
+    // move the node name into branch name to avoid mis-labelling
+    BranchVector branches;
+    tree.getInnerBranches(branches);
+    BranchVector::iterator brit;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch1 = brit->second->findNeighbor(brit->first);
+        Neighbor *branch2 = brit->first->findNeighbor(brit->second);
+        string label = brit->second->name;
+        if (!label.empty()) {
+            PUT_ATTR(branch1, label);
+            PUT_ATTR(branch2, label);
+            brit->second->name = "";
+        }
+    }
+    
+    rooted = params.is_rooted;
+    MTreeSet trees(params.treeset_file.c_str(), rooted, params.tree_burnin, params.tree_max_count);
+    double start_time = getRealTime();
+    cout << "Computing rootstrap supports..." << endl;
+    if (tree.rooted)
+        tree.computeRootstrap(trees, false);
+    else
+        tree.computeRootstrapUnrooted(trees, params.root, false);
+    cout << getRealTime() - start_time << " sec" << endl;
+    
 }
