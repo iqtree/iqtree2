@@ -1246,7 +1246,7 @@ void AliSimulator::checkBaseFrequenciesDNAModels(IQTree* tree, string model_name
 /**
     extract the maximum length of taxa names
 */
-short int AliSimulator::extractMaxTaxaNameLength()
+void AliSimulator::extractMaxTaxaNameLength()
 {
     if (tree && tree->aln)
     {
@@ -1670,7 +1670,7 @@ string AliSimulator::exportSequenceWithGaps(Node *node, int sequence_length, int
 /**
     extract array of substitution rates
 */
-double AliSimulator::extractRatesJMatrix(ModelSubst *model)
+void AliSimulator::extractRatesJMatrix(ModelSubst *model)
 {
     // get num_mixture_models
     int num_mixture_models = model->getNMixtures();

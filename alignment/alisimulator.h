@@ -150,7 +150,7 @@ protected:
     /**
         extract the maximum length of taxa names
     */
-    short int extractMaxTaxaNameLength();
+    void extractMaxTaxaNameLength();
     
     /**
         selecting & permuting sites (FunDi models)
@@ -230,7 +230,7 @@ protected:
     /**
         extract array of substitution rates and Jmatrix
     */
-    double extractRatesJMatrix(ModelSubst *model);
+    void extractRatesJMatrix(ModelSubst *model);
     
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
