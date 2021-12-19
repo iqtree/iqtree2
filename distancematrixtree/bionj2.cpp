@@ -75,10 +75,10 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     ADVERTISE(RapidNJ,            defaultName,  "Rapid Neighbour Joining"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 
-    ADVERTISE(FancyNJMatrix<NJFloat>,"BROKEN",  "Rapid Neighbour Joining (Broken Version)"
+    ADVERTISE(FancyNJMatrix<NJFloat>,"ONJ-R",   "Rapid Neighbour Joining (a rival version)"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 
-    ADVERTISE(VectorizedFancyNJMatrix<NJFloat>, "BROKEN-V",  "Rapid Neighbour Joining (Broken Version)"
+    ADVERTISE(VectorizedFancyNJMatrix<NJFloat>, "ONJ-R-V",  "Rapid Neighbour Joining (a rival version)"
                                                 " (Simonsen, Mailund, Pedersen [2011]) (Vectorized)");
 
 #ifdef USE_VECTORCLASS_LIBRARY
