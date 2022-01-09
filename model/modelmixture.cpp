@@ -1821,8 +1821,8 @@ double ModelMixture::optimizeWeights() {
             new_prop[i] = 0.0;
         }
         for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
-            double *this_lk_cat = lh_cat + ptn*nmix;
-            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            double* this_lk_cat = lh_cat + ptn*nmix;
+            double  lk_ptn      = phylo_tree->ptn_invar[ptn];
             for (size_t c = 0; c < nmix; ++c) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1924,8 +1924,8 @@ void ModelMixture::optimizeEStep(double* new_prop) {
     int      nmix = static_cast<int>(models.size());
     auto   lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
     for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
-        double *this_lk_cat = lh_cat + ptn*nmix;
-        double lk_ptn = phylo_tree->ptn_invar[ptn];
+        double* this_lk_cat = lh_cat + ptn*nmix;
+        double  lk_ptn      = phylo_tree->ptn_invar[ptn];
         for (intptr_t c = 0; c < nmix; ++c) {
             lk_ptn += this_lk_cat[c];
         }

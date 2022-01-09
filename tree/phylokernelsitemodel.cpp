@@ -509,10 +509,11 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 #pragma omp parallel for reduction(+: my_df, my_ddf) private(ptn, i, c) schedule(static)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
-		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-		double *theta = theta_all + ptn*block;
-        
-        double *eval = models->at(ptn)->getEigenvalues();
+		double  lh_ptn = ptn_invar[ptn];
+        double  df_ptn = 0.0;
+        double  ddf_ptn = 0.0;
+		double* theta = theta_all + ptn*block;
+        double* eval = models->at(ptn)->getEigenvalues();
         
         for (c = 0; c < ncat; c++) {
             double lh_cat = 0.0, df_cat = 0.0, ddf_cat = 0.0;
@@ -588,7 +589,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double  lh_ptn = ptn_invar[ptn];
 			double* lh_cat = _pattern_lh_cat + ptn*ncat;
-			double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_dad  = dad_branch->partial_lh + ptn*block;
 			double* partial_lh_node = tip_partial_lh_node + ptn*nstates;
             double* eval   = models->at(ptn)->getEigenvalues();
 
@@ -616,11 +617,11 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
-			double lh_ptn  = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-			double *partial_lh_dad  = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_node = node_branch->partial_lh + ptn*block;
-            double *eval = models->at(ptn)->getEigenvalues();
+			double  lh_ptn = ptn_invar[ptn];
+			double* lh_cat = _pattern_lh_cat + ptn*ncat;
+			double* partial_lh_dad  = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_node = node_branch->partial_lh + ptn*block;
+            double* eval = models->at(ptn)->getEigenvalues();
 
 			for (c = 0; c < ncat; c++) {
                 double len  = rate_model->getRate(c)*dad_branch->length;
@@ -691,10 +692,9 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
-		double lh_ptn = ptn_invar[ptn];
-		double *theta = theta_all + ptn*block;
-        
-        double *eval = models->at(ptn)->getEigenvalues();
+		double  lh_ptn = ptn_invar[ptn];
+		double* theta  = theta_all + ptn*block;        
+        double* eval   = models->at(ptn)->getEigenvalues();
         
         for (c = 0; c < ncat; c++) {
             double lh_cat = 0.0;

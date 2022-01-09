@@ -496,7 +496,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
             }
         }
 
-        VectorClass inv_lh_ptn = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+        VectorClass inv_lh_ptn = horizontal_add(lh_ptn) 
+                               + VectorClass().load_a(&ptn_invar[ptn]);
         inv_lh_ptn = unit / abs(inv_lh_ptn);
         VectorClass freq;
         freq.load_a(&ptn_freq[ptn]);
@@ -606,7 +607,8 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
 
             VectorClass freq;
             freq.load_a(&ptn_freq[ptn]);
-            VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+            VectorClass lh_ptn_sum = horizontal_add(lh_ptn) 
+                                   + VectorClass().load_a(&ptn_invar[ptn]);
             lh_ptn_sum = log(abs(lh_ptn_sum));
             lh_ptn_sum.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP
@@ -664,7 +666,8 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
 
             VectorClass freq;
             freq.load_a(&ptn_freq[ptn]);
-            VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+            VectorClass lh_ptn_sum = horizontal_add(lh_ptn) 
+                                   + VectorClass().load_a(&ptn_invar[ptn]);
             lh_ptn_sum = log(abs(lh_ptn_sum));
             lh_ptn_sum.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP
@@ -773,7 +776,8 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
 
         VectorClass freq;
         freq.load_a(&ptn_freq[ptn]);
-        VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+        VectorClass lh_ptn_sum = horizontal_add(lh_ptn) 
+                               + VectorClass().load_a(&ptn_invar[ptn]);
         lh_ptn_sum = log(abs(lh_ptn_sum));
         lh_ptn_sum.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP

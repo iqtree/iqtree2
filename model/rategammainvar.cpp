@@ -209,20 +209,28 @@ int RateGammaInvar::computePatternRates(DoubleVector& pattern_rates,
 
     double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
-		double sum_rate = 0.0;
-        double sum_lh   = phylo_tree->ptn_invar[i];
-		int    best     = 0;
-        double best_lh  = phylo_tree->ptn_invar[i];
+		double sum_rate   = 0.0;
+        double sum_lh     = phylo_tree->ptn_invar[i];
+		int    best       = 0;
+        double best_lh    = phylo_tree->ptn_invar[i];
+        double count_tied = 1.0;
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh   += lh_cat[c];
             //Todo: tiebreaking code is wrong, if there
             //is a three(or more)-way-tie.
-			if (lh_cat[c] > best_lh
-                || (lh_cat[c] == best_lh && 
-                    random_double()<0.5)) { // break tie at random
-                best    = c + 1;
-                best_lh = lh_cat[c];
+			if (lh_cat[c] > best_lh) {
+                best       = c + 1;
+                best_lh    = lh_cat[c];
+                count_tied = 1.0;
+            }
+            else if (lh_cat[c] == best_lh) {
+                count_tied += 1.0;
+                if (random_double()*count_tied<1.0) { 
+                    // break tie at random
+                    best    = c + 1;
+                    best_lh = lh_cat[c];
+                }
             }
 		}
 		pattern_rates[i] = sum_rate / sum_lh;

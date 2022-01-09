@@ -852,8 +852,9 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
             theta += block*VCSIZE;
 
             // ptn_invar[ptn] is not aligned
-            lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
-            df_ptn = horizontal_add(vc_df);
+            lh_ptn  = horizontal_add(vc_ptn) 
+                    + VectorClass().load(&ptn_invar[ptn]);
+            df_ptn  = horizontal_add(vc_df);
             ddf_ptn = horizontal_add(vc_ddf);
 
         }

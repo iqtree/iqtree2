@@ -88,8 +88,6 @@ std::string RateInvar::getNameParams() const {
 
 double RateInvar::computeFunction(double p_invar_value) {
 	p_invar = p_invar_value;
-	// fix bug: computeTip... will update ptn_invar vector
-//	phylo_tree->computePtnInvar();
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }

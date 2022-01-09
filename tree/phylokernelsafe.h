@@ -316,8 +316,9 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
                 if (lh_max < SCALING_THRESHOLD && lh_max != 0.0) {
                     if (ptn_invar[ptn] == 0.0) {
                         // now do the likelihood scaling
-                        for (i = 0; i < nstates; i++)
+                        for (i = 0; i < nstates; i++) {
                             partial_lh[i] *= SCALING_THRESHOLD_INVER;
+                        }
                         scale_dad[c] += 1;
                     }
                 }
@@ -470,7 +471,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 				}
                 // check if one should scale partial likelihoods
                 double lh_max = horizontal_max(vc_max);
-                if (lh_max < SCALING_THRESHOLD && ptn_invar[ptn] == 0.0 && lh_max != 0.0) {
+                if (lh_max < SCALING_THRESHOLD && 
+                    ptn_invar[ptn] == 0.0 && lh_max != 0.0) {
                     // now do the likelihood scaling
                     VectorClass scale_thres(SCALING_THRESHOLD_INVER);
                     for (i = 0; i < block; i+=VCSIZE) {
@@ -546,7 +548,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 				}
                 // check if one should scale partial likelihoods
                 double lh_max = horizontal_max(vc_max);
-                if (lh_max < SCALING_THRESHOLD && ptn_invar[ptn] == 0.0 && lh_max != 0.0) {
+                if (lh_max < SCALING_THRESHOLD && 
+                    ptn_invar[ptn] == 0.0 && lh_max != 0.0) {
                     // now do the likelihood scaling
                     VectorClass scale_thres(SCALING_THRESHOLD_INVER);
                     for (i = 0; i < block; i+=VCSIZE) {
@@ -759,7 +762,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 				vc_ddf[j] = mul_add(vc_theta[j], vc_val2[i], vc_ddf[j]);
 			}
 		}
-		lh_ptn     = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+		lh_ptn     = horizontal_add(vc_ptn) 
+                   + VectorClass().load_a(&ptn_invar[ptn]);
 		inv_lh_ptn = vc_unit / abs(lh_ptn);
 
 		vc_freq.load_a(&ptn_freq[ptn]);
@@ -825,8 +829,9 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
-			df_ptn = horizontal_add(vc_df);
+			lh_ptn  = horizontal_add(vc_ptn)
+                    + VectorClass().load(&ptn_invar[ptn]);
+			df_ptn  = horizontal_add(vc_df);
 			ddf_ptn = horizontal_add(vc_ddf);
 
 		}
@@ -1079,7 +1084,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                     }
 				}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) 
+                       + VectorClass().load(&ptn_invar[ptn]);
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;
@@ -1236,7 +1242,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                         vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
                 */
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) 
+                       + VectorClass().load(&ptn_invar[ptn]);
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;

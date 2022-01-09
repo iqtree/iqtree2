@@ -289,8 +289,8 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
-int RateGamma::computePatternRates(DoubleVector &pattern_rates,
-                                   IntVector &pattern_cat) {
+int RateGamma::computePatternRates(DoubleVector& pattern_rates,
+                                   IntVector&    pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
 	phylo_tree->computePatternLhCat(WSL_RATECAT);
@@ -302,29 +302,28 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates,
     double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (intptr_t i = 0; i < npattern; i++) {
 		double sum_rate = 0.0, sum_lh = 0.0;
-		int best = 0;
+		int    best       = 0;
+		double count_tied = 0.0;
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
-			sum_lh += lh_cat[c];
-			if (lh_cat[c] > lh_cat[best]
-                || (lh_cat[c] == lh_cat[best] && random_double()<0.5)) { // break tie at random
-                best = c;
+			sum_lh   += lh_cat[c];
+			if (c==0 || lh_cat[c] > lh_cat[best])
+			{
+				best       = c;
+				count_tied = 1.0;
+			}
+			else if (lh_cat[c] == lh_cat[best]) {
+				count_tied += 1.0;
+				if (random_double()*count_tied<1.0) {
+					best = c;
+				}                
 			}
 		}
 		pattern_rates[i] = sum_rate / sum_lh;
-		pattern_cat[i] = best;
-		lh_cat += ncategory;
+		pattern_cat[i]   = best;
+		lh_cat          += ncategory;
 	}
     return ncategory;
-
-//	pattern_rates.clear();
-//	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);
-//	pattern_cat.resize(npattern, 0);
-//	for (int i = 0; i < npattern; i++)
-//		for (int j = 1; j < ncategory; j++)
-//			if (fabs(rates[j] - ptn_rates[i]) < fabs(rates[pattern_cat[i]] - ptn_rates[i]))
-//				pattern_cat[i] = j;
-//	delete [] ptn_rates;
 }
 
 

@@ -105,15 +105,15 @@ void PhyloSuperTreePlen::normalizePartRate() {
 void PhyloSuperTreePlen::deleteAllPartialLh() {
 	for (iterator it = begin(); it != end(); ++it) {
 		// reset these pointers so that they are not deleted
-		(*it)->central_partial_lh = NULL;
-		(*it)->central_scale_num = NULL;
+		(*it)->central_partial_lh = nullptr;
+		(*it)->central_scale_num  = nullptr;
         (*it)->tree_buffers.forget();
-		(*it)->ptn_freq = NULL;
-		(*it)->ptn_freq_computed = false;
-        (*it)->ptn_freq_pars = NULL;
-		(*it)->ptn_invar = NULL;
-        (*it)->nni_partial_lh = NULL;
-        (*it)->nni_scale_num = NULL;
+		(*it)->ptn_freq           = nullptr;
+		(*it)->ptn_freq_computed  = false;
+        (*it)->ptn_freq_pars      = nullptr;
+		(*it)->ptn_invar          = nullptr;
+        (*it)->nni_partial_lh     = nullptr;
+        (*it)->nni_scale_num      = nullptr;
 	}
     PhyloTree::deleteAllPartialLh();
 }

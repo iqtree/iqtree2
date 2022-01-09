@@ -665,8 +665,9 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
-			df_ptn = horizontal_add(vc_df);
+			lh_ptn  = horizontal_add(vc_ptn) 
+			        + VectorClass().load(&ptn_invar[ptn]);
+			df_ptn  = horizontal_add(vc_df);
 			ddf_ptn = horizontal_add(vc_ddf);
 
 		}
@@ -879,7 +880,8 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 					}
 				}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) 
+				       + VectorClass().load(&ptn_invar[ptn]);
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;
@@ -979,7 +981,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 				// ptn_invar[ptn] is not aligned
 				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 				partial_lh_node += block*VCSIZE;
-				partial_lh_dad += block*VCSIZE;
+				partial_lh_dad  += block*VCSIZE;
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;
@@ -1146,7 +1148,8 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
                     vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) 
+			       + VectorClass().load(&ptn_invar[ptn]);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {

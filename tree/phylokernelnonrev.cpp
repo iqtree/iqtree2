@@ -492,8 +492,10 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
             for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
-                double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double  lh_ptn = ptn_invar[ptn];
+                double  df_ptn = 0.0;
+                double  ddf_ptn = 0.0;
+                double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 int state_dad;
                 state_dad = (ptn < orig_nptn) 
                             ? (aln->at(ptn))[dad->id] 
@@ -550,12 +552,14 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
             }
             for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
-                double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-                double *partial_lh_node = node_branch->partial_lh + ptn*block;
-                double *trans_mat_tmp = trans_mat;
-                double *trans_derv1_tmp = trans_derv1;
-                double *trans_derv2_tmp = trans_derv2;
+                double  lh_ptn = ptn_invar[ptn];
+                double  df_ptn = 0.0;
+                double  ddf_ptn = 0.0;
+                double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double* partial_lh_node = node_branch->partial_lh + ptn*block;
+                double* trans_mat_tmp = trans_mat;
+                double* trans_derv1_tmp = trans_derv1;
+                double* trans_derv2_tmp = trans_derv2;
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates; ++i) {
                         double lh_state = 0.0;
@@ -714,9 +718,9 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn++) {
-                double lh_ptn = ptn_invar[ptn];
-                double *lh_cat = _pattern_lh_cat + ptn*ncat;
-                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double  lh_ptn         = ptn_invar[ptn];
+                double* lh_cat         = _pattern_lh_cat + ptn*ncat;
+                double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 int state_dad;
                 if (dad == root) 
                     state_dad = 0;
@@ -765,11 +769,11 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn++) {
-                double lh_ptn = ptn_invar[ptn];
-                double *lh_cat = _pattern_lh_cat + ptn*ncat;
-                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-                double *partial_lh_node = node_branch->partial_lh + ptn*block;
-                double *trans_mat_tmp = trans_mat;
+                double  lh_ptn          = ptn_invar[ptn];
+                double* lh_cat          = _pattern_lh_cat + ptn*ncat;
+                double* partial_lh_dad  = dad_branch->partial_lh + ptn*block;
+                double* partial_lh_node = node_branch->partial_lh + ptn*block;
+                double* trans_mat_tmp   = trans_mat;
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates; i++) {
                         double lh_state = 0.0;

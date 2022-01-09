@@ -652,8 +652,9 @@ void PhyloTree::computePtnInvar() {
                 ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates+1;
                 for (x = 0; x < nstates; x++) {
-                    if ((cstate) & (1 << x))
+                    if ((cstate) & (1 << x)) {
                         ptn_invar[ptn] += state_freq[x];
+                    }
                 }
                 ptn_invar[ptn] *= p_invar;
             } else if (aln->seq_type == SeqType::SEQ_PROTEIN) {
@@ -1503,8 +1504,8 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for reduction(+: tree_lh, prob_const) schedule(static)
 #endif
     	for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-			double  lh_ptn = ptn_invar[ptn];
-            double* lh_cat = buffers._pattern_lh_cat + ptn*ncat_mix;
+			double  lh_ptn     = ptn_invar[ptn];
+            double* lh_cat     = buffers._pattern_lh_cat + ptn*ncat_mix;
             double* partial_lh_dad  = dad_branch->partial_lh  + ptn*block;
             double* partial_lh_node = node_branch->partial_lh + ptn*block;
             double* val_tmp    = val;
@@ -1571,9 +1572,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     	tree_lh -= aln->getNSite()*prob_const;
 		assert(!isnan(tree_lh) && !isinf(tree_lh));
     }
-
 	assert(!isnan(tree_lh) && !isinf(tree_lh));
-
     return tree_lh;
 }
 #endif
@@ -1600,7 +1599,7 @@ void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonre
     size_t   nstates = model->num_states;
 
     ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
-    ptn_ancestral_seq = aligned_alloc<int>(nptn);
+    ptn_ancestral_seq  = aligned_alloc<int>(nptn);
 }
 
 void PhyloTree::computeMarginalAncestralState
@@ -1685,7 +1684,6 @@ void PhyloTree::writeMarginalAncestralState
         }
         out << endl;
     }
-
 }
 
 void PhyloTree::endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
@@ -1876,7 +1874,6 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
     if (node->isLeaf()) {
         return;
     }
-    
     int num_leaves = 0;
     
     // recursive into subtree
@@ -2000,7 +1997,7 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
     // initialize L_y(i) and C_y(i)
 //    memset(dad_branch->partial_lh, 0, nptn*nstates*sizeof(double));
 
-    int *C_node = C + (node->id-leafNum)*nptn*nstates;
+    int* C_node = C + (node->id-leafNum)*nptn*nstates;
 
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double *lh_dad = dad_branch->partial_lh+ptn*nstates;
@@ -2063,8 +2060,8 @@ void PhyloTree::computeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
     intptr_t nptn    = aln->getNPattern();
     size_t   nstates = model->num_states;
 
-    int *C_node = C + (node->id-leafNum)*nptn*nstates;
-    int *ancestral_seqs_node = ancestral_seqs + (node->id-leafNum)*nptn; 
+    int* C_node = C + (node->id-leafNum)*nptn*nstates;
+    int* ancestral_seqs_node = ancestral_seqs + (node->id-leafNum)*nptn; 
     if (dad) {
         // at an internal node
         int *ancestral_seqs_dad = ancestral_seqs + (dad->id-leafNum)*nptn;

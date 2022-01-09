@@ -959,7 +959,8 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 					}
 				}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) 
+				       + VectorClass().load(&ptn_invar[ptn]);
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;
@@ -1223,8 +1224,8 @@ double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
                     vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
-
+			lh_ptn = horizontal_add(vc_ptn) 
+			       + VectorClass().load(&ptn_invar[ptn]);
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
 		case 0:
