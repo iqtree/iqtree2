@@ -1651,6 +1651,13 @@ public:
      true to normalize tree distances, false otherwise
      */
     bool normalize_tree_dist;
+
+    /**
+     true to calculate robinson-foulds tree distances
+     even when there are taxa in the second tree, not 
+     found in the first tree (by ignoring those taxa).
+     */
+    bool loose_robinson_foulds;
     
     /**
             compute the site-specific rates by Meyer & von Haeseler method

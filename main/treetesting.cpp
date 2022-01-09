@@ -24,8 +24,8 @@
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
 #include "gsl/mygsl.h"
+#include "utils/safe_io.h" //for isAtEndOfFile()
 #include "utils/timeutil.h"
-
 
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                  bool append, const char *linename) {
@@ -478,13 +478,9 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
                 } while (!in.eof() && ch != ';');
                 distinct_ids.push_back(-1);
             }
-            char ch;
-            in.exceptions(ios::goodbit);
-            (in) >> ch;
-            if (in.eof()) break;
-            in.unget();
-            in.exceptions(ios::failbit | ios::badbit);
-            
+            if (isAtEndOfFile(in)) {
+                break;                
+            }
         }
         in.close();
     } catch (ios::failure) {

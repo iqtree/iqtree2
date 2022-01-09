@@ -600,8 +600,9 @@ Params::Params() :
     iqp_assess_quartet(IQP_DISTANCE), iqp(false),
     write_intermediate_trees(0),      writeDistImdTrees(false),
     rf_dist_mode(0),                  rf_same_pair(false),
-    normalize_tree_dist(false),       mvh_site_rate(false),
-    rate_mh_type(true),               discard_saturated_site(false),
+    normalize_tree_dist(false),       loose_robinson_foulds(false),
+    mvh_site_rate(false),             rate_mh_type(true),               
+    discard_saturated_site(false),
     mean_rate(1.0),                   aLRT_threshold(101),
     aLRT_replicates(0),               aLRT_test(false),
     aBayes_test(false),               localbp_replicates(0),
@@ -2807,11 +2808,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_branches = true;
                 continue;
             }
-            if (arg=="-rf_all" || arg=="--tree-dist-all") {
+            if (arg=="-rf_all" || arg=="--tree-dist-all" ||
+                arg=="-rf-all") {
                 params.rf_dist_mode = RF_ALL_PAIR;
                 continue;
             }
-            if (arg=="-rf_adj") {
+            if (arg=="-rf_adj" || arg=="-rf-adj") {
                 params.rf_dist_mode = RF_ADJACENT_PAIR;
                 continue;
             }
@@ -2841,6 +2843,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use -rf2 <second_tree>";
                 }
                 params.second_tree = argv[cnt];
+                continue;
+            }
+            if (arg=="-rf-loose") {
+                params.loose_robinson_foulds = true;
                 continue;
             }
             if (arg=="--normalize-dist") {

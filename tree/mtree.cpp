@@ -25,6 +25,7 @@
 #include "pda/splitgraph.h"
 
 #include <utils/nametoidmap.h>
+#include <utils/safe_io.h> //for isAtEndOfFile()
 #include <utils/stringfunctions.h> //for convert_double, convert_double_vec
 #include <utils/tools.h>
 
@@ -2735,14 +2736,9 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 			}
 			delete subsp;
 		}
-
-		char ch;
-		in.exceptions(ios::goodbit);
-		(in) >> ch;
-		if (in.eof()) break;
-		in.unget();
-		in.exceptions(ios::failbit | ios::badbit);
-
+        if (isAtEndOfFile(in)) {
+            break;
+        }
 	}
 
 	cout << ntrees << " trees read" << endl;
@@ -2784,7 +2780,8 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 }
 */
 
-void MTree::computeRFDist(const char *trees_file, DoubleVector &dist, int assign_sup) {
+void MTree::computeRFDist(const char *trees_file, 
+                          DoubleVector &dist, int assign_sup) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
 		ifstream in;
@@ -2797,26 +2794,28 @@ void MTree::computeRFDist(const char *trees_file, DoubleVector &dist, int assign
 	}
 }
 
-void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool one_tree) {
-	SplitGraph mysg;
+void MTree::computeRFDist(istream &in, DoubleVector &dist, 
+                          int assign_sup, bool one_tree) {
     NodeVector nodes;
-	convertSplits(mysg, &nodes, root->neighbors[0]->node);
-    StringIntMap name_index;
-    int ntrees, taxid;
-    for (taxid = 0; taxid < mysg.getNTaxa(); ++taxid) {
-        name_index[mysg.getTaxa()->GetTaxonLabel(taxid)] = taxid;
-    }
-    NodeVector::iterator nit;
-    if (assign_sup) {
-        for (nit = nodes.begin(); nit != nodes.end(); ++nit) {
-            (*nit)->height = 0.0;
+	for (int ntrees = 1; !in.eof(); ntrees++) {
+        nodes.clear();
+        SplitGraph mysg;
+        convertSplits(mysg, &nodes, root->neighbors[0]->node);
+        if (ntrees==1 && assign_sup) {
+            for (auto node : nodes) {
+                node->height = 0.0;
+            }
         }
-    }    
-	SplitGraph::iterator sit;
-    for (sit = mysg.begin(); sit != mysg.end(); ++sit) {
-        (*sit)->setWeight(0.0);
-    }
-	for (ntrees = 1; !in.eof(); ntrees++) {
+
+        StringIntMap name_index;
+        for (int taxid = 0; taxid < mysg.getNTaxa(); ++taxid) {
+            auto name = mysg.getTaxa()->GetTaxonLabel(taxid);
+            name_index[name] = taxid;
+        }
+        for (auto sit : mysg ) {
+            sit->setWeight(0.0);
+        }
+
 		MTree tree;
 		bool is_rooted = false;
 
@@ -2829,91 +2828,131 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 		tree.getTaxaName(taxname);
 		// create the map from taxa between 2 trees
 		Split taxa_mask(leafNum);
-		for (StrVector::iterator it = taxname.begin(); 
-             it != taxname.end(); ++it) {
-            if (name_index.find(*it) == name_index.end()) {
-                outError("Taxon not found in full tree: ", *it);
+        StrVector dead_taxa_names; 
+		for (auto taxon_name : taxname) {
+            auto found = name_index.find(taxon_name);
+            if ( found == name_index.end()) {
+                //Formerly: outError("Taxon not found in full tree: ", taxon_name);
+                //But removing the taxon from the second tree also works.
+                dead_taxa_names.push_back(taxon_name);
+            } else {
+                int taxid = found->second;
+                taxa_mask.addTaxon(taxid);
             }
-			taxid = name_index[*it];
-			taxa_mask.addTaxon(taxid);
 		}
+        auto dead_taxon_count = dead_taxa_names.size();
+        if (0<dead_taxon_count) {
+            std::stringstream complaint;
+            complaint << "Ignoring " << dead_taxa_names.size()
+                    << " taxa in tree " << ntrees << ".";
+            std::string context(complaint.str());
+            tree.removeTaxa(dead_taxa_names, false, 
+                            context.c_str());
+            outWarning(complaint.str());
+            if (verbose_mode >= VerboseMode::VB_MED) {
+                complaint << "\nThe taxa that were ignored were:";
+                for (auto dead_taxon : dead_taxa_names) {
+                    complaint << "\n  " << dead_taxon;
+                }
+                logLine(complaint.str());
+            }
+            auto surviving_taxa = taxname.size() - dead_taxon_count;
+            if (surviving_taxa < 3) {
+                std::stringstream problem;
+                problem << "Cannot calculate Robinson-Foulds metric "
+                        << " as" << (0<surviving_taxa ? " only" : "")
+                        << " " << surviving_taxa
+                        << " taxa in the second tree"
+                        << " were found in the first.";
+                outError(problem.str());
+            }
+            if (!Params::getInstance().loose_robinson_foulds) {
+                outError("Cannot calculate Robinson-Foulds metric"
+                         " when some taxa in the second tree are"
+                         " not found in the first.  Use -rf-loose"
+                         " to implictly remove any such taxa.");
+            } 
+        }
+
 		// make the taxa ordering right before converting to split system
 		taxname.clear();
-		int smallid;
-		for (taxid = 0, smallid = 0; taxid < static_cast<int>(leafNum); ++taxid) {
+		for (int taxid = 0; taxid < static_cast<int>(leafNum); ++taxid) {
 			if (taxa_mask.containTaxon(taxid)) {
-				taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
-				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
-				tree.findLeafName(name)->id = smallid++;
-			}
+                string name = mysg.getTaxa()->GetTaxonLabel(taxid);
+				taxname.push_back(name);
+				tree.findLeafName(name)->id = taxid;
+			} 
         }
-		ASSERT(taxname.size() == tree.leafNum);
 
 		SplitGraph sg;
-		//NodeVector nodes;
 		tree.convertSplits(sg);
 		SplitIntMap hash_ss;
-		for (sit = sg.begin(); sit != sg.end(); ++sit) {
-			hash_ss.insertSplit((*sit), 1);
+		for (auto sit : sg) {
+            if (sit->shouldInvert()) {
+                sit->invert();
+            }
+			hash_ss.insertSplit(sit, 1);
         }
 
 		// now scan through all splits in current tree
 		int common_splits = 0;
-		for (sit = mysg.begin(); sit != mysg.end(); ++sit) {
-		if ((*sit)->trivial() < 0) { // it is an internal split
-			Split *subsp = (*sit)->extractSubSplit(taxa_mask);
-			if (subsp->shouldInvert()) {
-				subsp->invert();
-            }
-			Split *sp = hash_ss.findSplit(subsp);
-			if (sp) {
-				++common_splits;
-				//(*sit)->setWeight((*sit)->getWeight()+1.0);
-				if (verbose_mode >= VerboseMode::VB_MAX) {
-					for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++) {
-						if ((*sit)->containTaxon(taxid)) {
-							cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
-                        }
-                    }
-					cout << " --> ";
-					for (taxid = 0; taxid < sp->getNTaxa(); taxid++) {
-						if (sp->containTaxon(taxid)) {
-							cout << " " << taxname[taxid];
-                        }
-                    }
-					cout << endl;
-				}
-                if (assign_sup && subsp->trivial() < 0) {
-                    ++(nodes[sit-mysg.begin()]->height);
+        int node_number   = 0;
+		for (auto sit: mysg ) {
+            if (sit->trivial() < 0) { // it is an internal split
+                Split *subsp = sit->extractSubSplit(taxa_mask);
+                if (subsp->shouldInvert()) {
+                    subsp->invert();
                 }
+                Split *sp = hash_ss.findSplit(subsp);
+                if (sp!=nullptr) {
+                    ++common_splits;
+                    //(*sit)->setWeight((*sit)->getWeight()+1.0);
+                    if (verbose_mode >= VerboseMode::VB_MAX) {
+                        for (int taxid = 0; taxid < sit->getNTaxa(); taxid++) {
+                            if (sit->containTaxon(taxid)) {
+                                cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
+                            }
+                        }
+                        cout << " --> ";
+                        for (int taxid = 0; taxid < sp->getNTaxa(); taxid++) {
+                            if (sp->containTaxon(taxid)) {
+                                cout << " " << taxname[taxid];
+                            }
+                        }
+                        cout << endl;
+                    }
+                    if (assign_sup && subsp->trivial() < 0) {
+                        ++(nodes[node_number]->height);
+                    }
+                }
+                delete subsp;
             }
-            delete subsp;
-        }
+            ++node_number;
         }
         
         //cout << "common_splits = " << common_splits << endl;
-        double max_dist = branchNum-leafNum + tree.branchNum-tree.leafNum;
-        double rf_val   = max_dist - 2*common_splits;
+        double max_dist = branchNum - leafNum - 2 * dead_taxon_count
+                        + tree.branchNum - tree.leafNum;
+        if (!dead_taxa_names.empty()) {
+            max_dist -= dead_taxa_names.size();
+        }
+        double rf_val   = max_dist       - 2 * common_splits;
         if (Params::getInstance().normalize_tree_dist) {
             rf_val = rf_val / max_dist;
         }
 		dist.push_back(rf_val);
-		char ch;
-		in.exceptions(ios::goodbit);
-		(in) >> ch;
-		if (in.eof()) {
+        if (isAtEndOfFile(in)) {
             break;
         }
-		in.unget();
-		in.exceptions(ios::failbit | ios::badbit);
         if (one_tree) {
             break;
         }
 	}
     if (assign_sup) {
-        for (nit = nodes.begin(); nit != nodes.end(); ++nit) {
-            if (!(*nit)->isLeaf()) {
-                (*nit)->name = convertIntToString(static_cast<int>((*nit)->height));
+        for (auto node: nodes) {
+            if (!node->isLeaf()) {
+                int height = static_cast<int>(node->height);
+                node->name = convertIntToString(height);
             }
         }
     }

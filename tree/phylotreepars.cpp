@@ -298,6 +298,7 @@ public:
     //
     template<typename F>
     void doEverything(F computeParsimonyFunction) {
+        (void)phylo_tree;
         if (layers.empty()) {
             return;
         }

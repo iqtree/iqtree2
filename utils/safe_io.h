@@ -102,4 +102,16 @@ S& safeGetTrimmedLineAsStream(S& is, std::stringstream& lineStream) {
     return is;
 }
 
+template <class S> bool isAtEndOfFile(S& in) {
+    char ch;
+    in.exceptions(std::ios::goodbit);
+    (in) >> ch;
+    if (in.eof()) {
+        return true;
+    }
+    in.unget();
+    in.exceptions(std::ios::failbit | std::ios::badbit);
+    return false;
+}
+
 #endif /* safe_io_h */

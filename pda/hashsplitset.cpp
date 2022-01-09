@@ -28,7 +28,7 @@ Split *SplitIntMap::findSplit(Split *sp) {
     if (ass_it != end()) {
         return ass_it->first;
     }
-    return NULL;
+    return nullptr;
 }
 
 

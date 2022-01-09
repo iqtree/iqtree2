@@ -65,6 +65,7 @@
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"
 #include "utils/operatingsystem.h" //for getOSName()
+#include "utils/safe_io.h" //for isAtEndOfFile()
 #include <stdlib.h>
 #include "vectorclass/instrset.h"
 
@@ -1474,7 +1475,7 @@ void calcDistribution(Params &params) {
     }
 }
 
-void printRFDist(string filename, double *rfdist, int n, int m, 
+void printRFDist(string filename, const double *rfdist, int n, int m, 
                  int rf_dist_mode, bool print_msg = true) {
     try {
         ofstream out;
@@ -1533,55 +1534,41 @@ void printRFDist(string filename, double *rfdist, int n, int m,
     }
 }
 
-void computeRFDistExtended(const char *trees1, const char *trees2, const char *filename) {
+void computeRFDistExtended(const char *trees1, const char *trees2, 
+                           const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
-    int ntrees = 0, ntrees2 = 0;
-    double *rfdist_raw = NULL;
+    int          ntrees  = 0;
+    DoubleVector rfdist;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(trees1);
-        IntVector rfdist;
         for (ntrees = 1; !in.eof(); ntrees++) {
             MTree tree;
             bool is_rooted = false;
 
             // read in the tree and convert into split system for indexing
             tree.readTree(in, is_rooted);
-            if (verbose_mode >= VerboseMode::VB_DEBUG)
+            if (verbose_mode >= VerboseMode::VB_DEBUG) {
                 cout << ntrees << " " << endl;
-            DoubleVector dist;
-            tree.computeRFDist(trees2, dist);
-            ntrees2 = static_cast<int>(dist.size());
-            for (double x : dist) {
-                rfdist.push_back(static_cast<int>(x));
             }
-            char ch;
-            in.exceptions(ios::goodbit);
-            (in) >> ch;
-            if (in.eof()) break;
-            in.unget();
-            in.exceptions(ios::failbit | ios::badbit);
-
+            tree.computeRFDist(trees2, rfdist);
+            if (isAtEndOfFile(in)) {
+                break;
+            }
         }
-
         in.close();
-        ASSERT(ntrees * ntrees2 == rfdist.size());
-        rfdist_raw = new double[rfdist.size()];
-        copy(rfdist.begin(), rfdist.end(), rfdist_raw);
-
     } catch (ios::failure) {
         outError(ERR_READ_INPUT, trees1);
     }
-
-    printRFDist(filename, rfdist_raw, ntrees, ntrees2, RF_TWO_TREE_SETS_EXTENDED);
-    delete [] rfdist_raw;
+    printRFDist(filename, rfdist.data(), ntrees, 
+                rfdist.size()/ntrees, RF_TWO_TREE_SETS_EXTENDED);
 }
 
 void computeRFDistSamePair(const char *trees1, const char *trees2, const char *filename) {
     cout << "Reading input trees 1 file " << trees1 << endl;
-    int ntrees = 0, ntrees2 = 0;
-    double *rfdist_raw = NULL;
+    int          ntrees  = 0;
+    DoubleVector rfdist;
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -1591,41 +1578,26 @@ void computeRFDistSamePair(const char *trees1, const char *trees2, const char *f
         in2.exceptions(ios::failbit | ios::badbit);
         in2.open(trees2);
 
-        DoubleVector rfdist;
         for (ntrees = 1; !in.eof() && !in2.eof(); ntrees++) {
             MTree tree;
             bool is_rooted = false;
             // read in the tree and convert into split system for indexing
             tree.readTree(in, is_rooted);
-
-            if (verbose_mode >= VerboseMode::VB_DEBUG)
+            if (verbose_mode >= VerboseMode::VB_DEBUG) {
                 cout << ntrees << " " << endl;
-            DoubleVector dist;
-            tree.computeRFDist(in2, dist, 0, true);
-            ntrees2 = static_cast<int>(dist.size());
-            rfdist.insert(rfdist.end(), dist.begin(), dist.end());
-            char ch;
-            in.exceptions(ios::goodbit);
-            (in) >> ch;
-            if (in.eof()) break;
-            in.unget();
-            in.exceptions(ios::failbit | ios::badbit);
-            
+            }
+            tree.computeRFDist(in2, rfdist, 0, true);
+            if (isAtEndOfFile(in)) {
+                break;
+            }
         }
-        
         in.close();
-        in2.close();
-        ASSERT(ntrees * ntrees2 == rfdist.size());
-        rfdist_raw = new double[rfdist.size()];
-        copy(rfdist.begin(), rfdist.end(), rfdist_raw);
-        
+        in2.close();        
     } catch (ios::failure) {
         outError(ERR_READ_INPUT, trees1);
-    }
-    
-    printRFDist(filename, rfdist_raw, ntrees, ntrees2, RF_TWO_TREE_SETS_EXTENDED);
-
-    delete [] rfdist_raw;
+    }    
+    printRFDist(filename, rfdist.data(), ntrees, ntrees, 
+                RF_TWO_TREE_SETS_EXTENDED);
 }
 
 void computeRFDist(Params& params) {
@@ -1637,16 +1609,19 @@ void computeRFDist(Params& params) {
     filename += ".rfdist";
 
     if (params.rf_dist_mode == RF_TWO_TREE_SETS_EXTENDED) {
-        computeRFDistExtended(params.user_file.c_str(), params.second_tree, filename.c_str());
+        computeRFDistExtended(params.user_file.c_str(), params.second_tree, 
+                              filename.c_str());
         return;
     }
 
     if (params.rf_same_pair) {
-        computeRFDistSamePair(params.user_file.c_str(), params.second_tree, filename.c_str());
+        computeRFDistSamePair(params.user_file.c_str(), params.second_tree, 
+                              filename.c_str());
         return;
     }
 
-    MTreeSet trees(params.user_file.c_str(), params.is_rooted, params.tree_burnin, params.tree_max_count);
+    MTreeSet trees(params.user_file.c_str(), params.is_rooted, 
+                   params.tree_burnin, params.tree_max_count);
     int n = static_cast<int>(trees.size());
     int m = n;
     double* rfdist;
@@ -1656,13 +1631,15 @@ void computeRFDist(Params& params) {
     string treename = params.out_prefix;
     treename += ".rftree";
     if (params.rf_dist_mode == RF_TWO_TREE_SETS) {
-        MTreeSet treeset2(params.second_tree, params.is_rooted, params.tree_burnin, params.tree_max_count);
+        MTreeSet treeset2(params.second_tree, params.is_rooted, 
+                          params.tree_burnin, params.tree_max_count);
         cout << "Computing Robinson-Foulds distances between two sets of trees" << endl;
         m = static_cast<int>(treeset2.size());
         size_t size = n * m;
         if (params.rf_same_pair) {
-            if (m != n)
+            if (m != n) {
                 outError("Tree sets has different number of trees");
+            }
             size = n;
         }
         rfdist = new double[size];
@@ -1682,7 +1659,8 @@ void computeRFDist(Params& params) {
     else {
         rfdist = new double[n * n];
         memset(rfdist, 0, n * n * sizeof(double));
-        trees.computeRFDist(rfdist, params.rf_dist_mode, params.split_weight_threshold);
+        trees.computeRFDist(rfdist, params.rf_dist_mode, 
+                            params.split_weight_threshold);
     }
 
     //if (verbose_mode >= VerboseMode::VB_MED) {
@@ -1694,8 +1672,10 @@ void computeRFDist(Params& params) {
     if (incomp_splits) {
         filename = params.out_prefix;
         filename += ".incomp";
-        printRFDist(filename, incomp_splits, n, m, params.rf_dist_mode, false);
-        cout << "Number of incompatible splits in printed to " << filename << endl;
+        printRFDist(filename, incomp_splits, n, m, 
+                    params.rf_dist_mode, false);
+        cout << "Number of incompatible splits" 
+             << " in printed to " << filename << endl;
     }
 
     if (incomp_splits != nullptr) {

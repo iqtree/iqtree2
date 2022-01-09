@@ -21,6 +21,7 @@
 #include <alignment/alignment.h>
 #include <utils/gzstream.h>
 #include <utils/stringfunctions.h> //for convertIntToString
+#include <utils/safe_io.h>         //for isAtEndOfFile()
 #include <utils/vectortypes.h>     //for StrVector
 
 MTreeSet::MTreeSet()
@@ -177,14 +178,6 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted,
 	                     IntVector *weights, bool compressed) 
 {
 	cout << "Reading tree(s) file " << infile << " ..." << endl;
-/*	IntVector ok_trees;
-	if (trees_id) {
-		int max_id = *max_element(trees_id->begin(), trees_id->end());
-		ok_trees.resize(max_id+1, 0);
-		for (IntVector::iterator it = trees_id->begin(); it != trees_id->end(); it++)
-			ok_trees[*it] = 1;
-		cout << "Restricting to " << trees_id->size() << " trees" << endl;
-	}*/
 	try {
 		istream *in;
 		if (compressed) {
@@ -247,14 +240,9 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted,
 				}
 				++omitted;
 			} 
-			char ch;
-			in->exceptions(ios::goodbit);
-			(*in) >> ch;
-			if (in->eof()) {
+			if (isAtEndOfFile(*in)) {
 				break;
 			}
-			in->unget();
-			in->exceptions(ios::failbit | ios::badbit);
 		}
 		cout << size() << " tree(s) loaded (" 
 		     << countRooted() << " rooted and " 
@@ -605,16 +593,16 @@ void MTreeSet::computeRFDist(double *rfdist, int mode,
 	if (size() < 2) {
 		return;
 	}
-#ifdef USE_HASH_MAP
-	cout << "Using hash_map" << endl;
-#else
-	cout << "Using map" << endl;
-#endif
-	cout << "Computing Robinson-Foulds distance..." << endl;
+	cout << "Computing Robinson-Foulds distance using ";
+	#ifdef USE_HASH_MAP
+		cout << "hash_map" << endl;
+	#else
+		cout << "map" << endl;
+	#endif
 
     StrVector taxname(front()->leafNum);
 	vector<SplitIntMap*> hs_vec;
-	vector<SplitGraph*> sg_vec;
+	vector<SplitGraph*>  sg_vec;
 
 	front()->getTaxaName(taxname);
 
@@ -625,12 +613,11 @@ void MTreeSet::computeRFDist(double *rfdist, int mode,
 
 		(*it)->convertSplits(taxname, *sg);
 		// make sure that taxon 0 is included
-		for (SplitGraph::iterator sit = sg->begin(); 
-		     sit != sg->end(); ++sit) {
-			if (!(*sit)->containTaxon(0)) {
-				(*sit)->invert();
+		for (auto sit : *sg) {
+			if (!sit->containTaxon(0)) {
+				sit->invert();
 			}
-			hs->insertSplit((*sit), 1);
+			hs->insertSplit(sit, 1);
 		}
 		hs_vec.push_back(hs);
 		sg_vec.push_back(sg);
@@ -677,8 +664,9 @@ void MTreeSet::computeRFDist(double *rfdist, int mode,
 }
 
 
-void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
-	const char *info_file, const char *tree_file, double *incomp_splits)
+void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, 
+                             bool k_by_k, const char *info_file, 
+							 const char *tree_file, double *incomp_splits)
 {
 	// exit if less than 2 trees
 #ifdef USE_HASH_MAP
