@@ -25,27 +25,27 @@ class PhyloMemory: public Optimization {
         PhyloMemory(double m1, double m2, double bl, double e);
         virtual double computeFunction(double value);
         virtual void computeFuncDerv(double value, double &df, double &ddf);
-        double memory1;
-        double memory2;
+        double coeff1;
+        double coeff2;
         double brlen;
         double eval;
 
 };
 
 PhyloMemory::PhyloMemory(double m1, double m2, double bl, double e) {
-    memory1 = m1;
-    memory2 = m2;
     brlen = bl;
     eval = e;
+    coeff1 = (m1 - exp(2*brlen*eval) * m2) / (1 - exp(4*brlen*eval));
+    coeff2 = (m2 - exp(2*brlen*eval) * m1) / (1 - exp(4*brlen*eval));
 }
 
 double PhyloMemory::computeFunction(double value) {
-    return exp(2*eval*value)*memory1 + exp(2*eval*(brlen-value))*memory2;
+    return exp(2*eval*value)*coeff1 + exp(2*eval*(brlen-value))*coeff2;
 }
 
 void PhyloMemory::computeFuncDerv(double value, double &df, double &ddf) {
-    df = 2*eval*exp(2*eval*value)*memory1 - 2*eval*exp(2*eval*(brlen-value))*memory2;
-    ddf = 4*eval*eval*exp(2*eval*value)*memory1 + 4*eval*eval*exp(2*eval*(brlen-value))*memory2;
+    df = 2*eval*exp(2*eval*value)*coeff1 - 2*eval*exp(2*eval*(brlen-value))*coeff2;
+    ddf = 4*eval*eval*exp(2*eval*value)*coeff1 + 4*eval*eval*exp(2*eval*(brlen-value))*coeff2;
 }
 
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
@@ -275,6 +275,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 
         double *eval = tree->getModel()->getEigenvalues();
         double *evec = tree->getModel()->getEigenvectors();
+        double *inv_evec = tree->getModel()->getInverseEigenvectors();
         size_t nptn = tree->getAlnNPattern();
         size_t nstates = tree->getModel()->num_states;
         size_t len = nptn * nstates;
@@ -365,12 +366,15 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                 prob_vec.load(prob);
                 double addto = 0;
                 for (int j = 0; j < amount_of_equal_eigenvalues; j++) {
+                //for (int j = 0; j < nstates; j++) {
                     addto += pow(horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec), 2);
+                    //if (j != position_zero) addto += pow(horizontal_add(evec_ptr[j] * prob_vec), 2);
                 }
                 int ptn_idx = l / nstates;
                 memory1 += addto * ptn_freq[ptn_idx];
             }
             memory1 /= div;
+            //memory1 /= (nsites * (nstates - 1));
             double tnode = log(memory1) / eval[positions_of_biggest[0]];
             cout << node->name << " memory: " << memory1 << ", t: " << tnode << endl;
 
@@ -381,12 +385,15 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                 prob_vec.load(prob);
                 double addto = 0;
                 for (int j = 0; j < amount_of_equal_eigenvalues; j++) {
+                //for (int j = 0; j < nstates; j++) {
                     addto += pow(horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec), 2);
+                    //if (j != position_zero) addto += pow(horizontal_add(evec_ptr[j] * prob_vec), 2);
                 }
                 int ptn_idx = l / nstates;
                 memory2 += addto * ptn_freq[ptn_idx];
             }
             memory2 /= div;
+            //memory2 /= (nsites * (nstates - 1));
             double tdad = log(memory2) / eval[positions_of_biggest[0]];
             cout << dad->name << " memory: "<< memory2 << ", t: " << tdad << endl;
 
@@ -400,21 +407,24 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                 prob_vec2.load(prob2);
                 double addto = 0;
                 for (int j = 0; j < amount_of_equal_eigenvalues; j++) {
-                    addto += horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec) * horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec2) ;
+                //for (int j = 0; j < nstates; j++) {
+                    addto += horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec) * horizontal_add(evec_ptr[positions_of_biggest[j]] * prob_vec2);
+                     //if (j != position_zero) addto += horizontal_add(evec_ptr[j] * prob_vec) * horizontal_add(evec_ptr[j] * prob_vec2);
                 }
                 int ptn_idx = l / nstates;
                 coherence += addto * ptn_freq[ptn_idx];
             }
             coherence /= div;
+            //coherence /= (nsites * (nstates - 1));
             double dede = log(coherence) / eval[positions_of_biggest[0]];
             cout << dad->name << "-" << node->name << " coherence: " << coherence << ", t: " << dede << endl;
 
-            double start = (brlen - tdad + tnode) / 2;
+            double start = (2 * brlen - tdad + tnode) / 4;
             start = (start < 0) ? 0 : start;
             start = (start > brlen) ? brlen : start; 
             PhyloMemory MemoryObj(memory1, memory2, brlen, biggest_eval);
             double estimate;
-            double optx = MemoryObj.minimizeNewton(0.0, start, brlen, tolerance, estimate);
+            double optx = MemoryObj.minimizeNewtonSafeMode(0.0, start, brlen, tolerance, estimate);
 
             cout << "Optimizing memory of branch " << node->name << " - " << dad->name << " from " << start <<  " (brlen: " << brlen << ")" << endl;
             cout << "Optimized memory" << " at " << optx << " : " << estimate << endl;
