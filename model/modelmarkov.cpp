@@ -736,7 +736,8 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
     }
 
 	double evol_time = time / total_num_subst;
-    
+
+#if !defined(__ARM_NEON)
     if (Params::getInstance().experimental) {
         //James' version
         double eval_exp[num_states];
@@ -775,9 +776,9 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
         Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv2(trans_derv2,num_states,num_states);
         map_derv2 = res;
     }
-    
-    /*
+#else
      //Flat version
+    int i, j, k;
 	double exptime[num_states];
 
 	for (i = 0; i < num_states; i++)
@@ -807,7 +808,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 			}
 		}
 	}
-     */
+#endif
 //	delete [] exptime;
 }
 

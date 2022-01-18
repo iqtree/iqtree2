@@ -47,7 +47,11 @@
 
 #if ! (defined(__ppc) || defined(__powerpc__) || defined(PPC))
 #if (defined(__AVX) || defined(__SSE3))
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
+#endif
 #endif
 /*
    special bug fix, enforces denormalized numbers to be flushed to zero,
@@ -3501,7 +3505,9 @@ int pllInitModel (pllInstance * tr, partitionList * partitions)
   
 #if ! (defined(__ppc) || defined(__powerpc__) || defined(PPC))
 #if (defined(__AVX) || defined(__SSE3))
+#if !defined(__ARM_NEON) // flush zero always on in NEON
   _mm_setcsr( _mm_getcsr() | _MM_FLUSH_ZERO_ON);
+#endif
 #endif
 #endif 
 
