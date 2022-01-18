@@ -5635,7 +5635,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+LMMK          Additionally test Lie Markov models with MK symmetry" << endl
     << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
     << "  --mset STRING        Restrict search to models supported by other programs" << endl
-    << "                       (raxml, phyml or mrbayes)" << endl
+    << "                       (raxml, phyml, mrbayes, beast1 or beast2)" << endl
     << "  --mset STR,...       Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
     << "  --msub STRING        Amino-acid model source" << endl
     << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
