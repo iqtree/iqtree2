@@ -66,17 +66,25 @@ extern "C" {
 #define PLL_VECTOR_WIDTH 8
 #elif defined (__AVX)
 
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <immintrin.h>
 #include <pmmintrin.h>
+#endif
 
 #define PLL_BYTE_ALIGNMENT 32
 #define PLL_VECTOR_WIDTH 4
 
 #elif defined (__SSE3)
 
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <pmmintrin.h>
+#endif
 
 #define PLL_BYTE_ALIGNMENT 16
 #define PLL_VECTOR_WIDTH 2

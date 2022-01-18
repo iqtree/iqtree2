@@ -1,5 +1,7 @@
 #include <omp.h>
+#if !defined(__ARM_NEON)
 #include <immintrin.h>
+#endif
 #include <string.h>
 #include <math.h>
 

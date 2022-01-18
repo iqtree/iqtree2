@@ -20,7 +20,7 @@
 #include "phylokernelnew.h"
 #include "phylokernelnonrev.h"
 
-#if !defined(__AVX2__) && !defined(__FMA__)
+#if !defined(__AVX2__) && !defined(__FMA__) && !defined(__ARM_NEON)
 #error "You must compile this file with AVX2 or FMA enabled!"
 #endif
 

@@ -14,7 +14,12 @@ Option(TERRAPHAST_USE_GMP "Use GMP" ON)
 Option(TERRAPHAST_BUILD_CLIB "Build the C library" ON)
 Option(TERRAPHAST_BUILD_APPS "Build the tools" ON)
 Option(TERRAPHAST_BUILD_TESTS "Build the tests" ON)
-Option(TERRAPHAST_ARCH_NATIVE "Use -march=native compiler flag" ON)
+#Option(TERRAPHAST_ARCH_NATIVE "Use -march=native compiler flag" ON)
+if (NEON)
+	Option(TERRAPHAST_ARCH_NATIVE "Use -march=native compiler flag" OFF)
+else()
+    Option(TERRAPHAST_ARCH_NATIVE "Use -march=native compiler flag" ON)
+endif()
 
 #####################################################################
 # build library
