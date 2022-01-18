@@ -136,12 +136,21 @@ if (USE_LSD2)
 endif()
 
 # Check if __ARM_NEON is defined
-include(cmake_utls/check_neon_exists.cmake)
-if (NEON)
-set (__ARM_NEON "TRUE")
-message("__ARM_NEON DETECTED : TRUE")
-else()
-  message("__ARM_NEON DETECTED : FALSE")
+#include(cmake_utls/check_neon_exists.cmake)
+set (__ARM_NEON "FALSE")
+set (NEON 0)
+if (APPLE)
+	execute_process(
+      COMMAND uname -m
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE OSX_NATIVE_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+		message("APPLE SILICON (M1) DETECTED!")
+		set (__ARM_NEON "TRUE")
+		set (NEON 1)
+	endif()
 endif()
 
 ##################################################################
@@ -156,12 +165,6 @@ if (WIN32)
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (APPLE)
     message("Target OS     : Mac OS X")
-    execute_process(
-      COMMAND uname -m
-      RESULT_VARIABLE result
-      OUTPUT_VARIABLE OSX_NATIVE_ARCHITECTURE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
 	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
 		add_definitions("--target=arm64-apple-macos10.5")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=arm64-apple-macos12.0.1")
