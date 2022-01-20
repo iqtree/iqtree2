@@ -483,6 +483,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 
+#if !defined(__ARM_NEON)
     if (Params::getInstance().experimental) {
         double eval_exp[num_states];
         calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
@@ -500,7 +501,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
         map_trans = res;
         return;
     }
-    /*
+#else
     double exptime[num_states];
 	int i, j, k;
 
@@ -531,7 +532,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 			sum += trans_row[j];
 		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
-    */
+#endif
 //	delete [] exptime;
 }
 
