@@ -142,7 +142,7 @@ void AlignmentPairwise::setSequenceNumbersFlat(int seq1, int seq2) {
     //Todo: Handle the multiple category case here
 }
 
-AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2)
+AlignmentPairwise::AlignmentPairwise(PhyloTree* atree, int seq1, int seq2)
     : Alignment(), Optimization() {
     setTree(atree);
     setSequenceNumbers(seq1,seq2);
@@ -332,7 +332,7 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
 
 void AlignmentPairwise::computeFuncDervSiteSpecificRate
         (double value, double &df, double &ddf) {
-    RateHeterogeneity *site_rate = tree->getRate();
+    RateHeterogeneity* site_rate = tree->getRate();
     intptr_t nptn           = tree->aln->getNPattern();
     auto     sequence1      = tree->getConvertedSequenceByNumber(seq_id1);
     auto     sequence2      = tree->getConvertedSequenceByNumber(seq_id2);

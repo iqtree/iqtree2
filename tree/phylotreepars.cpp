@@ -60,7 +60,7 @@ static inline uint32_t vml_popcntl (uint64_t ab)
 /***********************************************************/
 
 void PhyloTree::computePartialParsimonyFast
-        (PhyloNeighbor *dad_branch, PhyloNode *dad) {
+        (PhyloNeighbor *dad_branch, PhyloNode* dad) {
     if (dad_branch->isParsimonyComputed()) {
         return;
     }
@@ -442,7 +442,7 @@ int PhyloTree::getSubTreeParsimonyFast(PhyloNeighbor* dad_branch) const {
 }
 
 int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch,
-                                          PhyloNode *dad, int *branch_subst) {
+                                          PhyloNode* dad, int *branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);
@@ -512,7 +512,7 @@ int PhyloTree::computeParsimonyOutOfTreeFast(const UINT* dad_partial_pars,
 }
 
 
-void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
+void PhyloTree::computeAllPartialPars(PhyloNode* node, PhyloNode* dad) {
 	if (!node) node = getRoot();
     FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, nei) {
         if (!nei->isParsimonyComputed()) {
@@ -1010,7 +1010,7 @@ void getLeftAndRightNodes
  @param dad its dad, used to direct the traversal
  */
 void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch,
-                                               PhyloNode *dad){
+                                               PhyloNode* dad){
     // don't recompute the parsimony
     if (dad_branch->isParsimonyComputed()) {
         return;
@@ -1300,7 +1300,7 @@ int PhyloTree::getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch) const {
  @return parsimony score of the tree
  */
 int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch,
-                                             PhyloNode *dad, int *branch_subst) {
+                                             PhyloNode* dad, int* branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     assert(node_branch);
@@ -1903,9 +1903,9 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
         best_pars_score = UINT_MAX;
         
         // create a new node attached to new taxon or removed node
-        PhyloNode *added_node = newNode(static_cast<int>(newNodeID));
+        PhyloNode* added_node = newNode(static_cast<int>(newNodeID));
         ++newNodeID;
-        PhyloNode *new_taxon;
+        PhyloNode* new_taxon;
         auto seq_name = aln->getSeqName(taxon_order[leafNum]);
 
         if (step < static_cast<intptr_t>(removed_nei.size())) {
@@ -1979,7 +1979,7 @@ int PhyloTree::computeParsimonyTreeOld(int *rand_stream) {
     return best_pars_score;
 }
 
-UINT PhyloTree::addTaxonMPFast(PhyloNode *added_taxon, PhyloNode* added_node,
+UINT PhyloTree::addTaxonMPFast(PhyloNode* added_taxon, PhyloNode* added_node,
                                PhyloNode* node, PhyloNode* dad) {
 
     // now insert the new node in the middle of the branch node-dad
@@ -2024,7 +2024,7 @@ void PhyloTree::extractBifurcatingSubTree(PhyloNeighborVec& removed_nei,
     // firstly make bifurcating tree
     for (auto it = nodes.begin(); it != nodes.end(); ++it)
     {
-        PhyloNode *node = *it;
+        PhyloNode* node = *it;
         int id[3];
         id[0] = -1;
         // find the neighbor toward root to preserve root

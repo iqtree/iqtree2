@@ -60,8 +60,8 @@ struct nodeheightcmp {
 };
 
 struct IntBranchInfo {
-    PhyloNode *node1;
-    PhyloNode *node2;
+    PhyloNode* node1;
+    PhyloNode* node2;
     double lh_contribution; // log-likelihood contribution of this branch: L(T)-L(T|e=0)
 };
 
@@ -219,8 +219,9 @@ public:
             @param dad the dad node of the considered subtree, to direct the search
             @param leaves (OUT) the k-representative leaf set
      */
-    RepresentLeafSet* findRepresentLeaves(vector<RepresentLeafSet*> &leaves, int nei_id,
-            PhyloNode *dad);
+    RepresentLeafSet* findRepresentLeaves
+                        (vector<RepresentLeafSet*>& leaves, int nei_id,
+                         PhyloNode* dad);
 
     /**
             clear representative leave sets iteratively, called once a leaf is re-inserted into the tree
@@ -320,7 +321,7 @@ public:
      * @param node2
      * @return
      */
-    double swapTaxa(PhyloNode *node1, PhyloNode *node2);
+    double swapTaxa(PhyloNode* node1, PhyloNode* node2);
 
     /**
             generate candidate trees, to use in tere search
@@ -461,7 +462,7 @@ public:
                             being considered (used for traverse direction)
 
      */
-    //void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    //void evalNNIs(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
     /**
      * @brief Evaluate all NNIs on branch defined by \a branches
@@ -894,7 +895,7 @@ protected:
     virtual void saveCurrentTree(double logl) override; // save current tree
 
 
-    void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void saveNNITrees(PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
 
     int duplication_counter;
 
@@ -957,21 +958,22 @@ protected:
             @param cur_root the current virtual root
             @param del_leaf a leaf that was deleted (not in the existing sub-tree)
      */
-    void assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cur_root, PhyloNode *del_leaf);
+    void assessQuartets(vector<RepresentLeafSet*> &leaves_vec, 
+                        PhyloNode* cur_root, PhyloNode* del_leaf);
 
     /**
             initialize the bonus points to ZERO
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void initializeBonus(PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+    void initializeBonus(PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
 
     /**
             raise the bonus points for all branches in the subtree rooted at a node
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void raiseBonus(PhyloNeighbor *nei, PhyloNode *dad, double bonus);
+    void raiseBonus(PhyloNeighbor* nei, PhyloNode* dad, double bonus);
 
     /**
             Bonuses are stored in a partial fashion. This function will propagate the bonus at every branch
@@ -980,7 +982,7 @@ protected:
             @param dad dad of 'node', used to direct the recursion
             @return the partial bonus of the branch (node -> dad)
      */
-    double computePartialBonus(PhyloNode *node, PhyloNode* dad);
+    double computePartialBonus(PhyloNode* node, PhyloNode* dad);
 
     /**
             determine the list of branches with the same best bonus point
@@ -990,7 +992,9 @@ protected:
             @param node the root of the sub-tree
             @param dad dad of 'node', used to direct the recursion
      */
-    void findBestBonus(double &best_score, NodeVector &best_nodes, NodeVector &best_dads, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+    void findBestBonus(double& best_score, NodeVector& best_nodes, 
+                       NodeVector& best_dads, PhyloNode* node = nullptr, 
+                       PhyloNode* dad = nullptr);
 
     void estDeltaMin();
 

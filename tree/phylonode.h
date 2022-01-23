@@ -108,7 +108,7 @@ public:
     /**
         tell that all partial likelihood vectors below this node are not computed
      */
-    void clearAllPartialLh(bool set_to_null, PhyloNode *dad);
+    void clearAllPartialLh(bool set_to_null, PhyloNode* dad);
     
     /**
         forget all scale_num vectors below this node
@@ -119,7 +119,7 @@ public:
         tell that all partial parsimony vectors below this node are not computed
         @param dad the node below which, all partial parsimony vectors are to be marked as uncomputed
      */
-    void clearAllPartialParsimony(bool set_to_null, PhyloNode *dad);
+    void clearAllPartialParsimony(bool set_to_null, PhyloNode* dad);
     
     /**
         tell that all partial parsimony vectors (in reverse direction), reach from this node
@@ -130,16 +130,16 @@ public:
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed
      */
-    void clearReversePartialLh(PhyloNode *dad);
+    void clearReversePartialLh(PhyloNode* dad);
 
-    void computeReversePartialLh(PhyloNode *dad);
+    void computeReversePartialLh(PhyloNode* dad);
 
     /**
         compute the size (#taxa) of the subtree rooted at this node
         using buffered 'size' attribute if computed beforehand
         @param dad dad of this node
     */
-    int computeSize(PhyloNode *dad);
+    int computeSize(PhyloNode* dad);
 
     PhyloNeighbor* findNeighbor(Node* node);
 
@@ -233,7 +233,7 @@ public:
         clear all partial likelihood recursively in forward direction
         @param dad dad of this neighbor
      */
-    void clearForwardPartialLh(PhyloNode *dad);
+    void clearForwardPartialLh(PhyloNode* dad);
     
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor

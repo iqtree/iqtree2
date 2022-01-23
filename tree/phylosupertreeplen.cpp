@@ -232,7 +232,7 @@ double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double toleran
                                           report_to_tree);
 }
 
-void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
+void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode* node1, PhyloNode* node2,
                                            bool clearLH, int maxNRStep) {
 	if (rooted && (node1 == root || node2 == root))
 	{
@@ -418,7 +418,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret,
 }
 
 NNIMove PhyloSuperTreePlen::getBestNNIForBran
-			(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
+			(PhyloNode* node1, PhyloNode* node2, NNIMove *nniMoves)
 {
     if ((node1->findNeighbor(node2))->direction == RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
@@ -502,7 +502,7 @@ void PhyloSuperTreePlen::doNNIs(const vector<NNIMove> &compatibleNNIs, bool chan
 }
 
 
-void PhyloSuperTreePlen::getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type) {
+void PhyloSuperTreePlen::getNNIType(PhyloNode* node1, PhyloNode* node2, vector<NNIType> &nni_type) {
 	int ntrees = static_cast<int>(size());
 	nni_type.resize(ntrees, NNI_NO_EPSILON);
 	for(int part=0; part<ntrees;++part){
@@ -557,7 +557,7 @@ void PhyloSuperTreePlen::doNNI(const NNIMove &move, bool clearLH)
 	}
 //	PhyloTree::doNNI(move,clearLH);
 	PhyloTree::doNNI(move,false);
-	PhyloNode *node1, *node2;
+	PhyloNode* node1, *node2;
 
 	for (int part = 0; part < ntrees; ++part) {
 		switch (is_nni[part]) {
@@ -604,7 +604,7 @@ void PhyloSuperTreePlen::doNNI(const NNIMove &move, bool clearLH)
 	}
 }
 
-double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, 
+double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode* node1, PhyloNode* node2, 
                                          SwapNNIParam *nni_param, NNIMove *nniMoves) {
 	int i = 0, id = 0;
 	int ntrees = static_cast<int>(size());
@@ -1460,7 +1460,7 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad,
 		}
 	}
 }
-//void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//void PhyloSuperTreePlen::restoreAllBrans(PhyloNode* node, PhyloNode* dad) {
 //	IQTree::restoreAllBrans(node,dad);
 //	mapTrees();
 //}
@@ -1603,7 +1603,7 @@ void PhyloSuperTreePlen::computeBranchLengths()
 {
 }
 
-int PhyloSuperTreePlen::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
+int PhyloSuperTreePlen::fixNegativeBranch(bool force, PhyloNode* node, PhyloNode* dad) {
 
 	mapTrees();
 	int fixed = 0;
@@ -1819,7 +1819,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
 void PhyloSuperTreePlen::initializeAllPartialLh
 		(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, 
-		 PhyloNode *node, PhyloNode *dad) {
+		 PhyloNode* node, PhyloNode* dad) {
     if (node==nullptr) {
         node = getRoot();
 	}
@@ -1888,12 +1888,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh
 }
 
 void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh,
-                                                PhyloNode *node, PhyloNode *dad) {
+                                                PhyloNode* node, PhyloNode* dad) {
 	// this function should not be used, assertion raised if accidentally called
 	ASSERT(0);
 }
 
-void PhyloSuperTreePlen::reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad) {
+void PhyloSuperTreePlen::reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode* dad) {
     SuperNeighbor* sdad_branch  = dynamic_cast<SuperNeighbor*>(dad_branch);
     SuperNeighbor* snode_branch = sdad_branch->getNode()->findNeighbor(dad);
     for (int part = 0; part < size(); part++) {

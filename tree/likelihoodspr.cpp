@@ -64,15 +64,15 @@ void SPRMoves::add(const SPRMove& spr) {
  ****************************************************************************/
 
 double PhyloTree::optimizeSPR_old(double cur_score,
-                                  PhyloNode *node, PhyloNode *dad,
+                                  PhyloNode* node, PhyloNode* dad,
                                   SPRMoves& spr_moves) {
     if (!node) {
         node = getRoot();
     }
-    PhyloNeighbor * dad1_nei = NULL;
-    PhyloNeighbor * dad2_nei = NULL;
-    PhyloNode * sibling1 = NULL;
-    PhyloNode * sibling2 = NULL;
+    PhyloNeighbor* dad1_nei = nullptr;
+    PhyloNeighbor* dad2_nei = nullptr;
+    PhyloNode* sibling1 = nullptr;
+    PhyloNode* sibling2 = nullptr;
     double sibling1_len = 0.0, sibling2_len = 0.0;
 
     if (dad && !dad->isLeaf()) {
@@ -222,16 +222,17 @@ double PhyloTree::swapSPR_old(double cur_score,      int cur_depth,
 
 }
 
-double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node,
-                              PhyloNode *dad, SPRMoves& spr_moves) {
+double PhyloTree::optimizeSPR(double cur_score, PhyloNode* node,
+                              PhyloNode* dad, SPRMoves& spr_moves) {
     if (!node) {
         node = getRoot();
     }
-    PhyloNeighbor * dad1_nei = NULL;
-    PhyloNeighbor * dad2_nei = NULL;
-    PhyloNode * sibling1 = NULL;
-    PhyloNode * sibling2 = NULL;
-    double sibling1_len = 0.0, sibling2_len = 0.0;
+    PhyloNeighbor* dad1_nei = nullptr;
+    PhyloNeighbor* dad2_nei = nullptr;
+    PhyloNode*     sibling1 = nullptr;
+    PhyloNode*     sibling2 = nullptr;
+    double     sibling1_len = 0.0;
+    double     sibling2_len = 0.0;
 
     if (dad && !dad->isLeaf()) {
 
@@ -320,10 +321,11 @@ double PhyloTree::optimizeSPR(double cur_score, PhyloNode *node,
 /**
  move the subtree (dad1-node1) to the branch (dad2-node2)
  */
-double PhyloTree::swapSPR(double cur_score, int cur_depth,
-                          PhyloNode *node1,      PhyloNode *dad1,  PhyloNode *orig_node1,
-                          PhyloNode *orig_node2, PhyloNode *node2, PhyloNode *dad2,
-                          PhyloNeighborVec &spr_path, SPRMoves& spr_moves) {
+double PhyloTree::swapSPR
+            (double cur_score, int cur_depth,
+             PhyloNode* node1,      PhyloNode* dad1,  PhyloNode* orig_node1,
+             PhyloNode* orig_node2, PhyloNode* node2, PhyloNode* dad2,
+             PhyloNeighborVec &spr_path, SPRMoves& spr_moves) {
 
     PhyloNeighbor* node1_nei  = node1->findNeighbor(dad1);
     PhyloNeighbor* dad1_nei   = dad1->findNeighbor(node1);
@@ -395,7 +397,7 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth,
         score = computeLikelihoodFromBuffer();
 
         /*
-         PhyloNode *cur_node = dad2;
+         PhyloNode* cur_node = dad2;
          for (int i = spr_path.size()-1; i >= 0; i--) {
          score = optimizeOneBranch(cur_node, spr_path[i]->getNode());
          cur_node = spr_path[i]->getNode();
@@ -450,15 +452,15 @@ double PhyloTree::swapSPR(double cur_score, int cur_depth,
 }
 
 double PhyloTree::assessSPRMove(double cur_score, const SPRMove &spr) {
-    PhyloNode *dad = spr.prune_dad;
-    PhyloNode *node = spr.prune_node;
-    PhyloNode *dad2 = spr.regraft_dad;
-    PhyloNode *node2 = spr.regraft_node;
+    PhyloNode* dad = spr.prune_dad;
+    PhyloNode* node = spr.prune_node;
+    PhyloNode* dad2 = spr.regraft_dad;
+    PhyloNode* node2 = spr.regraft_node;
 
-    PhyloNeighbor *dad_nei1 = NULL;
-    PhyloNeighbor *dad_nei2 = NULL;
-    PhyloNode *sibling1 = NULL;
-    PhyloNode *sibling2 = NULL;
+    PhyloNeighbor* dad_nei1 = NULL;
+    PhyloNeighbor* dad_nei2 = NULL;
+    PhyloNode* sibling1 = NULL;
+    PhyloNode* sibling2 = NULL;
     double sibling1_len = 0.0, sibling2_len = 0.0;
 
     PhyloNeighbor* node1_nei      = node->findNeighbor(dad);

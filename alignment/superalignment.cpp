@@ -317,7 +317,7 @@ void SuperAlignment::readPartition(const Params &params) {
             part_aln->sequence_type = info.sequence_type;
             partitions.push_back(part_aln);
             // TODO move this to supertree
-//            PhyloTree *tree = new PhyloTree(part_aln);
+//            PhyloTree* tree = new PhyloTree(part_aln);
 //            push_back(tree);
         }
         
@@ -410,7 +410,7 @@ void SuperAlignment::readPartitionRaxml(const Params &params) {
             new_aln->sequence_type = info.sequence_type;
             partitions.push_back(new_aln);
             // TODO move to supertree
-            // PhyloTree *tree = new PhyloTree(new_aln);
+            // PhyloTree* tree = new PhyloTree(new_aln);
             // push_back(tree);
             // cout << new_aln->getNSeq() << " sequences"
             //      << " and " << new_aln->getNSite() 
@@ -602,7 +602,7 @@ void SuperAlignment::loadOneNexusPartition(const Params& params,
     new_aln->sequence_type = charset->sequence_type;
     new_aln->tree_len      = charset->tree_len;
     partitions.push_back(new_aln);
-    // PhyloTree *tree = new PhyloTree(new_aln);
+    // PhyloTree* tree = new PhyloTree(new_aln);
     // push_back(tree);
     // params = origin_params;
     // cout << new_aln->getNSeq() << " sequences " 

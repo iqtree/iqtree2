@@ -52,7 +52,7 @@ void reindexTaxonIDs(MTree *tree);
  * input tree - is a subtree,
  * output - log-likelihood of generated subtree
  */
-MTree* generateRandomYH_UB(Params &params, PhyloTree *tree);
+MTree* generateRandomYH_UB(Params &params, PhyloTree* tree);
 
 /*
  * This function generates a random tree that has A|B split.
@@ -76,14 +76,15 @@ NodeVector getBranchABid(double brLen, PhyloTree* tree);
 /*
  * Applying UBs to NNI search
  */
-NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree);
-double logC(double t, PhyloTree* tree);
+NNIMove getBestNNIForBranUB
+			(PhyloNode* node1, PhyloNode* node2, PhyloTree* tree);
+	double logC(double t, PhyloTree* tree);
 
 /**
  * Tests on fractions ai/(ai+bi) and bi/(ai+bi)
  * (fractions of sums for matching and non-matching pairs of nucleotides on the ends of branch)
  */
 
-void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree);
+void sumFraction(PhyloNode* node1, PhyloNode* node2, PhyloTree* tree);
 
 #endif /* UPPERBOUNDS_H_ */

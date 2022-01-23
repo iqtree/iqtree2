@@ -216,7 +216,7 @@ void writeDate(string date_file, ostream &out, set<string> &nodenames) {
 }
 
 #ifdef USE_LSD2
-void runLSD2(PhyloTree *tree) {
+void runLSD2(PhyloTree* tree) {
     string basename = (string)Params::getInstance().out_prefix + ".timetree";
     string treefile = basename + ".subst";
     stringstream tree_stream, outgroup_stream, date_stream;
@@ -348,7 +348,7 @@ void runLSD2(PhyloTree *tree) {
 }
 #endif
 
-void doTimeTree(PhyloTree *tree) {
+void doTimeTree(PhyloTree* tree) {
 
     cout << "--- Start phylogenetic dating ---" << endl;
     cout.unsetf(ios::fixed);

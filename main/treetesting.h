@@ -37,8 +37,9 @@ struct TreeInfo {
  * @param append TRUE to append to existing file, FALSE otherwise
  * @param linename name of the line, default "Site_Lh" if NULL
  */
-void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
-		bool append = false, const char *linename = NULL);
+void printSiteLh(const char* filename, PhyloTree* tree, 
+                 double* ptn_lh = nullptr, bool append = false, 
+				 const char* linename = nullptr);
 
 /**
  * print partition log likelihoods to a file
@@ -48,29 +49,33 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
  * @param append TRUE to append to existing file, FALSE otherwise
  * @param linename name of the line, default "Site_Lh" if NULL
  */
-void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
-		bool append = false, const char *linename = NULL);
+void printPartitionLh(const char* filename, PhyloTree* tree, 
+                      double* ptn_lh = nullptr, bool append = false, 
+					  const char* linename = nullptr);
 
 /**
  * print site log likelihoods per category to a file
  * @param filename output file name
  * @param tree phylogenetic tree
  */
-void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl);
+void printSiteLhCategory(const char* filename, PhyloTree* tree, 
+                         SiteLoglType wsl);
 
 /**
  * print site posterior probabilities per rate/mixture category to a file
  * @param filename output file name
  * @param tree phylogenetic tree
  */
-void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl);
+void printSiteProbCategory(const char* filename, PhyloTree* tree, 
+                           SiteLoglType wsl);
 
 /**
  * print site state frequency vectors (for Huaichun)
  * @param filename output file name
  * @param tree phylogenetic tree
 */
-void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
+void printSiteStateFreq(const char* filename, PhyloTree* tree, 
+                        double* state_freqs = nullptr);
 
 /**
  * print site state frequency vectors (for Huaichun)
@@ -85,7 +90,8 @@ void printSiteStateFreq(const char* filename, Alignment *aln);
     @param tree phylogenetic tree
     @param ast either AST_MARGINAL or AST_JOINT
 */
-void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqType ast);
+void printAncestralSequences(const char* filename, PhyloTree* tree, 
+                             AncestralSeqType ast);
 
 /**
  * Evaluate user-trees with possibility of tree topology tests

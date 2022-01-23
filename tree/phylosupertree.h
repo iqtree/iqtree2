@@ -100,7 +100,7 @@ public:
             set the model factory
             @param model_fac model factory
      */
-    virtual void setModelFactory(ModelFactory *model_fac) override;
+    virtual void setModelFactory(ModelFactory* model_fac) override;
 
     /**
      2019-06-03: copy part_info from tree, taking into account -bsam option
@@ -162,12 +162,12 @@ public:
      * save branch lengths into a vector
      */
     virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, 
-                                   PhyloNode *node = nullptr, PhyloNode *dad = nullptr) override;
+                                   PhyloNode* node = nullptr, PhyloNode* dad = nullptr) override;
     /**
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
     virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, 
-                                      PhyloNode *node = nullptr, PhyloNode *dad = nullptr) override;
+                                      PhyloNode* node = nullptr, PhyloNode* dad = nullptr) override;
 
     /**
         Collapse all internal branches with length <= threshold
@@ -322,7 +322,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, 
+    virtual NNIMove getBestNNIForBran(PhyloNode* node1, PhyloNode* node2, 
                                       NNIMove *nniMoves = nullptr) override;
 
     /**
@@ -344,7 +344,7 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees
@@ -390,7 +390,7 @@ public:
 	 * @param ids partitions IDs
 	 * @return subtree
 	 */
-    PhyloTree *extractSubtree(set<int> &ids);
+    PhyloTree* extractSubtree(set<int> &ids);
 
     /**
      * compute the memory size required for storing partial likelihood vectors
@@ -408,7 +408,7 @@ public:
     /**
      * count the number of super branches that map to no branches in gene trees
      */
-    int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    int countEmptyBranches(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
@@ -418,10 +418,12 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, 
-                                  PhyloNode *dad = nullptr) override;
+    virtual int fixNegativeBranch(bool force = false, PhyloNode* node = nullptr, 
+                                  PhyloNode* dad = nullptr) override;
 
-    virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    virtual int computeParsimonyBranchObsolete
+                    (PhyloNeighbor *dad_branch, PhyloNode* dad, 
+                     int *branch_subst = nullptr);
 
     /****************************************************************************
             ancestral sequence reconstruction
@@ -441,11 +443,11 @@ public:
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
-    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode* dad,
                                                double *ptn_ancestral_prob, 
                                                int *ptn_ancestral_seq) override;
 
-    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, 
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode* node, 
                                              double *ptn_ancestral_prob, 
                                              int *ptn_ancestral_seq) override;
 

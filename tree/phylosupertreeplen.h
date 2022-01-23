@@ -117,12 +117,12 @@ public:
             @param index the index
      */
     virtual void initializeAllPartialLh(int &index, int &indexlh,
-                                        PhyloNode *node = nullptr, 
-                                        PhyloNode *dad  = nullptr) override;
+                                        PhyloNode* node = nullptr, 
+                                        PhyloNode* dad  = nullptr) override;
 
     void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr,
-                                PhyloNode *node = nullptr, 
-                                PhyloNode *dad  = nullptr);
+                                PhyloNode* node = nullptr, 
+                                PhyloNode* dad  = nullptr);
 
     /**
             de-allocate central_partial_lh
@@ -132,7 +132,7 @@ public:
 	/**
 	 * @return the type of NNI around node1-node2 for partition part
 	 */
-	void getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type);
+	void getNNIType(PhyloNode* node1, PhyloNode* node2, vector<NNIType> &nni_type);
 
     /**
             Inherited from Optimization class.
@@ -159,7 +159,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode* dad,
                                            LikelihoodBufferSet& buffers) override;
 
     /**
@@ -188,7 +188,7 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @return likelihood score
      */
-    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, 
+    virtual void optimizeOneBranch(PhyloNode* node1, PhyloNode* node2, 
                                    bool clearLH = true, int maxNRStep = 100) override;
 
     /**
@@ -198,7 +198,7 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, 
+    virtual NNIMove getBestNNIForBran(PhyloNode* node1, PhyloNode* node2, 
                                       NNIMove *nniMoves = nullptr) override;
 
 
@@ -232,7 +232,10 @@ public:
             @param nni_param (OUT) if not NULL: swapping information returned
             @return the likelihood of the tree
      */
-    virtual double swapNNIBranch(double cur_score, PhyloNode *node1, PhyloNode *node2, SwapNNIParam *nni_param = NULL, NNIMove *nniMoves = NULL);
+    virtual double swapNNIBranch(double cur_score, 
+                                 PhyloNode* node1, PhyloNode* node2, 
+                                 SwapNNIParam* nni_param = nullptr, 
+                                 NNIMove* nniMoves = nullptr);
 
     /**
      *	used in swapNNIBranch to update link_neighbors of other SuperNeighbors that point to the same branch on SubTree as (node,dad)
@@ -255,7 +258,7 @@ public:
 	void mapBranchLen(int part);
 	virtual void printMapInfo() override;
 
-//	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);
+//	virtual void restoreAllBrans(PhyloNode* node, PhyloNode* dad);
 
 	/**
 	 * initialize partition information for super tree
@@ -287,10 +290,10 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, 
-                                  PhyloNode *dad = nullptr) override;
+    virtual int fixNegativeBranch(bool force = false, PhyloNode* node = nullptr, 
+                                  PhyloNode* dad = nullptr) override;
 
-    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad) override;
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode* dad) override;
     
 protected:
 	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;

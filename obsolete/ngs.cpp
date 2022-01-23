@@ -30,7 +30,7 @@
         NGSAlignment
  ****************************************************************************/
 
-NGSAlignment::NGSAlignment(PhyloTree *atree) : AlignmentPairwise() {
+NGSAlignment::NGSAlignment(PhyloTree* atree) : AlignmentPairwise() {
     tree = atree;
 }
 
@@ -244,7 +244,7 @@ void NGSAlignment::computeFuncDervCat(int cat, double value, double &df, double 
 /****************************************************************************
         NGSRate
  ****************************************************************************/
-NGSRate::NGSRate(PhyloTree *tree) {
+NGSRate::NGSRate(PhyloTree* tree) {
     phylo_tree = tree;
     ncategory = ((NGSAlignment*)tree->aln)->ncategory;
     rates = new double[ncategory];
@@ -288,7 +288,7 @@ void NGSRate::writeInfo(ostream &out) {
 /****************************************************************************
         NGSRateCat
  ****************************************************************************/
-NGSRateCat::NGSRateCat(PhyloTree *tree, int ncat) {
+NGSRateCat::NGSRateCat(PhyloTree* tree, int ncat) {
     phylo_tree = tree;
     ncategory = ncat;
     rates = new double[ncategory];
@@ -458,7 +458,7 @@ double NGSTreeCat::computeLikelihood(double *pattern_lh) {
         NGSRead
  ****************************************************************************/
 
-NGSRead::NGSRead(PhyloTree *atree) : NGSAlignment(atree) {
+NGSRead::NGSRead(PhyloTree* atree) : NGSAlignment(atree) {
     init();
     if (tree) {
         num_states = tree->aln->num_states;
@@ -489,7 +489,7 @@ void NGSRead::computePairFreq() {
 
 double NGSRead::computeFunction(double value) {
 
-    RateHeterogeneity *site_rate = tree->getRate();
+    RateHeterogeneity* site_rate = tree->getRate();
     int i, rate_id;
     int nptn = scaff.length();
     double lh = 0.0;
@@ -518,10 +518,9 @@ double NGSRead::computeFunction(double value) {
 }
 
 void NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
-    RateHeterogeneity *site_rate = tree->getRate();
+    RateHeterogeneity* site_rate = tree->getRate();
     int i, rate_id;
     int nptn = scaff.length();
-//    double lh = 0.0;
     df = 0.0;
     ddf = 0.0;
 

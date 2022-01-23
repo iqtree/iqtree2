@@ -12,7 +12,7 @@
 #include "model/modelset.h"
 
 void PhyloTree::computeSitemodelPartialLikelihoodEigen
-        (PhyloNeighbor *dad_branch, PhyloNode *dad) {
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
 	ASSERT(dad);
     if (dad_branch->isLikelihoodComputed()) {
         return;
@@ -434,7 +434,9 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen
 }
 
 //template <const int nstates>
-void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeSitemodelLikelihoodDervEigen
+        (PhyloNeighbor* dad_branch, PhyloNode* dad, 
+         double& df, double& ddf) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
@@ -462,9 +464,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 		// precompute theta for fast branch length optimization
 
 	    if (dad->isLeaf()) {
-	    	// special treatment for TIP-INTERNAL NODE case
-            
-            double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+	    	// special treatment for TIP-INTERNAL NODE case            
+            double* tip_partial_lh_node = tip_partial_lh 
+                                        + (dad->id * get_safe_upper_limit(nptn)*nstates);
             
 #ifdef _OPENMP
 #pragma omp parallel for private(ptn, i, c) schedule(static)
@@ -490,9 +492,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 #pragma omp parallel for private(ptn, i) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
-				double *theta = theta_all + ptn*block;
-			    double *partial_lh_node = node_branch->partial_lh + ptn*block;
-			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+				double* theta = theta_all + ptn*block;
+			    double* partial_lh_node = node_branch->partial_lh + ptn*block;
+			    double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
 	    		for (i = 0; i < block; i++) {
 	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
 	    		}
@@ -552,7 +554,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 }
 
 //template <const int nstates>
-double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeSitemodelLikelihoodBranchEigen
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -582,7 +585,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
-        double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+        double* tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
 #endif

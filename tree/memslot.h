@@ -45,7 +45,7 @@ class MemSlotVector : public vector<MemSlot> {
 public:
 
     /** initialize with a specified number of slots */
-    void init(PhyloTree *tree, int num_slot);
+    void init(PhyloTree* tree, int num_slot);
 
     /** 
         lock the memory assigned to nei

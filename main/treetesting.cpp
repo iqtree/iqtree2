@@ -27,8 +27,8 @@
 #include "utils/safe_io.h" //for isAtEndOfFile()
 #include "utils/timeutil.h"
 
-void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
-                 bool append, const char *linename) {
+void printSiteLh(const char* filename, PhyloTree* tree, double* ptn_lh,
+                 bool append, const char* linename) {
     double *pattern_lh;
     if (!ptn_lh) {
         pattern_lh = new double[tree->getAlnNPattern()];
@@ -67,8 +67,8 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
         delete[] pattern_lh;
 }
 
-void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
-                      bool append, const char *linename) {
+void printPartitionLh(const char*filename, PhyloTree* tree, double* ptn_lh,
+                      bool append, const char* linename) {
     
     ASSERT(tree->isSuperTree());
     auto stree = dynamic_cast<PhyloSuperTree*>(tree);
@@ -121,7 +121,8 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     delete[] pattern_lh;
 }
 
-void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
+void printSiteLhCategory(const char* filename, PhyloTree* tree, 
+                         SiteLoglType wsl) {
     
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
@@ -192,7 +193,8 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
     
 }
 
-void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralSeqType ast) {
+void printAncestralSequences(const char *out_prefix, PhyloTree* tree, 
+                             AncestralSeqType ast) {
     
     //    int *joint_ancestral = NULL;
     //
@@ -308,8 +310,8 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
     
 }
 
-void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
-    
+void printSiteProbCategory(const char*filename, PhyloTree* tree, 
+                           SiteLoglType wsl) {
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
     // error checking
@@ -381,7 +383,8 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
 }
 
 
-void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs) {
+void printSiteStateFreq(const char* filename, PhyloTree* tree, 
+                        double* state_freqs) {
     size_t nsites = tree->getAlnNSite();
     size_t nstates = tree->aln->num_states;
     double *ptn_state_freq;
@@ -779,7 +782,8 @@ int mlecoef(double *cnts, double *rr, double bb, int kk,
 /**
  @param tree_lhs RELL score matrix of size #trees x #replicates
  */
-void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
+void performAUTest(Params &params, PhyloTree* tree, 
+                   double* pattern_lhs, vector<TreeInfo>& info) {
     
     if (params.topotest_replicates < 10000)
         outWarning("Too few replicates for AU test. At least -zb 10000 for reliable results!");

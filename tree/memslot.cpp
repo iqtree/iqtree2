@@ -25,7 +25,7 @@
 const int MEM_LOCKED = 1;
 const int MEM_SPECIAL = 2;
 
-void MemSlotVector::init(PhyloTree *tree, int num_slot) {
+void MemSlotVector::init(PhyloTree* tree, int num_slot) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     reserve(num_slot+2);

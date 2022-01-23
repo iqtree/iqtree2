@@ -54,7 +54,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQ
     StrVector model_names;
     for (it = alignment->partitions.begin(); 
 	     it != alignment->partitions.end(); ++it, ++part) {
-        PhyloTree *tree;
+        PhyloTree* tree;
         if (new_iqtree) {
             tree = new IQTree(*it);
 		}
@@ -80,7 +80,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	part_info = super_tree->part_info;
 	for (vector<Alignment*>::iterator it = alignment->partitions.begin(); 
 	     it != alignment->partitions.end(); ++it) {
-		PhyloTree *tree = new PhyloTree((*it));
+		PhyloTree* tree = new PhyloTree((*it));
 		push_back(tree);
 	}
 	// Initialize the counter for evaluated NNIs on subtrees
@@ -91,7 +91,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	aln = alignment;
 }
 
-void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
+void PhyloSuperTree::setModelFactory(ModelFactory* model_fac) {
     PhyloTree::setModelFactory(model_fac);
     if (model_fac) {
         PhyloSuperTree *tree = dynamic_cast<PhyloSuperTree*>
@@ -313,7 +313,7 @@ void PhyloSuperTree::readTreeString(const string &tree_string,
  * save branch lengths into a vector
  */
 void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, 
-                                       PhyloNode *node, PhyloNode *dad) {
+                                       PhyloNode* node, PhyloNode* dad) {
     ASSERT(getMixlen() == 1); // supertree and treemixlen not allowed together
     int totalBranchNum = branchNum * getMixlen();
     for (auto it = begin(); it != end(); ++it) {
@@ -332,7 +332,7 @@ void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid,
  * restore branch lengths from a vector previously called with saveBranchLengths
  */
 void PhyloSuperTree::restoreBranchLengths(DoubleVector &lenvec, int startid, 
-                                          PhyloNode *node, PhyloNode *dad) {
+                                          PhyloNode* node, PhyloNode* dad) {
     PhyloTree::restoreBranchLengths(lenvec, startid);
     startid += branchNum * getMixlen();
     for (iterator it = begin(); it != end(); ++it) {
@@ -699,7 +699,7 @@ void PhyloSuperTree::clearAllScaleNum(bool set_to_null) {
 }
 
 int PhyloSuperTree::computeParsimonyBranchObsolete
-        (PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+        (PhyloNeighbor *dad_branch, PhyloNode* dad, int *branch_subst) {
     int score = 0, part = 0;
     SuperNeighbor* dad_nei  = dynamic_cast<SuperNeighbor*>(dad_branch);
     SuperNeighbor* node_nei = dad_nei->getNode()->findNeighbor(dad);
@@ -949,7 +949,7 @@ int PhyloSuperTree::getMaxPartNameLength() {
 	return namelen;
 }
 
-NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves) {
+NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode* node1, PhyloNode* node2, NNIMove *nniMoves) {
     if ((node1->findNeighbor(node2))->direction == 
 	    RootDirection::TOWARD_ROOT) {
         // swap node1 and node2 if the direction is not right, only for nonreversible models
@@ -1053,8 +1053,8 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 		//part_moves[0].node1Nei_it = NULL;
 
 		// setup subtree NNI correspondingly
-		PhyloNode *node1_part = nei2_part->getNode();
-		PhyloNode *node2_part = nei1_part->getNode();
+		PhyloNode* node1_part = nei2_part->getNode();
+		PhyloNode* node2_part = nei1_part->getNode();
 		part_info[part].nniMoves[0].node1 = part_info[part].nniMoves[1].node1 = node1;
 		part_info[part].nniMoves[0].node2 = part_info[part].nniMoves[1].node2 = node2;
 		part_info[part].nniMoves[0].node1Nei_it = node1_part->findNeighborIt(node1_nei->link_neighbors[part]->node);
@@ -1272,7 +1272,7 @@ void PhyloSuperTree::changeNNIBrans(const NNIMove &move) {
 	}
 }
 
-//void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//void PhyloSuperTree::restoreAllBrans(PhyloNode* node, PhyloNode* dad) {
 //	int part = 0;
 //	for (iterator it = begin(); it != end(); it++, part++) {
 //		(*it)->setBranchLengths(part_info[part].cur_brlen);
@@ -1343,7 +1343,7 @@ string PhyloSuperTree::getModelName() {
 	return (string)"Partition model";
 }
 
-PhyloTree *PhyloSuperTree::extractSubtree(set<int> &ids) {
+PhyloTree* PhyloSuperTree::extractSubtree(set<int> &ids) {
 	string union_taxa;
 	for (auto it = ids.begin(); it != ids.end(); it++) {
 		int id = *it;
@@ -1363,7 +1363,7 @@ PhyloTree *PhyloSuperTree::extractSubtree(set<int> &ids) {
 			}
 		}
 	}
-	PhyloTree *tree = new PhyloTree;
+	PhyloTree* tree = new PhyloTree;
 	tree->copyTree(this, union_taxa);
 	return tree;
 }
@@ -1405,7 +1405,7 @@ uint64_t PhyloSuperTree::getMemoryRequiredThreaded(size_t ncategory, bool full_m
     return mem;
 }
 
-int PhyloSuperTree::countEmptyBranches(PhyloNode *node, PhyloNode *dad) {
+int PhyloSuperTree::countEmptyBranches(PhyloNode* node, PhyloNode* dad) {
 	int count = 0;
     if (!node) {
         node = getRoot();
@@ -1467,7 +1467,7 @@ void PhyloSuperTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
 	mapTrees();
 }
 
-int PhyloSuperTree::fixNegativeBranch(bool force, PhyloNode *node, PhyloNode *dad) {
+int PhyloSuperTree::fixNegativeBranch(bool force, PhyloNode* node, PhyloNode* dad) {
 	mapTrees();
 	int fixed = 0;
 	for (iterator it = begin(); it != end(); ++it) {
@@ -1518,7 +1518,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
     @param dad dad of the target internal node
     @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
 */
-void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode* dad,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
 
     SuperNeighbor* snei      = dynamic_cast<SuperNeighbor*>(dad_branch);
@@ -1545,7 +1545,7 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
     }
 }
 
-void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
+void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode* node,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
     int part = 1;
     for (auto it = begin(); it != end(); ++it, ++part) {

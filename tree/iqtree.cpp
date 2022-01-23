@@ -1513,8 +1513,8 @@ void IQTree::increaseKDelete() {
 //}
 
 RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_vec,
-                                              int nei_id, PhyloNode *dad) {
-    PhyloNode *node = dad->getNeighborByIndex(nei_id)->getNode();
+                                              int nei_id, PhyloNode* dad) {
+    PhyloNode* node = dad->getNeighborByIndex(nei_id)->getNode();
     int set_id = dad->id * 3 + nei_id;
     if (leaves_vec[set_id]) {
         return leaves_vec[set_id];
@@ -1621,7 +1621,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
     my_random_shuffle(indices_noncherry.begin(), indices_noncherry.end());
     int i;
     for (i = 0; i < num_delete && i < noncherry_taxa.size(); i++) {
-        PhyloNode *taxon = noncherry_taxa[indices_noncherry[i]];
+        PhyloNode* taxon = noncherry_taxa[indices_noncherry[i]];
         del_leaves.push_back(taxon);
         deleteLeaf(taxon);
     }
@@ -1637,7 +1637,7 @@ void IQTree::deleteNonCherryLeaves(PhyloNodeVector &del_leaves) {
         }
         my_random_shuffle(indices_cherry.begin(), indices_cherry.end());
         while (i < num_delete) {
-            PhyloNode *taxon = cherry_taxa[indices_cherry[j]];
+            PhyloNode* taxon = cherry_taxa[indices_cherry[j]];
             del_leaves.push_back(taxon);
             deleteLeaf(taxon);
             ++i;
@@ -1669,7 +1669,7 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
         else {
             ++i;
         }
-        PhyloNode *taxon = taxa[id];
+        PhyloNode* taxon = taxa[id];
         del_leaves.push_back(taxon);
         deleteLeaf(taxon);
         taxa[id] = nullptr;
@@ -1729,7 +1729,7 @@ int IQTree::assessQuartetParsimony(Node *leaf0, Node *leaf1,
     return 1;
 }
 
-void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
+void IQTree::initializeBonus(PhyloNode* node, PhyloNode* dad) {
     if (!node) {
         node = getRoot();
     }
@@ -1746,12 +1746,12 @@ void IQTree::initializeBonus(PhyloNode *node, PhyloNode *dad) {
     }
 }
 
-void IQTree::raiseBonus(PhyloNeighbor *nei, PhyloNode *dad, double bonus) {
+void IQTree::raiseBonus(PhyloNeighbor* nei, PhyloNode* dad, double bonus) {
     nei->lh_scale_factor += bonus;
     LOG_LINE(VerboseMode::VB_DEBUG, dad->id << " - " << nei->node->id << " : " << bonus);
 }
 
-double IQTree::computePartialBonus(PhyloNode *node, PhyloNode* dad) {
+double IQTree::computePartialBonus(PhyloNode* node, PhyloNode* dad) {
     PhyloNeighbor *node_nei = node->findNeighbor(dad);
     if (node_nei->isLikelihoodComputed()) {
         return node_nei->lh_scale_factor;
@@ -1765,9 +1765,9 @@ double IQTree::computePartialBonus(PhyloNode *node, PhyloNode* dad) {
     return node_nei->lh_scale_factor;
 }
 
-void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes,
-                           NodeVector &best_dads, PhyloNode *node,
-                           PhyloNode *dad) {
+void IQTree::findBestBonus(double& best_score, NodeVector &best_nodes,
+                           NodeVector& best_dads, PhyloNode* node,
+                           PhyloNode* dad) {
     if (!node)
         node = getRoot();
     if (!dad) {
@@ -1791,7 +1791,7 @@ void IQTree::findBestBonus(double &best_score, NodeVector &best_nodes,
 }
 
 void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec,
-                            PhyloNode *cur_root, PhyloNode *del_leaf) {
+                            PhyloNode* cur_root, PhyloNode* del_leaf) {
     const int MAX_DEGREE = 3;
     RepresentLeafSet * leaves[MAX_DEGREE];
     double bonus[MAX_DEGREE];
@@ -2479,7 +2479,7 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
     }
 }
 
-double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
+double IQTree::swapTaxa(PhyloNode* node1, PhyloNode* node2) {
     ASSERT(node1->isLeaf());
     ASSERT(node2->isLeaf());
 
@@ -2512,8 +2512,8 @@ double IQTree::perturb(int times) {
         getTaxa(taxa);
         int taxa_count = static_cast<int>(taxa.size());
         int taxonid1 = random_int(taxa_count);
-        PhyloNode *taxon1 = taxa[taxonid1];
-        PhyloNode *taxon2;
+        PhyloNode* taxon1 = taxa[taxonid1];
+        PhyloNode* taxon2;
         int *dists = new int[taxa.size()];
         int minDist = 1000000;
         for (int i = 0; i < taxa.size(); i++) {
@@ -4021,8 +4021,8 @@ void IQTree::evalNNIsSort(bool approx_nni) {
                     }
             }
         } else { // otherwise, only optimize the branch length
-            PhyloNode *node1 = it->node1;
-            PhyloNode *node2 = it->node2;
+            PhyloNode* node1 = it->node1;
+            PhyloNode* node2 = it->node2;
             PhyloNeighbor *node12_it = node1->findNeighbor(node2);
             PhyloNeighbor *node21_it = node2->findNeighbor(node1);
             double stored_len = node12_it->length;
@@ -4190,7 +4190,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
     }
 }
 
-void IQTree::saveNNITrees(PhyloNode *node, PhyloNode *dad) {
+void IQTree::saveNNITrees(PhyloNode* node, PhyloNode* dad) {
     if (!node) {
         node = getRoot();
     }

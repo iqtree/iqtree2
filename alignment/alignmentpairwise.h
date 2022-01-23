@@ -48,7 +48,7 @@ public:
         pairwise alignment with sequence numbers not yet set
         @param atree input multiple alignment
      */
-    AlignmentPairwise(PhyloTree *atree);
+    AlignmentPairwise(PhyloTree* atree);
 
     /**
 		construct the pairwise alignment from two sequences of a multiple alignment
@@ -56,7 +56,7 @@ public:
 		@param seq1 ID of the first sequence
 		@param seq2 ID of the second sequence
 	*/
-    AlignmentPairwise(PhyloTree *atree, int seq1, int seq2);
+    AlignmentPairwise(PhyloTree* atree, int seq1, int seq2);
 
     
     /**

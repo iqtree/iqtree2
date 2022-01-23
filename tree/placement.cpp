@@ -41,7 +41,7 @@ double PhyloTree::recomputeParsimonyBranchLength(PhyloNode* fromNode, PhyloNode*
     return branch_length;
 }
 
-double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode *added_node,
+double PhyloTree::addTaxonML(PhyloNode* added_taxon,     PhyloNode* added_node,
                              PhyloNode* node,            PhyloNode* dad,
                              bool isAddedAtMidpoint,
                              PhyloNode* &target_node,    PhyloNode* &target_dad,

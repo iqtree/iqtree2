@@ -104,7 +104,7 @@ void PhyloNeighbor::copyComputedState(const PhyloNeighbor* donor) {
     this->length              = donor->length;
 }
 
-void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
+void PhyloNode::clearReversePartialLh(PhyloNode* dad) {
     FOR_EACH_ADJACENT_PHYLO_NODE(this, dad, it, node) {
         PhyloNeighbor* backNei = node->findNeighbor(this);
         backNei->setLikelihoodComputed(false);
@@ -218,7 +218,7 @@ void PhyloNode::addNeighbor(Node *node, double length, int id) {
 	neighbors.push_back(new PhyloNeighbor(node, length, id));
 }
 
-int PhyloNode::computeSize(PhyloNode *dad) {
+int PhyloNode::computeSize(PhyloNode* dad) {
     PhyloNeighbor *nei = dad->findNeighbor(this);
     if (nei->size > 0)
         return nei->size;

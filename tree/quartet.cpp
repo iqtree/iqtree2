@@ -940,7 +940,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
                 // something partition kept, do computations
                 if (quartet_aln->ordered_pattern.empty())
                     quartet_aln->orderPatternByNumChars(PAT_VARIANT);
-                PhyloTree *quartet_tree;
+                PhyloTree* quartet_tree;
                 if (isSuperTree()) {
                     quartet_tree = new PhyloSuperTree(dynamic_cast<SuperAlignment*>(quartet_aln), 
                                                       dynamic_cast<PhyloSuperTree*>(this));

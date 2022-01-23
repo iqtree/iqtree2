@@ -42,9 +42,9 @@ public:
 		constructor
 		@param filename file in Fritz's format
 	*/
-	NGSAlignment(PhyloTree *atree);
+	NGSAlignment(PhyloTree* atree);
 
-    NGSAlignment(const char *filename);
+    NGSAlignment(const char* filename);
 
 	/**
 		constructor
@@ -156,7 +156,7 @@ public:
 	/**
 		@param tree must be NGSTree type
 	*/
-	NGSRate(PhyloTree *tree);
+	NGSRate(PhyloTree* tree);
 
 	/**
 		get rate category of a specified site-pattern. 
@@ -213,7 +213,7 @@ public:
 	/**
 		@param tree must be NGSTree type
 	*/
-	NGSRateCat(PhyloTree *tree, int ncat);
+	NGSRateCat(PhyloTree* tree, int ncat);
 
 	/**
 		optimize rates of all site-patterns
@@ -297,7 +297,7 @@ public:
 	/** 
 		constructor
 	*/
-	NGSRead(PhyloTree *atree);
+	NGSRead(PhyloTree* atree);
 
 	void init();
 
@@ -419,7 +419,7 @@ public:
 	*/
 	void writeInfo();
 
-	PhyloTree *tree;
+	PhyloTree* tree;
 
 	double homo_rate;
 

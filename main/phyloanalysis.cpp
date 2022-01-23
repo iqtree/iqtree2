@@ -188,7 +188,7 @@ void pruneModelInfo(ModelCheckpoint &model_info, PhyloSuperTree *tree) {
 }
 */
 void reportModelSelection(ofstream &out, Params &params,
-                          ModelCheckpoint *model_info, PhyloTree *tree) {
+                          ModelCheckpoint* model_info, PhyloTree* tree) {
     out << "Best-fit model according to "
         << criterionName(params.model_test_criterion) << ": ";
 //    ModelCheckpoint::iterator it;
@@ -307,7 +307,7 @@ void reportModelSelection(ofstream &out, Params &params,
     out << endl;
 }
 
-void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
+void reportModel(ofstream &out, Alignment* aln, ModelSubst* m) {
 
     if (m->isDivergentModel()) {
         auto dm = dynamic_cast<ModelDivergent*>(m);
@@ -493,7 +493,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 }
 
 void reportModel(ofstream &out, PhyloTree &tree) {
-    ModelSubst *mmodel = tree.getModel();
+    ModelSubst* mmodel = tree.getModel();
     if (mmodel->isMixture() &&
         !mmodel->isPolymorphismAware()) {
         out << "Mixture model of substitution: "
@@ -543,7 +543,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 }
 
 void reportRate(ostream &out, PhyloTree &tree) {
-    RateHeterogeneity *rate_model = tree.getRate();
+    RateHeterogeneity* rate_model = tree.getRate();
     out << "Model of rate heterogeneity: "
         << rate_model->full_name << endl;
     rate_model->writeInfo(out);
@@ -3483,7 +3483,7 @@ void restoreTreeAndModelFromBestRun(IQTree* tree,
 }
 
 void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
-    RateHeterogeneity *site_rates = iqtree.getRate();
+    RateHeterogeneity* site_rates = iqtree.getRate();
     site_rates->setFixPInvar(true);
     site_rates->setFixGammaShape(true);
     DoubleVector alphas, p_invars, logl;
@@ -4021,7 +4021,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     cout << endl << "===> COMPUTING SITE FREQUENCY MODEL BASED ON TREE FILE "
          << params.tree_freq_file << endl;
     ASSERT(params.tree_freq_file);
-    PhyloTree *tree = new PhyloTree(alignment);
+    PhyloTree* tree = new PhyloTree(alignment);
     tree->setParams(&params);
     bool myrooted = params.is_rooted;
     tree->readTree(params.tree_freq_file, myrooted);
@@ -4698,8 +4698,8 @@ void assignBranchSupportNew(Params &params) {
         outError("-nt AUTO is not supported for concordance factor analysis,"
                  " please specify no. cores");
     }
-    PhyloTree *tree;
-    Alignment *aln = NULL;
+    PhyloTree* tree;
+    Alignment* aln = nullptr;
     if (params.site_concordance) {
         if (!params.aln_file && !params.partition_file) {
             outError("Please provide an alignment (-s) or partition file");

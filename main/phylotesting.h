@@ -379,7 +379,7 @@ public:
         @param[out] ordered_models list of models ordered by specified criterion
         @return TRUE if ordered_models found, FALSE otherwise (unfinished job)
     */
-    bool getOrderedModels(PhyloTree *tree, CandidateModelSet &ordered_models);
+    bool getOrderedModels(PhyloTree* tree, CandidateModelSet& ordered_models);
 
     /*
         get the best tree

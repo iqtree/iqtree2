@@ -291,7 +291,8 @@ bool  ModelCheckpoint::getBestTree(string &best_tree) {
     return getString("best_tree_" + criterionName(Params::getInstance().model_test_criterion), best_tree);
 }
 
-bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, CandidateModelSet &ordered_models) {
+bool ModelCheckpoint::getOrderedModels
+        (PhyloTree* tree, CandidateModelSet &ordered_models) {
     if (tree->isSuperTree()) {
         auto stree = dynamic_cast<PhyloSuperTree*>(tree);
         ordered_models.clear();
@@ -1617,7 +1618,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets,
         //Partinfo constructor now sets cur_tpnlh to nullptr (James B. 06-Aug-2020).
         //NNIMove  constructor now sets ptnlh to nullptr     (James B. 06-Aug-2020).
 		part_info.push_back(info);
-		PhyloTree *tree = super_tree->extractSubtree(*it);
+		PhyloTree* tree = super_tree->extractSubtree(*it);
         tree->setParams(super_tree->params);
 		tree->setAlignment(aln);
 		tree_vec.push_back(tree);
@@ -1973,8 +1974,8 @@ double doKmeansClustering(Params &params, PhyloSuperTree *in_tree,
         }
         ModelCheckpoint part_model_info;
         if (!done_before) {
-            Alignment *aln = super_aln->concatenateAlignments(merged_set);
-            PhyloTree *tree = in_tree->extractSubtree(merged_set);
+            Alignment* aln = super_aln->concatenateAlignments(merged_set);
+            PhyloTree* tree = in_tree->extractSubtree(merged_set);
             tree->setAlignment(aln);
             extractModelInfo(set_name, model_info, part_model_info);
             tree->num_precision = in_tree->num_precision;
@@ -2195,7 +2196,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
         int i = partitionID[j].first;
-        PhyloTree *this_tree = in_tree->at(i);
+        PhyloTree* this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		ModelCheckpoint part_model_info;
 		extractModelInfo(this_tree->aln->name, model_info, part_model_info);
@@ -2385,8 +2386,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
             ModelCheckpoint part_model_info;
             double cur_tree_len = 0.0;
             if (!done_before) {
-                Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
-                PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
+                Alignment* aln = super_aln->concatenateAlignments(cur_pair.merged_set);
+                PhyloTree* tree = in_tree->extractSubtree(cur_pair.merged_set);
                 //tree->scaleLength((weight1*lenvec[cur_pair.part1] 
                 // + weight2*lenvec[cur_pair.part2])/tree->treeLength());
                 tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
@@ -2559,7 +2560,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree,
         #endif
         for (int j = 0; j < in_tree->size(); j++) {
             int i = partitionID[j].first;
-            PhyloTree *this_tree = in_tree->at(i);
+            PhyloTree* this_tree = in_tree->at(i);
             //scan through models for this partition,
             //assuming the information occurs consecutively
             ModelCheckpoint part_model_info;

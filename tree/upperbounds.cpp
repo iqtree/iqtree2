@@ -118,7 +118,8 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 			allSplits++;
 
 			// Dealing with subtrees T_A and T_B
-			PhyloTree *treeA, *treeB;
+			PhyloTree* treeA;
+			PhyloTree* treeB;
 			treeA = extractSubtreeUB(taxaA,tree,params,1);
 			treeB = extractSubtreeUB(taxaB,tree,params,1);
 
@@ -162,7 +163,8 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 			//cout<<"taxaA.size() = "<<taxaA.size()<<", taxaB.size() = "<<taxaB.size()<<", n = "<<n<<endl;
 
 			vector<int> taxaC, taxaD;
-			PhyloTree *treeC, *treeD;
+			PhyloTree*  treeC;
+			PhyloTree*  treeD;
 
 			// ContraSplit1: changing 1/2 of taxa
 			taxaC = taxaA;
@@ -337,7 +339,7 @@ void printTreeUB(MTree *tree){
 	}
 }
 
-MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
+MTree* generateRandomYH_UB(Params &params, PhyloTree* tree){
 	MExtTree* treeR = new MExtTree();
 	bool binary = TRUE;
 
@@ -418,12 +420,9 @@ MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
 }
 
 double RandomTreeAB(PhyloTree* treeORGN, PhyloTree* treeAorgn, PhyloTree* treeBorgn, IntVector &taxaA, IntVector &taxaB, Params* params, double brLen){
-	PhyloTree *tree  = new PhyloTree();
-	MTree *treeA = new MTree();
-	MTree *treeB = new MTree();
-
-	treeA = generateRandomYH_UB(*params,treeAorgn);
-	treeB = generateRandomYH_UB(*params,treeBorgn);
+	PhyloTree* tree  = new PhyloTree();
+	MTree*     treeA = generateRandomYH_UB(*params,treeAorgn);
+	MTree*     treeB = generateRandomYH_UB(*params,treeBorgn);
 
 /*
 	// PrintTree ---------------
@@ -521,7 +520,8 @@ double RandomTreeAB(PhyloTree* treeORGN, PhyloTree* treeAorgn, PhyloTree* treeBo
 double UpperBoundAB(IntVector &taxaA, IntVector &taxaB, PhyloTree* tree, Params *params){
 	double U = 0.0;
 
-	PhyloTree *treeA, *treeB;
+	PhyloTree* treeA;
+	PhyloTree* treeB;
 	treeA = extractSubtreeUB(taxaA,tree,params,1);
 	treeB = extractSubtreeUB(taxaB,tree,params,1);
 
@@ -602,7 +602,8 @@ void extendingTree(MTree *tree, Params* params){
 
 }
 
-NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
+NNIMove getBestNNIForBranUB(PhyloNode* node1, PhyloNode* node2, 
+                            PhyloTree* tree){
 
 	NNIMove nniMoves[2];
 
@@ -840,7 +841,7 @@ double logC(double t, PhyloTree* tree){
 	return log(maxTransProb/tree->minStateFreq);
 }
 
-void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
+void sumFraction(PhyloNode* node1, PhyloNode* node2, PhyloTree* tree){
 	PhyloNeighbor* nei1 = node1->findNeighbor(node2);
 	PhyloNeighbor* nei2 = node2->findNeighbor(node1);
 

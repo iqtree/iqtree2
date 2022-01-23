@@ -32,7 +32,7 @@ TinaTree::~TinaTree()
 }
 
 
-int TinaTree::computeParsimonyScore(intptr_t ptn, int &states, PhyloNode *node, PhyloNode *dad) {
+int TinaTree::computeParsimonyScore(intptr_t ptn, int &states, PhyloNode* node, PhyloNode* dad) {
     int score = 0;
     states = 0;
     if (!node) {
@@ -114,7 +114,7 @@ void TinaTree::initializeAllPartialLh() {
 }
 
 void TinaTree::initializeAllPartialLh(int &index, int &indexlh,
-                                      PhyloNode *node, PhyloNode *dad) {
+                                      PhyloNode* node, PhyloNode* dad) {
 
     if (node==nullptr) {
         node = getRoot();

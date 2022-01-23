@@ -30,7 +30,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
         return;
     }
     dad_branch->setLikelihoodComputed(true);
-    PhyloNode *node = dad_branch->getNode();
+    PhyloNode* node = dad_branch->getNode();
 
     intptr_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
     intptr_t ptn, c;
@@ -373,7 +373,9 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD
+        (PhyloNeighbor* dad_branch, PhyloNode* dad, 
+         double& df, double& ddf) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
@@ -404,15 +406,16 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
             
-            double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+            double* tip_partial_lh_node = tip_partial_lh 
+                                        + (dad->id * get_safe_upper_limit(nptn)*nstates);
             
 #ifdef _OPENMP
 #pragma omp parallel for private(ptn, i, c) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
-				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-				VectorClass *lh_tip = (VectorClass*)(tip_partial_lh_node + ptn*nstates);
+				VectorClass* partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+				VectorClass* theta = (VectorClass*)(theta_all + ptn*block);
+				VectorClass* lh_tip = (VectorClass*)(tip_partial_lh_node + ptn*nstates);
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates/VCSIZE; i++) {
                         theta[i] = lh_tip[i] * partial_lh_dad[i];
@@ -433,9 +436,9 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 #pragma omp parallel for private(ptn, i) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
-				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-			    VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+				VectorClass* partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+				VectorClass* theta = (VectorClass*)(theta_all + ptn*block);
+			    VectorClass* partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
 	    		for (i = 0; i < block_VCSIZE; i++) {
 	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
 	    		}
@@ -443,16 +446,17 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 	    }
 		if (nptn < maxptn) {
 			// copy dummy values
-			for (ptn = nptn; ptn < maxptn; ptn++)
+			for (ptn = nptn; ptn < maxptn; ptn++) {
 				memcpy(&theta_all[ptn*block], theta_all, block*sizeof(double));
+            }
 		}
 		theta_computed = true;
 	}
 
-    ModelSet *models = (ModelSet*)model;
-    VectorClass my_df = 0.0, my_ddf = 0.0;
+    ModelSet*   models     = (ModelSet*)model;
+    VectorClass my_df      = 0.0, my_ddf = 0.0;
     VectorClass dad_length = dad_branch->length;
-    VectorClass unit = 1.0;
+    VectorClass unit       = 1.0;
     
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, c, j)
@@ -469,8 +473,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         const VectorClass* eval;
         
         for (j = 0; j < VCSIZE; j++) {
-            lh_ptn[j] = 0.0;
-            df_ptn[j] = 0.0;
+            lh_ptn[j]  = 0.0;
+            df_ptn[j]  = 0.0;
             ddf_ptn[j] = 0.0;
             if (ptn+j < nptn) {
                 eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
@@ -489,8 +493,8 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
                     ddf_cat = mul_add(cof, val1, ddf_cat);
                 }
                 VectorClass prop = site_rate->getProp(c);
-                lh_ptn[j] = mul_add(prop, lh_cat, lh_ptn[j]);
-                df_ptn[j] = mul_add(prop, df_cat, df_ptn[j]);
+                lh_ptn[j]  = mul_add(prop, lh_cat, lh_ptn[j]);
+                df_ptn[j]  = mul_add(prop, df_cat, df_ptn[j]);
                 ddf_ptn[j] = mul_add(prop, ddf_cat, ddf_ptn[j]);
                 theta += nstates/VCSIZE;
             }
@@ -502,15 +506,15 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         VectorClass freq;
         freq.load_a(&ptn_freq[ptn]);
         
-        VectorClass df_ptn_sum = horizontal_add(df_ptn) * inv_lh_ptn;
+        VectorClass df_ptn_sum  = horizontal_add(df_ptn) * inv_lh_ptn;
         VectorClass ddf_ptn_sum = horizontal_add(ddf_ptn) * inv_lh_ptn;
         ddf_ptn_sum = nmul_add(df_ptn_sum, df_ptn_sum, ddf_ptn_sum);
 
 #ifdef _OPENMP
-        my_df_thread = mul_add(df_ptn_sum, freq, my_df_thread);
+        my_df_thread  = mul_add(df_ptn_sum, freq, my_df_thread);
         my_ddf_thread = mul_add(ddf_ptn_sum, freq, my_ddf_thread);
 #else
-        my_df = mul_add(df_ptn_sum, freq, my_df);
+        my_df  = mul_add(df_ptn_sum, freq, my_df);
         my_ddf = mul_add(ddf_ptn_sum, freq, my_ddf);
 #endif
     } // for loop
@@ -518,23 +522,24 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
 #ifdef _OPENMP
 #pragma omp critical
 	{
-		my_df += my_df_thread;
+		my_df  += my_df_thread;
 		my_ddf += my_ddf_thread;
 	}
 }
 #endif
 
-	df = horizontal_add(my_df);
+	df  = horizontal_add(my_df);
 	ddf = horizontal_add(my_ddf);
     if (isnan(df) || isinf(df)) {
-        df = 0.0;
+        df  = 0.0;
         ddf = 0.0;
         outWarning("Numerical instability (some site-likelihood = 0)");
     }
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
@@ -550,30 +555,30 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
     if ((node_branch->partial_lh_computed & 1) == 0) {
         computeSitemodelPartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     }
-    size_t ncat = site_rate->getNRate();
-
-    size_t block = ncat * nstates;
-    intptr_t ptn; // for big data size > 4GB memory required
-    size_t c, i, j;
-    intptr_t nptn = aln->size();
-    intptr_t maxptn = get_safe_upper_limit(nptn);
-
-    ModelSet *models = (ModelSet*)model;
-    VectorClass tree_lh = 0.0;
-    VectorClass *cat_length = aligned_alloc<VectorClass>(ncat);
-    VectorClass *cat_prop = aligned_alloc<VectorClass>(ncat);
+    size_t    ncat  = site_rate->getNRate();
+    size_t    block = ncat * nstates;
+    intptr_t  ptn; // for big data size > 4GB memory required
+    size_t    c, i, j;
+    intptr_t  nptn   = aln->size();
+    intptr_t  maxptn = get_safe_upper_limit(nptn);
+    ModelSet* models = (ModelSet*)model;
+    VectorClass  tree_lh    = 0.0;
+    VectorClass* cat_length = aligned_alloc<VectorClass>(ncat);
+    VectorClass* cat_prop   = aligned_alloc<VectorClass>(ncat);
     for (c = 0; c < ncat; c++) {
         cat_length[c] = site_rate->getRate(c) * dad_branch->length;
-        cat_prop[c] = site_rate->getProp(c);
+        cat_prop[c]   = site_rate->getProp(c);
     }
 
     if (dad->isLeaf()) {
 		// copy dummy values because VectorClass will access beyond nptn
-		for (ptn = nptn; ptn < maxptn; ptn++)
+		for (ptn = nptn; ptn < maxptn; ptn++) {
 			memcpy(&dad_branch->partial_lh[ptn*block], &dad_branch->partial_lh[(ptn-1)*block], block*sizeof(double));
+        }
 
     	// special treatment for TIP-INTERNAL NODE case
-        double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+        double* tip_partial_lh_node = tip_partial_lh 
+                                    + (dad->id * get_safe_upper_limit(nptn)*nstates);
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, c, j)
 {
