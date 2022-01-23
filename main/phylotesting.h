@@ -428,7 +428,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     @param seq_type (OUT) sequence type, SEQ_UNKNOWN if is not determined
     @return 1 for parametric model, 2 for empirical model
 */
-int detectSeqType(const char *model_name, SeqType &seq_type);
+int detectSeqType(const char* model_name, SeqType &seq_type);
 
 string detectSeqTypeName(string model_name);
 

@@ -60,7 +60,7 @@ static inline uint32_t vml_popcntl (uint64_t ab)
 /***********************************************************/
 
 void PhyloTree::computePartialParsimonyFast
-        (PhyloNeighbor *dad_branch, PhyloNode* dad) {
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
     if (dad_branch->isParsimonyComputed()) {
         return;
     }
@@ -441,7 +441,7 @@ int PhyloTree::getSubTreeParsimonyFast(PhyloNeighbor* dad_branch) const {
     return dad_branch->partial_pars[total];
 }
 
-int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch,
+int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor* dad_branch,
                                           PhyloNode* dad, int *branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
@@ -1009,7 +1009,7 @@ void getLeftAndRightNodes
  @param dad_branch the branch leading to the subtree
  @param dad its dad, used to direct the traversal
  */
-void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch,
+void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor* dad_branch,
                                                PhyloNode* dad){
     // don't recompute the parsimony
     if (dad_branch->isParsimonyComputed()) {
@@ -1299,7 +1299,7 @@ int PhyloTree::getSubTreeParsimonySankoff(PhyloNeighbor* dad_branch) const {
  @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
  @return parsimony score of the tree
  */
-int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch,
+int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor* dad_branch,
                                              PhyloNode* dad, int* branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);

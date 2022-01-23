@@ -343,7 +343,7 @@ bool ModelCheckpoint::getOrderedModels
     }
 }
 
-int detectSeqType(const char *model_name, SeqType &seq_type) {
+int detectSeqType(const char* model_name, SeqType &seq_type) {
     bool empirical_model = false;
     int i;
     string model_str = model_name;

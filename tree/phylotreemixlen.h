@@ -172,7 +172,7 @@ public:
             @param maxNRStep maximum number of Newton-Raphson steps
             @return likelihood score
      */
-    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2,
+    virtual void optimizeOneBranch(PhyloNode* node1, PhyloNode* node2,
                                    bool clearLH = true, int maxNRStep = 100) override;
 
     /**

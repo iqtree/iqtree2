@@ -224,7 +224,8 @@ void PhyloTreeMixlen::assignMeanMixBranches(PhyloNodeMixlen* node,
     if (!node) {
         node = getRoot();
     }
-    auto rate_model = getRateModelForBranch(node, dad);
+    RateHeterogeneity* other_rate = nullptr;
+    auto rate_model = getRateModelForBranch(node, dad, other_rate);
     FOR_EACH_PHYLO_NEIGHBOR_MIXLEN(node, dad, it, nei) {
         double mean_len = 0.0;
         for (int i = 0; i < nei->lengths.size(); ++i) {
@@ -247,7 +248,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info,
     initializing_mixlen = true;
 
     if (relative_treelen.empty()) {
-        RateHeterogeneity *saved_rate = getRate();
+        RateHeterogeneity* saved_rate = getRate();
         bool saved_fused_mix_rate = model_factory->fused_mix_rate;
 
         string param;
@@ -849,13 +850,15 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     intptr_t nptn    = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn  = get_safe_upper_limit(nptn);
 
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, 
-                             rate_model, tip_lh);
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
+    getModelAndTipLikelihood(dad, node, model_to_use, other_model,
+                             rate_model, other_rate, tip_lh);
 
-    double*  eval    = model_to_use->getEigenvalues();
+    double*            eval         = model_to_use->getEigenvalues();
     ASSERT(eval);
 
     ASSERT(tree_buffers.theta_all);
@@ -929,9 +932,11 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #pragma omp parallel for reduction(+:my_df,my_ddf,prob_const,df_const,ddf_const)
 #endif
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-        double  lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-        double* theta  = tree_buffers.theta_all + ptn*block 
-                       + cur_mixture*statecat;
+        double  lh_ptn  = ptn_invar[ptn];
+        double  df_ptn  = 0.0;
+        double  ddf_ptn = 0.0;
+        double* theta   = tree_buffers.theta_all + ptn*block 
+                        + cur_mixture*statecat;
         for (size_t i = 0; i < statecat; i++) {
             lh_ptn  += val0[i] * theta[i];
             df_ptn  += val1[i] * theta[i];

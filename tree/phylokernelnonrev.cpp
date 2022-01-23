@@ -24,7 +24,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
 //    if (dad_branch->isLikelihoodComputed())
 //        return;
 //    dad_branch->setLikelihoodComputed(true);
-    PhyloNode *node = dad_branch->getNode();
+    PhyloNode* node = dad_branch->getNode();
 
     ASSERT(dad_branch->direction != 
            RootDirection::UNDEFINED_DIRECTION);
@@ -95,9 +95,11 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
         std::swap(eleft, eright);
     }
 
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
 
@@ -377,7 +379,9 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, intptr_t ptn
 }
 
 //template <const int nstates>
-void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
+void PhyloTree::computeNonrevLikelihoodDerv
+        (PhyloNeighbor* dad_branch, PhyloNode* dad, 
+         double* df, double* ddf) {
 
     ASSERT(rooted);
     PhyloNode*     node        = dad_branch->getNode();
@@ -412,9 +416,11 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     double*  trans_derv1 = trans_mat   + block*nstates;
     double*  trans_derv2 = trans_derv1 + block*nstates;
 
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
 
@@ -444,21 +450,21 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
          // make sure that we do not estimate the virtual branch length from the root
         ASSERT(dad != root);
     	// special treatment for TIP-INTERNAL NODE case
-    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
-        double *partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block; 
-        double *partial_lh_derv2 = partial_lh_derv1 + (aln->STATE_UNKNOWN+1)*block; 
+    	double* partial_lh_node  = new double[(aln->STATE_UNKNOWN+1)*block*3];
+        double* partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block; 
+        double* partial_lh_derv2 = partial_lh_derv1 + (aln->STATE_UNKNOWN+1)*block; 
         IntVector states_dad = aln->seq_states[dad->id];
         states_dad.push_back(aln->STATE_UNKNOWN);
         // precompute information from one tip
         for (IntVector::iterator it = states_dad.begin(); 
              it != states_dad.end(); ++it) {
-            double *lh_node  = partial_lh_node +(*it)*block;
-            double *lh_derv1 = partial_lh_derv1 +(*it)*block;
-            double *lh_derv2 = partial_lh_derv2 +(*it)*block;
-            double *lh_tip   = tip_lh + (*it)*nstates;
-            double *trans_mat_tmp   = trans_mat;
-            double *trans_derv1_tmp = trans_derv1;
-            double *trans_derv2_tmp = trans_derv2;
+            double* lh_node  = partial_lh_node +(*it)*block;
+            double* lh_derv1 = partial_lh_derv1 +(*it)*block;
+            double* lh_derv2 = partial_lh_derv2 +(*it)*block;
+            double* lh_tip   = tip_lh + (*it)*nstates;
+            double* trans_mat_tmp   = trans_mat;
+            double* trans_derv1_tmp = trans_derv1;
+            double* trans_derv2_tmp = trans_derv2;
             for (c = 0; c < ncat; c++) {
                 for (i = 0; i < nstates; i++) {
                     lh_node[i] = 0.0;
@@ -492,8 +498,8 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
             for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
-                double  lh_ptn = ptn_invar[ptn];
-                double  df_ptn = 0.0;
+                double  lh_ptn  = ptn_invar[ptn];
+                double  df_ptn  = 0.0;
                 double  ddf_ptn = 0.0;
                 double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 int state_dad;
@@ -555,9 +561,9 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                 double  lh_ptn = ptn_invar[ptn];
                 double  df_ptn = 0.0;
                 double  ddf_ptn = 0.0;
-                double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double* partial_lh_dad  = dad_branch->partial_lh + ptn*block;
                 double* partial_lh_node = node_branch->partial_lh + ptn*block;
-                double* trans_mat_tmp = trans_mat;
+                double* trans_mat_tmp   = trans_mat;
                 double* trans_derv1_tmp = trans_derv1;
                 double* trans_derv2_tmp = trans_derv2;
                 for (c = 0; c < ncat; c++) {
@@ -566,7 +572,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                         double lh_derv1 = 0.0;
                         double lh_derv2 = 0.0;
                         for (x = 0; x < nstates; ++x) {
-                            lh_state += trans_mat_tmp[x] * partial_lh_node[x];
+                            lh_state += trans_mat_tmp[x]   * partial_lh_node[x];
                             lh_derv1 += trans_derv1_tmp[x] * partial_lh_node[x];
                             lh_derv2 += trans_derv2_tmp[x] * partial_lh_node[x];
                         }
@@ -622,7 +628,8 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 }
 
 //template <const int nstates>
-double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeNonrevLikelihoodBranch
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
 
     ASSERT(rooted);
 
@@ -672,12 +679,12 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
-    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
+    	double* partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
         if (dad == root) {
             for (c = 0; c < ncat; c++) {
-                double *lh_node = partial_lh_node + c*nstates;
+                double* lh_node = partial_lh_node + c*nstates;
                 model_to_use->getStateFrequency(lh_node);
-                double prop = site_rate->getProp(c);
+                double  prop    = site_rate->getProp(c);
                 for (i = 0; i < nstates; ++i)
                     lh_node[i] *= prop;
             }
@@ -687,9 +694,9 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             // precompute information from one tip
             for (IntVector::iterator it = states_dad.begin(); 
                  it != states_dad.end(); ++it) {
-                double *lh_node       = partial_lh_node +(*it)*block;
-                double *lh_tip        = tip_lh + (*it)*nstates;
-                double *trans_mat_tmp = trans_mat;
+                double* lh_node       = partial_lh_node +(*it)*block;
+                double* lh_tip        = tip_lh + (*it)*nstates;
+                double* trans_mat_tmp = trans_mat;
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates; i++) {
                         lh_node[i] = 0.0;
@@ -722,18 +729,20 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
                 double* lh_cat         = _pattern_lh_cat + ptn*ncat;
                 double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
                 int state_dad;
-                if (dad == root) 
+                if (dad == root) {
                     state_dad = 0;
-                else
+                }
+                else {
                     state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
-                double *lh_node = partial_lh_node + state_dad*block;
+                }
+                double* lh_node = partial_lh_node + state_dad*block;
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates; i++) {
                         lh_cat[c] += lh_node[i] * partial_lh_dad[i];
                     }
-                    lh_node += nstates;
+                    lh_node        += nstates;
                     partial_lh_dad += nstates;
-                    lh_ptn += lh_cat[c];
+                    lh_ptn         += lh_cat[c];
     //				lh_cat++;
                 }
                 ASSERT(lh_ptn > 0.0);

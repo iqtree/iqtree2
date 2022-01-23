@@ -344,7 +344,8 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-//    virtual void restoreAllBrans(PhyloNode* node = NULL, PhyloNode* dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode* node = nullptr, 
+//                                 PhyloNode* dad  = nullptr);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees
@@ -408,7 +409,7 @@ public:
     /**
      * count the number of super branches that map to no branches in gene trees
      */
-    int countEmptyBranches(PhyloNode* node = NULL, PhyloNode* dad = NULL);
+    int countEmptyBranches(PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
 
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
@@ -422,7 +423,7 @@ public:
                                   PhyloNode* dad = nullptr) override;
 
     virtual int computeParsimonyBranchObsolete
-                    (PhyloNeighbor *dad_branch, PhyloNode* dad, 
+                    (PhyloNeighbor* dad_branch, PhyloNode* dad, 
                      int *branch_subst = nullptr);
 
     /****************************************************************************
@@ -443,9 +444,9 @@ public:
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
-    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode* dad,
-                                               double *ptn_ancestral_prob, 
-                                               int *ptn_ancestral_seq) override;
+    virtual void computeMarginalAncestralState(PhyloNeighbor* dad_branch, PhyloNode* dad,
+                                               double* ptn_ancestral_prob, 
+                                               int* ptn_ancestral_seq) override;
 
     virtual void writeMarginalAncestralState(ostream &out, PhyloNode* node, 
                                              double *ptn_ancestral_prob, 

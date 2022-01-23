@@ -699,7 +699,7 @@ void PhyloSuperTree::clearAllScaleNum(bool set_to_null) {
 }
 
 int PhyloSuperTree::computeParsimonyBranchObsolete
-        (PhyloNeighbor *dad_branch, PhyloNode* dad, int *branch_subst) {
+        (PhyloNeighbor* dad_branch, PhyloNode* dad, int *branch_subst) {
     int score = 0, part = 0;
     SuperNeighbor* dad_nei  = dynamic_cast<SuperNeighbor*>(dad_branch);
     SuperNeighbor* node_nei = dad_nei->getNode()->findNeighbor(dad);
@@ -1518,7 +1518,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
     @param dad dad of the target internal node
     @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
 */
-void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode* dad,
+void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor* dad_branch, PhyloNode* dad,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
 
     SuperNeighbor* snei      = dynamic_cast<SuperNeighbor*>(dad_branch);

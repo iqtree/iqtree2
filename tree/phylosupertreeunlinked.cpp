@@ -136,7 +136,7 @@ void PhyloSuperTreeUnlinked::restoreCheckpoint() {
 /**
  * save branch lengths into a vector
  */
-void PhyloSuperTreeUnlinked::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+void PhyloSuperTreeUnlinked::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode* node, PhyloNode* dad) {
     int totalBranchNum = 0;
     for (auto it = begin(); it != end(); it++) {
         totalBranchNum += (*it)->branchNum * (*it)->getMixlen();
@@ -151,7 +151,7 @@ void PhyloSuperTreeUnlinked::saveBranchLengths(DoubleVector &lenvec, int startid
 /**
  * restore branch lengths from a vector previously called with saveBranchLengths
  */
-void PhyloSuperTreeUnlinked::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
+void PhyloSuperTreeUnlinked::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode* node, PhyloNode* dad) {
     for (iterator it = begin(); it != end(); ++it) {
         (*it)->restoreBranchLengths(lenvec, startid);
         startid += (*it)->branchNum * (*it)->getMixlen();
@@ -335,7 +335,7 @@ void PhyloSuperTreeUnlinked::writeUFBootTrees(Params &params) {
  */
 int PhyloSuperTreeUnlinked::testAllBranches(int threshold, double best_score, double *pattern_lh,
                             int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
-                            PhyloNode *node, PhyloNode *dad)
+                            PhyloNode* node, PhyloNode* dad)
 {
     int num_low_support = 0;
     std::vector<double*> ptn_lh_vector(size());

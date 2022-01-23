@@ -108,14 +108,14 @@ public:
      * save branch lengths into a vector
      */
     virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, 
-                                   PhyloNode *node = nullptr, 
-                                   PhyloNode *dad = nullptr) override;
+                                   PhyloNode* node = nullptr, 
+                                   PhyloNode* dad = nullptr) override;
     /**
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
     virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, 
-                                      PhyloNode *node = nullptr, 
-                                      PhyloNode *dad = nullptr) override;
+                                      PhyloNode* node = nullptr, 
+                                      PhyloNode* dad = nullptr) override;
     
     /** set the root by name
      @param my_root root node name
@@ -188,7 +188,7 @@ public:
      */
     virtual int testAllBranches(int threshold, double best_score, double *pattern_lh,
                                 int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
-                                PhyloNode *node = nullptr, PhyloNode *dad = nullptr) override;
+                                PhyloNode* node = nullptr, PhyloNode* dad = nullptr) override;
 
     /**
      test the best number of threads

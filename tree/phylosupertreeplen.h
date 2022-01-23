@@ -159,7 +159,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode* dad,
+    virtual double computeLikelihoodBranch(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                            LikelihoodBufferSet& buffers) override;
 
     /**

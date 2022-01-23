@@ -191,8 +191,9 @@ int PhyloTree::getSubTreeNumberForBranch(PhyloNode* dad,
     }
 }
 
-ModelSubst* PhyloTree::getModelForBranch(PhyloNode* dad, 
-                                         PhyloNode* node) const {
+ModelSubst* PhyloTree::getModelForBranch
+                (PhyloNode* dad, PhyloNode* node,
+                 ModelSubst*& other_model) const {
     if (!model->isDivergentModel()) {
         return model;
     }
@@ -209,22 +210,22 @@ ModelSubst* PhyloTree::getModelForBranch(PhyloNode* dad,
 }
 
 RateHeterogeneity* PhyloTree::getRateModelForBranch
-    (PhyloNode* dad, PhyloNode* node) const {
+    (PhyloNode* dad, PhyloNode* node, 
+     RateHeterogeneity*& other_rate_model) const {
     if (!model->isDivergentModel()) {
         return site_rate;
     }
-    auto model_div         = dynamic_cast<ModelDivergent*>(model);
-    int  dad_subset        = dad->getSubsetNumber();
-    auto rate_models       = model_div->getSubtreeRateModels();
-    auto dad_rate_model    = rate_models[dad_subset];
-    int  child_subset      = node->getSubsetNumber();
-    auto child_rate_model  = rate_models[child_subset];
+    auto model_div        = dynamic_cast<ModelDivergent*>(model);
+    int  dad_subset       = dad->getSubsetNumber();
+    auto rate_models      = model_div->getSubtreeRateModels();
+    other_rate_model      = rate_models[dad_subset];
+    int  child_subset     = node->getSubsetNumber();
+    auto child_rate_model = rate_models[child_subset];
 
-    if (child_rate_model == dad_rate_model) {
+    if (child_rate_model == other_rate_model) {
         return child_rate_model;
     }
     return child_rate_model;
-    //todo: return model_div->getBranchJoiningRateModel(dad_subset, child_subset);
 }
 
 ModelSubst* PhyloTree::getModelForCurrentBranch() const {
@@ -232,7 +233,8 @@ ModelSubst* PhyloTree::getModelForCurrentBranch() const {
     PhyloNode*  node = current_it->getNode();
     ASSERT(dad!=nullptr);
     ASSERT(node!=nullptr);
-    return getModelForBranch(dad, node);
+    ModelSubst* other_model = nullptr;
+    return getModelForBranch(dad, node, other_model);
 }
 
 RateHeterogeneity* PhyloTree::getRateModelForCurrentBranch() const {
@@ -240,16 +242,19 @@ RateHeterogeneity* PhyloTree::getRateModelForCurrentBranch() const {
     PhyloNode*  node = current_it->getNode();
     ASSERT(dad!=nullptr);
     ASSERT(node!=nullptr);
-    return getRateModelForBranch(dad, node);
+    RateHeterogeneity* other_rate_model = nullptr;
+    return getRateModelForBranch(dad, node, other_rate_model);
 }
 
 void PhyloTree::getModelAndTipLikelihood
         (PhyloNode*   dad, PhyloNode*   node, 
-         ModelSubst*& model_to_use, 
-         RateHeterogeneity*& rate_model,
+         ModelSubst*& model_to_use, ModelSubst*& other_model, 
+         RateHeterogeneity*& rate_model, RateHeterogeneity*& other_rate,
          double*&     tip_lh) const {
     model_to_use = model;
+    other_model  = model_to_use;
     rate_model   = site_rate;
+    other_rate   = rate_model;
     tip_lh       = tip_partial_lh;
     if (model_to_use->isDivergentModel()) {
         ModelDivergent* div_model = 
@@ -257,8 +262,11 @@ void PhyloTree::getModelAndTipLikelihood
         int subtree_number = getSubTreeNumberForBranch(dad, node);
         model_to_use = div_model->getNthSubtreeModel(subtree_number);
         rate_model   = div_model->getNthSubtreeRateModel(subtree_number);
-        tip_lh = tip_partial_lh 
-               + subtree_number * tip_partial_lh_size_per_model;
+        tip_lh       = tip_partial_lh 
+                     + subtree_number * tip_partial_lh_size_per_model;
+        int other_subtree_number = getSubTreeNumberForBranch(node, dad);
+        other_model  = div_model->getNthSubtreeModel(other_subtree_number);
+        other_rate   = div_model->getNthSubtreeRateModel(other_subtree_number);
     }
 }
 

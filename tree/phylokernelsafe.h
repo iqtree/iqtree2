@@ -79,7 +79,7 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computePartialLikelihoodEigenSIMD
-        (PhyloNeighbor *dad_branch, PhyloNode *dad) {
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
 
 	ASSERT(dad);
     if (dad_branch->isLikelihoodComputed()) {
@@ -101,9 +101,11 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 		return;
 	}
 
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
 
@@ -572,8 +574,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeLikelihoodDervEigenSIMD
-    ( PhyloNeighbor *dad_branch, PhyloNode *dad, 
-      double &df, double &ddf) {
+    ( PhyloNeighbor* dad_branch, PhyloNode* dad, 
+      double& df, double& ddf) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -590,9 +592,11 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
     }
     df = ddf = 0.0;
 
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
 
@@ -875,7 +879,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeLikelihoodBranchEigenSIMD
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     if (!central_partial_lh) {
@@ -891,9 +896,11 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     if ((node_branch->partial_lh_computed & 1) == 0) {
         computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
     }
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
 
@@ -940,13 +947,13 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     	// special treatment for TIP-INTERNAL NODE case
 
     	// precompute information from one tip        
-    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
+    	double* partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	for (IntVector::iterator it = states_dad.begin(); 
              it != states_dad.end(); ++it) {
-    		double *lh_node = partial_lh_node + (*it)*block;
-    		double *lh_tip = tip_lh + (*it)*tip_block;
+    		double* lh_node = partial_lh_node + (*it)*block;
+    		double* lh_tip  = tip_lh + (*it)*tip_block;
     		VectorClass *vc_val_tmp = vc_val;
             for (c = 0; c < ncat_mix; c++) {
                 double *this_lh_tip = lh_tip + mix_addr_nstates[c];
@@ -999,7 +1006,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                 UBYTE min_scale = *min_element(scale_dad, scale_dad+ncat_mix);
                 vc_scale.insert(j, (double)min_scale);
 
-				double *lh_node = &partial_lh_node[ptn_states_dad[ptn+j]*block];
+				double* lh_node = &partial_lh_node[ptn_states_dad[ptn+j]*block];
 
                 for (c = 0; c < ncat_mix; c++) {
                     VectorClass this_vc_ptn = 0.0;
@@ -1122,11 +1129,11 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
             VectorClass vc_scale;
 			for (j = 0; j < VCSIZE; j++) {
                 vc_ptn[j] = 0.0;
-				double *partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
-                double *partial_lh_node = node_branch->partial_lh + (ptn+j)*block;
+				double* partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
+                double* partial_lh_node = node_branch->partial_lh + (ptn+j)*block;
                 VectorClass *val_tmp = vc_val;
-                UBYTE *scale_dad = dad_branch->scale_num + (ptn+j)*ncat_mix;
-                UBYTE *scale_node = node_branch->scale_num + (ptn+j)*ncat_mix;
+                UBYTE* scale_dad  = dad_branch->scale_num  + (ptn+j)*ncat_mix;
+                UBYTE* scale_node = node_branch->scale_num + (ptn+j)*ncat_mix;
                 // determine the min scaling
                 UBYTE sum_scale[ncat_mix];
                 UBYTE min_scale = sum_scale[0] = scale_dad[0]+scale_node[0];
@@ -1188,14 +1195,14 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                 VectorClass vc_scale;
                 for (j = 0; j < VCSIZE; j++) {
                     vc_ptn[j] = 0.0;
-                    double *partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
-                    double *partial_lh_node = node_branch->partial_lh + (ptn+j)*block;
-                    VectorClass *val_tmp = vc_val;
-                    UBYTE *scale_dad = dad_branch->scale_num + (ptn+j)*ncat_mix;
-                    UBYTE *scale_node = node_branch->scale_num + (ptn+j)*ncat_mix;
+                    double* partial_lh_dad  = dad_branch->partial_lh + (ptn+j)*block;
+                    double* partial_lh_node = node_branch->partial_lh + (ptn+j)*block;
+                    VectorClass* val_tmp = vc_val;
+                    UBYTE*  scale_dad  = dad_branch->scale_num  + (ptn+j)*ncat_mix;
+                    UBYTE*  scale_node = node_branch->scale_num + (ptn+j)*ncat_mix;
                     // determine the min scaling
-                    UBYTE sum_scale[ncat_mix];
-                    UBYTE min_scale = sum_scale[0] = scale_dad[0]+scale_node[0];
+                    UBYTE   sum_scale[ncat_mix];
+                    UBYTE   min_scale = sum_scale[0] = scale_dad[0]+scale_node[0];
                     for (c = 1; c < ncat_mix; c++) {
                         sum_scale[c] = scale_dad[c] + scale_node[c];
                         min_scale = min(min_scale, sum_scale[c]);
@@ -1273,10 +1280,12 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 	ASSERT(theta_all && theta_computed);
 
-    ModelSubst*        model_to_use  = nullptr;
-    RateHeterogeneity* rate_model    = nullptr;
-    double*            tip_lh        = tip_partial_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, 
+    ModelSubst*        model_to_use = nullptr;
+    RateHeterogeneity* rate_model   = nullptr;
+    ModelSubst*        other_model  = nullptr;
+    RateHeterogeneity* other_rate   = nullptr;
+    double*            tip_lh       = tip_partial_lh;
+    (dad, node, model_to_use, 
                              rate_model, tip_lh);
 
 	double tree_lh     = current_it->lh_scale_factor 
@@ -1505,14 +1514,15 @@ inline void horizontal_popcount(Vec8ui &x) {
 }
 
 template<class VectorClass>
-void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computePartialParsimonyFastSIMD
+        (PhyloNeighbor* dad_branch, PhyloNode* dad) {
 
     if (dad_branch->isParsimonyComputed()) {
         return;
     }
     dad_branch->setParsimonyComputed(true);
 
-    PhyloNode *node    = dad_branch->getNode();
+    PhyloNode* node    = dad_branch->getNode();
     int nstates        = aln->getMaxNumStates();
     int site           = 0;
     const int VCSIZE   = VectorClass::size();
@@ -1762,7 +1772,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 
 template<class VectorClass>
 int PhyloTree::computeParsimonyBranchFastSIMD
-        (PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+        (PhyloNeighbor* dad_branch, PhyloNode* dad, int* branch_subst) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
     ASSERT(node_branch);

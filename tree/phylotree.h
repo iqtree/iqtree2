@@ -295,7 +295,7 @@ public:
     TraversalInfo() : dad_branch(nullptr), dad(nullptr),
         echildren(nullptr), partial_lh_leaves(nullptr) {
     }
-    TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    TraversalInfo(PhyloNeighbor* dad_branch, PhyloNode* dad) {
         this->dad                  = dad;
         this->dad_branch           = dad_branch;
         echildren                  = nullptr;
@@ -449,7 +449,7 @@ public:
             @param tree the tree to copy
             @param borrowSummary true if the alignment summary of the other tree is to be "borrowed"
      */
-    void copyPhyloTree(PhyloTree *tree, bool borrowSummary);
+    void copyPhyloTree(PhyloTree* tree, bool borrowSummary);
 
     /**
             copy the phylogenetic tree structure into this tree, designed specifically for PhyloTree.
@@ -458,7 +458,7 @@ public:
             @param mix mixture ID of branch lengths
             @param borrowSummary true if the alignment summary of the other tree is to be "borrowed"
      */
-    virtual void copyPhyloTreeMixlen(PhyloTree *tree, int mix, bool borrowSummary);
+    virtual void copyPhyloTreeMixlen(PhyloTree* tree, int mix, bool borrowSummary);
 
 
     /**
@@ -571,8 +571,8 @@ public:
     
     void reinsertTaxaViaStepwiseParsimony(const IntVector& taxaIdsToAdd);
         
-    virtual PhyloNode* findFarthestLeaf(PhyloNode *node = nullptr,
-                                       PhyloNode *dad = nullptr);
+    virtual PhyloNode* findFarthestLeaf(PhyloNode* node = nullptr,
+                                       PhyloNode* dad = nullptr);
     
     /** set the root by name
         @param my_root root node name
@@ -584,13 +584,13 @@ public:
             set the substitution model, important to compute the likelihood
             @param amodel associated substitution model
      */
-    void setModel(ModelSubst *amodel);
+    void setModel(ModelSubst* amodel);
 
     /**
             set the model factory
             @param model_fac model factory
      */
-    virtual void setModelFactory(ModelFactory *model_fac);
+    virtual void setModelFactory(ModelFactory* model_fac);
 
     /**
             indicates whether there is a model factory
@@ -607,7 +607,7 @@ public:
             set rate heterogeneity, important to compute the likelihood
             @param rate associated rate heterogeneity class
      */
-    void setRate(RateHeterogeneity *rate);
+    void setRate(RateHeterogeneity* rate);
 
     /**
             indicates whether there is a rate heterogeneity
@@ -619,7 +619,7 @@ public:
             get rate heterogeneity
             @return associated rate heterogeneity class
      */
-    RateHeterogeneity *getRate() const;
+    RateHeterogeneity* getRate() const;
 
     void discardSaturatedSite(bool val);
 
@@ -639,11 +639,11 @@ public:
 	 */
 	virtual string getModelNameParams();
 
-    ModelSubst *getModel() const {
+    ModelSubst* getModel() const {
         return model;
     }
 
-    ModelFactory *getModelFactory() const {
+    ModelFactory* getModelFactory() const {
         return model_factory;
     }
 
@@ -714,11 +714,15 @@ public:
     /**
      * save branch lengths into a vector
      */
-    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void saveBranchLengths
+                    (DoubleVector &lenvec, int startid = 0, 
+                     PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
     /**
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
-    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreBranchLengths
+                    (DoubleVector &lenvec, int startid = 0, 
+                     PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
 
     /****************************************************************************
             Dot product
@@ -764,7 +768,8 @@ public:
      * 		This is usually used as the starting point before using 
      *      Newton-Raphson.
      */
-//    double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeCorrectedParsimonyBranch
+//           (PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     /**
             initialize partial_pars vector of all PhyloNeighbors, 
@@ -783,7 +788,9 @@ public:
             @param dad dad of the node, used to direct the search
             @param index the index
      */
-    virtual void initializeAllPartialPars(int &index, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void initializeAllPartialPars
+                    (int &index, PhyloNode* node = nullptr,
+                     PhyloNode* dad = nullptr);
 
     /**
             compute the tree parsimony score
@@ -802,7 +809,7 @@ public:
                          PhyloNeighbor* neighbor=nullptr,
                          PhyloNode* starting_node=nullptr);
 
-    typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
+    typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode* );
     ComputePartialParsimonyType computePartialParsimonyPointer;
     
     typedef int (PhyloTree::*GetSubtreeParsimonyType)(PhyloNeighbor *) const;
@@ -819,9 +826,9 @@ public:
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    virtual void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
-//    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    virtual void computePartialParsimony(PhyloNeighbor* dad_branch, PhyloNode* dad);
+//    void computePartialParsimonyNaive(PhyloNeighbor* dad_branch, PhyloNode* dad);
+    void computePartialParsimonyFast(PhyloNeighbor* dad_branch, PhyloNode* dad);
         //Supporting functions
         intptr_t computeDNAPartialParsimonyFast
                  (Alignment* sub_aln, int leafid, 
@@ -850,7 +857,8 @@ public:
     int getSubTreeParsimonyFast(PhyloNeighbor* dad_branch) const;
 
     template<class VectorClass>
-    void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    void computePartialParsimonyFastSIMD(PhyloNeighbor* dad_branch, 
+                                         PhyloNode* dad);
     
     
     double computePartialParsimonyOutOfTree(const UINT* left_partial_pars,
@@ -862,10 +870,10 @@ public:
                                               UINT* dad_partial_pars) const;
     
     template <class VectorClass>
-    int getSubTreeParsimonyFastSIMD(PhyloNeighbor *dad_branch) const;
+    int getSubTreeParsimonyFastSIMD(PhyloNeighbor* dad_branch) const;
     
     template<class VectorClass>
-    void computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    void computePartialParsimonySankoffSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     template<class VectorClass>
     double computePartialParsimonyOutOfTreeSankoffSIMD(const UINT* left_partial_pars,
@@ -873,11 +881,11 @@ public:
                                                      UINT*       dad_partial_pars) const;
 
     template<class VectorClass>
-    int getSubTreeParsimonySankoffSIMD(PhyloNeighbor *dad_branch) const;
+    int getSubTreeParsimonySankoffSIMD(PhyloNeighbor* dad_branch) const;
     
-    void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
+    void computeReversePartialParsimony(PhyloNode* node, PhyloNode* dad);
 
-    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
+    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode* , int *);
     ComputeParsimonyBranchType computeParsimonyBranchPointer;
 
     typedef int (PhyloTree::*ComputeParsimonyOutOfTreeType)(const UINT* dad_partial_pars,
@@ -891,22 +899,26 @@ public:
             @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
             @return parsimony score of the tree
      */
-    virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    virtual int computeParsimonyBranch
+                    (PhyloNeighbor* dad_branch, PhyloNode* dad, 
+                     int *branch_subst = nullptr);
     
     virtual int computeParsimonyOutOfTree(const UINT* dad_partial_pars,
                                           const UINT* node_partial_pars,
                                           int* branch_subst = nullptr) const;
     
-    virtual int getSubTreeParsimony(PhyloNeighbor *dad_branch) const;
+    virtual int getSubTreeParsimony(PhyloNeighbor* dad_branch) const;
     
-//    int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-    int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    int computeParsimonyBranchFast(PhyloNeighbor* dad_branch, PhyloNode* dad, 
+                                   int *branch_subst = nullptr);
+
     int computeParsimonyOutOfTreeFast(const UINT* dad_partial_pars,
                                       const UINT* node_partial_pars,
                                       int*        branch_subst) const;
     
     template<class VectorClass>
-        int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+        int computeParsimonyBranchFastSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad, 
+                                           int *branch_subst = nullptr);
     
     template<class VectorClass>
     int computeParsimonyOutOfTreeSIMD(const UINT* dad_partial_pars,
@@ -914,14 +926,16 @@ public:
                                       int*        branch_subst) const;
 
     template<class VectorClass>
-    int computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    int computeParsimonyBranchSankoffSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad, 
+                                          int *branch_subst = nullptr);
 
     template<class VectorClass>
     int computeParsimonyOutOfTreeSankoffSIMD(const UINT* dad_partial_pars,
                                              const UINT* node_partial_pars,
                                              int*        branch_subst) const;
 
-    //    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
+    //    void printParsimonyStates(PhyloNeighbor* dad_branch = nullptr, 
+    //                              PhyloNode* dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
 #if defined(BINARY32) || defined(__NOAVX__)
@@ -963,7 +977,7 @@ public:
      @param dad_branch the branch leading to the subtree
      @param dad its dad, used to direct the traversal
      */
-    void   computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    void   computePartialParsimonySankoff(PhyloNeighbor* dad_branch, PhyloNode* dad);
         //Supporting functions
         void computeLeafPartialParsimonySankoff
                 (PhyloNode* node, UINT * partial_pars);
@@ -987,8 +1001,8 @@ public:
      @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
      @return parsimony score of the tree
      */
-    int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad,
-                                      int *branch_subst = NULL);
+    int computeParsimonyBranchSankoff(PhyloNeighbor* dad_branch, PhyloNode* dad,
+                                      int *branch_subst = nullptr);
     
     int computeParsimonyOutOfTreeSankoff(const UINT* dad_partial_pars,
                                          const UINT* node_partial_pars,
@@ -1049,7 +1063,7 @@ public:
             @param index the index
      */
     virtual void initializeAllPartialLh(int &index, int &indexlh,
-                                        PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+                                        PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
         void initializePartialParsimonyForOneNeighbor(PhyloNeighbor* nei, int &index_pars);
         void initializePartialLikelihoodForOneNeighbor(PhyloNeighbor* nei, int &index_lh);
     /**
@@ -1073,12 +1087,14 @@ public:
     /**
      * compute all partial likelihoods if not computed before
      */
-    void computeAllPartialLh(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void computeAllPartialLh(PhyloNode* node = nullptr, 
+                             PhyloNode* dad = nullptr);
 
     /**
      * compute all partial parsimony vector if not computed before
      */
-    void computeAllPartialPars(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void computeAllPartialPars(PhyloNode* node = nullptr, 
+                               PhyloNode* dad = nullptr);
 
     /**
             allocate memory for a partial likelihood vector
@@ -1137,16 +1153,16 @@ public:
     /**
         compute traversal_info of a subtree
     */
-    bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
+    bool computeTraversalInfo(PhyloNeighbor* dad_branch, PhyloNode* dad, double* &buffer);
 
 
     /**
         compute traversal_info of both subtrees
     */
     template<class VectorClass, const int nstates>
-    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, const LikelihoodBufferSet& buffers, bool compute_partial_lh);
+    void computeTraversalInfo(PhyloNode* node, PhyloNode* dad, const LikelihoodBufferSet& buffers, bool compute_partial_lh);
     template<class VectorClass>
-    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, const LikelihoodBufferSet& buffers, bool compute_partial_lh);
+    void computeTraversalInfo(PhyloNode* node, PhyloNode* dad, const LikelihoodBufferSet& buffers, bool compute_partial_lh);
 
     /**
         precompute info for models
@@ -1163,7 +1179,7 @@ public:
         @param node the starting node, NULL to start from the root
         @param dad dad of the node, used to direct the search
     */
-    void sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad);
+    void sortNeighborBySubtreeSize(PhyloNode* node, PhyloNode* dad);
 
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
@@ -1214,14 +1230,14 @@ public:
 
 
     #if (EIGEN_PARTIAL_LIKELIHOOD)
-    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computePartialLikelihoodEigen(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                        const LikelihoodBufferSet& buffers);
 
-    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                 const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computePartialLikelihoodEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                            const LikelihoodBufferSet& buffers);
     #endif
     
@@ -1249,15 +1265,15 @@ public:
 
     #if (EIGEN_PARTIAL_LIKELIHOOD)
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                   const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                   const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                     const LikelihoodBufferSet& buffers);
     #endif
 
@@ -1271,7 +1287,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    virtual double computeLikelihoodBranch(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                            LikelihoodBufferSet& buffers);
 
     typedef double (PhyloTree::*ComputeLikelihoodBranchType)(PhyloNeighbor*, PhyloNode*,
@@ -1283,45 +1299,45 @@ public:
      * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
      */
 //    template<int NSTATES>
-//    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    inline double computeLikelihoodBranchFast(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
 #if (EIGEN_PARTIAL_LIKELIHOOD)
-    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeLikelihoodBranchEigen(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                         LikelihoodBufferSet& buffers);
 
-    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                             LikelihoodBufferSet& buffers);
 #endif
     
-    double computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeNonrevLikelihoodBranch(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                          LikelihoodBufferSet& buffers);
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
-    double computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                     LikelihoodBufferSet& buffers);
     template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
-    double computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeNonrevLikelihoodBranchSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                              LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
-    double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeLikelihoodBranchSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                        LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
-    double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double computeLikelihoodBranchGenericSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                               LikelihoodBufferSet& buffers);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad);
     */
 
     /****************************************************************************
@@ -1373,7 +1389,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    virtual double computeLikelihoodZeroBranch(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     /**
         compute likelihood of rooted tree with virtual root (FOR TINA)
@@ -1381,7 +1397,7 @@ public:
         @param dad its dad, used to direct the tranversal
         @return tree likelihood
      */
-//    virtual double computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    virtual double computeLikelihoodRooted(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     /**
             compute the tree likelihood
@@ -1408,7 +1424,7 @@ public:
      * @param node - starting point of the search (may not be nullptr)
      * @return a leaf reachable from node (not found on the path through dad)
      */
-    PhyloNode* findFirstFarLeaf(PhyloNode *node) const;
+    PhyloNode* findFirstFarLeaf(PhyloNode* node) const;
 
     /**
         compute state frequency for each pattern (for Huaichun)
@@ -1433,10 +1449,10 @@ public:
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
-    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    virtual void computeMarginalAncestralState(PhyloNeighbor* dad_branch, PhyloNode* dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
-    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode* node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     /**
         end computing ancestral sequence probability for an internal node by marginal reconstruction
@@ -1455,7 +1471,7 @@ public:
      *  @param dad dad of the target internal node
      *  @param[out] C array storing all information about max ancestral states
      */
-    void computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C);
+    void computeAncestralLikelihood(PhyloNeighbor* dad_branch, PhyloNode* dad, int *C);
 
     /**
      * compute max ancestral states according to
@@ -1465,7 +1481,7 @@ public:
      *  @param C array storing all information about max ancestral states
      *  @param[out] ancestral_seqs array of size nptn*nnode for ancestral sequences at all internal nodes
      */
-    void computeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C, int *ancestral_seqs);
+    void computeAncestralState(PhyloNeighbor* dad_branch, PhyloNode* dad, int *C, int *ancestral_seqs);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -1518,7 +1534,7 @@ public:
      *	@param[in] dad must be an internal node
      *	@return estimated branch length or -1.0 if one of the 2 nodes is leaf
      */
-    double computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeBayesianBranchLength(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     /**
      * \brief Approximate the branch legnth between \a dad_branch and \a dad using Least Square instead
@@ -1527,7 +1543,7 @@ public:
      * @param[in] dad
      * @return approximated branch length
      */
-    double computeLeastSquareBranLen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLeastSquareBranLen(PhyloNeighbor* dad_branch, PhyloNode* dad);
 
     /**
      * Update all subtree distances that are affect by doing an NNI on branch (node1-node2)
@@ -1540,8 +1556,9 @@ public:
      */
     void   computeSubtreeDists();
 
-    void   getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, PhyloNode* node = NULL, 
-                            PhyloNode* dad = NULL);
+    void   getUnmarkedNodes(PhyloNodeVector& unmarkedNodes, 
+                            PhyloNode* node = nullptr, 
+                            PhyloNode* dad  = nullptr);
 
     void   computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* nei1, PhyloNode* nei2, 
                                            PhyloNode* node, PhyloNode* dad);
@@ -1550,8 +1567,8 @@ public:
 
     void   correctBranchLengthIfNeedBe    (double &uncorrected) const;
 
-    double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch,
-                                                PhyloNode *dad);
+    double computeCorrectedBayesianBranchLength(PhyloNeighbor* dad_branch,
+                                                PhyloNode* dad);
 
 
     /**
@@ -1561,7 +1578,8 @@ public:
             @param other_tree the other tree to compare
             @param pattern_lh pattern log-likelihoods of current tree, will be computed if NULL
      */
-    double computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh = NULL);
+    double computeLogLDiffVariance(PhyloTree* other_tree, 
+                                   double* pattern_lh = nullptr);
 
     /**
             Roll back the tree saved with only Taxon IDs and branch lengths.
@@ -1650,7 +1668,9 @@ public:
      */
     string getTopologyString(bool printBranchLength);
 
-    bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    bool checkEqualScalingFactor(double &sum_scaling, 
+                                 PhyloNode* node = nullptr, 
+                                 PhyloNode* dad  = nullptr);
 
     /****************************************************************************
             computing derivatives of likelihood function
@@ -1658,53 +1678,53 @@ public:
 
 
 #if (EIGEN_PARTIAL_LIKELIHOOD)
-    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodDervEigen(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                     double &df, double &ddf,
                                     LikelihoodBufferSet& buffers);
 
-    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                              double &df, double &ddf,
                                              LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
-                                        PhyloNode *dad, double &df, double &ddf,
+    void computeLikelihoodDervEigenSIMD(PhyloNeighbor* dad_branch,
+                                        PhyloNode* dad, double &df, double &ddf,
                                         LikelihoodBufferSet& buffers);
 #endif
     
-    void computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeNonrevLikelihoodDerv(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                      double *df, double *ddf, LikelihoodBufferSet&);
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
-    void computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                 double *df, double *ddf,
                                                 const LikelihoodBufferSet& buffers);
     template<class VectorClass, const bool SAFE_NUMERIC,
              const int nstates, const bool FMA = false>
-    void computeNonrevLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeNonrevLikelihoodDervSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                          double *df, double *ddf,
                                          const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
               const bool FMA = false, const bool SITE_MODEL = false>
-    void computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodBufferSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                      intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                      const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
             const bool FMA = false, const bool SITE_MODEL = false>
-    void computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodBufferGenericSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                             intptr_t ptn_lower, intptr_t ptn_upper, int thread_id,
                                             const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
             const bool FMA = false, const bool SITE_MODEL = false>
-    void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodDervSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                    double *df, double *ddf,
                                    const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
               const bool FMA = false, const bool SITE_MODEL = false>
-    void computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodDervGenericSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                           double *df, double *ddf,
                                           const LikelihoodBufferSet& buffers);
 
@@ -1713,26 +1733,26 @@ public:
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates,
               const bool FMA = false, const bool SITE_MODEL = false>
-    void computeLikelihoodDervMixlenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodDervMixlenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                          double &df, double &ddf,
                                          const LikelihoodBufferSet& buffers);
 
     template <class VectorClass, const bool SAFE_NUMERIC,
               const bool FMA = false, const bool SITE_MODEL = false>
-    void computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                                 double &df, double &ddf,
                                                 const LikelihoodBufferSet& buffers);
 
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor* dad_branch, PhyloNode* dad, double &df, double &ddf);
     */
 
     /**
@@ -1743,15 +1763,15 @@ public:
             @param ddf (OUT) second derivative
             @return tree likelihood
      */
-    void computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    void computeLikelihoodDerv(PhyloNeighbor* dad_branch, PhyloNode* dad,
                                double *df, double *ddf,
                                const LikelihoodBufferSet& buffers);
 
-    typedef void (PhyloTree::*ComputeLikelihoodDervType)(PhyloNeighbor *, PhyloNode *, double *, double *,
+    typedef void (PhyloTree::*ComputeLikelihoodDervType)(PhyloNeighbor *, PhyloNode* , double *, double *,
                                                          const LikelihoodBufferSet&);
     ComputeLikelihoodDervType computeLikelihoodDervPointer;
 
-    typedef void (PhyloTree::*ComputeLikelihoodDervMixlenType)(PhyloNeighbor *, PhyloNode *,
+    typedef void (PhyloTree::*ComputeLikelihoodDervMixlenType)(PhyloNeighbor *, PhyloNode* ,
                                                                double &, double &,
                                                                const LikelihoodBufferSet&);
     ComputeLikelihoodDervMixlenType computeLikelihoodDervMixlenPointer;
@@ -1781,7 +1801,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    UINT addTaxonMPFast(PhyloNode *added_taxon, PhyloNode *added_node, PhyloNode *node, PhyloNode *dad);
+    UINT addTaxonMPFast(PhyloNode* added_taxon, PhyloNode* added_node, PhyloNode* node, PhyloNode* dad);
 
     /**
         create a 3-taxon tree and return random taxon order
@@ -1948,7 +1968,7 @@ public:
             @param clearLH true to clear the partial likelihood, otherwise false
             @param maxNRStep maximum number of Newton-Raphson steps
      */
-    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, 
+    virtual void optimizeOneBranch(PhyloNode* node1, PhyloNode* node2, 
                                    bool clearLH = true, int maxNRStep = 100);
 
     /**
@@ -1957,7 +1977,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeChildBranches(PhyloNode *node, PhyloNode *dad = NULL);
+    double optimizeChildBranches(PhyloNode* node, PhyloNode* dad = NULL);
 
     /**
             optimize all branch lengths at the subtree rooted at node step-by-step.
@@ -1965,7 +1985,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    virtual void optimizeAllBranches(PhyloNode *node, PhyloNode *dad = nullptr, 
+    virtual void optimizeAllBranches(PhyloNode* node, PhyloNode* dad = nullptr, 
                                      int maxNRStep = 100);
 
     /**
@@ -1974,7 +1994,7 @@ public:
      * @param node the current node
      * @param dad dad of the node, used to direct the search
      */
-    void optimizeAllBranchesLS(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void optimizeAllBranchesLS(PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
     void computeBestTraversal(NodeVector &nodes, NodeVector &nodes2);
 
@@ -2054,7 +2074,7 @@ public:
      * @param node2 second node of the branch
      * @return
      */
-    double optimizeOneBranchLS(PhyloNode *node1, PhyloNode *node2);
+    double optimizeOneBranchLS(PhyloNode* node1, PhyloNode* node2);
 
     /****************************************************************************
             Auxilary functions and varialbes for speeding up branch length optimization (RAxML Trick)
@@ -2099,7 +2119,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-//    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL
+//    double optimizeNNI(double cur_score, PhyloNode* node = NULL, PhyloNode* dad = NULL
 //            /*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL,
 //    StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
 //    int *max_trees = NULL, double *logl_cutoff = NULL*/
@@ -2114,7 +2134,7 @@ public:
        @param node2 1 of the 2 nodes on the branch
        @param nniMoves (IN/OUT) detailed information of the 2 NNIs, set .ptnlh to compute pattern likelihoods
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = nullptr);
+    virtual NNIMove getBestNNIForBran(PhyloNode* node1, PhyloNode* node2, NNIMove *nniMoves = nullptr);
 
     virtual void clearInwardViewsFromNeighbors(PhyloNode* node1, PhyloNode* node2);
     
@@ -2173,8 +2193,8 @@ public:
             @param len_to_dad length of link between added_dode and target_dad
             @return the likelihood of the tree
      */
-    double addTaxonML(PhyloNode* added_taxon,  PhyloNode *added_node,
-                      PhyloNode *node,         PhyloNode *dad,
+    double addTaxonML(PhyloNode* added_taxon,  PhyloNode* added_node,
+                      PhyloNode* node,         PhyloNode* dad,
                       bool isAddedAtMidpoint,
                       PhyloNode* &target_node, PhyloNode* &target_dad,
                       double& lenToNewTaxon, double& lenToNode, double& lenToDad);
@@ -2305,7 +2325,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return The number of branches that have no/negative length
      */
-    virtual int fixNegativeBranch(bool force = false, PhyloNode *node = nullptr, PhyloNode *dad = nullptr);
+    virtual int fixNegativeBranch(bool force = false, PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
 
     /**
      Jukes-Cantor correction with alpha shape of Gamma distribution
@@ -2382,37 +2402,37 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeSPR(double cur_score, PhyloNode *node,
-                       PhyloNode *dad, SPRMoves& spr_moves);
+    double optimizeSPR(double cur_score, PhyloNode* node,
+                       PhyloNode* dad, SPRMoves& spr_moves);
 
     /**
      *  original implementation by Minh
      */
-    double optimizeSPR_old(double cur_score, PhyloNode *node, PhyloNode *dad,
+    double optimizeSPR_old(double cur_score, PhyloNode* node, PhyloNode* dad,
                            class SPRMoves& spr_moves);
 
     /**
      *  original implementation by Minh
      */
-    double swapSPR_old(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-                       PhyloNode *orig_node1, PhyloNode *orig_node2,
-                       PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path,
+    double swapSPR_old(double cur_score, int cur_depth, PhyloNode* node1, PhyloNode* dad1,
+                       PhyloNode* orig_node1, PhyloNode* orig_node2,
+                       PhyloNode* node2, PhyloNode* dad2, PhyloNeighborVec &spr_path,
                        SPRMoves& spr_moves);
 
     /**
             move the subtree (dad1-node1) to the branch (dad2-node2)
      */
-    double swapSPR(double cur_score, int cur_depth, PhyloNode *node1, PhyloNode *dad1,
-                   PhyloNode *orig_node1, PhyloNode *orig_node2,
-                   PhyloNode *node2, PhyloNode *dad2, PhyloNeighborVec &spr_path,
+    double swapSPR(double cur_score, int cur_depth, PhyloNode* node1, PhyloNode* dad1,
+                   PhyloNode* orig_node1, PhyloNode* orig_node2,
+                   PhyloNode* node2, PhyloNode* dad2, PhyloNeighborVec &spr_path,
                    SPRMoves& spr_moves);
 
     double assessSPRMove(double cur_score, const SPRMove &spr);
 
-    void pruneSubtree(PhyloNode *node, PhyloNode *dad, PruningInfo &info);
+    void pruneSubtree(PhyloNode* node, PhyloNode* dad, PruningInfo &info);
 
     void regraftSubtree(PruningInfo &info,
-            PhyloNode *in_node, PhyloNode *in_dad);
+            PhyloNode* in_node, PhyloNode* in_dad);
 
     /****************************************************************************
             Approximate Likelihood Ratio Test with SH-like interpretation
@@ -2421,7 +2441,7 @@ public:
     void computeNNIPatternLh(double cur_lh,
             double &lh2, double *pattern_lh2,
             double &lh3, double *pattern_lh3,
-            PhyloNode *node1, PhyloNode *node2);
+            PhyloNode* node1, PhyloNode* node2);
 
     /**
             Resampling estimated log-likelihood (RELL)
@@ -2433,7 +2453,7 @@ public:
      */
     double testOneBranch(double best_score, double *pattern_lh, 
             int reps, int lbp_reps,
-            PhyloNode *node1, PhyloNode *node2, 
+            PhyloNode* node1, PhyloNode* node2, 
             double &lbp_support, double &aLRT_support, double &aBayes_support);
 
     /**
@@ -2441,7 +2461,7 @@ public:
      */
     virtual int testAllBranches(int threshold, double best_score, double *pattern_lh,
             int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
-            PhyloNode *node = NULL, PhyloNode *dad = NULL);
+            PhyloNode* node = NULL, PhyloNode* dad = NULL);
 
     /****************************************************************************
             Quartet functions
@@ -2698,9 +2718,10 @@ public:
         b0: initial guess for the maximum
         @return approximted branch length
     */
-    double approxOneBranch(PhyloNode *node, PhyloNode *dad, double b0);
+    double approxOneBranch(PhyloNode* node, PhyloNode* dad, double b0);
 
-    void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void approxAllBranches(PhyloNode* node = nullptr, 
+                           PhyloNode* dad  = nullptr);
 
     double getCurScore();
 
@@ -2722,12 +2743,14 @@ public:
     /**
      * for rooted tree update direction for all branches
      */
-    void computeBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void computeBranchDirection(PhyloNode* node = nullptr, 
+                                PhyloNode* dad = nullptr);
 
     /**
      * clear branch direction for all branches
      */
-    void clearBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    void clearBranchDirection(PhyloNode* node = nullptr, 
+                              PhyloNode* dad = nullptr);
 
     /**
         convert from unrooted to rooted tree
@@ -2916,7 +2939,7 @@ protected:
     uint64_t pars_block_size;          //in UINTs
     uint64_t total_parsimony_mem_size; //in UINTs
 
-    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode *dad);
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, PhyloNode* dad);
     
     //----------- memory saving technique ------//
 
@@ -3023,16 +3046,20 @@ protected:
     int getSubTreeNumberForBranch(PhyloNode* dad, 
                                   PhyloNode* node) const;
 
-    ModelSubst* getModelForBranch(PhyloNode* dad, 
-                                  PhyloNode* node) const;
+    ModelSubst* getModelForBranch
+                    (PhyloNode*   dad, PhyloNode*  node,
+                     ModelSubst*& other_model) const;
 
-    RateHeterogeneity* getRateModelForBranch(PhyloNode* dad, 
-                                             PhyloNode* node) const;
+    RateHeterogeneity* getRateModelForBranch
+                        (PhyloNode* dad, PhyloNode* node,
+                         RateHeterogeneity*& other_rate) const;
 
     void getModelAndTipLikelihood(PhyloNode*   dad, 
                                   PhyloNode*   node, 
                                   ModelSubst*& model_to_use,
+                                  ModelSubst*& other_model,
                                   RateHeterogeneity*& rate_model,
+                                  RateHeterogeneity*& other_rate,
                                   double*&     tip_lh) const;
 
 

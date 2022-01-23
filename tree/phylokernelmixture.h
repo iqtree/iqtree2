@@ -18,7 +18,8 @@
  *************************************************************************************************/
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computeMixturePartialLikelihoodEigenSIMD
+		(PhyloNeighbor* dad_branch, PhyloNode* dad) {
     if (dad_branch->node->degree() > 3) {
         // TODO: SIMD version for multifurcating node
         computePartialLikelihoodEigen(dad_branch, dad);
@@ -95,7 +96,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
     ModelSubst*        model_to_use  = nullptr;
     RateHeterogeneity* rate_model    = nullptr;
     double*            tip_lh        = tip_partial_lh;
-    getModelAndTipLikelihood(dad, node, model_to_use, 
+    (dad, node, model_to_use, 
                              rate_model, tip_lh);
 
 	double *evec     = model_to_use->getEigenvectors();
@@ -473,7 +474,9 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 }
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeMixtureLikelihoodDervEigenSIMD
+		(PhyloNeighbor* dad_branch, PhyloNode* dad,
+		 double& df, double& ddf) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
 	if (!central_partial_lh) {
@@ -506,11 +509,12 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 
     ModelSubst*        model_to_use  = nullptr;
     RateHeterogeneity* rate_model    = nullptr;
+    ModelSubst*        other_model   = nullptr;
+    RateHeterogeneity* other_rate    = nullptr;
     double*            tip_lh        = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
-
-    double* eval = model_to_use->getEigenvalues();
+    double*            eval          = model_to_use->getEigenvalues();
     ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -576,8 +580,8 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 			}
 	    } else {
 	    	// both dad and node are internal nodes
-		    double *partial_lh_node = node_branch->partial_lh;
-		    double *partial_lh_dad = dad_branch->partial_lh;
+		    double* partial_lh_node = node_branch->partial_lh;
+		    double* partial_lh_dad = dad_branch->partial_lh;
 	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
 #pragma omp parallel for private(i)
@@ -743,7 +747,8 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 
 
 template <class VectorClass, const int VCSIZE, const int nstates>
-double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD
+			(PhyloNeighbor* dad_branch, PhyloNode* dad) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
 	if (!central_partial_lh) {
@@ -774,8 +779,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     double*            tip_lh        = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, 
                              rate_model, tip_lh);
-
-    double *eval = model_to_use->getEigenvalues();
+    double*            eval          = model_to_use->getEigenvalues();
     ASSERT(eval);
 
     VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
@@ -797,13 +801,13 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 
 	if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
-    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
+    	double* partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	for (IntVector::iterator it = states_dad.begin(); 
 		     it != states_dad.end(); ++it) {
-    		double *lh_node = partial_lh_node + (*it)*block;
-    		double *lh_tip = tip_lh           + (*it)*statemix;
+    		double* lh_node = partial_lh_node + (*it)*block;
+    		double* lh_tip = tip_lh           + (*it)*statemix;
     		VectorClass *vc_val_tmp = vc_val;
 			for (m = 0; m < nmixture; m++) {
 				for (c = 0; c < ncat; c++) {
@@ -859,9 +863,9 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 //			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			for (j = 0; j < VCSIZE; j++) {
 				vc_ptn[j] = 0.0;
-				double *partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
-				int state_dad = ptn_states_dad[ptn+j];
-				double *lh_node = &partial_lh_node[state_dad*block];
+				double* partial_lh_dad = dad_branch->partial_lh + (ptn+j)*block;
+				int     state_dad = ptn_states_dad[ptn+j];
+				double* lh_node = &partial_lh_node[state_dad*block];
 				for (i = 0; i < block; i+=VCSIZE) {
 					vc_ptn[j] = mul_add(VectorClass().load_a(&lh_node[i]),
 							VectorClass().load_a(&partial_lh_dad[i]), vc_ptn[j]);
@@ -992,8 +996,8 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 #pragma omp for nowait
 #endif
 		for (ptn = 0; ptn < orig_nptn; ptn+=VCSIZE) {
-			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_node = node_branch->partial_lh + ptn*block;
+			double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			double* partial_lh_node = node_branch->partial_lh + ptn*block;
 
 			for (j = 0; j < VCSIZE; j++) {
 				vc_ptn[j] = 0.0;
@@ -1053,7 +1057,8 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 					}
 				}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) 
+				       + VectorClass().load(&ptn_invar[ptn]);
 				partial_lh_node += block*VCSIZE;
 				partial_lh_dad  += block*VCSIZE;
 			}

@@ -462,7 +462,7 @@ public:
                             being considered (used for traverse direction)
 
      */
-    //void evalNNIs(PhyloNode* node = NULL, PhyloNode* dad = NULL);
+    //void evalNNIs(PhyloNode* node = nullptr, PhyloNode* dad = nullptr);
 
     /**
      * @brief Evaluate all NNIs on branch defined by \a branches
