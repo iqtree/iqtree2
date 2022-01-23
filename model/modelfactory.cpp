@@ -129,7 +129,8 @@ size_t findCloseBracket(string &str, size_t start_pos) {
     return string::npos;
 }
 
-string ModelFactory::getDefaultModelName(PhyloTree *tree, const Params &params) {
+string ModelFactory::getDefaultModelName
+        (PhyloTree* tree, const Params& params) {
     std::string model_str;
     if      (tree->aln->seq_type == SeqType::SEQ_DNA)     model_str = "HKY";
     else if (tree->aln->seq_type == SeqType::SEQ_PROTEIN) model_str = "LG";
@@ -914,7 +915,7 @@ void ModelFactory::initializeFusedMixRate(ModelsBlock *models_block,
                                           const std::string& freq_params,
                                           StateFreqType freq_type,
                                           bool optimize_mixmodel_weight,
-                                          PhyloTree *tree,
+                                          PhyloTree* tree,
                                           PhyloTree* report_to_tree) {
     if (!model->isMixture()) {
         TREE_LOG_LINE(*tree, VerboseMode::VB_MED,
@@ -1009,7 +1010,7 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
             std::vector<RateHeterogeneity*> rate_models;
             if (model->isDivergentModel()) {
                 auto div_model = dynamic_cast<ModelDivergent*>(model);
-                rate_models = div_model->getSubtreeRateModels();
+                rate_models    = div_model->getSubtreeRateModels();
             } else {
                 rate_models.push_back(site_rate);
             }
@@ -1041,17 +1042,16 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     int ndim = getNDim();
 
     // return if nothing to be optimized
-    if (ndim == 0) return 0.0;
+    if (ndim == 0) {
+        return 0.0;
+    }
 
     VariableBounds vb(ndim+1);
-
-    int i;
-    double score;
 
     // setup the bounds for model
     setVariables(vb.variables);
     int model_ndim = model->getNDim();
-    for (i = 1; i <= model_ndim; i++) {
+    for (int i = 1; i <= model_ndim; i++) {
         //cout << variables[i] << endl;
         vb.lower_bound[i] = MIN_RATE;
         vb.upper_bound[i] = MAX_RATE;
@@ -1059,7 +1059,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     }
 
     if (model->freq_type == StateFreqType::FREQ_ESTIMATE) {
-        for (i = model_ndim - model->num_states+2; i <= model_ndim; i++) {
+        for (int i = model_ndim - model->num_states+2; i <= model_ndim; i++) {
             vb.upper_bound[i] = 1.0;
         }
     }
@@ -1068,15 +1068,15 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     site_rate->setBounds(vb.lower_bound+model_ndim, vb.upper_bound+model_ndim,
                          vb.bound_check+model_ndim);
 
-    score = -minimizeMultiDimen(vb.variables, ndim, vb.lower_bound, vb.upper_bound,
-                                vb.bound_check, max(gradient_epsilon, TOL_RATE));
+    double score = -minimizeMultiDimen(vb.variables, ndim, 
+                                       vb.lower_bound, vb.upper_bound,
+                                       vb.bound_check, 
+                                       max(gradient_epsilon, TOL_RATE));
 
     getVariables(vb.variables);
     model->decomposeRateMatrix();
     site_rate->phylo_tree->clearAllPartialLH();
-
     score = site_rate->phylo_tree->computeLikelihood();
-
     return score;
 }
 
@@ -1099,7 +1099,6 @@ GammaInvarOptimizationState::GammaInvarOptimizationState
                         / (numberOfStartValues - 1.0);
     initPInv            = MIN_PINVAR;
     initAlpha           = site_rate->getGammaShape();
-
 }
 
 double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info,
@@ -1282,7 +1281,7 @@ DoubleVector ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double l
                                                          double initPInv, double initAlpha,
                                                          DoubleVector &lenvec, Checkpoint *model_ckp,
                                                          PhyloTree* report_to_tree) {
-    PhyloTree *tree = site_rate->getTree();
+    PhyloTree* tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
 
     // -- Mon Apr 17 21:12:24 BST 2017

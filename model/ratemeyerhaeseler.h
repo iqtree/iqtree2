@@ -37,9 +37,10 @@ public:
 	/**
 		constructor
 	*/
-    RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate_type);
+    RateMeyerHaeseler(char *file_name, PhyloTree* tree, bool rate_type);
 
-	RateMeyerHaeseler(int dummy_rates, PhyloTree* tree, PhyloTree* report_to_tree);
+	RateMeyerHaeseler(int dummy_rates, PhyloTree* tree, 
+	                  PhyloTree* report_to_tree);
 
     RateMeyerHaeseler();
 
@@ -201,7 +202,7 @@ protected:
 
 	double cur_scale;
 
-	PhyloTree *ptn_tree;
+	PhyloTree* ptn_tree;
 
 	void prepareRateML(IntVector &ptn_id);
 	void completeRateML();

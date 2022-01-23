@@ -17,7 +17,7 @@
 #endif
 
 ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name,
-                                       PhyloTree *tree, ModelsBlock *models_block,
+                                       PhyloTree* tree, ModelsBlock *models_block,
                                        PhyloTree* report_to_tree)
     : ModelFactory(params, model_name, tree, models_block, report_to_tree) {
     if (!tree->isMixlen()) {

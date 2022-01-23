@@ -59,12 +59,12 @@ class ModelPoMo : public ModelMarkov
      *
      * @return
      */
-    ModelPoMo(const char *model_name, const string& model_params,
+    ModelPoMo(const char* model_name, const string& model_params,
               StateFreqType freq_type, const string& freq_params,
-              PhyloTree *tree, const string& pomo_heterozygosity,
+              PhyloTree* tree, const string& pomo_heterozygosity,
               PhyloTree* report_to_tree);
 
-    ModelPoMo(PhyloTree *tree, PhyloTree* report_to_tree);
+    ModelPoMo(PhyloTree* tree, PhyloTree* report_to_tree);
 
     ~ModelPoMo();
 
@@ -81,12 +81,12 @@ class ModelPoMo : public ModelMarkov
      * @param freq_type
      * @param freq_params
      */
-    virtual void init(const char *model_name,
-                      string model_params,
+    virtual void init(const char* model_name,
+                      string      model_params,
                       StateFreqType freq_type,
-                      string freq_params,
-                      string pomo_heterozygosity,
-                      PhyloTree* report_to_tree);
+                      string      freq_params,
+                      string      pomo_heterozygosity,
+                      PhyloTree*  report_to_tree);
 
     /**
      *  \brief Initialize underlying mutation model.
@@ -99,7 +99,7 @@ class ModelPoMo : public ModelMarkov
      * of polymorphism.
      *
      */
-    void init_mutation_model(const char *model_name,  string model_params,
+    void init_mutation_model(const char* model_name,  string model_params,
                              StateFreqType freq_type, string freq_params,
                              PhyloTree* report_to_tree);
 
@@ -308,7 +308,7 @@ class ModelPoMo : public ModelMarkov
   /**
    * get the underlying mutation model, used with PoMo model
    */
-  virtual ModelSubst *getMutationModel() override { return mutation_model; }
+  virtual ModelSubst* getMutationModel() override { return mutation_model; }
 
     /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
      @param state character state

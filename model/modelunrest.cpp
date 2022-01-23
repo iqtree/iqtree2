@@ -7,7 +7,7 @@
 
 #include "modelunrest.h"
 
-ModelUnrest::ModelUnrest(PhyloTree *tree, const string& model_params,
+ModelUnrest::ModelUnrest(PhyloTree* tree, const string& model_params,
                          PhyloTree* report_to_tree)
 	: ModelMarkov(tree, false)
 {

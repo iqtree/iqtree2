@@ -23,7 +23,7 @@
 
 RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
                                double p_invar_sites, string optimize_alg,
-                               PhyloTree *tree, bool testParamDone) :
+                               PhyloTree* tree, bool testParamDone) :
         RateGamma(ncat, shape, median, tree), 
         invar(p_invar_sites, tree) {
 	name = "+I" + name;
@@ -39,8 +39,9 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
 
 void RateGammaInvar::setPInvar(double pInvar) {
     invar.setPInvar(pInvar);
-    for (int cat = 0; cat < ncategory; cat++)
+    for (int cat = 0; cat < ncategory; cat++) {
         rates[cat] = 1.0/(1.0-pInvar);
+    }
     computeRates();
 }
 
@@ -80,8 +81,9 @@ std::string RateGammaInvar::getNameParams() const {
 }
 
 double RateGammaInvar::computeFunction(double value) {
-	if (cur_optimize == 0)
+	if (cur_optimize == 0) {
 		gamma_shape = value;
+    }
 	else {
 		setPInvar(value);
     }
@@ -165,7 +167,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
 	} else if (contains(optimize_alg,"EM")) {
         return optimizeWithEM(gradient_epsilon, report_to_tree);
     } else if (contains(optimize_alg,"BFGS")) {
-        double* variables = new double[ndim+1];
+        double* variables   = new double[ndim+1];
         double* upper_bound = new double[ndim+1];
         double* lower_bound = new double[ndim+1];
         bool*   bound_check = new bool[ndim+1];
@@ -207,7 +209,7 @@ int RateGammaInvar::computePatternRates(DoubleVector& pattern_rates,
 	pattern_rates.resize(npattern);
 	pattern_cat.resize  (npattern);
 
-    double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
+    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
 		double sum_rate   = 0.0;
         double sum_lh     = phylo_tree->ptn_invar[i];
@@ -251,9 +253,9 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
     }
     curlh = gamma_lh;
 
-    size_t ncat = getNRate();
-    intptr_t nptn = phylo_tree->aln->getNPattern();
-    size_t nSites = phylo_tree->aln->getNSite();
+    size_t   ncat   = getNRate();
+    intptr_t nptn   = phylo_tree->aln->getNPattern();
+    size_t   nSites = phylo_tree->aln->getNSite();
 
     // Compute the pattern likelihood for each category
     // (invariable and variable category)
@@ -304,9 +306,9 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
         setPInvar(initPInv);
         setGammaShape(initAlpha);
         phylo_tree->clearAllPartialLH();
-        double logl = optimizeWithEM(gradient_epsilon, report_to_tree);
+        double logl     = optimizeWithEM(gradient_epsilon, report_to_tree);
         double estAlpha = getGammaShape();
-        double estPInv = getPInvar();
+        double estPInv  = getPInvar();
 
         if (verbose_mode >= VerboseMode::VB_MED) {
             cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
@@ -316,8 +318,8 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
         initPInv = initPInv + testInterval;
 
         if (logl > bestLogl) {
-            bestLogl = logl;
-            bestAlpha = estAlpha;
+            bestLogl   = logl;
+            bestAlpha  = estAlpha;
             bestPInvar = estPInv;
         }
     }
@@ -338,8 +340,9 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon,
 
 double RateGammaInvar::meanRates() const {
 	double ret = 0.0;
-	for (int i = 0; i < ncategory; i++)
+	for (int i = 0; i < ncategory; i++) {
 		ret += rates[i];
+    }
     ret *= (1.0-getPInvar())/ncategory;
 	return ret;
 }
@@ -350,8 +353,9 @@ double RateGammaInvar::meanRates() const {
  */
 double RateGammaInvar::rescaleRates() {
 	double norm = meanRates();
-	for (int i = 0; i < ncategory; i++)
+	for (int i = 0; i < ncategory; i++) {
 		rates[i] /= norm;
+    }
 	return norm;
 }
 

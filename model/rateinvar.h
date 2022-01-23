@@ -53,7 +53,7 @@ public:
 		@param p_invar_sites proportion of invariable sites
 		@param tree associated phylogenetic tree
 	*/
-	RateInvar(double p_invar_sites, PhyloTree *tree);
+	RateInvar(double p_invar_sites, PhyloTree* tree);
 
     /**
         start structure for checkpointing

@@ -21,9 +21,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelCodonParametric(const char *model_name, const std::string& model_params, 
+	ModelCodonParametric(const char* model_name, const std::string& model_params, 
 	                     StateFreqType freq,     const std::string& freq_params,
-    		             PhyloTree *tree, bool count_rates = true);
+    		             PhyloTree* tree, bool count_rates = true);
 
     /**
      * destructor

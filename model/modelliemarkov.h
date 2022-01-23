@@ -14,7 +14,7 @@ class ModelLieMarkov: public ModelMarkov {
 public:
 	typedef ModelMarkov super;
 
-	ModelLieMarkov(string model_name, PhyloTree *tree,
+	ModelLieMarkov(string model_name, PhyloTree* tree,
 				   const string& model_params, StateFreqType freq_type,
 				   const string& freq_params, PhyloTree* report_to_tree);
 	virtual ~ModelLieMarkov();

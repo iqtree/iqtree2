@@ -24,7 +24,7 @@
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
-ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
+ModelGTR::ModelGTR(PhyloTree* tree, bool count_rates)
  : super(tree,tree)
 {
 	setNumberOfStates(tree->aln->num_states);
@@ -145,7 +145,7 @@ void ModelGTR::getNameParamsFreq(std::ostream &retname) const {
 	}
 }
 
-void ModelGTR::init(const char *model_name, const std::string& model_params,
+void ModelGTR::init(const char* model_name, const std::string& model_params,
                     StateFreqType freq, const std::string& freq_params,
                     PhyloTree* report_to_tree) {
 	int i;

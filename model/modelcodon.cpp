@@ -243,14 +243,14 @@ void ModelCodon::setDefaults() {
     computeRateAttributes();
 }
 
-ModelCodon::ModelCodon(PhyloTree *tree, PhyloTree* report_to_tree) 
+ModelCodon::ModelCodon(PhyloTree* tree, PhyloTree* report_to_tree) 
     : ModelMarkov(tree, report_to_tree) {
     setDefaults();
 }
 
-ModelCodon::ModelCodon(const char *model_name, const string& model_params,
+ModelCodon::ModelCodon(const char* model_name, const string& model_params,
                        StateFreqType freq, const string& freq_params,
-                       PhyloTree *tree, PhyloTree* report_to_tree)
+                       PhyloTree* tree, PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree)
 {
     setDefaults();
@@ -334,7 +334,7 @@ namespace {
     };
 };
 
-StateFreqType ModelCodon::initCodon(const char *model_name, 
+StateFreqType ModelCodon::initCodon(const char* model_name, 
                                     StateFreqType freq, 
                                     bool reset_params) {
 	const std::string name_upper = string_to_upper(model_name);

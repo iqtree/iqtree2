@@ -20,16 +20,16 @@ class ModelMorphology: public ModelMarkov {
 public:
     typedef ModelMarkov super;
 
-    ModelMorphology(PhyloTree *tree, PhyloTree* report_to_tree);
+    ModelMorphology(PhyloTree* tree, PhyloTree* report_to_tree);
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelMorphology(const char *model_name, const string& model_params,
+	ModelMorphology(const char* model_name, const string& model_params,
                     StateFreqType freq, const string& freq_params,
-                    PhyloTree *tree, PhyloTree* report_to_tree);
+                    PhyloTree* tree, PhyloTree* report_to_tree);
 
 
 	/**
@@ -37,7 +37,7 @@ public:
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, const string& model_params,
+	virtual void init(const char* model_name, const string& model_params,
                       StateFreqType freq, const string& freq_params,
                       PhyloTree* report_to_tree) override;
 

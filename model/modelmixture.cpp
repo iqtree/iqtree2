@@ -1245,7 +1245,7 @@ ModelMarkov* createPomoModel(const std::string& model_str,
 	constructor
 	@param tree associated tree for the model
 */
-ModelMixture::ModelMixture(PhyloTree *tree,
+ModelMixture::ModelMixture(PhyloTree* tree,
                            PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree) {
     prop                 = nullptr;
@@ -1257,7 +1257,7 @@ ModelMixture::ModelMixture(PhyloTree *tree,
 ModelMixture::ModelMixture(const string& orig_model_name, const string& model_name,
                            const string& model_list, ModelsBlock *models_block,
                            StateFreqType freq, const string& freq_params, 
-                           PhyloTree *tree, bool optimize_weights, 
+                           PhyloTree* tree, bool optimize_weights, 
                            PhyloTree* report_to_tree)
     : ModelMarkov(tree) {
     prop                 = nullptr;
@@ -1272,7 +1272,7 @@ ModelMixture::ModelMixture(const string& orig_model_name, const string& model_na
 void ModelMixture::initMixture(string orig_model_name, const string& model_name,
                                string model_list, ModelsBlock *models_block,
                                StateFreqType freq, string freq_params,
-                               PhyloTree *tree, bool optimize_weights,
+                               PhyloTree* tree, bool optimize_weights,
                                PhyloTree* report_to_tree)
 {
     NxsModel nxs_freq_empirical("empirical");
@@ -1811,7 +1811,7 @@ double ModelMixture::optimizeWeights() {
         if (step > 0) {
             // convert _pattern_lh_cat taking into account new weights
             for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
-                double *this_lk_cat = lh_cat + ptn * nmix;
+                double* this_lk_cat = lh_cat + ptn * nmix;
                 for (size_t c = 0; c < nmix; ++c) {
                     this_lk_cat[c] *= ratio_prop[c];
                 }
@@ -1877,11 +1877,11 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
     tree->setNumThreads      (phylo_tree->num_threads);
     
     // initialize model
-    ModelFactory *model_fac      = new ModelFactory();
+    ModelFactory* model_fac      = new ModelFactory();
     model_fac->joint_optimize    = phylo_tree->params->optimize_model_rate_joint;
     //model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
 
-    RateHeterogeneity *site_rate = new RateHeterogeneity;
+    RateHeterogeneity* site_rate = new RateHeterogeneity;
     tree->setRate(site_rate);
     site_rate->setTree(tree);
 
@@ -1889,13 +1889,12 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
     tree->model_factory  = model_fac;
     tree->setParams(phylo_tree->params);
     double prev_score    = -DBL_MAX;
-    double score;
 
     //EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     bool converged = false;
     for (int step = 0; step < optimize_steps && !converged; ++step) {
         // first compute _pattern_lh_cat
-        score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
+        double score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
 
         if (score < prev_score + gradient_epsilon) {
             break;
@@ -1908,9 +1907,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
         optimizeEachModel(new_prop, tree, model_fac, 
                           gradient_epsilon, report_to_tree);
     }
-
     delete tree;
-    score = phylo_tree->computeLikelihood();
+    double score = phylo_tree->computeLikelihood();
     phylo_tree->initializeAllPartialLh();
     return score;
 }

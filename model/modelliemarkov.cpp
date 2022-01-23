@@ -320,7 +320,7 @@ const static int NUM_RATES = 12;
 const double MIN_LIE_WEIGHT = -0.98;
 const double MAX_LIE_WEIGHT =  0.98;
 
-ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree,
+ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree* tree,
                                const string& model_params, StateFreqType freq_type,
                                const string& freq_params, PhyloTree* report_to_tree)
 	: ModelMarkov(tree, false) {
@@ -328,7 +328,7 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree,
        report_to_tree);
 }
 
-void ModelLieMarkov::init(const char *model_name, const string& model_params,
+void ModelLieMarkov::init(const char* model_name, const string& model_params,
                           StateFreqType freq, const string& freq_params,
                           PhyloTree* report_to_tree)
 {

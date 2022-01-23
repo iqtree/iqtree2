@@ -49,7 +49,7 @@ public:
 	*/
     explicit ModelSubst(int nstates);
 
-	virtual void setTree(PhyloTree *tree);
+	virtual void setTree(PhyloTree* tree);
 
 	virtual void setNumberOfStates(int states);
 
@@ -392,7 +392,7 @@ public:
     /**
     * get the underlying mutation model, used with PoMo model
     */
-    virtual ModelSubst *getMutationModel() { return this; }
+    virtual ModelSubst* getMutationModel() { return this; }
 
 	/*****************************************************
 		Checkpointing facility

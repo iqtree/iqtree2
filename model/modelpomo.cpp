@@ -13,17 +13,17 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelPoMo::ModelPoMo(PhyloTree *tree, PhyloTree* report_to_tree)
+ModelPoMo::ModelPoMo(PhyloTree* tree, PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree) {
 }
 
-ModelPoMo::ModelPoMo(const char *model_name,
+ModelPoMo::ModelPoMo(const char*   model_name,
                      const string& model_params,
                      StateFreqType freq_type,
                      const string& freq_params,
-                     PhyloTree *tree,
+                     PhyloTree*    tree,
                      const string& pomo_heterozygosity,
-                     PhyloTree* report_to_tree)
+                     PhyloTree*    report_to_tree)
     // Set reversibility to true to allocate memory for objects (like
     // eigenvalues) necessary when the model is reversible.  In case
     // the model is not reversible memory for different object has to
@@ -34,7 +34,7 @@ ModelPoMo::ModelPoMo(const char *model_name,
          pomo_heterozygosity, report_to_tree);
 }
 
-void ModelPoMo::init_mutation_model(const char *model_name,  string model_params,
+void ModelPoMo::init_mutation_model(const char* model_name,  string model_params,
                                     StateFreqType freq_type, string freq_params,
                                     PhyloTree* report_to_tree)
 {
@@ -183,11 +183,11 @@ void ModelPoMo::init_fixed_parameters(string model_params,
 }
 
 
-void ModelPoMo::init(const char *model_name,
-                     string model_params,
+void ModelPoMo::init(const char* model_name,
+                     string      model_params,
                      StateFreqType freq_type,
-                     string freq_params,
-                     string pomo_heterozygosity,
+                     string     freq_params,
+                     string     pomo_heterozygosity,
                      PhyloTree* report_to_tree) {
     // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;

@@ -60,7 +60,8 @@ public:
         @param reversible TRUE (default) for reversible model, FALSE for non-reversible
         @param adapt_tree TRUE (default) to convert rooted<->unrooted tree
 	*/
-    explicit ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
+    explicit ModelMarkov(PhyloTree* tree, bool reversible = true, 
+	                     bool adapt_tree = true);
 
 	virtual void setNumberOfStates(int states) override;
 
@@ -152,7 +153,7 @@ public:
 		set the associated tree
 		@param tree the associated tree
 	*/
-    virtual void setTree(PhyloTree *tree) override;
+    virtual void setTree(PhyloTree* tree) override;
 
 
 	/**
@@ -443,9 +444,10 @@ public:
     /**
      * Return a model of type given by model_name. (Will be some subclass of ModelMarkov.)
      */
-    static ModelMarkov* getModelByName(string model_name, PhyloTree *tree,
-                                       string model_params, StateFreqType freq_type,
-                                       string freq_params, PhyloTree* report_to_tree);
+    static ModelMarkov* getModelByName
+			(string model_name,   PhyloTree* tree,
+             string model_params, StateFreqType freq_type,
+             string freq_params,  PhyloTree* report_to_tree);
 
     /**
      * true if model_name is the name of some known non-reversible model
@@ -523,13 +525,13 @@ protected:
 	/**
 		phylogenetic tree associated
 	*/
-	PhyloTree *phylo_tree;
+	PhyloTree* phylo_tree;
 
     /**
 		rates between pairs of states of the unit rate matrix Q.
 		In order A-C, A-G, A-T, C-G, C-T (rate G-T = 1 always)
 	*/
-	double *rates;
+	double* rates;
 
 	/**
 		the number of free rate parameters

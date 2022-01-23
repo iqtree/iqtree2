@@ -44,7 +44,7 @@ public:
 		@param report_to_tree send any log messages to this tree.
 		note: gamma shape and median are defaulted
 	*/
-	RateGamma(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+	RateGamma(int ncat, PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 		constructor
@@ -53,7 +53,7 @@ public:
 		@param median 
 		@param tree associated phylogenetic tree
 	*/
-    RateGamma(int ncat, double shape, bool median, PhyloTree *tree);
+    RateGamma(int ncat, double shape, bool median, PhyloTree* tree);
 
 	/**
 		destructor

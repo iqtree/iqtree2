@@ -220,10 +220,10 @@ bool ModelListFromYAMLFile::isRateHeterotachyRequired
 }
 
 ModelMarkov* ModelListFromYAMLFile::getModelByName
-            (const char* model_name,   PhyloTree *tree,
+            (const char* model_name,   PhyloTree*    tree,
              const char* model_params, StateFreqType freq_type,
-             const char* freq_params,  ModelsBlock* models_block,
-            PhyloTree* report_to_tree) {
+             const char* freq_params,  ModelsBlock*  models_block,
+             PhyloTree* report_to_tree) {
     std::string name;
     std::string parameter_list;
     extractModelNameAndParameters(model_name, name, parameter_list);
@@ -254,10 +254,10 @@ ModelMarkov* ModelListFromYAMLFile::getModelByName
 }
 
 ModelMarkov* ModelListFromYAMLFile::getModelByReference
-                        (ModelInfoFromYAMLFile& model_info, PhyloTree *tree,
-                         StateFreqType freq_type,           ModelsBlock* models_block,
-                         const std::string &parameter_list, 
-                         PhyloTree* report_to_tree) {
+                (ModelInfoFromYAMLFile& model_info, PhyloTree*   tree,
+                 StateFreqType freq_type,           ModelsBlock* models_block,
+                 const std::string &parameter_list, 
+                 PhyloTree* report_to_tree) {
     if (model_info.isDivergentModel()) {
         return getDivergentModel(model_info, parameter_list,
                                freq_type, models_block, tree,  

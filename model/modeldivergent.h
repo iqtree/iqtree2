@@ -33,7 +33,7 @@ public:
     virtual ~ModelDivergent();
 
     virtual bool isDivergentModel() const override;
-	virtual void setTree(PhyloTree *tree) override;      //for each subtree model
+	virtual void setTree(PhyloTree* tree) override;      //for each subtree model
 
     virtual void checkModelReversibility(); 
 
@@ -69,7 +69,7 @@ public:
 	virtual bool   isUnstableParameters()  const override;
 	virtual void   writeInfo(ostream &out) override;
 	virtual void   report(ostream &out)    override;
-    virtual uint64_t getMemoryRequired() const override;
+    virtual uint64_t getMemoryRequired()   const override;
     virtual void   startCheckpoint()       override;
     virtual void   saveCheckpoint()        override;
     virtual void   restoreCheckpoint()     override;
@@ -92,7 +92,7 @@ public:
         //Currently always returns StateFreqType::FREQ_EQUAL; }
         //Should perhaps return the frequency type of the first 
         //divergent model.
-    virtual ModelSubst *getMutationModel();
+    virtual ModelSubst* getMutationModel();
 
     #endif
 

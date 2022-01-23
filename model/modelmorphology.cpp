@@ -7,13 +7,13 @@
 
 #include "modelmorphology.h"
 
-ModelMorphology::ModelMorphology(PhyloTree *tree, PhyloTree* report_to_tree) 
+ModelMorphology::ModelMorphology(PhyloTree* tree, PhyloTree* report_to_tree) 
     : ModelMarkov(tree, report_to_tree) {
 }
 
-ModelMorphology::ModelMorphology(const char *model_name, const string& model_params,
+ModelMorphology::ModelMorphology(const char* model_name, const string& model_params,
                                  StateFreqType freq, const string& freq_params,
-                                 PhyloTree *tree, PhyloTree* report_to_tree)
+                                 PhyloTree* tree, PhyloTree* report_to_tree)
 : ModelMarkov(tree, report_to_tree)
 {
 	init(model_name, model_params, freq, freq_params, report_to_tree);

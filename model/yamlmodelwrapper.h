@@ -446,7 +446,7 @@ class YAMLModelDNA: public YAMLModelWrapper<ModelDNA> {
 public:
     typedef YAMLModelWrapper<ModelDNA> super;
     YAMLModelDNA(ModelInfoFromYAMLFile& info,
-                 bool make_copy, const char *model_name, 
+                 bool make_copy, const char* model_name, 
                  const std::string& model_params, StateFreqType freq, 
                  const std::string& freq_params,  PhyloTree*    tree, 
                  PhyloTree* report_to_tree);
@@ -456,7 +456,7 @@ class YAMLModelDNAError: public YAMLModelWrapper<ModelDNAError> {
 public:
     typedef YAMLModelWrapper<ModelDNAError> super;
     YAMLModelDNAError(ModelInfoFromYAMLFile& info,
-                      bool make_copy, const char *model_name, 
+                      bool make_copy, const char* model_name, 
                       const std::string& model_params, StateFreqType freq, 
                       const std::string& freq_params,  PhyloTree*    tree, 
                       PhyloTree* report_to_tree);
@@ -467,17 +467,17 @@ class YAMLModelProtein: public YAMLModelWrapper<ModelProtein> {
 public:
     typedef YAMLModelWrapper<ModelProtein> super;
     YAMLModelProtein(ModelInfoFromYAMLFile& info, 
-                     bool make_copy, const char *model_name,
+                     bool make_copy, const char* model_name,
                      const std::string& model_params, StateFreqType freq, 
                      const std::string& freq_params,  ModelsBlock* block,
-                     PhyloTree *tree, PhyloTree* report_to_tree);
+                     PhyloTree* tree, PhyloTree* report_to_tree);
 };
 
 class YAMLModelBinary: public YAMLModelWrapper<ModelBIN> {
 public:
     typedef YAMLModelWrapper<ModelBIN> super;
     YAMLModelBinary(ModelInfoFromYAMLFile& info,
-                    bool  make_copy, const char *model_name, 
+                    bool  make_copy, const char* model_name, 
                     const std::string& model_params, StateFreqType freq, 
                     const std::string& freq_params,  PhyloTree*    tree, 
                     PhyloTree* report_to_tree);
@@ -487,7 +487,7 @@ class YAMLModelMorphology: public YAMLModelWrapper<ModelMorphology> {
 public:
     typedef YAMLModelWrapper<ModelMorphology> super;
     YAMLModelMorphology(ModelInfoFromYAMLFile& info,
-                        bool make_copy, const char *model_name, 
+                        bool make_copy, const char* model_name, 
                         const std::string& model_params, StateFreqType freq, 
                         const std::string& freq_params,  PhyloTree*    tree, 
                         PhyloTree* report_to_tree);
@@ -497,7 +497,7 @@ class YAMLModelCodon: public YAMLModelWrapper<ModelCodon> {
 public:
     typedef YAMLModelWrapper<ModelCodon> super;
     YAMLModelCodon(ModelInfoFromYAMLFile& info, 
-                   bool make_copy, const char *model_name, 
+                   bool make_copy, const char* model_name, 
                    const std::string& model_params, StateFreqType freq, 
                    const std::string& freq_params,  PhyloTree*    tree, 
                    PhyloTree* report_to_tree);
@@ -510,7 +510,7 @@ public:
     typedef YAMLModelWrapper<ModelMixture> super;
     YAMLModelMixture(ModelInfoFromYAMLFile& info, bool make_copy,              
                      const char* model_name, StateFreqType freq,
-                     ModelsBlock* models_block, PhyloTree *tree, 
+                     ModelsBlock* models_block, PhyloTree* tree, 
                      PhyloTree* report_to_tree);
 
     virtual bool isMixtureModel()         const override;
@@ -525,9 +525,9 @@ protected:
 public:
     typedef YAMLModelWrapper<ModelDivergent> super;
     YAMLModelDivergent(ModelInfoFromYAMLFile& info, bool make_copy,              
-                       const char* model_name, StateFreqType freq,
-                       ModelsBlock* models_block, PhyloTree *tree, 
-                       PhyloTree* report_to_tree);
+                       const char*  model_name,   StateFreqType freq,
+                       ModelsBlock* models_block, PhyloTree*    tree, 
+                       PhyloTree*   report_to_tree);
     virtual bool isDivergentModel() const override;
     virtual void setRateMatrixFromModel() override; 
 };
@@ -730,7 +730,7 @@ public:
 class YAMLRateFree: public YAMLRateModelWrapper<RateFree> {
 public:
     typedef YAMLRateModelWrapper<RateFree> super;
-    YAMLRateFree(PhyloTree *tree, PhyloTree* report_to_tree,
+    YAMLRateFree(PhyloTree* tree, PhyloTree* report_to_tree,
                  ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;
@@ -739,7 +739,7 @@ public:
 class YAMLRateFreeInvar:public YAMLRateModelWrapper<RateFreeInvar> {
 public:
     typedef YAMLRateModelWrapper<RateFreeInvar> super;
-    YAMLRateFreeInvar(PhyloTree *tree, PhyloTree* report_to_tree,
+    YAMLRateFreeInvar(PhyloTree* tree, PhyloTree* report_to_tree,
                       ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;
@@ -748,7 +748,7 @@ public:
 class YAMLRateHeterotachy: public YAMLRateModelWrapper<RateHeterotachy> {
 public:
     typedef YAMLRateModelWrapper<RateHeterotachy> super;
-    YAMLRateHeterotachy(PhyloTree *tree, PhyloTree* report_to_tree,
+    YAMLRateHeterotachy(PhyloTree* tree, PhyloTree* report_to_tree,
                         ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;
@@ -757,7 +757,7 @@ public:
 class YAMLRateHeterotachyInvar:public YAMLRateModelWrapper<RateHeterotachyInvar> {
 public:
     typedef YAMLRateModelWrapper<RateHeterotachyInvar> super;
-    YAMLRateHeterotachyInvar(PhyloTree *tree, PhyloTree* report_to_tree,
+    YAMLRateHeterotachyInvar(PhyloTree* tree, PhyloTree* report_to_tree,
                             ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;
@@ -766,7 +766,7 @@ public:
 class YAMLRateInvar:public YAMLRateModelWrapper<RateInvar> {
 public:
     typedef YAMLRateModelWrapper<RateInvar> super;
-    YAMLRateInvar(PhyloTree *tree, PhyloTree* report_to_tree,
+    YAMLRateInvar(PhyloTree* tree, PhyloTree* report_to_tree,
                   ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;
@@ -775,8 +775,8 @@ public:
 class YAMLRateMeyerDiscrete:public YAMLRateModelWrapper<RateMeyerDiscrete> {
 public:
     typedef YAMLRateModelWrapper<RateMeyerDiscrete> super;
-    YAMLRateMeyerDiscrete(PhyloTree *tree, PhyloTree* report_to_tree,
-                     ModelInfoFromYAMLFile& info);
+    YAMLRateMeyerDiscrete(PhyloTree* tree, PhyloTree* report_to_tree,
+                          ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;    
 };
@@ -784,8 +784,8 @@ public:
 class YAMLRateMeyerHaeseler:public YAMLRateModelWrapper<RateMeyerHaeseler> {
 public:
     typedef YAMLRateModelWrapper<RateMeyerHaeseler> super;
-    YAMLRateMeyerHaeseler(PhyloTree *tree, PhyloTree* report_to_tree,
-                     ModelInfoFromYAMLFile& info);
+    YAMLRateMeyerHaeseler(PhyloTree* tree, PhyloTree* report_to_tree,
+                          ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;    
 };
@@ -793,7 +793,7 @@ public:
 class YAMLRateKategory:public YAMLRateModelWrapper<RateKategory> {
 public:
     typedef YAMLRateModelWrapper<RateKategory> super;
-    YAMLRateKategory(PhyloTree *tree, PhyloTree* report_to_tree,
+    YAMLRateKategory(PhyloTree* tree, PhyloTree* report_to_tree,
                      ModelInfoFromYAMLFile& info);
     virtual void updateRateClassFromModelVariables() override;
     virtual void sortUpdatedRates() override;    

@@ -95,7 +95,7 @@ ModelMarkov::ModelMarkov(PhyloTree* tree, PhyloTree* report_to_tree)
     setReversible(true, true);
 }
 
-ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
+ModelMarkov::ModelMarkov(PhyloTree* tree, bool reversible, bool adapt_tree)
  : super(tree->aln->num_states), EigenDecomposition()
 {
     setDefaults(reversible);
@@ -254,7 +254,7 @@ int ModelMarkov::getNumberOfVariableRates() const {
     return num_params;
 }
 
-void ModelMarkov::setTree(PhyloTree *tree) {
+void ModelMarkov::setTree(PhyloTree* tree) {
     phylo_tree = tree;
 }
 
@@ -1935,9 +1935,10 @@ void ModelMarkov::setNumberOfVariableRates(int param_count) {
     num_params = param_count;       
 }
 
-/* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name,   PhyloTree *tree,
-                                                      string model_params, StateFreqType freq_type,
-                                                      string freq_params,  PhyloTree* report_to_tree) {
+/* static */ ModelMarkov* ModelMarkov::getModelByName
+                (string model_name,   PhyloTree*    tree,
+                 string model_params, StateFreqType freq_type,
+                 string freq_params,  PhyloTree*    report_to_tree) {
     if (ModelUnrest::validModelName(model_name)) {
         return (new ModelUnrest(tree, model_params, report_to_tree));
     } else if (ModelLieMarkov::validModelName(model_name)) {

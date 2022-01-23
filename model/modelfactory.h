@@ -86,10 +86,10 @@ public:
         @param model_name full model name
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactory(Params &params, const string &model_name, PhyloTree *tree,
-                 ModelsBlock *models_block, PhyloTree* report_to_tree);
+	ModelFactory(Params &params, const string &model_name, PhyloTree* tree,
+                 ModelsBlock* models_block, PhyloTree* report_to_tree);
 
-    string getDefaultModelName(PhyloTree *tree, const Params &params);
+    string getDefaultModelName(PhyloTree* tree, const Params &params);
     
     StateFreqType getDefaultFrequencyTypeForSequenceType(SeqType seq_type);
 
@@ -163,7 +163,7 @@ public:
                                 const std::string& freq_params,
                                 const StateFreqType freq_type,
                                 bool optimize_mixmodel_weight,
-                                PhyloTree *tree,
+                                PhyloTree* tree,
                                 PhyloTree* report_to_tree);
     
     /**
@@ -330,13 +330,13 @@ public:
 	/**
 		pointer to the model, will not be deleted when deleting ModelFactory object
 	*/
-	ModelSubst *model;
+	ModelSubst* model;
 
 
 	/**
 		pointer to the site-rate heterogeneity, will not be deleted when deleting ModelFactory object
 	*/
-	RateHeterogeneity *site_rate;
+	RateHeterogeneity* site_rate;
 
 	/* TRUE if a fused mixture and rate model, e.g. LG4M and LG4X */
 	bool fused_mix_rate;
@@ -389,7 +389,7 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
-	double initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
+	double initGTRGammaIParameters(RateHeterogeneity* rate, ModelSubst* model, double initAlpha,
 								 double initPInvar, double *initRates, double *initStateFreqs);
 
     double optimizeAllParameters(double gradient_epsilon);

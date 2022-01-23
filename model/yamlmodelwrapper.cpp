@@ -4,9 +4,9 @@
 #include "utils/stringfunctions.h"
 
 YAMLModelBinary::YAMLModelBinary(ModelInfoFromYAMLFile& info,
-                                 bool make_copy, const char *model_name, 
+                                 bool make_copy, const char* model_name, 
                                  const std::string& model_params, StateFreqType freq, 
-                                 const std::string& freq_params, PhyloTree *tree, 
+                                 const std::string& freq_params, PhyloTree* tree, 
                                  PhyloTree* report_to_tree)
         : super(info, make_copy, tree, report_to_tree) {
     init(model_name, model_params, freq, freq_params, report_to_tree);
@@ -521,7 +521,7 @@ void YAMLRateFreeInvar::sortUpdatedRates() {
 }
 
 YAMLRateHeterotachy::YAMLRateHeterotachy
-    (PhyloTree *tree, PhyloTree* report_to_tree,
+    (PhyloTree* tree, PhyloTree* report_to_tree,
      ModelInfoFromYAMLFile& info)
     : super(info, report_to_tree) {
     setNCategory(info.getNumberOfProportions());
@@ -560,7 +560,7 @@ void YAMLRateHeterotachy::sortUpdatedRates() {
 }
 
 YAMLRateHeterotachyInvar::YAMLRateHeterotachyInvar
-    (PhyloTree *tree, PhyloTree* report_to_tree,
+    (PhyloTree* tree, PhyloTree* report_to_tree,
      ModelInfoFromYAMLFile& info) 
      : super(info, report_to_tree) {
     setNCategory(info.getNumberOfProportions());

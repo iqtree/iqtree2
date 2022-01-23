@@ -194,9 +194,9 @@ void RateMeyerDiscrete::setNCategory(int ncat) {
     }
 }
 
-RateMeyerDiscrete::RateMeyerDiscrete(int ncat, int cat_type,
-                                     char *file_name, PhyloTree *tree,
-                                     bool rate_type)
+RateMeyerDiscrete::RateMeyerDiscrete(int   ncat, int cat_type,
+                                     char* file_name, PhyloTree* tree,
+                                     bool  rate_type)
  : super(file_name, tree, rate_type) {
 	rates          = nullptr;
 	ptn_cat        = nullptr;
@@ -333,13 +333,13 @@ void RateMeyerDiscrete::computeFuncDerv(double value, double &df, double &ddf) {
 		return;
 	}
 //	double lh = 0.0;
-	int nseq = phylo_tree->leafNum;
-	int nstate = phylo_tree->getModel()->num_states;
-	ModelSubst *model = phylo_tree->getModel();
-    int trans_size = nstate * nstate;
-	double *trans_mat = new double[trans_size];
-	double *trans_derv1 = new double[trans_size];
-	double *trans_derv2 = new double[trans_size];
+	int         nseq    = phylo_tree->leafNum;
+	int         nstate  = phylo_tree->getModel()->num_states;
+	ModelSubst* model   = phylo_tree->getModel();
+    int     trans_size  = nstate * nstate;
+	double* trans_mat   = new double[trans_size];
+	double* trans_derv1 = new double[trans_size];
+	double* trans_derv2 = new double[trans_size];
 	df = ddf = 0.0;
 
     int *pair_freq = new int[trans_size];

@@ -27,7 +27,7 @@ extern void loadBuiltInMixInModels(stringstream& here);
  */
 ModelMarkov *createModel(string model_str, ModelsBlock *models_block,
                         StateFreqType freq_type, string freq_params,
-                        PhyloTree *tree, PhyloTree* report_to_tree);
+                        PhyloTree* tree, PhyloTree* report_to_tree);
 
 class ModelPoMoMixture;
 
@@ -47,7 +47,7 @@ protected:
 	void optimizeEStep(double* new_prop);
 	bool optimizeMStep(double* new_prop); //returns true if converged
 	void optimizeEachModel(double* new_prop, PhyloTree* tree,
-	                       ModelFactory *model_fac,
+	                       ModelFactory* model_fac,
 						   double gradient_epsilon, 
                            PhyloTree* report_to_tree);
 
@@ -63,13 +63,14 @@ public:
 		@param tree associated phylogenetic tree
 	*/
     ModelMixture(const string& orig_model_name, const string& model_name, 
-	             const string& model_list, ModelsBlock *models_block, 
+	             const string& model_list, ModelsBlock* models_block, 
 				 StateFreqType freq, const string& freq_params,
-                 PhyloTree *tree, bool optimize_weights, PhyloTree* report_to_tree);
+                 PhyloTree* tree, bool optimize_weights, 
+				 PhyloTree* report_to_tree);
 
 		void initMixture(string orig_model_name, const string& model_name,
 						string model_list, ModelsBlock *models_block,
-						StateFreqType freq, string freq_params, PhyloTree *tree,
+						StateFreqType freq, string freq_params, PhyloTree* tree,
 						bool optimize_weights, PhyloTree* report_to_tree);
 
 		bool parseModelRateAndWeight(const char* model_noun,
@@ -92,7 +93,7 @@ public:
 		@param tree associated tree for the model
 		@param report_to_tree log messages directed here
 	*/
-    ModelMixture(PhyloTree *tree, PhyloTree* report_to_tree);
+    ModelMixture(PhyloTree* tree, PhyloTree* report_to_tree);
 
     virtual ~ModelMixture();
 

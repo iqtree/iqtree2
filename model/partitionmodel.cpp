@@ -352,7 +352,7 @@ double PartitionModel::targetFunk(double x[]) {
 #endif
     for (int j = 0; j < ntrees; j++) {
         int i = tree->part_order[j];
-        ModelSubst *part_model = tree->at(i)->getModel();
+        ModelSubst* part_model = tree->at(i)->getModel();
         if (part_model->getName() != model->getName())
             continue;
         bool fixed = part_model->fixParameters(false);
@@ -491,7 +491,7 @@ double PartitionModel::optimizeLinkedModels(bool write_info,
                                             PhyloTree* report_to_tree) {
     auto tree = dynamic_cast<PhyloSuperTree*>(site_rate->getTree());
     for (auto it = linked_models.begin(); it != linked_models.end(); ++it) {
-        ModelSubst *saved_model = model;
+        ModelSubst* saved_model = model;
         model = it->second;
         PhyloSuperTree::iterator part_tree;
         // un-fix model parameters

@@ -32,7 +32,7 @@ bool ModelDivergent::isDivergentModel() const {
     return true;
 }
 
-void ModelDivergent::setTree(PhyloTree *tree) {
+void ModelDivergent::setTree(PhyloTree* tree) {
     for (ModelMarkov* subtree_model : subtree_models) {
         subtree_model->setTree(tree);
     }

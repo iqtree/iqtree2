@@ -21,7 +21,7 @@ public:
 		@param tree associated phylogenetic tree
 		@param report_to_tree send any log messages to this tree.
 	*/
-	RateFree(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+	RateFree(int ncat, PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 		constructor
@@ -29,7 +29,8 @@ public:
 		@param tree associated phylogenetic tree
         @param opt_alg optimization algorithm (1-BFGS, 2-BFGS, EM)
 	*/
-    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree);
+    RateFree(int ncat, double start_alpha, string params, 
+	         bool sorted_rates, string opt_alg, PhyloTree* tree);
 
 	virtual ~RateFree();
 

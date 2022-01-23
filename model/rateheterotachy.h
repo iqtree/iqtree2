@@ -29,7 +29,7 @@ public:
         @param sorted_rates true to sort the rate in increasing order
 		@param tree associated phylogenetic tree
 	*/
-    RateHeterotachy(int ncat, string params, PhyloTree *tree);
+    RateHeterotachy(int ncat, string params, PhyloTree* tree);
 
 	/**
 		constructor (used by, for example, YAMLRateModelWrapper)
@@ -37,7 +37,7 @@ public:
 		@param tree associated phylogenetic tree
 		@param report_to_tree send any log messages to this tree.
 	*/
-	RateHeterotachy(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+	RateHeterotachy(int ncat, PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 		destructor

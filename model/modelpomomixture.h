@@ -36,14 +36,14 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelPoMoMixture(const char *model_name,
+    ModelPoMoMixture(const char*   model_name,
                      const string& model_params,
                      StateFreqType freq_type,
                      const string& freq_params,
-                     PhyloTree *tree,
-                     string pomo_params,
-                     string pomo_rate_str,
-                     PhyloTree* report_to_tree);
+                     PhyloTree*    tree,
+                     string        pomo_params,
+                     string        pomo_rate_str,
+                     PhyloTree*    report_to_tree);
 
     virtual ~ModelPoMoMixture();
 
@@ -132,7 +132,7 @@ public:
     /**
         rate heterogeneity among sites, TODO: redesign this as separate
     */
-    RateHeterogeneity *ratehet;
+    RateHeterogeneity* ratehet;
 
   // Mon Jul 3 14:47:08 BST 2017; added by Dominik. I had problems with mixture
   // models together with PoMo and rate heterogeneity. E.g., a model

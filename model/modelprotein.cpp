@@ -950,14 +950,14 @@ end;
 )";
 }
 
-ModelProtein::ModelProtein(PhyloTree *tree, PhyloTree* report_to_tree)
+ModelProtein::ModelProtein(PhyloTree* tree, PhyloTree* report_to_tree)
 : super(tree, true, false), models_block(nullptr)
 {
 }
 
-ModelProtein::ModelProtein(const char *model_name, const string& model_params,
+ModelProtein::ModelProtein(const char* model_name, const string& model_params,
                            StateFreqType freq, const string& freq_params,
-                           PhyloTree *tree, ModelsBlock* models_block,
+                           PhyloTree* tree, ModelsBlock* models_block,
                            PhyloTree* report_to_tree)
  : ModelMarkov(tree, true, false)
 {
@@ -984,7 +984,7 @@ void ModelProtein::setModelsBlock(ModelsBlock* blocks) {
 }
 
 
-void ModelProtein::init(const char *model_name, const string& model_params,
+void ModelProtein::init(const char* model_name, const string& model_params,
                         StateFreqType freq, const string& freq_params,
                         PhyloTree* report_to_tree) {
     ASSERT(num_states == 20);

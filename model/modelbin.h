@@ -31,7 +31,7 @@ class ModelBIN : public ModelMarkov
 {
 public:
 	typedef ModelMarkov super;
-	ModelBIN(PhyloTree *tree, PhyloTree* report_to_tree);
+	ModelBIN(PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 		constructor
@@ -39,8 +39,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelBIN(const char *model_name, const string& model_params, StateFreqType freq,
-             const string& freq_params, PhyloTree *tree, PhyloTree* report_to_tree);
+    ModelBIN(const char* model_name, const string& model_params, 
+	         StateFreqType freq, const string& freq_params, 
+			 PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
@@ -49,7 +50,7 @@ public:
         @param freq_params
         @param report_to_tree
 	*/
-	virtual void init(const char *model_name, const string& model_params,
+	virtual void init(const char* model_name, const string& model_params,
                       StateFreqType freq, const string& freq_params,
                       PhyloTree* report_to_tree) override;
 

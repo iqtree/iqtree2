@@ -15,9 +15,9 @@
 #include <boost/scoped_array.hpp>
 #endif
 
-ModelPoMoMixture::ModelPoMoMixture(const char *model_name,  const string& model_params,
+ModelPoMoMixture::ModelPoMoMixture(const char* model_name,  const string& model_params,
                                    StateFreqType freq_type, const string& freq_params,
-                                   PhyloTree *tree, string pomo_params,
+                                   PhyloTree* tree, string pomo_params,
                                    string pomo_rate_str, PhyloTree* report_to_tree)
 	:   ModelPoMo(model_name, model_params, freq_type,
                   freq_params, tree, pomo_params, report_to_tree),
@@ -239,7 +239,7 @@ void reportRate(ostream &out, PhyloTree &tree);
 
 void ModelPoMoMixture::report(ostream &out) {
     super::report(out);
-    RateHeterogeneity *saved_rate = phylo_tree->getRate();
+    RateHeterogeneity* saved_rate = phylo_tree->getRate();
     phylo_tree->setRate(ratehet);
     reportRate(out, *phylo_tree);
     phylo_tree->setRate(saved_rate);

@@ -33,7 +33,8 @@ RateGamma::RateGamma(int ncat, PhyloTree* tree, PhyloTree* report_to_tree) : Rat
 	setNCategory(ncat);
 }
 
-RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : RateHeterogeneity() {
+RateGamma::RateGamma(int ncat, double shape, bool median, 
+                     PhyloTree* tree) : RateHeterogeneity() {
 	ncategory = ncat;
 	phylo_tree = tree;
 	cut_median = median;
@@ -299,9 +300,10 @@ int RateGamma::computePatternRates(DoubleVector& pattern_rates,
 	pattern_rates.resize(npattern);
 	pattern_cat.resize  (npattern);
 
-    double *lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
+    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (intptr_t i = 0; i < npattern; i++) {
-		double sum_rate = 0.0, sum_lh = 0.0;
+		double sum_rate   = 0.0;
+		double sum_lh     = 0.0;
 		int    best       = 0;
 		double count_tied = 0.0;
 		for (int c = 0; c < ncategory; c++) {

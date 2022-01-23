@@ -10,7 +10,7 @@
 #include <tree/phylotree.h>
 #include <utils/stringfunctions.h> //for convert_double_vec
 
-RateHeterotachy::RateHeterotachy(int ncat, PhyloTree *tree, 
+RateHeterotachy::RateHeterotachy(int ncat, PhyloTree* tree, 
                                  PhyloTree* report_to_tree)
     : RateHeterogeneity() {
     phylo_tree     = tree;
@@ -22,7 +22,7 @@ RateHeterotachy::RateHeterotachy(int ncat, PhyloTree *tree,
     setNCategory(ncat);
 }
 
-RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) 
+RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree* tree) 
     : RateHeterotachy(ncat, tree, tree) {
 	if (params.empty()) return;
 	DoubleVector params_vec;

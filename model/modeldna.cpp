@@ -21,7 +21,7 @@
 #include "modelliemarkov.h"
 #include <utils/stringfunctions.h> //for string_to_upper, convert_double
 
-ModelDNA::ModelDNA(PhyloTree *tree, PhyloTree* report_to_tree)
+ModelDNA::ModelDNA(PhyloTree* tree, PhyloTree* report_to_tree)
 : ModelMarkov(tree, report_to_tree)
 {
 }
@@ -113,7 +113,7 @@ string getDNAModelInfo(string model_name, string &full_name,
     return name;
 }
 
-void ModelDNA::init(const char *model_name, const string& model_params,
+void ModelDNA::init(const char* model_name, const string& model_params,
                     StateFreqType freq, const string& freq_params,
                     PhyloTree* report_to_tree)
 {

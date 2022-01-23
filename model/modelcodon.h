@@ -38,7 +38,7 @@ public:
 	typedef ModelMarkov super;
 	void setDefaults();
 
-	ModelCodon(PhyloTree *tree, PhyloTree* report_to_tree) ;
+	ModelCodon(PhyloTree* tree, PhyloTree* report_to_tree) ;
 
 	/**
 		constructor
@@ -46,9 +46,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-	ModelCodon(const char *model_name, const string& model_params,
+	ModelCodon(const char* model_name, const string& model_params,
                StateFreqType freq, const string& freq_params,
-               PhyloTree *tree, PhyloTree* report_to_tree);
+               PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 	 * destructor
@@ -81,7 +81,7 @@ public:
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, const string& model_params,
+	virtual void init(const char* model_name, const string& model_params,
                       StateFreqType freq, const string& freq_params,
                       PhyloTree* report_to_tree) override;
 
@@ -89,7 +89,8 @@ public:
 	*/
 	void initEmpiricalRates();
 
-	StateFreqType initCodon(const char *model_name, StateFreqType freq, bool reset_params);
+	StateFreqType initCodon(const char* model_name, StateFreqType freq, 
+	                        bool reset_params);
 
 
 	/**

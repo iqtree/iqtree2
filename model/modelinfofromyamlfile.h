@@ -647,7 +647,7 @@ public:
                                 PhyloTree* report_to_tree);
 
     static ModelMarkov* getModelByReference
-                    (ModelInfoFromYAMLFile& model_info, PhyloTree *tree,
+                    (ModelInfoFromYAMLFile& model_info, PhyloTree*   tree,
                      StateFreqType freq_type,           ModelsBlock* models_block,
                      const std::string &parameter_list, 
                      PhyloTree* report_to_tree);

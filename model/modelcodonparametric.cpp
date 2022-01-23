@@ -8,9 +8,9 @@
 #include "modelcodonparametric.h"
 
 ModelCodonParametric::ModelCodonParametric
-		(const char *model_name, const string& model_params,
+		(const char* model_name, const string& model_params,
 		 StateFreqType freq, const string& freq_params, 
-		 PhyloTree *tree, bool count_rates) : ModelCodon(tree, tree)
+		 PhyloTree* tree, bool count_rates) : ModelCodon(tree, tree)
 {
 	init(model_name, model_params, freq, freq_params, tree);
 }

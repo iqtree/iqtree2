@@ -14,7 +14,7 @@ class ModelUnrest: public ModelMarkov {
 public:
     typedef ModelMarkov super;
     /** constructor */
-	ModelUnrest(PhyloTree *tree, const string& model_params,
+	ModelUnrest(PhyloTree* tree, const string& model_params,
                 PhyloTree* report_to_tree);
 
     /**

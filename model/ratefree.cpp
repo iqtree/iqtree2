@@ -26,7 +26,7 @@ const double TOL_FREE_RATE = 0.0001;
 const double MIN_FREE_RATE_PROP = 0.001;
 const double MAX_FREE_RATE_PROP = 1000;
 
-RateFree::RateFree(int ncat, PhyloTree *tree, PhyloTree* report_to_tree)
+RateFree::RateFree(int ncat, PhyloTree* tree, PhyloTree* report_to_tree)
     : RateGamma(ncat, tree, report_to_tree) {
 	fix_params           = 0;
 	prop                 = nullptr;
@@ -39,7 +39,8 @@ RateFree::RateFree(int ncat, PhyloTree *tree, PhyloTree* report_to_tree)
 }
 
 RateFree::RateFree(int ncat, double start_alpha, string params,
-                   bool use_sorted_rates, string opt_alg, PhyloTree *tree)
+                   bool use_sorted_rates, string opt_alg, 
+                   PhyloTree* tree)
     : RateGamma(ncat, start_alpha, false, tree) {
 	fix_params           = 0;
 	prop                 = nullptr;
@@ -534,11 +535,11 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     tree->setNumThreads(phylo_tree->num_threads);
 
     // initialize model
-    ModelFactory *model_fac   = new ModelFactory();
+    ModelFactory* model_fac   = new ModelFactory();
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
 //    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
 
-    RateHeterogeneity *site_rate = new RateHeterogeneity; 
+    RateHeterogeneity* site_rate = new RateHeterogeneity; 
     tree->setRate(site_rate);
     site_rate->setTree(tree);
             

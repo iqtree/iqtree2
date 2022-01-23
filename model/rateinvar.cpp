@@ -49,7 +49,7 @@ RateInvar::RateInvar(int dummy_categories, PhyloTree* tree,
 	full_name = "Invar";
 }
 
-RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
+RateInvar::RateInvar(double p_invar_sites, PhyloTree* tree)
  : super()
 {
 	phylo_tree = tree;

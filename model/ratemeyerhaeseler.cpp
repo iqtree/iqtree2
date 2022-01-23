@@ -35,8 +35,9 @@ RateMeyerHaeseler::RateMeyerHaeseler()
 	rate_minimum   = MIN_SITE_RATE;
 }
 
-RateMeyerHaeseler::RateMeyerHaeseler(char *file_name, PhyloTree *tree, bool rate_type)
- : RateMeyerHaeseler()
+RateMeyerHaeseler::RateMeyerHaeseler
+	(char *file_name, PhyloTree* tree, bool rate_type)
+ 	: RateMeyerHaeseler()
 {
 	//name, full_name, dist_mat, phylo_tree, rate_file, rate_mh,
 	//rate_tolerance, rate_minimum are all set by the
@@ -459,12 +460,12 @@ double RateMeyerHaeseler::computeFunction(double value) {
         }
         return -ptn_tree->computeLikelihood();
     }
-    int nseq = static_cast<int>(phylo_tree->leafNum);
-    int nstate = phylo_tree->getModel()->num_states;
-    double lh = 0.0;
-    ModelSubst *model = phylo_tree->getModel();
-    Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-    int nseqLess1 = nseq - 1;
+    int         nseq      = static_cast<int>(phylo_tree->leafNum);
+    int         nstate    = phylo_tree->getModel()->num_states;
+    double      lh        = 0.0;
+    ModelSubst* model     = phylo_tree->getModel();
+    Pattern*    pat       = & phylo_tree->aln->at(optimizing_pattern);
+    int         nseqLess1 = nseq - 1;
 
     #ifdef _OPENMP
     #pragma omp parallel for reduction(-:lh)
@@ -487,13 +488,12 @@ double RateMeyerHaeseler::computeFunction(double value) {
 }
 
 void RateMeyerHaeseler::computeFuncDerv(double value, double &df, double &ddf) {
-    int nseq = phylo_tree->leafNum;
+    int nseq   = phylo_tree->leafNum;
     int nstate = phylo_tree->getModel()->num_states;
-    //	double lh = 0.0;
-    double trans, derv1, derv2;
-    ModelSubst *model = phylo_tree->getModel();
-    Pattern *pat = & phylo_tree->aln->at(optimizing_pattern);
-    auto nseqLess1 = nseq - 1;
+    double      trans, derv1, derv2;
+    ModelSubst* model     = phylo_tree->getModel();
+    Pattern*    pat       = & phylo_tree->aln->at(optimizing_pattern);
+    auto        nseqLess1 = nseq - 1;
 
 	double dfLocal  = 0.0; //MSVC's OMP insists that variables in reduction
 	double ddfLocal = 0.0; //clauses cannot have reference type.
@@ -532,7 +532,7 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 		out.close();
 	}
 	setTree(&tree);
-	RateHeterogeneity *backup_rate = tree.getRate();
+	RateHeterogeneity* backup_rate = tree.getRate();
 	if (backup_rate->getGammaShape() > 0 ) {
 		IntVector pattern_cat;
 		backup_rate->computePatternRates(pat_rates, pattern_cat);

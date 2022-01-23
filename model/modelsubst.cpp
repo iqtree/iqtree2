@@ -41,7 +41,7 @@ void ModelSubst::setNumberOfStates(int states) {
     }
 }
 
-void ModelSubst::setTree(PhyloTree *tree) {
+void ModelSubst::setTree(PhyloTree* tree) {
     //Doesn't have a phylo_tree member variable.  But many subclasses do
 }
 
@@ -265,7 +265,7 @@ ModelSubst::~ModelSubst()
 
 void ModelSubst::getDivergentModels
         (std::vector<ModelDivergent*>& div_models) {
-    //Well, there aren't any.  But this is overridden for
-    //subclasses of ModelSubst.
+    //Well, there aren't any.  But this may be overridden for
+    //subclasses of ModelSubst.  Notably, ModelDivergent.
 }
 

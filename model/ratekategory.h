@@ -37,7 +37,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateKategory(int ncat, PhyloTree *tree);
+    RateKategory(int ncat, PhyloTree* tree);
 
 	/**
 		constructor (used by, for example, YAMLRateModelWrapper)
@@ -45,7 +45,7 @@ public:
 		@param tree associated phylogenetic tree
 		@param report_to_tree send any log messages to this tree.
 	*/
-	RateKategory(int ncat, PhyloTree *tree, PhyloTree* report_to_tree);
+	RateKategory(int ncat, PhyloTree* tree, PhyloTree* report_to_tree);
 
 	/**
 		destructor

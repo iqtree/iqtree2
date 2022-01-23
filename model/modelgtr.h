@@ -8,7 +8,7 @@
 class ModelGTR : public ModelMarkov {
     public:
         typedef ModelMarkov super;
-        ModelGTR(PhyloTree *tree, bool count_rates);
+        ModelGTR(PhyloTree* tree, bool count_rates);
         ~ModelGTR() = default;
 
         virtual void        saveCheckpoint() override;
@@ -16,7 +16,7 @@ class ModelGTR : public ModelMarkov {
         virtual std::string getName()       const override;
         virtual std::string getNameParams() const override;
         void                getNameParamsFreq(std::ostream &retname) const;
-        void                init(const char *model_name, const std::string& model_params,
+        void                init(const char* model_name, const std::string& model_params,
                                  StateFreqType freq, const std::string& freq_params,
                                  PhyloTree* report_to_tree) override;
         virtual void        writeInfo(ostream &out) override;

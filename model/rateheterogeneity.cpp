@@ -30,7 +30,7 @@ RateHeterogeneity::RateHeterogeneity()
 	phylo_tree = NULL;
 }
 
-void RateHeterogeneity::setTree(PhyloTree *tree) {
+void RateHeterogeneity::setTree(PhyloTree* tree) {
 	phylo_tree = tree;
 }
 

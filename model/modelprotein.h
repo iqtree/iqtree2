@@ -41,8 +41,9 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelProtein(const char *model_name, const string& model_params, StateFreqType freq,
-                 const string& freq_params, PhyloTree *tree, ModelsBlock *models_block,
+    ModelProtein(const char* model_name, const string& model_params, 
+                 StateFreqType freq, const string& freq_params, 
+                 PhyloTree* tree, ModelsBlock* models_block,
                  PhyloTree* report_to_tree);
 
     void setModelsBlock(ModelsBlock* blocks);

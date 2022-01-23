@@ -19,19 +19,19 @@
  ***************************************************************************/
 #include "modelbin.h"
 
-ModelBIN::ModelBIN(PhyloTree *tree, PhyloTree* report_to_tree) 
+ModelBIN::ModelBIN(PhyloTree* tree, PhyloTree* report_to_tree) 
     : ModelMarkov(tree, report_to_tree) {
 }
 
-ModelBIN::ModelBIN(const char *model_name, const string& model_params,
+ModelBIN::ModelBIN(const char* model_name, const string& model_params,
                    StateFreqType freq, const string& freq_params,
-                   PhyloTree *tree, PhyloTree* report_to_tree)
+                   PhyloTree* tree, PhyloTree* report_to_tree)
 : ModelMarkov(tree, report_to_tree)
 {
 	init(model_name, model_params, freq, freq_params, report_to_tree);
 }
 
-void ModelBIN::init(const char *model_name, const string& model_params,
+void ModelBIN::init(const char* model_name, const string& model_params,
                     StateFreqType freq, const string& freq_params,
                     PhyloTree* report_to_tree)
 {

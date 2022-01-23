@@ -75,13 +75,13 @@ public:
 		set phylogenetic tree
 		@param tree associated phyogenetic tree
 	*/
-	void setTree(PhyloTree *tree);
+	void setTree(PhyloTree* tree);
 
 	/**
 		set phylogenetic tree
 		@param tree associated phyogenetic tree
 	*/
-	PhyloTree *getTree() { return phylo_tree; }
+	PhyloTree* getTree() { return phylo_tree; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
@@ -332,7 +332,7 @@ public:
 	/**
 		phylogenetic tree associated
 	*/
-	PhyloTree *phylo_tree;
+	PhyloTree* phylo_tree;
 
 protected:
 

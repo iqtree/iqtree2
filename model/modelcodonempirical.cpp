@@ -148,9 +148,10 @@ AAG AGT AGC AGA AGG GTT GTC GTA GTG GCT GCC GCA GCG GAT GAC GAA GAG GGT GGC GGA 
 GGG";
 
 
-ModelCodonEmpirical::ModelCodonEmpirical(const char *model_name, const string& model_params,
+ModelCodonEmpirical::ModelCodonEmpirical
+	   (const char* model_name, const string& model_params,
 		StateFreqType freq, const string& freq_params, 
-		PhyloTree *tree, bool count_rates) : ModelCodon(tree, tree)
+		PhyloTree* tree, bool count_rates) : ModelCodon(tree, tree)
 {
 	init(model_name, model_params, freq, freq_params, tree);
 }
@@ -158,7 +159,7 @@ ModelCodonEmpirical::ModelCodonEmpirical(const char *model_name, const string& m
 ModelCodonEmpirical::~ModelCodonEmpirical() {
 }
 
-void ModelCodonEmpirical::init(const char *model_name, const string& model_params, 
+void ModelCodonEmpirical::init(const char* model_name, const string& model_params, 
 	                           StateFreqType freq, const string& freq_params,
 							   PhyloTree* report_to_tree)
 {

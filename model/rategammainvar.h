@@ -38,7 +38,7 @@ public:
 		@param tree associated phylogenetic tree
 	*/
     RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, 
-	               string optimize_alg, PhyloTree *tree, bool testParamDone);
+	               string optimize_alg, PhyloTree* tree, bool testParamDone);
 
     /**
      *  check whether +I+G is used
