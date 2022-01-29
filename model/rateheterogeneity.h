@@ -307,10 +307,20 @@ public:
 
 	/**
 		Compute site-specific rates. Override this for Gamma model
-		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+		@param lh_cat (IN/OUT) pointer to an array of (number of patterns * 
+		                       number of categories) doubles, to be initialized. 
+							   Usually a PhyloTree's tree_buffers._pattern_lh_cat.
+		@param pattern_rates  (OUT) pattern rates. Resized if necesary.
+		@param pattern_cat    (OUT) pattern categories. Resized if necessary.
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) { return 1; }
+	virtual int computePatternRates(double*       lh_cat,
+	                                DoubleVector& pattern_rates, 
+									IntVector&    pattern_cat) 
+	{ 
+		//Todo: This should resize pattern_rates and pattern_cat.
+		return 1; 
+	}
 
 	/**
 		name of the rate heterogeneity type

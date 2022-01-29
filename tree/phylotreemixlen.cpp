@@ -497,8 +497,9 @@ void PhyloTreeMixlen::optimizeOneBranch
         double tree_lh = -DBL_MAX;
 
         // 2 steps are empirically determined to be best!
+        double* lh_cat = tree_buffers._pattern_lh_cat;
         for (int EM_step = 0; EM_step < 2; EM_step++) {
-            double new_tree_lh = computePatternLhCat(WSL_RATECAT);
+            double  new_tree_lh = computePatternLhCat(WSL_RATECAT, lh_cat);
             if (new_tree_lh+1.0 < tree_lh) {
                 cout << "WARN: at EM step " << EM_step 
                      << " new_tree_lh " << new_tree_lh 
@@ -512,8 +513,7 @@ void PhyloTreeMixlen::optimizeOneBranch
             // decoupled weights (prop) from _pattern_lh_cat 
             // to obtain L_ci and compute pattern likelihood L_i
             for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-                double* this_lk_cat = tree_buffers._pattern_lh_cat 
-                                    + ptn*nmix;
+                double* this_lk_cat = lh_cat + ptn*nmix;
                 double  lk_ptn = ptn_invar[ptn];
                 for (size_t c = 0; c < nmix; c++) {
                     lk_ptn += this_lk_cat[c];

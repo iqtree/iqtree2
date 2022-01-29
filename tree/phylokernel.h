@@ -186,8 +186,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
         // precompute information buffer
         for (int c = 0; c < ncat_mix; c++) {
             VectorClass len_child = rate_model->getRate(c%ncat) * child->length;
-            double *eval_ptr = eval + mix_addr_nstates[c];
-            double *evec_ptr = evec + mix_addr[c];
+            double* eval_ptr = eval + mix_addr_nstates[c];
+            double* evec_ptr = evec + mix_addr[c];
             for (int i = 0; i < nstates/VCSIZE; i++) {
                 // eval is not aligned!
                 expchild[i] = exp(VectorClass().load_a(&eval_ptr[i*VCSIZE]) * len_child);
@@ -237,7 +237,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
         echild += block*nstates/VCSIZE;
     }
     
-    VectorClass* eleft = echildren;
+    VectorClass* eleft  = echildren;
     VectorClass* eright = echildren + block*nstates/VCSIZE;
     
     if (!left->node->isLeaf() && right->node->isLeaf()) {
@@ -309,7 +309,6 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
                 echild += block*nstates;
             } // FOR_NEIGHBOR
             
-        
             // compute dot-product with inv_eigenvector
             double lh_max = 0.0;
             double *partial_lh_tmp = partial_lh_all;

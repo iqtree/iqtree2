@@ -550,7 +550,8 @@ double RateFree::optimizeWithEM(PhyloTree* report_to_tree) {
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
-        double score = phylo_tree->computePatternLhCat(WSL_RATECAT);
+        double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
+        double  score  = phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
         TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_DEBUG, 
                       "At start of EM step " << step
                       << " likelihood score is " << score);

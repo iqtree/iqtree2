@@ -135,17 +135,16 @@ void RateKategory::setBounds(double* lower_bound, double* upper_bound,
 }
 
 int RateKategory::computePatternRates
-		(DoubleVector& pattern_rates, IntVector& pattern_cat)
+		(double* lh_cat, DoubleVector& pattern_rates, IntVector& pattern_cat)
 {
 	cout << "Computing site rates by empirical Bayes..." << endl;
 
-	phylo_tree->computePatternLhCat(WSL_RATECAT);
+	phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
 
 	int npattern = static_cast<int>(phylo_tree->aln->getNPattern());
 	pattern_rates.resize(npattern);
 	pattern_cat.resize  (npattern);
 
-    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
 		double sum_rate   = 0.0;
 		double sum_lh     = 0.0;

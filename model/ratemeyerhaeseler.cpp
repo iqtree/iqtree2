@@ -147,9 +147,11 @@ double RateMeyerHaeseler::getPtnRate(int ptn) {
 	return 1.0;
 }
 
-int RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates,
-                                           IntVector &pattern_cat) {
-	pattern_rates.insert(pattern_rates.begin(), pat_rates.begin(), pat_rates.end());
+int RateMeyerHaeseler::computePatternRates(double*       lh_cat,
+                                           DoubleVector& pattern_rates,
+										   IntVector&    pattern_cat) {
+	pattern_rates = pat_rates;
+	pattern_cat.resize ( pat_rates.size(), 0); //Added, James B. 23-Jan-2022
     return static_cast<int>(pat_rates.size());
 }
 
@@ -532,10 +534,11 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 		out.close();
 	}
 	setTree(&tree);
+	double* lh_cat = tree.tree_buffers._pattern_lh_cat;
 	RateHeterogeneity* backup_rate = tree.getRate();
 	if (backup_rate->getGammaShape() > 0 ) {
 		IntVector pattern_cat;
-		backup_rate->computePatternRates(pat_rates, pattern_cat);
+		backup_rate->computePatternRates(lh_cat, pat_rates, pattern_cat);
 		double   sum    = 0.0;
         intptr_t seqLen = static_cast<intptr_t>(pat_rates.size());
         auto     freq   = phylo_tree->getConvertedSequenceFrequencies();

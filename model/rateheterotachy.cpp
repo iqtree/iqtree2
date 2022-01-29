@@ -156,7 +156,8 @@ double RateHeterotachy::optimizeParameters(double gradient_epsilon,
 
 double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
     // first compute _pattern_lh_cat
-    phylo_tree->computePatternLhCat(WSL_RATECAT);
+    double*  lh_cat     = phylo_tree->tree_buffers._pattern_lh_cat;
+    phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
     intptr_t nptn       = phylo_tree->aln->getNPattern();
     size_t   nmix       = ncategory;    
     double*  new_prop   = aligned_alloc<double>(nmix);
@@ -234,8 +235,8 @@ double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
 
     // first compute _pattern_lh_cat
-    double score;
-    score = phylo_tree->computePatternLhCat(WSL_RATECAT);
+    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
+    double  score = phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
 
     memset(new_prop, 0, nmix*sizeof(double));
             

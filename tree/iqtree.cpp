@@ -3395,8 +3395,9 @@ pair<int, int> IQTree::doNNISearch(bool write_info, const char* context,
         if (isSuperTree()) {
             (dynamic_cast<PhyloSuperTree*>(this))->computeBranchLengths();
         }
-        if (params->print_trees_site_posterior)
+        if (params->print_trees_site_posterior) {
             computePatternCategories();
+        }
     }
 
     if(!on_refine_btree){ // Diep add (IF in Refinement Step,

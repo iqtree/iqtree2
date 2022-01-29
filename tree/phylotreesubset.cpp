@@ -270,4 +270,75 @@ void PhyloTree::getModelAndTipLikelihood
     }
 }
 
+void PhyloTree::handleDivergentModelBoundary
+        (TraversalInfo&     info, 
+         ModelSubst*        model_to_use, ModelSubst*        other_model, 
+         RateHeterogeneity* rate_model,   RateHeterogeneity* other_rate,
+         intptr_t ptn_lower, intptr_t ptn_upper, intptr_t packet_id,
+         const LikelihoodBufferSet& buffers) {
+
+    intptr_t       ptn_count      = ptn_upper - ptn_lower;
+    PhyloNeighbor* dad_branch     = info.dad_branch;
+    int            nstates        = aln->num_states;
+    const int      ncat           = rate_model->getNRate();
+    const bool     fused          = model_factory->fused_mix_rate;
+    const int      n_mix          = model->getNMixtures();
+    const int      ncat_mix       = fused ? ncat : ncat * n_mix;
+    const int      block          = nstates * ncat_mix * vector_size;
+    const int      v_by_s         = nstates * vector_size;
+    double*        start_lh       = dad_branch->partial_lh 
+                                  + ptn_lower * static_cast<intptr_t>(block);
+
+#if 0
+    //It doesn't look like I need this
+    std::vector<double> temp_lh_vector(block * ptn_count);
+    double* temp_lh = temp_lh_vector.data();
+    memcpy(temp_lh, start_lh, block * ptn_count * sizeof(double));
+#endif
+
+    std::vector<double> lh_total(nstates, 0.0);
+    
+    //Note: This needs to know category weights
+    double*  partial_lh = start_lh;
+    for (intptr_t ptn = ptn_lower; ptn < ptn_upper
+         ; partial_lh += block, ptn += vector_size) {
+        int state_offset = 0;
+        for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
+            //Todo: what about scaling?
+            for (int vector_index = 0; vector_index < vector_size; ++vector_index) { 
+                double lh_for_state = 0.0;
+                int    cat          = 0;
+                for (int cat_offset = 0; cat_offset < block
+                     ; cat_offset += v_by_s, ++ cat) {
+                    lh_for_state += exp(partial_lh [ cat_offset + state_offset + vector_index ]);
+                                    //times the weight for this category and pattern,
+                                    //according to this model_to_use?
+                }
+                lh_total[state] += log(lh_for_state);
+            }
+        }
+    }
+
+    std::vector<double> state_lh(nstates);
+    for (int state = 0; state < nstates; ++state) {
+        state_lh[state] = lh_total[state] 
+                        / static_cast<double>(ptn_count)
+                        / static_cast<double>(ncat_mix);
+    }
+
+    partial_lh = start_lh;
+    for (intptr_t ptn = ptn_lower; ptn < ptn_upper
+         ; partial_lh += block, ptn += vector_size) {
+        for (int cat_offset = 0; cat_offset < block; cat_offset += v_by_s) {
+            int state_offset = 0;
+            for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
+                double lh = state_lh[state];
+                for (int vector_index = 0; vector_index < vector_size; ++vector_index) {
+                    partial_lh [ cat_offset + state_offset + vector_index ] = lh;
+                }
+            }
+        }
+    }
+}
+
 

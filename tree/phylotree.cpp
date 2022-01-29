@@ -2232,7 +2232,7 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
     }
 }
 
-void PhyloTree::transformPatternLhCat() {
+void PhyloTree::transformPatternLhCat(double* lh_cat) {
     if (vector_size == 1) {
         return;
     }
@@ -2243,10 +2243,10 @@ void PhyloTree::transformPatternLhCat() {
     }
     std::vector<double> memvec(nptn*ncat);
     double* memptr = memvec.data();
-    memcpy(memptr, tree_buffers._pattern_lh_cat, nptn*ncat*sizeof(double));
+    memcpy(memptr, lh_cat, nptn*ncat*sizeof(double));
 
     for (intptr_t ptn = 0; ptn < nptn; ptn+=vector_size) {
-        double* lh_cat_ptr = &tree_buffers._pattern_lh_cat[ptn*ncat];
+        double* lh_cat_ptr = lh_cat + ptn * ncat;
         for (size_t cat = 0; cat < ncat; cat++) {
             for (size_t i = 0; i < vector_size; i++) {
                 lh_cat_ptr[i*ncat+cat] = memptr[i];
@@ -2268,7 +2268,8 @@ PhyloNode* PhyloTree::findFirstFarLeaf(PhyloNode* node) const {
     return node;
 }
 
-double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
+double PhyloTree::computePatternLhCat(SiteLoglType wsl, 
+                                      double* lh_cat_buffer) {
     if (current_it == nullptr) {
         PhyloNode* leaf = findFirstFarLeaf(getRoot());
         current_it      = leaf->firstNeighbor();
@@ -2277,14 +2278,23 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     double score  = computeLikelihoodBranch(current_it,
                                             current_it_back->getNode(),
                                             tree_buffers);
-    transformPatternLhCat();
+    if (lh_cat_buffer != tree_buffers._pattern_lh_cat) {        
+        intptr_t nptn    = ((aln->size()+vector_size-1)/vector_size)*vector_size;
+        intptr_t ncat    = site_rate->getNRate();
+        if (!model_factory->fused_mix_rate) {
+            ncat *= model->getNMixtures();
+        }
+        intptr_t lh_size = sizeof(double) * ntpn * ncat;
+        memcpy(lh_cat_buffer, tree_buffers._pattern_lh_cat, lh_size);
+    }                                            
+    transformPatternLhCat(lh_cat_buffer);
 
     if (!getModel()->isSiteSpecificModel() 
         && getModel()->isMixture() 
         && !getModelFactory()->fused_mix_rate) {
         if (wsl == WSL_MIXTURE || wsl == WSL_RATECAT) {
-            double*  lh_cat   = tree_buffers._pattern_lh_cat;
-            double*  lh_res   = tree_buffers._pattern_lh_cat;
+            double*  lh_cat   = lh_cat_buffer;
+            double*  lh_res   = lh_cat_buffer;
             intptr_t nptn     = aln->getNPattern();
             size_t   nmixture = getModel()->getNMixtures();
             size_t   ncat     = getRate()->getNRate();
@@ -2324,8 +2334,8 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
 
 void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     ASSERT(getModel()->isMixture());
-    computePatternLhCat(WSL_MIXTURE);
     double*  lh_cat   = tree_buffers._pattern_lh_cat;
+    computePatternLhCat(WSL_MIXTURE, lh_cat);
     intptr_t nptn     = getAlnNPattern();
     int      nmixture = getModel()->getNMixtures();
     double*  freq_ptr = ptn_state_freq;
@@ -2380,16 +2390,13 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     }
 }
 
-void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
-    /*    if (!dad_branch) {
-     dad = getRoot();
-     dad_branch = dad->firstNeighbor();
-     }*/
+void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, 
+                                         double *ptn_lh_cat, SiteLoglType wsl) {
     intptr_t nptn = aln->getNPattern();
     int      ncat = getNumLhCat(wsl);
     if (ptn_lh_cat) {
         // Right now only Naive version store _pattern_lh_cat!
-        computePatternLhCat(wsl);
+        computePatternLhCat(wsl, tree_buffers._pattern_lh_cat);
     }
     
     double sum_scaling = current_it->lh_scale_factor 
@@ -2533,13 +2540,11 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 
 void PhyloTree::computePatternProbabilityCategory
         (double *ptn_prob_cat, SiteLoglType wsl) {
-    intptr_t nptn = aln->getNPattern();
-    size_t   ncat = getNumLhCat(wsl);
-    // Right now only Naive version store _pattern_lh_cat!
-    computePatternLhCat(wsl);
+    intptr_t nptn   = aln->getNPattern();
+    size_t   ncat   = getNumLhCat(wsl);
 
-    memcpy(ptn_prob_cat, tree_buffers._pattern_lh_cat, 
-           sizeof(double)*nptn*ncat);
+    // Right now only Naive version store _pattern_lh_cat!
+    computePatternLhCat(wsl, ptn_prob_cat);
 
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double* lh_cat = ptn_prob_cat + ptn*ncat;
@@ -2557,7 +2562,8 @@ void PhyloTree::computePatternProbabilityCategory
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     if (sse != LK_386) {
         // compute _pattern_lh_cat
-        computePatternLhCat(WSL_MIXTURE_RATECAT);
+        double* lh_cat = tree_buffers._pattern_lh_cat;
+        computePatternLhCat(WSL_MIXTURE_RATECAT, lh_cat);
     }    
     intptr_t npattern = aln->getNPattern();
     int      ncat     = getRate()->getNRate();
@@ -2569,7 +2575,7 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     else {
         nmixture = ncat;
     }
-    if (pattern_ncat) {
+    if (pattern_ncat!=nullptr) {
         pattern_ncat->resize(npattern);
     }
     if (ptn_cat_mask.empty()) {
@@ -2578,18 +2584,19 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     size_t num_best_mixture = 0;
     ASSERT(ncat < sizeof(uint64_t)*8 && nmixture < sizeof(uint64_t)*8);
 
+    std::vector<double> lh_mixture_vector(nmixture);
+    std::vector<double> sorted_lh_mixture_vector(nmixture);
+    std::vector<int>    id_mixture_vector(nmixture);
+
     double* lh_cat            = tree_buffers._pattern_lh_cat;
-    double* lh_mixture        = new double[nmixture];
-    double* sorted_lh_mixture = new double[nmixture];
-    int*    id_mixture        = new int[nmixture];
-    
-//    for (c = 0; c < ncat; c++)
-//        cat_prob[c] = getRate()->getProp(c);
-//    cout << "Ptn\tFreq\tNumMix\tBestMix" << endl;
-    
-    size_t sum_nmix = 0;
+    double* lh_mixture        = lh_mixture_vector.data();
+    double* sorted_lh_mixture = sorted_lh_mixture_vector.data();
+    int*    id_mixture        = id_mixture_vector.data();
+    size_t  sum_nmix          = 0;
+
     for (intptr_t ptn = 0; ptn < npattern; ptn++) {
-        double sum_prob = 0.0, acc_prob = 0.0;
+        double sum_prob = 0.0;
+        double acc_prob = 0.0;
         memset(lh_mixture, 0, nmixture*sizeof(double));
         if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate) {
             for (int m = 0; m < nmixture; m++) {
@@ -2637,10 +2644,8 @@ int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
             cout << endl;
         }
     }
-//    cout << 100*(double(sum_nmix)/nmixture)/npattern << "% computation necessary" << endl;
-    delete [] id_mixture;
-    delete [] sorted_lh_mixture;
-    delete [] lh_mixture;
+    //cout << 100*(double(sum_nmix)/nmixture)/npattern 
+    //     << "% computation necessary" << endl;
     return static_cast<int>(num_best_mixture);
 }
 
@@ -2675,26 +2680,24 @@ double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
 double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_lh) {
     intptr_t nptn       = getAlnNPattern();
     size_t   nsite      = getAlnNSite();
-    double*  pattern_lh = ptn_lh;
-    if (!ptn_lh) {
-        pattern_lh = new double[nptn];
-        computePatternLikelihood(pattern_lh);
+    std::vector<double> pattern_lh_vector;
+    if (ptn_lh==nullptr) {
+        pattern_lh_vector.resize(nptn);
+        ptn_lh = pattern_lh_vector.data();
+        computePatternLikelihood(ptn_lh);
     }
     IntVector pattern_freq;
     aln->getPatternFreq(pattern_freq);
 
     double avg_site_lh_diff = 0.0;
     for (intptr_t i = 0; i < nptn; ++i) {
-        avg_site_lh_diff += (pattern_lh[i] - pattern_lh_other[i]) * pattern_freq[i];
+        avg_site_lh_diff += (ptn_lh[i] - pattern_lh_other[i]) * pattern_freq[i];
     }
     avg_site_lh_diff /= nsite;
     double variance = 0.0;
     for (intptr_t i = 0; i < nptn; ++i) {
-        double diff = (pattern_lh[i] - pattern_lh_other[i] - avg_site_lh_diff);
-        variance += diff * diff * pattern_freq[i];
-    }
-    if (!ptn_lh) {
-        delete[] pattern_lh;
+        double diff = (ptn_lh[i] - pattern_lh_other[i] - avg_site_lh_diff);
+        variance   += diff * diff * pattern_freq[i];
     }
     if (nsite <= 1) {
         return 0.0;
@@ -6437,8 +6440,9 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
     int ncategory = 1;
     
     if (bayes) {
+        double* lh_cat = tree_buffers._pattern_lh_cat;
         ncategory = site_rate->computePatternRates
-                    (pattern_rates, pattern_cat);
+                    (lh_cat, pattern_rates, pattern_cat);
     }
     else {
         optimizePatternRates(pattern_rates);

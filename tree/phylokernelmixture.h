@@ -503,9 +503,10 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD
 	intptr_t ptn; // for big data size > 4GB memory required
     size_t   c, i, j, m;
 	intptr_t orig_nptn = aln->size();
-	intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-	intptr_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
+	intptr_t u_ptn     = model_factory->unobserved_ptns.size();
+	intptr_t nptn      = aln->size()+u_ptn;
+	intptr_t maxptn    = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    maxptn = max(maxptn, aln->size()+((u_ptn+VCSIZE-1)/VCSIZE)*VCSIZE);
 
     ModelSubst*        model_to_use  = nullptr;
     RateHeterogeneity* rate_model    = nullptr;

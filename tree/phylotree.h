@@ -1186,7 +1186,7 @@ public:
      ****************************************************************************/
 
     /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
-    void transformPatternLhCat();
+    void transformPatternLhCat(double* lh_cat);
 
     // Compute the partial likelihoods LH (OUT) at the leaves for an observed PoMo
     // STATE (IN). Use binomial sampling unless hyper is true, then use
@@ -1414,9 +1414,12 @@ public:
 
     /**
      * compute _pattern_lh_cat for site-likelihood per category
+     * @param wsl            - Site log likelihood type
+     * @param pattern_lh_cat - pointer to first element of an array
+     *                         of size at leat #patterns * #categories.
      * @return tree log-likelihood
      */
-    virtual double computePatternLhCat(SiteLoglType wsl);
+    virtual double computePatternLhCat(SiteLoglType wsl, double* pattern_lh_cat);
     
     /**
      * find a leaf near a node (by visiting a neighboring node, that
@@ -3062,8 +3065,12 @@ protected:
                                   RateHeterogeneity*& other_rate,
                                   double*&     tip_lh) const;
 
-
-
+    void handleDivergentModelBoundary
+            (TraversalInfo& info, 
+             ModelSubst* model_to_use, ModelSubst* other_model, 
+             RateHeterogeneity* rate_model, RateHeterogeneity* other_rate,
+             intptr_t ptn_lower, intptr_t ptn_upper, intptr_t packet_id,
+             const LikelihoodBufferSet& buffers);
 };
         
 #endif

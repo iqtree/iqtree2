@@ -290,17 +290,15 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
-int RateGamma::computePatternRates(DoubleVector& pattern_rates,
+int RateGamma::computePatternRates(double*       lh_cat,
+                                   DoubleVector& pattern_rates,
                                    IntVector&    pattern_cat) {
-	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
-
-	phylo_tree->computePatternLhCat(WSL_RATECAT);
+	phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
 
 	intptr_t npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
 	pattern_cat.resize  (npattern);
 
-    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (intptr_t i = 0; i < npattern; i++) {
 		double sum_rate   = 0.0;
 		double sum_lh     = 0.0;

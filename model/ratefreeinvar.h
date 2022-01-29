@@ -130,8 +130,9 @@ public:
 	virtual bool   isFixGammaShape()  const override { return super::isFixGammaShape(); }
 	virtual void   setFixGammaShape(bool fixGammaShape) override { super::setFixGammaShape(fixGammaShape); }
 	virtual int    isGammaRate()      const override { return super::isGammaRate(); }
-	virtual int    computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat) override {
-		return super::computePatternRates(pattern_rates, pattern_cat);
+	virtual int    computePatternRates(double* pattern_lh_cat, 
+	                                   DoubleVector& pattern_rates, IntVector& pattern_cat) override {
+		return super::computePatternRates(pattern_lh_cat, pattern_rates, pattern_cat);
 	}
 
 	virtual double getPInvar()        const override { return invar.getPInvar(); }

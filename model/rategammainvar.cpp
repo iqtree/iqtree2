@@ -199,17 +199,17 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon,
 }
 
 
-int RateGammaInvar::computePatternRates(DoubleVector& pattern_rates,
+int RateGammaInvar::computePatternRates(double*       lh_cat,
+                                        DoubleVector& pattern_rates,
                                         IntVector&    pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
-	phylo_tree->computePatternLhCat(WSL_RATECAT);
+	phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
 
 	auto npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
 	pattern_cat.resize  (npattern);
 
-    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	for (int i = 0; i < npattern; i++) {
 		double sum_rate   = 0.0;
         double sum_lh     = phylo_tree->ptn_invar[i];
@@ -259,7 +259,8 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
 
     // Compute the pattern likelihood for each category
     // (invariable and variable category)
-    phylo_tree->computePatternLhCat(WSL_RATECAT);
+    double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
+    phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
     phylo_tree->computePtnInvar();
 
     double ppInvar = 0;

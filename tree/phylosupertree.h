@@ -281,7 +281,8 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL) override;
 
     /**
-     * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
+     * @return number of elements per site lhl entry, 
+     *         used in conjunction with computePatternLhCat
      */
     virtual int getNumLhCat(SiteLoglType wsl) override;
 

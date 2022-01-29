@@ -59,10 +59,13 @@ void RateHeterogeneity::restoreCheckpoint() {
 
 /*
 void RateHeterogeneity::writeSiteRates(const char *file_name) {
+	double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
-	int ncategory = computePatternRates(pattern_rates, pattern_cat);
-	if (pattern_rates.empty()) return;
+	int ncategory = computePatternRates( lh_cat, pattern_rates, pattern_cat);
+	if (pattern_rates.empty()) {
+		return;
+	}
 
 	try {
 		ofstream out;
