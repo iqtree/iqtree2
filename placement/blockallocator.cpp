@@ -42,17 +42,21 @@ void BlockAllocator::allocateVectorOfParsimonyBlocks(intptr_t vectorSize,
     //              << ", index_parsimony now " << index_parsimony
     //              << " (left: " << leftover << ")");
 }
+
 void BlockAllocator::allocateMemoryFor(PhyloNeighbor* nei) {
     if (nei->partial_pars==nullptr) {
         allocateParsimonyBlock(nei->partial_pars);
     }
 }
+
 PhyloTree& BlockAllocator::getTree() {
     return phylo_tree;
 }
+
 int BlockAllocator::getParsimonyBlockCount() const {
     return index_parsimony;
 }
+
 void BlockAllocator::handOverComputedState(PhyloNeighbor* from_nei,
                                            PhyloNeighbor* to_nei) {
     std::swap(to_nei->partial_lh         , from_nei->partial_lh);
@@ -62,16 +66,20 @@ void BlockAllocator::handOverComputedState(PhyloNeighbor* from_nei,
     allocateMemoryFor(from_nei);
     from_nei->clearComputedFlags();
 }
+
 int BlockAllocator::getLikelihoodBlockCount() const {
     return 0;
 }
+
 void BlockAllocator::allocateLikelihoodBlocks(double*& partial_lh,
                                               UBYTE*& scale_num) {
     //Don't!
 }
+
 bool BlockAllocator::usesLikelihood() {
     return false;
 }
+
 void BlockAllocator::makeTreeReady(PhyloNode* first, PhyloNode* second) {
 }
 
