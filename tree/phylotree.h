@@ -1210,6 +1210,8 @@ public:
         void computeProteinTipPartialParsimony();
 
     void computePtnInvar();
+    void computePtnInvar(Alignment* alignment, double* ptn_invar);
+
     void computePtnFreq();
     
     void computePatternPacketBounds(int vector_size, int threads, int packets,

@@ -610,7 +610,12 @@ void PhyloTree::setTipPartialLikelihoodComputed(bool is_it) {
 }
 
 void PhyloTree::computePtnInvar() {
-    intptr_t nptn    = aln->getNPattern(), ptn;
+    computePtnInvar(aln, tree_ptn_invar);
+}
+
+void PhyloTree::computePtnInvar
+        (Alignment* alignment, double* ptn_invar) {
+    intptr_t nptn    = alignment->getNPattern(), ptn;
     intptr_t unobs   = model_factory->unobserved_ptns.size();
     intptr_t maxptn  = get_safe_upper_limit(nptn)
                      + get_safe_upper_limit(unobs);
@@ -626,51 +631,53 @@ void PhyloTree::computePtnInvar() {
         512+1024 // U = I or L
     };
 
-	memset(tree_ptn_invar, 0, maxptn*sizeof(double));
+	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
         std::vector<double> state_freq_vector(nstates);
         double* state_freq = state_freq_vector.data();
 
         // -1 for mixture model
-
         // Again for PoMo, the stationary frequencies 
         // are set to the stationary
         // frequencies of the boundary states.
         
         model->getMutationModel()->getStateFrequency(&state_freq[0], -1);
 
-		for (ptn = 0; ptn < nptn; ptn++) {
-            //Todo: This bit will break if aln->STATE_UNKNOWN is bigger than... 127
-            if ((*aln)[ptn].const_char > static_cast<char>(aln->STATE_UNKNOWN)) {
+        auto unknown = static_cast<char>(alignment->STATE_UNKNOWN);
+
+        for (ptn = 0; ptn < nptn; ptn++) {
+            const Pattern& pat = alignment->getPattern(ptn);
+            //Todo: This bit will break if alignment->STATE_UNKNOWN is bigger than... 127
+            if (pat.const_char > unknown) {
                 continue;
             }
-			if ((*aln)[ptn].const_char == static_cast<char>(aln->STATE_UNKNOWN)) {
-				tree_ptn_invar[ptn] = p_invar;
+			if (pat.const_char == unknown) {
+				ptn_invar[ptn] = p_invar;
                 // For PoMo, if a polymorphic state is considered, the likelihood is
                 // left unchanged and zero because ptn_invar has been initialized to 0.
-			} else if ((*aln)[ptn].const_char < nstates) {
-				tree_ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
-			} else if (aln->seq_type == SeqType::SEQ_DNA) {
+			} else if (pat.const_char < nstates) {
+				ptn_invar[ptn] = p_invar * state_freq[(int) pat.const_char];
+			} else if (alignment->seq_type == SeqType::SEQ_DNA) {
                 // 2016-12-21: handling ambiguous state
-                tree_ptn_invar[ptn] = 0.0;
-                int cstate = (*aln)[ptn].const_char-nstates+1;
+                ptn_invar[ptn] = 0.0;
+                int cstate =  pat.const_char-nstates+1;
                 for (x = 0; x < nstates; x++) {
                     if ((cstate) & (1 << x)) {
-                        tree_ptn_invar[ptn] += state_freq[x];
+                        ptn_invar[ptn] += state_freq[x];
                     }
                 }
-                tree_ptn_invar[ptn] *= p_invar;
-            } else if (aln->seq_type == SeqType::SEQ_PROTEIN) {
-                tree_ptn_invar[ptn] = 0.0;
-                int cstate = (*aln)[ptn].const_char-nstates;
+                ptn_invar[ptn] *= p_invar;
+            } else if (alignment->seq_type == SeqType::SEQ_PROTEIN) {
+                ptn_invar[ptn] = 0.0;
+                int cstate = pat.const_char-nstates;
                 ASSERT(cstate <= 2);
                 for (x = 0; x < 11; x++) {
                     if (ambi_aa[cstate] & (1 << x)) {
-                        tree_ptn_invar[ptn] += state_freq[x];
+                        ptn_invar[ptn] += state_freq[x];
                     }
                 }
-                tree_ptn_invar[ptn] *= p_invar;
+                ptn_invar[ptn] *= p_invar;
             } 
             else { 
                 ASSERT(0);
@@ -682,7 +689,7 @@ void PhyloTree::computePtnInvar() {
 //      }
 //		// dummy values
 		for (ptn = nptn; ptn < maxptn; ptn++) {
-			tree_ptn_invar[ptn] = p_invar;
+			ptn_invar[ptn] = p_invar;
         }
 	}
 }
