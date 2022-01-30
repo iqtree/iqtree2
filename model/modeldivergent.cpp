@@ -620,6 +620,36 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
     
     int model_number = 0;
     for (ModelMarkov* subtree_model : subtree_models) {
+        auto subtree_rate = subtree_rate_models[model_number];
+        {
+            Alignment* subtree_aln = alignment->isSuperAlignment() 
+                                   ? new SuperAlignment() : new Alignment();            
+            subtree_aln->extractSubAlignment
+                ( alignment, taxon_subsets[model_number], 0, 0, nullptr );
+
+            double* ptn_invar         = allocatePatternInvarArray();
+            {
+                //Pattern numbers in subtree_aln aren't the same as those in 
+                //the parent alignment.  So we need to map them 
+                //(easiest way is one site at a time)
+                auto    invar_dim         = for_tree->getPatternInvarArrayDimension();
+                double* ptn_invar_scratch = aligned_alloc<double>(invar_dim);
+                for_tree->computePtnInvar(subtree_aln, ptn_invar_scratch);
+                
+                memset(ptn_invar, 0, invar_dim * sizeof(double) );
+                size_t n_site = alignment->getNSite();
+                for (size_t site=0; site<n_site; ++site) {
+                    auto src_ptn  = subtree_aln->getPatternID(site);
+                    auto dest_ptn = alignment-> getPatternID(site);
+                    ptn_invar[dest_ptn] = ptn_invar_scratch[src_ptn];
+                }
+                aligned_free(ptn_invar_scratch);
+            }
+            subtree_model->setPatternInvar ( ptn_invar, true);  //Owner
+            subtree_rate->setPatternInvar  ( ptn_invar, false); //Not an owner!
+            delete subtree_aln;
+        }
+
         auto freq_type = subtree_model->getFreqType(); 
         if (taxon_subsets[model_number].empty()) {
             //No taxa mapped to subtree model.  So nothing to do!
@@ -647,19 +677,6 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
                     << taxon_subsets[model_number].size() 
                     << " taxa.";
             std::cout << message.str() << std::endl;
-        }
-        auto subtree_rate = subtree_rate_models[model_number];
-
-        {
-            Alignment* subtree_aln = alignment->isSuperAlignment() 
-                                   ? new SuperAlignment() : new Alignment();            
-            subtree_aln->extractSubAlignment
-                ( alignment, taxon_subsets[model_number], 0, 0, nullptr );
-            double* ptn_invar = subtree_model->allocatePatternInvarArray();
-            for_tree->computePtnInvar(subtree_aln, ptn_invar);
-            subtree_model->setPatternInvar(ptn_invar, true);
-            subtree_rate->setPatternInvar(ptn_invar, false);
-            delete subtree_aln;
         }
 
         subtree_model->setStateFrequency(freq_vector.data());

@@ -649,6 +649,7 @@ public:
             @param aln original input alignment
             @param seq_id ID of sequences to extract from
             @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
+            @param min_taxa only keep alignment that has >= min_taxa sequences
             @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
     virtual void extractSubAlignment(const Alignment *aln, const IntVector &seq_id, 
