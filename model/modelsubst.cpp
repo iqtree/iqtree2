@@ -277,3 +277,24 @@ void ModelSubst::getDivergentModels
 double* ModelSubst::getPatternInvar() const {
     return ptn_invar!=nullptr ? ptn_invar : phylo_tree->tree_ptn_invar;
 }
+
+double* ModelSubst::allocatePatternInvarArray() const {
+    ASSERT(phylo_tree != nullptr);
+    size_t  invar_dimension = phylo_tree->getPatternInvarArrayDimension();
+    double* new_ptn_invar   = aligned_alloc<double>(invar_dimension);
+    return  new_ptn_invar;
+}
+
+void ModelSubst::setPatternInvar
+        (double* new_ptn_invar, bool take_ownership) {
+    if (new_ptn_invar == ptn_invar) {
+        return;
+    }
+    if (ptn_invar != nullptr) {
+        if (own_ptn_invar) {
+            aligned_free(ptn_invar);
+        }
+    }
+    ptn_invar     = new_ptn_invar;
+    own_ptn_invar = take_ownership;
+}

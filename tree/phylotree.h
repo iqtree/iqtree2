@@ -1055,7 +1055,9 @@ public:
     
     void ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_blocks,
                                     size_t count_of_extra_lh_blocks);
-        
+
+       size_t getPatternInvarArrayDimension() const;
+
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
             @param node the current node
@@ -1210,7 +1212,7 @@ public:
         void computeProteinTipPartialParsimony();
 
     void computePtnInvar();
-    void computePtnInvar(Alignment* alignment, double* ptn_invar);
+    void computePtnInvar(Alignment* alignment, double* ptn_invar) const;
 
     void computePtnFreq();
     

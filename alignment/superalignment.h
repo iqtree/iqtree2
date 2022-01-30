@@ -72,7 +72,7 @@ public:
     virtual void init(StrVector *sequence_names = NULL);
     
     /** return that this is a super-alignment structure */
-	virtual bool isSuperAlignment() override { return true; }
+	virtual bool isSuperAlignment() const override { return true; }
 
     /** read partition model file */
     void readPartition(const Params &params);
@@ -170,7 +170,7 @@ public:
             @param min_taxa only keep alignment that has >= min_taxa sequences
             @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
-    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, 
+    virtual void extractSubAlignment(const Alignment *aln, const IntVector &seq_id, 
                                      int min_true_char, int min_taxa = 0, 
                                      IntVector *kept_partitions = nullptr) override;
 

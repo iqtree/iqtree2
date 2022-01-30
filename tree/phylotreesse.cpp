@@ -614,7 +614,7 @@ void PhyloTree::computePtnInvar() {
 }
 
 void PhyloTree::computePtnInvar
-        (Alignment* alignment, double* ptn_invar) {
+        (Alignment* alignment, double* ptn_invar) const {
     intptr_t nptn    = alignment->getNPattern(), ptn;
     intptr_t unobs   = model_factory->unobserved_ptns.size();
     intptr_t maxptn  = get_safe_upper_limit(nptn)

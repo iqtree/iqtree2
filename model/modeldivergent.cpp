@@ -1,7 +1,9 @@
 #include "modeldivergent.h"
-#include "utils/stringfunctions.h"
 #include "variablebounds.h" //for VariableBounds class
 #include "modelmarkov.h"    //for RATE_TOL
+
+#include <utils/stringfunctions.h>
+#include <alignment/superalignment.h>
 
 ModelDivergent::ModelDivergent(): super(), 
     catchall_model_number(MODEL_UNASSIGNED), 
@@ -614,6 +616,8 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
         }   
     }
 
+    ASSERT( subtree_models.size() == subtree_rate_models.size() );
+    
     int model_number = 0;
     for (ModelMarkov* subtree_model : subtree_models) {
         auto freq_type = subtree_model->getFreqType(); 
@@ -644,10 +648,27 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
                     << " taxa.";
             std::cout << message.str() << std::endl;
         }
+        auto subtree_rate = subtree_rate_models[model_number];
+
+        {
+            Alignment* subtree_aln = alignment->isSuperAlignment() 
+                                   ? new SuperAlignment() : new Alignment();            
+            subtree_aln->extractSubAlignment
+                ( alignment, taxon_subsets[model_number], 0, 0, nullptr );
+            double* ptn_invar = subtree_model->allocatePatternInvarArray();
+            for_tree->computePtnInvar(subtree_aln, ptn_invar);
+            subtree_model->setPatternInvar(ptn_invar, true);
+            subtree_rate->setPatternInvar(ptn_invar, false);
+            delete subtree_aln;
+        }
+
         subtree_model->setStateFrequency(freq_vector.data());
         subtree_model->afterVariablesChanged();
         ++model_number;
     }
+
+
+
 }
 
 ModelMarkov* ModelDivergent::getNthSubtreeModel(int n) const {

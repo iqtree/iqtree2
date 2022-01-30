@@ -1667,6 +1667,13 @@ size_t PhyloTree::getBufferPartialLhSize() {
     return buffer_size;
 }
 
+size_t PhyloTree::getPatternInvarArrayDimension() const {
+    int numStates = model->num_states;
+    size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
+        get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+    return mem_size;
+}
+
 void PhyloTree::ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_blocks,
                                            size_t count_of_extra_lh_blocks) {
     determineBlockSizes();
@@ -1675,8 +1682,9 @@ void PhyloTree::ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_block
     // Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
     // extra #numStates for ascertainment bias correction
-    size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
-        get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+
+    size_t mem_size = getPatternInvarArrayDimension();
+
 
     tree_buffers.theta_block_size = mem_size * numStates * site_rate->getNRate()
                                     * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());

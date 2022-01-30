@@ -1805,7 +1805,7 @@ double ModelMixture::optimizeWeights() {
     double* ratio_prop = new_ratio_prop_vector.data();
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    bool converged = false;
+    bool    converged  = false;
     for (int step = 0; step < optimize_steps && !converged; ++step) {
         // E-step
         if (step > 0) {
@@ -1920,10 +1920,10 @@ void ModelMixture::optimizeEStep(double* new_prop) {
     // decoupled weights (prop) from _pattern_lh_cat 
     // to obtain L_ci and compute pattern likelihood L_i
 
-    intptr_t nptn  = phylo_tree->aln->getNPattern();
-    int      nmix  = static_cast<int>(models.size());
-    auto   lh_cat  = phylo_tree->tree_buffers._pattern_lh_cat;
-    auto ptn_invar = getPatternInvar();
+    intptr_t nptn      = phylo_tree->aln->getNPattern();
+    int      nmix      = static_cast<int>(models.size());
+    auto     lh_cat    = phylo_tree->tree_buffers._pattern_lh_cat;
+    auto     ptn_invar = getPatternInvar();
     for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
         double* this_lk_cat = lh_cat + ptn*nmix;
         double  lk_ptn      = ptn_invar[ptn];

@@ -3761,15 +3761,15 @@ void Alignment::printAlignment(InputType format, ostream &out, const char* file_
     }
 }
 
-void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
-                                    int min_true_char, int min_taxa,
-                                    IntVector *kept_partitions) {
-    IntVector::iterator it;
-    aln->seq_to_subset.resize(aln->seq_names.size(),0);
+void Alignment::extractSubAlignment(const Alignment* aln, const IntVector &seq_id,
+                                    int min_true_char, int min_taxon_count,
+                                    IntVector* kept_partitions) {
+    int source_seq_count = aln->seq_names.size();
     for (int i : seq_id) {
         ASSERT( 0 <= i && i < aln->getNSeq());
         seq_names.push_back(aln->getSeqName(i));
-        seq_to_subset.push_back(aln->getSequenceSubset(i));
+        int subset_number = (i<source_seq_count) ? aln->getSequenceSubset(i) : 0;
+        seq_to_subset.push_back(subset_number);
     }
     name           = aln->name;
     model_name     = aln->model_name;
@@ -3796,9 +3796,9 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
     int    siteMod = 0; //site # modulo 100.
     size_t seqCount = seq_id.size();
     for (size_t site = 0; site < aln->getNSite(); ++site) {
-        iterator pit = aln->begin() + (aln->getPatternID(site));
+        const_iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
-        for (it = seq_id.begin(); it != seq_id.end(); ++it) {
+        for (auto it = seq_id.begin(); it != seq_id.end(); ++it) {
             pat.push_back ( (*pit)[*it] );
         }
         size_t true_char = seqCount - pat.computeGapChar(num_states, STATE_UNKNOWN);
@@ -3825,7 +3825,8 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id,
     site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
     countConstSite();
-//    buildSeqStates();
+    //buildSeqStates();
+
     ASSERT(size() <= aln->size());
     if (kept_partitions) {
         kept_partitions->push_back(0);

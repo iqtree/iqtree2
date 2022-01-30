@@ -90,3 +90,17 @@ double RateHeterogeneity::targetFunk(double x[]) {
 double* RateHeterogeneity::getPatternInvar() const {
     return ptn_invar!=nullptr ? ptn_invar : phylo_tree->tree_ptn_invar;
 }
+
+void RateHeterogeneity::setPatternInvar
+		(double* new_ptn_invar, bool take_ownership) {
+    if (new_ptn_invar == ptn_invar) {
+        return;
+    }
+    if (ptn_invar != nullptr) {
+        if (own_ptn_invar) {
+            delete [] ptn_invar;
+        }
+    }
+    ptn_invar     = new_ptn_invar;
+    own_ptn_invar = take_ownership;
+}

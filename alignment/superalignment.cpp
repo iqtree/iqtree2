@@ -941,11 +941,11 @@ void SuperAlignment::linkSubAlignment(int part) {
 	}
 }
 
-void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, 
+void SuperAlignment::extractSubAlignment(const Alignment *aln, const IntVector &seq_id, 
                                          int min_true_char, int min_taxa, 
                                          IntVector *kept_partitions) {
 	ASSERT(aln->isSuperAlignment());
-	SuperAlignment *saln = dynamic_cast<SuperAlignment*>(aln);
+	const SuperAlignment *saln = dynamic_cast<const SuperAlignment*>(aln);
     name = aln->name;
     model_name = aln->model_name;
     sequence_type = aln->sequence_type;

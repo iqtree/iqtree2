@@ -391,6 +391,10 @@ public:
 
 	virtual double* getPatternInvar() const;
 
+	double* allocatePatternInvarArray() const;
+
+	virtual void setPatternInvar(double* ptn_invar, bool take_ownership);
+
     /**
     * get the underlying mutation model, used with PoMo model
     */
