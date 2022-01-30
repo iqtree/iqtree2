@@ -51,6 +51,8 @@ public:
 
 	virtual void setTree(PhyloTree* tree);
 
+	virtual PhyloTree* getTree() const;
+
 	virtual void setNumberOfStates(int states);
 
 	/**
@@ -379,7 +381,6 @@ public:
         return nullptr;
     }
 
-
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
@@ -388,6 +389,7 @@ public:
     	return num_states*sizeof(double);
     }
 
+	virtual double* getPatternInvar() const;
 
     /**
     * get the underlying mutation model, used with PoMo model
@@ -423,7 +425,6 @@ public:
 	*/
 	string name;
 
-
 	/**
 		full name of the model
 	*/
@@ -437,7 +438,6 @@ public:
 	 */
 	double *state_freq;
 	
-
 	/**
 		state frequency type
 	*/
@@ -468,6 +468,10 @@ public:
 
 	virtual void getDivergentModels(DivergentModels& div_models);
 
+protected:
+	PhyloTree* phylo_tree;
+	double*    ptn_invar;
+	bool       own_ptn_invar;
 };
 
 #endif //MODELSUBST_H

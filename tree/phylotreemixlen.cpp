@@ -441,32 +441,30 @@ void PhyloTreeMixlen::optimizeOneBranch
         // optimize all lengths per branch
         // It is often better than the true Newton method 
         // (Numerical Recipes in C++, chap. 10.7)
-#ifndef _MSC_VER
-        double variables  [mixlen+1];
-        double upper_bound[mixlen+1];
-        double lower_bound[mixlen+1];
-        bool   bound_check[mixlen+1];
-#else 
-        boost::scoped_array<double> variables ( new double [mixlen + 1]);
-        boost::scoped_array<double> upper_bound ( new double [mixlen + 1]);
-        boost::scoped_array<double> lower_bound ( new double [mixlen + 1]);
-        boost::scoped_array<bool> bound_check( new bool [mixlen + 1]);
-#endif
+
+        DoubleVector var_vector         (mixlen+1);
+        DoubleVector upper_bound_vector (mixlen+1);
+        DoubleVector lower_bound_vector (mixlen+1);
+        BoolVector   check_vector       (mixlen+1);
+
+        double* variables   = var_vector.data();
+        double* upper_bound = upper_bound_vector.data();
+        double* lower_bound = lower_bound_vector.data();
+        bool*   bound_check = reinterpret_cast<bool*>(check_vector.data());
+
         for (int i = 0; i < mixlen; i++) {
             lower_bound[i+1] = params->min_branch_length;
-            variables[i+1] = current_it->getLength(i);
+            variables[i+1]   = current_it->getLength(i);
             upper_bound[i+1] = params->max_branch_length;
             bound_check[i+1] = false;
         }
 
-#ifndef _MSC_VER
-        double grad[mixlen + 1];
-        double hessian[mixlen * mixlen];
-#else
-        boost::scoped_array<double> grad( new double [mixlen + 1]);
-        boost::scoped_array<double> hessian( new double [mixlen * mixlen]);
-#endif 
-        computeFuncDervMulti(&variables[1], &grad[0], &hessian[0]);
+        DoubleVector grad_vector    ( mixlen + 1 );
+        DoubleVector hessian_vector ( mixlen * mixlen );
+        double*      grad    = grad_vector.data();
+        double*      hessian = hessian_vector.data();
+        computeFuncDervMulti(variables+1, grad, hessian);
+
         double score;
         if (params->optimize_alg_mixlen.find("BFGS-B") != string::npos)
             score = -L_BFGS_B(mixlen, &variables[1], &lower_bound[1], 
@@ -514,7 +512,7 @@ void PhyloTreeMixlen::optimizeOneBranch
             // to obtain L_ci and compute pattern likelihood L_i
             for (intptr_t ptn = 0; ptn < nptn; ptn++) {
                 double* this_lk_cat = lh_cat + ptn*nmix;
-                double  lk_ptn = ptn_invar[ptn];
+                double  lk_ptn      = tree_ptn_invar[ptn];
                 for (size_t c = 0; c < nmix; c++) {
                     lk_ptn += this_lk_cat[c];
                 }
@@ -932,7 +930,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 #pragma omp parallel for reduction(+:my_df,my_ddf,prob_const,df_const,ddf_const)
 #endif
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-        double  lh_ptn  = ptn_invar[ptn];
+        double  lh_ptn  = tree_ptn_invar[ptn];
         double  df_ptn  = 0.0;
         double  ddf_ptn = 0.0;
         double* theta   = tree_buffers.theta_all + ptn*block 

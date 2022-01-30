@@ -254,10 +254,6 @@ int ModelMarkov::getNumberOfVariableRates() const {
     return num_params;
 }
 
-void ModelMarkov::setTree(PhyloTree* tree) {
-    phylo_tree = tree;
-}
-
 string ModelMarkov::getName() const {
   // MDW note to Minh for code review: I don't really understand what getName()
   // is used for. I've tried to keep the old behaviour while adding

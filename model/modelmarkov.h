@@ -150,13 +150,6 @@ public:
 	virtual int getNumberOfVariableRates() const;
     
 	/**
-		set the associated tree
-		@param tree the associated tree
-	*/
-    virtual void setTree(PhyloTree* tree) override;
-
-
-	/**
 		Read the upper-triangle rate matrix from an input stream. 
 		It will throw error messages if failed
 		@param in input stream
@@ -521,11 +514,6 @@ protected:
 
     /** TRUE if model is reversible */
     bool is_reversible;
-
-	/**
-		phylogenetic tree associated
-	*/
-	PhyloTree* phylo_tree;
 
     /**
 		rates between pairs of states of the unit rate matrix Q.

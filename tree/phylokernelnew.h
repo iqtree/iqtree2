@@ -1275,6 +1275,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
     const double* evec         = model_to_use->getEigenvectors();
     const double* inv_evec     = model_to_use->getInverseEigenvectors();
     ASSERT( inv_evec!=nullptr && evec!=nullptr );
+    const double* ptn_invar    = model_to_use->getPatternInvar();
 
     // internal node
     PhyloNeighbor* left  = nullptr;
@@ -2286,10 +2287,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD
     intptr_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
     intptr_t nptn       = max_orig_nptn+model_factory->unobserved_ptns.size();
     ASCType  ASC_type   = model_factory->getASC();
-    bool ASC_Holder     = isHolderAscertainmentCorrection(ASC_type);
-    bool ASC_Lewis      = isLewisAscertainmentCorrection(ASC_type);
-    double* const_df    = nullptr;
-    double* const_ddf   = nullptr;
+    bool     ASC_Holder = isHolderAscertainmentCorrection(ASC_type);
+    bool     ASC_Lewis  = isLewisAscertainmentCorrection(ASC_type);
+    double*  const_df   = nullptr;
+    double*  const_ddf  = nullptr;
 
     if (ASC_Holder) {
         const_df  = aligned_alloc<double>(get_safe_upper_limit(nptn) - max_orig_nptn);
@@ -2305,6 +2306,8 @@ void PhyloTree::computeLikelihoodDervGenericSIMD
     int     denom            = fused ? 1 : ncat;
     double* eval             = model_to_use->getEigenvalues();
     ASSERT(eval);
+    const double* ptn_invar  = model_to_use->getPatternInvar();
+
     for (size_t c = 0; c < ncat_mix; c++) {
         size_t m            = c/denom;
         cat_id[c]           = c%ncat;
@@ -2753,6 +2756,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
     double*     buffer_partial_lh_ptr = buffers.buffer_partial_lh;
     double*     eval         = model_to_use->getEigenvalues();
     ASSERT(eval);
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
     std::vector<double> cat_length_vector(ncat);
     std::vector<double> cat_prop_vector(ncat);
@@ -3300,6 +3304,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
     auto        rate_model   = getRateModelForCurrentBranch();
     double*     eval         = model_to_use->getEigenvalues();
     ASSERT(eval!=nullptr);
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
     int      ncat       = rate_model->getNRate();
     bool     fused      = model_factory->fused_mix_rate;
@@ -3572,6 +3577,8 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD
                              rate_model, other_rate, tip_lh);
     double*            eval          = model_to_use->getEigenvalues();
     ASSERT(eval);
+    const double*      ptn_invar     = model_to_use->getPatternInvar();
+
 
 
     double *buffer_partial_lh_ptr = buffers.buffer_partial_lh;

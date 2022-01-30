@@ -206,15 +206,15 @@ int RateGammaInvar::computePatternRates(double*       lh_cat,
 
 	phylo_tree->computePatternLhCat(WSL_RATECAT, lh_cat);
 
-	auto npattern = phylo_tree->aln->getNPattern();
+    const double* ptn_invar = getPatternInvar();
+	auto          npattern  = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
 	pattern_cat.resize  (npattern);
-
 	for (int i = 0; i < npattern; i++) {
 		double sum_rate   = 0.0;
-        double sum_lh     = phylo_tree->ptn_invar[i];
+        double sum_lh     = ptn_invar[i];
 		int    best       = 0;
-        double best_lh    = phylo_tree->ptn_invar[i];
+        double best_lh    = ptn_invar[i];
         double count_tied = 1.0;
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
@@ -264,15 +264,16 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
     phylo_tree->computePtnInvar();
 
     double ppInvar = 0;
+    const double* ptn_invar = getPatternInvar();
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double* this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat 
                             + ptn * ncat;
-        double  lk_ptn      = phylo_tree->ptn_invar[ptn];
+        double  lk_ptn      = ptn_invar[ptn];
         for (size_t cat = 0; cat < ncat; ++cat) {
             lk_ptn += this_lk_cat[cat];
         }
         ASSERT(lk_ptn != 0.0);
-        ppInvar += phylo_tree->ptn_invar[ptn]
+        ppInvar += ptn_invar[ptn]
                  * phylo_tree->ptn_freq[ptn] / lk_ptn;
     }
     double newPInvar = ppInvar / nSites;

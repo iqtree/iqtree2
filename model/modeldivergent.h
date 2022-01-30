@@ -17,8 +17,6 @@ protected:
     std::vector<ModelMarkov*>           subtree_models;
     std::vector<RateHeterogeneity*>     subtree_rate_models;
     std::vector<ToleratedModelVariable> own_parameters;
-    //PhyloTree* phylo_tree; //Set by setTree(), and used in
-    //                       //decomposeRateMatrix() member function.
     int                        catchall_model_number;
     NameToIDMap                clade_to_model_number;
     IntVector                  subset_to_model;

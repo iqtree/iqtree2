@@ -1820,9 +1820,10 @@ double ModelMixture::optimizeWeights() {
         for (int i=0; i<nmix; ++i) {
             new_prop[i] = 0.0;
         }
+        auto ptn_invar = getPatternInvar();
         for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
             double* this_lk_cat = lh_cat + ptn*nmix;
-            double  lk_ptn      = phylo_tree->ptn_invar[ptn];
+            double  lk_ptn      = ptn_invar[ptn];
             for (size_t c = 0; c < nmix; ++c) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1919,12 +1920,13 @@ void ModelMixture::optimizeEStep(double* new_prop) {
     // decoupled weights (prop) from _pattern_lh_cat 
     // to obtain L_ci and compute pattern likelihood L_i
 
-    intptr_t nptn = phylo_tree->aln->getNPattern();
-    int      nmix = static_cast<int>(models.size());
-    auto   lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
+    intptr_t nptn  = phylo_tree->aln->getNPattern();
+    int      nmix  = static_cast<int>(models.size());
+    auto   lh_cat  = phylo_tree->tree_buffers._pattern_lh_cat;
+    auto ptn_invar = getPatternInvar();
     for (intptr_t ptn = 0; ptn < nptn; ++ptn) {
         double* this_lk_cat = lh_cat + ptn*nmix;
-        double  lk_ptn      = phylo_tree->ptn_invar[ptn];
+        double  lk_ptn      = ptn_invar[ptn];
         for (intptr_t c = 0; c < nmix; ++c) {
             lk_ptn += this_lk_cat[c];
         }

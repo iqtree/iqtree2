@@ -626,7 +626,7 @@ void PhyloTree::computePtnInvar() {
         512+1024 // U = I or L
     };
 
-	memset(ptn_invar, 0, maxptn*sizeof(double));
+	memset(tree_ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
         std::vector<double> state_freq_vector(nstates);
@@ -646,31 +646,31 @@ void PhyloTree::computePtnInvar() {
                 continue;
             }
 			if ((*aln)[ptn].const_char == static_cast<char>(aln->STATE_UNKNOWN)) {
-				ptn_invar[ptn] = p_invar;
+				tree_ptn_invar[ptn] = p_invar;
                 // For PoMo, if a polymorphic state is considered, the likelihood is
                 // left unchanged and zero because ptn_invar has been initialized to 0.
 			} else if ((*aln)[ptn].const_char < nstates) {
-				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
+				tree_ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			} else if (aln->seq_type == SeqType::SEQ_DNA) {
                 // 2016-12-21: handling ambiguous state
-                ptn_invar[ptn] = 0.0;
+                tree_ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates+1;
                 for (x = 0; x < nstates; x++) {
                     if ((cstate) & (1 << x)) {
-                        ptn_invar[ptn] += state_freq[x];
+                        tree_ptn_invar[ptn] += state_freq[x];
                     }
                 }
-                ptn_invar[ptn] *= p_invar;
+                tree_ptn_invar[ptn] *= p_invar;
             } else if (aln->seq_type == SeqType::SEQ_PROTEIN) {
-                ptn_invar[ptn] = 0.0;
+                tree_ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates;
                 ASSERT(cstate <= 2);
                 for (x = 0; x < 11; x++) {
                     if (ambi_aa[cstate] & (1 << x)) {
-                        ptn_invar[ptn] += state_freq[x];
+                        tree_ptn_invar[ptn] += state_freq[x];
                     }
                 }
-                ptn_invar[ptn] *= p_invar;
+                tree_ptn_invar[ptn] *= p_invar;
             } 
             else { 
                 ASSERT(0);
@@ -682,7 +682,7 @@ void PhyloTree::computePtnInvar() {
 //      }
 //		// dummy values
 		for (ptn = nptn; ptn < maxptn; ptn++) {
-			ptn_invar[ptn] = p_invar;
+			tree_ptn_invar[ptn] = p_invar;
         }
 	}
 }
@@ -747,10 +747,11 @@ void PhyloTree::computePartialLikelihoodEigen
     size_t tip_block  = nstates * n_mix;
     size_t scale_size = nptn * ncat_mix;
     
-	double* evec     = model_to_use->getEigenvectors();
-	double* inv_evec = model_to_use->getInverseEigenvectors();
-	double* eval     = model_to_use->getEigenvalues();
+	double* evec      = model_to_use->getEigenvectors();
+	double* inv_evec  = model_to_use->getInverseEigenvectors();
+	double* eval      = model_to_use->getEigenvalues();
     assert(inv_evec && evec);
+    double* ptn_invar = model_to_use->getPatternInvar();
 
     dad_branch->lh_scale_factor = 0.0;
 
@@ -1195,9 +1196,9 @@ void PhyloTree::computeLikelihoodDervEigen
         mix_addr_nstates[c] = m*nstates;
         mix_addr[c] = mix_addr_nstates[c]*nstates;
     }
-
-    double *eval = model_to_use->getEigenvalues();
+    double* eval      = model_to_use->getEigenvalues();
     ASSERT(eval);
+    double* ptn_invar = model_to_use->getPatternInvar();
 
     assert(buffers.theta_all);
     if (!buffers.theta_computed) {
@@ -1412,8 +1413,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor* dad_branch, PhyloN
     size_t* mix_addr         = mix_addr_vector.data();
     int     denom            = fused ? 1 : ncat;
 
-    double* eval = model_to_use->getEigenvalues();
+    double* eval      = model_to_use->getEigenvalues();
     ASSERT(eval);
+    double* ptn_invar = model_to_use->getPatternInvar();
+
 
     std::vector<double> val_vector(block);
     double* val = val_vector.data();

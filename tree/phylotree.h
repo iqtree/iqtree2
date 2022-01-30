@@ -2096,11 +2096,14 @@ public:
     UINT *ptn_freq_pars;
 
     /**
-     * used as buffer for faster likelihood computation
+     * this is used as buffer for faster likelihood computation
      * for const pattern: it stores product of p_invar and state frequency
      * for other pattern: zero
+     *
+     * It used to be called, just: ptn_invar.
+     *
      */
-    double *ptn_invar;
+    double *tree_ptn_invar;
 
     vector<TraversalInfo> traversal_info;
 

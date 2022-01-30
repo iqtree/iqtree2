@@ -111,7 +111,7 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 		(*it)->ptn_freq           = nullptr;
 		(*it)->ptn_freq_computed  = false;
         (*it)->ptn_freq_pars      = nullptr;
-		(*it)->ptn_invar          = nullptr;
+		(*it)->tree_ptn_invar     = nullptr;
         (*it)->nni_partial_lh     = nullptr;
         (*it)->nni_scale_num      = nullptr;
 	}
@@ -128,7 +128,7 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
         (*it)->ptn_freq             = nullptr;
         (*it)->ptn_freq_computed    = false;
         (*it)->ptn_freq_pars        = nullptr;
-        (*it)->ptn_invar            = nullptr;
+        (*it)->tree_ptn_invar       = nullptr;
         (*it)->nni_partial_lh       = nullptr;
         (*it)->nni_scale_num        = nullptr;
     }
@@ -1699,10 +1699,10 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     at(part_order[0])->ptn_freq          = ptn_freq;
     at(part_order[0])->ptn_freq_pars     = ptn_freq_pars;
     at(part_order[0])->ptn_freq_computed = false;
-    if (ptn_invar==nullptr) {
-        ptn_invar = aligned_alloc<double>(total_mem_size);
+    if (tree_ptn_invar==nullptr) {
+        tree_ptn_invar = aligned_alloc<double>(total_mem_size);
 	}
-    at(part_order[0])->ptn_invar         = ptn_invar;
+    at(part_order[0])->tree_ptn_invar    = tree_ptn_invar;
 
     size_t IT_NUM = 2;
     if ( nni_partial_lh == nullptr ) {
@@ -1730,9 +1730,9 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		(*it)->ptn_freq       = (*prev_it)->ptn_freq + mem_size[part];
         (*it)->ptn_freq_pars  = (*prev_it)->ptn_freq_pars + mem_size[part];
 		(*it)->ptn_freq_computed = false;
-		(*it)->ptn_invar      = (*prev_it)->ptn_invar + mem_size[part];
+		(*it)->tree_ptn_invar = (*prev_it)->tree_ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];
-        (*it)->nni_scale_num  = (*prev_it)->nni_scale_num + IT_NUM*scale_block_size[part];
+        (*it)->nni_scale_num  = (*prev_it)->nni_scale_num  + IT_NUM*scale_block_size[part];
 	}
 
 	// compute total memory for all partitions

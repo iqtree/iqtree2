@@ -61,6 +61,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
     ModelSubst*        model_to_use = getModelForBranch(dad,node,other_model);
     RateHeterogeneity* other_rate   = nullptr;
     RateHeterogeneity* rate_model   = getRateModelForBranch(dad,node,other_rate);
+    const double*      ptn_invar    = model_to_use->getPatternInvar();
 
     //Todo: get rate_model too.
     intptr_t orig_nptn  = aln->size();
@@ -83,9 +84,10 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info,
     }
     
     // precomputed buffer to save times
-    double *buffer_partial_lh_ptr = buffers.buffer_partial_lh + (getBufferPartialLhSize() - 2*block*VectorClass::size()*num_packets);
-    double *echildren = info.echildren;
-    double *partial_lh_leaves = info.partial_lh_leaves;
+    double* buffer_partial_lh_ptr = buffers.buffer_partial_lh 
+                                  + (getBufferPartialLhSize() - 2*block*VectorClass::size()*num_packets);
+    double* echildren             = info.echildren;
+    double* partial_lh_leaves     = info.partial_lh_leaves;
     
     if (Params::getInstance().buffer_mem_save) {
         echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
@@ -628,6 +630,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD
     double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, other_model,
                              rate_model, other_rate, tip_lh);
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
 #ifndef KERNEL_FIX_STATES
     size_t   nstates = aln->num_states;
@@ -1140,6 +1143,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD
     double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, other_model,
                              rate_model, other_rate, tip_lh);
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
     vector<intptr_t> limits;
     computePatternPacketBounds(VectorClass::size(), num_threads,

@@ -83,6 +83,8 @@ public:
 	*/
 	PhyloTree* getTree() { return phylo_tree; }
 
+	virtual double* getPatternInvar() const;
+
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
@@ -343,6 +345,10 @@ public:
 		phylogenetic tree associated
 	*/
 	PhyloTree* phylo_tree;
+
+	double*    ptn_invar;
+
+	bool       own_ptn_invar;
 
 protected:
 

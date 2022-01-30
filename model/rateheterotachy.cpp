@@ -176,9 +176,10 @@ double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
             } 
         }
         memset(new_prop, 0, nmix*sizeof(double));
+        const double* ptn_invar = getPatternInvar();
         for (intptr_t ptn = 0; ptn < nptn; ptn++) {
             double* this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat + ptn*nmix;
-            double  lk_ptn      = phylo_tree->ptn_invar[ptn];
+            double  lk_ptn      = ptn_invar[ptn];
             for (size_t c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -243,9 +244,10 @@ double RateHeterotachy::optimizeWithEM(PhyloTree* report_to_tree) {
     // E-step
     // decoupled weights (prop) from _pattern_lh_cat
     // to obtain L_ci and compute pattern likelihood L_i
+    const double* ptn_invar = getPatternInvar();
     for (ptn = 0; ptn < nptn; ptn++) {
         double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-        double lk_ptn = phylo_tree->ptn_invar[ptn];
+        double lk_ptn = ptn_invar[ptn];
         for (c = 0; c < nmix; c++) {
             lk_ptn += this_lk_cat[c];
         }

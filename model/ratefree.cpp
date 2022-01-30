@@ -624,10 +624,11 @@ void RateFree::doEStep(intptr_t nptn, double* new_prop, size_t nmix) {
     // decoupled weights (prop) from _pattern_lh_cat
     // to obtain L_ci and compute pattern likelihood L_i
     memset(new_prop, 0, nmix*sizeof(double));
+    const double* ptn_invar = getPatternInvar();
     for (intptr_t ptn = 0; ptn < nptn; ptn++) {
         double* this_lk_cat = phylo_tree->tree_buffers._pattern_lh_cat 
                             + ptn * nmix;
-        double  lk_ptn      = phylo_tree->ptn_invar[ptn];
+        double  lk_ptn      = ptn_invar[ptn];
         for (size_t c = 0; c < nmix; c++) {
             lk_ptn += this_lk_cat[c];
         }

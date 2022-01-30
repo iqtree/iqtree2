@@ -11,22 +11,20 @@
 //
 #include "modelsubst.h"
 #include "utils/tools.h"
-
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
+#include <tree/phylotree.h>
 
 ModelSubst::ModelSubst(int nstates)
     : Optimization(), CheckpointFactory()
-    , name("JC"), full_name("JC (Juke and Cantor, 1969)") {
+    , name("JC"), full_name("JC (Juke and Cantor, 1969)")
+    , phylo_tree(nullptr), ptn_invar(nullptr), own_ptn_invar(false)
+ {
     num_states = nstates;
     state_freq = new double[num_states];
     for (int i = 0; i < num_states; i++) {
         state_freq[i] = 1.0 / num_states;
     }
-    freq_type = StateFreqType::FREQ_EQUAL;
+    freq_type        = StateFreqType::FREQ_EQUAL;
     fixed_parameters = false;
-    // linked_model = NULL;
 }
 
 void ModelSubst::setNumberOfStates(int states) {
@@ -42,7 +40,11 @@ void ModelSubst::setNumberOfStates(int states) {
 }
 
 void ModelSubst::setTree(PhyloTree* tree) {
-    //Doesn't have a phylo_tree member variable.  But many subclasses do
+    phylo_tree = tree;
+}
+
+PhyloTree* ModelSubst::getTree() const {
+    return phylo_tree;
 }
 
 void ModelSubst::startCheckpoint() {
@@ -220,13 +222,11 @@ void ModelSubst::computeTransDerv(double  time,        double* trans_matrix,
 }
 
 void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
-    int nmixtures = getNMixtures();
-    double *inv_eigenvectors = getInverseEigenvectors();
-#ifndef _MSC_VER
-    double saved_state_lk[num_states];
-#else
-	boost::scoped_array<double> saved_state_lk( new double [num_states]);
-#endif
+    int          nmixtures = getNMixtures();
+    double*      inv_eigenvectors = getInverseEigenvectors();
+    DoubleVector saved_state_lk_vector(num_states);
+    double*      saved_state_lk   = saved_state_lk_vector.data();
+
     memcpy(&saved_state_lk[0], state_lk, sizeof(double)*num_states);
     memset(state_lk, 0, sizeof(double)*num_states*nmixtures);
     for (int m = 0; m < nmixtures; m++) {
@@ -260,6 +260,11 @@ ModelSubst::~ModelSubst()
     //}
     if (state_freq) {
         delete [] state_freq;
+        state_freq = nullptr;
+    }
+    if (ptn_invar!=nullptr && own_ptn_invar) {
+        aligned_free(ptn_invar);
+        ptn_invar = nullptr;
     }
 }
 
@@ -269,3 +274,6 @@ void ModelSubst::getDivergentModels
     //subclasses of ModelSubst.  Notably, ModelDivergent.
 }
 
+double* ModelSubst::getPatternInvar() const {
+    return ptn_invar!=nullptr ? ptn_invar : phylo_tree->tree_ptn_invar;
+}

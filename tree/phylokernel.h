@@ -165,12 +165,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
     double* evec     = model_to_use->getEigenvectors();
     double* inv_evec = model_to_use->getInverseEigenvectors();
     assert(inv_evec!=nullptr && evec!=nullptr);
-//    for (i = 0; i < tip_block; i++) {
-//        for (x = 0; x < nstates/VCSIZE; x++)
-//            // inv_evec is not aligned!
-//            vc_inv_evec[i*nstates/VCSIZE+x].load_a(&inv_evec[i*nstates+x*VCSIZE]);
-//    }
-    double* eval     = model_to_use->getEigenvalues();
+    double*       eval      = model_to_use->getEigenvalues();
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
     VectorClass* echildren = aligned_alloc<VectorClass>(block*nstates/VCSIZE*(node->degree()-1));
     double* partial_lh_leaves = nullptr;
@@ -664,11 +660,13 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
     intptr_t orig_nptn = aln->size();
     intptr_t nptn      = aln->size()+model_factory->unobserved_ptns.size();
     intptr_t maxptn    = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    size_t   mix_addr_nstates[ncat_mix];
     maxptn = max(maxptn, static_cast<intptr_t>(aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE));
 
-    size_t mix_addr_nstates[ncat_mix];
-    size_t denom = fused ? 1 : ncat;
-    double *eval = model_to_use->getEigenvalues();
+    size_t        denom     = fused ? 1 : ncat;
+    double*       eval      = model_to_use->getEigenvalues();
+    const double* ptn_invar = model_to_use->getPatternInvar();
+
     ASSERT(eval);
 
     VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
@@ -944,6 +942,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD
     maxptn             = max(maxptn, static_cast<intptr_t>(aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE));
     double*  eval      = model_to_use->getEigenvalues();
     ASSERT(eval);
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
     VectorClass* vc_val = (VectorClass*)aligned_alloc<double>(block);
 
@@ -1335,8 +1334,9 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buff
     intptr_t orig_nptn = aln->size();
     intptr_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 //    intptr_t maxptn  = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
-    double *eval     = model_to_use->getEigenvalues();
+    double*  eval      = model_to_use->getEigenvalues();
     ASSERT(eval);
+    const double* ptn_invar = model_to_use->getPatternInvar();
 
     VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 

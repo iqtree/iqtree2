@@ -24,10 +24,9 @@
 
 RateHeterogeneity::RateHeterogeneity()
  : Optimization(), CheckpointFactory()
+ , name(""), full_name("Uniform"), phylo_tree(nullptr)
+ , ptn_invar(nullptr), own_ptn_invar(false)
 {
-	name = "";
-	full_name = "Uniform";
-	phylo_tree = NULL;
 }
 
 void RateHeterogeneity::setTree(PhyloTree* tree) {
@@ -36,6 +35,10 @@ void RateHeterogeneity::setTree(PhyloTree* tree) {
 
 RateHeterogeneity::~RateHeterogeneity()
 {
+    if (ptn_invar!=nullptr && own_ptn_invar) {
+        aligned_free(ptn_invar);
+        ptn_invar = nullptr;
+    }
 }
 
 void RateHeterogeneity::startCheckpoint() {
@@ -82,4 +85,8 @@ void RateHeterogeneity::writeSiteRates(const char *file_name) {
 
 double RateHeterogeneity::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
+}
+
+double* RateHeterogeneity::getPatternInvar() const {
+    return ptn_invar!=nullptr ? ptn_invar : phylo_tree->tree_ptn_invar;
 }

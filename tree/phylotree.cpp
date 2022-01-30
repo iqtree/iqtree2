@@ -98,7 +98,7 @@ void PhyloTree::init() {
     root_state             = 126;
     ptn_freq               = nullptr;
     ptn_freq_pars          = nullptr;
-    ptn_invar              = nullptr;
+    tree_ptn_invar         = nullptr;
     subTreeDistComputed    = false;
     dist_matrix            = nullptr;
     dist_matrix_rank       = 0;
@@ -228,7 +228,7 @@ PhyloTree::~PhyloTree() {
     aligned_free(ptn_freq);
     aligned_free(ptn_freq_pars);
     ptn_freq_computed = false;
-    aligned_free(ptn_invar);
+    aligned_free(tree_ptn_invar);
     delete[] dist_matrix;
     dist_matrix = nullptr;
     dist_matrix_rank = 0;
@@ -1698,7 +1698,7 @@ void PhyloTree::ensurePartialLHIsAllocated(size_t count_of_extra_parsimony_block
     
     ensure_aligned_allocated(ptn_freq,          mem_size);
     ensure_aligned_allocated(ptn_freq_pars,     mem_size);
-    ensure_aligned_allocated(ptn_invar,         mem_size);
+    ensure_aligned_allocated(tree_ptn_invar,    mem_size);
 
     allocateCentralBlocks(count_of_extra_parsimony_blocks,
                           count_of_extra_lh_blocks);
@@ -1739,7 +1739,7 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(central_scale_num);
     aligned_free(nni_scale_num);
     aligned_free(nni_partial_lh);
-    aligned_free(ptn_invar);
+    aligned_free(tree_ptn_invar);
     aligned_free(ptn_freq);
     aligned_free(ptn_freq_pars);
     tree_buffers.freeBuffers();
@@ -2284,7 +2284,7 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl,
         if (!model_factory->fused_mix_rate) {
             ncat *= model->getNMixtures();
         }
-        intptr_t lh_size = sizeof(double) * ntpn * ncat;
+        intptr_t lh_size = sizeof(double) * nptn * ncat;
         memcpy(lh_cat_buffer, tree_buffers._pattern_lh_cat, lh_size);
     }                                            
     transformPatternLhCat(lh_cat_buffer);
