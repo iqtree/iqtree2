@@ -2275,8 +2275,9 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         cout << num_mix << " mixture components are necessary" << endl;
         string site_mix_file = (string)params.out_prefix + ".sitemix";
         ofstream out(site_mix_file.c_str());
-        if (!out.is_open())
+        if (!out.is_open()) {
             outError("File " + site_mix_file + " could not be opened");
+        }
         out << "Ptn\tFreq\tNumMix" << endl;
         int ptn;
         for (ptn = 0; ptn < pattern_cat.size(); ptn++) {
@@ -2299,12 +2300,14 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         for (ptn = 0; ptn < iqtree.ptn_cat_mask.size(); ptn++) {
             int num_cat = popcount_lauradoux((unsigned*)&iqtree.ptn_cat_mask[ptn], 2);
             out << ptn << "\t" << (int)iqtree.ptn_freq[ptn]
-                 << "\t" << num_cat << "\t";
+                << "\t" << num_cat << "\t";
             for (c = 0; c < ncat; c++)
-                if (iqtree.ptn_cat_mask[ptn] & ((uint64_t)1<<c))
+                if (iqtree.ptn_cat_mask[ptn] & ((uint64_t)1<<c)) {
                     out << "1";
-                else
+                }
+                else {
                     out << "0";
+                }
             out << endl;
         }
         out.close();
@@ -2316,7 +2319,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             iqtree.approxAllBranches();
         }
         string brlen_file = params.out_prefix;
-        brlen_file += ".brlen";
+        brlen_file       += ".brlen";
         ofstream out;
         out.open(brlen_file.c_str());
         iqtree.printBranchLengths(out);
@@ -2355,7 +2358,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             new RateMeyerHaeseler(params.rate_file,
                                   &iqtree, params.rate_mh_type);
         cout << endl << "Computing site-specific rates by "
-                << rate_mvh->full_name << "..." << endl;
+             << rate_mvh->full_name << "..." << endl;
         rate_mvh->runIterativeProc(params, iqtree);
         cout << endl << "BEST SCORE FOUND : " << iqtree.getBestScore()<< endl;
         string mhrate_file = params.out_prefix;
@@ -2379,13 +2382,13 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 
     if (params.print_site_rate & 1) {
         string rate_file = params.out_prefix;
-        rate_file += ".rate";
+        rate_file       += ".rate";
         printSiteRates(iqtree, rate_file.c_str(), true);
     }
 
     if (params.print_site_rate & 2) {
         string rate_file = params.out_prefix;
-        rate_file += ".mlrate";
+        rate_file       += ".mlrate";
         printSiteRates(iqtree, rate_file.c_str(), false);
     }
 
@@ -2414,13 +2417,13 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree,
         cout<<"Details for subtrees:"<<endl;
         int part = 0;
         for(auto it = stree->begin(); it != stree->end(); it++,part++){
-            auto nnis_evaluated = stree->part_info[part].evalNNIs;
-            double fraction = ((nnis_evaluated+1.0) /
-                               ((stree->totalNNIs+1.0) / stree->size()));
+            auto   nnis_evaluated = stree->part_info[part].evalNNIs;
+            double fraction       = ((nnis_evaluated+1.0)
+                                  / ((stree->totalNNIs+1.0) / stree->size()));
             cout << part+1 << ". " << (*it)->aln->name << ": "
                  << stree->part_info[part].evalNNIs<<" ( "
-            << (int)floor(fraction * 100.0)
-                << " %)" << endl;
+                 << (int)floor(fraction * 100.0)
+                 << " %)" << endl;
         }
     }
 
@@ -2432,21 +2435,20 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree,
     //      << " vector computations: " 
     //      << iqtree.num_partial_lh_computations << endl;
     cout << "CPU time used for tree search: " << search_cpu_time
-            << " sec (" << convert_time(search_cpu_time) << ")" << endl;
+         << " sec (" << convert_time(search_cpu_time) << ")" << endl;
     cout << "Wall-clock time used for tree search: " << search_real_time
-            << " sec (" << convert_time(search_real_time) << ")" << endl;
+         << " sec (" << convert_time(search_real_time) << ")" << endl;
     cout << "Total CPU time used: " << (double) params.run_time << " sec ("
-            << convert_time((double) params.run_time) << ")" << endl;
+         << convert_time((double) params.run_time) << ")" << endl;
     cout << "Total wall-clock time used: "
-            << getRealTime() - params.start_real_time << " sec ("
-            << convert_time(getRealTime() - params.start_real_time) << ")" << endl;
-
+         << getRealTime() - params.start_real_time << " sec ("
+         << convert_time(getRealTime() - params.start_real_time) << ")" << endl;
 }
 
 void printTrees(const StrVector& trees, Params &params, string suffix) {
     ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
             ofstream::out);
-    for (auto it = trees.begin(); it != trees.end(); it++) {
+    for (auto it = trees.begin(); it != trees.end(); ++it) {
         treesOut << (*it);
         treesOut << endl;
     }
