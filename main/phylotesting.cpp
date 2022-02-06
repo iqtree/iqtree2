@@ -10,7 +10,6 @@
  //Turn off (4) warnings about sprintf calls in ncl\nxsstring.h
 #define _CRT_SECURE_NO_WARNINGS (1)
 #endif
-#include <boost/scoped_array.hpp>
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -434,28 +433,20 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
  @return adjusted log-likelihood factor
  */
 double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) {
-
     // count codon occurences
-#ifndef _MSC_VER
-    unsigned int codon_counts[orig_aln->num_states];
-#else
-    boost::scoped_array<unsigned int> codon_counts(new unsigned int[orig_aln->num_states]);
-#endif
+    std::vector<unsigned int> count_vector(orig_aln->num_states);
+    unsigned int* codon_counts = count_vector.data();
     orig_aln->computeAbsoluteStateFreq(&codon_counts[0]);
     
     // compute AA frequency
-//    double aa_freq[newaln->num_states];
-//    newaln->computeStateFreq(aa_freq);
+    // double aa_freq[newaln->num_states];
+    // newaln->computeStateFreq(aa_freq);
     
     // compute codon frequency
-#ifndef _MSC_VER
-    double codon_freq[orig_aln->num_states];
-#else
-    boost::scoped_array<double> codon_freq(new double[orig_aln->num_states]);
-#endif 
+    std::vector<double> freq_vector(orig_aln->num_states);
+    double* codon_freq = freq_vector.data();
 
     //orig_aln->computeStateFreq(codon_freq);
-    
     double original_sum = 0.0;
     for (int codon = 0; codon < orig_aln->num_states; ++codon) {
         original_sum += codon_counts[codon];
