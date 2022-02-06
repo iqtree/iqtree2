@@ -15,11 +15,10 @@
 #include "taxontoplace.h"
 
 TargetBranch::TargetBranch() : super(), blocker(nullptr)
-               , partial_pars(nullptr)
-               , connection_cost(0), branch_cost(0), parsimony_dirtiness(1)
-               , partial_lh(nullptr)
-               , scale_num(nullptr), branch_lh_scale_factor(0)
-               , used(false)
+               , partial_pars(nullptr), connection_cost(0)
+               , branch_cost(0), parsimony_dirtiness(1)
+               , partial_lh(nullptr), scale_num(nullptr)
+               , branch_lh_scale_factor(0), used(false)
                , replacements(nullptr) {}
 
 TargetBranch::~TargetBranch() {
@@ -114,8 +113,8 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
                                   LikelihoodBlockPairs &blocks) {
     PhyloNeighbor* neigh1   = getLeftNeighbor();
     PhyloNeighbor* neigh2   = getRightNeighbor();
-    if (neigh1->partial_pars!=nullptr || 
-        neigh2->partial_pars!=nullptr) {
+    if (neigh1->partial_pars==nullptr || 
+        neigh2->partial_pars==nullptr) {
         connection_cost = 0;
         branch_cost     = 0;
     }
@@ -142,7 +141,9 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
             connection_cost = tree_parsimony_score;
         }
         parsimony_dirtiness = 0;
-        branch_cost         = connection_cost - first_subtree_cost - second_subtree_cost;
+        branch_cost         = connection_cost 
+                            - first_subtree_cost 
+                            - second_subtree_cost;
     } 
     if (phylo_tree.leafNum < 50) {
         TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MAX, "TB Parsimony (net) was "
@@ -152,7 +153,8 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
     if (partial_lh != nullptr) {
         blocker->makeTreeReady(first, second);
         LikelihoodBufferSet localBuffers(phylo_tree.tree_buffers);
-        double score = -phylo_tree.computeLikelihoodBranch(neigh1, first, localBuffers);
+        double score = -phylo_tree.computeLikelihoodBranch
+                        (neigh1, first, localBuffers);
         if (phylo_tree.leafNum < 50) {
             TREE_LOG_LINE(phylo_tree, VerboseMode::VB_MAX, 
                           "TB Initial Likelihood was " << score);
@@ -160,7 +162,8 @@ double TargetBranch::computeState(PhyloTree& phylo_tree,
 
         double old_length      = neigh1->length;
         double half_old_length = 0.5 * old_length;
-        PlacementTraversalInfo info(phylo_tree, localBuffers, nullptr, nullptr);
+        PlacementTraversalInfo info(phylo_tree, localBuffers, 
+                                    nullptr, nullptr);
         
         PhyloNode fakeInterior;
         fakeInterior.addNeighbor(second,        half_old_length);
@@ -361,8 +364,8 @@ void TargetBranchRange::reload(const PhyloTree& phylo_tree) {
     }
 }
 
-void TargetBranchRange::getFinalReplacementBranchIndexes(intptr_t top_index,
-                                                     std::vector<size_t> &ids) const {
+void TargetBranchRange::getFinalReplacementBranchIndexes
+        (intptr_t top_index, std::vector<size_t> &ids) const {
     ids.clear();
     const TargetBranch& top = at(top_index);
     if (top.getReplacements() == nullptr) {
@@ -390,14 +393,17 @@ void TargetBranchRange::getFinalReplacementBranchIndexes(intptr_t top_index,
     }
 }
 
-
-TargetBranchRef::TargetBranchRef(): target_range(nullptr), target_index(0) {}
+TargetBranchRef::TargetBranchRef(): 
+    target_range(nullptr), target_index(0) {
+}
 
 TargetBranchRef::TargetBranchRef(const TargetBranchRef& r)
-    : target_range(r.target_range), target_index(r.target_index) {}
+    : target_range(r.target_range), target_index(r.target_index) {    
+}
 
 TargetBranchRef::TargetBranchRef(TargetBranchRange* range, size_t index)
-    : target_range(range), target_index(index) {}
+    : target_range(range), target_index(index) {
+}
 
 TargetBranchRef& TargetBranchRef::operator=(const TargetBranchRef& r) = default;
 
@@ -440,15 +446,15 @@ size_t TargetBranchRef::getTargetIndex() const {
     return target_index;
 }
 
-TargetBranchRef TargetBranchRange::addNewRef(BlockAllocator& allocator,
-                                             LikelihoodBlockPairs& blocks,
-                                             PhyloNode* node1, PhyloNode* node2,
-                                             double& parsimony_score,
-                                             bool likelihood_wanted) {
+TargetBranchRef TargetBranchRange::addNewRef
+    (BlockAllocator& allocator,    LikelihoodBlockPairs& blocks,
+     PhyloNode* node1,             PhyloNode* node2,
+     double&    parsimony_score,   bool       likelihood_wanted) {
     size_t index /*of added target branch*/ = size();
     emplace_back(&allocator, node1, node2, true,
                  likelihood_wanted);
-    back().computeState(allocator.getTree(), parsimony_score, index, blocks);
+    back().computeState(allocator.getTree(), parsimony_score, 
+                        index, blocks);
     back().setParsimonyLength(allocator.getTree());
     return TargetBranchRef(this, index);
 }
@@ -491,8 +497,9 @@ double TargetBranch::getConnectionCost() const {
     return connection_cost;
 }
 
-double TargetBranch::getFullDisconnectionBenefit(const PhyloTree& phylo_tree,
-                                                 const TargetBranchRange& branches) const {
+double TargetBranch::getFullDisconnectionBenefit
+        (const PhyloTree& phylo_tree,
+         const TargetBranchRange& branches) const {
     ASSERT(!isExternalBranch());
     ASSERT(first->degree()  == 3);
     ASSERT(second->degree() == 3);
@@ -545,8 +552,9 @@ double TargetBranch::getFullDisconnectionBenefit(const PhyloTree& phylo_tree,
     return disconnection_benefit;
 }
 
-double TargetBranch::getFullConnectionCost(const PhyloTree& phylo_tree,
-                                       const TargetBranch& other_branch) const {
+double TargetBranch::getFullConnectionCost
+        (const PhyloTree& phylo_tree,
+         const TargetBranch& other_branch) const {
     //Letter-H connection.
     //If this branch is AB, and the other is EF, returns
     //cost(AC)+cost(BC)+cost(CD)+cost(DE)+cost(DF) - cost(AB) - cost(EF)
@@ -572,8 +580,9 @@ double TargetBranch::getFullConnectionCost(const PhyloTree& phylo_tree,
     return costCD;
 }
 
-BenefitPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_tree,
-                                                         const TargetBranchRange& branches) const {
+BenefitPair TargetBranch::getPartialDisconnectionBenefit
+    (const PhyloTree& phylo_tree,
+     const TargetBranchRange& branches) const {
     //
     //Letter-T disconnection
     //If this branch is CD, and C is connected to A and B, determine the
@@ -612,8 +621,9 @@ BenefitPair TargetBranch::getPartialDisconnectionBenefit(const PhyloTree& phylo_
     return result;
 }
 
-double TargetBranch::getForwardConnectionCost(const PhyloTree& phylo_tree,
-                                              const TargetBranch& other_branch) const {
+double TargetBranch::getForwardConnectionCost
+        (const PhyloTree& phylo_tree,
+         const TargetBranch& other_branch) const {
     //Letter-T connection
     //If this branch is CD, and the other is AB, returns the cost of
     //connecting A     B the subtree C-D by linking A and B to C.
@@ -625,9 +635,12 @@ double TargetBranch::getForwardConnectionCost(const PhyloTree& phylo_tree,
     //(it *might* be connected to D via C).
     //It is also assumed that C is an interior node!
     //
-    auto   view_from_D = other_branch.partial_pars;   //what the updated view from D would be
+    auto   view_from_D = other_branch.partial_pars;  
+           //what the updated view from D would be
+
     auto   view_to_D   = first->findNeighbor(second)->partial_pars;
            //what the existing view from C would be
+
     int    updatedCDCost;
     phylo_tree.computeParsimonyOutOfTree(view_from_D, view_to_D,
                                          &updatedCDCost);
@@ -635,8 +648,9 @@ double TargetBranch::getForwardConnectionCost(const PhyloTree& phylo_tree,
     return (double)updatedCDCost;
 }
 
-double TargetBranch::getBackwardConnectionCost(const PhyloTree& phylo_tree,
-                                               const TargetBranch& other_branch) const {
+double TargetBranch::getBackwardConnectionCost
+        (const PhyloTree& phylo_tree,
+         const TargetBranch& other_branch) const {
     //Letter-T connection
     //If this branch is CD, and the other is EF, returns the cost of
     //connecting    C the subtree D-C by linking E and F to D (if 
@@ -651,7 +665,8 @@ double TargetBranch::getBackwardConnectionCost(const PhyloTree& phylo_tree,
     auto view_from_C = other_branch.partial_pars;
     auto view_to_C   = second->findNeighbor(first)->partial_pars;
     int  updatedCDCost;
-    phylo_tree.computeParsimonyOutOfTree(view_from_C, view_to_C, &updatedCDCost);
+    phylo_tree.computeParsimonyOutOfTree
+    (view_from_C, view_to_C, &updatedCDCost);
     
     return (double)updatedCDCost;
 }
@@ -661,8 +676,9 @@ void TargetBranch::setParsimonyLength(PhyloTree& tree) {
     auto backnei    = second->findNeighbor(first);
     int  correction = 0;
     tree.adjustParsimonyBranchSubstitutionCount(first, second, correction);
-    double parsimony_length = (branch_cost + static_cast<double>(correction))
-                            / static_cast<double>(tree.getAlnNSite());
+    double num_sites        = static_cast<double>(tree.getAlnNSite());
+    double adjusted_cost    = branch_cost + static_cast<double>(correction);
+    double parsimony_length = adjusted_cost / num_sites;
 
     tree.correctBranchLengthIfNeedBe(parsimony_length);
 
