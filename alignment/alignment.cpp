@@ -30,10 +30,6 @@
 #include <boost/math/distributions/binomial.hpp>
 #endif
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 using namespace std;
 using namespace Eigen;
 
@@ -218,12 +214,9 @@ void Alignment::checkSeqName() {
         return;
     }
 
-#ifndef _MSC_VER
-    double state_freq[num_states];
-#else
-    boost::scoped_array<double> state_freq(new double[num_states]);
-#endif
-    unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
+    std::vector<double> state_freq_vector(num_states);
+    double*   state_freq    = state_freq_vector.data();
+    unsigned* count_per_seq = new unsigned[num_states*getNSeq()];
     computeStateFreq(&state_freq[0], 0, nullptr);
     countStatePerSequence(count_per_seq);
 
@@ -341,23 +334,17 @@ SequenceInfo* Alignment::calculateSequenceInfo(const AlignmentSummary* s,
         if ( 50.0 < seqInfo[i].percent_gaps ) {
             num_problem_seq++;
         }
-        size_t iRow = i * num_states;
-#ifndef _MSC_VER
-        double freq_per_sequence[num_states];
-#else
-        boost::scoped_array<double> freq_per_sequence(new double[num_states]);
-#endif
-        double chi2 = 0.0;
+        std::vector<double> freq_vector(num_states);
+        size_t   iRow = i * num_states;
+        double*  freq_per_sequence = freq_vector.data();
+        double   chi2 = 0.0;
         unsigned sum_count = 0;
-        double pvalue;
+        double   pvalue;
         if (seq_type == SeqType::SEQ_POMO) {
             // Have to normalize allele frequencies.
-#ifndef _MSC_VER
-            double state_freq_norm[num_states];
-#else
-            boost::scoped_array<double> state_freq_norm(new double[num_states]);
-#endif
-            double sum_freq = 0.0;
+            std::vector<double> norm_vector(num_states);
+            double* state_freq_norm = norm_vector.data();
+            double  sum_freq        = 0.0;
             for (int j = 0; j < num_states; j++) {
                 sum_freq += state_freq[j];
                 state_freq_norm[j] = state_freq[j];
@@ -5430,11 +5417,8 @@ void Alignment::countStates(size_t *state_count,
             if (size() < stop) {
                 stop = size();
             }
-#ifndef _MSC_VER
-            size_t localStateCount[this->STATE_UNKNOWN+1];
-#else
-            boost::scoped_array<size_t> localStateCount(new size_t[this->STATE_UNKNOWN + 1]);
-#endif
+            std::vector<size_t> count_vector(this->STATE_UNKNOWN+1);
+            size_t* localStateCount = count_vector.data();
             countStatesForSites(start, stop, &localStateCount[0]);
             #pragma omp critical (sum_states)
             {
