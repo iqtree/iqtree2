@@ -1891,7 +1891,9 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon,
     bool converged = false;
     for (int step = 0; step < optimize_steps && !converged; ++step) {
         // first compute _pattern_lh_cat
-        phylo_tree->ensurePartialLHIsAllocated(0,0);
+        if (step==0) {
+            phylo_tree->initializeAllPartialLh();
+        }
         double* lh_cat = phylo_tree->tree_buffers._pattern_lh_cat;
         double  score  = phylo_tree->computePatternLhCat(WSL_MIXTURE, lh_cat);
 
