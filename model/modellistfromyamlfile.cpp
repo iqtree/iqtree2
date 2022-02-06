@@ -405,7 +405,7 @@ void ModelListFromYAMLFile::insistOnAlignmentSequenceType(const Alignment* align
     if (alignment->seq_type != desired_type) {
         std::stringstream complaint;
         complaint << "Cannot use " << getSeqTypeName(desired_type) << " model"
-                  << " with a " << getSeqTypeName(alignment->seq_type) << "alignment."
+                  << " with a " << getSeqTypeName(alignment->seq_type) << " alignment."
                   << "\nPlease re-run, with"
                   << " a " << getSeqTypeName(alignment->seq_type) << " model,"
                   << " or passing -seqtype " << getSeqTypeShortName(desired_type, false)
