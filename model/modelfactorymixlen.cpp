@@ -12,9 +12,6 @@
 #include "model/modelmarkov.h"
 #include "model/modelmixture.h"
 #include "rateheterotachy.h"
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
 
 ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name,
                                        PhyloTree* tree, ModelsBlock *models_block,

@@ -9,10 +9,6 @@
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 ModelPoMo::ModelPoMo(PhyloTree* tree, PhyloTree* report_to_tree)
     : ModelMarkov(tree, report_to_tree) {
 }
@@ -715,23 +711,18 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
     memset(freq_boundary_states, 0, sizeof(double)*n_alleles);
 
     if (sampling_method == SamplingType::SAMPLING_SAMPLED) {
-#ifndef _MSC_VER
-        unsigned int abs_state_freq[num_states];
-#else
-        boost::scoped_array<unsigned int>
-            abs_state_freq(new unsigned int[num_states]);
-#endif
+        std::vector<unsigned int> freq_vector(num_states);
+        unsigned int* abs_state_freq = freq_vector.data();
+
         memset(&abs_state_freq[0], 0, sizeof(unsigned int)*num_states);
         phylo_tree->aln->computeAbsoluteStateFreq(&abs_state_freq[0]);
         int n;
         int x;
         int y;
 
-#ifndef _MSC_VER
-        int sum[n_alleles];
-#else
-        boost::scoped_array<int> sum(new int[n_alleles]);
-#endif
+        std::vector<int> sum_vector(n_alleles);
+        int* sum = sum_vector.data();
+
         int tot_sum = 0;
         memset (&sum[0], 0, n_alleles * sizeof(int));
 
@@ -801,12 +792,8 @@ double ModelPoMo::estimateEmpiricalWattersonTheta()
     double sum_theta_w = 0.0;
 
     if (sampling_method == SamplingType::SAMPLING_SAMPLED) {
-#ifndef _MSC_VER
-        unsigned int abs_state_freq[num_states];
-#else
-        boost::scoped_array<unsigned int>
-            abs_state_freq(new unsigned int[num_states]);
-#endif
+        std::vector<unsigned int> freq_vector(num_states);
+        unsigned int* abs_state_freq = freq_vector.data();
         memset(&abs_state_freq[0], 0, sizeof(unsigned int)*num_states);
         phylo_tree->aln->computeAbsoluteStateFreq(&abs_state_freq[0]);
         for (int i = 0; i < n_alleles; i++) {

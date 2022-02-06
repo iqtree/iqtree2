@@ -11,10 +11,6 @@
 #include <utils/tools.h>
 #include <utils/stringfunctions.h> //for convert_int
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 ModelPoMoMixture::ModelPoMoMixture(const char* model_name,  const string& model_params,
                                    StateFreqType freq_type, const string& freq_params,
                                    PhyloTree* tree, string pomo_params,
@@ -148,11 +144,9 @@ void ModelPoMoMixture::decomposeRateMatrix() {
     int m; 
     int nmix               = getNMixtures();
     int num_states_squared = num_states*num_states;
-#ifndef _MSC_VER
-    double saved_mutation_rate_matrix[n_alleles*n_alleles];
-#else
-    boost::scoped_array<double> saved_mutation_rate_matrix(new double[n_alleles * n_alleles]);
-#endif
+
+    std::vector<double> matrix_vector(n_alleles*n_alleles);
+    double* saved_mutation_rate_matrix = matrix_vector.data();
     memcpy(&saved_mutation_rate_matrix[0], mutation_rate_matrix, 
            sizeof(double)*n_alleles*n_alleles);
 

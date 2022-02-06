@@ -22,10 +22,6 @@
 #include "model/rategamma.h"
 #include "model/modelmarkov.h"
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 PartitionModel::PartitionModel()
         : ModelFactory()
 {
@@ -152,12 +148,9 @@ void PartitionModel::linkModelsAcrossPartitions
             if ((*it)->getModel()->getName() == mit->second->getName()) {
                 num_parts++;
                 disallowIfUnsupportedSequenceType((*it)->aln->seq_type);
-#ifndef _MSC_VER
-                size_t state_counts[(*it)->aln->STATE_UNKNOWN+1];
-#else
-                boost::scoped_array<size_t> state_counts(new size_t[(*it)->aln->STATE_UNKNOWN + 1]);
-#endif
-                size_t unknown_states = 0;
+                std::vector<size_t> count_vector((*it)->aln->STATE_UNKNOWN+1);
+                size_t* state_counts   = count_vector.data();
+                size_t  unknown_states = 0;
                 if( params.partition_type != TOPO_UNLINKED) {
                     unknown_states = (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq());
                 }
@@ -174,11 +167,9 @@ void PartitionModel::linkModelsAcrossPartitions
         cout << "Linking " << mit->first << " model"
              << " across " << num_parts << " partitions" << endl;
         int nstates = mit->second->num_states;
-#ifndef _MSC_VER
-        double sum_state_freq[nstates];
-#else
-        boost::scoped_array<double> sum_state_freq(new double[nstates]);
-#endif
+        std::vector<double> freq_vector(nstates);
+        double* sum_state_freq = freq_vector.data();
+
         // convert counts to frequencies
         for (auto it = stree->begin(); it != stree->end(); ++it) {
             if ((*it)->getModel()->getName() == mit->second->getName()) {
