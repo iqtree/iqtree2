@@ -23,10 +23,6 @@
 #include "utils/statefrequency.h"
 #include <utils/stringfunctions.h> //for convert_double
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 
 using namespace std;
 
@@ -2253,5 +2249,13 @@ void ModelMixture::getDivergentModels
         (DivergentModels& div_models) {
     for (auto model: models) {
         model->getDivergentModels(div_models);
+    }
+}
+
+void ModelMixture::setPatternInvar
+        (double* ptn_invar, bool take_ownership) {
+    super::setPatternInvar(ptn_invar, take_ownership);
+    for (auto model: models) {
+        model->setPatternInvar(ptn_invar, false);
     }
 }

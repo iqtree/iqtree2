@@ -154,7 +154,9 @@ public:
                                           int child_subset_number) const;
 
     const std::vector<ModelMarkov*>&       getSubtreeModels() const;
-    const std::vector<RateHeterogeneity*>& getSubtreeRateModels() const;                                    
+    const std::vector<RateHeterogeneity*>& getSubtreeRateModels() const;  
+
+    virtual void setPatternInvar(double* ptn_invar, bool take_ownership) override;                              
 };
 
 #endif

@@ -627,7 +627,7 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
             subtree_aln->extractSubAlignment
                 ( alignment, taxon_subsets[model_number], 0, 0, nullptr );
 
-            double* ptn_invar         = allocatePatternInvarArray();
+            double* ptn_invar      = allocatePatternInvarArray();
             {
                 //Pattern numbers in subtree_aln aren't the same as those in 
                 //the parent alignment.  So we need to map them 
@@ -678,14 +678,10 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
                     << " taxa.";
             std::cout << message.str() << std::endl;
         }
-
         subtree_model->setStateFrequency(freq_vector.data());
         subtree_model->afterVariablesChanged();
         ++model_number;
     }
-
-
-
 }
 
 ModelMarkov* ModelDivergent::getNthSubtreeModel(int n) const {
@@ -753,11 +749,20 @@ ModelMarkov* ModelDivergent::getBranchJoiningModel
     return subtree_models[0];
 }
 
-const std::vector<ModelMarkov*>& ModelDivergent::getSubtreeModels() const {
+const std::vector<ModelMarkov*>& 
+    ModelDivergent::getSubtreeModels() const {
     return subtree_models;
 }
 
-const std::vector<RateHeterogeneity*>& ModelDivergent::getSubtreeRateModels() const {
+const std::vector<RateHeterogeneity*>& 
+    ModelDivergent::getSubtreeRateModels() const {
     return subtree_rate_models;
 }                                   
 
+void ModelDivergent::setPatternInvar
+        (double* ptn_invar, bool take_ownership) {
+    super::setPatternInvar(ptn_invar, take_ownership);
+    for (ModelMarkov* subtree_model : subtree_models) {
+        subtree_model->setPatternInvar(ptn_invar, false);
+    }
+}

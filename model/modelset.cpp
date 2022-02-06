@@ -18,10 +18,6 @@
 
 #include "modelset.h"
 
-#ifdef _MSC_VER
-#include <boost/scoped_array.hpp>
-#endif
-
 
 ModelSet::ModelSet(const char* model_name, PhyloTree* tree) : ModelMarkov(tree)
 {
@@ -162,15 +158,13 @@ void ModelSet::decomposeRateMatrix()
         memcpy(&inv_eigenvectors_transposed[m*square], &inv_eigenvectors_transposed[(m-1)*square], sizeof(double)*square);
     }
 
-#ifndef _MSC_VER
-    double new_eval[num_states*vsize];
-    double new_evec[square*vsize];
-    double new_inv_evec[square*vsize];
-#else
-    boost::scoped_array<double> new_eval(new double[num_states * vsize]);
-    boost::scoped_array<double> new_evec(new double[square * vsize]);
-    boost::scoped_array<double> new_inv_evec(new double[square * vsize]);
-#endif
+    std::vector<double> eval_vector(num_states*vsize);
+    std::vector<double> evec_vector(square*vsize);
+    std::vector<double> inv_vector(square*vsize);
+
+    double* new_eval     = eval_vector.data();
+    double* new_evec     = evec_vector.data();
+    double* new_inv_evec = inv_vector.data();
 
     intptr_t num_models = static_cast<intptr_t>(models.size());
     for (intptr_t ptn = 0; ptn < num_models; ptn += vsize) {
@@ -282,6 +276,14 @@ void ModelSet::getDivergentModels
         (DivergentModels& div_models) {
     for (auto model: models) {
         model->getDivergentModels(div_models);
+    }
+}
+
+void ModelSet::setPatternInvar
+        (double* ptn_invar, bool take_ownership) {
+    super::setPatternInvar(ptn_invar, take_ownership);
+    for (auto model: models) {
+        model->setPatternInvar(ptn_invar, false);
     }
 }
 

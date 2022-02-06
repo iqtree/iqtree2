@@ -344,6 +344,8 @@ protected:
 
 	virtual void getDivergentModels
              (DivergentModels& div_models) override;
+
+	virtual void setPatternInvar(double* ptn_invar, bool take_ownership) override;
 };
 
 #endif /* MODELMIXTURE_H_ */
