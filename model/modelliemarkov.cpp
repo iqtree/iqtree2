@@ -322,6 +322,10 @@ const double MAX_LIE_WEIGHT =  0.98;
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false) {
   init(model_name.c_str(), model_params, freq_type, freq_params);
+        
+        // show warning if the user is running AliSim without inference mode but has not yet specified model parameters
+        if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && model_params.length() == 0 && getNParams()>0)
+            outWarning("Without Inference Mode, we strongly recommend users to specify model parameters for more accuracy simulations. Users could use <Model_Name>{<param_0>/.../<param_n>} to specify the model parameters. For the model "+model_name+", users should provide "+convertIntToString(getNParams())+" params (see User Manuals).");
 }
 
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
@@ -349,7 +353,13 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     // param optfromgiven only has effect if model_params != ""
     if (model_params != "") {
         DoubleVector vec;
-        convert_double_vec(model_params.c_str(), vec);
+        
+        // detect the seperator
+        char separator = ',';
+        if (model_params.find('/') != std::string::npos)
+            separator = '/';
+        
+        convert_double_vec_with_distributions(model_params.c_str(), vec, separator);
         if (vec.size() != num_params) 
             outError("String '"+ model_params + "' does not have exactly " + convertIntToString(num_params) + " parameters");
         for (int i = 0; i < num_params; i++) {
@@ -363,7 +373,225 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
 
     if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
+    
+    // read user-specified frequencies
+    if (freq_params.length() > 0)
+    {
+        // ignore user-specified frequencies if the model has equal state frequencies
+        if (expected_freq_type == FREQ_EQUAL)
+            outWarning("The model "+(string)model_name+" has equal state frequencies. Therefore, user-specified frequencies will be ignored.");
+        // otherwise, read user-specified frequencies
+        else
+            readFreqs(expected_freq_type, freq_params);
+    }
+    
     ModelMarkov::init(freq_type);
+    
+    // initialize random state frequencies if AliSim is running without inference mode
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode && (freq_type == FREQ_ESTIMATE || freq_type == FREQ_EMPIRICAL)){
+        // initializing state_freqs from expected_freq_type
+        initStateFreqsAliSim(expected_freq_type);
+    }
+}
+
+/**
+     initialize random state frequencies when running AliSim without inference mode
+*/
+void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
+{
+    switch (expected_freq_type) {
+        case FREQ_ESTIMATE:
+        case FREQ_EMPIRICAL:
+        {
+            random_frequencies_from_distributions(state_freq);
+            break;
+        }
+        case FREQ_DNA_1212:
+        case FREQ_DNA_1221:
+        case FREQ_DNA_1122:
+        {
+            // randomly generate an input frequency which is less than 0.5
+            int num_freqs = 1;
+            double* freqs = new double[num_freqs];
+            freqs[0] = random_number_from_distribution_with_upperbound("uniform", 0.5);
+            
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        case FREQ_DNA_RY:
+        case FREQ_DNA_WS:
+        case FREQ_DNA_MK:
+        {
+            // randomly generate two pairs of frequencies
+            int num_freqs = 2;
+            double* freqs = new double[num_freqs];
+            for (int i = 0; i < num_freqs; i++)
+                freqs[i] = random_number_from_distribution_with_upperbound("uniform", 0.5);
+            
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+/**
+     mapping state frequencies from user-specified/random frequencies
+*/
+void ModelLieMarkov::mappingFreqs(StateFreqType expected_freq_type, double *freqs)
+{
+    switch (expected_freq_type) {
+        case FREQ_DNA_1212:
+        case FREQ_DNA_1221:
+        case FREQ_DNA_1122:
+        {
+            // validate the input freqs[0], it must be less than 0.5
+            if (freqs[0] >= 0.5)
+                outError("The input base frequency must be less than 0.5. Please check and try again!");
+                
+            // set state freqs
+            if (expected_freq_type == FREQ_DNA_1212)
+            {
+                state_freq[0] = state_freq[2] = freqs[0];
+                state_freq[1] = state_freq[3] = 0.5 - freqs[0];
+            }
+            else if (expected_freq_type == FREQ_DNA_1221)
+            {
+                state_freq[0] = state_freq[3] = freqs[0];
+                state_freq[1] = state_freq[2] = 0.5 - freqs[0];
+            } else if (expected_freq_type == FREQ_DNA_1122)
+            {
+                state_freq[0] = state_freq[1] = freqs[0];
+                state_freq[2] = state_freq[3] = 0.5 - freqs[0];
+            }
+            
+            break;
+        }
+        case FREQ_DNA_RY:
+        case FREQ_DNA_WS:
+        case FREQ_DNA_MK:
+        {
+            // validate the input freqs[0], and freqs[1], they must be less than 0.5
+            if (freqs[0] >= 0.5 || freqs[1] >= 0.5)
+                outError("The input base frequencies must be less than 0.5. Please check and try again!");
+            
+            // set state freqs
+            if (expected_freq_type == FREQ_DNA_RY)
+            {
+                state_freq[0] = freqs[0];
+                state_freq[1] = freqs[1];
+                state_freq[2] = 0.5 - freqs[0];
+                state_freq[3] = 0.5 - freqs[1];
+            }
+            else if (expected_freq_type == FREQ_DNA_WS)
+            {
+                state_freq[0] = freqs[0];
+                state_freq[1] = freqs[1];
+                state_freq[2] = 0.5 - freqs[1];
+                state_freq[3] = 0.5 - freqs[0];
+            } else if (expected_freq_type == FREQ_DNA_MK)
+            {
+                state_freq[0] = freqs[0];
+                state_freq[1] = 0.5 - freqs[0];
+                state_freq[2] = freqs[1];
+                state_freq[3] = 0.5 - freqs[1];
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+/**
+     read user-specified state frequencies
+*/
+void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_params)
+{
+    // detect the seperator
+    char separator = ',';
+    if (freq_params.find('/') != std::string::npos)
+        separator = '/';
+    
+    switch (expected_freq_type) {
+        case FREQ_ESTIMATE:
+        case FREQ_EMPIRICAL:
+        {
+            // extract/generate freqs one by one
+            convert_double_array_with_distributions(freq_params, state_freq, num_states, separator);
+            
+            // normalize state freqs
+            normalize_frequencies(state_freq, num_states, -1, true);
+            
+            break;
+        }
+        case FREQ_DNA_1212:
+        case FREQ_DNA_1221:
+        case FREQ_DNA_1122:
+        {
+            // extract/generate input base frequency
+            int num_freqs = 1;
+            double* freqs = new double[num_freqs];
+            freqs[0] = convert_double_with_distribution_and_upperbound(freq_params, 0.5);
+            
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        case FREQ_DNA_RY:
+        case FREQ_DNA_WS:
+        case FREQ_DNA_MK:
+        {
+            // extract/generate two freqs
+            int num_freqs = 2;
+            double* freqs = new double[num_freqs];
+            // validate the number of items
+            size_t num_separators = std::count(freq_params.begin(), freq_params.end(), separator);
+            if (num_separators != num_freqs - 1)
+                outError("The number of frequencies in "+freq_params+" is "+convertIntToString(num_separators+1)+", which is different from the expected number of frequencies ("+convertIntToString(num_freqs)+") for this model. Please check and try again!");
+
+            // extract/generate double numbers one by one
+            for (int i = 0; i < num_freqs; i++) {
+                // extract sub-string by separator
+                size_t pos = freq_params.find(separator);
+                string token = freq_params.substr(0, pos);
+                
+                // convert/generate a double
+                freqs[i] = convert_double_with_distribution_and_upperbound(token, 0.5);
+                
+                // remove the current double/distribution name from tmp_str
+                freq_params.erase(0, pos + 1);
+            }
+            
+            // set state freqs
+            mappingFreqs(expected_freq_type, freqs);
+            
+            // delete freqs
+            delete[] freqs;
+            
+            break;
+        }
+        default:
+            break;
+    }
+    
+    // update freq_type
+    freq_type = FREQ_USER_DEFINED;
 }
 
 // Note to Minh: I see ModelUnrest also lacks checkpointing.
@@ -2041,8 +2269,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     }
 }
 
-void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-    return ModelMarkov::computeTransMatrix(time, trans_matrix, mixture);
+void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
+    return ModelMarkov::computeTransMatrix(time, trans_matrix, mixture, selected_row);
     /*
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || nondiagonalizable ) {

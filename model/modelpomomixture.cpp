@@ -265,7 +265,7 @@ bool ModelPoMoMixture::isUnstableParameters() {
 // version did not work for non-reversible substitution models. However, this
 // led to a clash because then computeTransMatrix is defined in both,
 // ModelMixture and ModelPoMo and inheritance is flawed.
-void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
   ASSERT(mixture < getNMixtures());
-  at(mixture)->computeTransMatrix(time, trans_matrix);
+  at(mixture)->computeTransMatrix(time, trans_matrix, 0, selected_row);
 }

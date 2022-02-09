@@ -86,6 +86,24 @@ public:
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
 	virtual bool isMixture() { return true; }
+    
+    /**
+     * @return TRUE if this is a mixture model and all model components share the same rate matrix, FALSE otherwise
+     */
+    virtual bool isMixtureSameQ() {
+        if (share_same_Q == -1)
+        {
+            share_same_Q = 1;
+            for (iterator it = begin() + 1; it != end(); it++)
+                if ((*it)->ModelSubst::getName() != at(0)->ModelSubst::getName())
+                {
+                    share_same_Q = 0;
+                    break;
+                }
+        }
+        
+        return share_same_Q == 1;
+    }
 
 
 	/**
@@ -136,10 +154,18 @@ public:
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
 		@param time time between two events
         @param mixture (optional) class for mixture model
+        @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
+    
+    /**
+        Get the rate matrix Q. One should override this function when defining new model.
+        The default is equal rate of 1 (JC Model), valid for all kind of data.
+        @param rate_mat (OUT) upper-triagle rate matrix. Assume rate_mat has size of num_states*(num_states-1)/2
+    */
+    virtual void getQMatrix(double *q_mat, int mixture = 0);
 
 
 	/**
@@ -192,7 +218,7 @@ public:
     virtual void setOptimizeSteps(int optimize_steps) { this->optimize_steps = optimize_steps; }
 
     /** @return true if model is fused with site_rate */
-    bool isFused();
+    virtual bool isFused();
 
 	/**
 		optimize model parameters
@@ -253,6 +279,30 @@ public:
     		mem += (*it)->getMemoryRequired();
     	return mem;
     }
+    
+    /**
+     * @return TRUE if this mixture model contains a DNA error model, FALSE otherwise
+     */
+    virtual bool containDNAerror()
+    {
+        if (contain_dna_error == -1)
+        {
+            contain_dna_error = 0;
+            for (iterator it = begin(); it != end(); it++)
+                if ((*it)->containDNAerror())
+                {
+                    contain_dna_error = 1;
+                    break;
+                }
+        }
+        
+        return contain_dna_error == 1;
+    }
+    
+    /**
+     * get the dna error probability, by default error probability = 0
+     */
+    virtual double getDNAErrProb(int mixture_index = 0) { return at(mixture_index)->getDNAErrProb(); }
 
 	/**
 		rates of mixture components
@@ -290,6 +340,16 @@ protected:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(double *variables);
+    
+    /**
+     * check whether the mixture model contains dna error model: -1: undefined; 0: FALSE; 1: TRUE
+     */
+    short int contain_dna_error = -1;
+    
+    /**
+     * check whether all the model components share the same rate matrix Q: -1: undefined; 0: FALSE; 1: TRUE
+     */
+    short int share_same_Q = -1;
 
 };
 

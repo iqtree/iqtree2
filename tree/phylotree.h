@@ -120,7 +120,7 @@ inline T *aligned_alloc(size_t size) {
     return (T*)mem;
 }
 
-template <class T> T* ensure_aligned_allocated(T* & ptr, size_t size) {
+template <class T> T* ensure_aligned_allocated(T* & ptr, long long int size) {
     if (ptr == nullptr) {
         ptr = aligned_alloc<T>(size);
     }
@@ -401,8 +401,9 @@ public:
             read the tree from the input file in newick format
             @param infile the input file file.
             @param is_rooted (IN/OUT) true if tree is rooted
+            @param tree_line_index the line_index to read the tree (in case with multiple trees *.parttrees)
      */
-    virtual void readTree(const char *infile, bool &is_rooted);
+    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0);
 
     /**
             read the tree from the ifstream in newick format
@@ -1431,7 +1432,7 @@ public:
      @param write_info true to write information to cout
      @param logl_epsilon epsilon of log-likelihood to consider as better
      */
-    virtual double testRootPosition(bool write_info, double logl_epsilon);
+    virtual double testRootPosition(bool write_info, double logl_epsilon, IntVector &branch_ids, string out_file);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
@@ -1573,6 +1574,12 @@ public:
     virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
+            Do an NNI: should only be used for topology change without any info about likelihoods
+            @param move reference to an NNI move object containing information about the move
+     */
+    void doNNI_simple(NNIMove &move);
+    
+    /**
      * [DEPRECATED]
      * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
      * This function also clear the corresponding partial likelihood vectors
@@ -1594,6 +1601,12 @@ public:
      *   @param nnimove the NNI move currently in consideration
      */
     virtual void changeNNIBrans(NNIMove &nnimove);
+    
+    /**
+        generate all one-nni neighbouring trees
+     */
+    void gen_all_nni_trees();
+
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood
@@ -2149,6 +2162,11 @@ public:
         convert from rooted to unrooted tree
     */
     void convertToUnrooted();
+    
+    /**
+        force converting from rooted to unrooted tree
+    */
+    void forceConvertingToUnrooted();
 
 
 	/**

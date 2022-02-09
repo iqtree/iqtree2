@@ -30,22 +30,26 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	if (params.sub_size < 3) {
 		outError(ERR_FEW_TAXA);
 	}
+    
 	switch (tree_type) {
 	case YULE_HARDING: 
 		generateYuleHarding(params, binary);
 		break;
 	case UNIFORM:
-		generateUniform(params.sub_size, binary);
+		generateUniform(params, binary);
 		break;
 	case CATERPILLAR:
-		generateCaterpillar(params.sub_size);
+		generateCaterpillar(params);
 		break;
 	case BALANCED:
-		generateBalanced(params.sub_size);
+		generateBalanced(params);
 		break;
 	case STAR_TREE:
 		generateStarTree(params);
 		break;
+    case BIRTH_DEATH:
+        generateBirthDeath(params);
+        break;
 	default:
 		break;
 	}
@@ -72,7 +76,8 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	}
 }
 
-void MExtTree::generateCaterpillar(int size) {
+void MExtTree::generateCaterpillar(Params &params) {
+    int size = params.sub_size;
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	root = newNode();
@@ -87,7 +92,7 @@ void MExtTree::generateCaterpillar(int size) {
 	for (i = 0; i < 3; i++)
 	{
 		node = newNode();
-		len = random_double();
+        len = randomLen(params);
 		root->addNeighbor(node, len);
 		node->addNeighbor(root, len);
 		myleaves.push_back(node);
@@ -103,14 +108,14 @@ void MExtTree::generateCaterpillar(int size) {
 		innodes.push_back(node);
 		// add the first leaf
 		Node *newleaf = newNode();
-		len = random_double();
+        len = randomLen(params);
 		node->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(node, len);
 		myleaves[index] = newleaf;
 
 		// add the second leaf
 		newleaf = newNode();
-		len = random_double();
+        len = randomLen(params);
 		node->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(node, len);
 		myleaves.push_back(newleaf);
@@ -128,7 +133,8 @@ void MExtTree::generateCaterpillar(int size) {
 }
 
 
-void MExtTree::generateBalanced(int size) {
+void MExtTree::generateBalanced(Params &params) {
+    int size = params.sub_size;
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	root = newNode();
@@ -140,7 +146,7 @@ void MExtTree::generateBalanced(int size) {
 	myleaves.push_back(root);
 	// create initial tree with 2 leaves
 	node = newNode();
-	len = random_double();
+    len = randomLen(params);
 	root->addNeighbor(node, len);
 	node->addNeighbor(root, len);
 	myleaves.push_back(node);
@@ -156,14 +162,14 @@ void MExtTree::generateBalanced(int size) {
 			node = myleaves[index];
 			// add the first leaf
 			Node *newleaf = newNode();
-			len = random_double();
+            len = randomLen(params);
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves[index] = newleaf;
 	
 			// add the second leaf
 			newleaf = newNode();
-			len = random_double();
+            len = randomLen(params);
 			node->addNeighbor(newleaf, len);
 			newleaf->addNeighbor(node, len);
 			myleaves.push_back(newleaf);
@@ -178,14 +184,14 @@ void MExtTree::generateBalanced(int size) {
 	leafNum = myleaves.size();
 	nodeNum = leafNum;
 	initializeTree();
-
 }
 
 /**
 	generate a random tree following uniform model
 */
-void MExtTree::generateUniform(int size, bool binary)
+void MExtTree::generateUniform(Params &params, bool binary)
 {
+    int size = params.sub_size;
 	if (size < 3)
 		outError(ERR_FEW_TAXA);
 	int i;
@@ -198,7 +204,7 @@ void MExtTree::generateUniform(int size, bool binary)
 	root = newNode(0, "0");
 	// create initial tree with 2 leaves
 	node = newNode(1, "1");
-	len = random_double();
+    len = randomLen(params);
 	root->addNeighbor(node, len);
 	node->addNeighbor(root, len);
 
@@ -221,7 +227,7 @@ void MExtTree::generateUniform(int size, bool binary)
 		node = leftend[index];
 		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
 			if ((*it)->node == rightend[index]) {
-				len = random_double();
+                len = randomLen(params);
 				(*it)->node = newnode;
 				(*it)->length = len;
 				newnode->addNeighbor(node, len);
@@ -232,7 +238,7 @@ void MExtTree::generateUniform(int size, bool binary)
 		node = rightend[index];
 		for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++) 
 			if ((*it)->node == leftend[index]) {
-				len = random_double();
+                len = randomLen(params);
 				(*it)->node = newnode;
 				(*it)->length = len;
 				newnode->addNeighbor(node, len);
@@ -242,7 +248,7 @@ void MExtTree::generateUniform(int size, bool binary)
 
 		// add a new leaf
 		Node *newleaf = newNode(i, i);
-		len = random_double();
+        len = randomLen(params);
 		newnode->addNeighbor(newleaf, len);
 		newleaf->addNeighbor(newnode, len);
 
@@ -266,6 +272,158 @@ void MExtTree::generateUniform(int size, bool binary)
 	nodeNum = leafNum;
 	initializeTree();
 
+}
+
+/**
+    generate a random tree following birth-death model
+    @param size number of taxa
+    @param rescale_birth_rate (birth_rate/(birth_rate+death_rate)
+    @param binary TRUE if you want to generate a binary tree
+*/
+void MExtTree::generateBirthDeath(Params &params)
+{
+    int size = params.sub_size;
+    double scale_birth_rate = params.birth_rate/(params.birth_rate + params.death_rate);
+    
+    if (size < 3)
+        outError(ERR_FEW_TAXA);
+    
+    // make sure birth_rate > death_rate
+    ASSERT(scale_birth_rate > 0.5);
+    
+    // list of leaves
+    NodeVector myleaves;
+    Node *node = NULL, *new_node = NULL;
+    double len, random_num;
+    int i;
+    
+    // retry the birth-death process (up to 1000 times) until successfully generating the tree
+    for (int retry = 0; retry < 1000; retry++)
+    {
+        i  = 0;
+        myleaves.clear();
+        node = newNode(i);
+        
+        // create innitial three leaves
+        for (int j = 0; j < 3; j++) {
+            i++;
+            new_node = newNode(i);
+            len = randomLen(params);
+            node->addNeighbor(new_node, len);
+            new_node->addNeighbor(node, len);
+            myleaves.push_back(new_node);
+        }
+        
+        while (myleaves.size() < size)
+        {
+            // randomly select a leaf
+            int current_node_index = random_int(myleaves.size());
+            node = myleaves[current_node_index];
+            
+            // randomly select a birth/death event based on its probability
+            random_num = random_double();
+            
+            // birth event occurs
+            if (random_num <= scale_birth_rate)
+            {
+                // create 2 new leaves
+                for (int j = 0; j < 2; j++) {
+                    i++;
+                    new_node = newNode(i);
+                    len = randomLen(params);
+                    node->addNeighbor(new_node, len);
+                    new_node->addNeighbor(node, len);
+                    myleaves.push_back(new_node);
+                }
+            }
+            // death event occurs
+            else
+            {
+                Node *dad_node = NULL;
+                
+                // if the death event occurs when the tree has only root node -> restart
+                if (node->neighbors.size() == 0)
+                    break;
+                // otherwise, retrieve the dad of the current node
+                else
+                    dad_node = node->neighbors[0]->node;
+                
+                // initial new length for the branch connecting 2 siblings
+                len = randomLen(params);
+
+                // detect the two siblings of the current node
+                Node *sibling_node1 = NULL, *sibling_node2 = NULL;
+                for (NeighborVec::iterator it = dad_node->neighbors.begin(); it != dad_node->neighbors.end(); it++)
+                {
+                    if ((*it)->node == node)
+                        continue;
+                    // detect sibling_node1
+                    else if(!sibling_node1) {
+                        sibling_node1 = (*it)->node;
+                    }
+                    // detect sibling_node2
+                    else
+                    {
+                        sibling_node2 = (*it)->node;
+                    }
+                }
+                
+                // make sure the two siblings are found
+                ASSERT(sibling_node1 && sibling_node2);
+                
+                // connect sibling_node1 to sibling_node2
+                for (NeighborVec::iterator it = sibling_node1->neighbors.begin(); it != sibling_node1->neighbors.end(); it++)
+                {
+                    if ((*it)->node == dad_node)
+                    {
+                        (*it)->node = sibling_node2;
+                        (*it)->length = len;
+                        break;
+                    }
+                }
+                
+                // connect sibling_node2 to sibling_node1
+                for (NeighborVec::iterator it = sibling_node2->neighbors.begin(); it != sibling_node2->neighbors.end(); it++)
+                {
+                    if ((*it)->node == dad_node)
+                    {
+                        (*it)->node = sibling_node1;
+                        (*it)->length = len;
+                        break;
+                    }
+                }
+                    
+                // delect dad_node
+                delete dad_node;
+                
+                // delect the current node
+                delete node;
+            }
+            
+            // remove the current node from the list of leaves
+            myleaves.erase(myleaves.begin()+current_node_index);
+            
+            // break the loop in case unfortunately the number of leaves is less than the initial tree (with 3 leaves).
+            if (myleaves.size() < 3) break;
+        }
+        
+        // check if the tree has been successfully generated or not
+        if (myleaves.size() == size)
+            break;
+    }
+    
+    // show error if the program failed to generate the tree after reaching the maximum retry.
+    if (myleaves.size() != size)
+        outError("Failed to generate the random tree after 1000 attempts. Please retry with other birth_rate and death_rate.");
+    
+    root = myleaves[0];
+    
+    // indexing the leaves
+    setLeavesName(myleaves);
+
+    leafNum = size;
+    nodeNum = leafNum;
+    initializeTree();
 }
 
 /**
@@ -438,7 +596,7 @@ void MExtTree::setLeavesName(NodeVector &myleaves) {
 	{
 		myleaves[i]->id = i;
 		stringstream str;
-		str << 'T' << myleaves[i]->id;
+		str << 'T' << (myleaves[i]->id + 1);
 		myleaves[i]->name = str.str();
 	}
 }

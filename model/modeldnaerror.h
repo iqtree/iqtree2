@@ -81,6 +81,16 @@ public:
      @param[out] state_lk state likehood vector of size num_states
      */
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    
+    /**
+     * @return TRUE if this is a DNA error model, FALSE otherwise
+     */
+    virtual bool containDNAerror() { return true; }
+    
+    /**
+     * get the dna error probability, by default error probability = 0
+     */
+    virtual double getDNAErrProb(int mixture_index = 0) { return epsilon; }
 
 protected:
 

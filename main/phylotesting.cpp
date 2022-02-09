@@ -59,7 +59,7 @@ const char* morph_model_names[] = {"MK"};
 /******* DNA model set ******/
 const char* dna_model_names[] = {"GTR", "SYM", "TVM",  "TVMe", "TIM3",
         "TIM3e", "TIM2", "TIM2e", "TIM", "TIMe", "TPM3u", "TPM3",
-        "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC"};
+        "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC", "UNREST"};
 
 /* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"GTR",  "SYM", "TVM", "TVMe", "TIM", "TIMe",
@@ -70,6 +70,12 @@ const char* dna_model_names_rax[] ={"GTR"};
 
 /* DNA model supported by MrBayes */
 const char *dna_model_names_mrbayes[] = {"GTR", "SYM", "HKY", "K80", "F81", "JC"};
+
+/* DNA model supported by BEAST1 */
+const char *dna_model_names_beast1[] = {"GTR", "TN", "HKY"};
+
+/* DNA model supported by BEAST2 */
+const char *dna_model_names_beast2[] = {"GTR", "TN", "HKY", "JC"};
 
 /* DNA model supported by ModelOMatic */
 const char *dna_model_names_modelomatic[] = {"GTR", "HKY", "K80", "F81", "JC"};
@@ -117,10 +123,13 @@ const char *dna_model_names_lie_markov_strsym[] = {
 
 
 /****** Protein model set ******/
-const char* aa_model_names[] = {"LG", "WAG", "JTT", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
+const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
         "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM",
-		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
-        
+		"HIVb", "HIVw", "FLU", "rtREV", "cpREV", "NONREV", "GTR20", "Poisson"};
+
+/****** Protein mixture model set ******/
+const char* aa_mixture_model_names[] = {"C10", "C20", "C30", "C40", "C50", "C60", "EX2", "EX3", "EHO", "UL2", "UL3", "EX_EHO", "LG4M", "LG4X", "CF4"};
+
 /* Protein models supported by PhyML/PartitionFinder */
 const char *aa_model_names_phyml[] = {"LG", "WAG", "JTT", "DCMut", "VT", "Blosum62", "Dayhoff",
 		"mtREV", "mtART", "mtMAM",
@@ -135,11 +144,16 @@ const char* aa_model_names_mrbayes[] = {"WAG", "JTT", "VT", "Blosum62", "Dayhoff
         "mtREV", "mtMAM",
 		"rtREV", "cpREV"};
 
+const char* aa_model_names_beast1[] = {"LG", "WAG", "JTT", "Blosum62", "Dayhoff", "mtREV", "cpREV", "FLU"};
+
+const char* aa_model_names_beast2[] = {"LG", "WAG", "JTT", "DCMut", "VT", "Blosum62", "Dayhoff",
+    "mtREV", "mtART", "mtMAM", "HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
+
 const char* aa_model_names_modelomatic[] = {"LG", "WAG", "JTT", "VT", "Blosum62", "Dayhoff",
         "mtART", "mtMAM", "mtREV",
         "HIVb", "HIVw", "rtREV", "cpREV"};
 
-const char *aa_model_names_nuclear[] = {"LG", "WAG", "JTT", "JTTDCMut","DCMut", "VT", "PMB", "Blosum62", "Dayhoff"};
+const char *aa_model_names_nuclear[] = {"LG", "WAG", "JTT", "Q.pfam", "JTTDCMut","DCMut", "VT", "PMB", "Blosum62", "Dayhoff"};
 
 const char *aa_model_names_mitochondrial[] = {"mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM"};
 
@@ -390,7 +404,44 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             seq_type = SEQ_DNA;
             break;
         }
+    copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
     copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_PROTEIN;
+            empirical_model = true;
+            break;
+        }
+    copyCString(aa_mixture_model_names, sizeof(aa_mixture_model_names)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_PROTEIN;
@@ -408,9 +459,8 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
     return (empirical_model) ? 2 : 1;
 }
 
-string detectSeqTypeName(string model_name) {
-    SeqType seq_type;
-    detectSeqType(model_name.c_str(), seq_type);
+string convertSeqTypeToSeqTypeName(SeqType seq_type)
+{
     switch (seq_type) {
     case SEQ_BINARY: return "BIN"; break;
     case SEQ_MORPH: return "MORPH"; break;
@@ -420,6 +470,12 @@ string detectSeqTypeName(string model_name) {
     default: break;
     }
     return "";
+}
+
+string detectSeqTypeName(string model_name) {
+    SeqType seq_type;
+    detectSeqType(model_name.c_str(), seq_type);
+    return convertSeqTypeToSeqTypeName(seq_type);
 }
 
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
@@ -926,6 +982,10 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         } else if (model_set == "mrbayes") {
             copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
             //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "beast1") {
+            copyCString(dna_model_names_beast1, sizeof(dna_model_names_beast1) / sizeof(char*), model_names);
+        } else if (model_set == "beast2") {
+            copyCString(dna_model_names_beast2, sizeof(dna_model_names_beast2) / sizeof(char*), model_names);
         } else if (model_set == "modelomatic") {
             copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
         } else if (model_set == "liemarkov") {
@@ -980,6 +1040,10 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
         } else if (model_set == "mrbayes") {
             copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+        } else if (model_set == "beast1") {
+            copyCString(aa_model_names_beast1, sizeof(aa_model_names_beast1) / sizeof(char*), model_names);
+        } else if (model_set == "beast2") {
+            copyCString(aa_model_names_beast2, sizeof(aa_model_names_beast2) / sizeof(char*), model_names);
         } else if (model_set == "modelomatic") {
             copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
         } else if (model_set[0] == '+') {

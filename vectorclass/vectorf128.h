@@ -1201,6 +1201,7 @@ static inline Vec4f exp2(Vec4i const & n) {
 //        11: round towards zero (truncate)
 // 15: Flush to Zero
 
+#if !defined(__ARM_NEON)
 // Function get_control_word:
 // Read the MXCSR control word
 static inline uint32_t get_control_word() {
@@ -1229,6 +1230,7 @@ static inline void no_subnormals() {
 static inline void reset_control_word() {
     set_control_word(0x1F80);
 }
+#endif
 
 
 // Categorization functions

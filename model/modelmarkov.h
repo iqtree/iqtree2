@@ -182,10 +182,11 @@ public:
 		compute the transition probability matrix.
 		@param time time between two events
         @param mixture (optional) class for mixture model
+        @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
 
     /**
      compute the transition probability matrix for non-reversible model
@@ -256,7 +257,7 @@ public:
 	 * compute Q matrix 
 	 * @param q_mat (OUT) Q matrix, assuming of size num_states * num_states
 	 */
-	virtual void getQMatrix(double *q_mat);
+	virtual void getQMatrix(double *q_mat, int mixture = 0);
 
 	/**
 		rescale the state frequencies
@@ -383,7 +384,7 @@ public:
     static void aTimesDiagonalBTimesTransposeOfC
         ( const double* matrixA, const double* rowB
          , const double* matrixCTranspose, int rank
-         , double* dest);
+         , double* dest, int selected_row = -1);
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes

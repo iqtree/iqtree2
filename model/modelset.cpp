@@ -26,12 +26,12 @@ ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelMarkov(tree)
 	full_name += "+site-specific state-frequency model (unpublished)";
 }
 
-void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture)
+void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture, int selected_row)
 {
     // TODO not working with vectorization
     ASSERT(0);
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->computeTransMatrix(time, trans_matrix, mixture);
+		(*it)->computeTransMatrix(time, trans_matrix, mixture, selected_row);
 		trans_matrix += (num_states * num_states);
 	}
 }

@@ -109,6 +109,13 @@ public:
 
 	virtual void writeInfo(ostream &out) {}
 
+    /**
+            return true if model is reversible, false otherwise
+     */
+    virtual bool isReversible() {
+        return model->isReversible();
+    }
+    
 	/**
 		Start to store transition matrix for efficiency
 	*/
@@ -124,10 +131,11 @@ public:
 		that stores matrix computed before for effiency purpose.
 		@param time time between two events
         @param mixture (optional) class for mixture model
+        @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
 
 	/**
 		Wrapper for computing the transition probability between two states.
@@ -220,6 +228,11 @@ public:
 		TRUE for storing process
 	*/
 	bool is_storing;
+    
+    /**
+        TRUE for continuous Gamma
+    */
+    bool is_continuous_gamma = false;
 
 	/**
 	 * encoded constant sites that are unobservable and added in the alignment
@@ -231,6 +244,7 @@ public:
     ASCType ASC_type;
     
     ASCType getASC() { return ASC_type; }
+    void setASC(ASCType new_ASC_type){ ASC_type = new_ASC_type; }
     
 	/**
 	 * optimize model and site_rate parameters

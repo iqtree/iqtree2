@@ -257,8 +257,8 @@ PhyloTree::~PhyloTree() {
     progressStackDepth = 0;
 }
 
-void PhyloTree::readTree(const char *infile, bool &is_rooted) {
-    MTree::readTree(infile, is_rooted);
+void PhyloTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
+    MTree::readTree(infile, is_rooted, tree_line_index);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
     if (rooted && root)
@@ -2817,7 +2817,7 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
     // optimize branch lengths for all trees
     for (auto t = trees.begin(); t != trees.end(); t++) {
         readTreeString(*t);
-        optimizeAllBranches(100, logl_epsilon);
+        setCurScore(optimizeAllBranches(100, logl_epsilon));
         if (verbose_mode >= VB_MED) {
             cout << "Root pos " << (t - trees.begin())+1 << ": " << curScore << endl;
             if (verbose_mode >= VB_DEBUG) {
@@ -2840,7 +2840,7 @@ double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double lo
     return curScore;
 }
 
-double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
+double PhyloTree::testRootPosition(bool write_info, double logl_epsilon, IntVector &branch_ids, string out_file) {
     if (!rooted)
         return curScore;
     
@@ -2859,7 +2859,7 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
     
     double best_score = curScore, orig_score = curScore;
     
-    multimap<double, string> logl_trees;
+    multimap<double, pair<int,string> > logl_trees;
     
     // ignore branches directly descended from root branch
     for (i = 0; i != branches.size(); )
@@ -2870,22 +2870,27 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
             i++;
         }
     branches.push_back(root_br);
+    string cur_tree = getTreeString();
         
     // get all trees
-//    for (i = 0; i != nodes1.size(); i++) {
-//        moveRoot(nodes1[i], nodes2[i]);
-//        trees.push_back(getTreeString());
-//    }
-//
-    // optimize branch lengths for all trees
+    StrVector trees;
+    branch_ids.clear();
     for (i = 0; i != branches.size(); i++) {
-//    for (auto t = trees.begin()+1; t != trees.end(); t++) {
+        branch_ids.push_back(branches[i].first->findNeighbor(branches[i].second)->id);
         moveRoot(branches[i].first, branches[i].second);
-//        readTreeString(*t);
-        optimizeAllBranches(100, logl_epsilon);
+        if (branches[i] == root_br)
+            trees.push_back(cur_tree);
+        else
+            trees.push_back(getTreeString());
+    }
+
+    // optimize branch lengths for all trees
+    for (i = 0; i != trees.size(); i++) {
+        readTreeString(trees[i]);
+        setCurScore(optimizeAllBranches(100, logl_epsilon));
         stringstream ss;
         printTree(ss);
-        logl_trees.insert({curScore, ss.str()});
+        logl_trees.insert({curScore, make_pair(branch_ids[i], ss.str())});
         if (verbose_mode >= VB_MED) {
             cout << "Root pos " << i+1 << ": " << curScore << endl;
             if (verbose_mode >= VB_DEBUG)
@@ -2901,21 +2906,22 @@ double PhyloTree::testRootPosition(bool write_info, double logl_epsilon) {
 //    readTreeString(best_tree);
 //    curScore = computeLikelihood();
     
+    if (!(curScore > orig_score - 0.1))
+        cout << "curScore: " << curScore << " orig_score: " << orig_score << endl;
     ASSERT(curScore > orig_score - 0.1);
     if (curScore > orig_score)
         cout << "UPDATE BEST SCORE: " << curScore << endl;
     
     ofstream out;
-    string out_file = (string)params->out_prefix + ".rooted_trees";
     out.open(out_file);
     out.precision(10);
+    branch_ids.clear();
     for (auto lt = logl_trees.rbegin(); lt != logl_trees.rend(); lt++) {
-        out << "[ lh=" << lt->first << " ]" << lt->second << endl;
+        branch_ids.push_back(lt->second.first);
+        out << "[ branchID=" << lt->second.first << " lh=" << lt->first << " ]" << lt->second.second << endl;
     }
     out.close();
     cout << "Rooted trees with log-likelihoods printed to " << out_file << endl;
-    if (params->treeset_file.empty())
-        params->treeset_file = out_file;
 
     // convert logL to weight based on the best score
 //    ASSERT(logLs.size() == nodes1.size());
@@ -3363,8 +3369,12 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     #pragma omp parallel for schedule(dynamic)
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
-        int threadNum = omp_get_thread_num();
-        AlignmentPairwise* processor = distanceProcessors[threadNum];
+        #ifdef _OPENMP
+            int threadNum = omp_get_thread_num();
+            AlignmentPairwise* processor = distanceProcessors[threadNum];
+        #else
+            AlignmentPairwise* processor = distanceProcessors[1];
+        #endif
         int rowStartPos = seq1 * nseqs;
         for (size_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
             size_t sym_pos = rowStartPos + seq2;
@@ -5485,16 +5495,19 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
             ext_tree.generateYuleHarding(*params);
             break;
         case UNIFORM:
-            ext_tree.generateUniform(params->sub_size);
+            ext_tree.generateUniform(*params);
             break;
         case CATERPILLAR:
-            ext_tree.generateCaterpillar(params->sub_size);
+            ext_tree.generateCaterpillar(*params);
             break;
         case BALANCED:
-            ext_tree.generateBalanced(params->sub_size);
+            ext_tree.generateBalanced(*params);
             break;
         case STAR_TREE:
             ext_tree.generateStarTree(*params);
+            break;
+        case BIRTH_DEATH:
+            ext_tree.generateBirthDeath(*params);
             break;
         default:
             break;
@@ -5630,6 +5643,17 @@ void PhyloTree::convertToRooted() {
 }
 
 void PhyloTree::convertToUnrooted() {
+    // keep rooted tree if running AliSim without inference mode
+    if (Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode)
+        return;
+    forceConvertingToUnrooted();
+}
+    
+/**
+    force converting from rooted to unrooted tree
+*/
+void PhyloTree::forceConvertingToUnrooted()
+{
     ASSERT(rooted);
     if (aln)
         ASSERT(leafNum == aln->getNSeq()+1);
@@ -5646,12 +5670,18 @@ void PhyloTree::convertToUnrooted() {
         // delete and join adjacent branches
         Node *node1 = NULL, *node2 = NULL;
         double len = 0.0;
+        // merge attributes
+        map<string,string> attributes;
         FOR_NEIGHBOR_IT(node, root, it) {
             if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
             len += (*it)->length;
+            attributes.insert((*it)->attributes.begin(),(*it)->attributes.end());
         }
         node1->updateNeighbor(node, node2, len);
         node2->updateNeighbor(node, node1, len);
+        node1->findNeighbor(node2)->attributes = attributes;
+        node2->findNeighbor(node1)->attributes = attributes;
+        
         delete node;
     } else {
         // only delete root node
@@ -5935,3 +5965,88 @@ void PhyloTree::doneProgress() {
         }
     }
 }
+
+void PhyloTree::gen_all_nni_trees(){
+    
+    cout<<"Gonna get you all NNI trees!:)"<<endl;
+    
+    NodeVector nodes1, nodes2;
+    generateNNIBraches(nodes1,nodes2);
+    
+    for(int i=0; i<nodes1.size();i++){
+        
+        NNIMove move;
+        move.node1=(PhyloNode*)nodes1[i];
+        move.node2=(PhyloNode*)nodes2[i];
+        
+        // Getting details for first NNI
+        FOR_NEIGHBOR_DECLARE(nodes1[i], nodes2[i], it){
+            move.node1Nei_it = it;
+            break;
+        }
+        
+        FOR_NEIGHBOR(nodes2[i], nodes1[i], it){
+            move.node2Nei_it = it;
+            break;
+        }
+
+        // Do first NNI on branch
+        doNNI_simple(move);
+        printTree(cout, WT_BR_SCALE | WT_NEWLINE);
+        doNNI_simple(move);
+        
+        // Getting details for second NNI
+        FOR_NEIGHBOR(nodes1[i], nodes2[i], it){
+            if(it != move.node1Nei_it){
+                move.node1Nei_it = it;
+                break;
+            }
+        }
+        
+        // Do second NNI on branch
+        doNNI_simple(move);
+        printTree(cout, WT_BR_SCALE | WT_NEWLINE);
+        doNNI_simple(move);
+        
+    }
+}
+
+void PhyloTree::doNNI_simple(NNIMove &move) {
+    PhyloNode *node1 = move.node1;
+    PhyloNode *node2 = move.node2;
+    NeighborVec::iterator node1Nei_it = move.node1Nei_it;
+    NeighborVec::iterator node2Nei_it = move.node2Nei_it;
+    Neighbor *node1Nei = *(node1Nei_it);
+    Neighbor *node2Nei = *(node2Nei_it);
+
+
+    ASSERT(node1->degree() == 3 && node2->degree() == 3);
+
+    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+
+    // do the NNI swap
+    node1->updateNeighbor(node1Nei_it, node2Nei);
+    node2Nei->node->updateNeighbor(node2, node1);
+
+    node2->updateNeighbor(node2Nei_it, node1Nei);
+    node1Nei->node->updateNeighbor(node1, node2);
+
+    PhyloNeighbor *nei12 = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *nei21 = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+
+    // update split store in node
+    if (nei12->split != NULL || nei21->split != NULL) {
+        delete nei12->split;
+        nei12->split = new Split(leafNum);
+        delete nei21->split;
+        nei21->split = new Split(leafNum);
+
+        FOR_NEIGHBOR_IT(nei12->node, node1, it)
+                *(nei12->split) += *((*it)->split);
+
+        FOR_NEIGHBOR_IT(nei21->node, node2, it)
+                *(nei21->split) += *((*it)->split);
+    }
+}
+

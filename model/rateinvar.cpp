@@ -42,6 +42,13 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	}
 }
 
+RateInvar::RateInvar(double p_invar_sites)
+ : RateHeterogeneity()
+{
+    p_invar = p_invar_sites;
+}
+
+
 void RateInvar::startCheckpoint() {
     checkpoint->startStruct("RateInvar");
 }

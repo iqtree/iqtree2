@@ -8,6 +8,10 @@ treetesting.cpp
 treetesting.h
 timetree.cpp
 timetree.h
+alisim.cpp
+alisim.h
+terraceanalysis.cpp
+terraceanalysis.h
 )
 
 if (USE_BOOSTER)
@@ -18,5 +22,5 @@ if (USE_LSD2)
     target_link_libraries(main lsd2)
 endif()
 
-target_link_libraries(main pda whtest vectorclass)
+target_link_libraries(main pda whtest vectorclass terrace)
 

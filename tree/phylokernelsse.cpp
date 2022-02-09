@@ -20,7 +20,7 @@
 #include "phylokernelnonrev.h"
 
 
-#if !defined ( __SSE2__ ) && !defined ( __x86_64__ )
+#if !defined ( __SSE2__ ) && !defined ( __x86_64__ ) && !defined ( __ARM_NEON )
 #error "You must compile this file with SSE2 enabled!"
 #endif
 
