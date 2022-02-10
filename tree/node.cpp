@@ -35,6 +35,7 @@ Node::Node(int aid) {
     id = aid;
     //name = NULL;
     height = -1;
+    genome_tree = NULL;
 }
 
 Node::Node(int aid, int aname) {
@@ -43,6 +44,7 @@ Node::Node(int aid, int aname) {
     sprintf(str, "%d", aname);
     name = str;
     height = -1;
+    genome_tree = NULL;
 }
 
 Node::Node(int aid, const char *aname) {
@@ -50,6 +52,7 @@ Node::Node(int aid, const char *aname) {
     if (aname)
         name = aname;
     height = -1;
+    genome_tree = NULL;
 }
 
 bool Node::isLeaf() {
@@ -260,5 +263,11 @@ Node::~Node() {
     for (it = neighbors.rbegin(); it != neighbors.rend(); it++)
         delete (*it);
     neighbors.clear();
+    
+    if (genome_tree)
+    {
+        delete genome_tree;
+        genome_tree = NULL;
+    }
 }
 

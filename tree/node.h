@@ -38,6 +38,7 @@
 #include "utils/tools.h"
 #include "pda/split.h"
 #include "model/modelsubst.h"
+#include "genometree.h"
 
 using namespace std;
 
@@ -277,6 +278,11 @@ public:
         number of children which have completed simulating the sequence (for AliSim)
      */
     short int num_children_done_simulation = 0;
+    
+    /**
+        root of the genome tree
+     */
+    GenomeTree* genome_tree;
 
     /**
         list of neighbors
@@ -305,6 +311,7 @@ public:
     Node() {
         id = -1;
         height = -1;
+        genome_tree = NULL;
     };
 
 

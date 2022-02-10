@@ -585,6 +585,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // generate alignment for the current tree/partition
                 AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree, partition_rate);
                 generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree, input_msa);
+                
+                // update new genome at tips from the original genome and the genome tree
+                if (super_alisimulator->params->alisim_insertion_ratio > 0)
+                    partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels, partition_simulator->tree->root, partition_simulator->tree->root);
             }
         }
         else
@@ -649,7 +653,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
 {
     // show an error if continuous gamma is used in inference mode.
     if (alisimulator->params->alisim_inference_mode && alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->is_continuous_gamma)
@@ -892,6 +896,10 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 //  get the num_leaves
                 int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
                 
+                // if using Indels, update the genome trees at tips
+                if (super_tree->params->alisim_insertion_ratio > 0)
+                    updateGenomeTreesIndels(max_site_index+1, super_tree->root, super_tree->root);
+                
                 // write the merged sequences to the output file for the current cluster of partitions
                 writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator);
             }
@@ -903,15 +911,32 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
         int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
         
         // determine the real sequence_length if Indels is used
-        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0)
-        {
-            bool stop = false;
-            determineSequenceLength(alisimulator->tree->root, alisimulator->tree->root, stop, sequence_length);
-        }
+        if (alisimulator->params->alisim_insertion_ratio > 0)
+            sequence_length = alisimulator->seq_length_indels;
         
         //  get the num_leaves
         int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
         writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator);
+    }
+}
+
+/**
+*  update genome trees at tips on the super tree if using Indels
+*/
+void updateGenomeTreesIndels(int seq_length, Node *node, Node *dad)
+{
+    // re-init the genome tree
+    if (node->isLeaf() && node->name!=ROOT_NAME)
+    {
+        if (node->genome_tree)
+            delete node->genome_tree;
+        node->genome_tree = new GenomeTree(seq_length);
+    }
+    
+    // browse deeply into its children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        updateGenomeTreesIndels(seq_length, (*it)->node, node);
     }
 }
 
@@ -932,7 +957,14 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             output[output.length()-1] = '\n';
             
             // convert non-empty sequence
-            if (node->sequence.size() >= sequence_length)
+            // export sequence of a leaf node from original sequence and genome_tree if using Indels
+            if (node->isLeaf() && Params::getInstance().alisim_insertion_ratio != 0 && node->sequence.size() > 0)
+            {
+                output = node->genome_tree->exportReadableCharacters(node->sequence, sequence_length, num_sites_per_state, state_mapping);
+                    
+            }
+            // otherwise, just export the sequence normally from the original sequence
+            else if (node->sequence.size() >= sequence_length)
                 output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
             
             // preparing output (without gaps) for indels
@@ -1097,6 +1129,11 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
         {
             node->sequence.insert(node->sequence.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
         }
+        
+        // init genome_tree
+        if (node->genome_tree)
+            delete node->genome_tree;
+        node->genome_tree = new GenomeTree(node->sequence.size());
     }
     
     // process its neighbors/children

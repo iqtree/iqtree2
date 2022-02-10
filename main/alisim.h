@@ -9,8 +9,8 @@
 #define alisim_h
 
 #include "utils/tools.h"
-#include "alignment/alisimulatorinvar.h"
-#include "alignment/alisimulatorheterogeneityinvar.h"
+#include "simulator/alisimulatorinvar.h"
+#include "simulator/alisimulatorheterogeneityinvar.h"
 #include "phyloanalysis.h"
 #include "tree/phylosupertree.h"
 #include "utils/gzstream.h"
@@ -56,7 +56,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
 
 /**
 *  compute the total sequence length of all partitions
@@ -111,5 +111,10 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
 *  insert redundant sites (inserted sites due to Indels) to the sequences of the super tree
 */
 void insertIndelSites(int position, int starting_index, int num_inserted_sites, IQTree *current_tree, Node *node, Node *dad);
+
+/**
+*  update genome trees at tips on the super tree if using Indels
+*/
+void updateGenomeTreesIndels(int seq_length, Node *node, Node *dad);
 
 #endif /* alisim_h */

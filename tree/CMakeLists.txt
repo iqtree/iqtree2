@@ -17,6 +17,10 @@ ncbitree.cpp
 ncbitree.h
 node.cpp
 node.h
+genomenode.h
+genomenode.cpp
+genometree.h
+genometree.cpp
 phylokernel.h
 phylokernelnew.h
 phylokernelnonrev.h
