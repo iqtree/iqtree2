@@ -19,4 +19,4 @@ superalignmentunlinked.cpp
 superalignmentunlinked.h
 )
 
-target_link_libraries(alignment ncl gsl model)
+target_link_libraries(alignment simulator ncl gsl model)

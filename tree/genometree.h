@@ -8,6 +8,9 @@
 #define GENOMETREE_H
 
 #include "genomenode.h"
+#include "utils/timeutil.h"
+#include <queue>
+using namespace std;
 
 /**
 A Genome Tree to present a genome by genome entry (each is a set of sites)
@@ -17,7 +20,7 @@ private:
     /**
         find a node that contains a given position
      */
-    GenomeNode* findNodeByPos(GenomeNode* node, Insertion insertion);
+    GenomeNode* findNodeByPos(GenomeNode* node, Insertion insertion, int num_cumulative_gaps);
     
     /**
         insert gaps into a "all-gap" node
@@ -30,20 +33,9 @@ private:
     void insertGapsIntoNormalNode(GenomeNode* node, int pos, int length);
     
     /**
-        recursively traverse the tree to update pos_new after insert gaps into a node
+        update the cumulative_gaps_from_left_child of all nodes on the path from the current node to root
      */
-    void updatePosNew(GenomeNode* node, int pos, int length);
-    
-    /**
-        export sites from a genome node and the original genome
-     */
-    void exportSiteFromGenomeNode(GenomeNode* node, vector<short int> ori_seq, vector<short int> &new_seq);
-    
-    /**
-        export readable characters from a genome node and the original genome
-     */
-    void exportReadableCharactersFromGenomeNode(GenomeNode* node, vector<short int> ori_seq, string &output, int num_sites_per_state, vector<string> state_mapping);
-    
+    void updateCumulativeGapsFromLeftChild(GenomeNode* node, int length);
     
 public:
     /**
@@ -79,7 +71,7 @@ public:
     /**
      export readable characters (for writing to file) from original genome and genome tree
      */
-    string exportReadableCharacters(vector<short int> ori_seq, int seq_length, int num_sites_per_state, vector<string> state_mapping);
+    void exportReadableCharacters(vector<short int> ori_seq, int num_sites_per_state, vector<string> state_mapping, string &output);
 
 };
 #endif

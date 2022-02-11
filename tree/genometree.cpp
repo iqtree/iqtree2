@@ -44,23 +44,30 @@ GenomeTree::~GenomeTree()
 /**
     find a node that contains a given position
  */
-GenomeNode* GenomeTree::findNodeByPos(GenomeNode* node, Insertion insertion)
+GenomeNode* GenomeTree::findNodeByPos(GenomeNode* node, Insertion insertion, int num_cumulative_gaps)
 {
     // return NULL if not found
     if (!node)
         outError("Opps! Insertion occurs at an invalid position. There is something wrong!");
     
+    // compute the position in the new genome (with gaps)
+    int pos_new = node->pos_ori + num_cumulative_gaps + node->cumulative_gaps_from_left_child;
+    
     // check if the current node contains the given pos
     // or if insertion occur at the end of the current genome (~append) -> return the right-bottom node of the tree
-    if ((node->pos_new <= insertion.pos && insertion.pos < node->pos_new + node->length)
-        || (insertion.is_append && insertion.pos == node->pos_new + node->length))
+    if ((pos_new <= insertion.pos && insertion.pos < pos_new + node->length)
+        || (insertion.is_append && insertion.pos == pos_new + node->length))
+    {
+        // update cumulative_gaps_from_parent before returning node
+        node->cumulative_gaps_from_parent = num_cumulative_gaps;
         return node;
+    }
     
     // otherwise, search on left/right branches
-    if (insertion.pos < node->pos_new)
-        return findNodeByPos(node->left_child, insertion);
+    if (insertion.pos < pos_new)
+        return findNodeByPos(node->left_child, insertion, num_cumulative_gaps);
     else
-        return findNodeByPos(node->right_child, insertion);
+        return findNodeByPos(node->right_child, insertion, num_cumulative_gaps + node->length + node->cumulative_gaps_from_left_child);
 }
 
 /**
@@ -77,21 +84,24 @@ void GenomeTree::insertGapsIntoGaps(GenomeNode* node, int length)
 void GenomeTree::insertGapsIntoNormalNode(GenomeNode* node, int pos, int length)
 {
     // init the left child
+    bool new_is_gap = false;
     int new_pos_ori = node->pos_ori;
-    int new_length = pos - node->pos_new;
-    int new_pos_new = node->pos_new;
-    GenomeNode* left_child = new GenomeNode(new_pos_ori, new_length, new_pos_new);
+    int new_length = pos - (node->pos_ori + node->cumulative_gaps_from_parent);
+    int new_cumulative_gap_from_left_child = 0;
+    GenomeNode* left_child = new GenomeNode(new_is_gap, new_pos_ori, new_length, new_cumulative_gap_from_left_child);
     
     // init the right child
-    new_pos_ori = node->pos_ori + left_child->length;
+    new_is_gap = false;
+    new_pos_ori = left_child->pos_ori + left_child->length;
     new_length = node->length - left_child->length;
-    new_pos_new = pos + length;
-    GenomeNode* right_child = new GenomeNode(new_pos_ori, new_length, new_pos_new);
+    new_cumulative_gap_from_left_child = 0;
+    GenomeNode* right_child = new GenomeNode(new_is_gap, new_pos_ori, new_length, new_cumulative_gap_from_left_child);
     
     // update the current node
-    node->pos_ori = -1;
+    node->is_gap = true;
+    node->pos_ori = right_child->pos_ori;
     node->length = length;
-    node->pos_new = pos;
+    node->cumulative_gaps_from_left_child = 0;
     
     // update relations among those nodes
     node->left_child = left_child;
@@ -101,30 +111,23 @@ void GenomeTree::insertGapsIntoNormalNode(GenomeNode* node, int pos, int length)
 }
 
 /**
-    recursively traverse the tree to update pos_new after insert gaps into a node
+    update the cumulative_gaps_from_left_child of all nodes on the path from the current node to root
  */
-void GenomeTree::updatePosNew(GenomeNode* node, int pos_new, int length)
+void GenomeTree::updateCumulativeGapsFromLeftChild(GenomeNode* node, int length)
 {
-    // make sure node is not NULL
+    // make sure the current node is not NULL
     ASSERT(node);
-    
-    // stop traversing deeply if we found the node where gaps are inserted.
-    if (pos_new == node->pos_new)
-        return;
-    
-    // update the current node if its new pos is greater than pos
-    if (pos_new < node->pos_new)
+
+    // stop at root
+    if (node->parent)
     {
-        node->pos_new = node->pos_new + length;
+        // if the current node is left child of its parent -> update the cumulative_gaps_from_left_child
+        if (node->parent->left_child == node)
+            node->parent->cumulative_gaps_from_left_child += length;
         
-        // browse the left child if it exists
-        if (node->left_child)
-            updatePosNew(node->left_child, pos_new, length);
+        // go up the tree
+        updateCumulativeGapsFromLeftChild(node->parent, length);
     }
-    
-    // browse the right child if it exists
-    if (node->right_child)
-        updatePosNew(node->right_child, pos_new, length);
 }
 
 /**
@@ -136,22 +139,20 @@ void GenomeTree::updateTree(vector<Insertion> insertions)
     for (Insertion insertion:insertions)
     {
         // find the genome node contains the position to insert gaps
-        GenomeNode* node = findNodeByPos(root, insertion);
+        GenomeNode* node = findNodeByPos(root, insertion, 0);
         
         // add gaps into that node we found
         ASSERT(node);
+        
         // if the current node contains only gaps -> simple inscrease its length, and update the pos_new of its children
-        if (node->pos_ori == -1)
-        {
+        if (node->is_gap)
             insertGapsIntoGaps(node, insertion.length);
-            updatePosNew(node->right_child, node->pos_new, insertion.length);
-        }
         // otherwise, insert gaps into a "normal" node (containing sites from the original genome) -> build a cherry from the current node
         else
             insertGapsIntoNormalNode(node, insertion.pos, insertion.length);
         
-        // traverse the tree from root to update the positions in the new genome of all nodes that follows the current node. Note that chilren of the node were already updated thus, we will stop at the current node in this method.
-        updatePosNew(root, node->pos_new, insertion.length);
+        // update the cumulative_gaps_from_left_child of all nodes on the path from the current node to root
+        updateCumulativeGapsFromLeftChild(node, insertion.length);
     }
 }
 
@@ -164,79 +165,87 @@ vector<short int> GenomeTree::exportNewGenome(vector<short int> ori_seq, int seq
     vector<short int> new_seq(seq_length, UNKOWN_STATE);
     
     // traverse the genome tree to export new genome
-    exportSiteFromGenomeNode(root, ori_seq, new_seq);
+    queue<GenomeNode*> genome_nodes;
+    root->cumulative_gaps_from_parent = 0;
+    genome_nodes.push(root);
+    
+    while (!genome_nodes.empty()) {
+        GenomeNode* node = genome_nodes.front();
+        genome_nodes.pop();
+        
+        // export sites from the current genome node (skip nodes with gaps as the default states are gaps)
+        if (!node->is_gap && node->length > 0)
+        {
+            int pos_new = node->pos_ori + node->cumulative_gaps_from_parent + node->cumulative_gaps_from_left_child;
+            ASSERT(node->is_gap || node->pos_ori + node->length <= ori_seq.size());
+            ASSERT(pos_new + node->length <= new_seq.size());
+            
+            for (int i = 0; i < node->length; i++)
+                new_seq[pos_new + i] = ori_seq[node->pos_ori + i];
+        }
+        
+        // traverse the left and right children (if any)
+        if (node->left_child)
+        {
+            node->left_child->cumulative_gaps_from_parent = node->cumulative_gaps_from_parent;
+            genome_nodes.push(node->left_child);
+        }
+        if (node->right_child)
+        {
+            node->right_child->cumulative_gaps_from_parent = node->cumulative_gaps_from_parent + node->length + node->cumulative_gaps_from_left_child;
+            genome_nodes.push(node->right_child);
+        }
+    }
     
     return new_seq;
 }
 
 /**
-    export sites from a genome node and the original genome
- */
-void GenomeTree::exportSiteFromGenomeNode(GenomeNode* node, vector<short int> ori_seq, vector<short int> &new_seq)
-{
-    // export sites from the current genome node (skip nodes with gaps as the default states are gaps)
-    if (node->pos_ori > -1 && node->length > 0)
-    {
-        ASSERT(node->pos_ori + node->length <= ori_seq.size());
-        ASSERT(node->pos_new + node->length <= new_seq.size());
-        
-        for (int i = 0; i < node->length; i++)
-            new_seq[node->pos_new + i] = ori_seq[node->pos_ori + i];
-    }
-    
-    // traverse the left and right children (if any)
-    if (node->left_child)
-        exportSiteFromGenomeNode(node->left_child , ori_seq, new_seq);
-    if (node->right_child)
-        exportSiteFromGenomeNode(node->right_child , ori_seq, new_seq);
-}
-
-/**
  export readable characters (for writing to file) from original genome and genome tree
  */
-string GenomeTree::exportReadableCharacters(vector<short int> ori_seq, int sequence_length, int num_sites_per_state, vector<string> state_mapping)
+void GenomeTree::exportReadableCharacters(vector<short int> ori_seq, int num_sites_per_state, vector<string> state_mapping, string &output)
 {
-    // dummy variables
-    std::string output (sequence_length * num_sites_per_state + 1, '-');
-    output[output.length()-1] = '\n';
+    queue<GenomeNode*> genome_nodes;
+    root->cumulative_gaps_from_parent = 0;
+    genome_nodes.push(root);
     
-    // recursively traverse the genome tree to export readable characters from each genome node and the original genome
-    exportReadableCharactersFromGenomeNode(root, ori_seq, output, num_sites_per_state, state_mapping);
-    
-    // return output
-    return output;
-}
-
-/**
-    export readable characters from a genome node and the original genome
- */
-void GenomeTree::exportReadableCharactersFromGenomeNode(GenomeNode* node, vector<short int> ori_seq, string &output, int num_sites_per_state, vector<string> state_mapping)
-{
-    // export readable characters from the current genome node (skip nodes with gaps as the default states are gaps)
-    if (node->pos_ori > -1 && node->length > 0)
-    {
-        ASSERT(node->pos_ori + node->length <= ori_seq.size());
-        ASSERT((node->pos_new + node->length) * num_sites_per_state <= output.length());
+    while (!genome_nodes.empty()) {
+        GenomeNode* node = genome_nodes.front();
+        genome_nodes.pop();
         
-        for (int i = 0; i < node->length; i++)
+        // export readable characters from the current genome node (skip nodes with gaps as the default states are gaps)
+        if (!node->is_gap && node->length > 0)
         {
-            // convert normal data
-            if (num_sites_per_state == 1)
-                output[node->pos_new + i] = state_mapping[ori_seq[node->pos_ori + i]][0];
-            // convert CODON
-            else
+            int pos_new = node->pos_ori + node->cumulative_gaps_from_parent + node->cumulative_gaps_from_left_child;
+            ASSERT(node->is_gap || node->pos_ori + node->length <= ori_seq.size());
+            ASSERT((pos_new + node->length) * num_sites_per_state <= output.length());
+            
+            for (int i = 0; i < node->length; i++)
             {
-                string output_codon = state_mapping[ori_seq[node->pos_ori + i]];
-                output[(node->pos_new + i) * num_sites_per_state] = output_codon[0];
-                output[(node->pos_new + i) * num_sites_per_state + 1] = output_codon[1];
-                output[(node->pos_new + i) * num_sites_per_state + 2] = output_codon[2];
+                // convert normal data
+                if (num_sites_per_state == 1)
+                    output[pos_new + i] = state_mapping[ori_seq[node->pos_ori + i]][0];
+                // convert CODON
+                else
+                {
+                    string output_codon = state_mapping[ori_seq[node->pos_ori + i]];
+                    output[(pos_new + i) * num_sites_per_state] = output_codon[0];
+                    output[(pos_new + i) * num_sites_per_state + 1] = output_codon[1];
+                    output[(pos_new + i) * num_sites_per_state + 2] = output_codon[2];
+                }
             }
         }
+        
+        // traverse the left and right children (if any)
+        if (node->left_child)
+        {
+            node->left_child->cumulative_gaps_from_parent = node->cumulative_gaps_from_parent;
+            genome_nodes.push(node->left_child);
+        }
+        if (node->right_child)
+        {
+            node->right_child->cumulative_gaps_from_parent = node->cumulative_gaps_from_parent + node->length + node->cumulative_gaps_from_left_child;
+            genome_nodes.push(node->right_child);
+        }
     }
-    
-    // traverse the left and right children (if any)
-    if (node->left_child)
-        exportReadableCharactersFromGenomeNode(node->left_child, ori_seq, output, num_sites_per_state, state_mapping);
-    if (node->right_child)
-        exportReadableCharactersFromGenomeNode(node->right_child, ori_seq, output, num_sites_per_state, state_mapping);
 }

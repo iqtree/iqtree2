@@ -630,8 +630,6 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool
         else
             tree->getModel()->getStateFrequency(state_freq);
         
-        auto end = getRealTime();
-        
         // finding the max probability position
         int max_prob_pos = 0;
         for (int i = 1; i < max_num_states; i++)
@@ -1903,7 +1901,7 @@ void AliSimulator::updateGenomesDue2Insertions(GenomeTree* genome_tree, vector<I
     if (stop_inserting_gaps)
         return;
     
-    // only insert gaps into not-empty node
+    // only insert gaps into non-empty node
     if (node->sequence.size() > 0)
     {
         // if node is a tips => just update the genome_tree from insertions

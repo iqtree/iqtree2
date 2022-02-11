@@ -959,10 +959,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             // convert non-empty sequence
             // export sequence of a leaf node from original sequence and genome_tree if using Indels
             if (node->isLeaf() && Params::getInstance().alisim_insertion_ratio != 0 && node->sequence.size() > 0)
-            {
-                output = node->genome_tree->exportReadableCharacters(node->sequence, sequence_length, num_sites_per_state, state_mapping);
-                    
-            }
+                node->genome_tree->exportReadableCharacters(node->sequence, num_sites_per_state, state_mapping, output);
             // otherwise, just export the sequence normally from the original sequence
             else if (node->sequence.size() >= sequence_length)
                 output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);

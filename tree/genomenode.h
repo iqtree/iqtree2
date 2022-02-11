@@ -51,6 +51,11 @@ A Genome Node to present a genome entry (a set of sites)
 class GenomeNode {
 public:
     /**
+        TRUE if this node contains gaps
+     */
+    bool is_gap;
+    
+    /**
         starting pos in the original genome
      */
     int pos_ori;
@@ -61,9 +66,14 @@ public:
     int length;
     
     /**
-        starting pos in the new genome
+        total gaps from the left child branch
      */
-    int pos_new;
+    int cumulative_gaps_from_left_child;
+    
+    /**
+        total gaps from the parent (NOTE: need to pre-compute before using)
+     */
+    int cumulative_gaps_from_parent;
     
     /**
         parent, left/right children of this node
@@ -83,7 +93,7 @@ public:
     /**
         constructor
      */
-    GenomeNode(int n_pos_ori, int n_length, int n_pos_new);
+    GenomeNode(bool n_is_gap, int n_pos_ori, int n_length, int n_cumulative_gaps);
     
     /**
         deconstructor
