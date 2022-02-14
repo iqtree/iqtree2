@@ -76,7 +76,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad);
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad);
 
 /**
 *  merge and write all sequences to output files
@@ -116,5 +116,10 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 *  update genome trees at tips on the super tree if using Indels
 */
 void updateGenomeTreesIndels(int seq_length, Node *node, Node *dad);
+
+/**
+*  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
+*/
+void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
 
 #endif /* alisim_h */

@@ -4,3 +4,4 @@ alisimulatorinvar.cpp alisimulatorinvar.h
 alisimulatorheterogeneity.cpp alisimulatorheterogeneity.h
 alisimulatorheterogeneityinvar.cpp alisimulatorheterogeneityinvar.h
 )
+target_link_libraries(simulator ncl gsl model)

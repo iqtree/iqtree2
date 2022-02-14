@@ -1449,6 +1449,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.outputfile_runtime = "";
     params.model_id = "";
+    params.tmp_data_filename = "tmp_data";
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {

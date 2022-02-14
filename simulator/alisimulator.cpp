@@ -719,9 +719,15 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // initialize trans_matrix
     double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
     
+    // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
+    bool write_sequences_to_tmp_data = params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
+    
     // write output to file (if output_filepath is specified)
-    if (output_filepath.length() > 0)
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
     {
+        // init an output_filepath to temporarily output the sequences (when simulating Indels)
+        if (write_sequences_to_tmp_data)
+            output_filepath = params->tmp_data_filename;
         try {
             // add ".phy" or ".fa" to the output_filepath
             if (params->aln_output_format != IN_FASTA)
@@ -774,7 +780,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     simulateSeqs(sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
     // close the file if neccessary
-    if (output_filepath.length() > 0)
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
     {
         if (params->do_compression)
             ((ogzstream*)out)->close();
@@ -862,12 +868,20 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
         }
         
         // init genome_tree at tips if using Indels
-        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->node->isLeaf())
+        if (params->alisim_insertion_ratio > 0)
         {
-            if ((*it)->node->genome_tree)
-                delete (*it)->node->genome_tree;
+            Node* tmp_node = (*it)->node;
+            if (node->isLeaf())
+                tmp_node = node;
             
-            (*it)->node->genome_tree = new GenomeTree((*it)->node->sequence.size());
+            if (tmp_node->isLeaf())
+            {
+                if (tmp_node->genome_tree)
+                    delete tmp_node->genome_tree;
+                
+                tmp_node->genome_tree = new GenomeTree(tmp_node->sequence.size());
+                map_seqname_node[tmp_node->name] = tmp_node;
+            }
         }
         
         // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
@@ -906,6 +920,17 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
 }
 
 /**
+    temporarily write internal states to file (when using Indels)
+*/
+void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
+{
+    out << node->name<<"@"<<node->sequence.size()<<"@";
+    for (int i = 0; i < node->sequence.size(); i++)
+        out << node->sequence[i]<<" ";
+    out<<endl;
+}
+
+/**
     writing and deleting simulated sequence immediately if possible
 */
 void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
@@ -917,17 +942,23 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
         {
             if (params->outputfile_runtime.length() == 0)
             {
-                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
-
-                // convert numerical states into readable characters and write output to file
-                string input_sequence = input_msa[(*it)->node->name];
-                if (input_sequence.length()>0)
-                    // write and copying gaps from the input sequences to the output.
-                    out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                // if using Indels -> temporarily write out internal states
+                if (params->alisim_insertion_ratio > 0)
+                    writeInternalStatesIndels((*it)->node, out);
                 else
-                    // write without copying gaps from the input sequences to the output.
-                    out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                {
+                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+
+                    // convert numerical states into readable characters and write output to file
+                    string input_sequence = input_msa[(*it)->node->name];
+                    if (input_sequence.length()>0)
+                        // write and copying gaps from the input sequences to the output.
+                        out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                    else
+                        // write without copying gaps from the input sequences to the output.
+                        out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                }
             }
             
             // remove the sequence to release the memory after extracting the sequence
@@ -939,17 +970,23 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
             // avoid writing sequence of __root__
             if (node->name!=ROOT_NAME && params->outputfile_runtime.length() == 0)
             {
-                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
-                
-                string input_sequence = input_msa[node->name];
-                // convert numerical states into readable characters and write output to file
-                if (input_sequence.length()>0)
-                    // write and copying gaps from the input sequences to the output.
-                    out << pre_output << exportSequenceWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                // if using Indels -> temporarily write out internal states
+                if (params->alisim_insertion_ratio > 0)
+                    writeInternalStatesIndels(node, out);
                 else
-                    // write without copying gaps from the input sequences to the output.
-                    out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                {
+                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                    
+                    string input_sequence = input_msa[node->name];
+                    // convert numerical states into readable characters and write output to file
+                    if (input_sequence.length()>0)
+                        // write and copying gaps from the input sequences to the output.
+                        out << pre_output << exportSequenceWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                    else
+                        // write without copying gaps from the input sequences to the output.
+                        out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                }
             }
             
             // remove the sequence to release the memory after extracting the sequence
@@ -1901,16 +1938,12 @@ void AliSimulator::updateGenomesDue2Insertions(GenomeTree* genome_tree, vector<I
     if (stop_inserting_gaps)
         return;
     
-    // only insert gaps into non-empty node
-    if (node->sequence.size() > 0)
-    {
-        // if node is a tips => just update the genome_tree from insertions
-        if (node->isLeaf())
-            node->genome_tree->updateTree(insertions);
-        // otherwise (node is an internal nodes), update the current genome by the genome_tree
-        else
-            node->sequence = genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
-    }
+    // if node is a tips => just update the genome_tree from insertions
+    if (node->isLeaf() && node->genome_tree)
+        node->genome_tree->updateTree(insertions);
+    // if it is a non-empty internal node -> update the current genome by the genome_tree
+    else if (node->sequence.size() > 0)
+        node->sequence = genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
     
     // process its neighbors/children
     NeighborVec::iterator it;

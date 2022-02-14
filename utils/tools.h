@@ -2522,6 +2522,11 @@ public:
     string outputfile_runtime;
     
     /**
+    *  path to the tmp_data file to temporarily output sequences at tips when using Indels
+    */
+    string tmp_data_filename;
+    
+    /**
     *  model id
     */
     string model_id;

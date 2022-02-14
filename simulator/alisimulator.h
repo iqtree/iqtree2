@@ -296,6 +296,11 @@ protected:
     */
     void initSite2PatternID(int length);
     
+    /**
+        temporarily write internal states to file (when using Indels)
+    */
+    void writeInternalStatesIndels(Node* node, ostream &out);
+    
 public:
     
     IQTree *tree;
@@ -318,6 +323,7 @@ public:
     double* mixture_accumulated_weight = NULL;
     int mixture_max_weight_pos = 0;
     int seq_length_indels = 0; // final seq_length due to indels
+    map<string, Node*> map_seqname_node;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
