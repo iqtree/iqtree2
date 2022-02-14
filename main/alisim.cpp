@@ -1177,7 +1177,8 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         
         // retrieve Node from the seq_name
         Node* node = alisimulator->map_seqname_node[seq_name];
-        ASSERT(node);
+        if (!node)
+            outError("Oops! Couldn't find the node with name " + seq_name+" . There is something wrong!");
         
         // extract the length of the original sequence
         int seq_length_ori = convert_int(line.substr(index_of_first_at + 1, index_of_second_at - index_of_first_at - 1).c_str());

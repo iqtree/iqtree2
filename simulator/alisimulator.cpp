@@ -789,7 +789,8 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         delete out;
         
         // show the output file name
-        cout << "An alignment has just been exported to "<<output_filepath<<endl;
+        if (!write_sequences_to_tmp_data)
+            cout << "An alignment has just been exported to "<<output_filepath<<endl;
     }
         
     // delete trans_matrix array
@@ -880,7 +881,6 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
                     delete tmp_node->genome_tree;
                 
                 tmp_node->genome_tree = new GenomeTree(tmp_node->sequence.size());
-                map_seqname_node[tmp_node->name] = tmp_node;
             }
         }
         
@@ -928,6 +928,8 @@ void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
     for (int i = 0; i < node->sequence.size(); i++)
         out << node->sequence[i]<<" ";
     out<<endl;
+    
+    map_seqname_node[node->name] = node;
 }
 
 /**
