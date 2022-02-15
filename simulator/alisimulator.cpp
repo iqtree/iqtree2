@@ -372,6 +372,19 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                 model_familyname_with_params = model_familyname_with_params.substr(0, model_fullname.find("*"));
                 string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
                 detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
+                
+                // manually detect AA data from "NONREV", "GTR20", "Poisson" model
+                if (tree->aln->seq_type == SEQ_UNKNOWN)
+                {
+                    const char* aa_model_names_plus[] = {"NONREV", "GTR20", "Poisson"};
+                    std::transform(model_familyname.begin(), model_familyname.end(), model_familyname.begin(), ::toupper);
+                    
+                    for (int i = 0; i < sizeof(aa_model_names_plus)/sizeof(char*); i++)
+                        if (model_familyname == aa_model_names_plus[i]) {
+                            tree->aln->seq_type = SEQ_PROTEIN;
+                            break;
+                        }
+                }
             }
             if (tree->aln->seq_type != SEQ_UNKNOWN)
                 tree->aln->sequence_type = tree->aln->getSeqTypeStr(tree->aln->seq_type);
