@@ -1930,7 +1930,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     }
     
     // if insertion events occur -> insert gaps to other nodes
-    if (insertion_before_simulation->next)
+    if (insertion_before_simulation && insertion_before_simulation->next)
     {
         // init a genome_tree to update new genomes for internal nodes
         GenomeTree* genome_tree = new GenomeTree(ori_seq_length);
