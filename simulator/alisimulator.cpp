@@ -749,7 +749,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     {
         // init an output_filepath to temporarily output the sequences (when simulating Indels)
         if (write_sequences_to_tmp_data)
-            output_filepath = params->tmp_data_filename;
+            output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename;
         try {
             // add ".phy" or ".fa" to the output_filepath
             if (params->aln_output_format != IN_FASTA)
