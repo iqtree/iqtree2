@@ -20,7 +20,7 @@ private:
     /**
         find a node that contains a given position
      */
-    GenomeNode* findNodeByPos(GenomeNode* node, Insertion insertion, int num_cumulative_gaps);
+    GenomeNode* findNodeByPos(GenomeNode* node, Insertion* insertion, int num_cumulative_gaps);
     
     /**
         insert gaps into a "all-gap" node
@@ -59,9 +59,9 @@ public:
     ~GenomeTree();
     
     /**
-        update genome tree from a vector of insertions
+        update genome tree from an insertion forward the insertion list
      */
-    void updateTree(vector<Insertion> insertions);
+    void updateTree(Insertion* insertion);
     
     /**
         export new genome from original genome and genome tree

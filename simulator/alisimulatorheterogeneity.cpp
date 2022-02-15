@@ -26,6 +26,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     max_num_states = alisimulator->max_num_states;
     seq_length_indels = alisimulator->seq_length_indels;
     map_seqname_node = alisimulator->map_seqname_node;
+    latest_insertion = alisimulator->latest_insertion;
 }
 
 /**

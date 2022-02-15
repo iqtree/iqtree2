@@ -283,6 +283,16 @@ public:
         root of the genome tree
      */
     GenomeTree* genome_tree;
+    
+    /**
+        pointer to the position of the insertion event that occurs after simulating sequence at this node
+     */
+    Insertion* insertion_pos;
+    
+    /**
+        parent node of the current node (only use when simulating Indels with AliSim)
+     */
+    Node* parent = NULL;
 
     /**
         list of neighbors

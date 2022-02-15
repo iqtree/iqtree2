@@ -17,6 +17,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
+    latest_insertion = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -48,6 +49,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
+    latest_insertion = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -68,6 +70,13 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
 
 AliSimulator::~AliSimulator()
 {
+    // delete latest_insertion
+    if (latest_insertion)
+    {
+        delete latest_insertion;
+        latest_insertion = NULL;
+    }
+    
     if (!tree) return;
     
     // delete tree
@@ -767,13 +776,20 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
     extractRatesJMatrix(model);
     
-    // init genome_tree for root if using Indels
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+    // init genome_tree, and the initial empty insertion for root if using Indels
+    if (params->alisim_insertion_ratio > 0)
     {
         if (tree->root->genome_tree)
             delete tree->root->genome_tree;
         
         tree->root->genome_tree = new GenomeTree(tree->root->sequence.size());
+        
+        // init an empty insertion event
+        latest_insertion = new Insertion();
+        
+        // init the insertion position for root if it is a leaf (a rooted tree)
+        if (tree->root->isLeaf())
+            tree->root->insertion_pos = latest_insertion;
     }
     
     // simulate Sequences
@@ -817,7 +833,8 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     if (length_ratio > 1)
     {
         // if using Indels, update new genome at tips from original genome and the genome tree
-        if (params->alisim_insertion_ratio > 0)
+        // skip updating if using Fundi as it must be already updated by Fundi
+        if (params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
             updateNewGenomeIndels(seq_length_indels, tree->root, tree->root);
         
         removeConstantSites();
@@ -833,6 +850,9 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
+        // update parent node of the current node
+        (*it)->node->parent = node;
+        
         // reset the num_children_done_simulation
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
@@ -869,19 +889,13 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
         }
         
         // init genome_tree at tips if using Indels
-        if (params->alisim_insertion_ratio > 0)
+        if (params->alisim_insertion_ratio > 0 && (*it)->node->isLeaf())
         {
-            Node* tmp_node = (*it)->node;
-            if (node->isLeaf())
-                tmp_node = node;
+            if ((*it)->node->genome_tree)
+                delete (*it)->node->genome_tree;
             
-            if (tmp_node->isLeaf())
-            {
-                if (tmp_node->genome_tree)
-                    delete tmp_node->genome_tree;
-                
-                tmp_node->genome_tree = new GenomeTree(tmp_node->sequence.size());
-            }
+            (*it)->node->genome_tree = new GenomeTree((*it)->node->sequence.size());
+            (*it)->node->insertion_pos = latest_insertion;
         }
         
         // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
@@ -1842,7 +1856,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     
     // dummy variables
     int ori_seq_length = (*it)->node->sequence.size();
-    vector<Insertion> insertions;
+    Insertion* insertion_before_simulation = latest_insertion;
     
     double branch_length = (*it)->length * params->alisim_branch_scale;
     while (branch_length > 0)
@@ -1871,7 +1885,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
             {
                 case INSERTION:
                 {
-                    length_change = handleInsertion(sequence_length, insertions, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    length_change = handleInsertion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
                     break;
                 }
                 case DELETION:
@@ -1903,15 +1917,14 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     }
     
     // if insertion events occur -> insert gaps to other nodes
-    if (insertions.size() > 0)
+    if (insertion_before_simulation->next)
     {
         // init a genome_tree to update new genomes for internal nodes
         GenomeTree* genome_tree = new GenomeTree(ori_seq_length);
-        genome_tree->updateTree(insertions);
+        genome_tree->updateTree(insertion_before_simulation);
         
-        // traverse the phylotree to update the genome_tree (at tips) or the sequence (at internal nodes)
-        bool stop_inserting_gaps = false;
-        updateGenomesDue2Insertions(genome_tree, insertions, sequence_length, (*it)->node->id, tree->root, tree->root, stop_inserting_gaps);
+        // update non-empty internal sequences due to insertions
+        updateInternalSeqsIndels(genome_tree, sequence_length, (*it)->node);
         
         // delete genome_tree
         delete genome_tree;
@@ -1931,20 +1944,34 @@ void AliSimulator::insertNewSequenceForInsertionEvent(vector<short int> &indel_s
 }
 
 /**
-*  insert gaps into other nodes when processing Insertion Events
+*  update internal sequences due to Indels
 *
 */
-void AliSimulator::updateGenomesDue2Insertions(GenomeTree* genome_tree, vector<Insertion> insertions, int seq_length, int stopping_node_id, Node *node, Node *dad, bool &stop_inserting_gaps)
+void AliSimulator::updateInternalSeqsIndels(GenomeTree* genome_tree, int seq_length, Node *node)
+{
+    // if we need to output all internal sequences -> traverse tree from root to the current node to update all internal sequences
+    if (params->alisim_write_internal_sequences)
+    {
+        bool stop_inserting_gaps = false;
+        updateInternalSeqsFromRootToNode(genome_tree, seq_length, node->id, tree->root, tree->root, stop_inserting_gaps);
+    }
+    // otherwise, only need to update sequences on the path from the current node to root
+    else
+        updateInternalSeqsFromNodeToRoot(genome_tree, seq_length, node);
+}
+
+/**
+*  update all simulated internal seqs from root to the current node due to insertions
+*
+*/
+void AliSimulator::updateInternalSeqsFromRootToNode(GenomeTree* genome_tree, int seq_length, int stopping_node_id, Node *node, Node* dad, bool &stop_inserting_gaps)
 {
     // check to stop
     if (stop_inserting_gaps)
         return;
     
-    // if node is a tips => just update the genome_tree from insertions
-    if (node->isLeaf() && node->genome_tree)
-        node->genome_tree->updateTree(insertions);
     // if it is a non-empty internal node -> update the current genome by the genome_tree
-    else if (node->sequence.size() > 0)
+    if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence.size() > 0)
         node->sequence = genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
     
     // process its neighbors/children
@@ -1958,14 +1985,34 @@ void AliSimulator::updateGenomesDue2Insertions(GenomeTree* genome_tree, vector<I
         }
         
         // browse 1-step deeper to the neighbor node
-        updateGenomesDue2Insertions(genome_tree, insertions, seq_length, stopping_node_id, (*it)->node, node, stop_inserting_gaps);
+        updateInternalSeqsFromRootToNode(genome_tree, seq_length, stopping_node_id, (*it)->node, node, stop_inserting_gaps);
+    }
+}
+
+/**
+*  update internal seqs on the path from the current phylonode to root due to insertions
+*
+*/
+void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int seq_length, Node *node)
+{
+    // get parent node
+    Node* internal_node = node->parent;
+    
+    for (; internal_node;)
+    {
+        // only update new genome at non-empty internal nodes
+        if (!(internal_node->isLeaf()) && internal_node->sequence.size() > 0)
+            internal_node->sequence = genome_tree->exportNewGenome(internal_node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+        
+        // move to the next parent
+        internal_node = internal_node->parent;
     }
 }
 
 /**
     handle insertion events
 */
-int AliSimulator::handleInsertion(int &sequence_length, vector<Insertion> &insertions, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
+int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
     int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
@@ -2006,8 +2053,10 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<Insertion> &inser
         total_sub_rate += sub_rate_change;
     }
     
-    // record the insertion event and update the genome_tree
-    insertions.push_back(Insertion(position, length, position == sequence_length));
+    // record the insertion event
+    Insertion* new_insertion = new Insertion(position, length, position == sequence_length);
+    latest_insertion->next = new_insertion;
+    latest_insertion = new_insertion;
     
     // update the sequence_length
     sequence_length += length;
@@ -2392,6 +2441,10 @@ void AliSimulator::updateNewGenomeIndels(int seq_length, Node *node, Node *dad)
 {
     // only update nodes that are tips
     if (node->isLeaf() && node->name!=ROOT_NAME) {
+        // update the genome tree from insertion events
+        node->genome_tree->updateTree(node->insertion_pos);
+        node->insertion_pos = NULL;
+        
         // update new genome
         node->sequence = node->genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
         

@@ -587,7 +587,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree, input_msa);
                 
                 // update new genome at tips from the original genome and the genome tree
-                if (super_alisimulator->params->alisim_insertion_ratio > 0)
+                // skip updating if using +ASC or Fundi model as they must be already updated
+                if (super_alisimulator->params->alisim_insertion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
                     partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels, partition_simulator->tree->root, partition_simulator->tree->root);
             }
         }
@@ -970,7 +971,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             
             // convert non-empty sequence
             // export sequence of a leaf node from original sequence and genome_tree if using Indels
-            if (node->isLeaf() && Params::getInstance().alisim_insertion_ratio > 0 && node->sequence.size() > 0)
+            if (node->isLeaf() && node->name!=ROOT_NAME && Params::getInstance().alisim_insertion_ratio > 0 && node->sequence.size() > 0)
                 node->genome_tree->exportReadableCharacters(node->sequence, num_sites_per_state, state_mapping, output);
             // otherwise, just export the sequence normally from the original sequence
             else if (node->sequence.size() >= sequence_length)
@@ -1196,8 +1197,16 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         string output (sequence_length * num_sites_per_state+1, '-');
         output[output.length()-1] = '\n';
         
+        // update genome tree from insertion events
+        node->genome_tree->updateTree(node->insertion_pos);
+        node->insertion_pos = NULL;
+        
         // export sequence of a leaf node from original sequence and genome_tree if using Indels
         node->genome_tree->exportReadableCharacters(seq_ori, num_sites_per_state, state_mapping, output);
+        
+        // delete the genome tree to save the memory
+        delete node->genome_tree;
+        node->genome_tree = NULL;
         
         // preparing output (without gaps) for indels
         string output_indels = "";

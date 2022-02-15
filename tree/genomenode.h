@@ -22,6 +22,7 @@ public:
     int pos;
     int length;
     bool is_append;
+    Insertion* next;
     
     /**
         constructor
@@ -31,6 +32,7 @@ public:
         pos = 0;
         length = 0;
         is_append = false;
+        next = NULL;
     }
     
     /**
@@ -41,6 +43,16 @@ public:
         pos = n_pos;
         length = n_length;
         is_append = n_is_append;
+        next = NULL;
+    }
+    
+    /**
+        deconstructor
+     */
+    ~Insertion()
+    {
+        if (next)
+            delete next;
     }
 };
 /*--------------------------------------------------------------*/

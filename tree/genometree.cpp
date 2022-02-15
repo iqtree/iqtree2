@@ -44,7 +44,7 @@ GenomeTree::~GenomeTree()
 /**
     find a node that contains a given position
  */
-GenomeNode* GenomeTree::findNodeByPos(GenomeNode* node, Insertion insertion, int num_cumulative_gaps)
+GenomeNode* GenomeTree::findNodeByPos(GenomeNode* node, Insertion* insertion, int num_cumulative_gaps)
 {
     // return NULL if not found
     if (!node)
@@ -55,8 +55,8 @@ GenomeNode* GenomeTree::findNodeByPos(GenomeNode* node, Insertion insertion, int
     
     // check if the current node contains the given pos
     // or if insertion occur at the end of the current genome (~append) -> return the right-bottom node of the tree
-    if ((pos_new <= insertion.pos && insertion.pos < pos_new + node->length)
-        || (insertion.is_append && insertion.pos == pos_new + node->length))
+    if ((pos_new <= insertion->pos && insertion->pos < pos_new + node->length)
+        || (insertion->is_append && insertion->pos == pos_new + node->length))
     {
         // update cumulative_gaps_from_parent before returning node
         node->cumulative_gaps_from_parent = num_cumulative_gaps;
@@ -64,7 +64,7 @@ GenomeNode* GenomeTree::findNodeByPos(GenomeNode* node, Insertion insertion, int
     }
     
     // otherwise, search on left/right branches
-    if (insertion.pos < pos_new)
+    if (insertion->pos < pos_new)
         return findNodeByPos(node->left_child, insertion, num_cumulative_gaps);
     else
         return findNodeByPos(node->right_child, insertion, num_cumulative_gaps + node->length + node->cumulative_gaps_from_left_child);
@@ -133,26 +133,36 @@ void GenomeTree::updateCumulativeGapsFromLeftChild(GenomeNode* node, int length)
 /**
     update genome tree from a vector of insertions
  */
-void GenomeTree::updateTree(vector<Insertion> insertions)
+void GenomeTree::updateTree(Insertion* prev_insertion)
 {
+    // Do nothing if there is no insertion event
+    if (!prev_insertion)
+        return;
+    
+    // init current insertion
+    Insertion* current_insertion = prev_insertion->next;
+    
     // process insertions one by one
-    for (Insertion insertion:insertions)
+    for (; current_insertion;)
     {
         // find the genome node contains the position to insert gaps
-        GenomeNode* node = findNodeByPos(root, insertion, 0);
+        GenomeNode* node = findNodeByPos(root, current_insertion, 0);
         
         // add gaps into that node we found
         ASSERT(node);
         
         // if the current node contains only gaps -> simple inscrease its length, and update the pos_new of its children
         if (node->is_gap)
-            insertGapsIntoGaps(node, insertion.length);
+            insertGapsIntoGaps(node, current_insertion->length);
         // otherwise, insert gaps into a "normal" node (containing sites from the original genome) -> build a cherry from the current node
         else
-            insertGapsIntoNormalNode(node, insertion.pos, insertion.length);
+            insertGapsIntoNormalNode(node, current_insertion->pos, current_insertion->length);
         
         // update the cumulative_gaps_from_left_child of all nodes on the path from the current node to root
-        updateCumulativeGapsFromLeftChild(node, insertion.length);
+        updateCumulativeGapsFromLeftChild(node, current_insertion->length);
+        
+        // move to the next insertion
+        current_insertion = current_insertion->next;
     }
 }
 
