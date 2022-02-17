@@ -280,14 +280,9 @@ public:
     short int num_children_done_simulation = 0;
     
     /**
-        root of the genome tree
-     */
-    GenomeTree* genome_tree;
-    
-    /**
         pointer to the position of the insertion event that occurs after simulating sequence at this node
      */
-    Insertion* insertion_pos;
+    Insertion* insertion_pos = NULL;
     
     /**
         parent node of the current node (only use when simulating Indels with AliSim)
@@ -321,7 +316,6 @@ public:
     Node() {
         id = -1;
         height = -1;
-        genome_tree = NULL;
     };
 
 

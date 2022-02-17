@@ -12,37 +12,43 @@
  */
 GenomeNode::GenomeNode()
 {
-    is_gap = true;
+    type = NORMAL;
     pos_ori = 0;
     length = 0;
     cumulative_gaps_from_left_child = 0;
     cumulative_gaps_from_parent = 0;
+    cumulative_converts_from_left_child = 0;
+    cumulative_converts_from_parent = 0;
     
     parent = NULL;
     left_child = NULL;
     right_child = NULL;
+    insertion = NULL;
 }
 
 /**
     constructor
  */
-GenomeNode::GenomeNode(bool n_is_gap, int n_pos_ori, int n_length, int n_cumulative_gaps)
+GenomeNode::GenomeNode(GenomeNodeType n_type, int n_pos_ori, int n_length, int n_cumulative_gaps)
 {
-    is_gap = n_is_gap;
+    type = n_type;
     pos_ori = n_pos_ori;
     length = n_length;
     cumulative_gaps_from_left_child = n_cumulative_gaps;
     cumulative_gaps_from_parent = 0;
+    cumulative_converts_from_left_child = 0;
+    cumulative_converts_from_parent = 0;
     
     parent = NULL;
     left_child = NULL;
     right_child = NULL;
+    insertion = NULL;
 }
 
 /**
     init a root genome node
  */
-GenomeNode::GenomeNode(int length):GenomeNode(false, 0, length, 0){}
+GenomeNode::GenomeNode(int length):GenomeNode(NORMAL, 0, length, 0){}
 
 /**
     deconstructor

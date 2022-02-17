@@ -17,12 +17,16 @@
 using namespace std;
 
 /*--------------------------------------------------------------*/
+class GenomeNode;
+class Node;
 class Insertion {
 public:
     int pos;
     int length;
     bool is_append;
     Insertion* next;
+    vector<GenomeNode*> genome_nodes; // list of all genome nodes that contains gaps inserted by this insertion
+    vector<Node*> phylo_nodes; // the phylo_nodes that this insertion occurs
     
     /**
         constructor
@@ -56,6 +60,11 @@ public:
     }
 };
 /*--------------------------------------------------------------*/
+enum GenomeNodeType {
+    GAP,
+    NORMAL,
+    GAP_CONVERTED_2_NORMAL
+};
 
 /**
 A Genome Node to present a genome entry (a set of sites)
@@ -63,9 +72,9 @@ A Genome Node to present a genome entry (a set of sites)
 class GenomeNode {
 public:
     /**
-        TRUE if this node contains gaps
+        The type of this genome node (GAP, NORMAL, GAP_CONVERTED_2_NORMAL)
      */
-    bool is_gap;
+    GenomeNodeType type;
     
     /**
         starting pos in the original genome
@@ -88,6 +97,21 @@ public:
     int cumulative_gaps_from_parent;
     
     /**
+        total gap converts (that accepts gaps as normal characters) from the left child branch
+     */
+    int cumulative_converts_from_left_child;
+    
+    /**
+        total gap converts (that accepts gaps as normal characters) (NOTE: need to pre-compute before using)
+     */
+    int cumulative_converts_from_parent;
+    
+    /**
+        the insertion event that insert gaps represented in this node
+     */
+    Insertion* insertion;
+    
+    /**
         parent, left/right children of this node
      */
     GenomeNode *parent, *left_child, *right_child;
@@ -105,7 +129,7 @@ public:
     /**
         constructor
      */
-    GenomeNode(bool n_is_gap, int n_pos_ori, int n_length, int n_cumulative_gaps);
+    GenomeNode(GenomeNodeType n_type, int n_pos_ori, int n_length, int n_cumulative_gaps);
     
     /**
         deconstructor

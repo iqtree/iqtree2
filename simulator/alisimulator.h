@@ -336,7 +336,8 @@ public:
     int mixture_max_weight_pos = 0;
     int seq_length_indels = 0; // final seq_length due to indels
     map<string, Node*> map_seqname_node; // mapping sequence name to Node (using when temporarily write sequences at tips to tmp_data file when simulating Indels)
-    Insertion* latest_insertion;
+    Insertion* latest_insertion = NULL;
+    Insertion* first_insertion = NULL;
     
     
     // variables using for posterior mean rates/state frequencies
@@ -402,9 +403,9 @@ public:
     static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
     
     /**
-    *  recursively traverse the phylotree to update new genome from original genome and the genome tree (due to Indels)
+    *  update new genome from original genome and the genome tree for each tips (due to Indels)
     */
-    void updateNewGenomeIndels(int seq_length, Node *node, Node *dad);
+    void updateNewGenomeIndels(int seq_length);
 };
 
 #endif /* alisimulator_h */

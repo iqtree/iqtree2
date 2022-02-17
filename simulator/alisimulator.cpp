@@ -18,6 +18,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
     latest_insertion = NULL;
+    first_insertion = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -50,6 +51,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
     latest_insertion = NULL;
+    first_insertion = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -70,11 +72,11 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
 
 AliSimulator::~AliSimulator()
 {
-    // delete latest_insertion
-    if (latest_insertion)
+    // delete first_insertion
+    if (first_insertion)
     {
-        delete latest_insertion;
-        latest_insertion = NULL;
+        delete first_insertion;
+        first_insertion = NULL;
     }
     
     if (!tree) return;
@@ -523,15 +525,6 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
             node->sequence.clear();
             variant_sites.resize(num_variant_states);
             node->sequence = variant_sites;
-            
-            // update genome_tree if using Indels
-            if (params->alisim_insertion_ratio > 0)
-            {
-                if (node->genome_tree)
-                    delete node->genome_tree;
-                
-                node->genome_tree = new GenomeTree(node->sequence.size());
-            }
         }
     }
     
@@ -792,13 +785,11 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // init genome_tree, and the initial empty insertion for root if using Indels
     if (params->alisim_insertion_ratio > 0)
     {
-        if (tree->root->genome_tree)
-            delete tree->root->genome_tree;
-        
-        tree->root->genome_tree = new GenomeTree(tree->root->sequence.size());
-        
         // init an empty insertion event
-        latest_insertion = new Insertion();
+        if (first_insertion)
+            delete first_insertion;
+        first_insertion = new Insertion();
+        latest_insertion = first_insertion;
         
         // init the insertion position for root if it is a leaf (a rooted tree)
         if (tree->root->isLeaf())
@@ -837,7 +828,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio > 0)
     {
         // update new genome at tips from original genome and the genome tree
-        updateNewGenomeIndels(seq_length_indels, tree->root, tree->root);
+        updateNewGenomeIndels(seq_length_indels);
         
         processDelayedFundi(tree->root, tree->root);
     }
@@ -848,7 +839,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         // if using Indels, update new genome at tips from original genome and the genome tree
         // skip updating if using Fundi as it must be already updated by Fundi
         if (params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
-            updateNewGenomeIndels(seq_length_indels, tree->root, tree->root);
+            updateNewGenomeIndels(seq_length_indels);
         
         removeConstantSites();
     }
@@ -901,14 +892,11 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
                 handleIndels(model, sequence_length, it, simulation_method);
         }
         
-        // init genome_tree at tips if using Indels
+        // set insetion position for of this node in the list of insertions if using Indels
         if (params->alisim_insertion_ratio > 0 && (*it)->node->isLeaf())
         {
-            if ((*it)->node->genome_tree)
-                delete (*it)->node->genome_tree;
-            
-            (*it)->node->genome_tree = new GenomeTree((*it)->node->sequence.size());
             (*it)->node->insertion_pos = latest_insertion;
+            latest_insertion->phylo_nodes.push_back((*it)->node);
         }
         
         // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
@@ -1933,8 +1921,8 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     if (insertion_before_simulation && insertion_before_simulation->next)
     {
         // init a genome_tree to update new genomes for internal nodes
-        GenomeTree* genome_tree = new GenomeTree(ori_seq_length);
-        genome_tree->updateTree(insertion_before_simulation);
+        GenomeTree* genome_tree = new GenomeTree();
+        genome_tree->buildGenomeTree(insertion_before_simulation, ori_seq_length);
         
         // update non-empty internal sequences due to insertions
         updateInternalSeqsIndels(genome_tree, sequence_length, (*it)->node);
@@ -2450,25 +2438,68 @@ void AliSimulator::initSite2PatternID(int length)
     }
 }
 
-void AliSimulator::updateNewGenomeIndels(int seq_length, Node *node, Node *dad)
+void AliSimulator::updateNewGenomeIndels(int seq_length)
 {
-    // only update nodes that are tips
-    if (node->isLeaf() && node->name!=ROOT_NAME) {
-        // update the genome tree from insertion events
-        node->genome_tree->updateTree(node->insertion_pos);
-        node->insertion_pos = NULL;
-        
-        // update new genome
-        node->sequence = node->genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
-        
-        // re-init genome tree
-        if (node->genome_tree)
-            delete node->genome_tree;
-        
-        node->genome_tree = new GenomeTree(node->sequence.size());
+    // find the first tip that completed the simulation
+    Insertion* insertion = first_insertion;
+    for (; insertion && insertion->phylo_nodes.size() == 0; )
+        insertion = insertion->next;
+    
+    ASSERT(insertion && insertion->phylo_nodes.size() > 0);
+    
+    // build a genome tree from the list of insertions
+    GenomeTree* genome_tree = new GenomeTree();
+    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence.size(), true);
+    
+    // export new sequence for the first tip
+    for (int i = 0; i < insertion->phylo_nodes.size(); i++)
+    {
+        insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+    
+        // delete the insertion_pos of this node as we updated its sequence.
+        insertion->phylo_nodes[i]->insertion_pos = NULL;
     }
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        updateNewGenomeIndels(seq_length, (*it)->node, node);
+    
+    // keep track of previous insertion
+    Insertion* previous_insertion = insertion;
+    
+    // move to next insertion
+    insertion = insertion->next;
+    
+    // find the next tip and update it sequence
+    for (; insertion; )
+    {
+        // if we found a tip -> update the genome_tree and export the new sequence for that tip
+        if (insertion->phylo_nodes.size() > 0)
+        {
+            // if it is not the last tip -> update the genome tree
+            if (insertion->next)
+            {
+                genome_tree->updateGenomeTree(previous_insertion, insertion);
+                // keep track of previous insertion
+                previous_insertion = insertion;
+            }
+            // otherwise, it is the last tip -> the current sequence is already the latest sequence since there no more insertion occurs
+            else
+            {
+                delete genome_tree;
+                genome_tree = new GenomeTree(seq_length);
+            }
+            
+            // export the new sequence for the current tip
+            for (int i = 0; i < insertion->phylo_nodes.size(); i++)
+            {
+                insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+            
+                // delete the insertion_pos of this node as we updated its sequence.
+                insertion->phylo_nodes[i]->insertion_pos = NULL;
+            }
+        }
+        
+        // move to next insertion
+        insertion = insertion->next;
     }
+    
+    // delete genome_tree
+    delete genome_tree;
 }

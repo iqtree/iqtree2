@@ -113,11 +113,6 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
 void insertIndelSites(int position, int starting_index, int num_inserted_sites, IQTree *current_tree, Node *node, Node *dad);
 
 /**
-*  update genome trees at tips on the super tree if using Indels
-*/
-void updateGenomeTreesIndels(int seq_length, Node *node, Node *dad);
-
-/**
 *  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
 */
 void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
