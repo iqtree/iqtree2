@@ -288,6 +288,11 @@ public:
         parent node of the current node (only use when simulating Indels with AliSim)
      */
     Node* parent = NULL;
+    
+    /**
+        number of gaps in the sequence
+     */
+    int num_gaps = 0;
 
     /**
         list of neighbors

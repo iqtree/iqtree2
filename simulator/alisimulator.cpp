@@ -796,6 +796,10 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             tree->root->insertion_pos = latest_insertion;
     }
     
+    // count the number of gaps at root if Indels is used
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+        tree->root->num_gaps = count(tree->root->sequence.begin(), tree->root->sequence.end(), STATE_UNKNOWN);
+    
     // simulate Sequences
     simulateSeqs(sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
@@ -856,6 +860,7 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
     FOR_NEIGHBOR(node, dad, it) {
         // update parent node of the current node
         (*it)->node->parent = node;
+        (*it)->node->num_gaps = node->num_gaps;
         
         // reset the num_children_done_simulation
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
@@ -1850,7 +1855,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
             total_sub_rate = 0;
     }
     else // otherwise, TRANS_PROB_MATRIX approach is used -> only count the number of gaps
-        num_gaps = count((*it)->node->sequence.begin(), (*it)->node->sequence.end(), STATE_UNKNOWN);
+        num_gaps = (*it)->node->num_gaps;
     double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
     double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
     double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
@@ -1891,7 +1896,9 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
                 }
                 case DELETION:
                 {
-                    length_change = -handleDeletion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    int deletion_length = handleDeletion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    length_change = -deletion_length;
+                    (*it)->node->num_gaps += deletion_length;
                     break;
                 }
                 case SUBSTITUTION:
@@ -1973,7 +1980,10 @@ void AliSimulator::updateInternalSeqsFromRootToNode(GenomeTree* genome_tree, int
     
     // if it is a non-empty internal node -> update the current genome by the genome_tree
     if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence.size() > 0)
+    {
+        node->num_gaps += seq_length - node->sequence.size();
         node->sequence = genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+    }
     
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -2003,7 +2013,10 @@ void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int
     {
         // only update new genome at non-empty internal nodes
         if (!(internal_node->isLeaf()) && internal_node->sequence.size() > 0)
+        {
+            internal_node->num_gaps += seq_length - internal_node->sequence.size();
             internal_node->sequence = genome_tree->exportNewGenome(internal_node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+        }
         
         // move to the next parent
         internal_node = internal_node->parent;
