@@ -1450,6 +1450,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.outputfile_runtime = "";
     params.model_id = "";
     params.tmp_data_filename = "tmp_data";
+    params.rebuild_indel_history_param = 1.0/3;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5210,6 +5211,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_sequence_length = convert_int(argv[cnt]);
                 if (params.alisim_sequence_length < 1)
                     throw "Positive --length please";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--rebuild-indel-history") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --rebuild-indel-history <proportion>";
+                params.rebuild_indel_history_param = convert_double(argv[cnt]);
+                if (params.rebuild_indel_history_param < 0 || params.rebuild_indel_history_param > 1)
+                    throw "<proportion> must be between 0 and 1.";
                 continue;
             }
             

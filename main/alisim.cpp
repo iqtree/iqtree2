@@ -1131,6 +1131,8 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     GenomeTree* genome_tree = NULL;
     Insertion* previous_insertion = NULL;
     int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON?3:1;
+    int rebuild_indel_his_step = alisimulator->params->rebuild_indel_history_param * alisimulator->tree->leafNum;
+    int rebuild_indel_his_thresh = rebuild_indel_his_step;
 
     for (; !in.eof(); line_num++)
     {
@@ -1172,9 +1174,34 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         // otherwise, update the tree by accepted gaps (inserted by previous insertions) as normal characters
         else
         {
-            // if it is not the last tip -> update the genome tree
+            // if it is not the last tip -> rebuild/update the genome tree
             if (node->insertion_pos->next)
-                genome_tree->updateGenomeTree(previous_insertion, node->insertion_pos);
+            {
+                // rebuild the indel his if the number of tips (line_num) >= current threshold
+                if (line_num >= rebuild_indel_his_thresh)
+                {
+                    // detach the insertion and genome nodes
+                    for (Insertion* insertion = node->insertion_pos; insertion; )
+                    {
+                        // detach insertion and genome_nodes
+                        insertion->genome_nodes.clear();
+                        
+                        // move to the next insertion
+                        insertion = insertion->next;
+                    }
+                    
+                    // delete and rebuild genome tree
+                    delete genome_tree;
+                    genome_tree = new GenomeTree();
+                    genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+                    
+                    // update the next threshold to rebuild the indel his
+                    rebuild_indel_his_thresh += rebuild_indel_his_step;
+                }
+                // otherwise, just update indel his
+                else
+                    genome_tree->updateGenomeTree(previous_insertion, node->insertion_pos);
+            }
             // otherwise, it is the last tip -> the current sequence is already the latest sequence since there no more insertion occurs
             else
             {

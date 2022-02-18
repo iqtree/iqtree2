@@ -2440,6 +2440,11 @@ void AliSimulator::initSite2PatternID(int length)
 
 void AliSimulator::updateNewGenomeIndels(int seq_length)
 {
+    // dummy variables
+    int rebuild_indel_his_step = params->rebuild_indel_history_param * tree->leafNum;
+    int rebuild_indel_his_thresh = rebuild_indel_his_step;
+    int tips_count = 0;
+    
     // find the first tip that completed the simulation
     Insertion* insertion = first_insertion;
     for (; insertion && insertion->phylo_nodes.size() == 0; )
@@ -2454,6 +2459,8 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
     // export new sequence for the first tip
     for (int i = 0; i < insertion->phylo_nodes.size(); i++)
     {
+        tips_count++;
+        
         insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
     
         // delete the insertion_pos of this node as we updated its sequence.
@@ -2475,7 +2482,31 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
             // if it is not the last tip -> update the genome tree
             if (insertion->next)
             {
-                genome_tree->updateGenomeTree(previous_insertion, insertion);
+                // rebuild the indel his if the number of tips (line_num) >= current threshold
+                if (tips_count >= rebuild_indel_his_thresh)
+                {
+                    // detach the insertion and genome nodes
+                    for (Insertion* tmp_insertion = insertion; tmp_insertion; )
+                    {
+                        // detach insertion and genome_nodes
+                        tmp_insertion->genome_nodes.clear();
+                        
+                        // move to the next insertion
+                        tmp_insertion = tmp_insertion->next;
+                    }
+                    
+                    // delete and rebuild genome tree
+                    delete genome_tree;
+                    genome_tree = new GenomeTree();
+                    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence.size(), true);
+                    
+                    // update the next threshold to rebuild the indel his
+                    rebuild_indel_his_thresh += rebuild_indel_his_step;
+                }
+                // otherwise, just update indel his
+                else
+                    genome_tree->updateGenomeTree(previous_insertion, insertion);
+                
                 // keep track of previous insertion
                 previous_insertion = insertion;
             }
@@ -2489,6 +2520,8 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
             // export the new sequence for the current tip
             for (int i = 0; i < insertion->phylo_nodes.size(); i++)
             {
+                tips_count++;
+                
                 insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
             
                 // delete the insertion_pos of this node as we updated its sequence.

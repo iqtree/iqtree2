@@ -2530,6 +2530,11 @@ public:
     *  model id
     */
     string model_id;
+    
+    /**
+    *  param to rebuild the indel history when using indel
+    */
+    double rebuild_indel_history_param;
 };
 
 /**
