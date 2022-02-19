@@ -2978,8 +2978,8 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
     #pragma omp parallel for
     #endif
     for (size_t seq_id = 0; seq_id < seq_count; seq_id++) {
-        std::string& str = seq_data[seq_id];
-        auto patterns = site_pattern.data();
+        std::string& str  = seq_data[seq_id];
+        auto patterns     = site_pattern.data();
         auto patternCount = site_pattern.size();
         for (int i=0; i<patternCount; ++i) {
             auto state = at(patterns[i])[seq_id];
@@ -3000,7 +3000,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         else {
             out << left << seq_names[seq_id] << " ";
         }
-        std::string& str = seq_data[0];
+        std::string& str = seq_data[seq_id];
         out.width(0);
         out.write(str.c_str(), str.length());
     }
@@ -3149,13 +3149,15 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     progress_display progress(aln->getNSite(), "Identifying sites to remove", "examined", "site");
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     int    siteMod = 0; //site # modulo 100.
+    size_t seqCount = seq_id.size();
     for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
         for (it = seq_id.begin(); it != seq_id.end(); ++it) {
             pat.push_back ( (*pit)[*it] );
         }
-        int true_char = pat.computeGapChar(num_states, STATE_UNKNOWN); //JB 27-Jul-2020 Vectorized
+        size_t gap_chars = pat.computeGapChar(num_states, STATE_UNKNOWN);
+        size_t true_char = seqCount - gap_chars;
         if (true_char < min_true_char) {
             removed_sites++;
         }
