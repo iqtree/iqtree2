@@ -493,10 +493,9 @@ void PhyloTree::computeNonrevLikelihoodDerv
             intptr_t ptn_lower = limits[thread_id];
             intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
-                 it != traversal_info.end(); ++it)
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
-
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, thread_id);
+            }
             for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
                 double  lh_ptn  = ptn_invar[ptn];
                 double  df_ptn  = 0.0;
@@ -553,9 +552,8 @@ void PhyloTree::computeNonrevLikelihoodDerv
             intptr_t ptn_lower = limits[thread_id];
             intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
-                 it != traversal_info.end(); ++it) {
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, thread_id);
             }
             for (ptn = ptn_lower; ptn < ptn_upper; ++ptn) {
                 double  lh_ptn = ptn_invar[ptn];
@@ -716,10 +714,11 @@ double PhyloTree::computeNonrevLikelihoodBranch
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
             intptr_t ptn_lower = limits[thread_id];
             intptr_t ptn_upper = limits[thread_id+1];
+
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
-                 it != traversal_info.end(); ++it)
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, thread_id);
+            }
 
             // reset memory for _pattern_lh_cat
             memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
@@ -770,9 +769,9 @@ double PhyloTree::computeNonrevLikelihoodBranch
             intptr_t ptn_lower = limits[thread_id];
             intptr_t ptn_upper = limits[thread_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
-                 it != traversal_info.end(); ++it)
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, thread_id);
+            }
 
             // reset memory for _pattern_lh_cat
             memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));

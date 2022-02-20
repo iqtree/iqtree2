@@ -1225,9 +1225,11 @@ double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
 			theta += block*VCSIZE;
 
             // bugfix 2016-01-21, prob_const can be rescaled
-            for (j = 0; j < VCSIZE; j++)
-                if (sum_scale_num[ptn+j-orig_nptn] >= 1)
+            for (j = 0; j < VCSIZE; j++) {
+                if (sum_scale_num[ptn+j-orig_nptn] >= 1) {
                     vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
+				}
+			}
 
 			// ptn_invar[ptn] is not aligned
 			lh_ptn = horizontal_add(vc_ptn) 

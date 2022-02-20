@@ -280,7 +280,7 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon,
     ASSERT(newPInvar < 1.0);
     invar.setPInvar(newPInvar);
     phylo_tree->clearAllPartialLH();
-//    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
+    //phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
     double pinvLH = phylo_tree->computeLikelihood();
     ASSERT(pinvLH > curlh - 1.0);
     return pinvLH;

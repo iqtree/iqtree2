@@ -260,7 +260,6 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD
 		// pre compute information for left tip
 		double *partial_lh_left = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
 
-
 		vector<int>::iterator it;
 		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
 			int state = (*it);
@@ -268,15 +267,19 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD
 			VectorClass vleft[VCSIZE];
 			for (c = 0; c < ncat; c++) {
 				size_t addrtip = state*block+c*nstates;
-				for (i = 0; i < nstates/VCSIZE; i++)
+				for (i = 0; i < nstates/VCSIZE; i++) {
 					vc_partial_lh_tmp[i].load_a(&tip_lh[addrtip+i*VCSIZE]);
+				}
 				for (x = 0; x < nstates; x+=VCSIZE) {
 					size_t addr = (c*nstates+x)*nstates/VCSIZE;
-					for (j = 0; j < VCSIZE; j++)
+					for (j = 0; j < VCSIZE; j++) {
 						vleft[j] = eleft[addr+j*nstates/VCSIZE] * vc_partial_lh_tmp[0];
+					}
 					for (i = 1; i < nstates/VCSIZE; i++) {
-						for (j = 0; j < VCSIZE; j++)
-							vleft[j] = mul_add(eleft[addr+j*nstates/VCSIZE+i], vc_partial_lh_tmp[i], vleft[j]);
+						for (j = 0; j < VCSIZE; j++) {
+							vleft[j] = mul_add(eleft[addr+j*nstates/VCSIZE+i], 
+							                   vc_partial_lh_tmp[i], vleft[j]);
+						}
 					}
 					horizontal_add(vleft).store_a(&partial_lh_left[addrtip+x]);
 				}
@@ -421,10 +424,11 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD
 					for (j = 0; j < VCSIZE; j++) {
 						res[j] = vc_partial_lh_tmp[0] * this_inv_evec[(i+j)*nstates/VCSIZE];
 					}
-					for (x = 1; x < nstates/VCSIZE; x++)
-						for (j = 0; j < VCSIZE; j++)
+					for (x = 1; x < nstates/VCSIZE; x++) {
+						for (j = 0; j < VCSIZE; j++) {
 							res[j] = mul_add(vc_partial_lh_tmp[x], this_inv_evec[(i+j)*nstates/VCSIZE+x], res[j]);
-
+						}
+					}
 					VectorClass sum_res = horizontal_add(res);
 					sum_res.store_a(&partial_lh[i]);
 					vc_max = max(vc_max, abs(sum_res)); // take the maximum for scaling check
@@ -1153,9 +1157,11 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 			theta += block*VCSIZE;
 
             // bugfix 2016-01-21, prob_const can be rescaled
-            for (j = 0; j < VCSIZE; j++)
-                if (sum_scale_num[ptn+j-orig_nptn] >= 1)
+            for (j = 0; j < VCSIZE; j++) {
+                if (sum_scale_num[ptn+j-orig_nptn] >= 1) {
                     vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
+				}
+			}
 
 			// ptn_invar[ptn] is not aligned
 			lh_ptn = horizontal_add(vc_ptn) 

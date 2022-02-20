@@ -767,8 +767,8 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD
             intptr_t ptn_lower = limits[packet_id];
             intptr_t ptn_upper = limits[packet_id+1];
             // first compute partial_lh
-            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, packet_id, buffers);
             }
             double *vec_tip = buffer_partial_lh_ptr + block*3*VectorClass::size() * packet_id;
             auto dadStateRow  = (dad->id < aln->getNSeq32()) ? this->getConvertedSequenceByNumber(dad->id) : nullptr;
@@ -924,8 +924,8 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD
             intptr_t ptn_lower = limits[packet_id];
             intptr_t ptn_upper = limits[packet_id+1];
             // first compute partial_lh
-            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, packet_id, buffers);
             }
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 VectorClass lh_ptn(0.0), df_ptn(0.0), ddf_ptn(0.0);
@@ -1227,8 +1227,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD
             intptr_t ptn_lower = limits[packet_id];
             intptr_t ptn_upper = limits[packet_id+1];
             // first compute partial_lh
-            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, packet_id, buffers);
             }
             // reset memory for _pattern_lh_cat
             memset(buffers._pattern_lh_cat+ptn_lower*ncat_mix, 0, sizeof(double)*(ptn_upper-ptn_lower)*ncat_mix);
@@ -1376,9 +1376,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD
             intptr_t ptn_lower = limits[packet_id];
             intptr_t ptn_upper = limits[packet_id+1];
             // first compute partial_lh
-            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); 
-                 it != traversal_info.end(); ++it) {
-                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id, buffers);
+            for (TraversalInfo& trav : traversal_info) {
+                computePartialLikelihood(trav, ptn_lower, ptn_upper, packet_id, buffers);
             }
 
             // reset memory for _pattern_lh_cat
