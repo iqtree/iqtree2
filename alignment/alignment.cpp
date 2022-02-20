@@ -3562,7 +3562,7 @@ void Alignment::getAllSequences(const char* task_description,
 }
 
 void Alignment::printPhylip(ostream &out, bool append,
-                            const char *aln_site_list,
+                            co∫nst char *aln_site_list,
                             int exclude_sites, const char *ref_seq_name,
                             bool print_taxid,
                             bool report_progress) const {

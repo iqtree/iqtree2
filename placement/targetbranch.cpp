@@ -259,7 +259,8 @@ void TargetBranch::setLhScaleFactor(double v) {
     branch_lh_scale_factor = v;
 }
 
-void TargetBranch::takeOwnershipOfReplacementVector(ReplacementBranchList* branches) {
+void TargetBranch::takeOwnershipOfReplacementVector
+        (ReplacementBranchList* branches) {
     replacements = branches;
 }
 

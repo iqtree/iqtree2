@@ -468,10 +468,11 @@ void AlignmentPairwise::computeFuncDervCategorizedRates(double value, double& df
 
     for (int cat = 0; cat < ncat; cat++) {
         double rate_val = site_rate->getRate(cat);
-        double derv1 = 0.0, derv2 = 0.0;
+        double derv1    = 0.0;
+        double derv2    = 0.0;
         tree->getModelFactory()->computeTransDerv(value*rate_val, trans_mat, 
                                                     trans_derv1, trans_derv2);
-        double *pair_pos = pair_freq + cat*trans_size;
+        double* pair_pos = pair_freq + cat*trans_size;
         for (int i = 0; i < trans_size; i++) {
             if (pair_pos[i] > 0) {
                 if (trans_mat[i] <= 0) {
@@ -485,7 +486,7 @@ void AlignmentPairwise::computeFuncDervCategorizedRates(double value, double& df
         local_df  -= derv1 * rate_val;
         local_ddf -= derv2 * rate_val * rate_val;
     }
-    df = local_df;
+    df  = local_df;
     ddf = local_ddf;
     return;
 }
@@ -511,7 +512,7 @@ void AlignmentPairwise::computeFuncDervAsUsual(double value, double& df, double&
         //cout << "cat " << cat << "," << (intptr_t)trans_mat << ", " << (intptr_t)trans_derv1 << ", " << (intptr_t)trans_derv2 << endl;
         tree->getModelFactory()->computeTransDerv(value * rate_val, trans_mat, trans_derv1, trans_derv2);
         for (int i = 0; i < trans_size; i++) {
-            sum_trans[i] += trans_mat[i] * prop_val;
+            sum_trans[i] += trans_mat[i]   * prop_val;
             sum_derv1[i] += trans_derv1[i] * coeff1;
             sum_derv2[i] += trans_derv2[i] * coeff2;
         }
@@ -527,7 +528,7 @@ void AlignmentPairwise::computeFuncDervAsUsual(double value, double& df, double&
     
     for (int i = 0; i < trans_size; i++) {
         if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0.0) {
-            double d1 = sum_derv1[i] / sum_trans[i];
+            double d1  = sum_derv1[i] / sum_trans[i];
             local_df  -= pair_freq[i] * d1;
             local_ddf -= pair_freq[i] * (sum_derv2[i]/sum_trans[i] - d1 * d1);
         }

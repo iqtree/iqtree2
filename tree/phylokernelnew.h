@@ -3081,7 +3081,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
 
                 // compute the scaling factor per pattern
                 VectorClass vc_min_scale(0.0);
-                double* vc_min_scale_ptr = (double*)&vc_min_scale;
+                double*     vc_min_scale_ptr = (double*)&vc_min_scale;
                 if (SAFE_NUMERIC) {
                     const UBYTE* scale_dad  = dad_branch->scale_num  + ptn*ncat_mix;
                     const UBYTE* scale_node = node_branch->scale_num + ptn*ncat_mix;
@@ -3232,9 +3232,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
     }
     if (ASC_Holder) {
         // Mark Holder's ascertainment bias correction for missing data
-        double *const_lh = buffers._pattern_lh + max_orig_nptn;
-        size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
-        double *const_lh_next = const_lh + step_unobserved_ptns;
+        double* const_lh             = buffers._pattern_lh + max_orig_nptn;
+        size_t  step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
+        double* const_lh_next        = const_lh + step_unobserved_ptns;
         for (int step = 1; step < nstates; step++, const_lh_next += step_unobserved_ptns) {
             #ifdef _OPENMP
             #pragma omp parallel for
@@ -3329,13 +3329,12 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
         mix_addr[c]          = mix_addr_nstates[c]*nstates;
     }
 
-
-    double* val0 = nullptr;
     std::vector<double> cat_length_vector(ncat);
     std::vector<double> cat_prop_vector(ncat);
     double* cat_length = cat_length_vector.data();
     double* cat_prop   = cat_prop_vector.data();
-
+    double* val0       = nullptr;
+ 
     if (SITE_MODEL) {
         for (int c = 0; c < ncat; ++c) {
             cat_length[c] = rate_model->getRate(c) * current_it->length;
@@ -3375,7 +3374,6 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
             }
         }
     }
-
     double all_tree_lh(0.0), all_prob_const(0.0);
 
     #ifdef _OPENMP
@@ -3470,9 +3468,9 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
 
     if (ASC_Holder) {
         // Mark Holder's ascertainment bias correction for missing data
-        double *const_lh = buffers._pattern_lh + max_orig_nptn;
-        size_t step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
-        double *const_lh_next = const_lh + step_unobserved_ptns;
+        double* const_lh = buffers._pattern_lh + max_orig_nptn;
+        size_t  step_unobserved_ptns = model_factory->unobserved_ptns.size() / nstates;
+        double* const_lh_next = const_lh + step_unobserved_ptns;
         for (int step = 1; step < nstates; step++, const_lh_next += step_unobserved_ptns) {
             for (intptr_t ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size()) {
                 (VectorClass().load_a(&const_lh[ptn]) + VectorClass().load_a(&const_lh_next[ptn])).store_a(&const_lh[ptn]);

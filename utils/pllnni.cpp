@@ -711,8 +711,10 @@ string convertQuartet2String(nodeptr p) {
 }
 
 void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
-    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back, PLL_FALSE,
-            PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+    pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, 
+	                pllInst->start->back, PLL_FALSE, PLL_TRUE, 
+					PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, 
+					PLL_FALSE, PLL_FALSE);
 	PhyloTree mtree;
 	mtree.rooted = false;
 	mtree.aln = globalAlignment;

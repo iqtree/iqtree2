@@ -1334,8 +1334,9 @@ string IQTree::generateParsimonyTree(int randomSeed) {
                                                             params->spr_radius);
             resetBranches(pllInst);
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
-                            pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
-                            PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+                            pllInst->start->back, PLL_FALSE, PLL_TRUE, 
+                            PLL_FALSE, PLL_FALSE, PLL_FALSE, 
+                            PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
             {
                 string pllTreeString = string(pllInst->tree_string);
                 PhyloTree::readTreeString(pllTreeString);
@@ -2695,9 +2696,9 @@ string IQTree::optimizeBranches(int maxTraversal) {
         pllOptimizeBranchLengths(pllInst, pllPartitions, maxTraversal);
         curScore = pllInst->likelihood;
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
-                        pllInst->start->back, PLL_TRUE, PLL_TRUE, PLL_FALSE,
-                        PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH,
-                        PLL_FALSE, PLL_FALSE);
+                        pllInst->start->back, PLL_TRUE, PLL_TRUE, 
+                        PLL_FALSE, PLL_FALSE, PLL_FALSE, 
+                        PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         tree = string(pllInst->tree_string);
     } else {
         curScore = optimizeAllBranches(maxTraversal, params->loglh_epsilon,

@@ -792,9 +792,7 @@ public:
     }
 };
 
-
 void PhyloTree::mergeAlignment(const Alignment* new_aln) {
-
     intptr_t       old_count    = aln->getNSeq();
     intptr_t       new_count    = new_aln->getNSeq();
     size_t         site_count   = aln->getNSite();
@@ -1190,8 +1188,9 @@ void PhyloTree::readTreeStringSeqName(const string &tree_string) {
     if (rooted) {
         rooted = false;
         readTree(str, rooted);
-        if (!rooted)
+        if (!rooted) {
             convertToRooted();
+        }
     } else {
         readTree(str, rooted);
     }
@@ -1206,7 +1205,6 @@ void PhyloTree::readTreeStringSeqName(const string &tree_string) {
         pllReadNewick(getTreeString());
     }
     resetCurScore();
-//    lhComputed = false;
     if (params->fixStableSplits) {
         buildNodeSplit();
     }
@@ -3605,7 +3603,8 @@ void PhyloTree::optimizePatternRates(DoubleVector &pattern_rates) {
         tree->setModelFactory(getModelFactory());
 
         // main optimization
-        tree->optimizeTreeLengthScaling(MIN_SITE_RATE, pattern_rates[ptn], MAX_SITE_RATE, 0.0001);
+        tree->optimizeTreeLengthScaling(MIN_SITE_RATE, pattern_rates[ptn], 
+                                        MAX_SITE_RATE, 0.0001);
         
         tree->setModelFactory(nullptr);
         tree->doneComputingDistances();
@@ -6268,7 +6267,7 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch,
     }
     if (params->lh_mem_save == LM_PER_NODE) {
         hideProgress();
-        ASSERT(dad_branch->partial_lh && "partial_lh is not re-oriented");
+        ASSERT(dad_branch->partial_lh!=nullptr && "partial_lh is not re-oriented");
         showProgress();
     }
 }
@@ -6444,8 +6443,8 @@ void PhyloTree::writeSiteLh
 
 void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
     DoubleVector pattern_rates;
-    IntVector pattern_cat;
-    int ncategory = 1;
+    IntVector    pattern_cat;
+    int          ncategory = 1;
     
     if (bayes) {
         double* lh_cat = tree_buffers._pattern_lh_cat;

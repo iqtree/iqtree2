@@ -123,15 +123,20 @@ public:
 	//being inherited "via dominance". Explictly declaring them
 	//instead shuts those warnings up.
 	virtual int    getNRate()         const override { return super::getNRate(); }
-	virtual void   setRate(int category, double value) override { super::setRate(category, value); }
+	virtual void   setRate(int category, double value) override { 
+		super::setRate(category, value); 
+	}
 	virtual int    getNDiscreteRate() const override { return super::getNDiscreteRate(); }
 	virtual double getGammaShape()    const override { return super::getGammaShape(); }
 	virtual void   setGammaShape(double gs) override { super::setGammaShape(gs); }
 	virtual bool   isFixGammaShape()  const override { return super::isFixGammaShape(); }
-	virtual void   setFixGammaShape(bool fixGammaShape) override { super::setFixGammaShape(fixGammaShape); }
+	virtual void   setFixGammaShape(bool fixGammaShape) override { 
+		super::setFixGammaShape(fixGammaShape); 
+	}
 	virtual int    isGammaRate()      const override { return super::isGammaRate(); }
 	virtual int    computePatternRates(double* pattern_lh_cat, 
-	                                   DoubleVector& pattern_rates, IntVector& pattern_cat) override {
+	                                   DoubleVector& pattern_rates, 
+									   IntVector& pattern_cat) override {
 		return super::computePatternRates(pattern_lh_cat, pattern_rates, pattern_cat);
 	}
 

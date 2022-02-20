@@ -164,12 +164,14 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
                      << " has branch cost " << tb.getBranchCost()
                      << " and connection_cost " << tb.getConnectionCost() );
         }
-        LOG_LINE(VerboseMode::VB_DEBUG, "finding best " << s.name << " move for each branch");
+        LOG_LINE(VerboseMode::VB_DEBUG, "finding best " 
+                 << s.name << " move for each branch");
         std::vector<Move> moves;
         moves.resize(branch_count);
         
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(num_threads) reduction(+:positions_considered) schedule(dynamic)
+#pragma omp parallel for num_threads(num_threads) \
+        reduction(+:positions_considered) schedule(dynamic)
 #endif
         for (intptr_t i=0; i<branch_count; ++i) {
             Move&         move   = moves[i];
@@ -203,7 +205,7 @@ int PhyloTree::optimizeSubtreeParsimony(ParsimonySearchParameters& s,
         moves_applied=0;
         moves_still_possible=0;
         
-        size_t i=moves_considered;
+        size_t i         = moves_considered;
         double work_step = 0;
         if (0<moves_considered) {
             work_step = static_cast<double>(branch_count) 

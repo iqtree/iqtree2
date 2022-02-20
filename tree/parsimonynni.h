@@ -50,5 +50,4 @@ protected:
     PhyloNode* getOtherRightNode() const;
 };
 
-
 #endif /* parsimonynni_h */

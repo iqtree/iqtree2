@@ -162,11 +162,12 @@ void PhyloTree::computePartialLikelihoodEigenSIMD
         }
         assert(done && "partial_lh is not re-oriented");
     }
-    double* evec     = model_to_use->getEigenvectors();
-    double* inv_evec = model_to_use->getInverseEigenvectors();
-    assert(inv_evec!=nullptr && evec!=nullptr);
+    double*       evec      = model_to_use->getEigenvectors();
+    double*       inv_evec  = model_to_use->getInverseEigenvectors();
     double*       eval      = model_to_use->getEigenvalues();
     const double* ptn_invar = model_to_use->getPatternInvar();
+
+    assert(inv_evec!=nullptr && evec!=nullptr);
 
     VectorClass* echildren = aligned_alloc<VectorClass>(block*nstates/VCSIZE*(node->degree()-1));
     double* partial_lh_leaves = nullptr;
@@ -704,10 +705,9 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 #pragma omp parallel for
 #endif
             for (intptr_t ptn = 0; ptn < nptn; ptn++) {
-                double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-                double *theta = buffers.theta_all + ptn*block;
-                
-                int dadState;
+                double* partial_lh_dad = dad_branch->partial_lh + ptn*block;
+                double* theta          = buffers.theta_all + ptn*block;                
+                int     dadState;
                 if (ptn < orig_nptn) {
                     if (dadStateRow!=nullptr) {
                         dadState = dadStateRow[ptn];
@@ -788,18 +788,17 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
 
         vc_freq.load_a(&ptn_freq[ptn]);
 
-        df_ptn = horizontal_add(vc_df) * inv_lh_ptn;
+        df_ptn  = horizontal_add(vc_df) * inv_lh_ptn;
         ddf_ptn = horizontal_add(vc_ddf) * inv_lh_ptn;
         ddf_ptn = nmul_add(df_ptn, df_ptn, ddf_ptn);
 
 #ifdef _OPENMP
-        df_final_th = mul_add(df_ptn, vc_freq, df_final_th);
+        df_final_th  = mul_add(df_ptn, vc_freq, df_final_th);
         ddf_final_th = mul_add(ddf_ptn, vc_freq, ddf_final_th);
 #else
-        df_final = mul_add(df_ptn, vc_freq, df_final);
+        df_final  = mul_add(df_ptn, vc_freq, df_final);
         ddf_final = mul_add(ddf_ptn, vc_freq, ddf_final);
 #endif
-
     }
 
 #ifdef _OPENMP
@@ -810,24 +809,23 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
     }
 }
 #endif
-    df = horizontal_add(df_final);
+    df  = horizontal_add(df_final);
     ddf = horizontal_add(ddf_final);
     if (isnan(df) || isinf(df)) {
-        df = 0.0;
+        df  = 0.0;
         ddf = 0.0;
-//        outWarning("Numerical instability (some site-likelihood = 0)");
+        // outWarning("Numerical instability (some site-likelihood = 0)");
     }
 
-
-//    assert(isnormal(tree_lh));
+    //assert(isnormal(tree_lh));
     if (orig_nptn < nptn) {
         // ascertaiment bias correction
         VectorClass lh_final = 0.0;
-        df_final = 0.0;
+        df_final  = 0.0;
         ddf_final = 0.0;
-        lh_ptn = 0.0;
-        df_ptn = 0.0;
-        ddf_ptn = 0.0;
+        lh_ptn    = 0.0;
+        df_ptn    = 0.0;
+        ddf_ptn   = 0.0;
         double prob_const, df_const, ddf_const;
         double *theta = &buffers.theta_all[orig_nptn*block];
         for (intptr_t ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
@@ -839,7 +837,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
             for (int i = 0; i < VCSIZE; i++) {
                 vc_theta[i].load_a(theta+i*block);
                 vc_ptn[i] = vc_val0[0] * vc_theta[i];
-                vc_df[i] = vc_val1[0] * vc_theta[i];
+                vc_df[i]  = vc_val1[0] * vc_theta[i];
                 vc_ddf[i] = vc_val2[0] * vc_theta[i];
             }
 
@@ -847,7 +845,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
                 for (int j = 0; j < VCSIZE; j++) {
                     vc_theta[j].load_a(&theta[i*VCSIZE+j*block]);
                     vc_ptn[j] = mul_add(vc_theta[j], vc_val0[i], vc_ptn[j]);
-                    vc_df[j] = mul_add(vc_theta[j], vc_val1[i], vc_df[j]);
+                    vc_df[j]  = mul_add(vc_theta[j], vc_val1[i], vc_df[j]);
                     vc_ddf[j] = mul_add(vc_theta[j], vc_val2[i], vc_ddf[j]);
                 }
             }
@@ -863,33 +861,33 @@ void PhyloTree::computeLikelihoodDervEigenSIMD
         switch ((nptn-orig_nptn) % VCSIZE) {
         case 0:
             prob_const = horizontal_add(lh_final+lh_ptn);
-            df_const = horizontal_add(df_final+df_ptn);
-            ddf_const = horizontal_add(ddf_final+ddf_ptn);
+            df_const   = horizontal_add(df_final+df_ptn);
+            ddf_const  = horizontal_add(ddf_final+ddf_ptn);
             break;
         case 1:
             prob_const = horizontal_add(lh_final)+lh_ptn[0];
-            df_const = horizontal_add(df_final)+df_ptn[0];
-            ddf_const = horizontal_add(ddf_final)+ddf_ptn[0];
+            df_const   = horizontal_add(df_final)+df_ptn[0];
+            ddf_const  = horizontal_add(ddf_final)+ddf_ptn[0];
             break;
         case 2:
             prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1];
-            df_const = horizontal_add(df_final)+df_ptn[0]+df_ptn[1];
-            ddf_const = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1];
+            df_const   = horizontal_add(df_final)+df_ptn[0]+df_ptn[1];
+            ddf_const  = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1];
             break;
         case 3:
             prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2];
-            df_const = horizontal_add(df_final)+df_ptn[0]+df_ptn[1]+df_ptn[2];
-            ddf_const = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1]+ddf_ptn[2];
+            df_const   = horizontal_add(df_final)+df_ptn[0]+df_ptn[1]+df_ptn[2];
+            ddf_const  = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1]+ddf_ptn[2];
             break;
         default:
             assert(0);
             break;
         }
         prob_const = 1.0 - prob_const;
-        double df_frac = df_const / prob_const;
+        double df_frac  = df_const / prob_const;
         double ddf_frac = ddf_const / prob_const;
-        size_t nsites = aln->getNSite();
-        df += nsites * df_frac;
+        size_t nsites   = aln->getNSite();
+        df  += nsites * df_frac;
         ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
     assert(!isnan(df));
@@ -904,8 +902,9 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD
          LikelihoodBufferSet& buffers) {
     PhyloNode*     node        = dad_branch->getNode();
     PhyloNeighbor* node_branch = node->findNeighbor(dad);
-    if (!central_partial_lh)
+    if (!central_partial_lh) {
         initializeAllPartialLh();
+    }
     if (node->isLeaf()) {
         std::swap(dad, node);
         std::swap(dad_branch, node_branch);
@@ -1109,14 +1108,14 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD
                 printTree(cout);
                 cout << endl;
             }
-//            cout << "WARNING: Tree log-likelihood is set to " << tree_lh << endl;
+            // cout << "WARNING: Tree log-likelihood is set to " << tree_lh << endl;
         }
 
         if (orig_nptn < nptn) {
             lh_final = 0.0;
             lh_ptn = 0.0;
             for (intptr_t ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
-//                double *partial_lh_dad = &dad_branch->partial_lh[ptn*block];
+                // double *partial_lh_dad = &dad_branch->partial_lh[ptn*block];
                 lh_final += lh_ptn;
                 for (int j = 0; j < VCSIZE; j++) {
                     vc_ptn[j] = 0.0;
@@ -1213,8 +1212,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD
 #pragma omp for nowait
 #endif
         for (intptr_t ptn = 0; ptn < orig_nptn; ptn+=VCSIZE) {
-            double *partial_lh_dad  = dad_branch->partial_lh + ptn*block;
-            double *partial_lh_node = node_branch->partial_lh + ptn*block;
+            double* partial_lh_dad  = dad_branch->partial_lh + ptn*block;
+            double* partial_lh_node = node_branch->partial_lh + ptn*block;
 
             for (int j = 0; j < VCSIZE; j++) {
                 vc_ptn[j] = 0.0;
@@ -1236,7 +1235,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD
 #ifdef _OPENMP
             lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
 #else
-            lh_final = mul_add(lh_ptn, vc_freq, lh_final);
+            lh_final    = mul_add(lh_ptn, vc_freq, lh_final);
 #endif
         }
 #ifdef _OPENMP
@@ -1253,7 +1252,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD
         if (orig_nptn < nptn) {
             // ascertainment bias correction
             lh_final = 0.0;
-            lh_ptn = 0.0;
+            lh_ptn   = 0.0;
             double* partial_lh_node = &node_branch->partial_lh[orig_nptn*block];
             double* partial_lh_dad  = &dad_branch->partial_lh[orig_nptn*block];
 
@@ -1430,9 +1429,9 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD(LikelihoodBufferSet& buff
     if (orig_nptn < nptn) {
         // ascertaiment bias correction
         lh_final = 0.0;
-        lh_ptn = 0.0;
-        double prob_const;// df_const, ddf_const;
-        double *theta = &buffers.theta_all[orig_nptn*block];
+        lh_ptn   = 0.0;
+        double  prob_const;// df_const, ddf_const;
+        double* theta = &buffers.theta_all[orig_nptn*block];
 
         UBYTE sum_scale_num[nstates+VCSIZE];
         memset(sum_scale_num, 0, sizeof(UBYTE)*(nstates+VCSIZE));
@@ -1631,8 +1630,8 @@ void PhyloTree::computePartialParsimonyFastSIMD
                             }
                             UINT bit1 = (1 << (site%UINT_BITS));
                             UINT *p = x+(site/UINT_BITS);
-                            p[0] |= bit1;
-                            p[VCSIZE] |= bit1;
+                            p[0]        |= bit1;
+                            p[VCSIZE]   |= bit1;
                             p[2*VCSIZE] |= bit1;
                             p[3*VCSIZE] |= bit1;
                         }
@@ -1646,9 +1645,11 @@ void PhyloTree::computePartialParsimonyFastSIMD
                             UINT *p = x + ((site/UINT_BITS));
                             
                             UINT bit1 = (1 << (site%UINT_BITS));
-                            for (int i = 0; i < 4; i++)
-                                if (state & (1<<i))
+                            for (int i = 0; i < 4; i++) {
+                                if (state & (1<<i)) {
                                     p[i*VCSIZE] |= bit1;
+                                }
+                            }
                         }
                     }
                 }
@@ -1672,8 +1673,8 @@ void PhyloTree::computePartialParsimonyFastSIMD
                                 x += nstates*VCSIZE;
                                 site = 0;
                             }
-                            UINT bit1 = (1 << (site%UINT_BITS));
-                            UINT *p = x+(site/UINT_BITS);
+                            UINT  bit1 = (1 << (site%UINT_BITS));
+                            UINT* p    = x + (site/UINT_BITS);
                             for (int i = 0; i < 20; i++)
                                 p[i*VCSIZE] |= bit1;
                         }
@@ -1685,8 +1686,8 @@ void PhyloTree::computePartialParsimonyFastSIMD
                                 x += nstates*VCSIZE;
                                 site = 0;
                             }
-                            UINT *p = x + ((site/UINT_BITS));
-                            UINT bit1 = (1 << (site%UINT_BITS));
+                            UINT* p    = x + ((site/UINT_BITS));
+                            UINT  bit1 = (1 << (site%UINT_BITS));
 
                             p[ambi_aa[state]*VCSIZE] |= bit1;
                             p[ambi_aa[state+1]*VCSIZE] |= bit1;
@@ -1698,7 +1699,7 @@ void PhyloTree::computePartialParsimonyFastSIMD
             for (intptr_t patid = start_pos; patid != end_pos; patid++) {
                 Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                 int state = pat->at(leafid);
-                int freq = pat->frequency;
+                int freq  = pat->frequency;
                 if (aln->seq_type == SeqType::SEQ_POMO && state >= nstates && 
                     state < static_cast<int>( aln->STATE_UNKNOWN)) {
                     state -= nstates;
@@ -1771,7 +1772,7 @@ void PhyloTree::computePartialParsimonyFastSIMD
         } // of end FOR LOOP
 
         ASSERT(start_pos == aln->ordered_pattern.size());
-//        assert(site == aln->num_parsimony_sites % NUM_BITS);
+        // assert(site == aln->num_parsimony_sites % NUM_BITS);
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
@@ -1802,7 +1803,8 @@ void PhyloTree::computePartialParsimonyFastSIMD
         }
     } else {
         // internal node
-        ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  ); // it works only for strictly bifurcating tree
+        ASSERT(node->degree() == 3 || (dad==nullptr && 1<node->degree())  ); 
+        // this cpde works only for strictly bifurcating tree
         PhyloNeighbor* left  = nullptr;
         PhyloNeighbor* right = nullptr; // left & right are two neighbors leading to 2 subtrees
         FOR_EACH_PHYLO_NEIGHBOR(node, dad, it, pit) {
