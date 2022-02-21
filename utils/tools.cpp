@@ -5493,7 +5493,9 @@ void usage_alisim(){
     << endl << "Usage: iqtree --alisim <OUTPUT_PREFIX> [-m MODEL] [-t TREE] ..." << endl << endl
     << "  --alisim OUTPUT_PREFIX    Activate AliSim, specify the prefix for the output filename" << endl
     << "  -t TREE_FILE              Specify the path to the input tree[s]" << endl
-    << "  --length LENGTH           Set the length of the simulated sequences" << endl
+    << "  --length LENGTH           Set the length of the root sequence. The length of the output" << endl
+    << "                            sequences may be greater than the sequence length at root" << endl
+    << "                            in simulations with Indels." << endl
     << "  --num-alignments NUMBER   Set the number of output datasets" << endl
     << "  --seqtype STRING          BIN, DNA, AA, CODON, MORPH{NUM_STATES} (default: auto-detect)" << endl
     << "                            For morphological data, 0<NUM_STATES<=32" << endl

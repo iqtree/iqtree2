@@ -1007,7 +1007,10 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
     // don't load Input MSA if either partitions or ASC model is being used
     if ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
         || alisimulator->tree->isSuperTree())
+    {
+        outWarning("AliSim will not copy gaps from the input alignment in simulations with Indels/Partitions/+ASC models.");
         return input_msa;
+    }
     
     // only load Input MSA if the user has specified an alignment file and wants to copy gaps from the input MSA.
     if (alisimulator->params->aln_file && !alisimulator->params->alisim_no_copy_gaps)
