@@ -1544,10 +1544,10 @@ void exportAliSimCMD(Params &params, IQTree &tree)
         return;
     }
     
-    // skip mixture/heterotachy models
-    if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || params.partition_file || tree.getModel()->isLieMarkov())
+    // skip unsupported models
+    if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || params.partition_file || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
     {
-        outWarning("Sorry! Currently, we have not yet supported exporting AliSim command from Mixture/Partition/LieMarkov/Heterotachy(GHOST) model. Please refer to the User Manual for simulations with those types of models!");
+        outWarning("Sorry! Currently, we only support exporting AliSim commands from models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, partition, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!");
         return;
     }
     
