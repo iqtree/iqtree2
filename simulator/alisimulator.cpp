@@ -375,7 +375,7 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                 string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
                 detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
                 
-                // manually detect AA data from "NONREV", "GTR20", "Poisson" model
+                // manually detect AA data from "NONREV", "GTR20", "Poisson" model and detect DNA data from UNREST model
                 if (tree->aln->seq_type == SEQ_UNKNOWN)
                 {
                     const char* aa_model_names_plus[] = {"NONREV", "GTR20", "Poisson"};
@@ -386,6 +386,10 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                             tree->aln->seq_type = SEQ_PROTEIN;
                             break;
                         }
+                    
+                    // manually detect DNA data from UNREST model
+                    if (tree->aln->seq_type == SEQ_UNKNOWN && model_familyname == "UNREST")
+                        tree->aln->seq_type = SEQ_DNA;
                 }
             }
             if (tree->aln->seq_type != SEQ_UNKNOWN)
@@ -1856,8 +1860,14 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     }
     else // otherwise, TRANS_PROB_MATRIX approach is used -> only count the number of gaps
         num_gaps = (*it)->node->num_gaps;
-    double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
-    double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+    
+    double total_ins_rate = 0;
+    double total_del_rate = 0;
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+    {
+        total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
+        total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+    }
     double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
     
     // dummy variables
@@ -1878,12 +1888,15 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
             branch_length -=  waiting_time;
             
             // Determine the event type (insertion, deletion, substitution) occurs
-            double random_num = random_double()*total_event_rate;
             EVENT_TYPE event_type = SUBSTITUTION;
-            if (random_num < total_ins_rate)
-                event_type = INSERTION;
-            else if (random_num < total_ins_rate+total_del_rate)
-                event_type = DELETION;
+            if (total_ins_rate > 0 || total_del_rate > 0)
+            {
+                double random_num = random_double()*total_event_rate;
+                if (random_num < total_ins_rate)
+                    event_type = INSERTION;
+                else if (random_num < total_ins_rate+total_del_rate)
+                    event_type = DELETION;
+            }
             
             // process event
             int length_change = 0;
@@ -2303,11 +2316,31 @@ void AliSimulator::computeSwitchingParam(int seq_length)
 {
     // don't re-set the switching param if the user has specified it
     if (params->original_params.find("--simulation-thresh") == std::string::npos) {
-        // init 'a' with continuous rate heterogeneity
-        double a = 13.3073605;
-        // update 'a' for other simulations
+        double a = 1;
+        // init 'a' for simulations with discrete rate variation or without rate heterogeneity
         if (!tree->getModelFactory()->is_continuous_gamma)
-            a = 2.226224503;
+        {
+            if (seq_length >= 1000000)
+                a = 1;
+            else if (seq_length >= 500000)
+                a = 1.1;
+            else if (seq_length >= 100000)
+                a = 1.4;
+            else
+                a = 2.226224503;
+        }
+        // update 'a' for simulations with continuous rate variation
+        else
+        {
+            if (seq_length >= 1000000)
+                a = 6;
+            else if (seq_length >= 500000)
+                a = 7;
+            else if (seq_length >= 100000)
+                a = 9.1;
+            else
+                a = 13.3073605;
+        }
         
         // compute the switching param
         params->alisim_simulation_thresh = a/seq_length;

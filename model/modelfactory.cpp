@@ -442,6 +442,10 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         posfreq = freq_str.find("+Fo");
     else
         posfreq = freq_str.find("+F");
+        
+    // AliSim: manually handle cases when users specify +FO{...} or +FU{...}
+    if (freq_str.find("+FO{") != string::npos || freq_str.find("+FU{") != string::npos)
+        freq_str = "+F" + freq_str.substr(3, freq_str.length() - 3);
 
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 

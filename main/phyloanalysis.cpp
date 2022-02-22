@@ -1528,6 +1528,49 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
     }
     
     printOutfilesInfo(params, tree);
+    
+    // export AliSim command if needed
+    if (params.export_alisim_cmd)
+        exportAliSimCMD(params, tree);
+}
+
+void exportAliSimCMD(Params &params, IQTree &tree)
+{
+    // make sure this method will not make IQTREE crashed
+    if (!params.out_prefix || !tree.aln || !tree.getModel()
+        || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH))
+    {
+        outWarning("Sorry! We cannot export AliSim command from this inference!");
+        return;
+    }
+    
+    // skip mixture/heterotachy models
+    if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || params.partition_file || tree.getModel()->isLieMarkov())
+    {
+        outWarning("Sorry! Currently, we have not yet supported exporting AliSim command from Mixture/Partition/LieMarkov/Heterotachy(GHOST) model. Please refer to the User Manual for simulations with those types of models!");
+        return;
+    }
+    
+    // init alisim command
+    string alisim_cmd = "--alisim simulated_MSA";
+    
+    // specify tree
+    string tree_file(params.out_prefix);
+    alisim_cmd += " -t " + tree_file + ".treefile";
+    
+    // specify model
+    string model_tr = tree.getModelNameParams();
+    alisim_cmd += " -m " + model_tr;
+    
+    // specify the length of root sequence
+    string root_length = "";
+    int num_sites = tree.aln->getNSite() * (tree.aln->seq_type == SEQ_CODON ? 3 : 1);
+    root_length += " --length " + convertIntToString(num_sites);
+    alisim_cmd += root_length;
+    
+    // output alisim cmd
+    cout << endl << "AliSim command:" << endl;
+    cout << alisim_cmd << endl;
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {

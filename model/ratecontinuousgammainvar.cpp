@@ -40,13 +40,16 @@ void RateContinuousGammaInvar::getSiteSpecificRates(vector<double> &site_specifi
     gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);
     default_random_engine generator = Params::getInstance().generator;
     
+    // rescale ratio due to invariant sites
+    double scale = 1.0/(1 - p_invar);
+    
     for (int i = 0; i < sequence_length; i++)
     {
         // if this site is invariant -> its rate is zero
         if (random_double() <= p_invar)
             site_specific_rates[i] = 0;
         else
-            site_specific_rates[i] = distribution(generator);
+            site_specific_rates[i] = distribution(generator) * scale;
     }
 }
 

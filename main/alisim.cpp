@@ -1008,7 +1008,7 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
     if ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
         || alisimulator->tree->isSuperTree())
     {
-        outWarning("AliSim will not copy gaps from the input alignment in simulations with Indels/Partitions/+ASC models.");
+        outWarning("AliSim will not copy gaps from the input alignment into the output alignments in simulations with Indels/Partitions/+ASC models.");
         return input_msa;
     }
     
