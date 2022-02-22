@@ -615,6 +615,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
                     PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
             PhyloTree::readTreeStringSeqName(string(pllInst->tree_string));
             cout << getRealTime() - start << " seconds" << endl;
+            if (verbose_mode >= VB_MED)
+            {
+                int z = computeParsimony();
+                cout << "Parsimony of PLL Parsimony tree was " << z << endl;
+            }
             wrapperFixNegativeBranch(true);
             break;
         case STT_BIONJ:
