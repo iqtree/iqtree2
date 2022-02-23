@@ -778,6 +778,10 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
         
             // show the output file name
             cout << "An alignment has just been exported to "<<file_path<<endl;
+        
+            // show actual output sequence length in simulations with Indels
+            if (alisimulator->params->alisim_insertion_ratio > 0)
+                cout << "Output sequence length: " << convertIntToString(sequence_length) << endl;
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, file_path);
         }
