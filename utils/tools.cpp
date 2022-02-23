@@ -1451,7 +1451,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_id = "";
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
-    params.export_alisim_cmd = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5185,12 +5184,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // set default model_name
                 if (params.model_name.empty())
                     params.model_name = "HKY";
-                
-                continue;
-            }
-            
-            if (strcmp(argv[cnt], "--export-alisim-cmd") == 0) {
-                params.export_alisim_cmd = true;
                 
                 continue;
             }

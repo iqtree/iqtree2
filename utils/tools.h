@@ -2535,12 +2535,6 @@ public:
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;
-    
-    /**
-    *  TRUE to export AliSim command from IQTREE inference
-    */
-    bool export_alisim_cmd;
-    
 };
 
 /**
