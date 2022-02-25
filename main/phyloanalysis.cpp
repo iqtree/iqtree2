@@ -1066,17 +1066,16 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
             int namelen = stree->getMaxPartNameLength();
             int part;
-            out.width(max(namelen+6,10));
-            out << left << "  ID  Name" << "  Type\tSeq\tSite\tUnique\tInfor\tInvar\tConst" << endl;
+            out.width(4);
+            out << left << "  ID" << "\tType\tSeq\tSite\tUnique\tInfor\tInvar\tConst\tName" << endl;
             //out << string(namelen+54, '-') << endl;
             part = 0;
             for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
                 //out << "FOR PARTITION " << stree->part_info[part].name << ":" << endl << endl;
                 //reportAlignment(out, *((*it)->aln));
                 out.width(4);
-                out << right << part+1 << "  ";
-                out.width(max(namelen,4));
-                out << left << (*it)->aln->name << "  ";
+                out << right << part+1;
+                out << "\t";
                 switch ((*it)->aln->seq_type) {
                 case SEQ_BINARY: out << "BIN"; break;
                 case SEQ_CODON: out << "CODON"; break;
@@ -1090,7 +1089,10 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 out << "\t" << (*it)->aln->getNSeq() << "\t" << (*it)->aln->getNSite()
                     << "\t" << (*it)->aln->getNPattern() << "\t" << (*it)->aln->num_informative_sites
                     << "\t" << (*it)->getAlnNSite() - (*it)->aln->num_variant_sites
-                    << "\t" << int((*it)->aln->frac_const_sites*(*it)->getAlnNSite()) << endl;
+                    << "\t" << int((*it)->aln->frac_const_sites*(*it)->getAlnNSite())
+                    << "\t";
+                out << left << (*it)->aln->name;
+                out << endl;
             }
             out << endl << "Column meanings:" << endl
                 << "  Unique: Number of unique site patterns" << endl
