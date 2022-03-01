@@ -28,16 +28,10 @@ GenomeTree::GenomeTree(int length)
  */
 GenomeTree::~GenomeTree()
 {
-    if (root && root->left_child)
+    if (root)
     {
-        delete root->left_child;
-        root->left_child = NULL;
-    }
-    
-    if (root && root->right_child)
-    {
-        delete root->right_child;
-        root->right_child = NULL;
+        delete root;
+        root = NULL;
     }
 }
 
