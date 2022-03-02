@@ -1506,9 +1506,6 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             }
             out << endl;
         }
-        
-        // export AliSim command if needed
-        exportAliSimCMD(out, params, tree);
 
         time_t cur_time;
         time(&cur_time);
@@ -1530,23 +1527,26 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
     }
     
     printOutfilesInfo(params, tree);
+    
+    // export AliSim command if needed
+    exportAliSimCMD(params, tree);
 }
 
-void exportAliSimCMD(ostream &out, Params &params, IQTree &tree)
+void exportAliSimCMD(Params &params, IQTree &tree)
 {
     // make sure this method will not make IQTREE crashed
     if (!(params.aln_file || params.partition_file) || !params.out_prefix || !tree.aln || !tree.getModel()
         || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH))
         return;
     
-    out << "ALISIM COMMAND" << endl;
-    out << "--------------" << endl;
+    cout << "ALISIM COMMAND" << endl;
+    cout << "--------------" << endl;
     
     
     // skip unsupported models
     if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || params.partition_file || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
     {
-        out << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, partition, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        cout << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, partition, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
         return;
     }
     
@@ -1568,7 +1568,7 @@ void exportAliSimCMD(ostream &out, Params &params, IQTree &tree)
     alisim_cmd += root_length;
     
     // output alisim cmd
-    out << alisim_cmd << endl << endl;
+    cout << alisim_cmd << endl << endl;
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {

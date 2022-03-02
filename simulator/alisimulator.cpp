@@ -458,6 +458,7 @@ void AliSimulator::initializeModel(IQTree *tree, string model_name)
     ModelsBlock *models_block = readModelsDefinition(*params);
     tree->params = params;
     tree->IQTree::initializeModel(*params, tree->aln->model_name, models_block);
+    delete models_block;
 }
 
 /**
