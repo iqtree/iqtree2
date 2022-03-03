@@ -10,8 +10,9 @@
 
 #include "utils/tools.h"
 #include "tree/node.h"
-#include "superalignment.h"
-#include "superalignmentunlinked.h"
+#include "tree/genometree.h"
+#include "alignment/superalignment.h"
+#include "alignment/superalignmentunlinked.h"
 #include "tree/phylotreemixlen.h"
 #include "tree/phylosupertree.h"
 #include "tree/phylosupertreeplen.h"
@@ -210,7 +211,7 @@ protected:
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, int &sequence_length, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method);
+    void handleIndels(ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method);
     
     /**
         handle substitution events
@@ -220,7 +221,7 @@ protected:
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
@@ -244,21 +245,28 @@ protected:
     virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence);
     
     /**
-    *  insert gaps into other nodes when processing Insertion Events
+    *  update internal sequences due to Indels
     *
     */
-    void insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, Node *node, Node *dad, bool &stop_inserting_gaps);
+    void updateInternalSeqsIndels(GenomeTree* genome_tree, int seq_length, Node *node);
+    
+    /**
+    *  update all simulated internal seqs from root to the current node due to insertions
+    *
+    */
+    void updateInternalSeqsFromRootToNode(GenomeTree* genome_tree, int seq_length, int stopping_node_id, Node *node, Node* dad, bool &stop_inserting_gaps);
+    
+    /**
+    *  update internal seqs on the path from the current phylonode to root due to insertions
+    *
+    */
+    void updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int seq_length, Node *node);
     
     /**
     *  randomly select a valid position (not a deleted-site) for insertion/deletion event
     *
     */
     int selectValidPositionForIndels(int upper_bound, vector<short int> sequence);
-    
-    /**
-        merge the simulated sequence with indel_sequence
-    */
-    virtual void mergeIndelSequence(Node* node, vector<short int> indel_sequence, vector<int> index_mapping_by_jump_step);
     
     /**
         generate indel-size from its distribution
@@ -300,6 +308,11 @@ protected:
     */
     void initSite2PatternID(int length);
     
+    /**
+        temporarily write internal states to file (when using Indels)
+    */
+    void writeInternalStatesIndels(Node* node, ostream &out);
+    
 public:
     
     IQTree *tree;
@@ -321,6 +334,11 @@ public:
     double* Jmatrix;
     double* mixture_accumulated_weight = NULL;
     int mixture_max_weight_pos = 0;
+    int seq_length_indels = 0; // final seq_length due to indels
+    map<string, Node*> map_seqname_node; // mapping sequence name to Node (using when temporarily write sequences at tips to tmp_data file when simulating Indels)
+    Insertion* latest_insertion = NULL;
+    Insertion* first_insertion = NULL;
+    
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
@@ -383,6 +401,11 @@ public:
     *
     */
     static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
+    
+    /**
+    *  update new genome from original genome and the genome tree for each tips (due to Indels)
+    */
+    void updateNewGenomeIndels(int seq_length);
 };
 
 #endif /* alisimulator_h */

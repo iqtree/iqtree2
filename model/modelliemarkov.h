@@ -60,6 +60,11 @@ public:
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
 	virtual bool isReversible();
+    
+    /**
+     * @return TRUE if this is a liemarkov model, FALSE otherwise
+     */
+    virtual bool isLieMarkov() { return true; }
 
     /**
          initialize random state frequencies when running AliSim without inference mode

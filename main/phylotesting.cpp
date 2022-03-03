@@ -59,7 +59,7 @@ const char* morph_model_names[] = {"MK"};
 /******* DNA model set ******/
 const char* dna_model_names[] = {"GTR", "SYM", "TVM",  "TVMe", "TIM3",
         "TIM3e", "TIM2", "TIM2e", "TIM", "TIMe", "TPM3u", "TPM3",
-        "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC", "UNREST"};
+        "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC"};
 
 /* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"GTR",  "SYM", "TVM", "TVMe", "TIM", "TIMe",
@@ -125,7 +125,7 @@ const char *dna_model_names_lie_markov_strsym[] = {
 /****** Protein model set ******/
 const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
         "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM", "FLAVI",
-		"HIVb", "HIVw", "FLU", "rtREV", "cpREV", "NONREV", "GTR20", "Poisson"};
+		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
 
 /****** Protein mixture model set ******/
 const char* aa_mixture_model_names[] = {"C10", "C20", "C30", "C40", "C50", "C60", "EX2", "EX3", "EHO", "UL2", "UL3", "EX_EHO", "LG4M", "LG4X", "CF4"};

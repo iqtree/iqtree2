@@ -9,8 +9,8 @@
 #define alisim_h
 
 #include "utils/tools.h"
-#include "alignment/alisimulatorinvar.h"
-#include "alignment/alisimulatorheterogeneityinvar.h"
+#include "simulator/alisimulatorinvar.h"
+#include "simulator/alisimulatorheterogeneityinvar.h"
 #include "phyloanalysis.h"
 #include "tree/phylosupertree.h"
 #include "utils/gzstream.h"
@@ -56,7 +56,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
 
 /**
 *  compute the total sequence length of all partitions
@@ -76,7 +76,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad);
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad);
 
 /**
 *  merge and write all sequences to output files
@@ -111,5 +111,10 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
 *  insert redundant sites (inserted sites due to Indels) to the sequences of the super tree
 */
 void insertIndelSites(int position, int starting_index, int num_inserted_sites, IQTree *current_tree, Node *node, Node *dad);
+
+/**
+*  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
+*/
+void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
 
 #endif /* alisim_h */

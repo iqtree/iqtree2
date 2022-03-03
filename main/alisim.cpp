@@ -585,6 +585,11 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // generate alignment for the current tree/partition
                 AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree, partition_rate);
                 generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree, input_msa);
+                
+                // update new genome at tips from the original genome and the genome tree
+                // skip updating if using +ASC or Fundi model as they must be already updated
+                if (super_alisimulator->params->alisim_insertion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
+                    partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels);
             }
         }
         else
@@ -608,6 +613,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // show omega/kappa/kappa2 when using codon models
         if (super_alisimulator->tree->aln->seq_type == SEQ_CODON)
             super_alisimulator->tree->getModel()->writeInfo(cout);
+        
+        // remove tmp_data if using Insertion
+        if (super_alisimulator->params->alisim_insertion_ratio > 0)
+            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + ".phy").c_str());
     }
 }
 
@@ -649,7 +658,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
 {
     // show an error if continuous gamma is used in inference mode.
     if (alisimulator->params->alisim_inference_mode && alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->is_continuous_gamma)
@@ -735,13 +744,19 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
             AliSimulator::initializeStateMapping(alisimulator->num_sites_per_state, aln, state_mapping);
+        
+            // write sequences at tips to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
+            bool write_sequences_from_tmp_data = alisimulator->params->alisim_insertion_ratio > 0 && alisimulator->params->alisim_fundi_taxon_set.size() == 0 && !(alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE) && !alisimulator->tree->isSuperTree();
+            if (write_sequences_from_tmp_data)
+                writeSeqsFromTmpDataAndGenomeTreesIndels(alisimulator, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name);
+        
 
 #ifdef _OPENMP
 #pragma omp parallel
 #pragma omp single
 #endif
             // browsing all sequences, converting each sequence & caching & writing output string to file
-            writeASequenceToFile(aln, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, alisimulator->tree->root, alisimulator->tree->root);
+            writeASequenceToFile(aln, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, write_sequences_from_tmp_data, alisimulator->tree->root, alisimulator->tree->root);
 
             // close the output file for Indels
             if (write_indels_output)
@@ -763,6 +778,10 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
         
             // show the output file name
             cout << "An alignment has just been exported to "<<file_path<<endl;
+        
+            // show actual output sequence length in simulations with Indels
+            if (alisimulator->params->alisim_insertion_ratio > 0)
+                cout << "Output sequence length: " << convertIntToString(sequence_length) << endl;
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, file_path);
         }
@@ -903,11 +922,8 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
         int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
         
         // determine the real sequence_length if Indels is used
-        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0)
-        {
-            bool stop = false;
-            determineSequenceLength(alisimulator->tree->root, alisimulator->tree->root, stop, sequence_length);
-        }
+        if (alisimulator->params->alisim_insertion_ratio > 0)
+            sequence_length = alisimulator->seq_length_indels;
         
         //  get the num_leaves
         int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
@@ -918,9 +934,11 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
 {
-    if ((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0)) {
+    // if write_sequences_from_tmp_data and this node is a leaf -> skip this node as its sequence was already written to the output file
+    if ((!(node->isLeaf() && write_sequences_from_tmp_data))
+        &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0))) {
 #ifdef _OPENMP
 #pragma omp task firstprivate(node) shared(out, out_indels)
 #endif
@@ -932,8 +950,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             output[output.length()-1] = '\n';
             
             // convert non-empty sequence
-            if (node->sequence.size() >= sequence_length)
-                output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
+            output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
             
             // preparing output (without gaps) for indels
             string output_indels = "";
@@ -967,7 +984,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, write_sequences_from_tmp_data, (*it)->node, node);
     }
 }
 
@@ -994,7 +1011,10 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
     // don't load Input MSA if either partitions or ASC model is being used
     if ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
         || alisimulator->tree->isSuperTree())
+    {
+        outWarning("AliSim will not copy gaps from the input alignment into the output alignments in simulations with Indels/Partitions/+ASC models.");
         return input_msa;
+    }
     
     // only load Input MSA if the user has specified an alignment file and wants to copy gaps from the input MSA.
     if (alisimulator->params->aln_file && !alisimulator->params->alisim_no_copy_gaps)
@@ -1089,14 +1109,10 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 
         // if current_node is found, inserting sites normally
         if (current_node)
-        {
             node->sequence.insert(node->sequence.begin()+position, current_node->sequence.begin()+starting_index, current_node->sequence.end());
-        }
         // otherwise, insert gaps
         else
-        {
             node->sequence.insert(node->sequence.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
-        }
     }
     
     // process its neighbors/children
@@ -1105,4 +1121,138 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
         // browse 1-step deeper to the neighbor node
         insertIndelSites(position, starting_index, num_inserted_sites, current_tree, (*it)->node, node);
     }
+}
+
+/**
+*  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
+*/
+void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
+{
+    // read tmp_data line by line
+    igzstream in;
+    int line_num = 1;
+    string line;
+    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename + ".phy").c_str());
+    
+    // dummy variables
+    GenomeTree* genome_tree = NULL;
+    Insertion* previous_insertion = NULL;
+    int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON?3:1;
+    int rebuild_indel_his_step = alisimulator->params->rebuild_indel_history_param * alisimulator->tree->leafNum;
+    int rebuild_indel_his_thresh = rebuild_indel_his_step;
+
+    for (; !in.eof(); line_num++)
+    {
+        safeGetline(in, line);
+        line = line.substr(0, line.find_first_of("\n\r"));
+        if (line == "" || line_num == 1) continue;
+        
+        // extract seq_name
+        int index_of_first_at = line.find_first_of("@");
+        int index_of_second_at = line.find_first_of("@", index_of_first_at + 1);
+        string seq_name = line.substr(0, index_of_first_at);
+        
+        // retrieve Node from the seq_name
+        Node* node = alisimulator->map_seqname_node[seq_name];
+        if (!node)
+            outError("Oops! Couldn't find the node with name " + seq_name+" . There is something wrong!");
+        
+        // extract the length of the original sequence
+        int seq_length_ori = convert_int(line.substr(index_of_first_at + 1, index_of_second_at - index_of_first_at - 1).c_str());
+        
+        // extract original sequences
+        vector<short int> seq_ori(seq_length_ori, 0);
+        string internal_states = line.substr(index_of_second_at + 1, line.length() - index_of_second_at - 1);
+        istringstream seq_in(internal_states);
+        for (int i = 0; i < seq_length_ori; i++)
+            seq_in >> seq_ori[i];
+        
+        // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
+        string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
+        string output (sequence_length * num_sites_per_state+1, '-');
+        output[output.length()-1] = '\n';
+        
+        // build a new genome tree from the list of insertions if the genome tree has not been initialized (~NULL)
+        if (!genome_tree)
+        {
+            genome_tree = new GenomeTree();
+            genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+        }
+        // otherwise, update the tree by accepted gaps (inserted by previous insertions) as normal characters
+        else
+        {
+            // if it is not the last tip -> rebuild/update the genome tree
+            if (node->insertion_pos->next)
+            {
+                // rebuild the indel his if the number of tips (line_num) >= current threshold
+                if (line_num >= rebuild_indel_his_thresh)
+                {
+                    // detach the insertion and genome nodes
+                    for (Insertion* insertion = node->insertion_pos; insertion; )
+                    {
+                        // detach insertion and genome_nodes
+                        insertion->genome_nodes.clear();
+                        
+                        // move to the next insertion
+                        insertion = insertion->next;
+                    }
+                    
+                    // delete and rebuild genome tree
+                    delete genome_tree;
+                    genome_tree = new GenomeTree();
+                    genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+                    
+                    // update the next threshold to rebuild the indel his
+                    rebuild_indel_his_thresh += rebuild_indel_his_step;
+                }
+                // otherwise, just update indel his
+                else
+                    genome_tree->updateGenomeTree(previous_insertion, node->insertion_pos);
+            }
+            // otherwise, it is the last tip -> the current sequence is already the latest sequence since there no more insertion occurs
+            else
+            {
+                delete genome_tree;
+                genome_tree = new GenomeTree(seq_length_ori);
+            }
+        }
+        
+        // keep track of previous insertion
+        previous_insertion = node->insertion_pos;
+        
+        // delete the insertion_pos of this node as we updated its sequence.
+        node->insertion_pos = NULL;
+        
+        // export sequence of a leaf node from original sequence and genome_tree if using Indels
+        genome_tree->exportReadableCharacters(seq_ori, num_sites_per_state, state_mapping, output);
+        
+        // preparing output (without gaps) for indels
+        string output_indels = "";
+        if (write_indels_output)
+        {
+            // add node's name
+            string node_name = node->name;
+            // write node's id if node's name is empty
+            if (node_name.length() == 0) node_name = convertIntToString(node->id);
+            
+            output_indels = ">" + node_name + "\n" + output;
+            output_indels.erase(remove(output_indels.begin(), output_indels.end(), '-'), output_indels.end());
+        }
+        
+        // concat pre_output & output
+        output = pre_output + output;
+        
+        // write output to file
+        out << output;
+        
+        // write aln without gaps for Indels
+        if (write_indels_output)
+            out_indels << output_indels;
+    }
+    
+    // delete the genome tree
+    delete genome_tree;
+    
+    // close the tmp_data file
+    in.close();
 }
