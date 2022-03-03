@@ -124,7 +124,7 @@ const char *dna_model_names_lie_markov_strsym[] = {
 
 /****** Protein model set ******/
 const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
-        "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM",
+        "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM", "FLAVI",
 		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
 
 /****** Protein mixture model set ******/
@@ -159,7 +159,7 @@ const char *aa_model_names_mitochondrial[] = {"mtREV", "mtART", "mtZOA", "mtMet"
 
 const char *aa_model_names_chloroplast[] = {"cpREV"};
 
-const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV"};
+const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV", "FLAVI"};
 
 const char* aa_freq_names[] = {"", "+F"};
 
