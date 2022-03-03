@@ -1986,11 +1986,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_weight_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--contree") == 0) {
+			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--con-tree") == 0) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--connet") == 0) {
+			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--con-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
                 continue;
 			}
