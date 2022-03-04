@@ -1544,9 +1544,9 @@ void exportAliSimCMD(Params &params, IQTree &tree)
     
     
     // skip unsupported models
-    if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || params.partition_file || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
+    if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
     {
-        cout << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, partition, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        cout << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
         return;
     }
     
@@ -1555,17 +1555,51 @@ void exportAliSimCMD(Params &params, IQTree &tree)
     
     // specify tree
     string tree_file(params.out_prefix);
-    alisim_cmd += " -t " + tree_file + ".treefile";
+    if (params.partition_file && params.partition_type == BRLEN_OPTIMIZE)
+        tree_file += ".parttrees";
+    else
+        tree_file += ".treefile";
+    alisim_cmd += " -t " + tree_file;
     
-    // specify model
-    string model_tr = tree.getModelNameParams();
-    alisim_cmd += " -m " + model_tr;
+    // specify model or a partition file
+    // if using partitions -> specify a partition file
+    if (params.partition_file)
+    {
+        string partition_file(params.partition_file);
+        partition_file += ".best_model.nex";
+        switch (params.partition_type)
+        {
+            case BRLEN_OPTIMIZE:
+                alisim_cmd += " -Q " + partition_file;
+                break;
+            case BRLEN_FIX:
+                alisim_cmd += " -q " + partition_file;
+                break;
+            case BRLEN_SCALE:
+                alisim_cmd += " -p " + partition_file;
+                break;
+        }
+    }
+    // otherwise, specify a model
+    else
+    {
+        string model_tr = tree.getModelNameParams(true);
+        alisim_cmd += " -m \"" + model_tr + "\"";
+        
+        // specify num_states for morph data
+        if (tree.aln->seq_type == SEQ_MORPH)
+            alisim_cmd += " -st \"MORPH{" + convertIntToString(tree.aln->num_states) + "}\"";
+    }
     
     // specify the length of root sequence
-    string root_length = "";
-    int num_sites = tree.aln->getNSite() * (tree.aln->seq_type == SEQ_CODON ? 3 : 1);
-    root_length += " --length " + convertIntToString(num_sites);
-    alisim_cmd += root_length;
+    // skip specifying sequence length for partitions
+    if (!params.partition_file)
+    {
+        string root_length = "";
+        int num_sites = tree.aln->getNSite() * (tree.aln->seq_type == SEQ_CODON ? 3 : 1);
+        root_length += " --length " + convertIntToString(num_sites);
+        alisim_cmd += root_length;
+    }
     
     // output alisim cmd
     cout << alisim_cmd << endl << endl;

@@ -61,8 +61,20 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, int partition_
             part_info[part].part_rate *= 3.0;
     }
     
+    // bug fixed: if using edge-equal partitions but still specifying a tree length for each partition -> ignore tree lengths and set all partition rates at 1.
     if (has_tree_len)
-        normalizePartRate();
+    {
+        // only apply in cases with AliSim -> to make sure this change does not affect other function
+        if (Params::getInstance().alisim_active && partition_type == BRLEN_FIX)
+        {
+            part = 0;
+            for (iterator it = begin(); it != end(); it++, part++)
+                part_info[part].part_rate = 1;
+        }
+        // otherwise, normalize the partition rates as usual
+        else
+            normalizePartRate();
+    }
 }
 
 PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree)
