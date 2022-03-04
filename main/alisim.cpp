@@ -1009,8 +1009,10 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
 {
     map<string,string> input_msa;
     // don't load Input MSA if either partitions or ASC model is being used
-    if ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-        || alisimulator->tree->isSuperTree())
+    if (alisimulator->params->alisim_inference_mode &&
+        ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+        || alisimulator->tree->isSuperTree()
+        || alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0))
     {
         outWarning("AliSim will not copy gaps from the input alignment into the output alignments in simulations with Indels/Partitions/+ASC models.");
         return input_msa;
