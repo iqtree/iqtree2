@@ -3373,7 +3373,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
             int threadNum = omp_get_thread_num();
             AlignmentPairwise* processor = distanceProcessors[threadNum];
         #else
-            AlignmentPairwise* processor = distanceProcessors[1];
+            AlignmentPairwise* processor = distanceProcessors[0];
         #endif
         int rowStartPos = seq1 * nseqs;
         for (size_t seq2=seq1+1; seq2 < nseqs; ++seq2) {
