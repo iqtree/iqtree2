@@ -1449,6 +1449,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.outputfile_runtime = "";
     params.model_id = "";
+    params.tmp_data_filename = "tmp_data";
+    params.rebuild_indel_history_param = 1.0/3;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -1984,11 +1986,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_weight_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--contree") == 0) {
+			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--con-tree") == 0) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--connet") == 0) {
+			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--con-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
                 continue;
 			}
@@ -5212,6 +5214,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--rebuild-indel-history") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --rebuild-indel-history <proportion>";
+                params.rebuild_indel_history_param = convert_double(argv[cnt]);
+                if (params.rebuild_indel_history_param < 0 || params.rebuild_indel_history_param > 1)
+                    throw "<proportion> must be between 0 and 1.";
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--num-alignments") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5481,7 +5493,9 @@ void usage_alisim(){
     << endl << "Usage: iqtree --alisim <OUTPUT_PREFIX> [-m MODEL] [-t TREE] ..." << endl << endl
     << "  --alisim OUTPUT_PREFIX    Activate AliSim, specify the prefix for the output filename" << endl
     << "  -t TREE_FILE              Specify the path to the input tree[s]" << endl
-    << "  --length LENGTH           Set the length of the simulated sequences" << endl
+    << "  --length LENGTH           Set the length of the root sequence. The length of the output" << endl
+    << "                            sequences may be greater than the sequence length at root" << endl
+    << "                            in simulations with Indels." << endl
     << "  --num-alignments NUMBER   Set the number of output datasets" << endl
     << "  --seqtype STRING          BIN, DNA, AA, CODON, MORPH{NUM_STATES} (default: auto-detect)" << endl
     << "                            For morphological data, 0<NUM_STATES<=32" << endl
@@ -5558,6 +5572,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
+    << "  --export-alisim-cmd  Export a command-line from the inferred tree and model params" << endl
+    << "                       to simulate new MSAs with AliSim" << endl
     << endl << "CHECKPOINT:" << endl
     << "  --redo               Redo both ModelFinder and tree search" << endl
     << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl

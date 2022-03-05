@@ -1507,7 +1507,6 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             out << endl;
         }
 
-
         time_t cur_time;
         time(&cur_time);
 
@@ -1528,6 +1527,82 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
     }
     
     printOutfilesInfo(params, tree);
+    
+    // export AliSim command if needed
+    exportAliSimCMD(params, tree);
+}
+
+void exportAliSimCMD(Params &params, IQTree &tree)
+{
+    // make sure this method will not make IQTREE crashed
+    if (!(params.aln_file || params.partition_file) || !params.out_prefix || !tree.aln || !tree.getModel()
+        || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH))
+        return;
+    
+    cout << "ALISIM COMMAND" << endl;
+    cout << "--------------" << endl;
+    
+    
+    // skip unsupported models
+    if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
+    {
+        cout << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        return;
+    }
+    
+    // init alisim command
+    string alisim_cmd = "--alisim simulated_MSA";
+    
+    // specify tree
+    string tree_file(params.out_prefix);
+    if (params.partition_file && params.partition_type == BRLEN_OPTIMIZE)
+        tree_file += ".parttrees";
+    else
+        tree_file += ".treefile";
+    alisim_cmd += " -t " + tree_file;
+    
+    // specify model or a partition file
+    // if using partitions -> specify a partition file
+    if (params.partition_file)
+    {
+        string partition_file(params.partition_file);
+        partition_file += ".best_model.nex";
+        switch (params.partition_type)
+        {
+            case BRLEN_OPTIMIZE:
+                alisim_cmd += " -Q " + partition_file;
+                break;
+            case BRLEN_FIX:
+                alisim_cmd += " -q " + partition_file;
+                break;
+            case BRLEN_SCALE:
+                alisim_cmd += " -p " + partition_file;
+                break;
+        }
+    }
+    // otherwise, specify a model
+    else
+    {
+        string model_tr = tree.getModelNameParams(true);
+        alisim_cmd += " -m \"" + model_tr + "\"";
+        
+        // specify num_states for morph data
+        if (tree.aln->seq_type == SEQ_MORPH)
+            alisim_cmd += " -st \"MORPH{" + convertIntToString(tree.aln->num_states) + "}\"";
+    }
+    
+    // specify the length of root sequence
+    // skip specifying sequence length for partitions
+    if (!params.partition_file)
+    {
+        string root_length = "";
+        int num_sites = tree.aln->getNSite() * (tree.aln->seq_type == SEQ_CODON ? 3 : 1);
+        root_length += " --length " + convertIntToString(num_sites);
+        alisim_cmd += root_length;
+    }
+    
+    // output alisim cmd
+    cout << alisim_cmd << endl << endl;
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {

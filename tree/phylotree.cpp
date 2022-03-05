@@ -684,8 +684,8 @@ string PhyloTree::getModelName() {
     return getSubstName() + getRateName();
 }
 
-string PhyloTree::getModelNameParams() {
-    string name = model->getNameParams();
+string PhyloTree::getModelNameParams(bool show_fixed_params) {
+    string name = model->getNameParams(show_fixed_params);
     name += getASCName(model_factory->getASC());
     string rate_name = site_rate->getNameParams();
 

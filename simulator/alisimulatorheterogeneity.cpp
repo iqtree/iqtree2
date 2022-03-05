@@ -24,6 +24,10 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     fundi_items = alisimulator->fundi_items;
     STATE_UNKNOWN = alisimulator->STATE_UNKNOWN;
     max_num_states = alisimulator->max_num_states;
+    seq_length_indels = alisimulator->seq_length_indels;
+    map_seqname_node = alisimulator->map_seqname_node;
+    latest_insertion = alisimulator->latest_insertion;
+    first_insertion = alisimulator->first_insertion;
 }
 
 /**
