@@ -109,7 +109,7 @@ void ModelMorphology::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
-string ModelMorphology::getNameParams() {
+string ModelMorphology::getNameParams(bool show_fixed_params) {
     if (num_params == 0) return name;
     ostringstream retname;
     retname << name << '{';

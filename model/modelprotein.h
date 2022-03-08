@@ -71,7 +71,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-    virtual string getNameParams();
+    virtual string getNameParams(bool show_fixed_params = false);
 
     /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
      @param state character state

@@ -17,6 +17,8 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
+    latest_insertion = NULL;
+    first_insertion = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -48,6 +50,8 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
+    latest_insertion = NULL;
+    first_insertion = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -68,6 +72,13 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
 
 AliSimulator::~AliSimulator()
 {
+    // delete first_insertion
+    if (first_insertion)
+    {
+        delete first_insertion;
+        first_insertion = NULL;
+    }
+    
     if (!tree) return;
     
     // delete tree
@@ -363,6 +374,23 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                 model_familyname_with_params = model_familyname_with_params.substr(0, model_fullname.find("*"));
                 string model_familyname = model_familyname_with_params.substr(0, model_familyname_with_params.find("{"));
                 detectSeqType(model_familyname.c_str(), tree->aln->seq_type);
+                
+                // manually detect AA data from "NONREV", "GTR20", "Poisson" model and detect DNA data from UNREST model
+                if (tree->aln->seq_type == SEQ_UNKNOWN)
+                {
+                    const char* aa_model_names_plus[] = {"NONREV", "GTR20", "Poisson"};
+                    std::transform(model_familyname.begin(), model_familyname.end(), model_familyname.begin(), ::toupper);
+                    
+                    for (int i = 0; i < sizeof(aa_model_names_plus)/sizeof(char*); i++)
+                        if (model_familyname == aa_model_names_plus[i]) {
+                            tree->aln->seq_type = SEQ_PROTEIN;
+                            break;
+                        }
+                    
+                    // manually detect DNA data from UNREST model
+                    if (tree->aln->seq_type == SEQ_UNKNOWN && model_familyname == "UNREST")
+                        tree->aln->seq_type = SEQ_DNA;
+                }
             }
             if (tree->aln->seq_type != SEQ_UNKNOWN)
                 tree->aln->sequence_type = tree->aln->getSeqTypeStr(tree->aln->seq_type);
@@ -430,6 +458,7 @@ void AliSimulator::initializeModel(IQTree *tree, string model_name)
     ModelsBlock *models_block = readModelsDefinition(*params);
     tree->params = params;
     tree->IQTree::initializeModel(*params, tree->aln->model_name, models_block);
+    delete models_block;
 }
 
 /**
@@ -447,6 +476,10 @@ void AliSimulator::removeConstantSites(){
     if (num_variant_states < round(expected_num_sites/length_ratio)){
         outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(length_ratio));
     }
+    
+    // if using Indels, update seq_length_indels
+    if (params->alisim_insertion_ratio > 0)
+        seq_length_indels = num_variant_states;
 
     // recording start_time
     auto start = getRealTime();
@@ -473,7 +506,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
 #endif
         {
             // dummy sequence
-            vector<short int> variant_sites;
+            vector<short int> variant_sites(variant_state_mask.size(),0);
             
             // initialize the number of variant sites
             int num_variant_states = 0;
@@ -484,7 +517,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
                 if (variant_state_mask[i] == -1)
                 {
                     // get the variant site
-                    variant_sites.push_back(node->sequence[i]);
+                    variant_sites[num_variant_states] = node->sequence[i];
                     num_variant_states++;
                     
                     // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
@@ -495,6 +528,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
             
             // replace the sequence of the Leaf by variant sites
             node->sequence.clear();
+            variant_sites.resize(num_variant_states);
             node->sequence = variant_sites;
         }
     }
@@ -616,8 +650,6 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool
         else
             tree->getModel()->getStateFrequency(state_freq);
         
-        auto end = getRealTime();
-        
         // finding the max probability position
         int max_prob_pos = 0;
         for (int i = 1; i < max_num_states; i++)
@@ -707,9 +739,15 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // initialize trans_matrix
     double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
     
+    // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
+    bool write_sequences_to_tmp_data = params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
+    
     // write output to file (if output_filepath is specified)
-    if (output_filepath.length() > 0)
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
     {
+        // init an output_filepath to temporarily output the sequences (when simulating Indels)
+        if (write_sequences_to_tmp_data)
+            output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename;
         try {
             // add ".phy" or ".fa" to the output_filepath
             if (params->aln_output_format != IN_FASTA)
@@ -749,11 +787,29 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
     extractRatesJMatrix(model);
     
+    // init genome_tree, and the initial empty insertion for root if using Indels
+    if (params->alisim_insertion_ratio > 0)
+    {
+        // init an empty insertion event
+        if (first_insertion)
+            delete first_insertion;
+        first_insertion = new Insertion();
+        latest_insertion = first_insertion;
+        
+        // init the insertion position for root if it is a leaf (a rooted tree)
+        if (tree->root->isLeaf())
+            tree->root->insertion_pos = latest_insertion;
+    }
+    
+    // count the number of gaps at root if Indels is used
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+        tree->root->num_gaps = count(tree->root->sequence.begin(), tree->root->sequence.end(), STATE_UNKNOWN);
+    
     // simulate Sequences
     simulateSeqs(sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
         
     // close the file if neccessary
-    if (output_filepath.length() > 0)
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
     {
         if (params->do_compression)
             ((ogzstream*)out)->close();
@@ -762,7 +818,8 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         delete out;
         
         // show the output file name
-        cout << "An alignment has just been exported to "<<output_filepath<<endl;
+        if (!write_sequences_to_tmp_data)
+            cout << "An alignment has just been exported to "<<output_filepath<<endl;
     }
         
     // delete trans_matrix array
@@ -772,13 +829,29 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     delete[] sub_rates;
     delete[] Jmatrix;
     
+    // record the actual (final) seq_length due to Indels
+    if (params->alisim_insertion_ratio > 0)
+        seq_length_indels = sequence_length;
+    
     // process delayed Fundi if it is delayed due to Insertion events
     if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio > 0)
+    {
+        // update new genome at tips from original genome and the genome tree
+        updateNewGenomeIndels(seq_length_indels);
+        
         processDelayedFundi(tree->root, tree->root);
+    }
     
     // removing constant states if it's necessary
     if (length_ratio > 1)
+    {
+        // if using Indels, update new genome at tips from original genome and the genome tree
+        // skip updating if using Fundi as it must be already updated by Fundi
+        if (params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
+            updateNewGenomeIndels(seq_length_indels);
+        
         removeConstantSites();
+    }
 }
 
 /**
@@ -790,6 +863,10 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
+        // update parent node of the current node
+        (*it)->node->parent = node;
+        (*it)->node->num_gaps = node->num_gaps;
+        
         // reset the num_children_done_simulation
         if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
             node->num_children_done_simulation = 0;
@@ -801,19 +878,11 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
             || (*it)->attributes["model"].length()>0)
             simulation_method = TRANS_PROB_MATRIX;
         
-        // dummy variables
-        vector<short int> indel_sequence;
-        vector<int> index_mapping_by_jump_step;
-        
         // if branch_length is too short (less than 1 substitution is expected to occur) -> clone the sequence from the parent's node
         if ((*it)->length == 0)
             (*it)->node->sequence = node->sequence;
         else
         {
-            // handle indels
-            if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || simulation_method == RATE_MATRIX)
-                handleIndels(model, sequence_length, node, it, indel_sequence, index_mapping_by_jump_step, simulation_method);
-            
             // only simulate new sequence if the simulation type is Transition Probability Matrix approach
             if (simulation_method == TRANS_PROB_MATRIX)
             {
@@ -824,14 +893,21 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
                 else
                     simulateASequenceFromBranchAfterInitVariables(model, sequence_length, trans_matrix, node, it);
             }
-            // otherwise (Rate_matrix is used as the simulation method) -> use the indel_sequence
+            // otherwise (Rate_matrix is used as the simulation method) -> clone the sequence from the parent node.
             else
-                (*it)->node->sequence = indel_sequence;
+                (*it)->node->sequence = node->sequence;
+            
+            // handle indels
+            if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || simulation_method == RATE_MATRIX)
+                handleIndels(model, sequence_length, it, simulation_method);
         }
         
-        // merge the simulated sequence with the indel_sequence
-        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && (*it)->length > 0 && simulation_method == TRANS_PROB_MATRIX)
-            mergeIndelSequence((*it)->node, indel_sequence, index_mapping_by_jump_step);
+        // set insetion position for of this node in the list of insertions if using Indels
+        if (params->alisim_insertion_ratio > 0 && (*it)->node->isLeaf())
+        {
+            (*it)->node->insertion_pos = latest_insertion;
+            latest_insertion->phylo_nodes.push_back((*it)->node);
+        }
         
         // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
         if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
@@ -869,6 +945,19 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
 }
 
 /**
+    temporarily write internal states to file (when using Indels)
+*/
+void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
+{
+    out << node->name<<"@"<<node->sequence.size()<<"@";
+    for (int i = 0; i < node->sequence.size(); i++)
+        out << node->sequence[i]<<" ";
+    out<<endl;
+    
+    map_seqname_node[node->name] = node;
+}
+
+/**
     writing and deleting simulated sequence immediately if possible
 */
 void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
@@ -880,17 +969,23 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
         {
             if (params->outputfile_runtime.length() == 0)
             {
-                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
-
-                // convert numerical states into readable characters and write output to file
-                string input_sequence = input_msa[(*it)->node->name];
-                if (input_sequence.length()>0)
-                    // write and copying gaps from the input sequences to the output.
-                    out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                // if using Indels -> temporarily write out internal states
+                if (params->alisim_insertion_ratio > 0)
+                    writeInternalStatesIndels((*it)->node, out);
                 else
-                    // write without copying gaps from the input sequences to the output.
-                    out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                {
+                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+
+                    // convert numerical states into readable characters and write output to file
+                    string input_sequence = input_msa[(*it)->node->name];
+                    if (input_sequence.length()>0)
+                        // write and copying gaps from the input sequences to the output.
+                        out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                    else
+                        // write without copying gaps from the input sequences to the output.
+                        out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                }
             }
             
             // remove the sequence to release the memory after extracting the sequence
@@ -902,17 +997,23 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
             // avoid writing sequence of __root__
             if (node->name!=ROOT_NAME && params->outputfile_runtime.length() == 0)
             {
-                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
-                
-                string input_sequence = input_msa[node->name];
-                // convert numerical states into readable characters and write output to file
-                if (input_sequence.length()>0)
-                    // write and copying gaps from the input sequences to the output.
-                    out << pre_output << exportSequenceWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                // if using Indels -> temporarily write out internal states
+                if (params->alisim_insertion_ratio > 0)
+                    writeInternalStatesIndels(node, out);
                 else
-                    // write without copying gaps from the input sequences to the output.
-                    out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                {
+                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                    
+                    string input_sequence = input_msa[node->name];
+                    // convert numerical states into readable characters and write output to file
+                    if (input_sequence.length()>0)
+                        // write and copying gaps from the input sequences to the output.
+                        out << pre_output << exportSequenceWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
+                    else
+                        // write without copying gaps from the input sequences to the output.
+                        out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
+                }
             }
             
             // remove the sequence to release the memory after extracting the sequence
@@ -1744,7 +1845,7 @@ void AliSimulator::initVariables4RateMatrix(double &total_sub_rate, int &num_gap
 /**
     handle indels
 */
-void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *node, NeighborVec::iterator it, vector<short int> &indel_sequence, vector<int> &index_mapping_by_jump_step, SIMULATION_METHOD simulation_method)
+void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method)
 {
     int num_gaps = 0;
     double total_sub_rate = 0;
@@ -1752,20 +1853,28 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
     // If AliSim is using RATE_MATRIX approach -> initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     if (simulation_method == RATE_MATRIX)
     {
-        initVariables4RateMatrix(total_sub_rate, num_gaps, sub_rate_by_site, node->sequence);
+        initVariables4RateMatrix(total_sub_rate, num_gaps, sub_rate_by_site, (*it)->node->sequence);
         
         // handle cases when total_sub_rate == NaN due to extreme freqs
         if (total_sub_rate != total_sub_rate)
             total_sub_rate = 0;
     }
     else // otherwise, TRANS_PROB_MATRIX approach is used -> only count the number of gaps
-        num_gaps = count(node->sequence.begin(), node->sequence.end(), STATE_UNKNOWN);
-    double total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
-    double total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+        num_gaps = (*it)->node->num_gaps;
+    
+    double total_ins_rate = 0;
+    double total_del_rate = 0;
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+    {
+        total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
+        total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+    }
     double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
     
-    indel_sequence = node->sequence;
-    index_mapping_by_jump_step.resize(sequence_length + 1, 0);
+    // dummy variables
+    int ori_seq_length = (*it)->node->sequence.size();
+    Insertion* insertion_before_simulation = latest_insertion;
+    
     double branch_length = (*it)->length * params->alisim_branch_scale;
     while (branch_length > 0)
     {
@@ -1780,12 +1889,15 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
             branch_length -=  waiting_time;
             
             // Determine the event type (insertion, deletion, substitution) occurs
-            double random_num = random_double()*total_event_rate;
             EVENT_TYPE event_type = SUBSTITUTION;
-            if (random_num < total_ins_rate)
-                event_type = INSERTION;
-            else if (random_num < total_ins_rate+total_del_rate)
-                event_type = DELETION;
+            if (total_ins_rate > 0 || total_del_rate > 0)
+            {
+                double random_num = random_double()*total_event_rate;
+                if (random_num < total_ins_rate)
+                    event_type = INSERTION;
+                else if (random_num < total_ins_rate+total_del_rate)
+                    event_type = DELETION;
+            }
             
             // process event
             int length_change = 0;
@@ -1793,19 +1905,21 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
             {
                 case INSERTION:
                 {
-                    length_change = handleInsertion(sequence_length, index_mapping_by_jump_step, indel_sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    length_change = handleInsertion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
                     break;
                 }
                 case DELETION:
                 {
-                    length_change = -handleDeletion(sequence_length, indel_sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    int deletion_length = handleDeletion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    length_change = -deletion_length;
+                    (*it)->node->num_gaps += deletion_length;
                     break;
                 }
                 case SUBSTITUTION:
                 {
                     if (simulation_method == RATE_MATRIX)
                     {
-                        handleSubs(sequence_length, total_sub_rate, sub_rate_by_site, indel_sequence, model->getNMixtures());
+                        handleSubs(sequence_length, total_sub_rate, sub_rate_by_site, (*it)->node->sequence, model->getNMixtures());
                     }
                     break;
                 }
@@ -1825,10 +1939,17 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Node *n
     }
     
     // if insertion events occur -> insert gaps to other nodes
-    if (index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1]>0)
+    if (insertion_before_simulation && insertion_before_simulation->next)
     {
-        bool stop_inserting_gaps = false;
-        insertGapsForInsertionEvents(index_mapping_by_jump_step, (*it)->node->id, tree->root, tree->root, stop_inserting_gaps);
+        // init a genome_tree to update new genomes for internal nodes
+        GenomeTree* genome_tree = new GenomeTree();
+        genome_tree->buildGenomeTree(insertion_before_simulation, ori_seq_length);
+        
+        // update non-empty internal sequences due to insertions
+        updateInternalSeqsIndels(genome_tree, sequence_length, (*it)->node);
+        
+        // delete genome_tree
+        delete genome_tree;
         
         // re-compute the switching param to switch between Rate matrix and Probability matrix
         computeSwitchingParam(sequence_length);
@@ -1845,35 +1966,37 @@ void AliSimulator::insertNewSequenceForInsertionEvent(vector<short int> &indel_s
 }
 
 /**
-*  insert gaps into other nodes when processing Insertion Events
+*  update internal sequences due to Indels
 *
 */
-void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jump_step, int stopping_node_id, Node *node, Node *dad, bool &stop_inserting_gaps)
+void AliSimulator::updateInternalSeqsIndels(GenomeTree* genome_tree, int seq_length, Node *node)
+{
+    // if we need to output all internal sequences -> traverse tree from root to the current node to update all internal sequences
+    if (params->alisim_write_internal_sequences)
+    {
+        bool stop_inserting_gaps = false;
+        updateInternalSeqsFromRootToNode(genome_tree, seq_length, node->id, tree->root, tree->root, stop_inserting_gaps);
+    }
+    // otherwise, only need to update sequences on the path from the current node to root
+    else
+        updateInternalSeqsFromNodeToRoot(genome_tree, seq_length, node);
+}
+
+/**
+*  update all simulated internal seqs from root to the current node due to insertions
+*
+*/
+void AliSimulator::updateInternalSeqsFromRootToNode(GenomeTree* genome_tree, int seq_length, int stopping_node_id, Node *node, Node* dad, bool &stop_inserting_gaps)
 {
     // check to stop
     if (stop_inserting_gaps)
         return;
     
-    // only insert gaps into not-empty node
-    if (node->sequence.size() > 0)
+    // if it is a non-empty internal node -> update the current genome by the genome_tree
+    if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence.size() > 0)
     {
-        // resize the sequence with gaps
-        node->sequence.resize(index_mapping_by_jump_step.size() + index_mapping_by_jump_step[index_mapping_by_jump_step.size() - 1] - 1, STATE_UNKNOWN);
-        
-        // update sites to new positions
-        for (int i = index_mapping_by_jump_step.size() - 1 - 1; i >= 0; i--)
-        {
-            if (index_mapping_by_jump_step[i] > 0)
-            {
-                node->sequence[i + index_mapping_by_jump_step[i]] = node->sequence[i];
-                
-                // if (*it)->node->sequence[i] is not overrided, it should be a gap
-                node->sequence[i] = STATE_UNKNOWN;
-            }
-            else
-                break;
-        }
-        
+        node->num_gaps += seq_length - node->sequence.size();
+        node->sequence = genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
     }
     
     // process its neighbors/children
@@ -1887,14 +2010,37 @@ void AliSimulator::insertGapsForInsertionEvents(vector<int> index_mapping_by_jum
         }
         
         // browse 1-step deeper to the neighbor node
-        insertGapsForInsertionEvents(index_mapping_by_jump_step, stopping_node_id, (*it)->node, node, stop_inserting_gaps);
+        updateInternalSeqsFromRootToNode(genome_tree, seq_length, stopping_node_id, (*it)->node, node, stop_inserting_gaps);
+    }
+}
+
+/**
+*  update internal seqs on the path from the current phylonode to root due to insertions
+*
+*/
+void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int seq_length, Node *node)
+{
+    // get parent node
+    Node* internal_node = node->parent;
+    
+    for (; internal_node;)
+    {
+        // only update new genome at non-empty internal nodes
+        if (!(internal_node->isLeaf()) && internal_node->sequence.size() > 0)
+        {
+            internal_node->num_gaps += seq_length - internal_node->sequence.size();
+            internal_node->sequence = genome_tree->exportNewGenome(internal_node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+        }
+        
+        // move to the next parent
+        internal_node = internal_node->parent;
     }
 }
 
 /**
     handle insertion events
 */
-int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mapping_by_jump_step, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
+int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
     int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
@@ -1935,17 +2081,13 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<int> &index_mappi
         total_sub_rate += sub_rate_change;
     }
     
+    // record the insertion event
+    Insertion* new_insertion = new Insertion(position, length, position == sequence_length);
+    latest_insertion->next = new_insertion;
+    latest_insertion = new_insertion;
+    
     // update the sequence_length
     sequence_length += length;
-    
-    // update index_mapping_by_jump_step
-    for (int i = index_mapping_by_jump_step.size() - 1; i >= 0; i--)
-    {
-        if (i + index_mapping_by_jump_step[i] >= position)
-            index_mapping_by_jump_step[i] += length;
-        else
-            break;
-    }
     
     // return insertion-size
     return length;
@@ -2056,6 +2198,12 @@ int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int
     {
         position = random_int(upper_bound);
         
+        // try to move to the following site if the selected site is a gap
+        if (position < sequence.size() && sequence[position] == STATE_UNKNOWN)
+            for (; position < upper_bound; position++)
+                if (position == sequence.size() || sequence[position] != STATE_UNKNOWN)
+                    break;
+        
         // a valid position must not be a deleted site
         if (position == sequence.size() || sequence[position] != STATE_UNKNOWN)
             break;
@@ -2064,26 +2212,6 @@ int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int
     if (position < sequence.size() && sequence[position] == STATE_UNKNOWN)
         outError("Sorry! Could not select a valid position (not a deleted-site) for insertion/deletion events. You may specify a too high deletion rate, thus almost all sites were deleted. Please try again a a smaller deletion ratio!");
     return position;
-}
-
-/**
-    merge the simulated sequence with indel_sequence
-*/
-void AliSimulator::mergeIndelSequence(Node* node, vector<short int> indel_sequence, vector<int> index_mapping_by_jump_step)
-{
-    // mapping state from the current sequence into indel_sequence
-    for (int i = 0; i < index_mapping_by_jump_step.size() - 1; i++)
-    {
-        // preserving deleted site
-        if (indel_sequence[i+index_mapping_by_jump_step[i]] != STATE_UNKNOWN)
-            indel_sequence[i+index_mapping_by_jump_step[i]] = node->sequence[i+index_mapping_by_jump_step[i]];
-    }
-    
-    // release the memory for the current sequence
-    vector<short int>().swap(node->sequence);
-    
-    // update the new sequence
-    node->sequence = indel_sequence;
 }
 
 /**
@@ -2189,11 +2317,31 @@ void AliSimulator::computeSwitchingParam(int seq_length)
 {
     // don't re-set the switching param if the user has specified it
     if (params->original_params.find("--simulation-thresh") == std::string::npos) {
-        // init 'a' with continuous rate heterogeneity
-        double a = 13.3073605;
-        // update 'a' for other simulations
+        double a = 1;
+        // init 'a' for simulations with discrete rate variation or without rate heterogeneity
         if (!tree->getModelFactory()->is_continuous_gamma)
-            a = 2.226224503;
+        {
+            if (seq_length >= 1000000)
+                a = 1;
+            else if (seq_length >= 500000)
+                a = 1.1;
+            else if (seq_length >= 100000)
+                a = 1.4;
+            else
+                a = 2.226224503;
+        }
+        // update 'a' for simulations with continuous rate variation
+        else
+        {
+            if (seq_length >= 1000000)
+                a = 6;
+            else if (seq_length >= 500000)
+                a = 7;
+            else if (seq_length >= 100000)
+                a = 9.1;
+            else
+                a = 13.3073605;
+        }
         
         // compute the switching param
         params->alisim_simulation_thresh = a/seq_length;
@@ -2335,4 +2483,103 @@ void AliSimulator::initSite2PatternID(int length)
         }
         
     }
+}
+
+void AliSimulator::updateNewGenomeIndels(int seq_length)
+{
+    // dummy variables
+    int rebuild_indel_his_step = params->rebuild_indel_history_param * tree->leafNum;
+    int rebuild_indel_his_thresh = rebuild_indel_his_step;
+    int tips_count = 0;
+    
+    // find the first tip that completed the simulation
+    Insertion* insertion = first_insertion;
+    for (; insertion && insertion->phylo_nodes.size() == 0; )
+        insertion = insertion->next;
+    
+    ASSERT(insertion && insertion->phylo_nodes.size() > 0);
+    
+    // build a genome tree from the list of insertions
+    GenomeTree* genome_tree = new GenomeTree();
+    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence.size(), true);
+    
+    // export new sequence for the first tip
+    for (int i = 0; i < insertion->phylo_nodes.size(); i++)
+    {
+        tips_count++;
+        
+        insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+    
+        // delete the insertion_pos of this node as we updated its sequence.
+        insertion->phylo_nodes[i]->insertion_pos = NULL;
+    }
+    
+    // keep track of previous insertion
+    Insertion* previous_insertion = insertion;
+    
+    // move to next insertion
+    insertion = insertion->next;
+    
+    // find the next tip and update it sequence
+    for (; insertion; )
+    {
+        // if we found a tip -> update the genome_tree and export the new sequence for that tip
+        if (insertion->phylo_nodes.size() > 0)
+        {
+            // if it is not the last tip -> update the genome tree
+            if (insertion->next)
+            {
+                // rebuild the indel his if the number of tips (line_num) >= current threshold
+                if (tips_count >= rebuild_indel_his_thresh)
+                {
+                    // detach the insertion and genome nodes
+                    for (Insertion* tmp_insertion = insertion; tmp_insertion; )
+                    {
+                        // detach insertion and genome_nodes
+                        tmp_insertion->genome_nodes.clear();
+                        
+                        // move to the next insertion
+                        tmp_insertion = tmp_insertion->next;
+                    }
+                    
+                    // delete and rebuild genome tree
+                    delete genome_tree;
+                    genome_tree = new GenomeTree();
+                    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence.size(), true);
+                    
+                    // update the next threshold to rebuild the indel his
+                    rebuild_indel_his_thresh += rebuild_indel_his_step;
+                }
+                // otherwise, just update indel his
+                else
+                    genome_tree->updateGenomeTree(previous_insertion, insertion);
+                
+                // keep track of previous insertion
+                previous_insertion = insertion;
+            }
+            // otherwise, it is the last tip -> the current sequence is already the latest sequence since there no more insertion occurs
+            else
+            {
+                delete genome_tree;
+                genome_tree = new GenomeTree(seq_length);
+            }
+            
+            // export the new sequence for the current tip
+            for (int i = 0; i < insertion->phylo_nodes.size(); i++)
+            {
+                tips_count++;
+                
+                insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+            
+                // delete the insertion_pos of this node as we updated its sequence.
+                insertion->phylo_nodes[i]->insertion_pos = NULL;
+            }
+        }
+        
+        // move to next insertion
+        insertion = insertion->next;
+    }
+    
+    // delete genome_tree
+    delete genome_tree;
 }

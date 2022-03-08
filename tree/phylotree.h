@@ -516,7 +516,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}+I{pinvar}+G{alpha}
 	 */
-	virtual string getModelNameParams();
+	virtual string getModelNameParams(bool show_fixed_params = false);
 
     ModelSubst *getModel() {
         return model;

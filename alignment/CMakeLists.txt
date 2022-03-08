@@ -17,10 +17,6 @@ superalignmentpairwiseplen.cpp
 superalignmentpairwiseplen.h
 superalignmentunlinked.cpp
 superalignmentunlinked.h
-alisimulator.cpp alisimulator.h
-alisimulatorinvar.cpp alisimulatorinvar.h
-alisimulatorheterogeneity.cpp alisimulatorheterogeneity.h
-alisimulatorheterogeneityinvar.cpp alisimulatorheterogeneityinvar.h
 )
 
-target_link_libraries(alignment ncl gsl model)
+target_link_libraries(alignment simulator ncl gsl model)
