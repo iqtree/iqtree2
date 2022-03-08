@@ -682,6 +682,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 */
 int detectSeqType(const char *model_name, SeqType &seq_type);
 
+string convertSeqTypeToSeqTypeName(SeqType seq_type);
+
 string detectSeqTypeName(string model_name);
 
 #endif /* PHYLOTESTING_H_ */

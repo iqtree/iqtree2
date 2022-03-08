@@ -1494,8 +1494,9 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             replace(name.begin(), name.end(), '+', '_');
             out << "  charset " << name << " = ";
             if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-            if (saln->partitions[part]->seq_type == SEQ_CODON)
-                out << "CODON, ";
+            /*if (saln->partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";*/
+            out << saln->partitions[part]->sequence_type << ", ";
             string pos = saln->partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');
             out << pos << ";" << endl;
@@ -1505,7 +1506,7 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;
-            out << "    " << at(part)->getModelNameParams() << ": " << name << "{" << at(part)->treeLength() << "}";
+            out << "    " << at(part)->getModelNameParams(true) << ": " << name << "{" << at(part)->treeLength() << "}";
         }
         out << ";" << endl;
         out << "end;" << endl;

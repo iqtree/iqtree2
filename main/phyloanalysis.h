@@ -40,6 +40,12 @@ class IQTree;
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
 
 /**
+    carry out phylogenetic inference without deleting IQTree instance
+    @param params program parameters
+*/
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln);
+
+/**
     Perform separate tree inference across partitions
  */
 void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint);
@@ -98,5 +104,12 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count, do
 void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff,
 		int weight_summary, double weight_threshold,
 	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
+
+void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree);
+
+void exportAliSimCMD(Params &params, IQTree &tree);
+
+/** compute rootstrap for a user defined tree from a set of trees */
+void runRootstrap(Params &params);
 
 #endif

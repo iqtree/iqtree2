@@ -19,7 +19,12 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
 	if (params.empty()) return;
 	DoubleVector params_vec;
 	try {
-		convert_double_vec(params.c_str(), params_vec);
+        // detect the seperator
+        char separator = ',';
+        if (params.find('/') != std::string::npos)
+            separator = '/';
+        
+		convert_double_vec_with_distributions(params.c_str(), params_vec, separator);
 		if (params_vec.size() != ncategory)
 			outError("Number of parameters for rate heterotachy model must equal number of categories");
 		int i;
@@ -29,7 +34,10 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
 			sum_prop += prop[i];
 		}
 		if (fabs(sum_prop-1.0) > 1e-5)
-			outError("Sum of category proportions not equal to 1");
+        {
+			outWarning("Normalizing category proportions so that sum of them not equal to 1");
+            normalize_frequencies(prop, ncategory, sum_prop);
+        }
 		// Minh: Please double check this one. It isn't quite so
 		// clear what fix_params is doing, as it seems to take values
 		// 0, 1 or 2.  -- MDW

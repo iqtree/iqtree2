@@ -391,8 +391,13 @@ public:
     // cut off vector to n elements. The last 16-n elements are set to zero
     Vec16c & cutoff(int n) {
         if (uint32_t(n) >= 16) return *this;
+#if defined(__ARM_NEON)
+        static const signed char mask[32] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+            0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#else
         static const char mask[32] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#endif
         *this &= Vec16c().load(mask+16-n);
         return *this;
     }
@@ -4924,7 +4929,11 @@ static inline Vec2q lookup(Vec2q const & index, void const * table) {
 static inline Vec16c shift_bytes_up(Vec16c const & a, int b) {
     if ((uint32_t)b > 15) return _mm_setzero_si128();
 #if INSTRSET >= 4    // SSSE3
+#if defined(__ARM_NEON)
+    static const signed char mask[32] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};    
+#else
     static const char mask[32] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};    
+#endif
     return Vec16c(_mm_shuffle_epi8(a, Vec16c().load(mask+16-b)));
 #else
     Vec2uq a1 = Vec2uq(a);
@@ -4943,7 +4952,11 @@ static inline Vec16c shift_bytes_up(Vec16c const & a, int b) {
 static inline Vec16c shift_bytes_down(Vec16c const & a, int b) {
     if ((uint32_t)b > 15) return _mm_setzero_si128();
 #if INSTRSET >= 4    // SSSE3
+#if defined(__ARM_NEON)
+    static const signed char mask[32] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+#else
     static const char mask[32] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+#endif
     return Vec16c(_mm_shuffle_epi8(a, Vec16c().load(mask+b)));
 #else
     Vec2uq a1 = Vec2uq(a);

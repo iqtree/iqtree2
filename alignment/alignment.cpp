@@ -81,6 +81,15 @@ string &Alignment::getSeqName(int i) {
     return seq_names[i];
 }
 
+void Alignment::addSeqName(string seq_name)
+{
+    if (!seq_name.empty())
+    {
+        seq_names.resize(seq_names.size()+1);
+        seq_names[seq_names.size()-1] = seq_name;
+    }
+}
+
 vector<string>& Alignment::getSeqNames() {
 	return seq_names;
 }
@@ -1111,6 +1120,41 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         }
 }
 
+void Alignment::extractSequences(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
+    InputType intype = detectInputFile(filename);
+
+    try {
+        if (intype == IN_NEXUS) {
+            outError("Unsupported sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF format");
+        } else if (intype == IN_FASTA) {
+            cout << "Fasta format detected" << endl;
+            doReadFasta(filename, sequence_type, sequences, nseq, nsite);
+        } else if (intype == IN_PHYLIP) {
+            cout << "Phylip format detected" << endl;
+            if (Params::getInstance().phylip_sequential_format)
+                doReadPhylipSequential(filename, sequence_type, sequences, nseq, nsite);
+            else
+                doReadPhylip(filename, sequence_type, sequences, nseq, nsite);
+        } else if (intype == IN_COUNTS) {
+            outError("Unsupported sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF format");
+        } else if (intype == IN_CLUSTAL) {
+            cout << "Clustal format detected" << endl;
+            doReadClustal(filename, sequence_type, sequences, nseq, nsite);
+        } else if (intype == IN_MSF) {
+            cout << "MSF format detected" << endl;
+            doReadMSF(filename, sequence_type, sequences, nseq, nsite);
+        } else {
+            outError("Unknown sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF format");
+        }
+    } catch (ios::failure) {
+        outError(ERR_READ_INPUT);
+    } catch (const char *str) {
+        outError(str);
+    } catch (string str) {
+        outError(str);
+    }
+}
+
 /**
 	determine if the pattern is constant. update the is_const variable.
 */
@@ -1533,9 +1577,9 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
         return SEQ_DNA;
     if (((double)num_bin) / num_ungap > 0.9)
         return SEQ_BINARY;
-    if (((double)num_alpha) / num_ungap > 0.9)
+    if (((double)num_alpha + num_nuc) / num_ungap > 0.9)
         return SEQ_PROTEIN;
-    if (((double)(num_alpha+num_digit)) / num_ungap > 0.9)
+    if (((double)(num_alpha + num_digit + num_nuc)) / num_ungap > 0.9)
         return SEQ_MORPH;
     return SEQ_UNKNOWN;
 }
@@ -1895,6 +1939,29 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
     return user_seq_type;
 }
 
+string Alignment::getSeqTypeStr(SeqType sequence_type) {
+    switch (sequence_type) {
+    case SEQ_BINARY:
+        return "BIN";
+        break;
+    case SEQ_DNA:
+        return "DNA";
+        break;
+    case SEQ_PROTEIN:
+        return "PROT";
+        break;
+    case SEQ_MORPH:
+        return "MORPH";
+        break;
+    case SEQ_CODON:
+        return "CODON";
+        break;
+    default:
+        return "";
+        break;
+    }
+}
+
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
@@ -2124,16 +2191,14 @@ void processSeq(string &sequence, string &line, int line_num) {
     }
 }
 
-int Alignment::readPhylip(char *filename, char *sequence_type) {
-
-    StrVector sequences;
+void Alignment::doReadPhylip(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite)
+{
     ostringstream err_str;
     igzstream in;
     int line_num = 1;
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
     in.open(filename);
-    int nseq = 0, nsite = 0;
     int seq_id = 0;
     string line;
     // remove the failbit
@@ -2196,20 +2261,26 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+}
+
+int Alignment::readPhylip(char *filename, char *sequence_type) {
+    StrVector sequences;
+    int nseq = 0, nsite = 0;
+    
+    doReadPhylip(filename, sequence_type, sequences, nseq, nsite);
 
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
-
-    StrVector sequences;
+void Alignment::doReadPhylipSequential(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite)
+{
     ostringstream err_str;
     igzstream in;
     int line_num = 1;
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
     in.open(filename);
-    int nseq = 0, nsite = 0;
+    
     int seq_id = 0;
     string line;
     // remove the failbit
@@ -2258,12 +2329,19 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+}
+
+int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
+
+    StrVector sequences;
+    int nseq = 0, nsite = 0;
+    
+    doReadPhylipSequential(filename, sequence_type, sequences, nseq, nsite);
 
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readFasta(char *filename, char *sequence_type) {
-    StrVector sequences;
+void Alignment::doReadFasta(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
     ostringstream err_str;
     igzstream in;
     // ifstream in;
@@ -2354,13 +2432,24 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     }
 
     seq_names = new_seq_names;
-
-    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+    
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+    
 }
 
-int Alignment::readClustal(char *filename, char *sequence_type) {
-
+int Alignment::readFasta(char *filename, char *sequence_type) {
     StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    doReadFasta(filename, sequence_type, sequences, nseq, nsite);
+    
+
+    return buildPattern(sequences, sequence_type, nseq, nsite);
+}
+
+void Alignment::doReadClustal(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
     igzstream in;
     int line_num = 1;
     string line;
@@ -2415,17 +2504,27 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
 
     if (sequences.empty())
         throw "No sequences found. Please check input (e.g. newline character)";
+    
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+}
 
-    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+
+int Alignment::readClustal(char *filename, char *sequence_type) {
+
+    StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    doReadClustal(filename, sequence_type, sequences, nseq, nsite);
+    
+    return buildPattern(sequences, sequence_type, nseq, nsite);
 
 
 }
 
-
-int Alignment::readMSF(char *filename, char *sequence_type) {
-
-
-    StrVector sequences;
+void Alignment::doReadMSF(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite){
+    
     igzstream in;
     int line_num = 1;
     string line;
@@ -2519,9 +2618,21 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
-    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+    
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+}
+
+int Alignment::readMSF(char *filename, char *sequence_type) {
 
 
+    StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    doReadMSF(filename, sequence_type, sequences, nseq, nsite);
+
+    return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
 // TODO: Use outWarning to print warnings.
@@ -3113,8 +3224,8 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
     #pragma omp parallel for
     #endif
     for (size_t seq_id = 0; seq_id < seq_count; seq_id++) {
-        std::string& str = seq_data[seq_id];
-        auto patterns = site_pattern.data();
+        std::string& str  = seq_data[seq_id];
+        auto patterns     = site_pattern.data();
         auto patternCount = site_pattern.size();
         for (int i=0; i<patternCount; ++i) {
             auto state = at(patterns[i])[seq_id];
@@ -3135,7 +3246,7 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         else {
             out << left << seq_names[seq_id] << " ";
         }
-        std::string& str = seq_data[0];
+        std::string& str = seq_data[seq_id];
         out.width(0);
         out.write(str.c_str(), str.length());
     }
@@ -3284,13 +3395,15 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     progress_display progress(aln->getNSite(), "Identifying sites to remove", "examined", "site");
     size_t oldPatternCount = size(); //JB 27-Jul-2020 Parallelized
     int    siteMod = 0; //site # modulo 100.
+    size_t seqCount = seq_id.size();
     for (size_t site = 0; site < aln->getNSite(); ++site) {
         iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
         for (it = seq_id.begin(); it != seq_id.end(); ++it) {
             pat.push_back ( (*pit)[*it] );
         }
-        int true_char = pat.computeGapChar(num_states, STATE_UNKNOWN); //JB 27-Jul-2020 Vectorized
+        size_t gap_chars = pat.computeGapChar(num_states, STATE_UNKNOWN);
+        size_t true_char = seqCount - gap_chars;
         if (true_char < min_true_char) {
             removed_sites++;
         }
@@ -3436,6 +3549,39 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
 }
 
 
+/**
+    get Codon StateType from input sites
+*/
+StateType Alignment::getCodonStateTypeFromSites(char state, char state2, char state3, string sequence_name, int site_index, ostringstream &err_str, int &num_error){
+    if (state < 4 && state2 < 4 && state3 < 4) {
+//                    state = non_stop_codon[state*16 + state2*4 + state3];
+        state = state*16 + state2*4 + state3;
+        if (genetic_code[(int)state] == '*') {
+            err_str << "Sequence " << sequence_name << " has stop codon at site " << site_index+1 << endl;
+            num_error++;
+            state = STATE_UNKNOWN;
+        } else {
+            state = non_stop_codon[(int)state];
+        }
+    } else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
+        state = STATE_INVALID;
+    } else {
+        if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN || state3 != STATE_UNKNOWN) {
+            ostringstream warn_str;
+            warn_str << "Sequence " << sequence_name << " has ambiguous character at site " << site_index+1;
+            outWarning(warn_str.str());
+        }
+        state = STATE_UNKNOWN;
+    }
+    if (state == STATE_INVALID) {
+        if (num_error < 100) {
+            err_str << "Sequence " << sequence_name << " has invalid character at site " << site_index+1 << endl;
+        } else if (num_error == 100)
+            err_str << "...many more..." << endl;
+        num_error++;
+    }
+    return (int)state;
+}
 
 void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa) {
     if (aln->seq_type != SEQ_DNA)
@@ -3690,25 +3836,27 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     step_size = d;
 }
 
-void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, bool nt2aa, int max_id, bool test_num_sites ) {
+    if (max_id < aln->getNSite()) max_id = aln->getNSite();
     int i;
     char *str = (char*)spec;
     int nchars = 0;
+    bool converted_to_codon_or_aa = (aln->seq_type == SEQ_CODON || nt2aa);
     try {
         for (; *str != 0; ) {
             int lower, upper, step;
             convert_range(str, lower, upper, step, str);
             // 2019-06-03: special '.' character
             if (upper == lower-1)
-                upper = aln->getNSite();
+                upper = max_id;
             lower--;
             upper--;
             nchars += (upper-lower+1)/step;
-            if (aln->seq_type == SEQ_CODON) {
+            if (converted_to_codon_or_aa) {
                 lower /= 3;
                 upper /= 3;
             }
-            if (upper >= aln->getNSite()) throw "Too large site ID";
+            if (!test_num_sites && upper >= max_id) throw "Too large site ID";
             if (lower < 0) throw "Negative site ID";
             if (lower > upper) throw "Wrong range";
             if (step < 1) throw "Wrong step size";
@@ -3717,7 +3865,7 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             if (*str == ',' || *str == ' ') str++;
             //else break;
         }
-        if (aln->seq_type == SEQ_CODON && nchars % 3 != 0)
+        if (converted_to_codon_or_aa && nchars % 3 != 0)
             throw (string)"Range " + spec + " length is not multiple of 3 (necessary for codon data)";
     } catch (const char* err) {
         outError(err);
@@ -3726,9 +3874,9 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
     }
 }
 
-void Alignment::extractSites(Alignment *aln, const char* spec) {
+void Alignment::extractSites(Alignment *aln, const char* spec, bool nt2aa) {
     IntVector site_id;
-    extractSiteID(aln, spec, site_id);
+    extractSiteID(aln, spec, site_id, nt2aa);
     extractSites(aln, site_id);
 }
 
@@ -4897,26 +5045,88 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 	}
 }
 
-void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq) {
+void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq, string freq_params) {
 	size_t nseqs = getNSeq();
+    
+    // TRUE if alisim is executing and state/codon freqs needs to be randomly generated
+    Params params = Params::getInstance();
+    bool freqs_random_generated = params.alisim_active && !params.alisim_inference_mode;
 
 	if (freq == FREQ_CODON_1x4) {
 		memset(ntfreq, 0, sizeof(double)*4);
-		for (iterator it = begin(); it != end(); it++) {
-			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
-				int codon = codon_table[(int)(*it)[seq]];
-//				int codon = (int)(*it)[seq];
-				int nt1 = codon / 16;
-				int nt2 = (codon % 16) / 4;
-				int nt3 = codon % 4;
-				ntfreq[nt1] += (*it).frequency;
-				ntfreq[nt2] += (*it).frequency;
-				ntfreq[nt3] += (*it).frequency;
-			}
-		}
+        // randomly generate state/condon freqs or estimating it from the input sequence
+        if (freqs_random_generated)
+        {
+            // randomly generate ntfreq if it has not yet been generated
+            if (!cache_ntfreq)
+            {
+                // if the user has specified freq_params -> extract frequencies
+                if (freq_params.length() > 0)
+                {
+                    // detect the seperator
+                    char separator = ',';
+                    if (freq_params.find('/') != std::string::npos)
+                        separator = '/';
+                    
+                    // validate the number of input params (
+                    size_t num_separators = std::count(freq_params.begin(), freq_params.end(), separator);
+                    if (num_separators != 3)
+                        outError("To use F1X4, please specify 4 frequencies by +F1X4{<freq_0>,...,<freq_3>} or let AliSim randomly generate the frequencies by +F1X4.");
+                    
+                    // extract user-specified frequencies one by one
+                    for (int i = 0; i < 4; i++)
+                    {
+                        size_t pos = freq_params.find(separator);
+                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        if (ntfreq[i] < 0)
+                            outError("State frequency cannot be negative!");
+                        
+                        // delete the current from freq_params
+                        freq_params.erase(0, pos + 1);
+                    }
+                    
+                    // normalize ntfreq
+                    normalize_frequencies(ntfreq, 4);
+                }
+                // otherwise, randomly generate ntfreq based on empirical distribution
+                else
+                    random_frequencies_from_distributions(ntfreq);
+                
+                // cache ntfreq for using later
+                cache_ntfreq = new double[4];
+                memcpy(cache_ntfreq, ntfreq, sizeof(double)*4);
+            }
+            // otherwise, reload ntfreq from cache then delete the cache
+            else
+            {
+                // reload ntfreq from the cache
+                memcpy(ntfreq, cache_ntfreq, sizeof(double)*4);
+                
+                // delete the cache
+                delete cache_ntfreq;
+                cache_ntfreq = NULL;
+            }
+        }
+        else
+        {
+            for (iterator it = begin(); it != end(); it++) {
+                for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+                    int codon = codon_table[(int)(*it)[seq]];
+    //				int codon = (int)(*it)[seq];
+                    int nt1 = codon / 16;
+                    int nt2 = (codon % 16) / 4;
+                    int nt3 = codon % 4;
+                    ntfreq[nt1] += (*it).frequency;
+                    ntfreq[nt2] += (*it).frequency;
+                    ntfreq[nt3] += (*it).frequency;
+                }
+            }
+        }
 		double sum = 0;
 		for (int i = 0; i < 4; i++)
 			sum += ntfreq[i];
+        if (fabs(sum) < 1e-5)
+            outError("Sum of all state frequencies must be greater than zero!");
 		for (int i = 0; i < 4; i++)
 			ntfreq[i] /= sum;
 		if (verbose_mode >= VB_MED) {
@@ -4949,22 +5159,98 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	} else if (freq == FREQ_CODON_3x4) {
 		// F3x4 frequency model
 		memset(ntfreq, 0, sizeof(double)*12);
-		for (iterator it = begin(); it != end(); it++) {
-			for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
-				int codon = codon_table[(int)(*it)[seq]];
-//				int codon = (int)(*it)[seq];
-				int nt1 = codon / 16;
-				int nt2 = (codon % 16) / 4;
-				int nt3 = codon % 4;
-				ntfreq[nt1] += (*it).frequency;
-				ntfreq[4+nt2] += (*it).frequency;
-				ntfreq[8+nt3] += (*it).frequency;
-			}
-		}
+        // randomly generate state/condon freqs or estimating it from the input sequence
+        if (freqs_random_generated)
+        {
+            // randomly generate ntfreq if it has not yet been generated
+            if (!cache_ntfreq)
+            {
+                // if the user has specified freq_params -> extract frequencies
+                if (freq_params.length() > 0)
+                {
+                    // detect the seperator
+                    char separator = ',';
+                    if (freq_params.find('/') != std::string::npos)
+                        separator = '/';
+                    
+                    // validate the number of input params (
+                    size_t num_separators = std::count(freq_params.begin(), freq_params.end(), separator);
+                    if (num_separators != 11)
+                        outError("To use F3X4, please specify 12 frequencies by +F3X4{<freq_0>,...,<freq_11>} or let AliSim randomly generate the frequencies by +F3X4.");
+                    
+                    // extract user-specified frequencies one by one
+                    for (int i = 0; i < 12; i++)
+                    {
+                        size_t pos = freq_params.find(separator);
+                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        if (ntfreq[i] < 0)
+                            outError("State frequency cannot be negative!");
+                        
+                        // delete the current from freq_params
+                        freq_params.erase(0, pos + 1);
+                    }
+                    
+                    // normalize ntfreq
+                    for (int i = 0; i < 3; i++)
+                        normalize_frequencies_from_index(ntfreq, 4, i*4);
+                }
+                // otherwise, randomly generate ntfreq based on empirical distributions
+                else
+                {
+                    double *tmp_freqs = new double[4];
+                    
+                    // repeatively generate a set of frequencies for each codon position
+                    for (int i = 0; i<3; i++)
+                    {
+                        random_frequencies_from_distributions(tmp_freqs);
+                        
+                        // copy the current set of frequencies to ntfreq
+                        for (int j = 0; j < 4; j++)
+                            ntfreq[i*4+j] = tmp_freqs[j];
+                    }
+                    
+                    // delete tmp_freqs
+                    delete [] tmp_freqs;
+                }
+                
+                // cache ntfreq for using later
+                cache_ntfreq = new double[12];
+                memcpy(cache_ntfreq, ntfreq, sizeof(double)*12);
+            }
+            // otherwise, reload ntfreq from cache then delete the cache
+            else
+            {
+                // reload ntfreq from the cache
+                memcpy(ntfreq, cache_ntfreq, sizeof(double)*12);
+                
+                // delete the cache
+                delete cache_ntfreq;
+                cache_ntfreq = NULL;
+            }
+        }
+        else
+        {
+            for (iterator it = begin(); it != end(); it++) {
+                for (int seq = 0; seq < nseqs; seq++) if ((*it)[seq] != STATE_UNKNOWN) {
+                    int codon = codon_table[(int)(*it)[seq]];
+    //				int codon = (int)(*it)[seq];
+                    int nt1 = codon / 16;
+                    int nt2 = (codon % 16) / 4;
+                    int nt3 = codon % 4;
+                    ntfreq[nt1] += (*it).frequency;
+                    ntfreq[4+nt2] += (*it).frequency;
+                    ntfreq[8+nt3] += (*it).frequency;
+                }
+            }
+        }
 		for (int j = 0; j < 12; j+=4) {
 			double sum = 0;
 			for (int i = 0; i < 4; i++)
 				sum += ntfreq[i+j];
+            
+            if (fabs(sum) < 1e-5)
+                outError("Sum of all state frequencies must be greater than zero!");
+            
 			for (int i = 0; i < 4; i++)
 				ntfreq[i+j] /= sum;
 			if (verbose_mode >= VB_MED) {
@@ -5037,12 +5323,21 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
         int i = 0;
-        for (iterator it = begin(); it != end(); ++it, ++i)
-			for (size_t seq = 0; seq < nseqs; seq++) {
-				int state = it->at(seq);
-				if (state >= num_states) continue;
-				state_freq[state] += it->frequency;
-			}
+        // randomly generate state/condon freqs or estimating it from the input sequence
+        if (freqs_random_generated)
+        {
+            for (i = 0; i < num_states; i++)
+                state_freq[i] = random_double();
+        }
+        else
+        {
+            for (iterator it = begin(); it != end(); ++it, ++i)
+                for (size_t seq = 0; seq < nseqs; seq++) {
+                    int state = it->at(seq);
+                    if (state >= num_states) continue;
+                    state_freq[state] += it->frequency;
+                }
+        }
         double sum = 0.0;
         for (i = 0; i < num_states; i++)
         	sum += state_freq[i];
@@ -5657,4 +5952,12 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
     }
     cout << site_state_freq.size() << " distinct per-site state frequency vectors detected" << endl;
     return aln_changed;
+}
+
+/**
+ * set the expected_num_sites (for alisim)
+ * @param the expected_num_sites
+ */
+void Alignment::setExpectedNumSites(int new_expected_num_sites){
+    expected_num_sites = new_expected_num_sites;
 }

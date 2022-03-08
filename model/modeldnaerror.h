@@ -56,7 +56,7 @@ public:
     /**
      * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
      */
-    virtual string getNameParams();
+    virtual string getNameParams(bool show_fixed_params = false);
 
     /**
         write information
@@ -81,6 +81,16 @@ public:
      @param[out] state_lk state likehood vector of size num_states
      */
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+    
+    /**
+     * @return TRUE if this is a DNA error model, FALSE otherwise
+     */
+    virtual bool containDNAerror() { return true; }
+    
+    /**
+     * get the dna error probability, by default error probability = 0
+     */
+    virtual double getDNAErrProb(int mixture_index = 0) { return epsilon; }
 
 protected:
 

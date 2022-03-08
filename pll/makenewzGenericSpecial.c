@@ -41,9 +41,13 @@
 #include "pllInternal.h"
 
 #ifdef __SSE3
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 /*#include <tmmintrin.h>*/
+#endif
 #endif
 
 #ifdef __MIC_NATIVE

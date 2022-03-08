@@ -132,6 +132,9 @@ public:
 
     /** get the SeqType for a given string */
     static SeqType getSeqType(const char *sequence_type);
+    
+    /** get the SeqTypeString for a given SeqType */
+    string getSeqTypeStr(SeqType sequence_type);
 
       /**
                add a pattern into the alignment
@@ -197,6 +200,14 @@ public:
     int readNexus(char *filename);
 
     int buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite);
+    
+    /**
+            do-read the alignment in PHYLIP format (interleaved)
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadPhylip(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in PHYLIP format (interleaved)
@@ -205,6 +216,14 @@ public:
             @return 1 on success, 0 on failure
      */
     int readPhylip(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in sequential PHYLIP format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadPhylipSequential(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in sequential PHYLIP format
@@ -213,6 +232,14 @@ public:
             @return 1 on success, 0 on failure
      */
     int readPhylipSequential(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in FASTA format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadFasta(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in FASTA format
@@ -233,6 +260,14 @@ public:
      * @return 1 on success, 0 on failure
      */
     int readCountsFormat(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in CLUSTAL format.
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadClustal(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in CLUSTAL format
@@ -241,6 +276,14 @@ public:
             @return 1 on success, 0 on failure
      */
     int readClustal(char *filename, char *sequence_type);
+    
+    /**
+            do-read the alignment in MSF format.
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void doReadMSF(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
 
     /**
             read the alignment in MSF format
@@ -255,6 +298,15 @@ public:
             @param data_block data block of nexus file
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
+    
+    /**
+            extract sequences, nseq, nsite from an input file.
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @param sequences, nseq, nsite
+     */
+    void extractSequences(char *filename, char *sequence_type, StrVector &sequences, int &nseq, int &nsite);
+
 
     vector<Pattern> ordered_pattern;
     
@@ -364,6 +416,10 @@ public:
             @return number of sites (alignment columns)
      */
     inline size_t getNSite() {
+        // if expected_num_sites is specified -> resizing site_pattern
+        if (expected_num_sites > -1)
+            site_pattern.resize(expected_num_sites);
+        
         return site_pattern.size();
     }
 
@@ -404,6 +460,11 @@ public:
             @return sequence name
      */
     string &getSeqName(int i);
+    
+    /**
+            @param seq_name sequence name
+     */
+    void addSeqName(string seq_name);
 
     /**
      *  Get a list of all sequence names
@@ -576,13 +637,19 @@ public:
             extract a sub-set of sites
             @param aln original input alignment
             @param spec specification of positions, e.g. "1-100,101-200\2"
+            @return the modified site spec if nt2aa is true, otherwise same as spec
      */
-    void extractSites(Alignment *aln, const char* spec);
+    void extractSites(Alignment *aln, const char* spec, bool nt2aa = false);
 
     /**
         convert a DNA alignment into codon or AA alignment
     */
     void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
+    
+    /**
+        get Codon StateType from input sites
+    */
+    StateType getCodonStateTypeFromSites(char state, char state2, char state3, string sequence_name, int site_index, ostringstream &err_str, int &num_error);
 
     /**
      convert this codon alignment to AA
@@ -734,8 +801,9 @@ public:
 	 * at least num_states entries.
 	 * @param freq either FREQ_CODON_1x4, FREQ_CODON_3x4, or FREQ_CODON_3x4C
 	 * @param ntfreq (OUT) nucleotide frequencies, assuming of size 4 for F1x4 and of size 12 for F3x4.
+     * @param freq_params is user-specified frequency params (assuming 4 params for F1x4 and 12 params for F3x4).
 	 */
-	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq);
+	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq, string freq_params = "");
 
 	/**
             compute empirical substitution counts between state pairs
@@ -956,7 +1024,18 @@ public:
      * @return modified (new) alignment
      */
     Alignment* removeAndFillUpGappySites();
-
+    
+    /**
+     * special initialization for codon sequences, e.g., setting #states, genetic_code
+     * @param sequence_type user-defined sequence type
+     */
+    void initCodon(char *gene_code_id);
+    
+    /**
+     * set the expected_num_sites (for alisim)
+     * @param the expected_num_sites
+     */
+    void setExpectedNumSites(int new_expected_num_sites);
 
 protected:
 
@@ -965,6 +1044,11 @@ protected:
             sequence names
      */
     vector<string> seq_names;
+    
+    /**
+            expected num_sites
+     */
+    int expected_num_sites = -1;
 
     /**
             Site to pattern index
@@ -975,18 +1059,16 @@ protected:
             hash map from pattern to index in the vector of patterns (the alignment)
      */
     PatternIntMap pattern_index;
-
-
+    
     /**
-	 * special initialization for codon sequences, e.g., setting #states, genetic_code
-	 * @param sequence_type user-defined sequence type
-	 */
-	void initCodon(char *gene_code_id);
+            alisim: caching ntfreq if it has already randomly initialized
+     */
+    double* cache_ntfreq = NULL;
 
 };
 
 
-void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
+void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id, bool nt2aa = false, int max_id=0, bool test_num_sites=false);
 
 /**
  create a new Alignment object with possibility of comma-separated file names
@@ -996,5 +1078,6 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
  @param model_name model name
  */
 Alignment *createAlignment(string aln_file, const char *sequence_type, InputType intype, string model_name);
+
 
 #endif

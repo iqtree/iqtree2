@@ -11,6 +11,8 @@ partitionmodel.cpp partitionmodel.h
 partitionmodelplen.cpp partitionmodelplen.h
 rategamma.cpp rategamma.h
 rategammainvar.cpp rategammainvar.h
+ratecontinuousgamma.cpp ratecontinuousgamma.h
+ratecontinuousgammainvar.cpp ratecontinuousgammainvar.h
 rateheterogeneity.cpp rateheterogeneity.h
 rateinvar.cpp rateinvar.h
 ratemeyerdiscrete.cpp ratemeyerdiscrete.h

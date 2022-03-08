@@ -55,7 +55,7 @@
 #
 #
 
-cmake_minimum_required(VERSION 2.8.10 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 set(GCC_MIN_VERSION "4.8")
@@ -82,8 +82,8 @@ endif()
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
-set (iqtree_VERSION_MINOR 1)
-set (iqtree_VERSION_PATCH ".0")
+set (iqtree_VERSION_MINOR 2)
+set (iqtree_VERSION_PATCH ".0-beta")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -110,6 +110,7 @@ endif()
 
 include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/yaml-cpp/include")
+include_directories(after system "/usr/local/include")
 
 ##################################################################
 # Include the Terraphast library
@@ -135,6 +136,24 @@ if (USE_LSD2)
     add_definitions(-DUSE_LSD2)
 endif()
 
+# Check if __ARM_NEON is defined
+#include(cmake_utls/check_neon_exists.cmake)
+set (__ARM_NEON "FALSE")
+set (NEON 0)
+if (APPLE)
+	execute_process(
+      COMMAND uname -m
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE OSX_NATIVE_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+		message("APPLE SILICON (M1) DETECTED!")
+		set (__ARM_NEON "TRUE")
+		set (NEON 1)
+	endif()
+endif()
+
 ##################################################################
 # Detect target platforms
 ##################################################################
@@ -147,14 +166,19 @@ if (WIN32)
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (APPLE)
     message("Target OS     : Mac OS X")
-    # to be compatible back to Mac OS X 10.7
-    if (IQTREE_FLAGS MATCHES "oldmac")
-        add_definitions("-mmacosx-version-min=10.5")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.5")
-    else()
-        add_definitions("--target=x86_64-apple-macos10.7")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=x86_64-apple-macos10.7")
-    endif()
+	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+		add_definitions("--target=arm64-apple-macos10.5")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=arm64-apple-macos12.0.1")
+	else()
+		# to be compatible back to Mac OS X 10.7
+    	if (IQTREE_FLAGS MATCHES "oldmac")
+        	add_definitions("-mmacosx-version-min=10.5")
+        	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.5")
+    	else()
+        	add_definitions("--target=x86_64-apple-macos10.7")
+        	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=x86_64-apple-macos10.7")
+    	endif()
+	endif()
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (UNIX)
     message("Target OS     : Unix")
@@ -179,7 +203,10 @@ set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
 set(CLANG_UNDER_VS "FALSE") #Clang compiler, used from inside Visual Studio
 # using C++11 standard
-if (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
+# disable AVX for NEON
+if (__ARM_NEON)
+    set(IQTREE_FLAGS "${IQTREE_FLAGS} novx")
+elseif (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
     set(CLANG_UNDER_VS "TRUE")
     #it won't recognize the -std=c++11 parameter.
     #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
@@ -224,6 +251,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (APPLE)
         SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
 
     #remove -rdynamic for Clang under Linux
@@ -378,7 +406,11 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     endif()
 
     if(CLANG AND APPLE)
-        link_directories(${PROJECT_SOURCE_DIR}/libmac)
+    	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+    		link_directories(${PROJECT_SOURCE_DIR}/libmac_m1)
+    	else()
+        	link_directories(${PROJECT_SOURCE_DIR}/libmac)
+        endif()	
     elseif (WIN32 OR UNIX)
         if (BINARY32)
             link_directories(${PROJECT_SOURCE_DIR}/lib32)
@@ -448,9 +480,17 @@ SET(AVX_FLAGS "-D__SSE3 -D__AVX")
 if (VCC)
     set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
 elseif (CLANG)
-    set(AVX_FLAGS "${AVX_FLAGS} -mavx")
+    if (__ARM_NEON)
+        set(AVX_FLAGS "${AVX_FLAGS} -march=armv8-a+fp+simd+crypto+crc")
+    else()
+        set(AVX_FLAGS "${AVX_FLAGS} -mavx")
+    endif()
 elseif (GCC)
-    set(AVX_FLAGS "${AVX_FLAGS} -mavx -fabi-version=0")
+    if (__ARM_NEON)
+        set(AVX_FLAGS "${AVX_FLAGS} -march=armv8-a+fp+simd+crypto+crc") #-mavx -fabi-version=0")
+    else()
+        set(AVX_FLAGS "${AVX_FLAGS} -mavx -fabi-version=0")
+    endif()
 elseif (ICC)
     if (WIN32)
          set(AVX_FLAGS "${AVX_FLAGS} /arch:avx")
@@ -463,7 +503,11 @@ SET(SSE_FLAGS "-D__SSE3")
 if (VCC)
     set(SSE_FLAGS "${SSE_FLAGS} /arch:SSE2 -D__SSE3__")
 elseif (GCC OR CLANG)
-    set(SSE_FLAGS "${SSE_FLAGS} -msse3")
+    if (__ARM_NEON)
+        set(SSE_FLAGS "${SSE_FLAGS} -march=armv8-a+fp+simd+crypto+crc")  # changed from -msse3
+    else()
+        set(SSE_FLAGS "${SSE_FLAGS} -msse3")
+    endif()
 elseif (ICC)
     if (WIN32)
         set(SSE_FLAGS "${SSE_FLAGS} /arch:sse3")
@@ -476,9 +520,17 @@ SET(FMA_FLAGS "-D__SSE3 -D__AVX")
 if (VCC)
     set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX2")
 elseif (CLANG)
-    set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+    if (__ARM_NEON)
+        set(FMA_FLAGS "${FMA_FLAGS} -march=armv8-a+fp+simd+crypto+crc") #-mavx -mfma")
+    else()
+        set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+    endif()
 elseif (GCC)
-    set(FMA_FLAGS "${FMA_FLAGS} -mavx -fabi-version=0 -mfma")
+    if (__ARM_NEON)
+        set(FMA_FLAGS "${FMA_FLAGS} -march=armv8-a+fp+simd+crypto+crc") #-mavx -fabi-version=0 -mfma")
+    else()
+        set(FMA_FLAGS "${FMA_FLAGS} -mavx -fabi-version=0 -mfma")
+    endif()
 elseif (ICC)
     if (WIN32)
          set(FMA_FLAGS "${FMA_FLAGS} /arch:core-avx2")
@@ -641,6 +693,8 @@ add_subdirectory(model)
 add_subdirectory(gsl)
 add_subdirectory(alignment)
 add_subdirectory(tree)
+add_subdirectory(terrace)
+add_subdirectory(simulator)
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -652,7 +706,7 @@ add_subdirectory(phylo-yaml)
 
 if (USE_TERRAPHAST)
    add_subdirectory(terraphast)
-   add_subdirectory(terrace)
+   add_subdirectory(terracetphast)
 endif()
 
 if (USE_LSD2)
@@ -689,9 +743,9 @@ endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         if (USE_TERRAPHAST)
-            set_target_properties(terrace terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+            set_target_properties(terracetphast terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
         if (USE_LSD2)
             set_target_properties(lsd2 PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
@@ -752,13 +806,13 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 # added by TD
 target_link_libraries(iqtree2 onnxruntime)
 
 if (USE_TERRAPHAST)
-   target_link_libraries(iqtree2 terrace)
+   target_link_libraries(iqtree2 terracetphast)
 endif()
 
 if (USE_LSD2)

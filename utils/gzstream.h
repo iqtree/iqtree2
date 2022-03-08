@@ -69,7 +69,7 @@ public:
         // ASSERT: both input & output capabilities will not be used together
     }
     int is_open() { return opened; }
-    gzstreambuf* open( const char* name, int open_mode, int compression_level=9);
+    gzstreambuf* open( const char* name, int open_mode, int compression_level=1);
     gzstreambuf* close();
     ~gzstreambuf() { close(); }
     
