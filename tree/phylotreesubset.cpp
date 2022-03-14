@@ -122,7 +122,7 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
             visit->setSubsetNumber(SUBSET_UNKNOWN);
         } else {     
             LOG_LINE(VerboseMode::VB_MAX, 
-                     "Edge " << visit->id  
+                     "Leaf " << visit->id  
                      << " (" << visit->name << ")"
                      << " in subset " << visit->getSubsetNumber());
             layer.push_back(visit);
@@ -147,7 +147,12 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
                                       "Interior " << interior->id 
                                       << " (" << interior->name << ")"
                                       << " in subset "
-                                      << interior->getSubsetNumber());
+                                      << interior->getSubsetNumber()
+                                      << " (because adjacent node with ids " 
+                                      << visited->id 
+                                      << " and "
+                                      << next_door->id
+                                      << " were)." );
                             break;
                         }
                     }
