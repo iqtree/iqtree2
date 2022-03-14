@@ -35,12 +35,14 @@ Node::Node() {
     id = -1;
     height = -1;
     is_floating_interior = false;
+    highestNei = nullptr;
 };
 
 Node::Node(int aid) {
     id = aid;
     height = -1;
     is_floating_interior = false;
+    highestNei = nullptr;
 }
 
 Node::Node(int aid, int aname) {
@@ -54,6 +56,7 @@ Node::Node(int aid, int aname) {
     name = str;
     height = -1;
     is_floating_interior = false;
+    highestNei = nullptr;
 }
 
 Node::Node(int aid, const char *aname) {
@@ -63,6 +66,7 @@ Node::Node(int aid, const char *aname) {
     }
     height = -1;
     is_floating_interior = false;
+    highestNei = nullptr;
 }
 
 bool Node::isLeaf() const {
@@ -107,7 +111,7 @@ Node *Node::calcHeight(Node *dad) {
     if (isLeaf() && dad != NULL) {
         // if a leaf, but not the root
         height = 0;
-        highestNei = NULL;
+        highestNei = nullptr;
         return this;
     }
     // scan through all children
