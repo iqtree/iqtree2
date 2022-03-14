@@ -43,7 +43,8 @@
 #include "rateheterotachyinvar.h"
 #include "variablebounds.h"
 #include <string>
-#include <utils/stringfunctions.h> //for convert_int
+#include <utils/scoped_assignment.h> //for SCOPED_ASSIGN
+#include <utils/stringfunctions.h>   //for convert_int
 #include <utils/timeutil.h>
 
 #include "nclextra/myreader.h"
@@ -1015,14 +1016,16 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
                 rate_models.push_back(site_rate);
             }
             for (RateHeterogeneity* rate_model: rate_models) {
-                double rate_lh = rate_model->optimizeParameters(gradient_epsilon,
-                                                                report_to_tree);
-                rate_model->afterVariablesChanged();
-                if (rate_lh == 0.0) {
-                    logl = model_lh;
-                }
-                else {
-                    logl = rate_lh;
+                if (rate_model != nullptr) {
+                    double rate_lh = rate_model->optimizeParameters(gradient_epsilon,
+                                                                    report_to_tree);
+                    rate_model->afterVariablesChanged();
+                    if (rate_lh == 0.0) {
+                        logl = model_lh;
+                    }
+                    else {
+                        logl = rate_lh;
+                    }
                 }
             }
             if (logl <= prev_logl + gradient_epsilon) {

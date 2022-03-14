@@ -615,14 +615,24 @@ void PhyloTree::computePtnInvar() {
 
 void PhyloTree::computePtnInvar
         (Alignment* alignment, double* ptn_invar) const {
+	int    nstates    = (model==nullptr) ? aln->num_states
+                      : model->getMutationModel()->num_states;
+    double prop_invar = (site_rate==nullptr) ? 0.0
+                      : site_rate->getPInvar();
+    computePtnInvar(alignment, nstates, prop_invar, ptn_invar );           
+}
+
+void PhyloTree::computePtnInvar
+        (Alignment* alignment, int nstates, 
+         double prop_invar, double* ptn_invar) const {
     intptr_t nptn    = alignment->getNPattern(), ptn;
-    intptr_t unobs   = model_factory->unobserved_ptns.size();
+    intptr_t unobs   = (model_factory==nullptr ) ? 0
+                     : model_factory->unobserved_ptns.size();
     intptr_t maxptn  = get_safe_upper_limit(nptn)
                      + get_safe_upper_limit(unobs);
     // For PoMo, only consider monomorphic states 
     // and set nstates to the number of
     // states of the underlying mutation model.
-	int      nstates = model->getMutationModel()->num_states;
     int      x;
     // ambiguous characters
     int      ambi_aa[] = {
@@ -632,8 +642,7 @@ void PhyloTree::computePtnInvar
     };
 
 	memset(ptn_invar, 0, maxptn*sizeof(double));
-	double p_invar = site_rate->getPInvar();
-	if (p_invar != 0.0) {
+	if (prop_invar != 0.0) {
         std::vector<double> state_freq_vector(nstates);
         double* state_freq = state_freq_vector.data();
 
@@ -653,11 +662,11 @@ void PhyloTree::computePtnInvar
                 continue;
             }
 			if (pat.const_char == unknown) {
-				ptn_invar[ptn] = p_invar;
+				ptn_invar[ptn] = prop_invar;
                 // For PoMo, if a polymorphic state is considered, the likelihood is
                 // left unchanged and zero because ptn_invar has been initialized to 0.
 			} else if (pat.const_char < nstates) {
-				ptn_invar[ptn] = p_invar * state_freq[(int) pat.const_char];
+				ptn_invar[ptn] = prop_invar * state_freq[(int) pat.const_char];
 			} else if (alignment->seq_type == SeqType::SEQ_DNA) {
                 // 2016-12-21: handling ambiguous state
                 ptn_invar[ptn] = 0.0;
@@ -667,7 +676,7 @@ void PhyloTree::computePtnInvar
                         ptn_invar[ptn] += state_freq[x];
                     }
                 }
-                ptn_invar[ptn] *= p_invar;
+                ptn_invar[ptn] *= prop_invar;
             } else if (alignment->seq_type == SeqType::SEQ_PROTEIN) {
                 ptn_invar[ptn] = 0.0;
                 int cstate = pat.const_char-nstates;
@@ -677,7 +686,7 @@ void PhyloTree::computePtnInvar
                         ptn_invar[ptn] += state_freq[x];
                     }
                 }
-                ptn_invar[ptn] *= p_invar;
+                ptn_invar[ptn] *= prop_invar;
             } 
             else { 
                 ASSERT(0);
@@ -688,10 +697,11 @@ void PhyloTree::computePtnInvar
 //			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
 //      }
 //		// dummy values
+	} else {
 		for (ptn = nptn; ptn < maxptn; ptn++) {
-			ptn_invar[ptn] = p_invar;
+			ptn_invar[ptn] = prop_invar;
         }
-	}
+    }
 }
 
 /*******************************************************

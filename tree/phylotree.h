@@ -1213,6 +1213,8 @@ public:
 
     void computePtnInvar();
     void computePtnInvar(Alignment* alignment, double* ptn_invar) const;
+    void computePtnInvar(Alignment* alignment, int nstates, 
+                         double prop_invar, double* ptn_invar) const;
 
     void computePtnFreq();
     

@@ -634,7 +634,12 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
                 //(easiest way is one site at a time)
                 auto    invar_dim         = for_tree->getPatternInvarArrayDimension();
                 double* ptn_invar_scratch = aligned_alloc<double>(invar_dim);
-                for_tree->computePtnInvar(subtree_aln, ptn_invar_scratch);
+                double  prop_invar        = (subtree_rate==nullptr) ? 0.0
+                                          : subtree_rate->getPInvar();
+                for_tree->computePtnInvar(subtree_aln, 
+                                          subtree_model->num_states,
+                                          prop_invar, 
+                                          ptn_invar_scratch);
                 
                 memset(ptn_invar, 0, invar_dim * sizeof(double) );
                 size_t n_site = alignment->getNSite();
@@ -646,7 +651,9 @@ void ModelDivergent::calculateSubtreeFrequencyEstimates
                 aligned_free(ptn_invar_scratch);
             }
             subtree_model->setPatternInvar ( ptn_invar, true);  //Owner
-            subtree_rate->setPatternInvar  ( ptn_invar, false); //Not an owner!
+            if (subtree_rate!=nullptr) {
+                subtree_rate->setPatternInvar  ( ptn_invar, false); //Not an owner!
+            }
             delete subtree_aln;
         }
 

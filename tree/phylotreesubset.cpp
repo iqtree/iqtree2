@@ -219,12 +219,13 @@ RateHeterogeneity* PhyloTree::getRateModelForBranch
     int  dad_subset       = dad->getSubsetNumber();
     auto rate_models      = model_div->getSubtreeRateModels();
     other_rate_model      = rate_models[dad_subset];
+    other_rate_model      = (other_rate_model!=nullptr)
+                          ? other_rate_model : site_rate;
     int  child_subset     = node->getSubsetNumber();
     auto child_rate_model = rate_models[child_subset];
+    child_rate_model      = (child_rate_model!=nullptr)
+                          ? child_rate_model : site_rate;
 
-    if (child_rate_model == other_rate_model) {
-        return child_rate_model;
-    }
     return child_rate_model;
 }
 
@@ -262,11 +263,13 @@ void PhyloTree::getModelAndTipLikelihood
         int subtree_number = getSubTreeNumberForBranch(dad, node);
         model_to_use = div_model->getNthSubtreeModel(subtree_number);
         rate_model   = div_model->getNthSubtreeRateModel(subtree_number);
+        rate_model   = (rate_model!=nullptr) ? rate_model : site_rate;
         tip_lh       = tip_partial_lh 
                      + subtree_number * tip_partial_lh_size_per_model;
         int other_subtree_number = getSubTreeNumberForBranch(node, dad);
         other_model  = div_model->getNthSubtreeModel(other_subtree_number);
         other_rate   = div_model->getNthSubtreeRateModel(other_subtree_number);
+        other_rate   = (other_rate!=nullptr) ? other_rate : site_rate;
     }
 }
 
@@ -296,7 +299,7 @@ void PhyloTree::handleDivergentModelBoundary
     memcpy(temp_lh, start_lh, block * ptn_count * sizeof(double));
 #endif
 
-    std::vector<double> lh_total(nstates, 0.0);
+    std::vector<double> log_lh_total(nstates, 0.0);
     
     //Note: This needs to know category weights
     double*  partial_lh = start_lh;
@@ -310,20 +313,21 @@ void PhyloTree::handleDivergentModelBoundary
                 int    cat          = 0;
                 for (int cat_offset = 0; cat_offset < block
                      ; cat_offset += v_by_s, ++ cat) {
-                    lh_for_state += exp(partial_lh [ cat_offset + state_offset + vector_index ]);
+                    lh_for_state += partial_lh [ cat_offset + state_offset + vector_index ];
                                     //times the weight for this category and pattern,
                                     //according to this model_to_use?
                 }
-                lh_total[state] += log(lh_for_state);
+                ASSERT(0 < lh_for_state);
+                log_lh_total[state] += log(lh_for_state);
             }
         }
     }
 
     std::vector<double> state_lh(nstates);
     for (int state = 0; state < nstates; ++state) {
-        state_lh[state] = lh_total[state] 
-                        / static_cast<double>(ptn_count)
-                        / static_cast<double>(ncat_mix);
+        state_lh[state] = exp( log_lh_total[state] 
+                               / static_cast<double>(ptn_count)
+                               / static_cast<double>(ncat_mix));
     }
 
     partial_lh = start_lh;
@@ -340,5 +344,3 @@ void PhyloTree::handleDivergentModelBoundary
         }
     }
 }
-
-

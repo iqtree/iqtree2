@@ -1666,9 +1666,14 @@ size_t PhyloTree::getBufferPartialLhSize() {
 }
 
 size_t PhyloTree::getPatternInvarArrayDimension() const {
-    int numStates = model->num_states;
-    size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
-        get_safe_upper_limit(model_factory->unobserved_ptns.size()));
+    int    numStates  = aln->num_states;
+    size_t unobs      = (model_factory != nullptr)
+                      ? model_factory->unobserved_ptns.size()
+                      : 0;
+    size_t pat_size   = get_safe_upper_limit(getAlnNPattern());
+    size_t state_size = max(get_safe_upper_limit(numStates),
+                            get_safe_upper_limit(unobs));
+    size_t mem_size   = pat_size + state_size;
     return mem_size;
 }
 
