@@ -66,6 +66,10 @@ public:
     void    doSwap(PhyloTree* tree);
     void    getLengths(bool nni5);
     double  optimizeNNIBranches(PhyloTree* tree, bool nni5, int nni5_num_eval);
+
+    bool    wouldItViolateSubtreeBoundaries() const;
+
+
 };
 
 

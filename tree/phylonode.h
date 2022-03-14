@@ -151,7 +151,7 @@ public:
 
     PhyloNeighbor* getNeighborByIndex(size_t index);
     
-    int  getSubsetNumber() const;
+    virtual int getSubsetNumber() const override;
     void setSubsetNumber(int subset_number);
 
 protected:

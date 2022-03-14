@@ -2057,9 +2057,8 @@ string IQTree::perturbStableSplits(double suppValue) {
             }
         }
         getCompatibleNNIs(randomNNIs, compatibleNNIs);
-        for (auto it = compatibleNNIs.begin();
-             it != compatibleNNIs.end(); it++) {
-            doNNI(*it);
+        for (NNIMove& move : compatibleNNIs) {
+            doNNI(move);
             ++numRandNNI;
 //            Split *sp = getSplit(it->node1, it->node2);
 //            Split *tabuSplit = new Split(*sp);
@@ -2127,10 +2126,11 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         int randInt = random_int((int) vectorNNIBranches.size());
         PhyloBranch random_branch(vectorNNIBranches[randInt]);
         NNIMove randNNI = getRandomNNI(random_branch);
-        if (randNNI.node1->getSubsetNumber() ==
-            randNNI.node2->getSubsetNumber() &&
+        if (!randNNI.wouldItViolateSubtreeBoundaries() &&
             constraintTree.isCompatible(randNNI)) {
             // only if random NNI satisfies constraintTree
+            // and is consistent with any divergent model
+            // subtree boundaries.
             doNNI(randNNI);
             if (storeTabu) {
                 Split *sp = getSplit(randNNI.node1, randNNI.node2);
@@ -3858,16 +3858,15 @@ void IQTree::pllDestroyUFBootData(){
 
 void IQTree::doNNIs(const vector<NNIMove> &compatibleNNIs,
                     bool changeBran) {
-    for (auto it = compatibleNNIs.begin();
-         it != compatibleNNIs.end(); it++) {
-        doNNI(*it);
+    for (const NNIMove& move : compatibleNNIs) {
+        doNNI(move);
         if (!params->leastSquareNNI && changeBran) {
             // apply new branch lengths
-            changeNNIBrans(*it);
+            changeNNIBrans(move);
         }
     }
     // 2015-10-14: has to reset this pointer when read in
-    current_it = current_it_back = NULL;
+    current_it = current_it_back = nullptr;
 }
 
 void IQTree::getCompatibleNNIs(const vector<NNIMove> &nniMoves,
@@ -3879,8 +3878,7 @@ void IQTree::getCompatibleNNIs(const vector<NNIMove> &nniMoves,
             touched[move.node2->id]) {
             continue;
         }
-        if (move.node1->getSubsetNumber() !=
-            move.node2->getSubsetNumber()) {
+        if (move.wouldItViolateSubtreeBoundaries()) {
             continue;
         }
         touched[move.node1->id] = true;

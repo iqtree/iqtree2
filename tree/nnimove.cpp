@@ -195,3 +195,15 @@ void NNIContext::restore() {
     //ends of the 5 branches between and around node1 and node2
     s2.restore();
 }
+
+bool NNIMove::wouldItViolateSubtreeBoundaries() const {
+    auto inner_subset = node1->getSubsetNumber();
+    if ( inner_subset != node2->getSubsetNumber()) {
+        return true;
+    }   
+    auto outer_subset = (*node1Nei_it)->getNode()->getSubsetNumber();
+    if ( outer_subset != (*node2Nei_it)->getNode()->getSubsetNumber()) {
+        return true;
+    }
+    return false;
+}

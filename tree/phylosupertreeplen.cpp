@@ -524,7 +524,7 @@ void PhyloSuperTreePlen::getNNIType(PhyloNode* node1, PhyloNode* node2, vector<N
 			nni_type[part]=NNI_TWO_EPSILON;
 		}else if(epsilon_cnt == 3){
 			nni_type[part]=NNI_THREE_EPSILON;
-		}else {
+		} else {
 			nni_type[part] = NNI_MANY_EPSILON;
 		}
 	}

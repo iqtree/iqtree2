@@ -47,6 +47,7 @@ class Node;
 #define BA_BOOTSTRAP "B"
 #define BA_CERTAINTY "C"
 
+#define SUBSET_UNKNOWN (-1)
 
 /**
     Neighbor list of a node in the tree
@@ -390,7 +391,6 @@ public:
      */
     double longestPath2(Node* &node1, Node* &node2);
 
-
     /**
         @param node the target node
         @return true if there's a neighbor that references the node,
@@ -489,6 +489,8 @@ public:
     void addNeighbor(Node *node, DoubleVector &length, int id = -1);
 
     bool unlinkNeighbor(Node* node);
+
+    virtual int getSubsetNumber() const;
 };
 
 /*

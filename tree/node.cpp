@@ -343,6 +343,11 @@ bool Node::hasNeighbor(Node* node) const {
     return false;
 }
 
+int Node::getSubsetNumber() const {
+    return SUBSET_UNKNOWN;
+}
+
+
 Branch::Branch(): super(nullptr, nullptr) {
 }
 

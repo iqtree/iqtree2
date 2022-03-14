@@ -108,7 +108,6 @@ void PhyloTree::setLeafSubsetNumbersFromAlignment() {
     }
 }
 
-#define SUBSET_UNKNOWN (-1)
 
 void PhyloTree::computeSubsetNumbersForInternalNodes() {
     setLeafSubsetNumbersFromAlignment();
