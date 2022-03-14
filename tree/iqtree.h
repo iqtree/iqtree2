@@ -498,7 +498,8 @@ public:
      *  @param nniMoves [IN] list of NNIs
      *  @return list of compatible NNIs
      */
-    void getCompatibleNNIs(vector<NNIMove> &nniMoves, vector<NNIMove> &compatibleNNIs);
+    void getCompatibleNNIs(const vector<NNIMove> &nniMoves, 
+                           vector<NNIMove> &compatibleNNIs);
 
     /**
             add a NNI move to the list of possible NNI moves;

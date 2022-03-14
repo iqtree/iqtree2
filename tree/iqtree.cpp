@@ -2116,7 +2116,9 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         nonNNIBranches.clear();
         getNNIBranches(initTabuSplits, candidateTrees.getCandSplits(),
                        nonNNIBranches, nniBranches);
-        if (nniBranches.size() == 0) break;
+        if (nniBranches.size() == 0) {
+            break;
+        }
         // Convert the map data structure Branches to vector of Branch
         vector<Branch> vectorNNIBranches;
         for (auto it = nniBranches.begin(); it != nniBranches.end(); ++it) {
@@ -2125,7 +2127,9 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         int randInt = random_int((int) vectorNNIBranches.size());
         PhyloBranch random_branch(vectorNNIBranches[randInt]);
         NNIMove randNNI = getRandomNNI(random_branch);
-        if (constraintTree.isCompatible(randNNI)) {
+        if (randNNI.node1->getSubsetNumber() ==
+            randNNI.node2->getSubsetNumber() &&
+            constraintTree.isCompatible(randNNI)) {
             // only if random NNI satisfies constraintTree
             doNNI(randNNI);
             if (storeTabu) {
@@ -3866,24 +3870,22 @@ void IQTree::doNNIs(const vector<NNIMove> &compatibleNNIs,
     current_it = current_it_back = NULL;
 }
 
-void IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves,
+void IQTree::getCompatibleNNIs(const vector<NNIMove> &nniMoves,
                                vector<NNIMove> &compatibleNNIs) {
     compatibleNNIs.clear();
-    for (auto it1 = nniMoves.begin(); it1 != nniMoves.end(); ++it1) {
-        bool select = true;
-        for (auto it2 = compatibleNNIs.begin();
-             it2 != compatibleNNIs.end(); it2++) {
-            if ((*it1).node1 == (*(it2)).node1
-                    || (*it1).node2 == (*(it2)).node1
-                    || (*it1).node1 == (*(it2)).node2
-                    || (*it1).node2 == (*(it2)).node2) {
-                select = false;
-                break;
-            }
+    BoolVector touched(nodeNum, false);
+    for (const NNIMove& move : nniMoves) {
+        if (touched[move.node1->id] ||
+            touched[move.node2->id]) {
+            continue;
         }
-        if (select) {
-            compatibleNNIs.push_back(*it1);
+        if (move.node1->getSubsetNumber() !=
+            move.node2->getSubsetNumber()) {
+            continue;
         }
+        touched[move.node1->id] = true;
+        touched[move.node2->id] = true;                      
+        compatibleNNIs.push_back(move);
     }
 }
 
