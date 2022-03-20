@@ -505,9 +505,30 @@ void ModelFileLoader::parseYAMLMixtureModels(Params& params,
                                              LoggingTarget* logging_target) {
     TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, "Processing mixtures" );
     info.mixed_models = new MapOfModels();
+    int index=0;
     for (const YAML::Node& model: mixture_models) {
+        ++index;
         std::string child_model_name = stringScalar(model, "substitutionmodel", "");
-        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, "Processing mixture model" );
+        if (child_model_name.empty() ||
+            info.mixed_models->hasName(child_model_name)) {
+            //No name provided, or same name provided again.
+            std::stringstream dummy_name;
+            dummy_name << "INMIX" << index;
+            if (!child_model_name.empty()) {
+                dummy_name << "_" << child_model_name;
+            }
+            do {
+                child_model_name = dummy_name.str();
+                dummy_name << "a";
+            }
+            while (info.mixed_models->hasName(child_model_name));
+        TREE_LOG_LINE(*logging_target, YAMLWarningVerbosity, 
+                      "Set name of model " << index 
+                      << " for mixture model " << info.getName()
+                      << " to " << child_model_name);
+        }
+        TREE_LOG_LINE(*logging_target, YAMLParsingVerbosity, 
+                      "Processing mixture model");
         ModelInfoFromYAMLFile* child_info = 
             new ModelInfoFromYAMLFile(info.model_file_path);
         parseYAMLModel(params, model, child_model_name, *child_info,
