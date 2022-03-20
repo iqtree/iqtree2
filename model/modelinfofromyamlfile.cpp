@@ -28,12 +28,18 @@
 #include "yamlmodelwrapper.h"      //for YAMLRateFree and friends.
 
 //YAML Logging Levels
-VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MIN;
+VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MAX;
 VerboseMode YAMLFrequencyVerbosity = VerboseMode::VB_MAX;
 VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
 VerboseMode YAMLParsingVerbosity   = VerboseMode::VB_MAX;
 VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MAX;
-VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MED;
+VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
+VerboseMode YAMLWarningVerbosity   = VerboseMode::VB_QUIET;
+
+//If these are turned up high when model definition yaml files are 
+//being passed, they write out a lot of junk.  So I'm starting with
+//them turned down, and turning them back up when I want them 
+//higher.
 
 YAMLFileParameter::YAMLFileParameter()
     : is_subscripted(false), minimum_subscript(0), maximum_subscript(0)

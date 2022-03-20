@@ -213,6 +213,7 @@ public:
     void insert(const std::string& name, R* pointer) {
         int index = static_cast<int>(size());
         push_back(pointer);
+        ASSERT(!hasName(name));
         names.push_back(name);
         name_map[name] = index;
     }
