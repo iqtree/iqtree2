@@ -717,9 +717,9 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             {
                 write_indels_output = true;
                 if (alisimulator->params->do_compression)
-                    out_indels = new ogzstream((file_path+"_withoutgaps.fa").c_str());
+                    out_indels = new ogzstream((file_path+".unaligned.fa").c_str());
                 else
-                    out_indels = new ofstream((file_path+"_withoutgaps.fa").c_str());
+                    out_indels = new ofstream((file_path+".unaligned.fa").c_str());
             }
         
             // add ".phy" or ".fa" to the output_filepath

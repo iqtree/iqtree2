@@ -2664,7 +2664,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_skip_checking_memory = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--no-unaligned-seq") == 0) {
+            if (strcmp(argv[cnt], "--no-unaligned") == 0) {
                 params.alisim_no_export_sequence_wo_gaps = true;
                 continue;
             }
@@ -5504,7 +5504,7 @@ void usage_alisim(){
     << "                            relative to the substitution rate"<< endl
     << "  --indel-size <INS_DIS>,<DEL_DIS> Set the insertion and deletion size distributions" << endl
     << "  --sub-level-mixture       Enable the feature to simulate substitution-level mixture model"<< endl
-    << "  --no-unaligned-seq        Disable outputing a file of unaligned sequences "<< endl
+    << "  --no-unaligned            Disable outputing a file of unaligned sequences "<< endl
     << "                            when using indel models"<< endl
     << "  --root-seq FILE,SEQ_NAME  Specify the root sequence from an alignment" << endl
     << "  -s FILE                   Specify the input sequence alignment" << endl
