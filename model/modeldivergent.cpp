@@ -3,6 +3,7 @@
 #include "modelmarkov.h"    //for RATE_TOL
 
 #include <utils/stringfunctions.h>
+#include <utils/scoped_assignment.h>
 #include <alignment/superalignment.h>
 
 ModelDivergent::ModelDivergent(): super(), 
@@ -237,6 +238,7 @@ void ModelDivergent::setBounds(double* lower_bound, double* upper_bound,
         ++i;
     }
     int offset = static_cast<int>(own_parameters.size());
+    //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ModelMarkov* subtree_model : subtree_models) {
         TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
                     "Setting bounds for subtree model " 
@@ -254,7 +256,11 @@ void ModelDivergent::setVariables(double *variables) {
         variables[offset+1] = p.getValue();
         ++offset;
     }
+    //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ModelMarkov* subtree_model : subtree_models) {
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                      "Setting variables for subtree model " 
+                      << subtree_model->getName());
         subtree_model->setVariables(variables+offset);
         offset+= subtree_model->getNDim();
     }
@@ -275,7 +281,11 @@ bool ModelDivergent::getVariables(const double *variables) {
         p.setValue(newValue);
         ++offset;
     }
+    //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ModelMarkov* subtree_model : subtree_models) {
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                      "Getting variables for subtree model " 
+                      << subtree_model->getName());
         changed |= subtree_model->getVariables(variables+offset);
         offset  += subtree_model->getNDim();
     }
@@ -283,7 +293,11 @@ bool ModelDivergent::getVariables(const double *variables) {
 }
 
 void ModelDivergent::afterVariablesChanged() {
+    //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ModelMarkov* subtree_model : subtree_models) {
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                      "After variable change for subtree model " 
+                      << subtree_model->getName());
         subtree_model->afterVariablesChanged();
     }
 }

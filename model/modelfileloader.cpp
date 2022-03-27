@@ -1206,16 +1206,16 @@ void ModelFileLoader::parseYAMLSubModels(Params& params,
     //Subtree models have to be handled before constraints, 
     //as constraints that are setting parameters in divergent
     //models... would otherwise not be resolved correctly.
-    auto subtree_models = substitution_model["divergent_models"];
-    if (subtree_models) {
+    auto list_of_subtree_models = substitution_model["divergent_models"];
+    if (list_of_subtree_models) {
         complainIfSo(info.is_rate_model,
                      "divergent rate models not supported."
                      " cannot parse model " + model_name +
                       " in file " + file_path);
-        complainIfNot(subtree_models.IsSequence(),
+        complainIfNot(list_of_subtree_models.IsSequence(),
                       "divergent_models for model " + model_name +
                       " in file " + file_path + " not a sequence");
-        parseYAMLSubtreeModels(params, subtree_models, 
+        parseYAMLSubtreeModels(params, list_of_subtree_models, 
                                info, list, logging_target);
     }
 }

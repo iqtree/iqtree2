@@ -48,6 +48,7 @@
 
 #include "modelinfofromyamlfile.h" //for ModelInfoFromYAMLFile, etc.
 #include <tree/phylotree.h>        //for PhyloTree
+#include <utils/scoped_assignment.h> //for SCOPED_ASSIGN macro
 
 template <class S> class YAMLModelWrapper: public S {
 protected:
@@ -212,11 +213,12 @@ public:
     virtual void setStateFrequency
                     (double *state_frequency_array) override {
         //State frequency arrays have a zero, not a one, lower bound
-        int rate_ix = 0;
+        int freq_index = 0;
         super::setStateFrequency(state_frequency_array);
+        //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
         model_info->updateModelVariablesByType(    
             state_frequency_array, num_states, true,
-            ModelParameterType::FREQUENCY, rate_ix, phylo_tree);
+            ModelParameterType::FREQUENCY, freq_index, phylo_tree);
     }
     
     virtual bool scaleStateFreq() override {

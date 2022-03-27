@@ -23,9 +23,10 @@
 
 #include "modelinfofromyamlfile.h"
 #include "modelexpression.h"
-#include <utils/stringfunctions.h> //for string_to_lower, startsWith, endsWith
-#include <tree/phylotree.h>        //for TREE_LOG_LINE macro
-#include "yamlmodelwrapper.h"      //for YAMLRateFree and friends.
+#include <utils/stringfunctions.h>   //for string_to_lower, startsWith, endsWith
+#include <utils/scoped_assignment.h> //for SCOPED_ASSIGN macro
+#include <tree/phylotree.h>          //for TREE_LOG_LINE macro
+#include "yamlmodelwrapper.h"        //for YAMLRateFree and friends.
 
 //YAML Logging Levels
 VerboseMode YAMLModelVerbosity     = VerboseMode::VB_MAX;
