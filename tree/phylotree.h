@@ -3049,9 +3049,11 @@ protected:
 
     PhyloNodeVector getAllNodesInTree() const;
 
-    void setLeafSubsetNumbersFromAlignment();
-    
-    void computeSubsetNumbersForInternalNodes();
+    void setSubsetNumbersForLeafNodes();    //Just the Leaves
+    void setSubsetNumbersForAllNodes(); //All nodes, Interiors too
+
+    void dumpSubsetStructure(PhyloNode* node, 
+                             PhyloNode* prev, int indent);
 
     void setUpSubtreesForDivergentModels(ModelSubst* top_model);
 

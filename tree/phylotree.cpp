@@ -1180,6 +1180,7 @@ void PhyloTree::readTreeString(const string &tree_string, bool keep_node_names) 
         buildNodeSplit();
     }
     current_it = current_it_back = nullptr;
+    setSubsetNumbersForAllNodes();
 }
 
 void PhyloTree::readTreeStringSeqName(const string &tree_string) {
@@ -4924,9 +4925,13 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
     }
     
     // do the NNI swap
-    LOG_LINE(VerboseMode::VB_DEBUG, 
-             "  Swapping branches " << node2Nei->id << 
-             " and " << node1Nei->id);
+    LOG_LINE(VerboseMode::VB_MIN, 
+             "  Swapping branches " << node2Nei->id 
+             << " and " << node1Nei->id 
+             << " (which link " << node1->id 
+             << " and " << node1Nei->getNode()->id
+             << " , " << node2->id 
+             << " and " << node2Nei->getNode()->id << ")");
     node1->updateNeighbor(node1Nei_it, node2Nei);
     node2Nei->node->updateNeighbor(node2, node1);
     PhyloNeighbor* backNei2 = node2Nei->getNode()->findNeighbor(node1);//JB

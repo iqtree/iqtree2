@@ -2053,7 +2053,9 @@ string IQTree::perturbStableSplits(double suppValue) {
             PhyloBranch stable_branch(it->second);
             NNIMove randNNI = getRandomNNI(stable_branch);
             if (constraintTree.isCompatible(randNNI)) {
-                randomNNIs.push_back(randNNI);
+                if (!randNNI.wouldItViolateSubtreeBoundaries()) {
+                    randomNNIs.push_back(randNNI);
+                }
             }
         }
         getCompatibleNNIs(randomNNIs, compatibleNNIs);
@@ -3490,7 +3492,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
         nniBranches.clear();
         nonNNIBranches.clear();
 
-        computeSubsetNumbersForInternalNodes();
+        setSubsetNumbersForAllNodes();
 
         bool startSpeedNNI;
         //When tabu and speednni are combined,
@@ -3954,12 +3956,17 @@ void IQTree::evaluateNNIs(Branches &nniBranches,
         PhyloNode* node1 = b.first;
         PhyloNode* node2 = b.second;
         NNIMove    nni   = getBestNNIForBran(node1, node2, nullptr);
-        if (nni.newloglh > previous_score) {
-            positiveNNIs.push_back(nni);
-            LOG_LINE(VerboseMode::VB_DEBUG, positiveNNIs.size() << "."
-                     << " Branch " <<nni.central_branch_id
-                     << " improvement " << (nni.newloglh - previous_score));
+        if (nni.wouldItViolateSubtreeBoundaries()) {
+            continue;
         }
+        if (nni.newloglh <= previous_score) {
+            continue;
+        }
+        positiveNNIs.push_back(nni);
+        LOG_LINE(VerboseMode::VB_DEBUG, positiveNNIs.size() << "."
+                    << " Branch " <<nni.central_branch_id
+                    << " improvement " << (nni.newloglh - previous_score));
+
         // synchronize tree during optimization step
         if (MPIHelper::getInstance().isMaster()
             && candidateset_changed.size() > 0
@@ -4013,7 +4020,8 @@ void IQTree::evalNNIsSort(bool approx_nni) {
         if (it->lh_contribution >= 0.0) // evaluate NNI if branch contribution is big enough
                 {
             NNIMove myMove = getBestNNIForBran(it->node1, it->node2, NULL, approx_nni, it->lh_contribution);
-            if (myMove.newloglh > curScore) {
+            if (!myMove.wouldItViolateSubtreeBoundaries() &&
+                myMove.newloglh > curScore) {
                 addPositiveNNIMove(myMove);
                 if (!estimate_nni_cutoff)
                     for (vector<IntBranchInfo>::iterator it2 = it + 1; it2 != int_branches.end(); it2++) {
@@ -4449,7 +4457,6 @@ double IQTree::computeBootstrapCorrelation() {
 //void IQTree::addPositiveNNIMove(NNIMove myMove) {
 //    plusNNIs.push_back(myMove);
 //}
-
 void IQTree::printResultTree(string suffix) {
     if (MPIHelper::getInstance().isWorker()) {
         return;

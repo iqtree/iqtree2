@@ -113,7 +113,8 @@ NNIContext::NNIContext(PhyloTree* phylo_tree, PhyloNode* firstNode, PhyloNode* s
         // Otherwise, follow the normal procedure: evaluate NNIs and compute the likelihood.
 
         // here, we skip NNI is its UB n times worse than the curLikelihood
-        if( resMove.newloglh < (1+params->upper_bound_frac)*this->curScore){
+        if( !resMove.wouldItViolateSubtreeBoundaries() &&
+            resMove.newloglh < (1+params->upper_bound_frac)*this->curScore){
             //cout << "Skipping Likelihood evaluation of NNIs for this branch :) ........................"<<endl;
             return resMove;
         }

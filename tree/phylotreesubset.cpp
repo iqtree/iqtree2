@@ -82,7 +82,7 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
         ++subset_number;
     }
 
-    computeSubsetNumbersForInternalNodes();
+    setSubsetNumbersForAllNodes();
 
     hideProgress();
     for (ModelDivergent* div_model: div_models) {
@@ -101,16 +101,15 @@ PhyloNodeVector PhyloTree::getAllNodesInTree() const {
     return answer;
 }
 
-void PhyloTree::setLeafSubsetNumbersFromAlignment() {
+void PhyloTree::setSubsetNumbersForLeafNodes() {
     for (PhyloNode* leaf: getTaxaNodesInIDOrder()) {
         int subset_number = aln->getSequenceSubset(leaf->id);
         leaf->setSubsetNumber(subset_number);
     }
 }
 
-
-void PhyloTree::computeSubsetNumbersForInternalNodes() {
-    setLeafSubsetNumbersFromAlignment();
+void PhyloTree::setSubsetNumbersForAllNodes() {
+    setSubsetNumbersForLeafNodes();
     PhyloNodeVector all_nodes (getAllNodesInTree());
     PhyloNodeVector layer; //starts out with leaf nodes
     for (PhyloNode* visit: all_nodes) {
@@ -174,7 +173,20 @@ void PhyloTree::computeSubsetNumbersForInternalNodes() {
         LOG_LINE(VerboseMode::VB_QUIET, 
                  "Node " << visit->id << "(" << visit->name << ")"
                  " could not be assigned to a subset.");
+        //Dump the tree structure
+        dumpSubsetStructure(getRoot(),nullptr,0);
+
         ASSERT(subset_number != SUBSET_UNKNOWN);
+    }
+}
+
+void PhyloTree::dumpSubsetStructure
+        (PhyloNode* node, PhyloNode* prev, int indent) {
+    LOG_LINE(VerboseMode::VB_MIN, std::string(indent, ' ')
+        << node->id << " " << node->name 
+        << " (subset " << node->getSubsetNumber() << ")" );
+    FOR_EACH_ADJACENT_PHYLO_NODE(node, prev, it, adj) {
+        dumpSubsetStructure(adj, node, indent+1);
     }
 }
 
