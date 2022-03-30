@@ -717,9 +717,9 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             {
                 write_indels_output = true;
                 if (alisimulator->params->do_compression)
-                    out_indels = new ogzstream((file_path+"_withoutgaps.fa").c_str());
+                    out_indels = new ogzstream((file_path+".unaligned.fa").c_str());
                 else
-                    out_indels = new ofstream((file_path+"_withoutgaps.fa").c_str());
+                    out_indels = new ofstream((file_path+".unaligned.fa").c_str());
             }
         
             // add ".phy" or ".fa" to the output_filepath
@@ -1009,8 +1009,10 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
 {
     map<string,string> input_msa;
     // don't load Input MSA if either partitions or ASC model is being used
-    if ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-        || alisimulator->tree->isSuperTree())
+    if (alisimulator->params->alisim_inference_mode &&
+        ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+        || alisimulator->tree->isSuperTree()
+        || alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0))
     {
         outWarning("AliSim will not copy gaps from the input alignment into the output alignments in simulations with Indels/Partitions/+ASC models.");
         return input_msa;

@@ -124,7 +124,7 @@ const char *dna_model_names_lie_markov_strsym[] = {
 
 /****** Protein model set ******/
 const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
-        "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM",
+        "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM", "FLAVI",
 		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
 
 /****** Protein mixture model set ******/
@@ -159,7 +159,7 @@ const char *aa_model_names_mitochondrial[] = {"mtREV", "mtART", "mtZOA", "mtMet"
 
 const char *aa_model_names_chloroplast[] = {"cpREV"};
 
-const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV"};
+const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV", "FLAVI"};
 
 const char* aa_freq_names[] = {"", "+F"};
 
@@ -1137,20 +1137,20 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
  */
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet) {
-    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
-    bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false};
-    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false};
-    bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false};
-    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false};
-    bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false};
-    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false};
-    bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false};
-    bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false};
-    bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true};
-    bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false};
-    bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true};
-    bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false};
-    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false};
+    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R", "+I+R"};
+    bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false, false};
+    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false, false};
+    bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false, false};
+    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false, false};
+    bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false, false};
+    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false, false};
+    bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false, false};
+    bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false, true};
+    bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true, false};
+    bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false, false};
+    bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true, false};
+    bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false, false};
+    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false, false};
     bool *test_options = test_options_default;
     //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
     const int noptions = sizeof(rate_options) / sizeof(char*);
@@ -1295,7 +1295,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     //bool auto_rate = iEquals(ratehet_set, "AUTO");
     
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
-
+    
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
 

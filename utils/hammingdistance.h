@@ -109,7 +109,7 @@ inline double hammingDistance
         }
     }
     frequencyOfUnknowns = freqUnknown;
-#else()
+#else
     // NHANLT: FUTURE WORK: implementing method to compute the Hamming distance for Apple Silicon Chipset
     throw "Sorry! Computing of Hamming distance has not yet implemented for Apple Silicon Chipset!";
 #endif
