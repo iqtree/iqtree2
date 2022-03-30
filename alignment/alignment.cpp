@@ -2552,9 +2552,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     // Variables to calculate mean number of samples per population.
     // If N is way above the average number of samples, PoMo has been
-    // ovserved to be unstable and a big warning is printed.
-    int n_samples_sum = 0;
-    int n_sites_sum = 0;
+    // observed to be unstable and a big warning is printed.
+    unsigned long long n_samples_sum = 0;
+    unsigned long long n_sites_sum = 0;
     // Average number of samples.
     double n_samples_bar = 0;
 
