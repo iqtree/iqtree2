@@ -554,6 +554,7 @@ void ModelFileLoader::parseYAMLSubtreeModels
         parseYAMLModel(params, model, child_model_name, *child_info,
                        list, &info, logging_target);
         info.subtree_models->insert( child_model_name, child_info );
+        child_info->parent_model = &info;
     }
 }
 
@@ -1303,7 +1304,7 @@ void ModelFileLoader::parseYAMLModelWeightAndScale
                     " was not a scalar" );
         info.weight_formula = weight.Scalar();
         info.model_weight   = info.getModelWeight();
-        bool is_fixed       = info.isModelWeightFixed();
+        bool is_fixed       = info.isModelWeightFixed(logging_target);
         TREE_LOG_LINE(*logging_target, YAMLModelVerbosity,
                       (is_fixed ? "Fixed" : "Variable") 
                       << " weight of " << info.parent_model->getName()

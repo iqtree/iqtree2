@@ -16,6 +16,7 @@ extern VerboseMode YAMLRateVerbosity;
 extern VerboseMode YAMLVariableVerbosity;
 extern VerboseMode YAMLFrequencyVerbosity;
 extern VerboseMode YAMLMatrixVerbosity;
+extern VerboseMode YAMLWeightVerbosity;
 extern VerboseMode YAMLWarningVerbosity;
 
 

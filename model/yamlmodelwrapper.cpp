@@ -119,7 +119,7 @@ YAMLModelMixture::YAMLModelMixture(ModelInfoFromYAMLFile& info,
         models.push_back(model);
         weights.push_back(child->getModelWeight());
         if (!optimize_weights) {
-            optimize_weights = !child->isModelWeightFixed();
+            optimize_weights = !child->isModelWeightFixed(report_to_tree);
         }
         //what about weights?!
         full_name += separator;
@@ -175,9 +175,23 @@ void YAMLModelMixture::afterWeightsChanged() {
     int nmix = getNMixtures();
     if (1<nmix) {
         int i = 0;
+        //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
+        //SCOPED_ASSIGN(YAMLWeightVerbosity,   VerboseMode::VB_MIN);
         model_info->updateModelVariablesByType(prop, getNMixtures(), true,
                                                ModelParameterType::WEIGHT, i,
                                                phylo_tree);
+        for (auto child : model_info->getMixedModels()) {        
+            //Todo: recalculate the expression for the model's weight
+            // (every model has one)
+            if (child->isModelWeightFixed(logging_target)) {
+                continue;
+            } 
+            double weight = child->getModelWeight();
+            TREE_LOG_LINE(*logging_target, YAMLWeightVerbosity, 
+                        "Recalculated " << child->getName() << " "
+                        << "weight, " << child->getModelWeightFormula() 
+                        << "=" << weight );
+        }
         return;
     }
 }

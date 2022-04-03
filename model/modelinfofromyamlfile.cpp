@@ -35,6 +35,7 @@ VerboseMode YAMLMatrixVerbosity    = VerboseMode::VB_MAX;
 VerboseMode YAMLParsingVerbosity   = VerboseMode::VB_MAX;
 VerboseMode YAMLRateVerbosity      = VerboseMode::VB_MAX;
 VerboseMode YAMLVariableVerbosity  = VerboseMode::VB_MAX;
+VerboseMode YAMLWeightVerbosity    = VerboseMode::VB_MAX;
 VerboseMode YAMLWarningVerbosity   = VerboseMode::VB_QUIET;
 
 //If these are turned up high when model definition yaml files are 
@@ -621,6 +622,7 @@ const ModelVariable*
     ModelInfoFromYAMLFile::getVariableByName
         (const char* name) const {
     //Todo: look up linked_models too
+    //      possibly also subtree_models
     if (hasDot(name) && mixed_models != nullptr ) {
         std::string sub_model_name;
         const char* var_name = nullptr;
@@ -855,6 +857,12 @@ void ModelInfoFromYAMLFile::setFrequencyType
     frequency_type = new_type;
 } 
 
+const std::string& 
+    ModelInfoFromYAMLFile::getModelWeightFormula() const {
+    return weight_formula;
+}
+
+
 double ModelInfoFromYAMLFile::getModelWeight() const {
     return model_weight;
 }
@@ -874,7 +882,16 @@ double ModelInfoFromYAMLFile::getModelWeight() {
     return model_weight;
 }
 
-bool ModelInfoFromYAMLFile::isModelWeightFixed() {
+void ModelInfoFromYAMLFile::setModelWeight(double new_weight) {
+    model_weight = new_weight;
+}
+
+bool ModelInfoFromYAMLFile::isModelWeightFixed(LoggingTarget* logging_target) {
+    SCOPED_ASSIGN(YAMLWeightVerbosity, VerboseMode::VB_MIN);
+    if (logging_target!=nullptr) {
+        TREE_LOG_LINE(*logging_target, YAMLWeightVerbosity,
+                    "Checking if " << weight_formula << " is fixed");
+    }
     ModelExpression::InterpretedExpression expr(*this, weight_formula);
     return expr.expression()->isFixed();
 }

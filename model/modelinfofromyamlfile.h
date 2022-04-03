@@ -471,9 +471,11 @@ public:
     std::string        getParameterList(ModelParameterType param_type)  const;
     bool               appendParameterList(ModelParameterType param_type,
                                            std::stringstream& list)     const;
+    const std::string& getModelWeightFormula()                          const;
     double             getModelWeight()                                 const;
     double             getModelWeight(); //This version re-evaluates weight_formula
-    bool               isModelWeightFixed(); //Can't be const.
+    bool               isModelWeightFixed(LoggingTarget* log_target); //Can't be const.
+    void               setModelWeight(double new_weight);
 
     //Rate matrices and associated rate models
     int                getRateMatrixRank()                              const;

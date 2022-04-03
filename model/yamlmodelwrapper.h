@@ -54,7 +54,7 @@ template <class S> class YAMLModelWrapper: public S {
 protected:
     bool                   is_info_owned;
     ModelInfoFromYAMLFile* model_info;
-    PhyloTree*             report_tree;
+    LoggingTarget*         logging_target;
 public:
     typedef S super;
     using   S::phylo_tree;
@@ -78,7 +78,7 @@ public:
         : super(tree, report_to_tree)
         , is_info_owned(make_copy)
         , model_info(make_copy ? new ModelInfoFromYAMLFile(info) : &info)
-        , report_tree(report_to_tree) {
+        , logging_target(report_to_tree) {
         model_info->logVariablesTo(report_to_tree);
     }
 
@@ -94,7 +94,7 @@ public:
         //parameter_list is passed by value so it can be modified
         //(without those changes being copied back to the original)
         ASSERT(model_info!=nullptr);
-        if (model_info->acceptParameterList(params, parameter_list, report_tree)) {
+        if (model_info->acceptParameterList(params, parameter_list, logging_target)) {
             setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
         }
@@ -149,7 +149,7 @@ public:
         int  num_rates       = getNumberOfRates();
         int  num_var_freq    = (isReversible() && estimating_frequencies)  
                                ? (num_states-1) : 0;
-        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                         "getVariables called" 
                         << " for " << model_info->getName() 
                         << " with num_params = " << num_params 
@@ -158,7 +158,7 @@ public:
         if (num_params > 0) {
             for (int i = 0; i < num_rates; i++) {
                 if (rates[i] != variables[i+1] ) {
-                    TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
+                    TREE_LOG_LINE(*logging_target, VerboseMode::VB_MAX,
                                   " estimated rates[" << i << "] changing"
                                   " from " << rates[i] << 
                                   " to " << variables[i+1] <<
@@ -176,7 +176,7 @@ public:
                 for (int i=0; i<num_states-1; ++i) {
                     double freq_delta = fabs(state_freq[i]-read_freq[i]);
                     if (freq_delta!=0) {
-                        TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX,
+                        TREE_LOG_LINE(*logging_target, VerboseMode::VB_MAX,
                                     "  estimated freqs[" << i << "] changing"
                                     << " from " << state_freq[i]
                                     << " to " << read_freq[i]);
@@ -189,9 +189,10 @@ public:
                 if (scaleStateFreq()) {
                     changed = true;
                     auto last_freq = state_freq[num_states-1];
-                    TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
-                                  "Setting model's last frequency parameter"
-                                  " to " << last_freq );
+                    TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
+                                  "Setting " << model_info->getName() 
+                                  << " model's last frequency parameter"
+                                  << " to " << last_freq );
                     model_info->assignLastFrequency(last_freq);
                 }
             } else {
@@ -202,7 +203,7 @@ public:
         if (changed) {
             model_info->updateModelVariables(variables, first_freq_index, 
                                              ndim,      phylo_tree);
-            model_info->logVariablesTo(report_tree);
+            model_info->logVariablesTo(logging_target);
             setNumberOfVariableRates(model_info->getNumberOfVariableRates());
             setRateMatrixFromModel();
             afterVariablesChanged();
@@ -257,7 +258,7 @@ public:
         }
         bool is_freq_estimate = freq_type == StateFreqType::FREQ_ESTIMATE;
         int variable_frequencies = is_freq_estimate ? (num_states-1) : 0;
-        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity,
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity,
                       "setVariables called for " 
                       << model_info->getName() 
                       << " which has " 
@@ -270,7 +271,7 @@ public:
             model_info->readModelVariablesByType(rates, num_params-1, false,
                                                  ModelParameterType::RATE, 
                                                  i, phylo_tree);
-            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+            TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, 
                           "after calling readModelVariablesByType,"
                           " for rates, i was " << i);
             for (i = 0; i < num_params; ++i) {
@@ -284,7 +285,7 @@ public:
             model_info->readModelVariablesByType
                 (state_freq, num_states, false,
                  ModelParameterType::FREQUENCY, i, phylo_tree);
-            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+            TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, 
                           "after calling readModelVariablesByType,"
                           " for frequencies, i was " << i);
             for (i = 0; i < variable_frequencies; ++i) {
@@ -302,7 +303,7 @@ public:
             trace << sep << state_freq[i];
             sep = ", ";
         }
-        TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
+        TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, 
                       trace.str());
     }
     
@@ -366,7 +367,7 @@ public:
             }
         }
         trace << " }";
-        TREE_LOG_LINE(*report_tree, VerboseMode::VB_MAX, trace.str());
+        TREE_LOG_LINE(*logging_target, VerboseMode::VB_MAX, trace.str());
 
         if (YAMLVariableVerbosity <= verbose_mode) {
             std::stringstream rate_list;
@@ -376,8 +377,9 @@ public:
                 sep = ", ";
             }
             rate_list << " }";
-            TREE_LOG_LINE(*report_tree, YAMLVariableVerbosity, 
-                          "Setting rates... " << rate_list.str());
+            TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, 
+                          "Setting " << model_info->getName()
+                          << " rates... " << rate_list.str());
         }
         setRateMatrix(rates.data());
     }
@@ -537,7 +539,7 @@ public:
 template <class R> class YAMLRateModelWrapper: public R {
 protected:
     ModelInfoFromYAMLFile model_info;
-    PhyloTree*            report_tree;
+    LoggingTarget*        logging_target;
     int                   number_of_variable_shapes;
     int                   number_of_variable_proportions;
     int                   number_of_variable_rates;
@@ -561,7 +563,7 @@ public:
     YAMLRateModelWrapper(const ModelInfoFromYAMLFile& info,
                      PhyloTree* tree)
         : super(info.getNumberOfRateCategories(), tree, tree)
-        , model_info(info), report_tree(tree)
+        , model_info(info), logging_target(tree)
         , only_optimizing_rates(false) {
         calculateNDim();
     }
