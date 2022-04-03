@@ -51,7 +51,7 @@ void ModelUnrest::setRates() {
 }
 */
 
-void ModelUnrest::setStateFrequency(double* freq) {
+void ModelUnrest::setStateFrequency(const double* freq) {
     // DOES NOTHING
 }
 

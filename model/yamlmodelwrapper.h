@@ -212,7 +212,7 @@ public:
     }
 
     virtual void setStateFrequency
-                    (double *state_frequency_array) override {
+                    (const double *state_frequency_array) override {
         //State frequency arrays have a zero, not a one, lower bound
         int freq_index = 0;
         super::setStateFrequency(state_frequency_array);

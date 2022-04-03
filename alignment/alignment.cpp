@@ -5532,7 +5532,7 @@ void Alignment::convertCountToFreq(size_t *state_count, double *state_freq) cons
 // every site).
 void Alignment::computeStateFreq (double *state_freq,
                                   size_t num_unknown_states,
-                                  PhyloTree* report_to_tree) {
+                                  const PhyloTree* report_to_tree) const {
     std::vector<size_t> state_count_vector(STATE_UNKNOWN+1);
     size_t *state_count = state_count_vector.data();
 

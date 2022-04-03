@@ -925,7 +925,7 @@ void ModelInfoFromYAMLFile::setModelWeight(double new_weight) {
 }
 
 bool ModelInfoFromYAMLFile::isModelWeightFixed(LoggingTarget* logging_target) {
-    SCOPED_ASSIGN(YAMLWeightVerbosity, VerboseMode::VB_MIN);
+    //SCOPED_ASSIGN(YAMLWeightVerbosity, VerboseMode::VB_MIN);
     if (logging_target!=nullptr) {
         TREE_LOG_LINE(*logging_target, YAMLWeightVerbosity,
                     "Checking if " << weight_formula << " is fixed");
@@ -1051,7 +1051,8 @@ bool ModelInfoFromYAMLFile::updateModelVariablesByType(const double* updated_val
                             << " (to " << value << ")"
                             << " from parameter " << i 
                             << " of " << param_count 
-                            << " (delta was " << delta << ")");
+                            << " (delta was " << delta << ")"
+                            << " (tolerance " << p.tolerance << ")");
             }
             ++i;
         }

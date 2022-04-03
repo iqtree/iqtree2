@@ -908,9 +908,9 @@ public:
             @param report_to_tree (the tree, if any, corresponding to the alignment,
                     for which state frequencies are being calculated)
      */
-    virtual void computeStateFreq(double *state_freq,
-                                  size_t num_unknown_states,
-                                  PhyloTree* report_to_tree);
+    virtual void computeStateFreq(double* state_freq,
+                                  size_t  num_unknown_states,
+                                  const PhyloTree* report_to_tree) const;
 
     /**
             compute empirical state frequencies, for one subset,

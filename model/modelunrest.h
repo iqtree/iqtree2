@@ -32,7 +32,7 @@ public:
      set the state frequency vector.
      @param state_freq state frequency vector. Assume state_freq has size of num_states
      */
-    virtual void setStateFrequency(double *state_freq) override;
+    virtual void setStateFrequency(const double *state_freq) override;
 
     /**
      start structure for checkpointing

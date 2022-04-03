@@ -51,7 +51,7 @@ public:
                                 double &derv1, double &derv2) const override;
 	virtual void   getStateFrequency(double *state_freq, 
 	                                 int mixture = 0) const override;
-    virtual void   setStateFrequency(double *state_freq) override;
+    virtual void   setStateFrequency(const double *state_freq) override;
     virtual bool   scaleStateFreq() override;
     virtual void   setRateMatrix(double* rate_mat) override;
     virtual void   setRateMatrixFromModel() override;
@@ -142,6 +142,13 @@ public:
 
     void calculateSubtreeFrequencyEstimates
             (const Alignment* alignment, const PhyloTree* tree);
+
+    void assignFrequencyVectorToModel
+            (const DoubleVector& freq_vector, 
+             ModelMarkov* subtree_model,
+             const std::string& subtree_model_name,
+             size_t count_of_taxa,
+             const PhyloTree* for_tree);
 
     int                getNumberOfSubtreeModels() const;
     ModelMarkov*       getNthSubtreeModel      (int n) const;

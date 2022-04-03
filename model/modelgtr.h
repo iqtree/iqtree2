@@ -22,7 +22,7 @@ class ModelGTR : public ModelMarkov {
         virtual void        writeInfo(ostream &out) override;
         virtual void        getRateMatrix(double *rate_mat) const override;
         virtual void        setRateMatrix(double* rate_mat) override;
-        virtual void        setStateFrequency(double* freq) override;
+        virtual void        setStateFrequency(const double* freq) override;
         virtual void        getQMatrix(double *q_mat) const override;
         virtual int         getNDim() const override;
         virtual int         getNDimFreq() const override;
