@@ -531,6 +531,7 @@ void ModelFileLoader::parseYAMLMixtureModels(Params& params,
                       "Processing mixture model");
         ModelInfoFromYAMLFile* child_info = 
             new ModelInfoFromYAMLFile(info.model_file_path);
+        child_info->parent_model = &info;
         parseYAMLModel(params, model, child_model_name, *child_info,
                        list, &info, logging_target);
         info.mixed_models->insert( child_model_name, child_info );
@@ -551,10 +552,10 @@ void ModelFileLoader::parseYAMLSubtreeModels
                       "Processing subtree model" );
         ModelInfoFromYAMLFile* child_info = 
             new ModelInfoFromYAMLFile(info.model_file_path);
+        child_info->parent_model = &info;
         parseYAMLModel(params, model, child_model_name, *child_info,
                        list, &info, logging_target);
         info.subtree_models->insert( child_model_name, child_info );
-        child_info->parent_model = &info;
     }
 }
 

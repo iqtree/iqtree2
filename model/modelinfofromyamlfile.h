@@ -114,6 +114,8 @@ public:
     ModelParameterRange  getRange    () const;
     double               getValue    () const;
     bool                 isFixed     () const;
+
+    std::string          toString    (const std::string& name) const;
 };
 
 class ToleratedModelVariable: public ModelVariable {
@@ -341,6 +343,7 @@ protected:
                             int new_value, int &old_value,
                             std::stringstream& complaint);
     void copyMixedAndLinkedModels (const ModelInfoFromYAMLFile& rhs);
+    void copyModelMap             (MapOfModels* src, MapOfModels*& dest);
     void changeParameterSubscriptRange(int new_min, int new_max, 
                                        YAMLFileParameter& param,
                                        LoggingTarget* logging_target);

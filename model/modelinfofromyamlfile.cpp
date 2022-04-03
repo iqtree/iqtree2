@@ -172,6 +172,23 @@ bool ModelVariable::isFixed() const {
     return is_fixed;
 }
 
+std::string ModelVariable::toString(const std::string& name) const {
+    std::stringstream stream;
+    if (is_fixed) {
+        stream << fixed << " ";
+    }
+    stream << modelParameterTypeToString(type) << " ";
+    if (!name.empty()) {
+        stream << name << "=";
+    }
+    stream << value << " ";
+    if (range.is_set) {
+        stream << "(in range " << range.first << ".." 
+               << range.second << ") ";
+    }
+    return stream.str();
+}
+
 ToleratedModelVariable::ToleratedModelVariable() : super()
     , tolerance(0.001) {
 }
@@ -243,23 +260,10 @@ ModelInfoFromYAMLFile::ModelInfoFromYAMLFile()
 
 void ModelInfoFromYAMLFile::copyMixedAndLinkedModels
         (const ModelInfoFromYAMLFile& rhs) {
-    delete mixed_models;
-    mixed_models = nullptr;
-    if (rhs.mixed_models != nullptr) {
-        mixed_models = new MapOfModels(*rhs.mixed_models);
-    }
+    copyModelMap(rhs.mixed_models, mixed_models);
+    copyModelMap(rhs.linked_models, linked_models);
+    copyModelMap(rhs.subtree_models, subtree_models);
 
-    delete linked_models;
-    linked_models = nullptr;
-    if (rhs.linked_models != nullptr) {
-        linked_models = new MapOfModels(*rhs.linked_models);
-    }
-
-    delete subtree_models;
-    subtree_models = nullptr;
-    if (rhs.subtree_models != nullptr) {
-        subtree_models = new MapOfModels(*rhs.subtree_models);
-    }
     clade_names          = rhs.clade_names;
     distinct_clade_names = rhs.distinct_clade_names;
 
@@ -269,7 +273,18 @@ void ModelInfoFromYAMLFile::copyMixedAndLinkedModels
         specified_rate_model_info = new ModelInfoFromYAMLFile
                                         (*rhs.specified_rate_model_info);
     }
+}
 
+void ModelInfoFromYAMLFile::copyModelMap(MapOfModels* src, MapOfModels*& dest) {
+    delete dest;
+    dest = nullptr;
+    if (src != nullptr) {
+        dest = new MapOfModels(*src);
+        for (auto it = dest->begin(); it!=dest->end(); ++it) {
+            ModelInfoFromYAMLFile* child_model = *it;
+            child_model->parent_model = this;
+        }
+    }
 }
 
 ModelInfoFromYAMLFile::ModelInfoFromYAMLFile(const ModelInfoFromYAMLFile& rhs)
@@ -618,26 +633,49 @@ const ModelInfoFromYAMLFile::Variables&
     return variables;
 }
 
-const ModelVariable* 
+const ModelVariable*
     ModelInfoFromYAMLFile::getVariableByName
         (const char* name) const {
-    //Todo: look up linked_models too
-    //      possibly also subtree_models
-    if (hasDot(name) && mixed_models != nullptr ) {
-        std::string sub_model_name;
-        const char* var_name = nullptr;
-        breakAtDot(name, sub_model_name, var_name);
-        auto it = findMixedModel(sub_model_name);
-        return (*it)->getVariableByName(var_name);
+
+    if (hasDot(name)) {
+        MapOfModels* maps[3] = { linked_models, mixed_models, subtree_models };
+        for (MapOfModels* map: maps) {
+            if (map != nullptr ) {
+                std::string sub_model_name;
+                const char* var_name = nullptr;
+                breakAtDot(name, sub_model_name, var_name);
+                auto it = map->find(sub_model_name);
+                if (it!=map->end()) {
+                    return (*it)->getVariableByName(var_name);
+                }
+            }
+        }
     }
-    auto it = variables.find(name);
-    if (variables.find(name) != variables.end()) {
+    std::string var_name_str(name);
+    //std::cout << "Searching " << variables.size() << " variables"
+    //          << " in " << getName()
+    //          << " for " << var_name_str << std::endl;
+    auto it = variables.find(var_name_str);
+    if (it != variables.end()) {
         return &(it->second);
     }
+
+    /* Todo: move to a getVariableNames() const member function.
+    const char* sep = "";
+    std::stringstream vars;
+    for (auto var: variables) {
+        vars << sep << var.first ;
+        sep = ", ";
+    }
+    std::cout << vars.str() << std::endl;
+    */
+
     if (parent_model==nullptr) {
         return nullptr;
     }
-    return parent_model->getVariableByName(name);
+    //std::cout << "Looking up parent model's " << name << std::endl;
+    const ModelVariable* var = parent_model->getVariableByName(name);
+    return var;
 }
 
 const ModelVariable* ModelInfoFromYAMLFile::getVariableByName(const std::string& name) const {
