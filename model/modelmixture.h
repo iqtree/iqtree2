@@ -264,6 +264,11 @@ public:
 	virtual void decomposeRateMatrix() override;
 
 	/**
+		set the tree for this model (and for the mixture models in it).
+	*/
+	virtual void setTree(PhyloTree* tree) override;
+
+	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
 	virtual void setBounds(double *lower_bound, double *upper_bound, 

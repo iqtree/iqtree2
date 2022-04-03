@@ -2173,6 +2173,13 @@ bool ModelMixture::getVariables(const double *variables) {
     return changed;
 }
 
+void ModelMixture::setTree(PhyloTree* tree) {
+	for (auto model : models) {
+        model->setTree(tree);
+    }
+    super::setTree(tree);
+}
+
 void ModelMixture::setBounds(double* lower_bound, double* upper_bound,
                              bool*   bound_check) {
 	int dim = 0;
