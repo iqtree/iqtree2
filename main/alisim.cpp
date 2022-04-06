@@ -299,7 +299,7 @@ void generateRandomTree(Params &params)
     }
 
     // calculate the distance
-    if (params.run_mode == CALC_DIST) {
+    if (params.run_mode == RunMode::CALC_DIST) {
         if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
             cout << "Calculating distance matrix..." << endl;
             sg.calcDistance(params.dist_file);

@@ -130,7 +130,7 @@ endif()
 ##################################################################
 # Include the LSD2 library
 ##################################################################
-option(USE_LSD2 "Use least square dating (lsd2)" OFF)
+option(USE_LSD2 "Use least square dating (lsd2)" ON)
 
 if (USE_LSD2)
     add_definitions(-DUSE_LSD2)
@@ -251,7 +251,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (APPLE)
         SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     endif()
 
     #remove -rdynamic for Clang under Linux
@@ -808,8 +807,14 @@ endif()
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
     gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
-# added by TD
-target_link_libraries(iqtree2 onnxruntime)
+# onnxruntime library
+if (APPLE)
+    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
+elseif(UNIX)
+    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
+else()
+    target_link_libraries(iqtree2 onnxruntime)
+endif()
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)
