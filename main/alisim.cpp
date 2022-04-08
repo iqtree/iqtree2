@@ -11,6 +11,8 @@ using namespace std::chrono;
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
+    auto start = getRealTime();
+    
     // Init variables
     IQTree *tree;
     Alignment *aln;
@@ -73,6 +75,8 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     executeSimulation(params, tree);
     
     // aln and tree are deleted in distructor of AliSimSimulator
+    auto end = getRealTime();
+    cout << "Simulation time: " << end-start << "s" << endl;
 }
 
 /**
