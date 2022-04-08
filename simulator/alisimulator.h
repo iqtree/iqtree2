@@ -372,12 +372,12 @@ public:
     /**
     *  simulate sequences for all nodes in the tree
     */
-    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "");
+    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
+    void generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length
