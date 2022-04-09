@@ -2403,7 +2403,7 @@ int main(int argc, char *argv[]) {
             cout << "AVX+FMA";
         } else if (Params::getInstance().SSE >= LK_AVX) {
             cout << "AVX";
-        } else if (Params::getInstance().SSE >= LK_SSE2) {
+        } else if (Params::getInstance().SSE >= LK_SSE2){
             cout << "SSE2";
         } else
             cout << "x86";
