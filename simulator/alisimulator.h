@@ -27,7 +27,9 @@
 #ifdef _OPENMP
     #include <omp.h>
 #endif
-
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+  #include "utils/MPIHelper.h"
+#endif
 struct FunDi_Item {
   int selected_site;
   int new_position;

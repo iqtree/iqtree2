@@ -2198,6 +2198,7 @@ int main(int argc, char *argv[]) {
     int instruction_set;
 
     MPIHelper::getInstance().init(argc, argv);
+    // cout << "MPI proc ID:     " << MPIHelper::getInstance().getProcessID() << std::endl;
     
     atexit(funcExit);
 
@@ -2285,9 +2286,11 @@ int main(int argc, char *argv[]) {
     if (MPIHelper::getInstance().isWorker())
         checkpoint->setFileName("");
 
-    _log_file = Params::getInstance().out_prefix;
-    _log_file += ".log";
-    startLogFile(append_log);
+    if  (MPIHelper::getInstance().isMaster()){ 
+        _log_file = Params::getInstance().out_prefix;
+        _log_file += ".log";
+        startLogFile(append_log);
+    }
     time_t start_time;
 
     if (append_log) {
@@ -2431,6 +2434,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef _IQTREE_MPI
     cout << endl << "MPI:     " << MPIHelper::getInstance().getNumProcesses() << " processes";
+    cout << endl << "MPI proc ID:     " << MPIHelper::getInstance().getProcessID() << std::endl;
 #endif
     
     int num_procs = countPhysicalCPUCores();
@@ -2507,6 +2511,8 @@ int main(int argc, char *argv[]) {
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
         if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
             runPhyloAnalysis(Params::getInstance(), checkpoint);
+        } else if (Params::getInstance().alisim_active) {
+            runAliSim(Params::getInstance(), checkpoint);
         } else {
             outError("Please use one MPI process! The feature you wanted does not need parallelization.");
         }
