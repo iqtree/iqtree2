@@ -2198,7 +2198,6 @@ int main(int argc, char *argv[]) {
     int instruction_set;
 
     MPIHelper::getInstance().init(argc, argv);
-    // cout << "MPI proc ID:     " << MPIHelper::getInstance().getProcessID() << std::endl;
     
     atexit(funcExit);
 
@@ -2283,9 +2282,12 @@ int main(int argc, char *argv[]) {
     }
 
     // after loading, workers are not allowed to write checkpoint anymore
+    // GMJB: this logic is in general incorrect, it makes the MPI workers
+    // crash on 2291-2293
     if (MPIHelper::getInstance().isWorker())
         checkpoint->setFileName("");
 
+    // GMJB masking the workers out 
     if  (MPIHelper::getInstance().isMaster()){ 
         _log_file = Params::getInstance().out_prefix;
         _log_file += ".log";
@@ -2434,7 +2436,6 @@ int main(int argc, char *argv[]) {
 
 #ifdef _IQTREE_MPI
     cout << endl << "MPI:     " << MPIHelper::getInstance().getNumProcesses() << " processes";
-    cout << endl << "MPI proc ID:     " << MPIHelper::getInstance().getProcessID() << std::endl;
 #endif
     
     int num_procs = countPhysicalCPUCores();

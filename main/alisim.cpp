@@ -318,7 +318,7 @@ void executeSimulation(Params params, IQTree *&tree)
 {
     cout << "[Alignment Simulator] Executing" <<"\n";
     cout << " Num processes: " << MPIHelper::getInstance().getNumProcesses() <<"\n";
-    cout << " Process ID " << MPIHelper::getInstance().getProcessID() <<"\n"; 
+    cout << " MPI Process ID " << MPIHelper::getInstance().getProcessID() <<"\n"; 
     
     // disable posterior mean rate (or sampling rate from posterior distribution) if users don't supply input alignment
     if (params.alisim_rate_heterogeneity!=UNSPECIFIED && !params.alisim_inference_mode)
@@ -525,9 +525,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // parallelize over MPI ranks statically
         int proc_ID = MPIHelper::getInstance().getProcessID();
         int nprocs  = MPIHelper::getInstance().getNumProcesses();
-        cout << "Process "<< proc_ID << std::endl; 
         if (i%nprocs != proc_ID) continue; 
-        cout << "Process "<< proc_ID << " simulating dataset " << i << std::endl; 
+        cout << "MPI Process ID "<< proc_ID << " simulating dataset # " << i << std::endl; 
         // output the simulated aln at the current execution localtion
         string output_filepath = super_alisimulator->params->alisim_output_filename;
         
