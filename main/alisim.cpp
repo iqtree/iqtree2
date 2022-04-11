@@ -11,6 +11,8 @@ using namespace std::chrono;
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
+    auto start = getRealTime();
+    
     // Init variables
     IQTree *tree;
     Alignment *aln;
@@ -73,6 +75,8 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     executeSimulation(params, tree);
     
     // aln and tree are deleted in distructor of AliSimSimulator
+    auto end = getRealTime();
+    cout << "Simulation time: " << end-start << "s" << endl;
 }
 
 /**
@@ -530,9 +534,18 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // output the simulated aln at the current execution localtion
         string output_filepath = super_alisimulator->params->alisim_output_filename;
         
+        // check to output a single file
+        if (super_alisimulator->params->alisim_single_output && super_alisimulator->params->alisim_dataset_num == 1)
+                super_alisimulator->params->alisim_single_output = false;
+        
         // only add alignment id if users want to generate multiple alignments
-        if (super_alisimulator->params->alisim_dataset_num > 1)
+        if (super_alisimulator->params->alisim_dataset_num > 1 && !super_alisimulator->params->alisim_single_output)
             output_filepath = output_filepath+"_"+convertIntToString(i+1);
+        
+        // check whether we should write output to a new file or append it into an existing one
+        std::ios_base::openmode open_mode = std::ios_base::out;
+        if (i > 0 && super_alisimulator->params->alisim_single_output)
+            open_mode = std::ios_base::app;
         
         // generate multiple alignments one by one
         if (super_alisimulator->tree->isSuperTree())
@@ -603,7 +616,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         {
             // check whether we could write the output to file immediately after simulating it
             if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio == 0)
-                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath);
+                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath, open_mode);
             // otherwise, writing output to file after completing the simulation
             else
                 generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa);
@@ -613,7 +626,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
-            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator);
+            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, open_mode);
         
         // report model's parameters
         reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));
@@ -623,7 +636,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         
         // remove tmp_data if using Insertion
         if (super_alisimulator->params->alisim_insertion_ratio > 0)
-            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + ".phy").c_str());
+            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename).c_str());
     }
 }
 
@@ -665,7 +678,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
     // show an error if continuous gamma is used in inference mode.
     if (alisimulator->params->alisim_inference_mode && alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->is_continuous_gamma)
@@ -707,13 +720,13 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
         }
     }
     
-    alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath);
+    alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath, open_mode);
 }
 
 /**
 *  write all sequences of a tree to an output file
 */
-void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator)
+void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator, std::ios_base::openmode open_mode)
 {
     try {
             // init output_stream for Indels to output aln without gaps
@@ -724,9 +737,9 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             {
                 write_indels_output = true;
                 if (alisimulator->params->do_compression)
-                    out_indels = new ogzstream((file_path+".unaligned.fa").c_str());
+                    out_indels = new ogzstream((file_path+".unaligned.fa").c_str(), open_mode);
                 else
-                    out_indels = new ofstream((file_path+".unaligned.fa").c_str());
+                    out_indels = new ofstream((file_path+".unaligned.fa").c_str(), open_mode);
             }
         
             // add ".phy" or ".fa" to the output_filepath
@@ -736,9 +749,9 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 file_path = file_path + ".fa";
             ostream *out;
             if (alisimulator->params->do_compression)
-                out = new ogzstream(file_path.c_str());
+                out = new ogzstream(file_path.c_str(), open_mode);
             else
-                out = new ofstream(file_path.c_str());
+                out = new ofstream(file_path.c_str(), open_mode);
             out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
@@ -797,7 +810,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator){
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, std::ios_base::openmode open_mode){
     // in case with partitions -> merge & write sequences to a single/multiple files
     if (alisimulator->tree->isSuperTree())
     {
@@ -919,7 +932,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
-                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator);
+                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator, open_mode);
             }
         }
     }
@@ -934,7 +947,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
         
         //  get the num_leaves
         int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
-        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator);
+        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator, open_mode);
     }
 }
 
@@ -1141,7 +1154,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     igzstream in;
     int line_num = 1;
     string line;
-    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename + ".phy").c_str());
+    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename).c_str());
     
     // dummy variables
     GenomeTree* genome_tree = NULL;
@@ -1154,7 +1167,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     {
         safeGetline(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
-        if (line == "" || line_num == 1) continue;
+        if (line == "" || (alisimulator->params->aln_output_format == IN_PHYLIP && line_num == 1)) continue;
         
         // extract seq_name
         int index_of_first_at = line.find_first_of("@");

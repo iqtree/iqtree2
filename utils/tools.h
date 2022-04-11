@@ -2507,6 +2507,11 @@ public:
     double alisim_branch_scale;
     
     /**
+    *  TRUE to output all replicate alignments into a single file
+    */
+    bool alisim_single_output;
+    
+    /**
     *  Type to assign rate heterogeneity to sites (default: posterior mean)
     */
     ASSIGNMENT_TYPE alisim_rate_heterogeneity;
