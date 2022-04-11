@@ -2281,18 +2281,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // after loading, workers are not allowed to write checkpoint anymore
-    // GMJB: this logic is in general incorrect, it makes the MPI workers
-    // crash on 2291-2293
     if (MPIHelper::getInstance().isWorker())
         checkpoint->setFileName("");
 
-    // GMJB masking the workers out 
-    if  (MPIHelper::getInstance().isMaster()){ 
-        _log_file = Params::getInstance().out_prefix;
-        _log_file += ".log";
-        startLogFile(append_log);
-    }
+    _log_file = Params::getInstance().out_prefix;
+    _log_file += ".log";
+    startLogFile(append_log);
     time_t start_time;
 
     if (append_log) {
