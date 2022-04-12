@@ -44,7 +44,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     params.alisim_inference_mode = inference_mode;
     
     // generate a random tree if neccessary
-    if (params.tree_gen != NONE)
+    if (params.tree_gen != NONE && MPIHelper::getInstance().isMaster())
     {
         // draw a random num_taxa from a user-defined list
         if (!params.alisim_num_taxa_list.empty())
@@ -65,6 +65,8 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
         params.start_tree = STT_PLL_PARSIMONY;
         params.tree_gen = NONE;
     }
+    // make sure the tree is generated before other MPI processes do further steps
+    MPIHelper::getInstance().barrier();
     
     // inferring input parameters if inference mode is active
     if (inference_mode)
