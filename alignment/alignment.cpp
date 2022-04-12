@@ -579,7 +579,7 @@ vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
 Alignment *Alignment::replaceAmbiguousChars() {
 
     IntVector patterns;
-
+    
     for (size_t idx = 0; idx < getNPattern(); idx++) {
         patterns.push_back(idx);
     }
@@ -587,7 +587,7 @@ Alignment *Alignment::replaceAmbiguousChars() {
     Alignment *aln = new Alignment;
     aln->extractPatterns(this, patterns);
 
-    for (size_t idx = 0; idx < boost::size(patterns); idx++) {
+    for (size_t idx = 0; idx < aln->size(); idx++) {
         for (size_t i = 0; i < getNSeq(); i++) {
             if (aln->at(idx)[i] > 3) {
                 uint32_t base;

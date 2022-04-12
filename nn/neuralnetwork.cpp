@@ -114,6 +114,7 @@ string NeuralNetwork::doModelInference() {
     const char *model_path = Params::getInstance().nn_path_model.c_str();
 
     printf("Using Onnxruntime C++ API\n");
+    cout << "model_path: " << model_path << endl;
     Ort::Session session(env, model_path, session_options);
 
     size_t num_input_nodes = session.GetInputCount();
@@ -122,7 +123,7 @@ string NeuralNetwork::doModelInference() {
     Ort::AllocatorWithDefaultOptions allocator;
     //std::vector<int64_t> input_node_dims;
 
-    //printf("Number of inputs = %zu\n", num_input_nodes);
+    // printf("Number of inputs = %zu\n", num_input_nodes);
 
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
