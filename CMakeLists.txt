@@ -79,6 +79,16 @@ if(Boost_FOUND)
     add_definitions(-DUSE_BOOST)
 endif()
 
+# Find onnxruntime library for machine learning
+if (NOT onnxruntime_INCLUDE_DIRS)
+    message("Search for onnxruntime...")
+    find_package(onnxruntime)
+    message(${onnxruntime_INCLUDE_DIRS})
+    if(NOT onnxruntime_FOUND)
+        message(FATAL_ERROR "onnxruntime library not found. Either install it or rerun cmake with -Donnxruntime_INCLUDE_DIRS=<installed_onnxruntime_dir>")
+    endif()
+endif()
+add_definitions(-I${onnxruntime_INCLUDE_DIRS})
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
@@ -307,13 +317,13 @@ endif()
 # onnxruntime (added by TD)
 ##################################################################
 
-if(NOT ONNXRUNTIME_ROOTDIR)
-    if(WIN32)
-        set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
-    else()
-        include_directories("/usr/local/include/onnxruntime")
-    endif()
-endif()
+#if(NOT ONNXRUNTIME_ROOTDIR)
+#    if(WIN32)
+#        set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
+#    else()
+#        include_directories("/usr/local/include/onnxruntime")
+#    endif()
+#endif()
 
 ##################################################################
 # detect 32 or 64 bit binary
@@ -694,6 +704,7 @@ add_subdirectory(alignment)
 add_subdirectory(tree)
 add_subdirectory(terrace)
 add_subdirectory(simulator)
+add_subdirectory(nn)
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -728,8 +739,7 @@ endif()
 
 add_executable(iqtree2
 obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h
-        nn/neuralnetwork.cpp nn/neuralnetwork.h) # added by TD (TODO: move into cmake in nn folder?)
+obsolete/parsmultistate.h)
 
 if(Backtrace_FOUND)
   include_directories(${Backtrace_INCLUDE_DIR})
@@ -762,6 +772,8 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
         endif()
     endif()
 endif()
+
+target_link_libraries(iqtree2 nn)
 
 ##################################################################
 # setup linking flags
@@ -808,13 +820,15 @@ target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vec
     gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 # onnxruntime library
-if (APPLE)
-    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
-elseif(UNIX)
-    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
-else()
-    target_link_libraries(iqtree2 onnxruntime)
-endif()
+target_link_libraries(iqtree2 ${onnxruntime_LIBRARIES})
+
+#if (APPLE)
+#    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
+#elseif(UNIX)
+#    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
+#else()
+#    target_link_libraries(iqtree2 onnxruntime)
+#endif()
 
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)
