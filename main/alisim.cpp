@@ -11,6 +11,7 @@ using namespace std::chrono;
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
+    MPIHelper::getInstance().barrier();
     auto start = getRealTime();
     
     // Init variables
@@ -75,6 +76,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     executeSimulation(params, tree);
     
     // aln and tree are deleted in distructor of AliSimSimulator
+    MPIHelper::getInstance().barrier();
     auto end = getRealTime();
     cout << "Simulation time: " << end-start << "s" << endl;
 }
