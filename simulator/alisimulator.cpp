@@ -544,7 +544,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
+void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
@@ -569,7 +569,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
     validataSeqLengthCodon();
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSeqsForTree(input_msa, output_filepath);
+    simulateSeqsForTree(input_msa, output_filepath, open_mode);
 }
 
 /**
@@ -717,7 +717,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath)
+void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
     // get variables
     int sequence_length = expected_num_sites;
@@ -748,16 +748,20 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         // init an output_filepath to temporarily output the sequences (when simulating Indels)
         if (write_sequences_to_tmp_data)
             output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename;
-        try {
+        // otherwise, just add ".phy" or ".fa" to the output_filepath
+        else
+        {
             // add ".phy" or ".fa" to the output_filepath
             if (params->aln_output_format != IN_FASTA)
                 output_filepath = output_filepath + ".phy";
             else
                 output_filepath = output_filepath + ".fa";
+        }
+        try {
             if (params->do_compression)
-                out = new ogzstream(output_filepath.c_str());
+                out = new ogzstream(output_filepath.c_str(), open_mode);
             else
-                out = new ofstream(output_filepath.c_str());
+                out = new ofstream(output_filepath.c_str(), open_mode);
             out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
