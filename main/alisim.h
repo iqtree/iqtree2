@@ -9,6 +9,7 @@
 #define alisim_h
 
 #include "utils/tools.h"
+#include "utils/MPIHelper.h"
 #include "simulator/alisimulatorinvar.h"
 #include "simulator/alisimulatorheterogeneityinvar.h"
 #include "phyloanalysis.h"
