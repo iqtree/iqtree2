@@ -375,7 +375,7 @@ void executeSimulation(Params params, IQTree *&tree)
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
 
-    if (params.outputfile_runtime.length() > 0)
+    if (params.outputfile_runtime.length() > 0 && MPIHelper::getInstance().isMaster())
     {
         auto end_time = high_resolution_clock::now();
         
@@ -539,6 +539,15 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // check to output a single file
         if (super_alisimulator->params->alisim_single_output && super_alisimulator->params->alisim_dataset_num == 1)
                 super_alisimulator->params->alisim_single_output = false;
+        
+        // ignore --single-output in version with MPI
+#ifdef _IQTREE_MPI
+        if (super_alisimulator->params->alisim_single_output)
+        {
+            outWarning("Ignore --single-output option since it is not supported in IQ-TREE version with MPI. Alignments will be outputted in separated files.");
+            super_alisimulator->params->alisim_single_output = false;
+        }
+#endif
         
         // only add alignment id if users want to generate multiple alignments
         if (super_alisimulator->params->alisim_dataset_num > 1 && !super_alisimulator->params->alisim_single_output)
