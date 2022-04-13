@@ -5171,8 +5171,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
-                // force --redo(ing)
-                params.ignore_checkpoint = true;
                 
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')

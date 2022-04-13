@@ -225,7 +225,11 @@ void generateRandomTree(Params &params)
 
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
             params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE || params.tree_gen == BIRTH_DEATH) {
-            if (!overwriteFile(params.user_file)) return;
+            if (MPIHelper::getInstance().isMaster() && fileExists(params.user_file) && !params.ignore_checkpoint)
+            {
+                string tmp_str(params.user_file);
+                outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");
+            }
             ofstream out;
             out.open(params.user_file);
             MTree itree;
@@ -291,13 +295,21 @@ void generateRandomTree(Params &params)
         // Generate random trees if optioned
         else if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
             cout << "Generating random circular split network..." << endl;
-            if (!overwriteFile(params.user_file)) return;
+            if (MPIHelper::getInstance().isMaster() && fileExists(params.user_file) && !params.ignore_checkpoint)
+            {
+                string tmp_str(params.user_file);
+                outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");
+            }
             sg.generateCircular(params);
         } else if (params.tree_gen == TAXA_SET) {
             sg.init(params);
             cout << "Generating random taxa set of size " << params.sub_size <<
                 " overlap " << params.overlap << " with " << params.repeated_time << " times..." << endl;
-            if (!overwriteFile(params.pdtaxa_file)) return;
+            if (MPIHelper::getInstance().isMaster() && fileExists(params.pdtaxa_file) && !params.ignore_checkpoint)
+            {
+                string tmp_str(params.pdtaxa_file);
+                outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");
+            }
             sg.generateTaxaSet(params.pdtaxa_file, params.sub_size, params.overlap, params.repeated_time);
         }
     } catch (bad_alloc) {
