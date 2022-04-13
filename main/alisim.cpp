@@ -647,7 +647,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         
         // remove tmp_data if using Insertion
         if (super_alisimulator->params->alisim_insertion_ratio > 0)
-            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename).c_str());
+            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
     }
 }
 
@@ -1165,7 +1165,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     igzstream in;
     int line_num = 1;
     string line;
-    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename).c_str());
+    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
     
     // dummy variables
     GenomeTree* genome_tree = NULL;
