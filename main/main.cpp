@@ -2510,7 +2510,6 @@ int main(int argc, char *argv[]) {
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
         if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
             runPhyloAnalysis(Params::getInstance(), checkpoint);
-            cout << "finish runPhyloAnalysis" << endl << flush;
         } else {
             outError("Please use one MPI process! The feature you wanted does not need parallelization.");
         }

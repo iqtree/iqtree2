@@ -22,7 +22,7 @@ double NeuralNetwork::doAlphaInference() {
 
     const char *model_path = Params::getInstance().nn_path_rates.c_str();
 
-    printf("Using Onnxruntime C++ API\n");
+    // printf("Using Onnxruntime C++ API\n");
     Ort::Session session(env, model_path, session_options);
 
     size_t num_input_nodes = session.GetInputCount();
@@ -113,8 +113,8 @@ string NeuralNetwork::doModelInference() {
 
     const char *model_path = Params::getInstance().nn_path_model.c_str();
 
-    printf("Using Onnxruntime C++ API\n");
-    cout << "model_path: " << model_path << endl;
+    // printf("Using Onnxruntime C++ API\n");
+    // cout << "model_path: " << model_path << endl;
     Ort::Session session(env, model_path, session_options);
 
     size_t num_input_nodes = session.GetInputCount();

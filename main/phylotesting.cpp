@@ -902,30 +902,30 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 
     ModelsBlock *models_block = readModelsDefinition(params);
 
-    if (!params.use_nn_model & !iqtree.isSuperTree()) {
-        // compute initial tree
-        // cout << "params.modelfinder_ml_tree = " << params.modelfinder_ml_tree << endl << flush;
-        if (params.modelfinder_ml_tree) {
-            // 2019-09-10: Now perform NNI on the initial tree
-            string tree_str = computeFastMLTree(params, iqtree.aln, model_info,
-                models_block, params.num_threads, params.partition_type, iqtree.dist_file);
-            iqtree.restoreCheckpoint();
-        } else {
-            iqtree.computeInitialTree(params.SSE);
+    // compute initial tree
+    // cout << "params.modelfinder_ml_tree = " << params.modelfinder_ml_tree << endl << flush;
+    if (!params.use_nn_model && params.modelfinder_ml_tree) {
+        // 2019-09-10: Now perform NNI on the initial tree
+        string tree_str = computeFastMLTree(params, iqtree.aln, model_info,
+            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
+        iqtree.restoreCheckpoint();
+    } else {
+        iqtree.computeInitialTree(params.SSE);
 
-            if (iqtree.isSuperTree()) {
-                PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-                int part = 0;
-                for (auto it = stree->begin(); it != stree->end(); it++, part++) {
-                    model_info.startStruct((*it)->aln->name);
-                    (*it)->saveCheckpoint();
-                    model_info.endStruct();
-                }
-            } else {
-                iqtree.saveCheckpoint();
+        if (iqtree.isSuperTree()) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+            int part = 0;
+            for (auto it = stree->begin(); it != stree->end(); it++, part++) {
+                model_info.startStruct((*it)->aln->name);
+                (*it)->saveCheckpoint();
+                model_info.endStruct();
             }
+        } else {
+            iqtree.saveCheckpoint();
         }
+    }
 
+    if (!params.use_nn_model) {
         // also save initial tree to the original .ckp.gz checkpoint
         //        string initTree = iqtree.getTreeString();
         //        CKP_SAVE(initTree);
