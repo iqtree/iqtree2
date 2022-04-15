@@ -822,7 +822,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         delete out;
         
         // show the output file name
-        if (!write_sequences_to_tmp_data)
+        if (!(write_sequences_to_tmp_data || (MPIHelper::getInstance().getNumProcesses() > 1 && params->alisim_dataset_num > 1)))
             cout << "An alignment has just been exported to "<<output_filepath<<endl;
     }
         

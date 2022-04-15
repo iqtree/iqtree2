@@ -651,11 +651,15 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, open_mode);
         
-        // report model's parameters
-        reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));
-        // show omega/kappa/kappa2 when using codon models
-        if (super_alisimulator->tree->aln->seq_type == SEQ_CODON)
-            super_alisimulator->tree->getModel()->writeInfo(cout);
+        // do not report model params when simulating MSAs with MPI
+        if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
+        {
+            // report model's parameters
+            reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));
+            // show omega/kappa/kappa2 when using codon models
+            if (super_alisimulator->tree->aln->seq_type == SEQ_CODON)
+                super_alisimulator->tree->getModel()->writeInfo(cout);
+        }
         
         // remove tmp_data if using Insertion
         if (super_alisimulator->params->alisim_insertion_ratio > 0)
@@ -820,7 +824,8 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             delete out;
         
             // show the output file name
-            cout << "An alignment has just been exported to "<<file_path<<endl;
+            if (!(MPIHelper::getInstance().getNumProcesses() > 1 && alisimulator->params->alisim_dataset_num > 1))
+                cout << "An alignment has just been exported to "<<file_path<<endl;
         
             // show actual output sequence length in simulations with Indels
             if (alisimulator->params->alisim_insertion_ratio > 0)
