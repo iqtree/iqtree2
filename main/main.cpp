@@ -2504,10 +2504,10 @@ int main(int argc, char *argv[]) {
     }
 
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
-        if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-        } else if (Params::getInstance().alisim_active) {
+        if (Params::getInstance().alisim_active) {
             runAliSim(Params::getInstance(), checkpoint);
+        } else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+            runPhyloAnalysis(Params::getInstance(), checkpoint);
         } else {
             outError("Please use one MPI process! The feature you wanted does not need parallelization.");
         }
