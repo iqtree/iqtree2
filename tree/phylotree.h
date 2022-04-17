@@ -3076,11 +3076,21 @@ protected:
                                   RateHeterogeneity*& other_rate,
                                   double*&     tip_lh) const;
 
+    void getSubtreeModelAndTipLikelihood(PhyloNode* dad, 
+                                         PhyloNode* node, 
+                                         ModelDivergent* div_model,
+                                         ModelSubst*& model_to_use,
+                                         ModelSubst*& other_model, 
+                                         RateHeterogeneity*& rate_model, 
+                                         RateHeterogeneity*& other_rate,
+                                         double*&     tip_lh) const;
+
     void handleDivergentModelBoundary
             (TraversalInfo& info, 
              ModelSubst* model_to_use, ModelSubst* other_model, 
              RateHeterogeneity* rate_model, RateHeterogeneity* other_rate,
              intptr_t ptn_lower, intptr_t ptn_upper, intptr_t packet_id,
+             int   start_cat_no, int stop_cat_no,
              const LikelihoodBufferSet& buffers);
 };
         

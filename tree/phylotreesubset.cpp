@@ -91,6 +91,7 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
         div_model->calculateSubtreeFrequencyEstimates
             (aln, this);
     }
+
     showProgress();
 }
 
@@ -276,27 +277,44 @@ void PhyloTree::getModelAndTipLikelihood
     if (model_to_use->isDivergentModel()) {
         ModelDivergent* div_model = 
             dynamic_cast<ModelDivergent*>(model_to_use);
-        int subtree_number = getSubTreeNumberForBranch(dad, node);
-        model_to_use = div_model->getNthSubtreeModel(subtree_number);
-        rate_model   = div_model->getNthSubtreeRateModel(subtree_number);
-        rate_model   = (rate_model!=nullptr) ? rate_model : site_rate;
-        tip_lh       = tip_partial_lh 
-                     + subtree_number * tip_partial_lh_size_per_model;
-        int other_subtree_number = getSubTreeNumberForBranch(node, dad);
-        other_model  = div_model->getNthSubtreeModel(other_subtree_number);
-        other_rate   = div_model->getNthSubtreeRateModel(other_subtree_number);
-        other_rate   = (other_rate!=nullptr) ? other_rate : site_rate;
+        getSubtreeModelAndTipLikelihood(dad, node, div_model, 
+                                        model_to_use, other_model,
+                                        rate_model, other_rate, tip_lh);
     }
 }
+
+void PhyloTree::getSubtreeModelAndTipLikelihood
+        (PhyloNode* dad, PhyloNode* node, ModelDivergent* div_model,
+         ModelSubst*& model_to_use, ModelSubst*& other_model, 
+         RateHeterogeneity*& rate_model, RateHeterogeneity*& other_rate,
+         double*&     tip_lh) const {
+    int subtree_number = getSubTreeNumberForBranch(dad, node);
+    model_to_use = div_model->getNthSubtreeModel(subtree_number);
+    rate_model   = div_model->getNthSubtreeRateModel(subtree_number);
+    rate_model   = (rate_model!=nullptr) ? rate_model : site_rate;
+    tip_lh       = tip_partial_lh 
+                    + subtree_number * tip_partial_lh_size_per_model;
+    int other_subtree_number = getSubTreeNumberForBranch(node, dad);
+    other_model  = div_model->getNthSubtreeModel(other_subtree_number);
+    other_rate   = div_model->getNthSubtreeRateModel(other_subtree_number);
+    other_rate   = (other_rate!=nullptr) ? other_rate : site_rate;
+
+    if (other_model != model_to_use) {
+        LOG_LINE(VerboseMode::VB_MIN,
+                    "Model for dad (" << dad->id << ")"
+                    << " different from model for node (" << node->id << ")" );
+    }
+}
+
 
 void PhyloTree::handleDivergentModelBoundary
         (TraversalInfo&     info, 
          ModelSubst*        model_to_use, ModelSubst*        other_model, 
          RateHeterogeneity* rate_model,   RateHeterogeneity* other_rate,
          intptr_t ptn_lower, intptr_t ptn_upper, intptr_t packet_id,
+         int start_cat_no,   int stop_cat_no,
          const LikelihoodBufferSet& buffers) {
 
-    intptr_t       ptn_count      = ptn_upper - ptn_lower;
     PhyloNeighbor* dad_branch     = info.dad_branch;
     int            nstates        = aln->num_states;
     const int      ncat           = rate_model->getNRate();
@@ -307,6 +325,18 @@ void PhyloTree::handleDivergentModelBoundary
     const int      v_by_s         = nstates * vector_size;
     double*        start_lh       = dad_branch->partial_lh 
                                   + ptn_lower * static_cast<intptr_t>(block);
+
+    //
+    //Question: for mixture models, is information stored 
+    //(in each block) in mixture category major order, 
+    //or in rate category major order? The code below 
+    //assumes mixture category major order (as it's simpler!)
+    //But it's a coin-toss.  I don't actually know.
+    //
+    if (!fused && 1<ncat && 1<n_mix) {
+        start_cat_no *= ncat;
+        stop_cat_no  *= ncat;
+    }
 
 #if 0
     //It doesn't look like I need this
@@ -326,35 +356,48 @@ void PhyloTree::handleDivergentModelBoundary
             //Todo: what about scaling?
             for (int vector_index = 0; vector_index < vector_size; ++vector_index) { 
                 double lh_for_state = 0.0;
-                int    cat          = 0;
-                for (int cat_offset = 0; cat_offset < block
-                     ; cat_offset += v_by_s, ++ cat) {
+                int    cat          = start_cat_no;                
+                for (int cat_offset = start_cat_no * v_by_s
+                     ; cat < stop_cat_no
+                     ; cat_offset += v_by_s, ++cat) {
                     lh_for_state += partial_lh [ cat_offset + state_offset + vector_index ];
-                                    //times the weight for this category and pattern,
-                                    //according to this model_to_use?
+                    //But... does the rate/mix category weight come into it here?
+                    //Do the partial_lh values already take that into account?
+                    //If not, doesn't this need to be multiplied?!
                 }
                 ASSERT(0 < lh_for_state);
-                log_lh_total[state] += log(lh_for_state);
+                log_lh_total[state] += log(lh_for_state) * ptn_freq[ptn];
             }
         }
     }
 
+    double total_ptn_freq = 0.0;
+    for (auto i=ptn_lower; i<ptn_upper; ++i) {
+        total_ptn_freq += static_cast<double>(ptn_freq[i]);
+    }
+
+    double multiplier = 1.0 / total_ptn_freq / static_cast<double>(ncat_mix);
     std::vector<double> state_lh(nstates);
     for (int state = 0; state < nstates; ++state) {
-        state_lh[state] = exp( log_lh_total[state] 
-                               / static_cast<double>(ptn_count)
-                               / static_cast<double>(ncat_mix));
+        state_lh[state] = exp( log_lh_total[state] * multiplier );
+        LOG_LINE(VerboseMode::VB_MIN, "state_lh[" << state << "]"
+                 << " is " << state_lh[state]);
     }
 
     partial_lh = start_lh;
+    int start_cat_offset = start_cat_no * v_by_s;
+    int stop_cat_offset  = stop_cat_no * v_by_s;
     for (intptr_t ptn = ptn_lower; ptn < ptn_upper
          ; partial_lh += block, ptn += vector_size) {
-        for (int cat_offset = 0; cat_offset < block; cat_offset += v_by_s) {
+        for (int cat_offset = start_cat_offset
+             ; cat_offset < stop_cat_offset
+             ; cat_offset += v_by_s) {
             int state_offset = 0;
             for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
                 double lh = state_lh[state];
                 for (int vector_index = 0; vector_index < vector_size; ++vector_index) {
-                    partial_lh [ cat_offset + state_offset + vector_index ] = lh;
+                    intptr_t ix = cat_offset + state_offset + vector_index;                   
+                    partial_lh [  ix ] = lh;
                 }
             }
         }

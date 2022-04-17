@@ -1247,15 +1247,15 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
     double*            tip_lh       = tip_partial_lh;
     getModelAndTipLikelihood(dad, node, model_to_use, other_model,
                              rate_model, other_rate, tip_lh);
-    const size_t   states_square  = nstates*nstates;
-    const intptr_t orig_nptn      = aln->size();
-    const intptr_t max_orig_nptn  = roundUpToMultiple(orig_nptn, VectorClass::size());
-    const intptr_t nptn           = max_orig_nptn+model_factory->unobserved_ptns.size();
-    const int      ncat           = rate_model->getNRate();
-    const bool     fused          = model_factory->fused_mix_rate;
-    const int      n_mix          = model->getNMixtures();
-    const int      ncat_mix       = fused ? ncat : ncat * n_mix;
-    const int      denom          = fused ? 1 : ncat;
+    const size_t     states_square  = nstates*nstates;
+    const intptr_t   orig_nptn      = aln->size();
+    const intptr_t   max_orig_nptn  = roundUpToMultiple(orig_nptn, VectorClass::size());
+    const intptr_t   nptn           = max_orig_nptn+model_factory->unobserved_ptns.size();
+    const int        ncat           = rate_model->getNRate();
+    const bool       fused          = model_factory->fused_mix_rate;
+    const int        n_mix          = model->getNMixtures();
+    const int        ncat_mix       = fused ? ncat : ncat * n_mix;
+    const int        denom          = fused ? 1 : ncat;
 
     std::vector<size_t> mix_addr_nstates_vector(ncat_mix);
     std::vector<size_t> mix_addr_vector(ncat_mix);
@@ -2009,6 +2009,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
             }
         } //big for loop over ptn
     }
+
     if (Params::getInstance().buffer_mem_save) {
         aligned_free(partial_lh_leaves);
         aligned_free(echildren);
@@ -2016,13 +2017,32 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
         info.echildren         = nullptr;
     }
 
-    #if (0)
     if (other_model != model_to_use) {
         handleDivergentModelBoundary
-        (info, model_to_use, other_model, rate_model, other_rate,
-        ptn_lower, ptn_upper, packet_id, buffers);
+            (info, model_to_use, other_model, rate_model, other_rate,
+             ptn_lower, ptn_upper, packet_id,
+             0, model->getNMixtures(), buffers);        
+    } else if (node->getSubsetNumber()!=dad->getSubsetNumber()) {
+        //if model_to_use is a mixture model, need to iterate
+        //over the models in the mixture, 
+        int mix_count = model->getNMixtures(); 
+        for (int cat = 0; cat < mix_count; ++ cat) {
+            ModelSubst* cat_model = model->getMixtureClass(cat);
+            if (cat_model->isDivergentModel()) {
+                auto div = reinterpret_cast<ModelDivergent*>(cat_model);
+                getSubtreeModelAndTipLikelihood(dad, node, div,
+                                                model_to_use, other_model,
+                                                rate_model, other_rate, tip_lh);
+                if (model_to_use!=other_model) {
+                    handleDivergentModelBoundary
+                        (info, model_to_use, other_model, 
+                         rate_model, other_rate,
+                         ptn_lower, ptn_upper, packet_id,
+                         cat, cat+1, buffers);  
+                }                                        
+            }
+        }
     }
-    #endif
 }
 
 /*******************************************************
@@ -2626,6 +2646,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD
             showProgress();
         }
         if (!SAFE_NUMERIC) {
+            hideProgress();
             outError("Numerical underflow (lh-derivative)."
                      " Run again with the safe likelihood kernel via `-safe` option");
         }
@@ -2683,7 +2704,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD
     if (!std::isfinite(*df)) {
         if (!warnedAboutNumericalUnderflow) {
             hideProgress();
-            cout << "WARNING: Numerical underflow for lh-derivative" << endl;
+            outWarning("Numerical underflow for lh-derivative");
             showProgress();
             warnedAboutNumericalUnderflow = true;
         }
@@ -2819,7 +2840,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
     computePatternPacketBounds(VectorClass::size(), num_threads,
                                num_packets, nptn, limits);
     
-    if (dad->isLeaf()) {
+    if (dad->isLeaf()) {        
         // special treatment for TIP-INTERNAL NODE case
         double* partial_lh_node;
         if (SITE_MODEL) {
@@ -3190,7 +3211,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
             }
             tree_lh += buffers._pattern_lh[ptn] * ptn_freq[ptn];
         }
-        //Don't we need to set _pattern_lh[...] something?
         if (justWarned) {
             LOG_LINE(VerboseMode::VB_MED, "Fixed tree_lh was " << tree_lh);
         }
@@ -3388,7 +3408,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
         VectorClass lh_ptn;
         const VectorClass* theta = (VectorClass*)(buffers.theta_all + ptn*block);
         if (SITE_MODEL) {
-            VectorClass *eval_ptr = (VectorClass*)&eval[ptn*nstates];
+            VectorClass* eval_ptr = (VectorClass*)&eval[ptn*nstates];
             lh_ptn = 0.0;
             for (size_t c = 0; c < ncat; c++) {
                 VectorClass lh_cat;
@@ -3717,7 +3737,9 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD
         ddf += nsites * (all_ddf_const + all_df_const*all_df_const);
     }
     if (!std::isfinite(df)) {
-        cout << "WARNING: Numerical underflow for lh-derivative-mixlen" << endl;
+        hideProgress();
+        outWarning("Numerical underflow for lh-derivative-mixlen");
+        showProgress();
         df = ddf = 0.0;
     }
 }
