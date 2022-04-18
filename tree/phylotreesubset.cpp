@@ -300,7 +300,7 @@ void PhyloTree::getSubtreeModelAndTipLikelihood
     other_rate   = (other_rate!=nullptr) ? other_rate : site_rate;
 
     if (other_model != model_to_use) {
-        LOG_LINE(VerboseMode::VB_MIN,
+        LOG_LINE(VerboseMode::VB_DEBUG,
                     "Model for dad (" << dad->id << ")"
                     << " different from model for node (" << node->id << ")" );
     }
@@ -315,78 +315,132 @@ void PhyloTree::handleDivergentModelBoundary
          int start_cat_no,   int stop_cat_no,
          const LikelihoodBufferSet& buffers) {
 
+    //Note:
+    //This assumes that organization of partial_lh 
+    //(major to minor) is as follows:
+    //
+    //   Rank             Number of choices         Indexing Multiplier
+    //-- -------------    -----------------         -------------------
+    //1. Pattern-Major    (PatternNo / VectorSize)  block
+    //2. Mixture Category (model->getNMixtures())   
+    //3. Rate Category    (rate_model->getNRate())  v_by_s
+    //4. State            (aln->num_states)         vector_size
+    //5. Pattern-Minor    (PatternNo % VectorSize)  1
+    //
+
     PhyloNeighbor* dad_branch     = info.dad_branch;
     int            nstates        = aln->num_states;
     const int      ncat           = rate_model->getNRate();
     const bool     fused          = model_factory->fused_mix_rate;
     const int      n_mix          = model->getNMixtures();
     const int      ncat_mix       = fused ? ncat : ncat * n_mix;
-    const int      block          = nstates * ncat_mix * vector_size;
     const int      v_by_s         = nstates * vector_size;
+    const int      block          = v_by_s  * ncat_mix;
     double*        start_lh       = dad_branch->partial_lh 
-                                  + ptn_lower * static_cast<intptr_t>(block);
+                                  + ptn_lower 
+                                    * static_cast<intptr_t>(nstates)
+                                    * static_cast<intptr_t>(ncat_mix);
+
+    ASSERT((ptn_lower % vector_size) == 0);
+    //Otherwise, formula for start_lh is invalid.
+    ASSERT((ptn_upper % vector_size) == 0);
+
+    LOG_LINE(VerboseMode::VB_MIN, "nstates=" << nstates
+             << ", ncat=" << ncat << ", fused=" << fused
+             << ", n_mix=" << n_mix << ", ncat_mix=" << ncat_mix
+             << ", v_by_s=" << v_by_s << ", block=" << v_by_s * ncat_mix
+             << ", ptn_lower=" << ptn_lower
+             << ", ptn_upper=" << ptn_upper);
 
     //
     //Question: for mixture models, is information stored 
     //(in each block) in mixture category major order, 
     //or in rate category major order? The code below 
     //assumes mixture category major order (as it's simpler!)
-    //But it's a coin-toss.  I don't actually know.
+    //I think that's right, but I'm not 100% sure.
     //
     if (!fused && 1<ncat && 1<n_mix) {
         start_cat_no *= ncat;
         stop_cat_no  *= ncat;
     }
 
-#if 0
-    //It doesn't look like I need this
-    std::vector<double> temp_lh_vector(block * ptn_count);
-    double* temp_lh = temp_lh_vector.data();
-    memcpy(temp_lh, start_lh, block * ptn_count * sizeof(double));
-#endif
-
     std::vector<double> log_lh_total(nstates, 0.0);
-    
-    //Note: This needs to know category weights
-    double*  partial_lh = start_lh;
+
+    //Get category proportions
+    auto cat_count = stop_cat_no - start_cat_no;
+    std::vector<double> cat_prop(cat_count, 1.0);
+    for (auto c=start_cat_no; c<stop_cat_no; ++c) {
+        int     denom          = fused ? 1 : ncat;
+        int     mymix          = c/denom;
+        int     mycat          = c%ncat;
+        cat_prop[c - start_cat_no ] 
+            = rate_model->getProp(mycat) 
+            * model_to_use->getMixtureWeight(mymix);
+        LOG_LINE(VerboseMode::VB_MIN, "cat_prop for cat " << c
+             << " is " << cat_prop[c - start_cat_no ]);
+    }
+
+    double* partial_lh   = start_lh;
+    double  total_log_lh = 0;
+
     for (intptr_t ptn = ptn_lower; ptn < ptn_upper
          ; partial_lh += block, ptn += vector_size) {
-        int state_offset = 0;
-        for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
-            //Todo: what about scaling?
-            for (int vector_index = 0; vector_index < vector_size; ++vector_index) { 
-                double lh_for_state = 0.0;
+        int    state_offset = 0;
+        double log_lh_here = 0.0; //log of likelihood for the 
+                                  //sites in this pattern block
+        int v_size_here = (ptn + vector_size < ptn_upper) 
+                        ? vector_size : (ptn_upper-ptn);
+
+        for (int vector_index = 0; vector_index < v_size_here; ++vector_index) { 
+            double lh_for_vector_posn = 0.0; //likelihood (over all states), 
+                                             //this pattern            
+            for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
+                double lh_for_state = 0.0; //likelihood over all rate categories
+                                           //and mixtures, for this pattern
                 int    cat          = start_cat_no;                
                 for (int cat_offset = start_cat_no * v_by_s
                      ; cat < stop_cat_no
                      ; cat_offset += v_by_s, ++cat) {
-                    lh_for_state += partial_lh [ cat_offset + state_offset + vector_index ];
-                    //But... does the rate/mix category weight come into it here?
-                    //Do the partial_lh values already take that into account?
-                    //If not, doesn't this need to be multiplied?!
+                    auto   ix      = cat_offset + state_offset + vector_index;
+                    double lh_here = abs(partial_lh [ ix ])
+                                   * cat_prop   [ cat - start_cat_no ];
+                    //Todo: what about scaling?!  Doesn't that need to be
+                    //taken into account?  Somehow?
+                    //LOG_LINE(VerboseMode::VB_MIN, "ptn+i=" << (ptn+vector_index)
+                    //         << ", ix=" << ix << ", lh=" << lh_here);
+                    lh_for_state += lh_here;
                 }
-                ASSERT(0 < lh_for_state);
-                log_lh_total[state] += log(lh_for_state) * ptn_freq[ptn];
+                lh_for_vector_posn += lh_for_state;
             }
+            //LOG_LINE(VerboseMode::VB_MIN, "ptn[" << (ptn+vector_index) <<"]"
+            //         << " has lh " << lh_for_vector_posn);
+            ASSERT(0<lh_for_vector_posn);
+            log_lh_here += log(lh_for_vector_posn) * ptn_freq[ptn+vector_index];        
         }
+        total_log_lh += log_lh_here;
     }
 
     double total_ptn_freq = 0.0;
-    for (auto i=ptn_lower; i<ptn_upper; ++i) {
-        total_ptn_freq += static_cast<double>(ptn_freq[i]);
+    for (auto ptn=ptn_lower; ptn<ptn_upper; ++ptn) {
+        total_ptn_freq += static_cast<double>(ptn_freq[ptn]);
     }
 
-    double multiplier = 1.0 / total_ptn_freq / static_cast<double>(ncat_mix);
-    std::vector<double> state_lh(nstates);
-    for (int state = 0; state < nstates; ++state) {
-        state_lh[state] = exp( log_lh_total[state] * multiplier );
-        LOG_LINE(VerboseMode::VB_MIN, "state_lh[" << state << "]"
-                 << " is " << state_lh[state]);
-    }
-
+    double ptn_count      = ptn_upper - ptn_lower;
+    double multiplier     = 1.0 / total_ptn_freq;;
+    double log_lh_per_ptn = total_log_lh * multiplier;
+    double lh_per_ptn     = exp(log_lh_per_ptn);    
+    LOG_LINE(VerboseMode::VB_MIN, "ptn_count is " << ptn_count
+             << ", total_ptn_freq is " << total_ptn_freq
+             << ", multiplier is "     << multiplier
+             << ", log_lh_per_ptn is " << log_lh_per_ptn 
+             << ", and lh_per_ptn is " << lh_per_ptn);
+    
     partial_lh = start_lh;
     int start_cat_offset = start_cat_no * v_by_s;
-    int stop_cat_offset  = stop_cat_no * v_by_s;
+    int stop_cat_offset  = stop_cat_no  * v_by_s;
+    LOG_LINE(VerboseMode::VB_MIN, 
+             "start_cat_offset is " << start_cat_offset
+             << ", stop_cat_offset is " << stop_cat_offset);
     for (intptr_t ptn = ptn_lower; ptn < ptn_upper
          ; partial_lh += block, ptn += vector_size) {
         for (int cat_offset = start_cat_offset
@@ -394,10 +448,9 @@ void PhyloTree::handleDivergentModelBoundary
              ; cat_offset += v_by_s) {
             int state_offset = 0;
             for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
-                double lh = state_lh[state];
                 for (int vector_index = 0; vector_index < vector_size; ++vector_index) {
                     intptr_t ix = cat_offset + state_offset + vector_index;                   
-                    partial_lh [  ix ] = lh;
+                    partial_lh [  ix ] = lh_per_ptn;
                 }
             }
         }
