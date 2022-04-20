@@ -1342,6 +1342,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     int i;
     //bool optimize_rate = true;
 //    double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
+    
+    // for mixture model, increase the maximum number of iterations
+    if (model->isMixture()) {
+        tree->params->num_param_iterations = model->getNMixtures() * 100;
+        // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
+    }
+
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
