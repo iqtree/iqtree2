@@ -389,6 +389,13 @@ void ModelMarkov::report_rates(ostream& out, string title, double *r) {
     out << "  C-T: " << r[4];
     out << "  G-T: " << r[5];
     out << endl;
+    // Output warning if some parameters hit the boundaries
+    for (size_t i=0; i<6; i++) {
+        if (r[i] <= MIN_RATE || r[i] >= MAX_RATE) {
+            out << "Warning! Some parameters hit the boundaries" << endl;
+            break;
+        }
+    }
   }
   else if (!is_reversible) {
     out << title << ":" << endl;
@@ -405,6 +412,13 @@ void ModelMarkov::report_rates(ostream& out, string title, double *r) {
     out << "  T-C: " << r[10];
     out << "  T-G: " << r[11];
     out << endl;
+    // Output warning if some parameters hit the boundaries
+    for (size_t i=0; i<12; i++) {
+        if (r[i] <= MIN_RATE || r[i] >= MAX_RATE) {
+            out << "Warning! Some parameters hit the boundaries" << endl;
+            break;
+        }
+    }
   }
 }
 
@@ -420,12 +434,26 @@ void ModelMarkov::report_state_freqs(ostream& out, double *custom_state_freq) {
         out << "  G: " << f[2];
         out << "  T: " << f[3];
         out << endl;
+        // Output warning if some parameters hit the boundaries
+        for (size_t i=0; i<4; i++) {
+            if (f[i] <= Params::getInstance().min_state_freq) {
+                out << "Warning! Some parameters hit the boundaries" << endl;
+                break;
+            }
+        }
     } else if (num_states == 2) {
         out << setprecision(3);
         out << "State frequencies:";
         out << "  0: " << f[0];
         out << "  1: " << f[1];
         out << endl;
+        // Output warning if some parameters hit the boundaries
+        for (size_t i=0; i<2; i++) {
+            if (f[i] <= Params::getInstance().min_state_freq) {
+                out << "Warning! Some parameters hit the boundaries" << endl;
+                break;
+            }
+        }
     }
 }
 

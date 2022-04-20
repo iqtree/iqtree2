@@ -129,7 +129,7 @@ endif()
 ##################################################################
 # Include the LSD2 library
 ##################################################################
-option(USE_LSD2 "Use least square dating (lsd2)" OFF)
+option(USE_LSD2 "Use least square dating (lsd2)" ON)
 
 if (USE_LSD2)
     add_definitions(-DUSE_LSD2)
