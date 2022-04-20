@@ -989,7 +989,7 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
 }
 
 
-string ModelProtein::getNameParams() {
+string ModelProtein::getNameParams(bool show_fixed_params) {
     ostringstream retname;
     retname << name;
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);

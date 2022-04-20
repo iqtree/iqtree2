@@ -2121,7 +2121,7 @@ string ModelMixture::getName() {
     return retname;
 }
 
-string ModelMixture::getNameParams() {
+string ModelMixture::getNameParams(bool show_fixed_params) {
     if (full_name != "")
         return full_name;
     string retname = "MIX";

@@ -1447,8 +1447,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_branch_scale = 1.0;
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
+    params.alisim_single_output = false;
     params.outputfile_runtime = "";
     params.model_id = "";
+    params.tmp_data_filename = "tmp_data";
+    params.rebuild_indel_history_param = 1.0/3;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -1984,11 +1987,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_weight_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--contree") == 0) {
+			if (strcmp(argv[cnt], "-con") == 0 || strcmp(argv[cnt], "--con-tree") == 0) {
 				params.consensus_type = CT_CONSENSUS_TREE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--connet") == 0) {
+			if (strcmp(argv[cnt], "-net") == 0 || strcmp(argv[cnt], "--con-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
                 continue;
 			}
@@ -2662,7 +2665,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_skip_checking_memory = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--no-export-sequence-wo-gaps") == 0) {
+            if (strcmp(argv[cnt], "--no-unaligned") == 0) {
                 params.alisim_no_export_sequence_wo_gaps = true;
                 continue;
             }
@@ -5202,6 +5205,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--single-output") == 0) {
+                params.alisim_single_output = true;
+                
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--length") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5209,6 +5218,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.alisim_sequence_length = convert_int(argv[cnt]);
                 if (params.alisim_sequence_length < 1)
                     throw "Positive --length please";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--rebuild-indel-history") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --rebuild-indel-history <proportion>";
+                params.rebuild_indel_history_param = convert_double(argv[cnt]);
+                if (params.rebuild_indel_history_param < 0 || params.rebuild_indel_history_param > 1)
+                    throw "<proportion> must be between 0 and 1.";
                 continue;
             }
             
@@ -5479,54 +5498,45 @@ void usage(char* argv[]) {
 void usage_alisim(){
     cout << endl << "ALISIM: ALIGNMENT SIMULATOR" << endl
     << endl << "Usage: iqtree --alisim <OUTPUT_PREFIX> [-m MODEL] [-t TREE] ..." << endl << endl
-    << "  --alisim OUTPUT_PREFIX    Activate AliSim, specify the prefix for the output filename" << endl
-    << "  -t TREE_FILE              Specify the path to the input tree[s]" << endl
-    << "  --length LENGTH           Set the length of the simulated sequences" << endl
+    << "  --alisim OUTPUT_ALIGNMENT Activate AliSim and specify the output alignment filename"<< endl
+    << "  -t TREE_FILE              Set the input tree file name" << endl
+    << "  --length LENGTH           Set the length of the root sequence" << endl
     << "  --num-alignments NUMBER   Set the number of output datasets" << endl
     << "  --seqtype STRING          BIN, DNA, AA, CODON, MORPH{NUM_STATES} (default: auto-detect)" << endl
     << "                            For morphological data, 0<NUM_STATES<=32" << endl
-    << "  --m MODEL_STRING          Model name string (e.g. GTR+F+I+G) (see SUBSTITUTION MODEL)" << endl
-    << "                            AliSim supports user-specified State Frequency;" <<endl
-    << "                            Rate Heterogeneity (+G/+GC/+Rk)" << endl
-    << "                            for Discrete/Continuous Gamma/FreeRate Model; " << endl
-    << "                            Heterotachy models; Mixture Models;" << endl
-    << "                            and Ascertainment bias correction (+ASC) to simulate" << endl
-    << "                            sequences without constant sites" << endl
-    << "  --mdef FILE               Model definition NEXUS file (see Manual)" << endl
+    << "  --m MODEL_STRING          Specify the evolutionary model. See Manual for more detail" << endl
+    << "  --mdef FILE               Name of a NEXUS model file to define new models (see Manual)" << endl
     << "  --fundi TAXA_LIST,RHO     Specify a list of taxa, and Rho (Fundi weight) for FunDi model" << endl
-    << "  --indel <INS>,<DEL>       Activate Indels (insertion/deletion events) and"<< endl
-    << "                            Specify the insertion/deletion rate relative to"<< endl
-    << "                            the substitution rate of 1"<< endl
-    << "  --indel-size <INS_DIS>,<DEL_DIS> Specify the distributions for generating"<< endl
-    << "                            Indels-size (see Manual)." << endl
+    << "  --indel <INS>,<DEL>       Set the insertion and deletion rate of the indel model,"<< endl
+    << "                            relative to the substitution rate"<< endl
+    << "  --indel-size <INS_DIS>,<DEL_DIS> Set the insertion and deletion size distributions" << endl
     << "  --sub-level-mixture       Enable the feature to simulate substitution-level mixture model"<< endl
-    << "  --no-export-sequence-wo-gaps Disable outputing sequences without gaps (when using Indels)"<< endl
-    << "  --root-seq FILE,SEQ_NAME  Supply the ancestral sequence from an alignment file" << endl
-    << "  -s FILE                   Specify the input sequence alignment (used in Inference Mode)" << endl
-    << "  --no-copy-gaps            Disable copying gaps from input sequences (default: false)" << endl
-    << "  --site-freq <OPTION>      Specify an option to mimic the site-frequencies from the input"<< endl
-    << "                            alignment (only use with a mixture model) (see Manual)."<< endl
-    << "                            <OPTION> should be MEAN(default)/SAMPLING/MODEL"<< endl
-    << "  --site-rate <OPTION>      Specify an option to mimic the discrete rate heterogeneity"<< endl
-    << "                            from the input alignment (see Manual)."<< endl
-    << "                            <OPTION> should be MEAN(default)/SAMPLING/MODEL"<< endl
-    << "  -t RANDOM{MODEL,NUM_TAXA} Specify a model and the number of taxa to generate a random tree" << endl
-    << "                            MODEL is yh, u, cat, bal, bd{BIRTH_RATE,DEATH_RATE} standing for" << endl
-    << "                            YuleHarding, Uniform, Caterpillar, Balanced, BirthDeath" << endl
-    << "                            NUM_TAXA could be a fixed number, a list (NUM_1,NUM_2,...,NUM_N)" << endl
-    << "                            or a Uniform distribution U(LOWER_BOUND,UPPER_BOUND)" << endl
-    << "  -rlen MIN MEAN MAX        Specify the min, mean, max branch lengths of a random tree" << endl
+    << "  --no-unaligned            Disable outputing a file of unaligned sequences "<< endl
+    << "                            when using indel models"<< endl
+    << "  --root-seq FILE,SEQ_NAME  Specify the root sequence from an alignment" << endl
+    << "  -s FILE                   Specify the input sequence alignment" << endl
+    << "  --no-copy-gaps            Disable copying gaps from input alignment (default: false)" << endl
+    << "  --site-freq <OPTION>      Specify the option (MEAN (default), or SAMPLING, or MODEL)"<< endl
+    << "                            to mimic the site-frequencies for mixture models from"<< endl
+    << "                            the input alignment (see Manual)"<< endl
+    << "  --site-rate <OPTION>      Specify the option (MEAN (default), or SAMPLING, or MODEL)"<< endl
+    << "                            to mimic the discrete rate heterogeneity from"<< endl
+    << "                            the input alignment (see Manual)"<< endl
+    << "  -t RANDOM{MODEL,NUM_TAXA} Specify the model and the number of taxa to generate a random tree" << endl
+    << "  -rlen MIN MEAN MAX        Specify three numbers: minimum, mean and maximum branch lengths" << endl
+    << "                            when generating a random tree" << endl
     << "  -p FILE                   NEXUS/RAxML partition file" << endl
     << "                            Edge-linked proportional partition model" << endl
     << "  -q FILE                   Like -p but edge-linked equal partition model " << endl
     << "  -Q FILE                   Like -p but edge-unlinked partition model" << endl
-    << "  --distribution FILE       Supply the distribution definition file" << endl
-    << "  --branch-distribution DIS Specify the distribution for randomly generating branch lengths" << endl
+    << "  --distribution FILE       Supply a definition file of distributions," << endl
+    << "                            which could be used to generate random model parameters" << endl
+    << "  --branch-distribution DIS Specify a distribution, from which branch lengths of the input trees" << endl
+    << "                            are randomly generated and overridden." << endl
     << "  --branch-scale SCALE      Specify a value to scale all branch lengths" << endl
-    << "  --write-all               Enable writing internal sequences" << endl
-    << "  --only-unroot-tree        Only unroot a rooted tree and return" << endl
+    << "  --single-output           Output all alignments into a single file" << endl
+    << "  --write-all               Enable outputting internal sequences" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
-    << "  -nt NUM                   Set the number of threads to run the simulation" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
     << "                            users should specify the seed number" << endl
     << "  -gz                       Enable output compression but taking longer running time" << endl
@@ -5558,6 +5568,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
+    << "  --export-alisim-cmd  Export a command-line from the inferred tree and model params" << endl
+    << "                       to simulate new MSAs with AliSim" << endl
     << endl << "CHECKPOINT:" << endl
     << "  --redo               Redo both ModelFinder and tree search" << endl
     << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl

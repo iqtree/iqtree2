@@ -2507,6 +2507,11 @@ public:
     double alisim_branch_scale;
     
     /**
+    *  TRUE to output all replicate alignments into a single file
+    */
+    bool alisim_single_output;
+    
+    /**
     *  Type to assign rate heterogeneity to sites (default: posterior mean)
     */
     ASSIGNMENT_TYPE alisim_rate_heterogeneity;
@@ -2522,9 +2527,19 @@ public:
     string outputfile_runtime;
     
     /**
+    *  path to the tmp_data file to temporarily output sequences at tips when using Indels
+    */
+    string tmp_data_filename;
+    
+    /**
     *  model id
     */
     string model_id;
+    
+    /**
+    *  param to rebuild the indel history when using indel
+    */
+    double rebuild_indel_history_param;
 };
 
 /**

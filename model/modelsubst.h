@@ -59,7 +59,7 @@ public:
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
-	virtual string getNameParams() { return name; }
+	virtual string getNameParams(bool show_fixed_params = false) { return name; }
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
@@ -91,6 +91,11 @@ public:
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
 	virtual bool isMixture() { return false; }
+    
+    /**
+     * @return TRUE if this is a liemarkov model, FALSE otherwise
+     */
+    virtual bool isLieMarkov() { return false; }
     
     /**
      * @return TRUE if this is a mixture model and all model components share the same rate matrix, FALSE otherwise

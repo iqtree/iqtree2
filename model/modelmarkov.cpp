@@ -261,7 +261,7 @@ string ModelMarkov::getName() {
   */
 }
 
-string ModelMarkov::getNameParams() {
+string ModelMarkov::getNameParams(bool show_fixed_params) {
 
 	ostringstream retname;
 	retname << name;

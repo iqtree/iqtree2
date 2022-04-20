@@ -31,7 +31,22 @@ void RateFreeInvar::restoreCheckpoint() {
 }
 
 void RateFreeInvar::setNCategory(int ncat) {
-	RateFree::setNCategory(ncat);
+    /* NHANLT: bug fixed
+     we should NOT re-initialize probs equally
+     instead, we should renormalize props and rates according to invar_prop
+     */
+	// RateFree::setNCategory(ncat);
+    double sum = 0;
+    // normalize prop
+    for (int i = 0; i < ncategory; i++) {
+        prop[i] *= (1.0-getPInvar());
+        sum += rates[i] * prop[i];
+    }
+    // normalize rates
+    for (int i = 0; i < ncategory; i++) {
+        rates[i] /= sum;
+    }
+    
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 }
