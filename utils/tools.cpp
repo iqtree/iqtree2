@@ -1447,6 +1447,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_branch_scale = 1.0;
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
+    params.alisim_single_output = false;
     params.outputfile_runtime = "";
     params.model_id = "";
     params.tmp_data_filename = "tmp_data";
@@ -5204,6 +5205,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--single-output") == 0) {
+                params.alisim_single_output = true;
+                
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--length") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5527,6 +5534,7 @@ void usage_alisim(){
     << "  --branch-distribution DIS Specify a distribution, from which branch lengths of the input trees" << endl
     << "                            are randomly generated and overridden." << endl
     << "  --branch-scale SCALE      Specify a value to scale all branch lengths" << endl
+    << "  --single-output           Output all alignments into a single file" << endl
     << "  --write-all               Enable outputting internal sequences" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
