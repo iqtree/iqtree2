@@ -484,10 +484,6 @@ void AliSimulator::removeConstantSites(){
     // recording start_time
     auto start = getRealTime();
     
-#ifdef _OPENMP
-#pragma omp parallel
-#pragma omp single
-#endif
     // get only variant sites for leaves
     getOnlyVariantSites(variant_state_mask, tree->root, tree->root);
     
@@ -501,36 +497,31 @@ void AliSimulator::removeConstantSites(){
 */
 void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
-#ifdef _OPENMP
-#pragma omp task firstprivate(node)
-#endif
-        {
-            // dummy sequence
-            vector<short int> variant_sites(variant_state_mask.size(),0);
-            
-            // initialize the number of variant sites
-            int num_variant_states = 0;
-            
-            // browse sites one by one
-            for (int i = 0; i < node->sequence.size(); i++)
-                // only get variant sites
-                if (variant_state_mask[i] == -1)
-                {
-                    // get the variant site
-                    variant_sites[num_variant_states] = node->sequence[i];
-                    num_variant_states++;
-                    
-                    // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    // keep checking if Indels is used
-                    if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == 0)
-                        break;
-                }
-            
-            // replace the sequence of the Leaf by variant sites
-            node->sequence.clear();
-            variant_sites.resize(num_variant_states);
-            node->sequence = variant_sites;
-        }
+        // dummy sequence
+        vector<short int> variant_sites(variant_state_mask.size(),0);
+        
+        // initialize the number of variant sites
+        int num_variant_states = 0;
+        
+        // browse sites one by one
+        for (int i = 0; i < node->sequence.size(); i++)
+            // only get variant sites
+            if (variant_state_mask[i] == -1)
+            {
+                // get the variant site
+                variant_sites[num_variant_states] = node->sequence[i];
+                num_variant_states++;
+                
+                // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
+                // keep checking if Indels is used
+                if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == 0)
+                    break;
+            }
+        
+        // replace the sequence of the Leaf by variant sites
+        node->sequence.clear();
+        variant_sites.resize(num_variant_states);
+        node->sequence = variant_sites;
     }
     
     // process its neighbors/children
@@ -737,7 +728,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     initVariables(sequence_length, true);
         
     // initialize trans_matrix
-    double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
+    double *trans_matrix = new double[max_num_states*max_num_states];
     
     // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
     bool write_sequences_to_tmp_data = params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
