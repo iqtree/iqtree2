@@ -2075,7 +2075,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (in_model_name.empty()) {
-        if (params.use_nn_model) {
+        if (params.use_nn_model && in_tree->aln->seq_type == SEQ_DNA) {
             cout << "Using NN" << endl;
             // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
             // determine substitution model using neural network
