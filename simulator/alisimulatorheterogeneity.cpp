@@ -73,7 +73,7 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
             for (int i = 0; i < sequence_length; i++)
             {
                 // randomly select a model from the set of model components, considering its probability array.
-                new_site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_models, mixture_max_weight_pos);
+                new_site_specific_model_index[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_models, mixture_max_weight_pos, NULL);
             }
             
             // delete the mixture_accumulated_weight if mixture model at substitution level is not used
@@ -273,7 +273,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 /**
   estimate the state from accumulated trans_matrices
 */
-int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int dad_state)
+int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int dad_state, int* rstream)
 {
     // randomly select the state, considering it's dad states, and the accumulated trans_matrices
     int model_index = site_specific_model_index[site_index];
@@ -282,28 +282,35 @@ int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double 
     
     ASSERT(category_index > RATE_ZERO_INDEX);
     
-    return getRandomItemWithAccumulatedProbMatrixMaxProbFirst(cache_trans_matrix, starting_index, max_num_states, dad_state);
+    return getRandomItemWithAccumulatedProbMatrixMaxProbFirst(cache_trans_matrix, starting_index, max_num_states, dad_state, rstream);
 }
 
 /**
   estimate the state from an original trans_matrix
 */
-int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index)
+int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *model, int model_component_index, double rate, double *trans_matrix, double branch_length, int dad_state, int site_index, int* rstream)
 {
     // update state freqs of the model component based on posterior mean site_freqs if needed
     if (model->isMixture() && model->isMixtureSameQ() && params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
     {
         ASSERT(site_to_patternID.size() > site_index && ptn_state_freq);
         double *tmp_state_freqs = ptn_state_freq + site_to_patternID[site_index]*max_num_states;
-        model->setStateFrequency(tmp_state_freqs);
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
+        {
+            model->setStateFrequency(tmp_state_freqs);
+            // compute the transition matrix
+            model->computeTransMatrix(partition_rate*params->alisim_branch_scale*branch_length*rate, trans_matrix, model_component_index, dad_state);
+        }
     }
-    
-    // compute the transition matrix
-    model->computeTransMatrix(partition_rate*params->alisim_branch_scale*branch_length*rate, trans_matrix, model_component_index, dad_state);
+    // otherwise, only need to compute the transition matrix
+    else
+        model->computeTransMatrix(partition_rate*params->alisim_branch_scale*branch_length*rate, trans_matrix, model_component_index, dad_state);
     
     // iteratively select the state, considering it's dad states, and the transition_probability_matrix
     int starting_index = dad_state*max_num_states;
-    return getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states);
+    return getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states, rstream);
 }
 
 /**
@@ -345,7 +352,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
     for (int i = 0; i < sequence_length; i++)
     {
         // randomly select a rate from the set of rate categories, considering its probability array.
-        int rate_category = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(category_probability_matrix, 0, num_rate_categories, max_prob_pos);
+        int rate_category = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(category_probability_matrix, 0, num_rate_categories, max_prob_pos, NULL);
         
         // if rate_category == -1 <=> this site is invariant -> return dad's state
         if (rate_category == -1)
@@ -498,7 +505,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths){
+void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths){
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
     if ((tree->getRateName().empty()
@@ -532,15 +539,14 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
         intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, branch_lengths, trans_matrix, model);
 
         // estimate the sequence
-        (*it)->node->sequence.resize(sequence_length);
-        for (int i = 0; i < sequence_length; i++)
+        for (int i = segment_start ; i < segment_start + segment_length; i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
             if (node->sequence[i] == STATE_UNKNOWN)
                 (*it)->node->sequence[i] = STATE_UNKNOWN;
             else
             {
-                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, node->sequence[i]);
+                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, node->sequence[i], rstream);
             }
         }
         
@@ -550,9 +556,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
     // otherwise, estimating the sequence without trans_matrix caching
     else
     {
-        (*it)->node->sequence.resize(sequence_length);
-
-        for (int i = 0; i < sequence_length; i++)
+        for (int i = segment_start ; i < segment_start + segment_length; i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
             if (node->sequence[i] == STATE_UNKNOWN)
@@ -560,7 +564,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(Mo
             else
             {
                 // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, (*it)->length, node->sequence[i], i);
+                (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, (*it)->length, node->sequence[i], i, rstream);
             }
         }
     }

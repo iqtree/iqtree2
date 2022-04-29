@@ -275,9 +275,19 @@ public:
     vector<short int> sequence;
     
     /**
+        sequence in string
+     */
+    string sequence_str;
+    
+    /**
         number of children which have completed simulating the sequence (for AliSim)
      */
     short int num_children_done_simulation = 0;
+    
+    /**
+        number of OPENMP threads that completed simulating the sequence (for AliSim)
+     */
+    short int num_threads_done_simulation = 0;
     
     /**
         pointer to the position of the insertion event that occurs after simulating sequence at this node

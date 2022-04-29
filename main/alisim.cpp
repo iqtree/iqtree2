@@ -537,6 +537,15 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         Params::getInstance().alisim_write_internal_sequences = false;
     }
     
+    // reset number of OpenMP threads to 1 in special cases: Indels, FunDi
+    if (super_alisimulator->params->num_threads > 1 && (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0 || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0))
+    {
+        outWarning("OpenMP has not yet been supported in simulations with Indels or FunDi model. Only one thread will be used.");
+        
+        Params::getInstance().num_threads = 1;
+        omp_set_num_threads(Params::getInstance().num_threads);
+    }
+    
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
@@ -994,11 +1003,10 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
             string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-            string output (sequence_length * num_sites_per_state+1, '-');
-            output[output.length()-1] = '\n';
+            string output  = AliSimulator::getDefaultSeqStr(sequence_length * num_sites_per_state);
             
             // convert non-empty sequence
-            output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
+            AliSimulator::convertNumericalStatesIntoReadableCharacters(node, output, sequence_length, num_sites_per_state, state_mapping);
             
             // preparing output (without gaps) for indels
             string output_indels = "";
@@ -1219,8 +1227,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         
         // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
         string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-        string output (sequence_length * num_sites_per_state+1, '-');
-        output[output.length()-1] = '\n';
+        string output = AliSimulator::getDefaultSeqStr(sequence_length * num_sites_per_state);
         
         // build a new genome tree from the list of insertions if the genome tree has not been initialized (~NULL)
         if (!genome_tree)

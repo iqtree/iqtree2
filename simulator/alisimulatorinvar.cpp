@@ -33,7 +33,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
 {
     // rescale ratio due to invariant sites
     double scale = 1.0/(1 - invariant_proportion);
@@ -45,8 +45,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
     
     // estimate the sequence for the current neighbor
-    (*it)->node->sequence.resize(sequence_length);
-    for (int i = 0; i < sequence_length; i++)
+    for (int i = segment_start; i < segment_start + segment_length; i++)
     {
         
         // if this site is invariant or the parent's state is a gap -> preserve the dad's state
@@ -55,7 +54,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {
             int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i], rstream);
         }
     }
 }
