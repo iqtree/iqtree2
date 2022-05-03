@@ -535,6 +535,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     {
         outWarning("Could not write out the internal sequences when using partition, or ASC models. Only sequences at tips will be written to the output file.");
         Params::getInstance().alisim_write_internal_sequences = false;
+        super_alisimulator->params->alisim_write_internal_sequences = false;
     }
     
     // reset number of OpenMP threads to 1 in special cases: Indels, FunDi
@@ -687,9 +688,9 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         // initialize sequence of the super_node
         if (node->sequence.size() != expected_num_states_super_tree)
         {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
             if (node->sequence.size() != expected_num_states_super_tree)
                 node->sequence.resize(expected_num_states_super_tree, initial_state);
         }
@@ -807,10 +808,10 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 writeSeqsFromTmpDataAndGenomeTreesIndels(alisimulator, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name);
         
 
-#ifdef _OPENMP
-#pragma omp parallel
-#pragma omp single
-#endif
+            #ifdef _OPENMP
+            #pragma omp parallel
+            #pragma omp single
+            #endif
             // browsing all sequences, converting each sequence & caching & writing output string to file
             writeASequenceToFile(aln, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, write_sequences_from_tmp_data, alisimulator->tree->root, alisimulator->tree->root);
 
@@ -881,9 +882,9 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 
                 // clear out all sequences in the current super_tree
                 clearoutSequencesSuperTree(super_tree->root, super_tree->root);
-#ifdef _OPENMP
-#pragma omp parallel for shared(partition_list, partition_count, max_site_index)
-#endif
+                #ifdef _OPENMP
+                #pragma omp parallel for shared(partition_list, partition_count, max_site_index)
+                #endif
                 for (j = i; j < super_tree->size(); j++)
                 {
                     IQTree *current_tree = (IQTree*) super_tree->at(j);
@@ -901,9 +902,9 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                         for (int site_index:site_ids)
                             if (current_tree->max_site_id_mapping <site_index)
                                 current_tree->max_site_id_mapping = site_index;
-#ifdef _OPENMP
-#pragma omp critical
-#endif
+                        #ifdef _OPENMP
+                        #pragma omp critical
+                        #endif
                         {
                             // update the overall max_site_index
                             if (max_site_index < current_tree->max_site_id_mapping)
@@ -996,9 +997,9 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
     // if write_sequences_from_tmp_data and this node is a leaf -> skip this node as its sequence was already written to the output file
     if ((!(node->isLeaf() && write_sequences_from_tmp_data))
         &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0))) {
-#ifdef _OPENMP
-#pragma omp task firstprivate(node) shared(out, out_indels)
-#endif
+        #ifdef _OPENMP
+        #pragma omp task firstprivate(node) shared(out, out_indels)
+        #endif
         {
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
@@ -1024,9 +1025,9 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             // concat pre_output & output
             output = pre_output + output;
             
-#ifdef _OPENMP
-#pragma omp critical
-#endif
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
             {
                 // write output to file
                 out << output;
@@ -1049,9 +1050,9 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
 *
 */
 void clearoutSequencesSuperTree(Node *node, Node *dad){
-#ifdef _OPENMP
-#pragma omp task firstprivate(node)
-#endif
+    #ifdef _OPENMP
+    #pragma omp task firstprivate(node)
+    #endif
     if (node->isLeaf())
         node->sequence.clear();
 

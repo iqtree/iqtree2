@@ -654,13 +654,12 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
 /**
     initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
 */
-void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
+void AliSimulatorHeterogeneity::initVariables4RateMatrix(int segment_start, int segment_length, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
 {
     // initialize variables
-    int sequence_length = sequence.size();
     total_sub_rate = 0;
     num_gaps = 0;
-    sub_rate_by_site.resize(sequence_length, 0);
+    sub_rate_by_site.resize(sequence.size(), 0);
     
     // check if sub_rates could be caching (without continuous gamma and not use Posterior Mean Rates) -> compute sub_rate_by_site efficiently using cache_sub_rates
     if (!tree->getModelFactory()->is_continuous_gamma && !applyPosRateHeterogeneity)
@@ -689,7 +688,7 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
         }
         
         // compute sub_rate_by_site
-        for (int i = 0; i < sequence_length; i++)
+        for (int i = segment_start; i < segment_start + segment_length; i++)
         {
             // not compute the substitution rate for gaps/deleted sites or constant sites
             if (sequence[i] != STATE_UNKNOWN && site_specific_rates[i] != 0)
@@ -722,7 +721,7 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(double &total_sub_rate,
     // otherwise, sub_rate_by_site for all sites one by one
     else
     {
-        for (int i = 0; i < sequence_length; i++)
+        for (int i = segment_start; i < segment_start + segment_length; i++)
         {
             // not compute the substitution rate for gaps/deleted sites or constant sites
             if (sequence[i] != STATE_UNKNOWN && site_specific_rates[i] != 0)

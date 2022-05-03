@@ -82,7 +82,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(int segment_start, int segment_length, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
         extract pattern- posterior mean state frequencies and posterior model probability

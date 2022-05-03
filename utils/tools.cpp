@@ -6256,11 +6256,11 @@ double random_double(int *rstream) {
  * returns a random double based on an exponential distribution
  * @param mean the mean of exponential distribution
  */
-double random_double_exponential_distribution(double mean)
+double random_double_exponential_distribution(double mean, int *rstream)
 {
     double ran;
     do
-        ran = random_double();
+        ran = random_double(rstream);
     while (ran == 0.0);
     return -mean * log(ran);
 }

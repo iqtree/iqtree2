@@ -3138,7 +3138,7 @@ double random_double(int *rstream = NULL);
  * returns a random double based on an exponential distribution
  * @param mean the mean of exponential distribution
  */
-double random_double_exponential_distribution(double mean);
+double random_double_exponential_distribution(double mean, int *rstream = NULL);
 
 /**
  * geometric random number generation

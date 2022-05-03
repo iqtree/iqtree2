@@ -110,7 +110,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int segment_start, int segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
+    virtual void simulateSeqs(int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
     
     /**
     *  reset tree (by reset some variables of nodes)
@@ -222,12 +222,12 @@ protected:
     /**
         handle indels
     */
-    void simulateSeqByGillespie(ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method);
+    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
     
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models);
+    void handleSubs(int segment_start, int segment_length, int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream);
     
     /**
         handle insertion events, return the insertion-size
@@ -247,7 +247,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(int segment_start, int segment_length, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence
