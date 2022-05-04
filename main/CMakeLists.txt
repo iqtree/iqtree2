@@ -22,5 +22,5 @@ if (USE_LSD2)
     target_link_libraries(main lsd2)
 endif()
 
-target_link_libraries(main pda whtest vectorclass terrace)
+target_link_libraries(main pda whtest vectorclass terrace nn)
 
