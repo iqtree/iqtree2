@@ -80,7 +80,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     // aln and tree are deleted in distructor of AliSimSimulator
     MPIHelper::getInstance().barrier();
     auto end = getRealTime();
-    cout << "Simulation time: " << end-start << "s" << endl;
+    cout << "Simulation time: " << fixed << end-start << "s" << endl;
 }
 
 /**
@@ -538,10 +538,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         super_alisimulator->params->alisim_write_internal_sequences = false;
     }
     
-    // reset number of OpenMP threads to 1 in special cases: Indels, FunDi
-    if (super_alisimulator->params->num_threads > 1 && (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0 || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0))
+    // reset number of OpenMP threads to 1 in simulations with Indels
+    if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
     {
-        outWarning("OpenMP has not yet been supported in simulations with Indels or FunDi model. Only one thread will be used.");
+        outWarning("OpenMP has not yet been supported in simulations with Indels. Only one thread will be used.");
         
         Params::getInstance().num_threads = 1;
         omp_set_num_threads(Params::getInstance().num_threads);

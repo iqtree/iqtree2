@@ -800,8 +800,6 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // reset variables at nodes (essential when simulating multiple alignments)
     resetTree();
     
-    auto start = getRealTime();
-    cout << " Start measuring time: " << endl;
     // simulate Sequences
     int num_threads = 1;
     int default_segment_length = sequence_length;
@@ -834,8 +832,6 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     #ifdef _OPENMP
     }
     #endif
-    
-    cout << " Simulation seqs time: " << getRealTime() - start << endl;
         
     // close the file if neccessary
     if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
@@ -998,15 +994,6 @@ void AliSimulator::simulateSeqs(int segment_start, int &segment_length, int &seq
             latest_insertion->phylo_nodes.push_back((*it)->node);
         }
         
-        // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
-        if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
-        {
-            if (node->isLeaf())
-                permuteSelectedSites(fundi_items, node);
-            if ((*it)->node->isLeaf())
-                permuteSelectedSites(fundi_items, (*it)->node);
-        }
-        
         // handle dna error model
         if (model->containDNAerror())
         {
@@ -1070,6 +1057,15 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
     // only one thread is selected to write the output
     if (this_thread_write_output)
     {
+        // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
+        if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
+        {
+            if (node->isLeaf())
+                permuteSelectedSites(fundi_items, node);
+            if ((*it)->node->isLeaf())
+                permuteSelectedSites(fundi_items, (*it)->node);
+        }
+        
         // write sequence of leaf nodes to file if possible
         if (state_mapping.size() > 0)
         {
@@ -1155,8 +1151,8 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
 */
 void AliSimulator::convertSequence(int segment_start, int segment_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
-    // don't convert sequence if using Indels -> we will output indel sequences later
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+    // don't convert sequence in simulations that we cannot output sequence during the simulations: Indels, partition, ASC
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || state_mapping.size() == 0)
         return;
     
     // write sequence of leaf nodes to file if possible
@@ -1641,7 +1637,11 @@ vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int nu
 */
 void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node)
 {
-    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end()) {
+    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end())
+    {
+        // permute the internal states if they have not been converted into readable characters
+        if (node->sequence_str.length() == 0)
+        {
             // caching the current states of all selected sites
             map<int, short int> caching_sites;
             for (int i = 0; i < fundi_items.size(); i++)
@@ -1651,6 +1651,40 @@ void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* no
             for (int i = 0; i < fundi_items.size(); i++)
                 node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
         }
+        // otherwise, permute the converted characters
+        else
+        {
+            // caching the current converted characters (string) of all selected sites
+            map<int, string> caching_sites;
+            for (int i = 0; i < fundi_items.size(); i++)
+            {
+                string caching_str(num_sites_per_state, ' ');
+                caching_str[0] = node->sequence_str[fundi_items[i].selected_site * num_sites_per_state + 0];
+                
+                // if they are codon -> also record the other two characters
+                if (num_sites_per_state == 3)
+                {
+                    caching_str[1] = node->sequence_str[fundi_items[i].selected_site * num_sites_per_state + 1];
+                    caching_str[2] = node->sequence_str[fundi_items[i].selected_site * num_sites_per_state + 2];
+                }
+                
+                caching_sites[fundi_items[i].selected_site] = caching_str;
+            }
+            
+            // permuting sites in FunDi model
+            for (int i = 0; i < fundi_items.size(); i++)
+            {
+                node->sequence_str[fundi_items[i].new_position * num_sites_per_state + 0] = caching_sites[fundi_items[i].selected_site][0];
+                
+                // if they are codon -> also record the other two characters
+                if (num_sites_per_state == 3)
+                {
+                    node->sequence_str[fundi_items[i].new_position * num_sites_per_state + 1] = caching_sites[fundi_items[i].selected_site][1];
+                    node->sequence_str[fundi_items[i].new_position * num_sites_per_state + 2] = caching_sites[fundi_items[i].selected_site][2];
+                }
+            }
+        }
+    }
 }
 
 /**
