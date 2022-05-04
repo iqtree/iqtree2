@@ -1054,16 +1054,22 @@ void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
 */
 void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
+    // increase num_threads_done_simulation
+    bool this_thread_write_output = false;
     #ifdef _OPENMP
     #pragma omp critical
     #endif
-    (*it)->node->num_threads_done_simulation++;
-    
-    if ((*it)->node->num_threads_done_simulation == omp_get_num_threads())
     {
-        // to make sure this sequence will not be written again by another thread
         (*it)->node->num_threads_done_simulation++;
         
+        // make sure only one thread is selected to write the output
+        if ((*it)->node->num_threads_done_simulation == omp_get_num_threads())
+            this_thread_write_output = true;
+    }
+    
+    // only one thread is selected to write the output
+    if (this_thread_write_output)
+    {
         // write sequence of leaf nodes to file if possible
         if (state_mapping.size() > 0)
         {
