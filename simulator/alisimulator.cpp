@@ -1091,7 +1091,7 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap((*it)->node->sequence);
-                (*it)->node->sequence_str = "";
+                string().swap((*it)->node->sequence_str);
             }
             
             // avoid writing sequence of __root__
@@ -1114,7 +1114,7 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
                 
                 // remove the sequence to release the memory after extracting the sequence
                 vector<short int>().swap(node->sequence);
-                node->sequence_str = "";
+                string().swap(node->sequence_str);
             }
         }
         
@@ -1141,7 +1141,7 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vec
             
             // release the memory
             vector<short int>().swap(node->sequence);
-            node->sequence_str = "";
+            string().swap(node->sequence_str);
         }
     }
 }
@@ -1155,59 +1155,56 @@ void AliSimulator::convertSequence(int segment_start, int segment_length, vector
     if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || state_mapping.size() == 0)
         return;
     
-    // write sequence of leaf nodes to file if possible
-    if (state_mapping.size() > 0)
+    // convert the sequence at leaf
+    if ((*it)->node->isLeaf())
     {
-        if ((*it)->node->isLeaf())
+        // init a default sequence str
+        int sequence_length = round(expected_num_sites/length_ratio);
+        if ((*it)->node->sequence_str.length() == 0)
         {
-            // init a default sequence str
-            int sequence_length = round(expected_num_sites/length_ratio);
+            #ifdef _OPENMP
+            #pragma omp critical
             if ((*it)->node->sequence_str.length() == 0)
-            {
-                #ifdef _OPENMP
-                #pragma omp critical
-                if ((*it)->node->sequence_str.length() == 0)
-                #endif
-                    (*it)->node->sequence_str = getDefaultSeqStr(sequence_length * num_sites_per_state);
-            }
-            
-            // convert numerical states into readable characters
-            string input_sequence = input_msa[(*it)->node->name];
-            if (input_sequence.length()>0)
-                // extract sequence and copying gaps from the input sequences to the output.
-                exportSequenceWithGaps((*it)->node, (*it)->node->sequence_str, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
-            else
-                // extract sequence without copying gaps from the input sequences to the output.
-                convertNumericalStatesIntoReadableCharacters((*it)->node, (*it)->node->sequence_str, sequence_length, num_sites_per_state, state_mapping, segment_start, segment_length);
+            #endif
+                (*it)->node->sequence_str = getDefaultSeqStr(sequence_length * num_sites_per_state);
         }
         
-        // avoid writing sequence of __root__
-        if (node->isLeaf() && node->name!=ROOT_NAME)
+        // convert numerical states into readable characters
+        string input_sequence = input_msa[(*it)->node->name];
+        if (input_sequence.length()>0)
+            // extract sequence and copying gaps from the input sequences to the output.
+            exportSequenceWithGaps((*it)->node, (*it)->node->sequence_str, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
+        else
+            // extract sequence without copying gaps from the input sequences to the output.
+            convertNumericalStatesIntoReadableCharacters((*it)->node, (*it)->node->sequence_str, sequence_length, num_sites_per_state, state_mapping, segment_start, segment_length);
+    }
+        
+    // avoid writing sequence of __root__
+    if (node->isLeaf() && node->name!=ROOT_NAME)
+    {
+        // init a default sequence str
+        int sequence_length = round(expected_num_sites/length_ratio);
+        if (node->sequence_str.length() == 0)
         {
-            // init a default sequence str
-            int sequence_length = round(expected_num_sites/length_ratio);
+            #ifdef _OPENMP
+            #pragma omp critical
             if (node->sequence_str.length() == 0)
-            {
-                #ifdef _OPENMP
-                #pragma omp critical
-                if (node->sequence_str.length() == 0)
-                #endif
-                    node->sequence_str = getDefaultSeqStr(sequence_length * num_sites_per_state);
-            }
-            
-            // convert numerical states into readable characters
-            string input_sequence = input_msa[node->name];
-            if (input_sequence.length()>0)
-                // extract sequence and copying gaps from the input sequences to the output.
-                exportSequenceWithGaps(node, node->sequence_str, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
-            else
-                // extract sequence without copying gaps from the input sequences to the output.
-                convertNumericalStatesIntoReadableCharacters(node, node->sequence_str, sequence_length, num_sites_per_state, state_mapping, segment_start, segment_length);
+            #endif
+                node->sequence_str = getDefaultSeqStr(sequence_length * num_sites_per_state);
         }
+        
+        // convert numerical states into readable characters
+        string input_sequence = input_msa[node->name];
+        if (input_sequence.length()>0)
+            // extract sequence and copying gaps from the input sequences to the output.
+            exportSequenceWithGaps(node, node->sequence_str, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
+        else
+            // extract sequence without copying gaps from the input sequences to the output.
+            convertNumericalStatesIntoReadableCharacters(node, node->sequence_str, sequence_length, num_sites_per_state, state_mapping, segment_start, segment_length);
     }
     
     // convert internal sequence if it's an internal node and the user want to output internal sequences
-    if ((!node->isLeaf() || node->name == ROOT_NAME) && params->alisim_write_internal_sequences && state_mapping.size() > 0)
+    if ((!node->isLeaf() || node->name == ROOT_NAME) && params->alisim_write_internal_sequences)
     {
         // init a default sequence str
         int sequence_length = round(expected_num_sites/length_ratio);
