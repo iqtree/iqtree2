@@ -414,9 +414,60 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
             out << endl;
         }
         if (m->num_states <= 4 || verbose_mode >= VB_MED) {
+            
+            if (verbose_mode >= VB_MED) {
+                if (Params::getInstance().numeric_precision > 0)
+                    out.precision(Params::getInstance().numeric_precision);
+                else
+                    out.precision(6);
+
+                // report R matrix
+                out << "Rate parameter R:" << endl << endl;
+
+                if (m->num_states > 4)
+                    out << fixed;
+                if (m->isReversible()) {
+                    for (i = 0, k = 0; i < m->num_states - 1; i++)
+                        for (j = i + 1; j < m->num_states; j++, k++) {
+                            out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j) << ": "
+                                    << rate_mat[k];
+                            if (m->num_states <= 4)
+                                out << endl;
+                            else if (k % 5 == 4)
+                                out << endl;
+                        }
+
+                } else { // non-reversible model
+                    for (i = 0, k = 0; i < m->num_states; i++)
+                        for (j = 0; j < m->num_states; j++)
+                            if (i != j) {
+                                out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j)
+                                        << ": " << rate_mat[k];
+                                if (m->num_states <= 4)
+                                    out << endl;
+                                else if (k % 5 == 4)
+                                    out << endl;
+                                k++;
+                            }
+
+                }
+                out << endl;
+                
+                // report state frequency
+                out << "State frequency F:" << endl << endl;
+                double *state_freqs = new double[m->num_states];
+                m->getStateFrequency(state_freqs);
+                int ncols=(aln->seq_type == SEQ_CODON) ? 4 : 1;
+                for (i = 0; i < m->num_states; i++) {
+                    out << "  pi(" << aln->convertStateBackStr(i) << ") = " << state_freqs[i];
+                    if (i % ncols == ncols-1)
+                        out << endl;
+                }
+                delete[] state_freqs;
+                out << endl;
+            }
+            
             // report Q matrix
-            if (verbose_mode >= VB_MED)
-                out.precision(6);
             double *q_mat = new double[m->num_states * m->num_states];
             m->getQMatrix(q_mat);
 
@@ -466,7 +517,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
         if (tree.aln->seq_type != SEQ_POMO && tree.aln->seq_type != SEQ_DNA)
         for (i = 0; i < nmix; i++) {
             ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
-            if (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED)
+            if (verbose_mode < VB_MED && (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED))
                 continue;
             out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
             reportModel(out, tree.aln, m);
