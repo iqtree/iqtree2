@@ -34,6 +34,7 @@ class ModelSubst: public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
     friend class PartitionModel;
+    friend class IQTreeMix;
 
 public:
 	/**

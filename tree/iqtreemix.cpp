@@ -12,6 +12,7 @@ const double MIN_LEN = 1e-4;
 const double MAX_LEN = 1.0;
 const double LIKE_THRES = 0.1; // 10% more in team of likelihood value
 const double WEIGHT_EPSILON = 0.001;
+const int OPTIMIZE_STEPS = 10000;
 
 // Input formats for the tree-mixture model
 // 1. linked models and site rates: GTR+G4+T
@@ -36,6 +37,7 @@ IQTreeMix::IQTreeMix() : IQTree() {
     isHighRestrict = false;
     optim_type = 1;
     parsi_computed = false;
+    logl_variance = 0.0;
 }
 
 IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTree(aln) {
@@ -77,7 +79,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     
     // number of optimization steps, default: number of Trees * 2
     // optimize_steps = 2 * size();
-    optimize_steps = 1000;
+    optimize_steps = OPTIMIZE_STEPS;
     
     // initialize the variables
     isTreeWeightFixed = false;
@@ -90,6 +92,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
         nbranch = 2 * ntip - 3; // number of branches in a unrooted tree
     else
         nbranch = 0;
+    logl_variance = 0.0;
 }
 
 IQTreeMix::~IQTreeMix() {
@@ -300,10 +303,9 @@ void IQTreeMix::separateModel(string modelName) {
         }
     }
     
-    /*
     if (ntree <= 1) {
         outError("For tree mixture model, number of trees has to be at least 2.");
-    }*/
+    }
     
     // remove the '+Txx'
     modelName = modelName.substr(0, t_pos);
@@ -402,6 +404,7 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
 
     models.clear();
     site_rates.clear();
+    site_rate_trees.clear();
     separateModel(model_name);
 
     // initialize the models
@@ -437,8 +440,6 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     if (isLinkModel) {
         models.push_back(at(0)->getModelFactory()->model);
         for (i=1; i<ntree; i++) {
-            ModelSubst *m = at(i)->getModelFactory()->model;
-            // delete m (need to be addressed);
             at(i)->getModelFactory()->model = models[0];
             at(i)->setModel(models[0]);
         }
@@ -459,42 +460,62 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
         if (isLinkSiteRate) {
             site_rates.push_back(at(0)->getModelFactory()->site_rate);
             for (i=1; i<ntree; i++) {
-                RateHeterogeneity *r = at(i)->getModelFactory()->site_rate;
-                // delete r (need to be addressed);
                 at(i)->getModelFactory()->site_rate = site_rates[0];
                 at(i)->setRate(site_rates[0]);
             }
             // for linked site rate model, set its tree to this tree
             site_rates[0]->setTree(this);
+            for (i=0; i<ntree; i++) {
+                site_rate_trees.push_back(this);
+            }
         } else {
             for (i=0; i<ntree; i++) {
                 site_rates.push_back(at(i)->getModelFactory()->site_rate);
             }
-            // for unlinked site rate model, set their trees to the corresponding trees
+            // for unlinked site rate model, set their trees to corresponding trees
             for (i=0; i<ntree; i++) {
                 site_rates[i]->setTree(at(i));
+                site_rate_trees.push_back(at(i));
             }
         }
     }
+}
+
+// this function is designed for the situation that
+// only one tree has been updated.
+double IQTreeMix::computeLikelihood_oneTreeUpdated(int whichTree) {
+    double* pattern_lh_tree;
+    size_t i,j,ptn;
+    double logLike = 0.0;
+    double subLike;
+    double score;
+    size_t t = whichTree;
+    PhyloTree* ptree;
     
-    /*
-    // initialize the tree weights using parsimony scores
-    double w_sum = 0.0;
-    cout << "parismony scores:";
-    for (i=0; i<ntree; i++) {
-        int par_score = at(i)->computeParsimony();
-        cout << " " << par_score;
-        weights[i] = 1.0 / (double) par_score;
-        w_sum += weights[i];
+    // compute likelihood for each tree
+    pattern_lh_tree = _ptn_like_cat;
+    pattern_lh_tree += t*nptn;
+    
+    ptree = at(t)->getRate()->getTree();
+    // set the tree t as the site rate's tree
+    // and compute the likelihood values
+    at(t)->getRate()->setTree(at(t));
+    at(t)->initializeAllPartialLh();
+    at(t)->clearAllPartialLH();
+    at(t)->computeLikelihood(pattern_lh_tree);
+    // set back the prevoius site rate's tree
+    at(t)->getRate()->setTree(ptree);
+    // cout << "[IQTreeMix::computeLikelihood] Tree " << t+1 << " : " << score << endl;
+
+    // reorganize the array
+    j=t;
+    for (ptn=0; ptn<nptn; ptn++) {
+        ptn_like_cat[j] = exp(pattern_lh_tree[ptn]);
+        j+=ntree;
     }
-    cout << endl;
-    cout << "tree weights are initialized as:";
-    for (i=0; i<ntree; i++) {
-        weights[i] = weights[i] / w_sum;
-        cout << " " << weights[i];
-    }
-    cout << endl;
-    */
+
+    // compute the overall likelihood value by combining all the existing likelihood values of the trees
+    return computeLikelihood_combine();
 }
 
 double IQTreeMix::computeLikelihood(double *pattern_lh) {
@@ -514,11 +535,10 @@ double IQTreeMix::computeLikelihood(double *pattern_lh) {
         // and compute the likelihood values
         at(t)->getRate()->setTree(at(t));
         at(t)->initializeAllPartialLh();
-        score = at(t)->computeLikelihood(pattern_lh_tree);
         at(t)->clearAllPartialLH();
+        at(t)->computeLikelihood(pattern_lh_tree);
         // set back the prevoius site rate's tree
         at(t)->getRate()->setTree(ptree);
-        // cout << "[IQTreeMix::computeLikelihood] Tree " << t+1 << " : " << score << endl;
         pattern_lh_tree += nptn;
     }
 
@@ -533,27 +553,12 @@ double IQTreeMix::computeLikelihood(double *pattern_lh) {
         }
     }
     
-    // compute the total likelihood
-    i=0;
-    for (ptn=0; ptn<nptn; ptn++) {
-        subLike = 0.0;
-        for (t=0; t<ntree; t++) {
-            subLike += ptn_like_cat[i] * weights[t];
-            i++;
-        }
-        if (pattern_lh) {
-            pattern_lh[ptn] = subLike;
-        }
-        // cout << ptn << "\t" << log(subLike) << "\t" << patn_freqs[ptn] << endl;
-        logLike += log(subLike) * (double) patn_freqs[ptn];
-    }
-    // cout << "[IQTreeMix::computeLikelihood] log-likelihood: " << logLike << endl;
-
-    return logLike;
+    // compute the overall likelihood value by combining all the existing likelihood values of the trees
+    return computeLikelihood_combine(pattern_lh);
 }
 
 // compute the overall likelihood value by combining all the existing likelihood values of the trees
-double IQTreeMix::computeLikelihood_combine() {
+double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
     double* pattern_lh_tree;
     size_t i,j,ptn,t;
     double logLike = 0.0;
@@ -572,7 +577,6 @@ double IQTreeMix::computeLikelihood_combine() {
         // cout << ptn << "\t" << log(subLike) << "\t" << patn_freqs[ptn] << endl;
         logLike += log(subLike) * (double) patn_freqs[ptn];
     }
-    // cout << "[IQTreeMix::computeLikelihood] log-likelihood: " << logLike << endl;
 
     return logLike;
 }
@@ -592,7 +596,6 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
 
 void IQTreeMix::initializeAllPartialLh() {
     size_t i;
-    // IQTree::initializeAllPartialLh();
     for (i=0; i<size(); i++) {
         at(i)->initializeAllPartialLh();
     }
@@ -600,7 +603,6 @@ void IQTreeMix::initializeAllPartialLh() {
 
 void IQTreeMix::deleteAllPartialLh() {
     size_t i;
-    // IQTree::deleteAllPartialLh();
     for (i=0; i<size(); i++) {
         at(i)->deleteAllPartialLh();
     }
@@ -608,31 +610,37 @@ void IQTreeMix::deleteAllPartialLh() {
 
 void IQTreeMix::clearAllPartialLH(bool make_null) {
     size_t i;
-    // IQTree::clearAllPartialLH(make_null);
     for (i=0; i<size(); i++) {
         at(i)->clearAllPartialLH(make_null);
     }
 }
 
 /**
-        optimize all branch lengths of the tree
+        optimize all branch lengths of one tree
+        @param iterations number of iterations to loop through all branches
+ */
+void IQTreeMix::optimizeAllBranchesOneTree(int whichtree, int my_iterations, double tolerance, int maxNRStep) {
+    PhyloTree* ptree;
+
+    // save the tree of the site rate
+    ptree = at(whichtree)->getRate()->getTree();
+    at(whichtree)->getRate()->setTree(at(whichtree));
+    at(whichtree)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+    // restore the tree of the site rate
+    at(whichtree)->getRate()->setTree(ptree);
+}
+
+/**
+        optimize all branch lengths of all trees
         @param iterations number of iterations to loop through all branches
         @return the likelihood of the tree
  */
 double IQTreeMix::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     size_t i;
-    PhyloTree* ptree;
     
-    for (i=0; i<size(); i++) {
-        // cout << "[IQTreeMix::optimizeAllBranches] i = " << i << endl;
-        // because the tree of the site rate is pointing to this tree
-        // save the tree of the site rate
-        ptree = at(i)->getRate()->getTree();
-        at(i)->getRate()->setTree(at(i));
-        at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
-        // restore the tree of the site rate
-        at(i)->getRate()->setTree(ptree);
-    }
+    for (i=0; i<size(); i++)
+        optimizeAllBranchesOneTree(i, my_iterations, tolerance, maxNRStep);
+
     return computeLikelihood();
 }
 
@@ -736,24 +744,28 @@ void IQTreeMix::checkWeightGrp() {
 void IQTreeMix::checkBranchGrp() {
     size_t i,j;
     size_t treeIdx,branchIdx;
-    double grp_mean;
+    double grp_len;
+    double sum_treeweight;
     
     // collect the branch lengths of the tree
     getBranchLengths(branch_len);
     
-    // set all the lengths of the branches in the same group as their average
     for (i = 0; i < branch_group.size(); i++) {
-        grp_mean = 0.0;
+        sum_treeweight = 0.0;
         for (j = 0; j < branch_group[i].size(); j++) {
             treeIdx = branch_group[i].at(j) / nbranch;
-            branchIdx = branch_group[i].at(j) % nbranch;
-            grp_mean += branch_len[treeIdx].at(branchIdx);
+            sum_treeweight += weights[treeIdx];
         }
-        grp_mean = grp_mean / branch_group[i].size();
+        grp_len = 0.0;
         for (j = 0; j < branch_group[i].size(); j++) {
             treeIdx = branch_group[i].at(j) / nbranch;
             branchIdx = branch_group[i].at(j) % nbranch;
-            branch_len[treeIdx].at(branchIdx) = grp_mean;
+            grp_len += branch_len[treeIdx].at(branchIdx) * weights[treeIdx] / sum_treeweight;
+        }
+        for (j = 0; j < branch_group[i].size(); j++) {
+            treeIdx = branch_group[i].at(j) / nbranch;
+            branchIdx = branch_group[i].at(j) % nbranch;
+            branch_len[treeIdx].at(branchIdx) = grp_len;
         }
     }
     
@@ -774,9 +786,7 @@ double IQTreeMix::optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradien
     double prev_score, score;
     int step;
 
-    initializeAllPartialLh();
     prev_score = computeLikelihood();
-    clearAllPartialLH();
     
     tmp_weights.resize(ntree);
     // save the previous weights
@@ -867,10 +877,7 @@ double IQTreeMix::optimizeTreeWeightsByBFGS(double gradient_epsilon) {
         for (i=0; i<size(); i++) {
             weights[i] = 1.0 / size();
         }
-        initializeAllPartialLh();
-        score = computeLikelihood();
-        clearAllPartialLH();
-        return score;
+        return computeLikelihood();
     }
     
     // compute the likelihood of each tree
@@ -1191,60 +1198,72 @@ int IQTreeMix::testNumThreads() {
 }
 
 /**
-    optimize each tree separately
+    optimize tree k separately
  */
-void IQTreeMix::OptimizeTreesSeparately(bool printInfo, double gradient_epsilon) {
-    size_t step, i, ptn;
-    string result = "";
-    string curr_res;
+void IQTreeMix::optimizeTreeSeparately(int k, bool printInfo, double gradient_epsilon) {
+    size_t step;
+    double prev_score, score, t_score;
     PhyloTree* ptree;
-    double t_score, score, prev_score;
-    
     int n = 1;
+    
+    // save the trees
+    ptree = at(k)->getRate()->getTree();
+    at(k)->getRate()->setTree(at(k));
+    at(k)->getModelFactory()->site_rate->setTree(at(k));
+    at(k)->clearAllPartialLH();
+    prev_score = score = at(k)->computeLikelihood();
 
-    score = computeLikelihood();
-    prev_score = score;
     for (step = 0; step < optimize_steps; step++) {
         
-        // optimize the linked site rate model
-        if (anySiteRate && isLinkSiteRate) {
-            t_score = site_rates[0]->optimizeParameters(gradient_epsilon);
-            if (t_score < 0.0)
-                score = t_score;
-        }
-
-        // optimize the linked subsitution model
-        if (isLinkModel) {
-            t_score = models[0]->optimizeParameters(gradient_epsilon);
-            if (t_score < 0.0)
-                score = t_score;
-        }
-
-        // optimize the unlinked site-rate models one by one
-        if (anySiteRate && !isLinkSiteRate) {
-            for (i=0; i<site_rates.size(); i++) {
-                site_rates[i]->optimizeParameters(gradient_epsilon);
-            }
-        }
-
-        // optimize the unlinked subsitution models one by one
+        // optimize the unlinked substitution models one by one
         if (!isLinkModel) {
-            for (i=0; i<models.size(); i++) {
-                models[i]->optimizeParameters(gradient_epsilon);
-            }
+             models[k]->optimizeParameters(gradient_epsilon);
         }
 
-        // optimize tree branches
-        score = optimizeAllBranches(n, gradient_epsilon);  // loop max n times
-        
-        score = computeLikelihood();
-            
+        // optimize the tree branches
+        if (params->fixed_branch_length != BRLEN_FIX)
+            score = at(k)->optimizeAllBranches(n, gradient_epsilon);
+        else
+            score = at(k)->computeLikelihood();
+
+        // for unlinked substitution models, optimize the unlinked site-rate models one by one
+        if (anySiteRate && !isLinkSiteRate && !isLinkModel) {
+            site_rates[k]->optimizeParameters(gradient_epsilon);
+        }
+
         if (score < prev_score + gradient_epsilon) {
             // converged
             break;
         }
         prev_score = score;
     }
+    
+    // restore the trees
+    at(k)->getRate()->setTree(ptree);
+    at(k)->getModelFactory()->site_rate->setTree(site_rate_trees[k]);
+}
+
+
+/**
+    optimize each tree separately
+    prerequisite: the array weights should be set
+ */
+void IQTreeMix::optimizeTreesSeparately(bool printInfo, double gradient_epsilon) {
+    int i;
+
+    for (i=0; i<ntree; i++) {
+        // optimize tree i
+        optimizeTreeSeparately(i, printInfo, gradient_epsilon);
+    }
+}
+
+void showDoubleArrayContent(string name, int dim, double* arr) {
+    int i;
+    // show the values of array
+    cout << name << ":";
+    for (i=1; i<=dim; i++)
+        cout << " " << arr[i];
+    cout << endl;
 }
 
 /**
@@ -1330,34 +1349,168 @@ void IQTreeMix::initializeTreeWeights() {
     cout << endl;
 }
 
+/**
+    Initialize the tree weights using parsimony scores
+    Idea:
+    1. Check the parsimony score for each tree along all the parsimony informative sites
+    2. Initialize equal tree weights
+    3. For each sites, compute the posterior probabilities of the trees with the same minimum parsimony scores
+    4. Update the tree weights according to the posterior probabilities of trees across all the sites
+    5. Repeat the steps 3 and 4 until the sum of the absolute changes in the tree weights <= 0.0001
+    6. Report the final tree weights
+ */
+void IQTreeMix::initializeTreeWeights2() {
+    size_t i, j, k;
+    int* parsimony_scores;
+    int min_par_score;
+    vector<vector<int> > tree_with_min_pars;
+    vector<double> pre_weights;
+    vector<int> freqs;
+    double weight_sum;
+    double diff_sum;
+
+    if (!parsi_computed) {
+        // compute parsimony scores for each tree along the patterns
+        // results are stored in the array patn_parsimony
+        computeParsimony();
+    }
+    
+    // cout << "the parimony scores:" << endl;
+    // collect the tree(s) with min parsimony scores along sites
+    tree_with_min_pars.clear();
+    freqs.clear();
+    for (i=0; i<nptn; i++) {
+        parsimony_scores = &(patn_parsimony[i * ntree]);
+        min_par_score = parsimony_scores[0];
+        if (min_par_score < 0) // not a parsimony informative site
+            continue;
+        // cout << parsimony_scores[0];
+        vector<int> min_pars;
+        min_pars.push_back(0);
+        for (j=1; j<ntree; j++) {
+            // cout << ", " << parsimony_scores[j];
+            if (parsimony_scores[j] < min_par_score) {
+                min_pars.clear();
+                min_pars.push_back(j);
+                min_par_score = parsimony_scores[j];
+            } else if (parsimony_scores[j] == min_par_score) {
+                min_pars.push_back(j);
+            }
+        }
+        // cout << ", " << patn_freqs[i] << endl;
+            tree_with_min_pars.push_back(min_pars);
+            freqs.push_back(patn_freqs[i]);
+    }
+    // cout << "--------------------" << endl;
+
+    // initialize the tree weights
+    for (i=0; i<ntree; i++) {
+        weights[i] = 1.0 / ntree;
+        pre_weights.push_back(weights[i]);
+    }
+    
+    if (tree_with_min_pars.size() == 0)
+        return;
+
+    // estimate the tree weights
+    diff_sum = ntree; // initialize diff_sum as a large value
+    while (diff_sum > 0.0001) {
+        // set pre_weights equal to weights
+        for (i=0; i<ntree; i++)
+            pre_weights[i] = weights[i];
+        // reset weights
+        for (i=0; i<ntree; i++)
+            weights[i] = 0.0;
+        for (i=0; i<tree_with_min_pars.size(); i++) {
+            weight_sum = 0.0;
+            if (tree_with_min_pars[i].size() == 1) {
+                k = tree_with_min_pars[i].at(0);
+                weights[k] += freqs[i];
+            } else {
+                for (j=0; j<tree_with_min_pars[i].size(); j++) {
+                    k = tree_with_min_pars[i].at(j);
+                    weight_sum += pre_weights[k];
+                }
+                for (j=0; j<tree_with_min_pars[i].size(); j++) {
+                    k = tree_with_min_pars[i].at(j);
+                    weights[k] += pre_weights[k] * freqs[i] / weight_sum; // posterior prob
+                }
+            }
+        }
+        // normalize weights
+        weight_sum = 0.0;
+        for (i=0; i<ntree; i++)
+            weight_sum += weights[i];
+        for (i=0; i<ntree; i++)
+            weights[i] = weights[i] / weight_sum;
+        /*
+        // list out the intermediate results
+        cout << "weights:";
+        for (i=0; i<ntree; i++)
+            cout << " " << weights[i];
+        cout << endl;
+         */
+        // compute the sum of difference
+        diff_sum = 0.0;
+        for (i=0; i<ntree; i++)
+            diff_sum += fabs(weights[i] - pre_weights[i]);
+    }
+
+    // If there are multiple tree weights belonging to the same group
+    // set all the tree weights of the same group to their average
+    checkWeightGrp();
+    
+    // show the initial tree weights
+    cout << "According to the parsimony scores along the sites, the tree weights are initialized to:" << endl;
+
+    for (i=0; i<ntree; i++) {
+        if (i>0)
+            cout << ",";
+        cout << weights[i];
+    }
+    cout << endl;
+}
+
+// reset the ptn_freq array to the original frequencies of the patterns
+void IQTreeMix::resetPtnOrigFreq() {
+    size_t i, ptn;
+    for (i = 0; i < ntree; i++) {
+        for (ptn = 0; ptn < nptn; ptn++) {
+            at(i)->ptn_freq[ptn] = patn_freqs[ptn];
+        }
+    }
+}
+
 string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     
     size_t i, ptn;
-    int step, n, substep;//, nsubstep;
+    int step, n, m, substep1, nsubstep1, nsubstep1_start, nsubstep1_max, nsubstep2_start, nsubstep2_max, substep2, nsubstep2, substep2_tot;
     double* pattern_mix_lh;
-    double gradient_epsilon = 0.0001;
-    double epsilon_start = 0.0001;
-    double epsilon_step = 0.1;
+    double gradient_epsilon = 0.001;
+    double gradient2_epsilon = 0.0001;
     double curr_epsilon;
-    double prev_score, prev_score2, score, t_score;
+    double prev_score, prev_score1, prev_score2, score, t_score;
     bool tree_weight_converge = false;
     PhyloTree *ptree;
     
 
     n = 1;
-
-    // if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
-    //    epsilon_start = 0.1; // using decreasing value of epsilon for BFGS optimization method
-    // }
-    curr_epsilon = epsilon_start;
+    nsubstep1_start = 5;
+    nsubstep1_max = 10;
+    nsubstep2_start = 5;
+    nsubstep2_max = 10;
+    substep2 = 0;
 
     // allocate memory
     pattern_mix_lh = new double[ntree * nptn];
     
     if (!isTreeWeightFixed) {
         // initialize the tree weights according to parsimony scores along the sites
-        initializeTreeWeights();
+        initializeTreeWeights2();
     }
+    
+    // initialize the parameters
+    optimizeTreesSeparately(printInfo, gradient2_epsilon);
     
     if (isHighRestrict) {
         // it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
@@ -1373,110 +1526,170 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     // score = computeLikelihood();
     // cout << "Initial likelihood = " << score << endl;
 
-    prev_score = score = -DBL_MAX;
+    bool is_ptnfrq_posterior = false;
+
+    nsubstep1 = nsubstep1_start;
+    nsubstep2 = nsubstep2_start;
+    score = computeLikelihood();
+    prev_score = score;
 
     for (step = 0; step < optimize_steps; step++) {
         
-        if (step > 0) {
-            // reset the ptn_freq array to the original frequencies of the patterns
-            for (i = 0; i < ntree; i++) {
-                for (ptn = 0; ptn < nptn; ptn++) {
-                    at(i)->ptn_freq[ptn] = patn_freqs[ptn];
-                }
-            }
-        }
+        prev_score1 = score;
+        substep2_tot = 0;
 
-        // optimize the linked site rate model
-        if (anySiteRate && isLinkSiteRate) {
-            site_rates[0]->optimizeParameters(curr_epsilon);
-            if (siterate_names[0].find("R") != string::npos) {
-                site_rates[0]->rescaleRates();
-            }
-            // score = computeLikelihood();
-            // cout << "after optimizing linked site rate model, likelihood = " << score << endl;
-        }
-
-        // optimize the linked subsitution model
-        if (isLinkModel) {
-            models[0]->optimizeParameters(curr_epsilon);
-            // score = computeLikelihood();
-            // cout << "after optimizing linked subsitution model, likelihood = " << score << endl;
-        }
-        
-        score = computeLikelihood();
-        prev_score2 = score;
-        
-        for (substep = 0; substep<step+1; substep++) {
+        for (substep1 = 0; substep1<nsubstep1; substep1++) {
             
-            // compute the ptn_freq array according to the posterior probabilities along each site for each tree
-            computeFreqArray(pattern_mix_lh, false);
+            prev_score2 = score;
 
-            if (params->fixed_branch_length != BRLEN_FIX) {
-                // optimize tree branches
-                if (isHighRestrict) {
-                    score = optimizeBranchLensByBFGS(curr_epsilon);
-                } else {
-                    score = optimizeAllBranches(1, curr_epsilon);  // loop max n times
+            for (substep2=0; substep2<nsubstep2; substep2++) {
+
+                // optimize the linked subsitution model
+                if (isLinkModel) {
+                    // reset the ptn_freq array to the original frequencies of the patterns
+                    if (is_ptnfrq_posterior) {
+                        resetPtnOrigFreq();
+                        is_ptnfrq_posterior = false;
+                    }
+                    models[0]->optimizeParameters(gradient2_epsilon);
+                    // score = computeLikelihood();
+                    // cout << "after optimizing linked subsitution model, likelihood = " << score << endl;
                 }
-                // cout << "after optimizing branches, likelihood = " << score << endl;
+
+                // optimize the unlinked subsitution models one by one
+                if (!isLinkModel) {
+                    if (!is_ptnfrq_posterior) {
+                        computeFreqArray(pattern_mix_lh, true);
+                        is_ptnfrq_posterior = true;
+                    }
+                    for (i=0; i<models.size(); i++) {
+                        models[i]->optimizeParameters(gradient2_epsilon);
+                        computeFreqArray(pattern_mix_lh, true, i);
+                    }
+                    // score = computeLikelihood();
+                    // cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
+                }
+
+                // optimize tree branches for non-branch-length-restricted model
+                if (!isHighRestrict && params->fixed_branch_length != BRLEN_FIX) {
+                    if (!is_ptnfrq_posterior) {
+                        computeFreqArray(pattern_mix_lh, true);
+                        is_ptnfrq_posterior = true;
+                    }
+                    for (i=0; i<size(); i++) {
+                        optimizeAllBranchesOneTree(i, 1, gradient2_epsilon);
+                        computeFreqArray(pattern_mix_lh, true, i);
+                    }
+                    // score = computeLikelihood();
+                    // cout << "after optimizing branches by EM, likelihood = " << score << endl;
+                }
+
+                // optimize tree branches for branch-length-restricted model
+                if (isHighRestrict && params->fixed_branch_length != BRLEN_FIX) {
+                    if (is_ptnfrq_posterior) {
+                        resetPtnOrigFreq();
+                        is_ptnfrq_posterior = false;
+                    }
+                    optimizeBranchLensByBFGS(gradient2_epsilon);
+                    // score = computeLikelihood();
+                    // cout << "after optimizing branches by BFGS, likelihood = " << score << endl;
+                }
+
+                score = computeLikelihood();
+                if (score < prev_score2 + gradient2_epsilon) {
+                    // converged
+                    break;
+                }
+                prev_score2 = score;
             }
 
-            // optimize the unlinked subsitution models one by one
-            if (!isLinkModel) {
-                for (i=0; i<models.size(); i++) {
-                    models[i]->optimizeParameters(curr_epsilon);
+            substep2_tot += substep2;
+
+            // optimize the linked site rate model
+            if (anySiteRate && isLinkSiteRate) {
+                if (is_ptnfrq_posterior) {
+                    resetPtnOrigFreq();
+                    is_ptnfrq_posterior = false;
+                }
+                site_rates[0]->optimizeParameters(gradient2_epsilon);
+                if (siterate_names[0].find("R") != string::npos) {
+                    site_rates[0]->rescaleRates();
                 }
                 // score = computeLikelihood();
-                // cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
+                // cout << "after optimizing linked site rate model, likelihood = " << score << endl;
             }
 
-            // optimize the unlinked site-rate models one by one
+            // optimize the unlinked site rate model
             if (anySiteRate && !isLinkSiteRate) {
+                if (!is_ptnfrq_posterior) {
+                    computeFreqArray(pattern_mix_lh, true);
+                    is_ptnfrq_posterior = true;
+                }
                 for (i=0; i<site_rates.size(); i++) {
-                    site_rates[i]->optimizeParameters(curr_epsilon);
+                    site_rates[i]->optimizeParameters(gradient2_epsilon);
                     if (siterate_names[i].find("R") != string::npos) {
                         site_rates[i]->rescaleRates();
                     }
+                    computeFreqArray(pattern_mix_lh, true, i);
                 }
                 // score = computeLikelihood();
                 // cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
             }
 
-            // optimize tree weights
-            if (!isTreeWeightFixed) {
-                // if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
-                if (params->optimize_alg_treeweight == "BFGS") {
-                    score = optimizeTreeWeightsByBFGS(curr_epsilon);
-                    tree_weight_converge = true;
-                } else {
-                    score = optimizeTreeWeightsByEM(pattern_mix_lh, curr_epsilon, 1, tree_weight_converge);  // loop max n times
-                    // cout << "tree_weight_converge = " << tree_weight_converge << endl;
-                }
-                // cout << "after optimizing tree weights, likelihood = " << score << endl;
-            }
-
             score = computeLikelihood();
-            if (score < prev_score2 + curr_epsilon) {
+
+            if (score < prev_score1 + gradient2_epsilon) {
                 // converged
                 break;
             }
-            prev_score2 = score;
+            prev_score1 = score;
         }
         
-        cout << "step= " << step << " substep = " << substep << " curr_epsilon=" << curr_epsilon << " score=" << score << endl;
+        // optimize tree weights
+        if (!isTreeWeightFixed) {
+            // if (weightGrpExist || params->optimize_alg_treeweight == "BFGS") {
+            if (params->optimize_alg_treeweight == "BFGS") {
+                score = optimizeTreeWeightsByBFGS(gradient2_epsilon);
+                tree_weight_converge = true;
+            } else {
+                m = 1 + step / 100;
+                score = optimizeTreeWeightsByEM(pattern_mix_lh, gradient2_epsilon, m, tree_weight_converge);  // loop max n times
+                // cout << "tree_weight_converge = " << tree_weight_converge << endl;
+            }
+            // score = computeLikelihood();
+            // cout << "after optimizing tree weights, likelihood = " << score << endl;
+        }
 
-        if (score < prev_score + curr_epsilon && curr_epsilon > gradient_epsilon) {
-            // update the epsilon value
-            curr_epsilon = curr_epsilon * epsilon_step;
-        } else if (score < prev_score + gradient_epsilon) {
+        if (step % 50 == 0) {
+            cout << "step=" << step; // << " substep1=" << substep1 << " substep2_tot=" << substep2_tot;
+            cout << " score=" << score;
+            /*
+            cout << " weights=(";
+            for (i=0; i<ntree; i++) {
+                if (i>0)
+                    cout << ", ";
+                cout << weights[i];
+            }
+            cout << ")";*/
+            cout << endl;
+        }
+
+        if (score < prev_score + gradient_epsilon) {
             // converged
             break;
         }
+        
+        if (nsubstep1 < nsubstep1_max)
+            nsubstep1++;
+        if (nsubstep2 < nsubstep2_max)
+            nsubstep2++;
 
         prev_score = score;
     }
 
     setCurScore(score);
+    stop_rule.setCurIt(step);
+    logl_variance = 0.0;
     
     // compute the proportion of sites for each tree with the maximum posterior probability
     // computeMaxPosteriorRatio(pattern_mix_lh, false, false);
@@ -1665,15 +1878,13 @@ void IQTreeMix::readTreeString(const string &tree_string) {
 }
 
 // get posterior probabilities along each site for each tree
-void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike) {
+void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike, int update_which_tree) {
     size_t i, ptn, c;
     double* this_lk_cat;
     double lk_ptn;
 
     if (need_computeLike) {
-        initializeAllPartialLh();
         computeLikelihood();
-        clearAllPartialLH();
     }
 
     memcpy(pattern_mix_lh, ptn_like_cat, nptn*ntree*sizeof(double));
@@ -1703,171 +1914,13 @@ void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike) {
     }
 }
 
-// compute the ratios of parsimony informative sites with max posterior probability for each tree
-void IQTreeMix::computeMaxPosteriorRatio(double* pattern_mix_lh, bool need_computePostProb, bool need_computeLike) {
-    
-    size_t ptn, c;
-    double* this_lk_cat;
-    size_t informative_sites = 0;
-    vector<int> max_sites;
-    double max_p;
-
-    // reset the array
-    max_posterior_ratio.clear();
-    
-    if (ninformsite == 0) {
-        // no parismony informative site
-        max_posterior_ratio.insert( max_posterior_ratio.begin(), ntree, 1.0 / ntree );
-    } else {
-        max_posterior_ratio.insert( max_posterior_ratio.begin(), ntree, 0.0 );
-    
-        if (need_computePostProb) {
-            getPostProb(pattern_mix_lh, need_computeLike);
-        }
-        for (ptn=0; ptn<nptn; ptn++) {
-            // only consider the parsimony informative sites
-            if (aln->at(ptn).isInformative()) {
-                informative_sites++;
-                this_lk_cat = pattern_mix_lh + ptn*ntree;
-                max_sites.clear();
-                max_sites.push_back(0);
-                max_p = this_lk_cat[0];
-                for (c = 1; c < ntree; c++) {
-                    if (this_lk_cat[c] > max_p) {
-                        max_p = this_lk_cat[c];
-                        max_sites.clear();
-                        max_sites.push_back(c);
-                    } else if (this_lk_cat[c] == max_p) {
-                        max_sites.push_back(c);
-                    }
-                }
-                for (c=0; c<max_sites.size(); c++) {
-                    max_posterior_ratio[max_sites[c]] += (double) aln->at(ptn).frequency / max_sites.size();
-                }
-            }
-        }
-        for (c=0; c<ntree; c++) {
-            max_posterior_ratio[c] /= (double) ninformsite;
-        }
-        // show the values of max_posterior_ratio
-        cout << "Proportions of parsimony informative sites with max posterior prob over the trees:" << endl;
-        for (c=0; c<ntree; c++) {
-            if (c>0)
-                cout << ",";
-            cout << max_posterior_ratio[c];
-        }
-        cout << endl;
-    }
- }
-
-
-// compute the ratios of parsimony informative sites with max high-enough likelihood for each tree
-void IQTreeMix::computeMaxLikeRatio() {
-    
-    size_t ptn, t;
-    double* pattern_lh_tree;
-    double* curr_ptn_lh;
-    size_t total_sites = 0;
-    size_t sites_consider = 0;
-    size_t sizes_w_gap = 0;
-    int maxsite, second_maxsite;
-    double maxlike, second_maxlike;
-    PhyloTree* ptree;
-    bool hasGap;
-
-    // reset the array
-    max_like_ratio.clear();
-    
-    if (ninformsite == 0) {
-        // no parismony informative site
-        max_like_ratio.insert( max_like_ratio.begin(), ntree, 1.0 / ntree );
-    } else {
-        max_like_ratio.insert( max_like_ratio.begin(), ntree, 0.0 );
-
-        // compute likelihood for each tree
-        pattern_lh_tree = new double[nptn * ntree];
-        curr_ptn_lh = pattern_lh_tree;
-        for (t=0; t<ntree; t++) {
-            // save the site rate's tree
-            ptree = at(t)->getRate()->getTree();
-            // set the tree t as the site rate's tree
-            // and compute the likelihood values
-            at(t)->getRate()->setTree(at(t));
-            at(t)->initializeAllPartialLh();
-            at(t)->computeLikelihood(curr_ptn_lh);
-            at(t)->clearAllPartialLH();
-            // set back the prevoius site rate's tree
-            at(t)->getRate()->setTree(ptree);
-            curr_ptn_lh += nptn;
-        }
-
-        for (ptn=0; ptn<nptn; ptn++) {
-            total_sites += aln->at(ptn).frequency;
-
-            // ignore the sites with gaps
-            hasGap = false;
-            for (t=0; t<ntip && (!hasGap); t++) {
-                if (aln->convertStateBackStr(aln->at(ptn).at(t)) == "-") {
-                    hasGap = true;
-                }
-            }
-            if (hasGap) {
-                sizes_w_gap += aln->at(ptn).frequency;
-                continue;
-            }
-            
-            if (aln->at(ptn).isInformative()) {
-                curr_ptn_lh = pattern_lh_tree;
-                maxsite = second_maxsite = -1;
-                for (t=0; t<ntree; t++) {
-                    if (maxsite == -1 || curr_ptn_lh[ptn] > maxlike) {
-                        if (maxsite != -1) {
-                            second_maxsite = maxsite;
-                            second_maxlike = maxlike;
-                        }
-                        maxsite = t;
-                        maxlike = curr_ptn_lh[ptn];
-                    } else if (second_maxsite == -1 || curr_ptn_lh[ptn] > second_maxlike) {
-                        second_maxsite = t;
-                        second_maxlike = curr_ptn_lh[ptn];
-                    }
-                    curr_ptn_lh += nptn;
-                }
-                if (maxlike - second_maxlike >= LIKE_THRES) {
-                    max_like_ratio[maxsite] += aln->at(ptn).frequency;
-                    sites_consider += aln->at(ptn).frequency;
-                }
-            }
-        }
-
-        for (t=0; t<ntree; t++) {
-            max_like_ratio[t] /= (double) sites_consider;
-        }
-        
-
-        // show the ratio of sites are tree informative
-        cout << "Number of tree informative sites: " << sites_consider << "(" << sites_consider * 100.0 / (total_sites - sizes_w_gap) << "%) out of " << total_sites - sizes_w_gap << " non-gapped sites." << endl;
-        
-        // show the values of max_like_ratio
-        cout << "Proportions of tree informative sites with max likelihood over the trees:" << endl;
-        for (t=0; t<ntree; t++) {
-            if (t>0)
-                cout << ",";
-            cout << max_like_ratio[t];
-        }
-        cout << endl;
-        
-        delete[] pattern_lh_tree;
-    }
- }
-
 // update the ptn_freq array according to the posterior probabilities along each site for each tree
-void IQTreeMix::computeFreqArray(double* pattern_mix_lh, bool need_computeLike) {
+void IQTreeMix::computeFreqArray(double* pattern_mix_lh, bool need_computeLike, int update_which_tree) {
     size_t i, ptn;
     PhyloTree* tree;
 
     // get posterior probabilities along each site for each tree
-    getPostProb(pattern_mix_lh, need_computeLike);
+    getPostProb(pattern_mix_lh, need_computeLike, update_which_tree);
 
     for (i = 0; i < ntree; i++) {
         tree = at(i);
@@ -1880,7 +1933,6 @@ void IQTreeMix::computeFreqArray(double* pattern_mix_lh, bool need_computeLike) 
             tree->ptn_freq[ptn] = this_lk_cat[ptn*ntree];
     }
 }
-
 
 double IQTreeMix::targetFunk(double x[]) {
     double score;
@@ -2025,9 +2077,8 @@ void IQTreeMix::showLhProb(ofstream& out) {
         // set the tree t as the site rate's tree
         // and compute the likelihood values
         at(t)->getRate()->setTree(at(t));
-        at(t)->initializeAllPartialLh();
-        at(t)->computeLikelihood(curr_ptn_lh);
         at(t)->clearAllPartialLH();
+        at(t)->computeLikelihood(curr_ptn_lh);
         // set back the prevoius site rate's tree
         at(t)->getRate()->setTree(ptree);
         curr_ptn_lh += nptn;
@@ -2246,9 +2297,8 @@ void IQTreeMix::showPatternLhProb(ofstream& out) {
         // set the tree t as the site rate's tree
         // and compute the likelihood values
         at(t)->getRate()->setTree(at(t));
-        at(t)->initializeAllPartialLh();
-        at(t)->computeLikelihood(curr_ptn_lh);
         at(t)->clearAllPartialLH();
+        at(t)->computeLikelihood(curr_ptn_lh);
         // set back the prevoius site rate's tree
         at(t)->getRate()->setTree(ptree);
         curr_ptn_lh += nptn;
@@ -2351,9 +2401,8 @@ void IQTreeMix::showOrderedPatternLhProb(ofstream& out) {
         // set the tree t as the site rate's tree
         // and compute the likelihood values
         at(t)->getRate()->setTree(at(t));
-        at(t)->initializeAllPartialLh();
-        at(t)->computeLikelihood(curr_ptn_lh);
         at(t)->clearAllPartialLH();
+        at(t)->computeLikelihood(curr_ptn_lh);
         // set back the prevoius site rate's tree
         at(t)->getRate()->setTree(ptree);
         curr_ptn_lh += nptn;

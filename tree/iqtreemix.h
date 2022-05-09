@@ -41,8 +41,12 @@ public:
     void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
-    double computeLikelihood_combine();
-    
+    double computeLikelihood_combine(double *pattern_lh = NULL);
+
+    // this function is designed for the situation that
+    // only one tree has been updated.
+    double computeLikelihood_oneTreeUpdated(int whichTree);
+
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
@@ -63,7 +67,13 @@ public:
     virtual void clearAllPartialLH(bool make_null = false);
 
     /**
-            optimize all branch lengths of the tree
+            optimize all branch lengths of one tree
+            @param iterations number of iterations to loop through all branches
+     */
+    void optimizeAllBranchesOneTree(int whichtree, int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    
+    /**
+            optimize all branch lengths of all trees
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
@@ -159,7 +169,8 @@ public:
         4. The tree weights are estimated according to the proportion of the sites assigned to each tree.
      */
     void initializeTreeWeights();
-    
+    void initializeTreeWeights2();
+
     string optimizeModelParameters(bool printInfo, double logl_epsilon);
 
     /**
@@ -293,7 +304,12 @@ public:
             site rates
      */
     vector<RateHeterogeneity*> site_rates;
-    
+
+    /**
+            trees assigned for the site rates
+     */
+    vector<PhyloTree*> site_rate_trees;
+
     /**
             members of each weight group
      */
@@ -331,31 +347,29 @@ private:
     // to separate the submodel names and the site rate names from the full model name
     void separateModel(string modelName);
     
+    // reset the ptn_freq array to the original frequencies of the patterns
+    void resetPtnOrigFreq();
+
     /**
             update the ptn_freq array according to the posterior probabilities along each site for each tree
 
      */
-    void computeFreqArray(double* pattern_mix_lh, bool need_computeLike);
+    void computeFreqArray(double* pattern_mix_lh, bool need_computeLike, int update_which_tree = -1);
 
     /**
             get posterior probabilities along each site for each tree
      */
-    void getPostProb(double* pattern_mix_lh, bool need_computeLike);
+    void getPostProb(double* pattern_mix_lh, bool need_computeLike, int update_which_tree = -1);
     
     /**
-            compute the ratios of parsimony informative sites with max posterior probability for each tree
+        optimize tree k separately
      */
-    void computeMaxPosteriorRatio(double* pattern_mix_lh, bool need_computePostProb, bool need_computeLike);
+    void optimizeTreeSeparately(int k, bool printInfo, double gradient_epsilon);
     
-    /**
-            compute the ratios of parsimony informative sites with max high-enough likelihood for each tree
-     */
-    void computeMaxLikeRatio();
-
     /**
             optimize each tree separately
      */
-    void OptimizeTreesSeparately(bool printInfo, double logl_epsilon);
+    void optimizeTreesSeparately(bool printInfo, double logl_epsilon);
 
     /**
              If there are multiple tree weights belonging to the same group

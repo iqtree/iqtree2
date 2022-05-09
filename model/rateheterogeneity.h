@@ -45,6 +45,7 @@ class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
 	friend class ModelPoMoMixture;
+    friend class IQTreeMix;
 
 public:
 	/**
