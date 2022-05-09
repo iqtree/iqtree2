@@ -57,7 +57,7 @@ public:
             @param cur_logl current log-likelihood (for sanity check)
             @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
+    virtual void computePatternLikelihood(double *pattern_lh = NULL, double *cur_logl = NULL,
             double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
 
     virtual void initializeAllPartialLh();

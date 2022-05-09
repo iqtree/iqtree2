@@ -579,12 +579,23 @@ void reportRate(ostream &out, PhyloTree &tree) {
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
     size_t ssize = tree.getAlnNSite();
     double epsilon = 1.0 / ssize;
-    double totalLen = tree.treeLength();
+    double totalLen;
+    vector<double> totalLens; // for tree mixture
     int df;
-    if (tree.isTreeMix())
+    IQTreeMix* treemix = NULL;
+    size_t i;
+
+    if (tree.isTreeMix()) {
+        treemix = (IQTreeMix*) &tree;
         df = ((IQTreeMix*) &tree)->getNParameters();
-    else
+        for (i=0; i<treemix->size(); i++) {
+            totalLens.push_back(treemix->at(i)->treeLength());
+        }
+    } else {
         df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+        totalLen = tree.treeLength();
+    }
+
     double AIC_score, AICc_score, BIC_score;
     computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
@@ -650,33 +661,49 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << "Total tree length (sum of branch lengths)" << endl;
         out << " - measured in number of mutations and frequency shifts per site: " << totalLen << endl;
         out << " - measured in number of substitutions per site (divided by N^2): " << totalLen / (N * N) << endl;
-    }
-    else out << "Total tree length (sum of branch lengths): " << totalLen << endl;
-
-    double totalLenInternal = tree.treeLengthInternal(epsilon);
-    double totalLenInternalP = totalLenInternal*100.0 / totalLen;
-    if (tree.aln->seq_type == SEQ_POMO) {
-      int N = tree.aln->virtual_pop_size;
-      double totLenIntSub = totalLenInternal/(N * N);
-        out << "Sum of internal branch lengths" << endl;
-        out << "- measured in mutations and frequency shifts per site: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
-        out << "- measured in substitutions per site: " << totLenIntSub << " (" << totalLenInternalP << "% of tree length)" << endl;
-        out << endl;
-    }
-    else {
-        out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
-        //    out << "Sum of internal branch lengths divided by total tree length: "
-        //            << totalLenInternal / totalLen << endl;
-        out << endl;
+    } else {
+        if (treemix == NULL) {
+            out << "Total tree length (sum of branch lengths): " << totalLen << endl;
+        } else {
+            out << "Total tree lengths (sum of branch lengths):";
+            for (i = 0; i < treemix->size(); i++) {
+                out << " " << totalLens[i];
+            }
+            out << endl;
+        }
     }
 
-    if (tree.isMixlen()) {
-        DoubleVector lenvec;
-        tree.treeLengths(lenvec);
-        out << "Class tree lengths: ";
-        for (int i = 0; i < lenvec.size(); i++)
-            out << " " << lenvec[i];
-        out << endl;
+    if (treemix != NULL) {
+        vector<double> totalLenInternals;
+        vector<double> totalLenInternalPs;
+        for (i = 0; i < treemix->size(); i++) {
+            totalLenInternals.push_back(treemix->at(i)->treeLengthInternal(epsilon));
+        }
+        ASSERT(totalLens.size() == totalLenInternals.size());
+        for (i = 0; i < treemix->size(); i++) {
+            totalLenInternalPs.push_back(totalLenInternals[i]*100.0 / totalLens[i]);
+        }
+        out << "Sum of internal branch lengths:";
+        for (i = 0; i < treemix->size(); i++) {
+            out << " " << totalLenInternals[i] << " (" << totalLenInternalPs[i] << "% of tree length)";
+        }
+        out << endl << endl;
+    } else {
+        double totalLenInternal = tree.treeLengthInternal(epsilon);
+        double totalLenInternalP = totalLenInternal*100.0 / totalLen;
+        if (tree.aln->seq_type == SEQ_POMO) {
+            int N = tree.aln->virtual_pop_size;
+            double totLenIntSub = totalLenInternal/(N * N);
+            out << "Sum of internal branch lengths" << endl;
+            out << "- measured in mutations and frequency shifts per site: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
+            out << "- measured in substitutions per site: " << totLenIntSub << " (" << totalLenInternalP << "% of tree length)" << endl;
+            out << endl;
+        } else {
+            out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
+            //    out << "Sum of internal branch lengths divided by total tree length: "
+            //            << totalLenInternal / totalLen << endl;
+            out << endl;
+        }
     }
 
     if (params.partition_type == TOPO_UNLINKED) {
@@ -685,8 +712,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         return;
     }
 
-    if (tree.isTreeMix()) {
-        out << "No drawing will be displayed for mixture of trees here" << endl;
+    if (treemix != NULL) {
+        // out << "No drawing will be displayed for mixture of trees here" << endl;
+        out << "Trees with branch lengths are provided in the .treefile file" << endl;
         out << endl;
         return;
     }
@@ -2121,7 +2149,17 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 }
 
 void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time, double search_real_time) {
-    cout << "Total tree length: " << iqtree.treeLength() << endl;
+    
+    if (iqtree.isTreeMix()) {
+        cout << "Total tree lengths:";
+        IQTreeMix* treemix = (IQTreeMix*) &iqtree;
+        for (size_t i = 0; i < treemix->size(); i++) {
+            cout << " " << treemix->at(i)->treeLength();
+        }
+        cout << endl;
+    } else {
+        cout << "Total tree length: " << iqtree.treeLength() << endl;
+    }
 
     if (iqtree.isSuperTree() && verbose_mode >= VB_MAX) {
         PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;

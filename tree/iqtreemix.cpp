@@ -560,10 +560,10 @@ double IQTreeMix::computeLikelihood(double *pattern_lh) {
 // compute the overall likelihood value by combining all the existing likelihood values of the trees
 double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
     double* pattern_lh_tree;
-    size_t i,j,ptn,t;
+    size_t i,ptn,t;
     double logLike = 0.0;
     double subLike;
-    double score;
+    double ptnLike;
     PhyloTree* ptree;
     
     // compute the total likelihood
@@ -575,7 +575,11 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
             i++;
         }
         // cout << ptn << "\t" << log(subLike) << "\t" << patn_freqs[ptn] << endl;
-        logLike += log(subLike) * (double) patn_freqs[ptn];
+        ptnLike = log(subLike);
+        logLike += ptnLike * (double) patn_freqs[ptn];
+        if (pattern_lh != NULL) {
+            pattern_lh[ptn] = ptnLike;
+        }
     }
 
     return logLike;
@@ -1689,7 +1693,6 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 
     setCurScore(score);
     stop_rule.setCurIt(step);
-    logl_variance = 0.0;
     
     // compute the proportion of sites for each tree with the maximum posterior probability
     // computeMaxPosteriorRatio(pattern_mix_lh, false, false);
