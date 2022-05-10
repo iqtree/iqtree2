@@ -182,6 +182,8 @@ void divideModelNSiteRate(string name, string& model, string& siteRate) {
         }
         i++;
     }
+    if (siteRate.length() == 0)
+        siteRate = "E";
 }
 
 void rmSpace(string& s) {
@@ -330,7 +332,7 @@ void IQTreeMix::separateModel(string modelName) {
                     divideModelNSiteRate(submodel_array[k], curr_model, curr_siterate);
                     model_names.push_back(curr_model);
                     siterate_names.push_back(curr_siterate);
-                    if (curr_siterate.length() > 0) {
+                    if (curr_siterate.length() > 0 && curr_siterate != "E") {
                         siteRateAppear = true; // some site rates appear
                     }
                 }
