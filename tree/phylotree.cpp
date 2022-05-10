@@ -140,6 +140,26 @@ void PhyloTree::init() {
     progressStackDepth = 0;
 }
 
+void PhyloTree::initSequences(Node* node, Node* dad)
+{
+    // init the starting node
+    if (!node && !dad)
+    {
+        node = root;
+        dad = root;
+    }
+    
+    // init sequence for each node
+    if (!node->sequence)
+        node->sequence = new Sequence();
+    
+    // browse 1-step deeper to the neighbor node
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        PhyloTree::initSequences((*it)->node, node);
+    }
+}
+
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
     init();
     this->aln = aln;

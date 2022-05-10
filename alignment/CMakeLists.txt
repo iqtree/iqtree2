@@ -17,6 +17,8 @@ superalignmentpairwiseplen.cpp
 superalignmentpairwiseplen.h
 superalignmentunlinked.cpp
 superalignmentunlinked.h
+sequence.cpp
+sequence.h
 )
 
 target_link_libraries(alignment simulator ncl gsl model)

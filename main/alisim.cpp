@@ -686,13 +686,13 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         Node *current_node = current_tree->findLeafName(node->name);
 
         // initialize sequence of the super_node
-        if (node->sequence.size() != expected_num_states_super_tree)
+        if (node->sequence->sequence_chunks.size() != expected_num_states_super_tree)
         {
             #ifdef _OPENMP
             #pragma omp critical
             #endif
-            if (node->sequence.size() != expected_num_states_super_tree)
-                node->sequence.resize(expected_num_states_super_tree, initial_state);
+            if (node->sequence->sequence_chunks.size() != expected_num_states_super_tree)
+                node->sequence->sequence_chunks.resize(expected_num_states_super_tree, initial_state);
         }
         
         // copy sequence from the current_node to the super_node (if the current node is found)
@@ -700,7 +700,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         {
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
             for (int i = 0; i < site_ids.size(); i++)
-                node->sequence[site_ids[i]] = current_node->sequence[i];
+                node->sequence->sequence_chunks[site_ids[i]] = current_node->sequence->sequence_chunks[i];
         }
     }
     
@@ -1054,7 +1054,7 @@ void clearoutSequencesSuperTree(Node *node, Node *dad){
     #pragma omp task firstprivate(node)
     #endif
     if (node->isLeaf())
-        node->sequence.clear();
+        node->sequence->sequence_chunks.clear();
 
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
@@ -1142,9 +1142,9 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
         return;
     
     // determine the real sequence_length
-    if (node->name!=ROOT_NAME && node->sequence.size() > 0)
+    if (node->name!=ROOT_NAME && node->sequence->sequence_chunks.size() > 0)
     {
-        sequence_length = node->sequence.size();
+        sequence_length = node->sequence->sequence_chunks.size();
         stop = true;
     }
     
@@ -1168,10 +1168,10 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 
         // if current_node is found, inserting sites normally
         if (current_node)
-            node->sequence.insert(node->sequence.begin()+position, current_node->sequence.begin()+starting_index, current_node->sequence.end());
+            node->sequence->sequence_chunks.insert(node->sequence->sequence_chunks.begin()+position, current_node->sequence->sequence_chunks.begin()+starting_index, current_node->sequence->sequence_chunks.end());
         // otherwise, insert gaps
         else
-            node->sequence.insert(node->sequence.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
+            node->sequence->sequence_chunks.insert(node->sequence->sequence_chunks.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
     }
     
     // process its neighbors/children
@@ -1234,19 +1234,19 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         if (!genome_tree)
         {
             genome_tree = new GenomeTree();
-            genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+            genome_tree->buildGenomeTree(node->sequence->insertion_pos, seq_length_ori, true);
         }
         // otherwise, update the tree by accepted gaps (inserted by previous insertions) as normal characters
         else
         {
             // if it is not the last tip -> rebuild/update the genome tree
-            if (node->insertion_pos->next)
+            if (node->sequence->insertion_pos->next)
             {
                 // rebuild the indel his if the number of tips (line_num) >= current threshold
                 if (line_num >= rebuild_indel_his_thresh)
                 {
                     // detach the insertion and genome nodes
-                    for (Insertion* insertion = node->insertion_pos; insertion; )
+                    for (Insertion* insertion = node->sequence->insertion_pos; insertion; )
                     {
                         // detach insertion and genome_nodes
                         insertion->genome_nodes.clear();
@@ -1258,14 +1258,14 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
                     // delete and rebuild genome tree
                     delete genome_tree;
                     genome_tree = new GenomeTree();
-                    genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+                    genome_tree->buildGenomeTree(node->sequence->insertion_pos, seq_length_ori, true);
                     
                     // update the next threshold to rebuild the indel his
                     rebuild_indel_his_thresh += rebuild_indel_his_step;
                 }
                 // otherwise, just update indel his
                 else
-                    genome_tree->updateGenomeTree(previous_insertion, node->insertion_pos);
+                    genome_tree->updateGenomeTree(previous_insertion, node->sequence->insertion_pos);
             }
             // otherwise, it is the last tip -> the current sequence is already the latest sequence since there no more insertion occurs
             else
@@ -1276,10 +1276,10 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         }
         
         // keep track of previous insertion
-        previous_insertion = node->insertion_pos;
+        previous_insertion = node->sequence->insertion_pos;
         
         // delete the insertion_pos of this node as we updated its sequence.
-        node->insertion_pos = NULL;
+        node->sequence->insertion_pos = NULL;
         
         // export sequence of a leaf node from original sequence and genome_tree if using Indels
         genome_tree->exportReadableCharacters(seq_ori, num_sites_per_state, state_mapping, output);

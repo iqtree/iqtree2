@@ -542,11 +542,11 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
         for (int i = segment_start ; i < segment_start + segment_length; i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
-            if (node->sequence[i] == STATE_UNKNOWN)
-                (*it)->node->sequence[i] = STATE_UNKNOWN;
+            if (node->sequence->sequence_chunks[i] == STATE_UNKNOWN)
+                (*it)->node->sequence->sequence_chunks[i] = STATE_UNKNOWN;
             else
             {
-                (*it)->node->sequence[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, node->sequence[i], rstream);
+                (*it)->node->sequence->sequence_chunks[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[i] , i, num_rate_categories, node->sequence->sequence_chunks[i], rstream);
             }
         }
         
@@ -559,12 +559,12 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
         for (int i = segment_start ; i < segment_start + segment_length; i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
-            if (node->sequence[i] == STATE_UNKNOWN)
-                (*it)->node->sequence[i] = STATE_UNKNOWN;
+            if (node->sequence->sequence_chunks[i] == STATE_UNKNOWN)
+                (*it)->node->sequence->sequence_chunks[i] = STATE_UNKNOWN;
             else
             {
                 // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                (*it)->node->sequence[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, (*it)->length, node->sequence[i], i, rstream);
+                (*it)->node->sequence->sequence_chunks[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[i], site_specific_rates[i], trans_matrix, (*it)->length, node->sequence->sequence_chunks[i], i, rstream);
             }
         }
     }
@@ -583,10 +583,10 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
     {
         // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
         if (tree->getModel()->isMixtureSameQ() && tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
-            tree->root->sequence = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, site_to_patternID);
+            tree->root->sequence->sequence_chunks = regenerateSequenceMixtureModelPosteriorMean(expected_num_sites, site_to_patternID);
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
-            tree->root->sequence = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
+            tree->root->sequence->sequence_chunks = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
     }
 
     

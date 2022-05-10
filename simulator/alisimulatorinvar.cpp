@@ -49,12 +49,12 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segmen
     {
         
         // if this site is invariant or the parent's state is a gap -> preserve the dad's state
-        if (site_specific_rates[i] == 0 || node->sequence[i] == STATE_UNKNOWN)
-            (*it)->node->sequence[i] = node->sequence[i];
+        if (site_specific_rates[i] == 0 || node->sequence->sequence_chunks[i] == STATE_UNKNOWN)
+            (*it)->node->sequence->sequence_chunks[i] = node->sequence->sequence_chunks[i];
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {
-            int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i], rstream);
+            int starting_index = node->sequence->sequence_chunks[i]*max_num_states;
+            (*it)->node->sequence->sequence_chunks[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence->sequence_chunks[i], rstream);
         }
     }
 }

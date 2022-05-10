@@ -124,6 +124,11 @@ public:
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
 	virtual void initSettings(Params& params);
+    
+    /**
+        init sequence instances for each nodes when using AliSim
+    */
+    virtual void initSequences(Node* node = NULL, Node* dad = NULL);
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 

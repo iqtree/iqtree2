@@ -197,6 +197,17 @@ void PhyloSuperTree::initSettings(Params &params) {
     }
 }
 
+void PhyloSuperTree::initSequences(Node* node, Node* dad)
+{
+    // init sequences for the primary/super tree first
+    PhyloTree::initSequences();
+    
+    // init sequences for each partition trees
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->PhyloTree::initSequences();
+    }
+}
+
 void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
     PhyloTree::setLikelihoodKernel(lk);
     for (iterator it = begin(); it != end(); it++)

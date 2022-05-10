@@ -376,6 +376,11 @@ public:
     PhyloTree(string& treeString, Alignment *aln, bool isRooted);
 
     void init();
+    
+    /**
+        init sequence instances for each nodes when using AliSim
+    */
+    virtual void initSequences(Node* node = NULL, Node* dad = NULL);
 
     /**
             destructor
