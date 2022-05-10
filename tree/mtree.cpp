@@ -463,6 +463,8 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     if (length_nei->length == -1.0)
         return; // NA branch length
     int prec = 10;
+    if (Params::getInstance().numeric_precision > 0)
+        prec = Params::getInstance().numeric_precision;
 	double length = length_nei->length;
     if (brtype & WT_BR_SCALE) length *= len_scale;
     if (brtype & WT_BR_LEN_SHORT) prec = 6;
