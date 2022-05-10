@@ -730,7 +730,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 
     if (treemix != NULL) {
         // out << "No drawing will be displayed for mixture of trees here" << endl;
-        out << "Trees with branch lengths are provided in the .treefile file" << endl;
+        out << "Trees with branch lengths are provided in the file: " << params.out_prefix << ".treefile" << endl;
         out << endl;
         return;
     }
@@ -1683,7 +1683,8 @@ void exportAliSimCMD(Params &params, IQTree &tree)
 {
     // make sure this method will not make IQTREE crashed
     if (!(params.aln_file || params.partition_file) || !params.out_prefix || !tree.aln || !tree.getModel()
-        || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH))
+        || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH)
+        || tree.isTreeMix())
         return;
     
     cout << "ALISIM COMMAND" << endl;
@@ -3828,7 +3829,9 @@ IQTree *newIQTreeMix(Params &params, Alignment *alignment) {
     // check how many trees inside the user input file
     numTree = checkCharInFile(params.user_file, ';');
     cout << "Number of input trees: " << numTree << endl;
-    ASSERT(numTree);
+    if (numTree <= 1) {
+        outError("For using the tree mixture model, there must be at least 2 trees inside the tree file: " + string(params.user_file) + ", and each tree must be followed by the character ';'.");
+    }
     for (i=0; i<numTree; i++) {
         trees.push_back(newIQTree(params,alignment));
     }
@@ -4114,7 +4117,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     }
 
     /*************** initialize tree ********************/
-    IQTree *tree;
     bool isTreeMix = isTreeMixture(params);
     
     if (isTreeMix) {

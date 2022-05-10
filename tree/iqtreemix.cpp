@@ -1213,7 +1213,8 @@ void IQTreeMix::optimizeTreeSeparately(int k, bool printInfo, double gradient_ep
     // save the trees
     ptree = at(k)->getRate()->getTree();
     at(k)->getRate()->setTree(at(k));
-    at(k)->getModelFactory()->site_rate->setTree(at(k));
+    if (anySiteRate)
+        at(k)->getModelFactory()->site_rate->setTree(at(k));
     at(k)->clearAllPartialLH();
     prev_score = score = at(k)->computeLikelihood();
 
@@ -1244,7 +1245,8 @@ void IQTreeMix::optimizeTreeSeparately(int k, bool printInfo, double gradient_ep
     
     // restore the trees
     at(k)->getRate()->setTree(ptree);
-    at(k)->getModelFactory()->site_rate->setTree(site_rate_trees[k]);
+    if (anySiteRate)
+        at(k)->getModelFactory()->site_rate->setTree(site_rate_trees[k]);
 }
 
 
@@ -1734,8 +1736,10 @@ void IQTreeMix::printResultTree(string suffix) {
     }
     fout.open(tree_file_name.c_str());
     setRootNode(params->root, true);
-    for (i=0; i<size(); i++)
+    for (i=0; i<size(); i++) {
         at(i)->printTree(fout);
+        fout << endl;
+    }
     setRootNode(params->root, false);
     fout.close();
     if (verbose_mode >= VB_MED)
