@@ -40,9 +40,15 @@
 #include <stdint.h>
 #include <limits.h>
 #include <stdint.h>
+
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <pmmintrin.h>
 #include <immintrin.h>
+#endif
+
 #include <assert.h>
 
 #ifdef _FMA

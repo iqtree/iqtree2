@@ -35,6 +35,8 @@
 #ifndef heapsort_h
 #define heapsort_h
 
+#include <cstddef>
+
 template <class V, class S>
 void constructMirroredHeap ( V* valueArray
                             , ptrdiff_t start, ptrdiff_t stop

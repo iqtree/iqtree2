@@ -37,6 +37,8 @@
 #include "ncl/ncl.h"
 #include "utils/tools.h"
 #include "pda/split.h"
+#include "model/modelsubst.h"
+#include "genometree.h"
 
 using namespace std;
 
@@ -266,6 +268,31 @@ public:
         node name
      */
     string name;
+    
+    /**
+        sequence
+     */
+    vector<short int> sequence;
+    
+    /**
+        number of children which have completed simulating the sequence (for AliSim)
+     */
+    short int num_children_done_simulation = 0;
+    
+    /**
+        pointer to the position of the insertion event that occurs after simulating sequence at this node
+     */
+    Insertion* insertion_pos = NULL;
+    
+    /**
+        parent node of the current node (only use when simulating Indels with AliSim)
+     */
+    Node* parent = NULL;
+    
+    /**
+        number of gaps in the sequence
+     */
+    int num_gaps = 0;
 
     /**
         list of neighbors

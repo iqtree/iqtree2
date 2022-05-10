@@ -94,7 +94,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         
         num_params = nrate - 1;
 
-        if (adapt_tree && phylo_tree && phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && phylo_tree->rooted && phylo_tree->root) {
             if (verbose_mode >= VB_MED) {
                 cout << "Converting rooted to unrooted tree..." << endl;
             }
@@ -142,7 +142,7 @@ void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
         ensure_aligned_allocated(cevec, num_states_squared);
         ensure_aligned_allocated(cinv_evec, num_states_squared);
         
-        if (adapt_tree && phylo_tree && !phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && !phylo_tree->rooted && phylo_tree->root) {
             if (verbose_mode >= VB_MED)
                 cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
@@ -261,7 +261,7 @@ string ModelMarkov::getName() {
   */
 }
 
-string ModelMarkov::getNameParams() {
+string ModelMarkov::getNameParams(bool show_fixed_params) {
 
 	ostringstream retname;
 	retname << name;
@@ -329,7 +329,12 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
                 highest_freq_state = i;
         break;
     case FREQ_USER_DEFINED:
-        if (state_freq[0] == 0.0) outError("State frequencies not specified");
+        {
+            double sum = 0;
+            for (i = 0; i < num_states; i++)
+                sum += state_freq[i];
+            if (fabs(sum) < 1.0e-5) outError("Sum of all state frequencies must be greater than zero!");
+        }
         break;
     default: break;
     }
@@ -468,7 +473,7 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
 
 }
 
-void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
 
     if (!is_reversible) {
         computeTransMatrixNonrev(time, trans_matrix, mixture);
@@ -478,11 +483,12 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 
+#if !defined(__ARM_NEON)
     if (Params::getInstance().experimental) {
         double eval_exp[num_states];
         calculateExponentOfScalarMultiply(eigenvalues, num_states, evol_time, eval_exp);
         aTimesDiagonalBTimesTransposeOfC( eigenvectors, eval_exp
-                              , inv_eigenvectors_transposed, num_states, trans_matrix);
+                              , inv_eigenvectors_transposed, num_states, trans_matrix, selected_row);
         return;
     } else {
         VectorXd eval_exp(num_states);
@@ -495,7 +501,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
         map_trans = res;
         return;
     }
-    /*
+#else
     double exptime[num_states];
 	int i, j, k;
 
@@ -526,7 +532,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 			sum += trans_row[j];
 		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
-    */
+#endif
 //	delete [] exptime;
 }
 
@@ -568,16 +574,16 @@ double ModelMarkov::computeTrans(double time, int state1, int state2, double &de
 
 void ModelMarkov::calculateExponentOfScalarMultiply ( const double* source, int size
                                                     , double scalar, double* dest) {
-    if (size == 4) {
-        Vec4d v;
+    if (size == 2) {
+        Vec2d v;
         v.load(source);
         exp(v * scalar).store(dest);
         return;
     }
     int offset=0;
-    if (4 < size) {
-        Vec4d v;
-        int step         = Vec4d::size();
+    if (2 < size) {
+        Vec2d v;
+        int step         = Vec2d::size();
         int integralSize = size - (size & (step - 1));
         for (; offset < integralSize; offset+=step) {
             v.load(source+offset);
@@ -593,18 +599,18 @@ void ModelMarkov::calculateExponentOfScalarMultiply ( const double* source, int 
 void ModelMarkov::calculateHadamardProduct(const double* first
                                            , const double* second, int size
                                            , double *dest) {
-    if (size==4) {
-        Vec4d a;
-        Vec4d b;
+    if (size==2) {
+        Vec2d a;
+        Vec2d b;
         a.load(first);
         b.load(second);
         (a*b).store(dest);
         return;
     }
     int offset = 0;
-    if (4<size) {
-        Vec4d a, b;
-        int step  = Vec4d::size();
+    if (2<size) {
+        Vec2d a, b;
+        int step  = Vec2d::size();
         int remainder = size & (step - 1);
         int integralSize = size - remainder;
         for (; offset<integralSize; offset += step) {
@@ -620,19 +626,19 @@ void ModelMarkov::calculateHadamardProduct(const double* first
 
 double ModelMarkov::dotProduct(const double* first
                             , const double* second, int size) {
-    if (size==4) {
-        Vec4d a;
-        Vec4d b;
+    if (size==2) {
+        Vec2d a;
+        Vec2d b;
         a.load(first);
         b.load(second);
         return horizontal_add(a*b);
     }
     int    offset    = 0;
     double product   = 0;
-    if (4<size) {
+    if (2<size) {
         //Todo: Investigate. Worth unrolling?
-        Vec4d a, b, dot = 0;
-        int step  = Vec4d::size();
+        Vec2d a, b, dot = 0;
+        int step  = Vec2d::size();
         int remainder = size & (step - 1);
         int integralSize = size - remainder;
         for (; offset<integralSize; offset += step) {
@@ -662,14 +668,32 @@ void ModelMarkov::calculateSquareMatrixTranspose(const double* original, int ran
 }
 
 void ModelMarkov::aTimesDiagonalBTimesTransposeOfC(const double* matrixA, const double* rowB
-                                      , const double* matrixCTranspose, int rank,double* dest) {
+                                      , const double* matrixCTranspose, int rank,double* dest, int selected_row) {
     double scratch[rank];
-    for (int i=0; i<rank; ++i, matrixA+=rank) {
+    // only compute one row (selected_row) if selected_row is different from the default value (-1)
+    if (selected_row != -1)
+    {
+        // move pointers to the correct position
+        matrixA += selected_row * rank;
+        dest += selected_row * rank;
+        
+        // compute entries of the selected row
         calculateHadamardProduct(matrixA, rowB, rank, scratch);
         auto rowC = matrixCTranspose;
         for (int j=0; j<rank; ++j, rowC+=rank) {
             *dest = dotProduct(scratch, rowC, rank );
             ++dest;
+        }
+    }
+    // otherwise, compute the whole transition matrix
+    else {
+        for (int i=0; i<rank; ++i, matrixA+=rank) {
+            calculateHadamardProduct(matrixA, rowB, rank, scratch);
+            auto rowC = matrixCTranspose;
+            for (int j=0; j<rank; ++j, rowC+=rank) {
+                *dest = dotProduct(scratch, rowC, rank );
+                ++dest;
+            }
         }
     }
 }
@@ -713,7 +737,8 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
     }
 
 	double evol_time = time / total_num_subst;
-    
+
+#if !defined(__ARM_NEON)
     if (Params::getInstance().experimental) {
         //James' version
         double eval_exp[num_states];
@@ -752,9 +777,9 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
         Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_derv2(trans_derv2,num_states,num_states);
         map_derv2 = res;
     }
-    
-    /*
+#else
      //Flat version
+    int i, j, k;
 	double exptime[num_states];
 
 	for (i = 0; i < num_states; i++)
@@ -784,7 +809,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 			}
 		}
 	}
-     */
+#endif
 //	delete [] exptime;
 }
 
@@ -873,7 +898,7 @@ void ModelMarkov::adaptStateFrequency(double* freq)
     ModelSubst::setStateFrequency(freq);
 }
 
-void ModelMarkov::getQMatrix(double *q_mat) {
+void ModelMarkov::getQMatrix(double *q_mat, int mixture) {
 
     if (!is_reversible) {
         // non-reversible model
@@ -1193,8 +1218,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     //double m[num_states];
     double freq = 1.0/num_states;
     
-    for (i = 0; i < num_states; i++)
-        state_freq[i] = freq;
+    if (freq_type!=FREQ_USER_DEFINED || Params::getInstance().optimize_from_given_params)
+        for (i = 0; i < num_states; i++)
+            state_freq[i] = freq;
     
     for (i = 0, k = 0; i < num_states; i++) {
         double *rate_row = rate_matrix+(i*num_states);
@@ -1205,8 +1231,9 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
             }
         rate_row[i] = -row_sum;
     }
-    computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
     
+    if (freq_type!=FREQ_USER_DEFINED || Params::getInstance().optimize_from_given_params)
+        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
     
     for (i = 0, sum = 0.0; i < num_states; i++) {
         sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
@@ -1316,7 +1343,10 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
                 }
             }
         }
-        calculateSquareMatrixTranspose(inv_eigenvectors, num_states
+        
+        // only calculateSquareMatrixTranspose if inv_eigenvectors is not NULL
+        if (inv_eigenvectors)
+            calculateSquareMatrixTranspose(inv_eigenvectors, num_states
                                        , inv_eigenvectors_transposed);
     }
     // sanity check
@@ -1486,6 +1516,11 @@ void ModelMarkov::decomposeRateMatrix(){
         if (n == num_states) {
             Map<VectorXd,Aligned> eval(eigenvalues,num_states);
             eval = eigensolver.eigenvalues();
+            
+            // Handle cases when eigenvalues[0] = NaN -> MORPH{1}
+            if (eigenvalues[0] != eigenvalues[0])
+                eigenvalues[0] = 0;
+            
             if (verbose_mode >= VB_DEBUG)
                 cout << "eval: " << eval << endl;
 
@@ -1499,6 +1534,11 @@ void ModelMarkov::decomposeRateMatrix(){
             for (i = 0, ii = 0; i < num_states; i++)
                 if (state_freq[i] > ZERO_FREQ) {
                     eigenvalues[i] = eigensolver.eigenvalues()(ii);
+                    
+                    // Handle cases when eigenvalues[i] = NaN
+                    if (eigenvalues[i] != eigenvalues[i])
+                        eigenvalues[i] = 0;
+                    
                     ii++;
                 } else
                     eigenvalues[i] = 0.0;
@@ -1575,15 +1615,19 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	} else if (is_reversible ){
         // reversible model
 		try {
-			rates[0] = convert_double(str.c_str());
+			rates[0] = convert_double_with_distribution(str.c_str());
 		} catch (string &str) {
 			outError(str);
 		}
 		if (rates[0] < 0.0)
 			throw "Negative rates not allowed";
 		for (int i = 1; i < nrates; i++) {
-			if (!(in >> rates[i]))
-				throw "Rate entries could not be read";
+            string tmp_value;
+            in >> tmp_value;
+            if (tmp_value.length() == 0)
+                throw "Rate entries could not be read";
+            rates[i] = convert_double_with_distribution(tmp_value.c_str());
+            
 			if (rates[i] < 0.0)
 				throw "Negative rates not allowed";
 		}
@@ -1596,14 +1640,18 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
                 if (row == 0 && col == 0) {
                     // top-left element was already red
                     try {
-                        row_sum = convert_double(str.c_str());
+                        row_sum = convert_double_with_distribution(str.c_str());
                     } catch (string &str) {
                         outError(str);
                     }
                 } else if (row != col) {
                     // non-diagonal element
-                    if (!(in >> rates[i]))
+                    string tmp_value;
+                    in >> tmp_value;
+                    if (tmp_value.length() == 0)
                         throw name+string(": Rate entries could not be read");
+                    rates[i] = convert_double_with_distribution(tmp_value.c_str());
+                    
                     if (rates[i] < 0.0)
                         throw "Negative rates found";
                     row_sum += rates[i];
@@ -1623,6 +1671,12 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 void ModelMarkov::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
+    
+    // detect the seperator
+    char separator = ',';
+    if (str.find('/') != std::string::npos)
+        separator = '/';
+    
 	cout << __func__ << " " << str << endl;
 	if (str.find("equalrate") != string::npos) {
 		for (int i = 0; i < nrates; i++)
@@ -1630,7 +1684,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 	} else for (int i = 0; i < nrates; i++) {
 		int new_end_pos;
 		try {
-			rates[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+			rates[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
 		} catch (string &str) {
 			outError(str);
 		}
@@ -1641,9 +1695,11 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 			outError("String too long ", str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != '/')
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
+        if (i < nrates - 1 && end_pos >= str.length())
+            outError("The number of input rates ("+convertIntToString(i+1)+") is less than the number of expected rates ("+convertIntToString(nrates)+"). Please check and try again.");
 	}
 	num_params = 0;
 
@@ -1652,43 +1708,60 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
-		if (!(in >> state_freq[i])) 
-			throw "State frequencies could not be read";
+        string tmp_value;
+        in >> tmp_value;
+        if (tmp_value.length() == 0)
+            throw "State frequencies could not be read";
+        state_freq[i] = convert_double_with_distribution(tmp_value.c_str());
 		if (state_freq[i] < 0.0)
 			throw "Negative state frequencies found";
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) > 1e-2)
-		throw "State frequencies do not sum up to 1.0";
-    sum = 1.0/sum;
-    for (i = 0; i < num_states; i++)
-        state_freq[i] *= sum;
+	if (fabs(sum-1.0) >= 1e-7)
+    {
+		outWarning("Normalizing state frequencies so that sum of them equals to 1");
+        sum = 1.0/sum;
+        for (i = 0; i < num_states; i++)
+            state_freq[i] *= sum;
+    }
 }
 
 void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	int i;
 	int end_pos = 0;
+    
+    // detect the seperator
+    char separator = ',';
+    if (str.find('/') != std::string::npos)
+        separator = '/';
+    
 	for (i = 0; i < num_states; i++) {
 		int new_end_pos;
-		state_freq[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
 		end_pos += new_end_pos;
 		//cout << i << " " << state_freq[i] << endl;
 		if (state_freq[i] < 0.0 || state_freq[i] > 1)
 			outError("State frequency must be in [0,1] in ", str);
 		if (i == num_states-1 && end_pos < str.length())
-			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ')
-			outError("Comma/Space to separate state frequencies not found in ", str);
+			outError("Unexpected end of string ", str + ". You may supply more frequencies than the number of states.");
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ' && str[end_pos] != '/')
+			outError("Comma/Space/Forward slash to separate state frequencies not found in ", str);
 		end_pos++;
+        if (i < num_states - 1 && end_pos >= str.length())
+            outError("The number of frequencies ("+convertIntToString(i+1)+") is less than the number of states ("+convertIntToString(num_states)+"). Please check and try again.");
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) > 1e-2)
-		outError("State frequencies do not sum up to 1.0 in ", str);
-    sum = 1.0/sum;
-    for (i = 0; i < num_states; i++)
-        state_freq[i] *= sum;
+    if (fabs(sum) <= 1e-5)
+        outError("Sum of all state frequencies must be greater than zero!");
+	if (fabs(sum-1.0) >= 1e-7)
+    {
+        outWarning("Normalizing State frequencies so that sum of them equals to 1");
+        sum = 1.0/sum;
+        for (i = 0; i < num_states; i++)
+            state_freq[i] *= sum;
+    }
 }
 
 void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
@@ -1744,7 +1817,7 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
     // if detect if reading full matrix or half matrix by the first entry
     int end_pos;
     double d = 0.0;
-    d = convert_double(model_str.c_str(), end_pos);
+    d = convert_double_with_distribution(model_str.c_str(), end_pos);
     if (d < 0) {
         setReversible(false, adapt_tree);
     }
@@ -1849,7 +1922,7 @@ void ModelMarkov::setRates() {
 
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params) {
 	if (ModelUnrest::validModelName(model_name)) {
-		return (new ModelUnrest(tree, model_params));
+		return (new ModelUnrest(tree, model_params, freq_type, freq_params));
 	} else if (ModelLieMarkov::validModelName(model_name)) {
 	        return (new ModelLieMarkov(model_name, tree, model_params, freq_type, freq_params));
 	} else {

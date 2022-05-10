@@ -58,6 +58,7 @@ inline double hammingDistance
     int blockStop = 0;
     int distance  = 0;
     int freqUnknown = 0;
+#if !defined(__ARM_NEON)
     Vec32c blockA;
     int blockSize = blockA.size(); //but see scratch. Needs to match
     if (blockSize < seqLen) {
@@ -108,6 +109,10 @@ inline double hammingDistance
         }
     }
     frequencyOfUnknowns = freqUnknown;
+#else
+    // NHANLT: FUTURE WORK: implementing method to compute the Hamming distance for Apple Silicon Chipset
+    throw "Sorry! Computing of Hamming distance has not yet implemented for Apple Silicon Chipset!";
+#endif
     return distance;
 }
 #endif

@@ -740,6 +740,10 @@ end;
 ModelProtein::ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock* models_block)
  : ModelMarkov(tree, true, false)
 {
+    // To specify sub rate for protein models, users must use NEXUS file
+   /* if (model_params.find(",") != std::string::npos || model_params.find("/") != std::string::npos)
+        outError("Cannot read substitution rates! For protein models, please specify substitution rates and state frequencies via a NEXUS file.");*/
+    
     this->models_block = models_block;
 	init(model_name, model_params, freq, freq_params);
 }
@@ -789,6 +793,46 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         num_params = 0;
 
 	} else if (!model_params.empty()) {
+        // detect the seperator
+        char separator = ',';
+        if (model_params.find('/') != std::string::npos)
+            separator = '/';
+        
+        // if user specifies params via command line
+        if (model_params.find(separator) != std::string::npos)
+        {
+            // count the number of params
+            size_t num_params = std::count(model_params.begin(), model_params.end(), separator) + 1;
+            
+            // validate the number of params
+            if (num_params != 189 && num_params != 400)
+                outError("The number of model parameters of a protein model should be 189 (for revesible model) or 400 (for non-revesible model)!");
+            
+            // validate GTR20
+            if (name_upper == "GTR20" && num_params != 189)
+                outError("The GTR20 requires 189 parameters. Please check and try again!");
+            
+            // validate NONREV
+            if (name_upper == "NONREV" && num_params != 400)
+                outError("The NONREV requires 400 parameters. Please check and try again!");
+            
+            // ----- CONVERT INPUT PARAMS (VIA COMMAND LINE) INTO NEXUS FORMAT -----------
+            // replace separator by space
+            std::replace(model_params.begin(), model_params.end(), separator, ' ');
+            
+            // if the user specify a reversible model -> add " 1" to provide 190 params as the model specified in a NEXUS file
+            if (num_params == 189)
+                model_params += " 1";
+            
+            // add dummy state freqs
+            string tmp_freq = " "+convertDoubleToString(1.0/num_states);
+            for (int i = 0; i < num_states; i++)
+                model_params += tmp_freq;
+            // ----- CONVERT INPUT PARAMS (VIA COMMAND LINE) INTO NEXUS FORMAT -----------
+            
+            freq = FREQ_ESTIMATE;
+        }
+        
         readParametersString(model_params);
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
@@ -855,6 +899,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	if (freq_params != "") {
 //		stringstream ss(freq_params);
 		readStateFreq(freq_params);
+        freq = FREQ_USER_DEFINED;
 	}
 
 	//assert(freq != FREQ_ESTIMATE);
@@ -904,8 +949,13 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
                 cout << row << " " << col << endl;
             }
             ASSERT(id < nrates && id >= 0); // make sure that the conversion is correct
-            if (!(in >> rates[id]))
+            
+            string tmp_value;
+            in >> tmp_value;
+            if (tmp_value.length() == 0)
                 throw name+string(": Rate entries could not be read");
+            rates[id] = convert_double_with_distribution(tmp_value.c_str());
+
             if (rates[id] < 0.0)
                 throw "Negative rates found";
         }
@@ -916,8 +966,12 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
             double row_sum = 0.0;
             for (col = 0; col < num_states; col++) {
                 if (row != col) {
-                    if (!(in >> rates[i]))
+                    string tmp_value;
+                    in >> tmp_value;
+                    if (tmp_value.length() == 0)
                         throw name+string(": Rate entries could not be read");
+                    rates[i] = convert_double_with_distribution(tmp_value.c_str());
+                    
                     if (rates[i] < 0.0)
                         throw "Negative rates found";
                     row_sum += rates[i];
@@ -935,7 +989,7 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
 }
 
 
-string ModelProtein::getNameParams() {
+string ModelProtein::getNameParams(bool show_fixed_params) {
     ostringstream retname;
     retname << name;
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);

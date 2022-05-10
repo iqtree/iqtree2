@@ -1092,7 +1092,7 @@ void ModelPoMo::set_heterozygosity_boundaries() {
 // anymore.
 
 // TODO DS: The parameter mixture is unused at the moment.
-void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || !is_reversible) {
     // Do not change the object rate_matrix, but only trans_matrix.
@@ -1142,7 +1142,7 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
     }
   }
 
-  else ModelMarkov::computeTransMatrix(time, trans_matrix);
+  else ModelMarkov::computeTransMatrix(time, trans_matrix, 0, selected_row);
 }
 
 void ModelPoMo::computeTipLikelihood(PML::StateType state, double *lh) {

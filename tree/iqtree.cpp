@@ -620,6 +620,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
                     PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
             PhyloTree::readTreeStringSeqName(string(pllInst->tree_string));
             cout << getRealTime() - start << " seconds" << endl;
+            if (verbose_mode >= VB_MED)
+            {
+                int z = computeParsimony();
+                cout << "Parsimony of PLL Parsimony tree was " << z << endl;
+            }
             wrapperFixNegativeBranch(true);
             break;
         case STT_BIONJ:
@@ -749,7 +754,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             PhyloTree::readTreeStringSeqName(curParsTree);
             wrapperFixNegativeBranch(true);
         } else if (params->start_tree == STT_RANDOM_TREE) {
-            generateRandomTree(YULE_HARDING);
+            if (params->tree_gen!=NONE)
+                generateRandomTree(params->tree_gen);
+            else
+                generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
             if (rooted) {
                 rooted = false;
@@ -888,7 +896,10 @@ string IQTree::generateParsimonyTree(int randomSeed) {
         wrapperFixNegativeBranch(true);
         parsimonyTreeString = getTreeString();
     } else if (params->start_tree == STT_RANDOM_TREE) {
-        generateRandomTree(YULE_HARDING);
+        if (params->tree_gen!=NONE)
+            generateRandomTree(params->tree_gen);
+        else
+            generateRandomTree(YULE_HARDING);
         wrapperFixNegativeBranch(true);
         parsimonyTreeString = getTreeString();
     } else {
@@ -3818,6 +3829,291 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
     trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, NULL, false); // do not sort taxa
 }
 
+void IQTree::computeRootstrap(MTreeSet &trees, bool use_taxid) {
+    ASSERT(rooted);
+    ASSERT(root->name == ROOT_NAME);
+    
+    // convert each tree into a split graph
+    vector<SplitIntMap> ssvec;
+    ssvec.resize(trees.size());
+    vector<string> taxname;
+    StringIntMap tax2id;
+    int i;
+    if (use_taxid) {
+        for (i = 0; i < leafNum; i++)
+            taxname.push_back(convertIntToString(i));
+    } else {
+        getTaxaName(taxname);
+        for (i = 0; i < taxname.size(); i++)
+            tax2id[taxname[i]] = i;
+    }
+    for (i = 0; i < trees.size(); i++) {
+        if (!trees[i]->rooted)
+            outError("Tree " + convertIntToString(i+1) + " is not rooted");
+        if (trees[i]->leafNum != leafNum)
+            outError("Tree " + convertIntToString(i+1) + " does not have the same number of taxa");
+        
+        if (!use_taxid) {
+            // change the taxon IDs to be the same as main tree
+            NodeVector taxa;
+            trees[i]->getTaxa(taxa);
+            for (int j = 0; j < taxa.size(); j++) {
+                auto id = tax2id.find(taxa[j]->name);
+                if (id == tax2id.end())
+                    outError("Taxon " + taxa[j]->name + " in tree " + convertIntToString(i+1) + " not found in main tree");
+                taxa[j]->id = id->second;
+            }
+        }
+        
+        // convert this tree for splits graph
+        SplitGraph sg;
+        trees[i]->convertSplits(taxname, sg);
+        for (auto split : sg) {
+            Split *sp = new Split(*split);
+            ssvec[i].insertSplit(sp, 1.0);
+        }
+    }
+    BranchVector branches;
+    SplitGraph sg;
+    Split sp(leafNum);
+    convertSplits(sg, &sp, &branches);
+    // iterator over all branch and compute rootstrap supports
+    ASSERT(branches.size() == sg.getNSplits());
+    for (i = 0; i < branches.size(); i++) {
+        Branch branch = branches[i];
+        int rootstrap = 0;
+        if (branch.first != root && branch.second != root) {
+            /* non-root branch */
+            
+            // get the other split
+            Split other = *sg[i];
+            if (other.containTaxon(root->id))
+                other.removeTaxon(root->id);
+            else
+                other.addTaxon(root->id);
+            if (other.shouldInvert())
+                other.invert();
+            // count how often both splits occur in the tree set
+            for (auto splits : ssvec) {
+                if (splits.findSplit(sg[i]) && splits.findSplit(&other)) {
+                    rootstrap++;
+                }
+            }
+
+        } else {
+            /* root branch */
+            // make sure that first of pair is the root
+            if (branch.first != root) {
+                cout << "Root branch swapped" << endl;
+                auto tmp = branch.first;
+                branch.first = branch.second;
+                branch.second = tmp;
+            }
+            Split *split = sg[i];
+            ASSERT(split->countTaxa() == 1);
+            Split top = *split;
+            Split *left = nullptr, *right = nullptr;
+            // get the two branches from root
+            FOR_NEIGHBOR_IT(branch.second, branch.first, it) {
+                if (left == nullptr)
+                    left = _getSplit(branch.second, (*it)->node);
+                else
+                    right = _getSplit(branch.second, (*it)->node);
+            }
+            
+            // count how often both splits occur in the tree set
+            for (auto splits : ssvec) {
+                if (splits.findSplit(left) && splits.findSplit(right)) {
+                    rootstrap++;
+                }
+            }
+            delete right;
+            delete left;
+        }
+        
+        double rootstrap_dbl = (double)rootstrap*100.0 / trees.size();
+        //branch.first->findNeighbor(branch.second)->putAttr("rootstrap", rootstrap_dbl);
+        Neighbor *nei = branch.second->findNeighbor(branch.first);
+        nei->putAttr("rootstrap", rootstrap_dbl);
+        nei->putAttr("id", nei->id);
+    }
+    string filename = (string)params->out_prefix + ".rootstrap.nex";
+    printNexus(filename, WT_BR_LEN, "This file is best viewed in FigTree.");
+    cout << "Annotated tree (best viewed in FigTree) written to " << filename << endl;
+}
+
+void IQTree::computeRootstrapUnrooted(MTreeSet &trees, const char* outgroup, bool use_taxid) {
+    ASSERT(!rooted);
+
+    // check for monophyly of outgroup
+    int i;
+    StrVector outgroup_vec;
+    convert_string_vec(outgroup, outgroup_vec);
+    unordered_set<string> outgroup_set;
+    for (auto it = outgroup_vec.begin(); it != outgroup_vec.end(); it++)
+        outgroup_set.insert(*it);
+    pair<Node*,Neighbor*> outgroup_branch = {NULL, NULL};
+    // move the root
+    root = findLeafName(outgroup_vec[0]);
+    if (!root)
+        outError("Taxon " + outgroup_vec[0] + " found not");
+    if (outgroup_vec.size() == 1) {
+        outgroup_branch.first = root;
+        outgroup_branch.second = outgroup_branch.first->neighbors[0];
+    } else {
+        findNodeNames(outgroup_set, outgroup_branch, root->neighbors[0]->node, nullptr);
+    }
+    if (!outgroup_branch.first) {
+        cout << "WARNING: outgroup taxa are not monophyletic - rootstrap will not be computed" << endl;
+        return;
+    }
+    // set root to the branch separating outgroup from ingroup
+    root = outgroup_branch.first;
+    
+    Split outgroup_split(leafNum);
+    getTaxa(outgroup_split, outgroup_branch.first, outgroup_branch.second->node);
+    int first_outgroup_id = outgroup_split.firstTaxon();
+    
+    // sanity check
+    if (outgroup_split.countTaxa() != outgroup_vec.size()) {
+        cout << "WARNING: outgroup taxa are not monophyletic - rootstrap will not be computed" << endl;
+        return;
+    }
+    if (outgroup_split.shouldInvert())
+        outError("Number of outgroup taxa must not be larger than half of all taxa");
+
+    bool error = false;
+    for (i = 0; i < trees.size(); i++)
+        if (trees[i]->rooted) {
+            cerr << "Tree " + convertIntToString(i+1) + " is rooted" << endl;
+            error = true;
+        }
+    
+    if (error)
+        outError("Trees listed above should be unrooted, please change them");
+    
+    // convert each tree into a split graph
+    vector<SplitIntMap> ssvec;
+    ssvec.resize(trees.size());
+    vector<string> taxname;
+    StringIntMap tax2id;
+    if (use_taxid) {
+        for (i = 0; i < leafNum; i++)
+            taxname.push_back(convertIntToString(i));
+    } else {
+        getTaxaName(taxname);
+        for (i = 0; i < taxname.size(); i++)
+            tax2id[taxname[i]] = i;
+    }
+
+    IntVector monophyletic;
+    monophyletic.resize(trees.size());
+    for (i = 0; i < trees.size(); i++) {
+        if (!use_taxid) {
+            // change the taxon IDs to be the same as main tree
+            NodeVector taxa;
+            trees[i]->getTaxa(taxa);
+            for (int j = 0; j < taxa.size(); j++) {
+                auto id = tax2id.find(taxa[j]->name);
+                if (id == tax2id.end())
+                    outError("Taxon " + taxa[j]->name + " in tree " + convertIntToString(i+1) + " not found in main tree");
+                taxa[j]->id = id->second;
+            }
+        }
+        
+        // convert this tree for splits graph
+        SplitGraph sg;
+        trees[i]->convertSplits(taxname, sg);
+        for (auto split : sg) {
+            Split *sp = new Split(*split);
+            ssvec[i].insertSplit(sp, 1.0);
+        }
+        // check that the outgroup is monophyletic in this tree
+        if (ssvec[i].findSplit(&outgroup_split)) {
+            monophyletic[i] = true;
+        } else {
+            cout << "WARNING: outgroup is not monophyletic in tree " << i+1 << " that will be ignored" << endl;
+            monophyletic[i] = false;
+        }
+    }
+    BranchVector branches;
+    SplitGraph sg;
+    Split sp(leafNum);
+    convertSplits(sg, &sp, &branches, outgroup_branch.second->node, outgroup_branch.first);
+    // iterator over all branch and compute rootstrap supports
+    ASSERT(branches.size() == sg.getNSplits());
+    for (i = 0; i < branches.size(); i++) {
+        Branch branch = branches[i];
+        int rootstrap = 0;
+        if (branch.first != outgroup_branch.first && branch.second != outgroup_branch.first) {
+            /* non-root branch */
+            
+            // get the other split
+            Split other = *sg[i];
+            for (int tax = 0; tax < leafNum; tax++)
+                if (outgroup_split.containTaxon(tax)) {
+                    if (other.containTaxon(tax))
+                        other.removeTaxon(tax);
+                    else
+                        other.addTaxon(tax);
+                }
+            if (other.shouldInvert())
+                other.invert();
+            // count how often both splits occur in the tree set
+            int treeid = 0;
+            for (auto splits : ssvec) {
+                if (monophyletic[treeid] && splits.findSplit(sg[i]) && splits.findSplit(&other)) {
+                    rootstrap++;
+                }
+                treeid++;
+            }
+            if (branch.first == outgroup_branch.second->node) {
+                cout << "Rootstrap at the current outgroup position: " << rootstrap*100.0 / trees.size() << "%" << endl;
+            }
+        } else {
+            /* root branch */
+            // make sure that first of pair is the root
+            if (branch.first != outgroup_branch.first) {
+                cout << "Root branch swapped" << endl;
+                auto tmp = branch.first;
+                branch.first = branch.second;
+                branch.second = tmp;
+            }
+//            ASSERT(split->countTaxa() == outgroup_split.countTaxa());
+            Split *left = nullptr, *right = nullptr;
+            // get the two branches from root
+            FOR_NEIGHBOR_IT(branch.second, branch.first, it) {
+                if (left == nullptr)
+                    left = _getSplit(branch.second, (*it)->node);
+                else
+                    right = _getSplit(branch.second, (*it)->node);
+            }
+            // count how often both splits occur in the tree set
+            int treeid = 0;
+            if (left != nullptr && right != nullptr)
+            for (auto splits : ssvec) {
+                if (monophyletic[treeid] && splits.findSplit(left) && splits.findSplit(right)) {
+                    rootstrap++;
+                }
+                treeid++;
+            }
+            delete right;
+            delete left;
+        }
+        
+        double rootstrap_dbl = (double)rootstrap*100.0 / trees.size();
+        Neighbor *nei = branch.second->findNeighbor(branch.first);
+        nei->putAttr("rootstrap", rootstrap_dbl);
+        nei->putAttr("id", nei->id);
+//        nei = branch.first->findNeighbor(branch.second);
+//        nei->putAttr("rootstrap", rootstrap_dbl);
+//        nei->putAttr("id", nei->id);
+    }
+    string filename = (string)params->out_prefix + ".rootstrap.nex";
+    printNexus(filename, WT_BR_LEN, "This file is best viewed in FigTree.");
+    cout << "Annotated tree (best viewed in FigTree) written to " << filename << endl;
+}
+
 void IQTree::pllConvertUFBootData2IQTree(){
     // duplication_counter
     duplication_counter = pllUFBootDataPtr->duplication_counter;
@@ -4287,7 +4583,10 @@ int PhyloTree::testNumThreads() {
                 // time not reached, add more tree
 //                readTreeString(trees[0]);
 //                doRandomNNIs();
-                generateRandomTree(YULE_HARDING);
+                if (params->tree_gen!=NONE)
+                    generateRandomTree(params->tree_gen);
+                else
+                    generateRandomTree(YULE_HARDING);
                 wrapperFixNegativeBranch(true);
                 trees.push_back(getTreeString());
             }

@@ -50,12 +50,14 @@
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
 #include "phyloanalysis.h"
+#include "alisim.h"
 #include "tree/matree.h"
 #include "obsolete/parsmultistate.h"
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
 #include "pda/ecopd.h"
 #include "tree/upperbounds.h"
+#include "terraceanalysis.h"
 #include "pda/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"
@@ -70,114 +72,6 @@
 #endif
 
 using namespace std;
-
-void generateRandomTree(Params &params)
-{
-    if (params.sub_size < 3 && !params.aln_file) {
-        outError(ERR_FEW_TAXA);
-    }
-
-    if (!params.user_file) {
-        outError("Please specify an output tree file name");
-    }
-    ////cout << "Random number seed: " << params.ran_seed << endl << endl;
-
-    SplitGraph sg;
-
-    try {
-
-        if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
-            params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE) {
-            if (!overwriteFile(params.user_file)) return;
-            ofstream out;
-            out.open(params.user_file);
-            MTree itree;
-
-            if (params.second_tree) {
-                cout << "Generating random branch lengths on tree " << params.second_tree << " ..." << endl;
-                itree.readTree(params.second_tree, params.is_rooted);
-            } else
-            switch (params.tree_gen) {
-            case YULE_HARDING:
-                cout << "Generating random Yule-Harding tree..." << endl;
-                break;
-            case UNIFORM:
-                cout << "Generating random uniform tree..." << endl;
-                break;
-            case CATERPILLAR:
-                cout << "Generating random caterpillar tree..." << endl;
-                break;
-            case BALANCED:
-                cout << "Generating random balanced tree..." << endl;
-                break;
-            case STAR_TREE:
-                cout << "Generating star tree with random external branch lengths..." << endl;
-                break;
-            default: break;
-            }
-            ofstream out2;
-            if (params.num_zero_len) {
-                cout << "Setting " << params.num_zero_len << " internal branches to zero length..." << endl;
-                string str = params.user_file;
-                str += ".collapsed";
-                out2.open(str.c_str());
-            }
-            for (int i = 0; i < params.repeated_time; i++) {
-                MExtTree mtree;
-                if (itree.root) {
-                    mtree.copyTree(&itree);
-                    mtree.generateRandomBranchLengths(params);
-                } else {
-                    mtree.generateRandomTree(params.tree_gen, params);
-                }
-                if (params.num_zero_len) {
-                    mtree.setZeroInternalBranches(params.num_zero_len);
-                    MExtTree collapsed_tree;
-                    collapsed_tree.copyTree(&mtree);
-                    collapsed_tree.collapseZeroBranches();
-                    collapsed_tree.printTree(out2);
-                    out2 << endl;
-                }
-                mtree.printTree(out);
-                out << endl;
-            }
-            out.close();
-            cout << params.repeated_time << " tree(s) printed to " << params.user_file << endl;
-            if (params.num_zero_len) {
-                out2.close();
-                cout << params.repeated_time << " collapsed tree(s) printed to " << params.user_file << ".collapsed" << endl;
-            }
-        }
-        // Generate random trees if optioned
-        else if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
-            cout << "Generating random circular split network..." << endl;
-            if (!overwriteFile(params.user_file)) return;
-            sg.generateCircular(params);
-        } else if (params.tree_gen == TAXA_SET) {
-            sg.init(params);
-            cout << "Generating random taxa set of size " << params.sub_size <<
-                " overlap " << params.overlap << " with " << params.repeated_time << " times..." << endl;
-            if (!overwriteFile(params.pdtaxa_file)) return;
-            sg.generateTaxaSet(params.pdtaxa_file, params.sub_size, params.overlap, params.repeated_time);
-        }
-    } catch (bad_alloc) {
-        outError(ERR_NO_MEMORY);
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, params.user_file);
-    }
-
-    // calculate the distance
-    if (params.run_mode == CALC_DIST) {
-        if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
-            cout << "Calculating distance matrix..." << endl;
-            sg.calcDistance(params.dist_file);
-            cout << "Distances printed to " << params.dist_file << endl;
-        }// else {
-            //mtree.calcDist(params.dist_file);
-        //}
-    }
-
-}
 
 inline void separator(ostream &out, int type = 0) {
     switch (type) {
@@ -212,14 +106,13 @@ void printCopyright(ostream &out) {
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
     out << " for " << getOSName();
     out << " built " << __DATE__;
-    out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
 #endif
 
 #ifdef IQ_TREE
     out << endl << "Developed by Bui Quang Minh, James Barbetti, Nguyen Lam Tung,"
-        << endl << "Olga Chernomor, Heiko Schmidt, Dominik Schrempf, Michael Woodhams." << endl << endl;
+        << endl << "Olga Chernomor, Heiko Schmidt, Dominik Schrempf, Michael Woodhams, Ly Trong Nhan." << endl << endl;
 #else
     out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
@@ -2542,7 +2435,7 @@ int main(int argc, char *argv[]) {
     
     int num_procs = countPhysicalCPUCores();
 #ifdef _OPENMP
-    if (num_procs > 1 && Params::getInstance().num_threads == 1) {
+    if (num_procs > 1 && Params::getInstance().num_threads == 1 && !Params::getInstance().alisim_active) {
         cout << endl << endl << "HINT: Use -nt option to specify number of threads because your CPU has " << num_procs << " cores!";
         cout << endl << "HINT: -nt AUTO will automatically determine the best number of threads to use.";
     }
@@ -2553,6 +2446,9 @@ int main(int argc, char *argv[]) {
 
     //cout << "sizeof(int)=" << sizeof(int) << endl;
     cout << endl << endl;
+    
+    // show msgs which are delayed to show
+    cout << Params::getInstance().delay_msgs;
 
     cout.precision(3);
     cout.setf(ios::fixed);
@@ -2597,6 +2493,16 @@ int main(int argc, char *argv[]) {
     version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
+    
+    // load distributions from built-in file and user-specified file
+    // load distributions from built-in file
+    read_distributions();
+    // load distributions from user-specified file
+    if (Params::getInstance().alisim_distribution_definitions)
+    {
+        cout<<"Reading user-specified distributions/lists of random numbers."<<endl;
+        read_distributions(Params::getInstance().alisim_distribution_definitions);
+    }
 
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
         if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
@@ -2606,7 +2512,9 @@ int main(int argc, char *argv[]) {
         }
     } else
     // call the main function
-    if (Params::getInstance().tree_gen != NONE) {
+    if (Params::getInstance().alisim_active) {
+        runAliSim(Params::getInstance(), checkpoint);
+    } else if (Params::getInstance().tree_gen != NONE && Params::getInstance().start_tree!=STT_RANDOM_TREE) {
         generateRandomTree(Params::getInstance());
     } else if (Params::getInstance().do_pars_multistate) {
         doParsMultiState(Params::getInstance());
@@ -2631,6 +2539,12 @@ int main(int argc, char *argv[]) {
         processNCBITree(Params::getInstance());
     } else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
         processECOpd(Params::getInstance());
+    } else if (Params::getInstance().gen_all_NNI){
+        PhyloTree *tree = new PhyloTree();
+        tree->readTree(Params::getInstance().user_file, Params::getInstance().is_rooted);
+        tree->gen_all_nni_trees();
+    } else if (Params::getInstance().terrace_analysis) { /**Olga: Terrace analysis*/
+        runterraceanalysis(Params::getInstance());
     } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) &&
                Params::getInstance().consensus_type != CT_ASSIGN_SUPPORT_EXTENDED)
     {
@@ -2669,6 +2583,8 @@ int main(int argc, char *argv[]) {
             case CT_NONE: break;
             /**MINH ANH: for some comparison*/
             case COMPARE: compare(Params::getInstance()); break; //MA
+            case CT_ROOTSTRAP:
+                runRootstrap(Params::getInstance()); break;
         }
     } else if (Params::getInstance().split_threshold_str) {
         // for Ricardo: keep those splits from input tree above given support threshold
@@ -2704,7 +2620,9 @@ int main(int argc, char *argv[]) {
 
     time(&start_time);
     cout << "Date and Time: " << ctime(&start_time);
+    try{
     delete checkpoint;
+    }catch(int err_num){}
 
     finish_random();
     

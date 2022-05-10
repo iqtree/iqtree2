@@ -39,6 +39,14 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
         num_params = 0;
         freq = FREQ_USER_DEFINED;
 	}
+    
+    // parse user-specified state frequencies (if any)
+    if (freq_params != "")
+    {
+        freq_type = FREQ_USER_DEFINED;
+        readStateFreq(freq_params);
+    }
+    
 	ModelMarkov::init(freq);
 }
 
@@ -56,8 +64,13 @@ void ModelMorphology::readRates(istream &in) throw(const char*, string) {
 			cout << row << " " << col << endl;
 		}
 		assert(id < nrates && id >= 0); // make sure that the conversion is correct
-		if (!(in >> rates[id]))
-			throw name+string(": Rate entries could not be read");
+        
+        string tmp_value;
+        in >> tmp_value;
+        if (tmp_value.length() == 0)
+            throw name+string(": Rate entries could not be read");
+        rates[id] = convert_double_with_distribution(tmp_value.c_str());
+        
 		if (rates[id] < 0.0)
 			throw "Negative rates found";
 	}
@@ -96,7 +109,7 @@ void ModelMorphology::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
-string ModelMorphology::getNameParams() {
+string ModelMorphology::getNameParams(bool show_fixed_params) {
     if (num_params == 0) return name;
     ostringstream retname;
     retname << name << '{';

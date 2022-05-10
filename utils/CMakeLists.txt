@@ -8,10 +8,11 @@ pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
 starttree.cpp starttree.h
-bionj.cpp bionj2.cpp
+bionj.cpp bionj2.cpp bionj2.h
 progress.cpp progress.h
 timeutil.h hammingdistance.h
 operatingsystem.cpp operatingsystem.h
+heapsort.h
 )
 
 if(ZLIB_FOUND)
@@ -33,3 +34,10 @@ else(ZLIB_FOUND)
   target_link_libraries(decentTree zlibstatic)
 endif(ZLIB_FOUND)
 
+if(CLANG AND WIN32)
+    if (BINARY32)
+        target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+    else()
+        target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+    endif()
+endif()

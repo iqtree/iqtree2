@@ -300,8 +300,9 @@ public:
             read the tree from the input file in newick format
             @param infile the input file file.
             @param is_rooted (IN/OUT) true if tree is rooted
+            @param tree_line_index the line_index to read the tree (in case with multiple trees *.parttrees)
      */
-    virtual void readTree(const char *infile, bool &is_rooted);
+    virtual void readTree(const char *infile, bool &is_rooted, int tree_line_index = 0);
 
     /**
             read the tree from the ifstream in newick format
@@ -326,6 +327,13 @@ public:
 		
      */
     void parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len);
+    
+    /**
+            parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
+            @param in_comment the input comment extract from tree file
+            @param node1, node2 the nodes that the branch connects to
+     */
+    void parseKeyValueFromComment(string &in_comment, Node* node1, Node* node2);
 
     /**
         parse the string containing branch length(s)
@@ -681,6 +689,16 @@ public:
     void convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes = NULL, Node *node = NULL, Node *dad = NULL);
 
     /**
+            convert the tree into the split system, iterative procedure
+            @param sg (OUT) resulting split graph
+            @param resp (internal) set of taxa below node
+            @param[out] branches set of corresponding branches
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+     */
+    void convertSplits(SplitGraph &sg, Split *resp, BranchVector *branches, Node *node = NULL, Node *dad = NULL);
+
+    /**
      * Initialize the hash stable splitBranchMap which contain mapping from split to branch
      * @param resp (internal) set of taxa below node
      * @param node the starting node, NULL to start from the root
@@ -870,6 +888,11 @@ public:
 
     /** if WT_BR_SCALE turned on, printTree will scale branch length with this factor */
     double len_scale;
+    
+    /**
+            AliSim: the highest site id mapping when using partitions
+     */
+    int max_site_id_mapping = -1;
 
     /**
     *   Pointer to the global params
