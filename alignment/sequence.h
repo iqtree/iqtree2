@@ -10,19 +10,20 @@ class Sequence {
 public:
     
     /**
-     chunks of sequence
-     */
-    vector<short int> sequence_chunks;
-    
-    /**
-        chunks of sequence (in string)
-     */
-    string sequence_str_chunks;
-    
-    /**
-        number of children which have completed simulating the sequence (for AliSim)
-     */
-    short int num_children_done_simulation;
+    chunks of sequence
+    */
+   vector<vector<short int>> sequence_chunks;
+   
+   /**
+       chunks of sequence (in string)
+    */
+   vector<string> sequence_str_chunks;
+   
+   /**
+       number of children which have completed simulating the sequence (for AliSim)
+    */
+   vector<short int> nums_children_done_simulation;
+
     
     /**
         number of OPENMP threads that completed simulating the sequence (for AliSim)

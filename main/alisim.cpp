@@ -686,13 +686,13 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         Node *current_node = current_tree->findLeafName(node->name);
 
         // initialize sequence of the super_node
-        if (node->sequence->sequence_chunks.size() != expected_num_states_super_tree)
+        if (node->sequence->sequence_chunks[0].size() != expected_num_states_super_tree)
         {
             #ifdef _OPENMP
             #pragma omp critical
             #endif
-            if (node->sequence->sequence_chunks.size() != expected_num_states_super_tree)
-                node->sequence->sequence_chunks.resize(expected_num_states_super_tree, initial_state);
+            if (node->sequence->sequence_chunks[0].size() != expected_num_states_super_tree)
+                node->sequence->sequence_chunks[0].resize(expected_num_states_super_tree, initial_state);
         }
         
         // copy sequence from the current_node to the super_node (if the current node is found)
@@ -700,7 +700,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         {
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
             for (int i = 0; i < site_ids.size(); i++)
-                node->sequence->sequence_chunks[site_ids[i]] = current_node->sequence->sequence_chunks[i];
+                node->sequence->sequence_chunks[0][site_ids[i]] = current_node->sequence->sequence_chunks[0][i];
         }
     }
     
@@ -1004,7 +1004,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
             string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-            string output  = AliSimulator::getDefaultSeqStr(sequence_length * num_sites_per_state);
+            string output(sequence_length * num_sites_per_state, '-');
             
             // convert non-empty sequence
             AliSimulator::convertNumericalStatesIntoReadableCharacters(node, output, sequence_length, num_sites_per_state, state_mapping);
@@ -1030,11 +1030,11 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             #endif
             {
                 // write output to file
-                out << output;
+                out << output << "\n";
                 
                 // write aln without gaps for Indels
                 if (write_indels_output)
-                    out_indels << output_indels;
+                    out_indels << output_indels << "\n";
             }
         }
     }
@@ -1054,7 +1054,7 @@ void clearoutSequencesSuperTree(Node *node, Node *dad){
     #pragma omp task firstprivate(node)
     #endif
     if (node->isLeaf())
-        node->sequence->sequence_chunks.clear();
+        node->sequence->sequence_chunks[0].clear();
 
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
@@ -1142,9 +1142,9 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
         return;
     
     // determine the real sequence_length
-    if (node->name!=ROOT_NAME && node->sequence->sequence_chunks.size() > 0)
+    if (node->name!=ROOT_NAME && node->sequence->sequence_chunks[0].size() > 0)
     {
-        sequence_length = node->sequence->sequence_chunks.size();
+        sequence_length = node->sequence->sequence_chunks[0].size();
         stop = true;
     }
     
@@ -1168,10 +1168,10 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 
         // if current_node is found, inserting sites normally
         if (current_node)
-            node->sequence->sequence_chunks.insert(node->sequence->sequence_chunks.begin()+position, current_node->sequence->sequence_chunks.begin()+starting_index, current_node->sequence->sequence_chunks.end());
+            node->sequence->sequence_chunks[0].insert(node->sequence->sequence_chunks[0].begin()+position, current_node->sequence->sequence_chunks[0].begin()+starting_index, current_node->sequence->sequence_chunks[0].end());
         // otherwise, insert gaps
         else
-            node->sequence->sequence_chunks.insert(node->sequence->sequence_chunks.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
+            node->sequence->sequence_chunks[0].insert(node->sequence->sequence_chunks[0].begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
     }
     
     // process its neighbors/children
@@ -1228,7 +1228,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         
         // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
         string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-        string output = AliSimulator::getDefaultSeqStr(sequence_length * num_sites_per_state);
+        string output(sequence_length * num_sites_per_state, '-');
         
         // build a new genome tree from the list of insertions if the genome tree has not been initialized (~NULL)
         if (!genome_tree)
@@ -1301,11 +1301,11 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         output = pre_output + output;
         
         // write output to file
-        out << output;
+        out << output << "\n";
         
         // write aln without gaps for Indels
         if (write_indels_output)
-            out_indels << output_indels;
+            out_indels << output_indels << "\n";
     }
     
     // delete the genome tree

@@ -110,13 +110,13 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
+    virtual void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
     
     /**
     *  reset tree (by reset some variables of nodes)
     *
     */
-    void resetTree(Node *node = NULL, Node *dad = NULL);
+    void resetTree(Node *node = NULL, Node *dad = NULL, int num_threads = -1);
     
     /**
     *  validate sequence length of codon
@@ -177,12 +177,12 @@ protected:
     /**
         writing and deleting simulated sequence immediately if possible
     */
-    void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void writeAndDeleteSequenceImmediatelyIfPossible(int thread_id, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         convert a sequence from states to characters
     */
-    void convertSequence(int segment_start, int segment_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void convertSequence(int thread_id, int segment_start, int segment_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         branch-specific evolution
@@ -197,7 +197,7 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(int thread_id, int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
@@ -217,17 +217,17 @@ protected:
     /**
     *  export a sequence with gaps copied from the input sequence
     */
-    void exportSequenceWithGaps(Node *node, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start = 0, int segment_length = -1);
+    void exportSequenceWithGaps(Node *node, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int thread_id = 0, int segment_start = 0, int segment_length = -1);
     
     /**
         handle indels
     */
-    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
+    void simulateSeqByGillespie(int thread_id, int segment_start, int &segment_length, ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
     
     /**
         handle substitution events
     */
-    void handleSubs(int segment_start, int segment_length, int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream);
+    void handleSubs(int thread_id, int segment_start, int segment_length, int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream);
     
     /**
         handle insertion events, return the insertion-size
@@ -247,7 +247,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(int segment_start, int segment_length, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(int thread_id, int segment_start, int segment_length, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence
@@ -307,7 +307,7 @@ protected:
     /**
         handle DNA error
     */
-    void handleDNAerr(int segment_start, int segment_length, double error_prop, vector<short int> &sequence, int* rstream, int model_index = -1);
+    void handleDNAerr(int thread_id, int segment_start, int segment_length, double error_prop, vector<short int> &sequence, int* rstream, int model_index = -1);
     
     /**
         TRUE if posterior mean rate can be used
@@ -323,6 +323,21 @@ protected:
         temporarily write internal states to file (when using Indels)
     */
     void writeInternalStatesIndels(Node* node, ostream &out);
+    
+    /**
+        separate root sequence into chunks
+    */
+    void separateSeqIntoChunks(Node* node, int num_threads);
+    
+    /**
+        merge chunks into a single sequence
+    */
+    void mergeChunks(Node* node);
+    
+    /**
+        merge chunks into a single sequence for all nodes in tree
+    */
+    void mergeChunksAllNodes(Node* node = NULL, Node* dad = NULL);
     
 public:
     
@@ -405,7 +420,7 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static void convertNumericalStatesIntoReadableCharacters(Node *node, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_start = 0, int segment_length = -1);
+    static void convertNumericalStatesIntoReadableCharacters(Node *node, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int thread_id = 0, int segment_start = 0, int segment_length = -1);
     
     /**
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
@@ -417,11 +432,6 @@ public:
     *  update new genome from original genome and the genome tree for each tips (due to Indels)
     */
     void updateNewGenomeIndels(int seq_length);
-    
-    /**
-        get default sequence with all gaps
-    */
-    static string getDefaultSeqStr(int sequence_length);
 };
 
 #endif /* alisimulator_h */
