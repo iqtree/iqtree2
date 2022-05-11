@@ -1005,6 +1005,9 @@ void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
         out << node->sequence->sequence_chunks[0][i]<<" ";
     out<<endl;
     
+    // release the memory
+    vector<short int>().swap(node->sequence->sequence_chunks[0]);
+    
     map_seqname_node[node->name] = node;
 }
 
@@ -1037,16 +1040,10 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(int thread_id, os
         // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
         if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
         {
-            if (node->isLeaf())
-            {
-                mergeChunks(node);
+            if (node->isLeaf() && node->name != ROOT_NAME)
                 permuteSelectedSites(fundi_items, node);
-            }
             if ((*it)->node->isLeaf())
-            {
-                mergeChunks((*it)->node);
                 permuteSelectedSites(fundi_items, (*it)->node);
-            }
         }
         
         // write sequence of leaf nodes to file if possible
@@ -1083,7 +1080,7 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(int thread_id, os
             }
             
             // avoid writing sequence of __root__
-            if (node->isLeaf() && node->name!=ROOT_NAME && params->outputfile_runtime.length() == 0)
+            if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences) && params->outputfile_runtime.length() == 0)
             {
                 // if using Indels -> temporarily write out internal states
                 if (params->alisim_insertion_ratio > 0)
@@ -1112,24 +1109,24 @@ void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(int thread_id, os
         }
         
         // remove the sequence of the current node to release the memory
-        if ((!node->isLeaf() || node->name == ROOT_NAME) && params->alisim_write_internal_sequences && state_mapping.size() > 0)
+        if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences && state_mapping.size() > 0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
         {
             // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-            string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+            string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
             
             #ifdef _OPENMP
             #pragma omp critical
             #endif
             {
                 out << pre_output;
-                for (int i = 0; i < node->sequence->sequence_str_chunks.size(); i++)
-                    out << node->sequence->sequence_str_chunks[i];
+                for (int i = 0; i < (*it)->node->sequence->sequence_str_chunks.size(); i++)
+                    out << (*it)->node->sequence->sequence_str_chunks[i];
                 out << "\n";
             }
             
             // release the memory
-            for (int i = 0; i < node->sequence->sequence_str_chunks.size(); i++)
-                string().swap(node->sequence->sequence_str_chunks[i]);
+            for (int i = 0; i < (*it)->node->sequence->sequence_str_chunks.size(); i++)
+                string().swap((*it)->node->sequence->sequence_str_chunks[i]);
         }
     }
 }
@@ -1165,7 +1162,7 @@ void AliSimulator::convertSequence(int thread_id, int segment_start, int segment
     }
         
     // avoid writing sequence of __root__
-    if (node->isLeaf() && node->name!=ROOT_NAME)
+    if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
     {
         // init a default sequence str
         int sequence_length = round(expected_num_sites/length_ratio);
@@ -1186,15 +1183,15 @@ void AliSimulator::convertSequence(int thread_id, int segment_start, int segment
     }
     
     // convert internal sequence if it's an internal node and the user want to output internal sequences
-    if ((!node->isLeaf() || node->name == ROOT_NAME) && params->alisim_write_internal_sequences)
+    if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
     {
         // init a default sequence str
         int sequence_length = round(expected_num_sites/length_ratio);
         string output(segment_length * num_sites_per_state, '-');
-        node->sequence->sequence_str_chunks[thread_id] = output;
+        (*it)->node->sequence->sequence_str_chunks[thread_id] = output;
         
         // convert numerical states into readable characters
-        convertNumericalStatesIntoReadableCharacters(node, node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
+        convertNumericalStatesIntoReadableCharacters((*it)->node, (*it)->node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
         
         // the memory allocated to the current sequence chunk of INTERNAL nodes will be release later
     }
@@ -1465,9 +1462,10 @@ void AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, stri
     else
         for (int i = 0; i < segment_length; i++)
         {
-            output[i*num_sites_per_state] = state_mapping[node->sequence->sequence_chunks[thread_id][i]][0];
-            output[i*num_sites_per_state + 1] = state_mapping[node->sequence->sequence_chunks[thread_id][i]][1];
-            output[i*num_sites_per_state + 2] = state_mapping[node->sequence->sequence_chunks[thread_id][i]][2];
+            string codon_str = state_mapping[node->sequence->sequence_chunks[thread_id][i]];
+            output[i*num_sites_per_state] = codon_str[0];
+            output[i*num_sites_per_state + 1] = codon_str[1];
+            output[i*num_sites_per_state + 2] = codon_str[2];
         }
 }
 
@@ -1614,6 +1612,8 @@ void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* no
 {
     if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end())
     {
+        mergeChunks(node);
+        
         // permute the internal states if they have not been converted into readable characters
         if (node->sequence->sequence_str_chunks[0].length() == 0)
         {
@@ -1649,13 +1649,13 @@ void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* no
             // permuting sites in FunDi model
             for (int i = 0; i < fundi_items.size(); i++)
             {
-                node->sequence->sequence_str_chunks[fundi_items[i].new_position * num_sites_per_state + 0] = caching_sites[fundi_items[i].selected_site][0];
+                node->sequence->sequence_str_chunks[0][fundi_items[i].new_position * num_sites_per_state + 0] = caching_sites[fundi_items[i].selected_site][0];
                 
                 // if they are codon -> also record the other two characters
                 if (num_sites_per_state == 3)
                 {
-                    node->sequence->sequence_str_chunks[fundi_items[i].new_position * num_sites_per_state + 1] = caching_sites[fundi_items[i].selected_site][1];
-                    node->sequence->sequence_str_chunks[fundi_items[i].new_position * num_sites_per_state + 2] = caching_sites[fundi_items[i].selected_site][2];
+                    node->sequence->sequence_str_chunks[0][fundi_items[i].new_position * num_sites_per_state + 1] = caching_sites[fundi_items[i].selected_site][1];
+                    node->sequence->sequence_str_chunks[0][fundi_items[i].new_position * num_sites_per_state + 2] = caching_sites[fundi_items[i].selected_site][2];
                 }
             }
         }
@@ -2861,6 +2861,9 @@ void AliSimulator::mergeChunks(Node* node)
     // otherwise, merge chunks of sequence
     else
     {
+        // ignore merging if it was already merged
+        if (node->sequence->sequence_chunks.size() == 1) return;
+        
         // count num of sites of all chunks
         int total_sites = 0;
         for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
