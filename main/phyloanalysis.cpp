@@ -441,7 +441,26 @@ void reportModel(ostream &out, PhyloTree &tree) {
 //    int i, j, k;
     int i;
 
-    if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
+    if (tree.isTreeMix()) {
+        IQTreeMix* treemix = (IQTreeMix*) &tree;
+        if (treemix->models.size() == 1) {
+            out << "Linked ";
+            reportModel(out, *treemix->at(0));
+        } else {
+            for (i=0; i<treemix->size(); i++) {
+                out << "Tree " << i+1 << "'s ";
+                reportModel(out, *treemix->at(i));
+            }
+        }
+        // show the tree weights
+        out << "Tree weights: ";
+        for (i=0; i<treemix->size(); i++) {
+            if (i>0)
+                out << ", ";
+            out << treemix->weights[i];
+        }
+        out << endl << endl;
+    } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;
         ModelSubst *mmodel = tree.getModel();
@@ -473,35 +492,6 @@ void reportModel(ostream &out, PhyloTree &tree) {
             reportModel(out, tree.aln, m);
         }
         out << endl;
-    } else if (tree.isTreeMix()) {
-        IQTreeMix* treemix = (IQTreeMix*) &tree;
-        if (treemix->models.size() == 1) {
-            out << "Linked model of substitution: " << treemix->at(0)->getModelName() << endl << endl;
-            reportModel(out, tree.aln, treemix->at(0)->getModel());
-        } else {
-            for (i=0; i<treemix->size(); i++) {
-                out << "Tree " << i+1 << "'s model of substitution: " << treemix->at(i)->getModelName() << endl << endl;
-                reportModel(out, tree.aln, treemix->at(i)->getModel());
-            }
-        }
-        // show the tree weights
-        out << "Tree weights: ";
-        for (i=0; i<treemix->size(); i++) {
-            if (i>0)
-                out << ", ";
-            out << treemix->weights[i];
-        }
-        out << endl << endl;
-        /*
-        // show the proportion of parsimony informative sites with max posterior probabilities among the trees
-        out << "Proportion of informative sites with max post prob over the trees: ";
-        for (i=0; i<treemix->size(); i++) {
-            if (i>0)
-                out << ", ";
-            out << treemix->max_posterior_ratio[i];
-        }
-        out << endl << endl;
-        */
     } else {
         // Update rate name if continuous gamma is used.
         if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)

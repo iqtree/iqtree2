@@ -20,13 +20,28 @@ const int OPTIMIZE_STEPS = 10000;
 // 3. linked models and unlinked site rates: GTR+MIX{G4,E}+T
 // 4. unlinked models and unlinked site rates: MIX{GTR+G4,GTR}+T
 // The situation that a part of the model is linked while another part is unlinked is not allowed.
-//    For example, MIX{GTR,GTR}+FO+T or GTR+MIX{FO+F0}+T is not be accepted
+//    For example, MIX{GTR,GTR}+FO+T or GTR+MIX{FO,FO}+T is not be accepted
 // Similarly, the situation that a part of the site rate is linked while another part is unlinked is also not allowed.
 //    For example, GTR+MIX{I,I}+G4+T or GTR+I+MIX{G4+G4}+T is not be accepted
 // The tree weights can be fixed by: T{0.2,0.3,0.5}, otherwise, optimization on tree weights will be performed.
 
+bool isRHS(string m) {
+    int i;
+    if (m=="I" || m=="G" || m=="R")
+        return true;
+    if (m.length() > 1 && (m[0]=='G' || m[0]=='R')) {
+        for (i=1; i<m.length(); i++) {
+            if (!isdigit(m[i]))
+                return false;
+        }
+        return true;
+    }
+    return false;
+}
+
 IQTreeMix::IQTreeMix() : IQTree() {
     patn_freqs = NULL;
+    ptn_freq = NULL;
     patn_isconst = NULL;
     patn_parsimony = NULL;
     ptn_like_cat = NULL;
@@ -34,7 +49,7 @@ IQTreeMix::IQTreeMix() : IQTree() {
     // initialize the variables
     isTreeWeightFixed = false;
     weightGrpExist = false;
-    isHighRestrict = false;
+    isEdgeLenRestrict = false;
     optim_type = 1;
     parsi_computed = false;
     logl_variance = 0.0;
@@ -55,15 +70,21 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     }
     
     // allocate memory for the arrays
-    ptn_like_cat = new double[size() * aln->getNPattern()];
-    _ptn_like_cat = new double[size() * aln->getNPattern()];
-    patn_freqs = new int[aln->getNPattern()];
-    patn_isconst = new int[aln->getNPattern()];
-    patn_parsimony = new int[size() * aln->getNPattern()];
+    nptn = aln->getNPattern();
+    size_t mem_size = get_safe_upper_limit(nptn);
+    size_t block_size = get_safe_upper_limit(nptn) * ntree;
+    patn_freqs = aligned_alloc<int>(mem_size);
+    ptn_freq = aligned_alloc<double>(mem_size);
+    patn_isconst = aligned_alloc<int>(mem_size);
+    ptn_like_cat = aligned_alloc<double>(block_size);
+    _ptn_like_cat = aligned_alloc<double>(block_size);
+    patn_parsimony = aligned_alloc<int>(block_size);
 
     // get the pattern frequencies
     aln->getPatternFreq(patn_freqs);
-    nptn = aln->getNPattern();
+    for (i=0; i<nptn; i++) {
+        ptn_freq[i] = (double) patn_freqs[i];
+    }
     
     // get whether the pattern is constant
     for (i=0; i<nptn; i++) {
@@ -84,7 +105,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     // initialize the variables
     isTreeWeightFixed = false;
     weightGrpExist = false;
-    isHighRestrict = false;
+    isEdgeLenRestrict = false;
     parsi_computed = false;
     optim_type = 1;
     ntip = aln->getNSeq();
@@ -112,19 +133,22 @@ IQTreeMix::~IQTreeMix() {
         delete (at(i));
     }
     if (ptn_like_cat != NULL) {
-        delete[] ptn_like_cat;
+        aligned_free(ptn_like_cat);
     }
     if (_ptn_like_cat != NULL) {
-        delete[] _ptn_like_cat;
+        aligned_free(_ptn_like_cat);
     }
     if (patn_freqs != NULL) {
-        delete[] patn_freqs;
+        aligned_free(patn_freqs);
+    }
+    if (ptn_freq != NULL) {
+        aligned_free(ptn_freq);
     }
     if (patn_isconst != NULL) {
-        delete[] patn_isconst;
+        aligned_free(patn_isconst);
     }
     if (patn_parsimony != NULL) {
-        delete[] patn_parsimony;
+        aligned_free(patn_parsimony);
     }
 }
 
@@ -171,14 +195,14 @@ void divideModelNSiteRate(string name, string& model, string& siteRate) {
         if (s.length() == 0) {
             outError(orig + " is not a valid model");
         }
-        if (i==0 || (s[0]=='F')) {
-            if (model.length() > 0)
-                model.append("+");
-            model.append(s);
-        } else {
+        if (isRHS(s)) {
             if (siteRate.length() > 0)
                 siteRate.append("+");
             siteRate.append(s);
+        } else {
+            if (model.length() > 0)
+                model.append("+");
+            model.append(s);
         }
         i++;
     }
@@ -222,10 +246,10 @@ void IQTreeMix::separateModel(string modelName) {
     }
     t_pos2 = t_pos+2;
     if (t_pos2 < modelName.length()) {
-        // if "+TR", then it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
+        // if "+TR", then it is a edge-length-restricted model in which the edges of different trees having the same partition have the same lengths
         if (modelName[t_pos2] == 'R') {
-            cout << "This is a highly-restricted model, in which the edges of different trees having the same partition have the same lengths" << endl;
-            isHighRestrict = true;
+            cout << "This is a edge-length-constrained model, in which the edges of different trees having the same partition are constrained to have the same lengths" << endl;
+            isEdgeLenRestrict = true;
             t_pos2++;
         }
         d_pos = t_pos2;
@@ -324,7 +348,7 @@ void IQTreeMix::separateModel(string modelName) {
             // mixture model
             s = s.substr(4,s.length()-5); // remove the beginning "MIX{" and the ending "}"
             if (i==0) {
-                // unlinked models (while site rates may or may not be linked)
+                // unlinked substitution models (while site rates may or may not be linked)
                 bool siteRateAppear = false;
                 string curr_model, curr_siterate;
                 separateStr(s, submodel_array, ',');
@@ -343,37 +367,46 @@ void IQTreeMix::separateModel(string modelName) {
             } else if (siterate_names.size()==0) {
                 // unlinked site rates
                 separateStr(s, submodel_array, ',');
+                string curr_model, curr_siterate;
                 for (k=0; k<submodel_array.size(); k++) {
+                    if (submodel_array[k].length() == 0) {
+                        outError("There is an empty submodel.");
+                    }
+                    divideModelNSiteRate(submodel_array[k], curr_model, curr_siterate);
+                    if (curr_model.length() > 0) {
+                        outError("The model: " + treemix_model + " is not correctly specified.");
+                    }
                     siterate_names.push_back(submodel_array[k]);
                 }
             } else {
-                outError("Error! The model: " + treemix_model + " is not correctly specified. Are you using too many 'MIX'?");
+                outError("The model: " + treemix_model + " is not correctly specified. Are you using more than one 'MIX'?");
             }
         } else if (i==0) {
-            // not a mixture model
+            // linked substitution model
+            // assuming the first is the substitution model
             model_names.push_back(s);
-        } else if (s.length() <= 2 && s[0] == 'F') {
-            // F or FO
-            if (model_names.size() > 1) {
-                outError("Error! 'F' is linked, but the model is unlinked");
-            } else if (model_names.size() == 1){
-                model_names[0].append("+" + s);
-            } else {
-                outError("Error! 'F' appears before the model does");
-            }
-        } else {
-            // assume this is the site rate model
+        } else if (s.length() > 0 && isRHS(s)) {
+            // linked RHS model
             if (siterate_names.size() > 1) {
-                outError("Error! '" + s + "' is linked, but the site rates are unlinked");
+                outError("'" + s + "' is linked, but the site rates are unlinked");
             } else if (siterate_names.size() == 1) {
                 siterate_names[0].append("+" + s);
             } else {
                 siterate_names.push_back(s);
             }
+        } else {
+            // other linked element which belongs to a part of the substutation model
+            if (model_names.size() > 1) {
+                outError("'" + s + "' is linked, but the model is unlinked");
+            } else if (model_names.size() == 1){
+                model_names[0].append("+" + s);
+            } else {
+                outError("'" + s + "' appears before the model defined");
+            }
         }
     }
     if (model_names.size() == 0) {
-        outError("Error! It seems no model is defined.");
+        outError("It seems no model is defined.");
     }
     isLinkModel = (model_names.size() == 1);
     if (siterate_names.size() == 0) {
@@ -385,18 +418,18 @@ void IQTreeMix::separateModel(string modelName) {
     
     // check correctness
     if (model_names.size() > 1 && model_names.size() != ntree) {
-        outError("Error! The number of submodels specified in the mixture does not match with the tree number");
+        outError("The number of submodels specified in the mixture does not match with the tree number");
     }
     if (siterate_names.size() > 1 && siterate_names.size() != ntree) {
-        outError("Error! The number of site rates specified in the mixture does not match with the tree number");
+        outError("The number of site rates specified in the mixture does not match with the tree number");
     }
 
-    // if it is a high restricted model, build the branch ID
-    if (isHighRestrict) {
+    // if it is a edge-length-restricted model, build the branch ID
+    if (isEdgeLenRestrict) {
         // build the branch ID
         computeBranchID();
         // show trees
-        showTree();
+        // showTree();
     }
 }
 
@@ -557,6 +590,44 @@ double IQTreeMix::computeLikelihood(double *pattern_lh) {
     
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
     return computeLikelihood_combine(pattern_lh);
+}
+
+double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
+    // this function is only for the linked mixture model
+    size_t nmix, t, p, m, i;
+    size_t tot_mem_size;
+    double ptnLike, score;
+    int index, indexlh;
+
+    int numStates = at(0)->model->num_states;
+    size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
+        get_safe_upper_limit(at(0)->model_factory->unobserved_ptns.size()));
+    if (!_pattern_lh_cat) {
+        tot_mem_size = mem_size * at(0)->site_rate->getNDiscreteRate() * ((at(0)->model_factory->fused_mix_rate)? 1 : at(0)->model->getNMixtures());
+        _pattern_lh_cat = aligned_alloc<double>(tot_mem_size);
+    }
+    
+    // compute _pattern_lh_cat for each tree
+    for (t = 0; t < ntree; t++) {
+        if (t==0) {
+            nmix = at(t)->getModel()->getNMixtures();
+        } else if (nmix != at(t)->getModel()->getNMixtures()) {
+            outError("The number of classes inside each tree is not the same!");
+        }
+        at(t)->computePatternLhCat(wsl);
+    }
+    
+    // compute the overall _pattern_lh_cat
+    for (p = 0; p < nptn * nmix; p++) {
+        ptnLike = 0.0;
+        for (t = 0; t < ntree; t++) {
+            ptnLike += at(t)->_pattern_lh_cat[p] * weights[t];
+        }
+        _pattern_lh_cat[p] = ptnLike;
+    }
+    
+    score = computeLikelihood();
+    return score;
 }
 
 // compute the overall likelihood value by combining all the existing likelihood values of the trees
@@ -1498,6 +1569,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     double gradient2_epsilon = 0.0001;
     double curr_epsilon;
     double prev_score, prev_score1, prev_score2, score, t_score;
+    double* prev_ptn_invar;
     bool tree_weight_converge = false;
     PhyloTree *ptree;
     
@@ -1519,8 +1591,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     
     // initialize the parameters
     optimizeTreesSeparately(printInfo, gradient2_epsilon);
+    prev_ptn_invar = ptn_invar;
+    ptn_invar = at(0)->ptn_invar;
     
-    if (isHighRestrict) {
+    if (isEdgeLenRestrict) {
         // it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
 
         // If there are multiple branches belonging to the same group
@@ -1579,7 +1653,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 }
 
                 // optimize tree branches for non-branch-length-restricted model
-                if (!isHighRestrict && params->fixed_branch_length != BRLEN_FIX) {
+                if (!isEdgeLenRestrict && params->fixed_branch_length != BRLEN_FIX) {
                     if (!is_ptnfrq_posterior) {
                         computeFreqArray(pattern_mix_lh, true);
                         is_ptnfrq_posterior = true;
@@ -1593,7 +1667,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 }
 
                 // optimize tree branches for branch-length-restricted model
-                if (isHighRestrict && params->fixed_branch_length != BRLEN_FIX) {
+                if (isEdgeLenRestrict && params->fixed_branch_length != BRLEN_FIX) {
                     if (is_ptnfrq_posterior) {
                         resetPtnOrigFreq();
                         is_ptnfrq_posterior = false;
@@ -1705,7 +1779,8 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     // computeMaxLikeRatio();
 
     delete[] pattern_mix_lh;
-
+    ptn_invar = prev_ptn_invar;
+    
     // show the weights
     cout << "Final estimation on weights:" << endl;
     for (i = 0; i < ntree; i++) {
@@ -1788,7 +1863,7 @@ int IQTreeMix::getNParameters() {
     }
     // for branch parameters
     if (params->fixed_branch_length != BRLEN_FIX) {
-        if (isHighRestrict) {
+        if (isEdgeLenRestrict) {
             df += branch_group.size();
         } else {
             for (i=0; i<size(); i++) {

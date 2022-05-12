@@ -49,6 +49,8 @@ public:
 
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
+    virtual double computePatternLhCat(SiteLoglType wsl);
+
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
@@ -447,9 +449,9 @@ private:
     bool anySiteRate;
 
     /**
-            whether it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
+            whether it is a edge-len-restricted model in which the edges of different trees having the same partition have the same lengths
      */
-    bool isHighRestrict;
+    bool isEdgeLenRestrict;
 
     /**
             number of trees
