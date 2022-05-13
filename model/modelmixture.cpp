@@ -989,59 +989,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         PhyloTree* tree)
 {
 	ModelSubst *model = NULL;
-    size_t slen = model_str.length();
-    size_t fpos = model_str.find("+F");
-    string fstr;
-    if (fpos != string::npos) {
-        cout << "Model " << model_str << endl;
-        if (fpos+2 < model_str.length()) {
-            fstr = model_str.substr(fpos,3);
-            if (fstr == "+FO" || fstr == "+Fo") {
-                freq_type = FREQ_ESTIMATE;
-            } else if (fstr == "+FQ" || fstr == "+Fq") {
-                freq_type = FREQ_EQUAL;
-            } else if (fstr == "+F{") {
-                size_t tpos = model_str.find("}", fpos);
-                if (tpos != string::npos && tpos-fpos > 3) {
-                    freq_type = FREQ_USER_DEFINED;
-                    freq_params = model_str.substr(fpos+3,tpos-fpos-3);
-                } else {
-                    outError("The user defined frequency model is incorrect");
-                }
-            } else {
-                outError("Unknown frequency model " + fstr);
-            }
-        } else {
-            // "+F"
-            freq_type = FREQ_EMPIRICAL;
-        }
-        model_str = model_str.substr(0, fpos);
-    } else {
-        switch(freq_type) {
-            case FREQ_USER_DEFINED:
-                if (freq_params.length() > 0) {
-                    cout << "Model " << model_str << " => " << model_str << "+F{" << freq_params << "}" << endl;
-                } else {
-                    outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
-                }
-                break;
-            case FREQ_EQUAL:
-                cout << "Model " << model_str << " => " << model_str << "+FQ" << endl;
-                break;
-            case FREQ_EMPIRICAL:
-                cout << "Model " << model_str << " => " << model_str << "+F" << endl;
-                break;
-            case FREQ_ESTIMATE:
-                cout << "Model " << model_str << " => " << model_str << "+FO" << endl;
-                break;
-            case FREQ_UNKNOWN:
-                outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
-                break;
-            default:
-                cout << "Model " << model_str << endl;
-                break;
-        }
-    }
 	//cout << "Numstates: " << tree->aln->num_states << endl;
 	string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -1298,7 +1245,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
     
-    cout << "\nMixture model" << endl;
+    if (freq != FREQ_MIXTURE)
+        cout << "\nMixture model" << endl;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
         size_t pos = model_list.find(',', cur_pos);
         size_t open_pos = model_list.find('{', cur_pos);
@@ -1360,7 +1308,64 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 				full_name += model->name;
 			}
 		} else {
-			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, tree);
+            
+            // for Mixture model, check the frequency of the model
+            StateFreqType model_freq = freq;
+            size_t slen = this_name.length();
+            size_t fpos = this_name.find("+F");
+            string fstr;
+            if (fpos != string::npos) {
+                cout << "Model " << this_name << endl;
+                if (fpos+2 < this_name.length()) {
+                    fstr = this_name.substr(fpos,3);
+                    if (fstr == "+FO" || fstr == "+Fo") {
+                        model_freq = FREQ_ESTIMATE;
+                    } else if (fstr == "+FQ" || fstr == "+Fq") {
+                        model_freq = FREQ_EQUAL;
+                    } else if (fstr == "+F{") {
+                        size_t tpos = this_name.find("}", fpos);
+                        if (tpos != string::npos && tpos-fpos > 3) {
+                            model_freq = FREQ_USER_DEFINED;
+                            freq_params = this_name.substr(fpos+3,tpos-fpos-3);
+                        } else {
+                            outError("The user defined frequency model is incorrect");
+                        }
+                    } else {
+                        outError("Unknown frequency model " + fstr);
+                    }
+                } else {
+                    // "+F"
+                    model_freq = FREQ_EMPIRICAL;
+                }
+                this_name = this_name.substr(0, fpos);
+            } else {
+                switch(model_freq) {
+                    case FREQ_USER_DEFINED:
+                        if (freq_params.length() > 0) {
+                            cout << "Model " << this_name << " => " << this_name << "+F{" << freq_params << "}" << endl;
+                        } else {
+                            outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
+                        }
+                        break;
+                    case FREQ_EQUAL:
+                        cout << "Model " << this_name << " => " << this_name << "+FQ" << endl;
+                        break;
+                    case FREQ_EMPIRICAL:
+                        cout << "Model " << this_name << " => " << this_name << "+F" << endl;
+                        break;
+                    case FREQ_ESTIMATE:
+                        cout << "Model " << this_name << " => " << this_name << "+FO" << endl;
+                        break;
+                    case FREQ_UNKNOWN:
+                        outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
+                        break;
+                    default:
+                        cout << "Model " << this_name << endl;
+                        break;
+                }
+            }
+            
+			model = (ModelMarkov*)createModel(this_name, models_block, model_freq, freq_params, tree);
 			model->total_num_subst = rate;
 			push_back(model);
 			weights.push_back(weight);
