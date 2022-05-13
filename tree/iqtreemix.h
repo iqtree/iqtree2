@@ -344,6 +344,16 @@ public:
      */
     bool parsi_computed;
 
+    /**
+            whether the submodels are linked
+     */
+    bool isLinkModel;
+    
+    /**
+            whether the site rates are linked, if exists
+     */
+    bool isLinkSiteRate;
+
 private:
 
     // to separate the submodel names and the site rate names from the full model name
@@ -432,16 +442,6 @@ private:
             individual site rate names (only one item if linked, more than one otherwise)
      */
     vector<string> siterate_names;
-    
-    /**
-            whether the submodels are linked
-     */
-    bool isLinkModel;
-    
-    /**
-            whether the site rates are linked, if exists
-     */
-    bool isLinkSiteRate;
     
     /**
             whether there is any site rate

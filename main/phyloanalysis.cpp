@@ -443,7 +443,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
 
     if (tree.isTreeMix()) {
         IQTreeMix* treemix = (IQTreeMix*) &tree;
-        if (treemix->models.size() == 1) {
+        if (treemix->isLinkModel) {
             out << "Linked ";
             reportModel(out, *treemix->at(0));
         } else {
@@ -515,7 +515,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
 
 void reportRate_TreeMix(ostream &out, PhyloTree &tree) {
     IQTreeMix* treemix = (IQTreeMix*) &tree;
-    if (treemix->site_rates.size() == 1) {
+    if (treemix->isLinkSiteRate) {
         out << "Linked ";
         reportRate(out, *(treemix->at(0)));
     } else {

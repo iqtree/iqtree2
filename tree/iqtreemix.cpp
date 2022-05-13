@@ -53,6 +53,9 @@ IQTreeMix::IQTreeMix() : IQTree() {
     optim_type = 1;
     parsi_computed = false;
     logl_variance = 0.0;
+    isLinkModel = true;
+    isLinkSiteRate = true;
+    anySiteRate = false;
 }
 
 IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTree(aln) {
@@ -114,6 +117,9 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
     else
         nbranch = 0;
     logl_variance = 0.0;
+    isLinkModel = true;
+    isLinkSiteRate = true;
+    anySiteRate = false;
 }
 
 IQTreeMix::~IQTreeMix() {
@@ -237,7 +243,6 @@ void IQTreeMix::separateModel(string modelName) {
     treemix_model = modelName;
     model_names.clear();
     siterate_names.clear();
-    isLinkSiteRate = true; // initialize to true
     
     // check how many trees
     t_pos = modelName.rfind("+T");
@@ -408,12 +413,10 @@ void IQTreeMix::separateModel(string modelName) {
     if (model_names.size() == 0) {
         outError("It seems no model is defined.");
     }
-    isLinkModel = (model_names.size() == 1);
     if (siterate_names.size() == 0) {
         anySiteRate = false;
     } else {
         anySiteRate = true;
-        isLinkSiteRate = (siterate_names.size() == 1);
     }
     
     // check correctness
@@ -431,6 +434,33 @@ void IQTreeMix::separateModel(string modelName) {
         // show trees
         // showTree();
     }
+    
+    // show summary
+    cout << endl;
+    if (model_names.size() == 1) {
+        cout << "Linked substitution model:" << endl;
+        isLinkModel = true;
+    } else {
+        cout << "Unlinked substitution models:" << endl;
+        isLinkModel = false;
+    }
+    for (i = 0; i < model_names.size(); i++) {
+        cout << "   " << model_names[i] << endl;
+    }
+    cout << endl;
+    if (anySiteRate) {
+        if (siterate_names.size() == 1) {
+            cout << "Linked RHS model:" << endl;
+            isLinkSiteRate = true;
+        } else {
+            cout << "Unlinked RHS models:" << endl;
+            isLinkSiteRate = false;
+        }
+        for (i = 0; i < siterate_names.size(); i++) {
+            cout << "   " << siterate_names[i] << endl;
+        }
+    }
+    cout << endl;
 }
 
 void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
@@ -1218,7 +1248,7 @@ void IQTreeMix::computeInitialTree(LikelihoodKernel kernel, istream* in) {
     fin.close();
     
     // show trees
-    showTree();
+    // showTree();
 }
 
 /**
