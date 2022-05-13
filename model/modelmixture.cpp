@@ -1191,7 +1191,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 					fix_prop = true;
 					if (weight <= 0.0)
 						outError("Mixture component weight is negative!");
-                    weight = max(weight, MIN_MIXTURE_PROP);
+                    if (weight < MIN_MIXTURE_PROP)
+                        outWarning("Your input class weight "+ convertDoubleToString(weight) + " is very small and may cause numerical issues");
+                    // weight = max(weight, MIN_MIXTURE_PROP);
 				}
 				this_name = this_name.substr(0, pos_rate);
 			}

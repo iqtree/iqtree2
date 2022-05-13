@@ -47,8 +47,9 @@ void RateFreeInvar::setNCategory(int ncat) {
         rates[i] /= sum;
     }
     
-	name = "+I" + name;
-	full_name = "Invar+" + full_name;
+    // the following two lines should be commented, as the same lines appear inside the constructor
+	// name = "+I" + name;
+	// full_name = "Invar+" + full_name;
 }
 
 double RateFreeInvar::computeFunction(double value) {
