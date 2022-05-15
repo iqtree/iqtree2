@@ -175,14 +175,14 @@ protected:
     void processDelayedFundi(Node *node, Node *dad);
     
     /**
-        writing and deleting simulated sequence immediately if possible
+        merge and write sequence in simulations with Indels or FunDi model
     */
-    void writeAndDeleteSequenceImmediatelyIfPossible(int thread_id, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
-        convert a sequence from states to characters
+        write and delete the current chunk of sequence if possible
     */
-    void convertSequence(int thread_id, int segment_start, int segment_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         branch-specific evolution
@@ -338,6 +338,26 @@ protected:
         merge chunks into a single sequence for all nodes in tree
     */
     void mergeChunksAllNodes(Node* node = NULL, Node* dad = NULL);
+    
+    /**
+        init the output file
+    */
+    void initOutputFile(ostream *&out, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    
+    /**
+        open an output stream
+    */
+    void openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode);
+    
+    /**
+        close an output stream
+    */
+    void closeOutputStream(ostream *&out);
+    
+    /**
+        merge output files when using multiple threads
+    */
+    void mergeOutputFiles(ostream *&single_output, int num_threads, int thread_id, string output_filepath, bool write_sequences_to_tmp_data);
     
 public:
     

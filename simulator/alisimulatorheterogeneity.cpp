@@ -118,7 +118,7 @@ void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int seque
     }
     
     // delete ptn_model_dis if we don't need to use it for handling insertions (in Indels)
-    if (tree->params->alisim_insertion_ratio == 0)
+    if (tree->params->alisim_insertion_ratio + tree->params->alisim_deletion_ratio == 0)
     {
         delete [] ptn_model_dis;
         ptn_model_dis = NULL;
@@ -228,7 +228,7 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPoste
     }
     
     // delete ptn_accumulated_state_freq if we don't need to use it for handling insertions (in Indels)
-    if (tree->params->alisim_insertion_ratio == 0)
+    if (tree->params->alisim_insertion_ratio + tree->params->alisim_deletion_ratio == 0)
     {
         delete [] ptn_accumulated_state_freq;
         ptn_accumulated_state_freq = NULL;
@@ -432,7 +432,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector
         }
     
     // delete ptn_accumulated_rate_dis if we don't need to use it for handling insertions (in Indels)
-    if (ptn_accumulated_rate_dis && tree->params->alisim_insertion_ratio == 0)
+    if (ptn_accumulated_rate_dis && tree->params->alisim_insertion_ratio + tree->params->alisim_deletion_ratio == 0)
     {
         delete [] ptn_accumulated_rate_dis;
         ptn_accumulated_rate_dis = NULL;

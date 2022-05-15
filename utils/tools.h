@@ -2522,11 +2522,6 @@ public:
     ASSIGNMENT_TYPE alisim_stationarity_heterogeneity;
     
     /**
-    *  path to output the simulation time
-    */
-    string outputfile_runtime;
-    
-    /**
     *  path to the tmp_data file to temporarily output sequences at tips when using Indels
     */
     string tmp_data_filename;

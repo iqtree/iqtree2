@@ -1448,7 +1448,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
-    params.outputfile_runtime = "";
     params.model_id = "";
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
@@ -2811,19 +2810,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use --branch-distribution <distribution_name> to specify a distribution, from which branch lengths will be randomly generated.";
                 params.branch_distribution = argv[cnt];
                 continue;
-            }
-            if (strcmp(argv[cnt], "--output-simulation-time") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "--output-simulation-time <file_name>,<model_id>";
-                string tmp = argv[cnt];
-                size_t pos = tmp.find(',');
-                if (pos != std::string::npos) {
-                    params.outputfile_runtime = tmp.substr(0, pos);
-                    params.model_id = tmp.substr(pos+1, tmp.length()-pos-1);
-                }
-                else
-                    outError("--output-simulation-time <file_name>,<model_id>");
             }
             if (strcmp(argv[cnt], "--simulation-thresh") == 0) {
                 cnt++;

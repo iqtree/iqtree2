@@ -516,7 +516,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
                 
                 // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
                 // keep checking if Indels is used
-                if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == 0)
+                if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
                     break;
             }
         
@@ -574,7 +574,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
 void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad){
     // no need to check the further sites if num_variant_states has exceeded the expected_num_variant_states
     // keep checking if Indels is used
-    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
+    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
         return;
     
     if (node->isLeaf() && node->name!=ROOT_NAME) {
@@ -603,7 +603,7 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
                         
                         // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
                         // keep checking if Indels is used
-                        if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
+                        if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
                             break;
                     }
                 }
@@ -719,6 +719,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     ostream *out = NULL;
+    ostream *single_output = NULL;
     vector<string> state_mapping;
     
     // check to use Posterior Mean Rates
@@ -733,43 +734,11 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     initVariables(sequence_length, true);
     
     // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
-    bool write_sequences_to_tmp_data = params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
+    bool write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
     
-    // write output to file (if output_filepath is specified)
+    // initialize state_mapping (mapping from state to characters)
     if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-    {
-        // init an output_filepath to temporarily output the sequences (when simulating Indels)
-        if (write_sequences_to_tmp_data)
-            output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID());
-        // otherwise, just add ".phy" or ".fa" to the output_filepath
-        else
-        {
-            // add ".phy" or ".fa" to the output_filepath
-            if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + ".phy";
-            else
-                output_filepath = output_filepath + ".fa";
-        }
-        try {
-            if (params->do_compression)
-                out = new ogzstream(output_filepath.c_str(), open_mode);
-            else
-                out = new ofstream(output_filepath.c_str(), open_mode);
-            out->exceptions(ios::failbit | ios::badbit);
-
-            // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-            if (params->aln_output_format != IN_FASTA)
-            {
-                int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
-            }
-
-            // initialize state_mapping (mapping from state to characters)
-            initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, output_filepath);
-        }
-    }
+        initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
     
     // rooting the tree if it's unrooted
     if (!tree->rooted)
@@ -785,7 +754,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     extractRatesJMatrix(model);
     
     // init genome_tree, and the initial empty insertion for root if using Indels
-    if (params->alisim_insertion_ratio > 0)
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
         // init an empty insertion event
         if (first_insertion)
@@ -810,7 +779,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     int default_segment_length = sequence_length;
     int *rstream = NULL;
     #ifdef _OPENMP
-    #pragma omp parallel private(rstream) shared(default_segment_length, num_threads)
+    #pragma omp parallel private(rstream, out) shared(default_segment_length, num_threads)
     {
         int thread_id = omp_get_thread_num();
         // init random generators
@@ -824,6 +793,10 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         }
         int actual_segment_length = thread_id < num_threads - 1 ? default_segment_length : sequence_length - (num_threads - 1) * default_segment_length;
     #endif
+        
+        // init the output stream
+        initOutputFile(out, num_threads, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
+        
         // initialize trans_matrix
         double *trans_matrix = new double[max_num_states*max_num_states];
         simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
@@ -831,26 +804,22 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         // delete trans_matrix array
         delete[] trans_matrix;
         
+        // close the output stream
+        if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+            closeOutputStream(out);
+        
         // release mem for rstream
         finish_random(rstream);
+        
+        // merge output files into a single file if using multithreading
+        #ifdef _OPENMP
+        #pragma omp barrier
+        #endif
+        mergeOutputFiles(single_output, num_threads, thread_id, output_filepath, write_sequences_to_tmp_data);
             
     #ifdef _OPENMP
     }
     #endif
-        
-    // close the file if neccessary
-    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-    {
-        if (params->do_compression)
-            ((ogzstream*)out)->close();
-        else
-            ((ofstream*)out)->close();
-        delete out;
-        
-        // show the output file name
-        if (!(write_sequences_to_tmp_data || (MPIHelper::getInstance().getNumProcesses() > 1 && params->alisim_dataset_num > 1)))
-            cout << "An alignment has just been exported to "<<output_filepath<<endl;
-    }
     
     // delete sub_rates, J_Matrix
     delete[] sub_rates;
@@ -865,7 +834,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         seq_length_indels = sequence_length;
     
     // process delayed Fundi if it is delayed due to Insertion events
-    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio > 0)
+    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
         // update new genome at tips from original genome and the genome tree
         updateNewGenomeIndels(seq_length_indels);
@@ -878,11 +847,203 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     {
         // if using Indels, update new genome at tips from original genome and the genome tree
         // skip updating if using Fundi as it must be already updated by Fundi
-        if (params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
             updateNewGenomeIndels(seq_length_indels);
         
         removeConstantSites();
     }
+}
+
+/**
+    merge output files
+*/
+void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, int thread_id, string output_filepath, bool write_sequences_to_tmp_data)
+{
+    if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
+    {
+        // merge output files into a single file
+        if (num_threads > 1)
+        {
+            // open single_output stream
+            #ifdef _OPENMP
+            #pragma omp single
+            #endif
+            {
+                string single_output_filepath;
+                if (params->aln_output_format != IN_FASTA)
+                    single_output_filepath = output_filepath + ".phy";
+                else
+                    single_output_filepath = output_filepath + ".fa";
+                openOutputStream(single_output, single_output_filepath, std::ios_base::out);
+                
+                // output the first line
+                if (params->aln_output_format != IN_FASTA)
+                {
+                    int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+                    *single_output << num_leaves << " " << round(expected_num_sites/length_ratio)*num_sites_per_state << endl;
+                }
+            }
+            
+            // init input streams
+            vector<igzstream> input_streams(num_threads);
+            
+            // open all files
+            for (int i = 0; i < input_streams.size(); i++)
+            {
+                // add ".phy" or ".fa" to the output_filepath
+                string tmp_output_filepath;
+                if (params->aln_output_format != IN_FASTA)
+                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".phy";
+                else
+                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".fa";
+                
+                // open an input file
+                input_streams[i].open(tmp_output_filepath.c_str());
+            }
+            
+            // merge chunks of each sequence and write to the single output file
+            int line_num = 0;
+            string line;
+            for (; !input_streams[0].eof(); line_num++) {
+                // only one thread process a line
+                if (line_num % num_threads == thread_id)
+                {
+                    string output = "";
+                    for (int j = 0; j < input_streams.size(); j++)
+                    {
+                        safeGetline(input_streams[j], line);
+                        line = line.substr(0, line.find_first_of("\n\r"));
+                        output += line;
+                    }
+                    
+                    // write the concatenated sequence into file
+                    if (output.length() > 0)
+                    {
+                        #ifdef _OPENMP
+                        #pragma omp critical
+                        #endif
+                        (*single_output) << output << "\n";
+                    }
+                }
+                // otherwise, just ignore the current line
+                else
+                {
+                    for (int j = 0; j < input_streams.size(); j++)
+                    {
+                        input_streams[j].ignore(LLONG_MAX, '\n');
+                    }
+                }
+            }
+            
+            // close all files
+            for (int i = 0; i < input_streams.size(); i++)
+                input_streams[i].close();
+            
+            // close single_output stream and delete all intermidate files
+            #ifdef _OPENMP
+            #pragma omp barrier
+            #pragma omp single
+            #endif
+            {
+                closeOutputStream(single_output);
+                
+                // delete all intermidate files
+                for (int i = 0; i < input_streams.size(); i++)
+                {
+                    // add ".phy" or ".fa" to the output_filepath
+                    string tmp_output_filepath;
+                    if (params->aln_output_format != IN_FASTA)
+                        tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".phy";
+                    else
+                        tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".fa";
+                    
+                    // delete file
+                    remove(tmp_output_filepath.c_str());
+                }
+                
+            }
+        }
+        
+        // show the output file name
+        #ifdef _OPENMP
+        #pragma omp single
+        #endif
+        {
+            string single_output_filepath;
+            if (params->aln_output_format != IN_FASTA)
+                single_output_filepath = output_filepath + ".phy";
+            else
+                single_output_filepath = output_filepath + ".fa";
+            cout << "An alignment has just been exported to " << single_output_filepath << endl;
+        }
+       
+    }
+}
+
+/**
+    init the output file
+*/
+void AliSimulator::initOutputFile(ostream *&out, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
+{
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+    {
+        // init an output_filepath to temporarily output the sequences (when simulating Indels)
+        if (write_sequences_to_tmp_data)
+            output_filepath = params->alisim_output_filename + params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID());
+        // otherwise, just add ".phy" or ".fa" to the output_filepath
+        else
+        {
+            // only add thread_id to filename if using multiple threads
+            string thread_id_str = "";
+            if (num_threads > 1)
+                thread_id_str = "_" + convertIntToString(thread_id);
+            
+            // add ".phy" or ".fa" to the output_filepath
+            if (params->aln_output_format != IN_FASTA)
+                output_filepath = output_filepath + thread_id_str + ".phy";
+            else
+                output_filepath = output_filepath + thread_id_str + ".fa";
+        }
+        
+        // open the output stream
+        openOutputStream(out, output_filepath, open_mode);
+        
+        // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
+        // only output the first line in the singlethreading mode; in multithreading mode -> the first line will be output later when merging output files
+        if (params->aln_output_format != IN_FASTA && num_threads == 1)
+        {
+            int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+            *out << num_leaves << " " << round(expected_num_sites/length_ratio)*num_sites_per_state << endl;
+        }
+    }
+}
+
+/**
+    open an output stream
+*/
+void AliSimulator::openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode)
+{
+    try {
+        if (params->do_compression)
+            out = new ogzstream(output_filepath.c_str(), open_mode);
+        else
+            out = new ofstream(output_filepath.c_str(), open_mode);
+        out->exceptions(ios::failbit | ios::badbit);
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, output_filepath);
+    }
+}
+
+/**
+    close an output stream
+*/
+void AliSimulator::closeOutputStream(ostream *&out)
+{
+    if (params->do_compression)
+        ((ogzstream*)out)->close();
+    else
+        ((ofstream*)out)->close();
+    delete out;
 }
 
 /**
@@ -895,7 +1056,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
         //  clone the number of gaps from the ancestral sequence if using Indels
-        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
             (*it)->node->sequence->num_gaps = node->sequence->num_gaps;
         
         // select the appropriate simulation method
@@ -945,7 +1106,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 }
                 
                 // handle indels
-                if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+                if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
                     simulateSeqByGillespie(thread_id, segment_start, segment_length, model, sequence_length, it, simulation_method, rstream);
             }
             // otherwise (Rate_matrix is used as the simulation method) + also handle Indels (if any).
@@ -960,7 +1121,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         }
         
         // set insertion position for of this node in the list of insertions if using Indels
-        if (params->alisim_insertion_ratio > 0 && (*it)->node->isLeaf())
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && (*it)->node->isLeaf())
         {
             (*it)->node->sequence->insertion_pos = latest_insertion;
             latest_insertion->phylo_nodes.push_back((*it)->node);
@@ -984,11 +1145,11 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
             }
         }
         
-        // convert a sequence from states to characters
-        convertSequence(thread_id, segment_start, segment_length, state_mapping, input_msa, it, node);
+        // write and delete the current chunk of sequence if possible
+        writeAndDeleteSequenceChunkIfPossible(thread_id, segment_start, segment_length, out, state_mapping, input_msa, it, node);
         
-        // writing and deleting simulated sequence immediately if possible
-        writeAndDeleteSequenceImmediatelyIfPossible(thread_id, out, state_mapping, input_msa, it, node);
+        // merge and write sequence in simulations with Indels or FunDi model
+        mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
         simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, (*it)->node, node, out, state_mapping, input_msa, rstream);
@@ -1012,189 +1173,230 @@ void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
 }
 
 /**
-    writing and deleting simulated sequence immediately if possible
+    merge and write sequence in simulations with Indels or FunDi model
 */
-void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(int thread_id, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
-    // update the num_children_done_simulation
-    node->sequence->nums_children_done_simulation[thread_id]++;
-    if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence->nums_children_done_simulation[thread_id] >= (node->neighbors.size() - 1) && !(params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && params->alisim_write_internal_sequences))
-        vector<short int>().swap(node->sequence->sequence_chunks[thread_id]);
-    
-    // increase num_threads_done_simulation
-    bool this_thread_write_output = false;
-    #ifdef _OPENMP
-    #pragma omp critical
-    #endif
+    // only handle simulations with Indel or Fundi model in this function
+    if (params->alisim_fundi_taxon_set.size() > 0 || params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
-        (*it)->node->sequence->num_threads_done_simulation++;
-        
-        // make sure only one thread is selected to write the output
-        if ((*it)->node->sequence->num_threads_done_simulation == omp_get_num_threads())
-            this_thread_write_output = true;
-    }
-    
-    // only one thread is selected to write the output
-    if (this_thread_write_output)
-    {
-        // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
-        if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
+        // increase num_threads_done_simulation
+        bool this_thread_write_output = false;
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
         {
-            if (node->isLeaf() && node->name != ROOT_NAME)
-                permuteSelectedSites(fundi_items, node);
-            if ((*it)->node->isLeaf())
-                permuteSelectedSites(fundi_items, (*it)->node);
+            (*it)->node->sequence->num_threads_done_simulation++;
+            
+            // make sure only one thread is selected to write the output
+            if ((*it)->node->sequence->num_threads_done_simulation == omp_get_num_threads())
+                this_thread_write_output = true;
         }
+        this_thread_write_output = false;
         
-        // write sequence of leaf nodes to file if possible
-        if (state_mapping.size() > 0)
+        // only one thread is selected to write the output
+        if (this_thread_write_output)
         {
-            if ((*it)->node->isLeaf())
+            // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
+            if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
             {
-                if (params->outputfile_runtime.length() == 0)
+                if (node->isLeaf() && node->name != ROOT_NAME)
+                    permuteSelectedSites(fundi_items, node);
+                if ((*it)->node->isLeaf())
+                    permuteSelectedSites(fundi_items, (*it)->node);
+            }
+            
+            // write sequence of leaf nodes to file if possible
+            if (state_mapping.size() > 0)
+            {
+                if ((*it)->node->isLeaf())
                 {
                     // if using Indels -> temporarily write out internal states
-                    if (params->alisim_insertion_ratio > 0)
+                    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
                         writeInternalStatesIndels((*it)->node, out);
                     else
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
                         string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                        string output(sequence_length * num_sites_per_state, '-');
+                        
+                        // convert numerical states into readable characters
+                        string input_sequence = input_msa[(*it)->node->name];
+                        if (input_sequence.length()>0)
+                            // extract sequence and copying gaps from the input sequences to the output.
+                            exportSequenceWithGaps((*it)->node, output, sequence_length, num_sites_per_state, input_sequence, state_mapping);
+                        else
+                            // extract sequence without copying gaps from the input sequences to the output.
+                            convertNumericalStatesIntoReadableCharacters((*it)->node, output, sequence_length, num_sites_per_state, state_mapping);
+                        
+                        // release memory allocated to the sequence chunk
+                        vector<short int>().swap((*it)->node->sequence->sequence_chunks[0]);
                         
                         // write output to file
                         #ifdef _OPENMP
                         #pragma omp critical
                         #endif
-                        {
-                            out << pre_output;
-                            for (int i = 0; i < (*it)->node->sequence->sequence_str_chunks.size(); i++)
-                                out << (*it)->node->sequence->sequence_str_chunks[i];
-                            out << "\n";
-                        }
-                        
-                        // remove the sequence to release the memory after extracting the sequence
-                        for (int i = 0; i < (*it)->node->sequence->sequence_str_chunks.size(); i++)
-                            string().swap((*it)->node->sequence->sequence_str_chunks[i]);
+                            out << pre_output << output << "\n";
                     }
                 }
-            }
-            
-            // avoid writing sequence of __root__
-            if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences) && params->outputfile_runtime.length() == 0)
-            {
-                // if using Indels -> temporarily write out internal states
-                if (params->alisim_insertion_ratio > 0)
-                    writeInternalStatesIndels(node, out);
-                else
+                
+                // avoid writing sequence of __root__
+                if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
                 {
-                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
-                    
-                    // write output to file
-                    #ifdef _OPENMP
-                    #pragma omp critical
-                    #endif
+                    // if using Indels -> temporarily write out internal states
+                    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+                        writeInternalStatesIndels(node, out);
+                    else
                     {
-                        out << pre_output;
-                        for (int i = 0; i < node->sequence->sequence_str_chunks.size(); i++)
-                            out << node->sequence->sequence_str_chunks[i];
-                        out << "\n";
+                        // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                        string output(sequence_length * num_sites_per_state, '-');
+                        
+                        // convert numerical states into readable characters
+                        string input_sequence = input_msa[node->name];
+                        if (input_sequence.length()>0)
+                            // extract sequence and copying gaps from the input sequences to the output.
+                            exportSequenceWithGaps(node, output, sequence_length, num_sites_per_state, input_sequence, state_mapping);
+                        else
+                            // extract sequence without copying gaps from the input sequences to the output.
+                            convertNumericalStatesIntoReadableCharacters(node, output, sequence_length, num_sites_per_state, state_mapping);
+                        
+                        // release memory allocated to the sequence chunk
+                        vector<short int>().swap(node->sequence->sequence_chunks[0]);
+                        
+                        // write output to file
+                        #ifdef _OPENMP
+                        #pragma omp critical
+                        #endif
+                            out << pre_output << output << "\n";
                     }
-                    
-                    // remove the sequence to release the memory after extracting the sequence
-                    for (int i = 0; i < node->sequence->sequence_str_chunks.size(); i++)
-                        string().swap(node->sequence->sequence_str_chunks[i]);
                 }
             }
-        }
-        
-        // remove the sequence of the current node to release the memory
-        if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences && state_mapping.size() > 0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
-        {
-            // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-            string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
             
-            #ifdef _OPENMP
-            #pragma omp critical
-            #endif
+            // remove the sequence of the current node to release the memory
+            if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences && state_mapping.size() > 0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
             {
-                out << pre_output;
-                for (int i = 0; i < (*it)->node->sequence->sequence_str_chunks.size(); i++)
-                    out << (*it)->node->sequence->sequence_str_chunks[i];
-                out << "\n";
+                // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                string output(sequence_length * num_sites_per_state, '-');
+                
+                // convert numerical states into readable characters
+                convertNumericalStatesIntoReadableCharacters(node, output, sequence_length, num_sites_per_state, state_mapping);
+                
+                // release memory allocated to the sequence chunk
+                vector<short int>().swap(node->sequence->sequence_chunks[0]);
+                
+                // write output to file
+                #ifdef _OPENMP
+                #pragma omp critical
+                #endif
+                    out << pre_output << output << "\n";
             }
-            
-            // release the memory
-            for (int i = 0; i < (*it)->node->sequence->sequence_str_chunks.size(); i++)
-                string().swap((*it)->node->sequence->sequence_str_chunks[i]);
         }
     }
 }
 
 /**
-    convert a sequence from states to characters
+    write and delete the current chunk of sequence if possible
 */
-void AliSimulator::convertSequence(int thread_id, int segment_start, int segment_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
-    // don't convert sequence in simulations that we cannot output sequence during the simulations: Indels, partition, ASC
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || state_mapping.size() == 0)
-        return;
-    
-    // convert the sequence at leaf
-    if ((*it)->node->isLeaf())
+    // we can only write and delete sequence chunk in normal simulations: without Indels, FunDi, ASC, etc
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0 && params->alisim_fundi_taxon_set.size() == 0)
     {
-        // init a default sequence str
-        int sequence_length = round(expected_num_sites/length_ratio);
-        string output(segment_length * num_sites_per_state, '-');
-        (*it)->node->sequence->sequence_str_chunks[thread_id] = output;
+        // convert the sequence at leaf
+        if ((*it)->node->isLeaf())
+        {
+            // init a default sequence str
+            int sequence_length = round(expected_num_sites/length_ratio);
+            string output(segment_length * num_sites_per_state, '-');
+            
+            // convert numerical states into readable characters
+            string input_sequence = input_msa[(*it)->node->name];
+            if (input_sequence.length()>0)
+                // extract sequence and copying gaps from the input sequences to the output.
+                exportSequenceWithGaps((*it)->node, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, thread_id, segment_start, segment_length);
+            else
+                // extract sequence without copying gaps from the input sequences to the output.
+                convertNumericalStatesIntoReadableCharacters((*it)->node, output, sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
+            
+            // release memory allocated to the sequence chunk
+            vector<short int>().swap((*it)->node->sequence->sequence_chunks[thread_id]);
+            
+            // write current converted chunk of the sequence to file
+            // only write sequence name in the first thread
+            if (thread_id == 0)
+            {
+                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                out << pre_output << output << "\n";
+            }
+            // don't write sequence name in other thread
+            else
+                out << output << "\n";
+        }
+            
+        // avoid writing sequence of __root__
+        if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
+        {
+            // init a default sequence str
+            int sequence_length = round(expected_num_sites/length_ratio);
+            string output(segment_length * num_sites_per_state, '-');
+            
+            // convert numerical states into readable characters
+            string input_sequence = input_msa[node->name];
+            if (input_sequence.length()>0)
+                // extract sequence and copying gaps from the input sequences to the output.
+                exportSequenceWithGaps(node, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, thread_id, segment_start, segment_length);
+            else
+                // extract sequence without copying gaps from the input sequences to the output.
+                convertNumericalStatesIntoReadableCharacters(node, output, sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
+            
+            // release memory allocated to the sequence chunk
+            vector<short int>().swap(node->sequence->sequence_chunks[thread_id]);
+            
+            // write current converted chunk of the sequence to file
+            // only write sequence name in the first thread
+            if (thread_id == 0)
+            {
+                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                out << pre_output << output << "\n";
+            }
+            // don't write sequence name in other thread
+            else
+                out << output << "\n";
+        }
         
-        // convert numerical states into readable characters
-        string input_sequence = input_msa[(*it)->node->name];
-        if (input_sequence.length()>0)
-            // extract sequence and copying gaps from the input sequences to the output.
-            exportSequenceWithGaps((*it)->node, (*it)->node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, input_sequence, state_mapping, thread_id, segment_start, segment_length);
-        else
-            // extract sequence without copying gaps from the input sequences to the output.
-            convertNumericalStatesIntoReadableCharacters((*it)->node, (*it)->node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
-        
-        // release memory allocated to the sequence chunk
-        vector<short int>().swap((*it)->node->sequence->sequence_chunks[thread_id]);
+        // convert internal sequence if it's an internal node and the user want to output internal sequences
+        if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
+        {
+            // init a default sequence str
+            int sequence_length = round(expected_num_sites/length_ratio);
+            string output(segment_length * num_sites_per_state, '-');
+            
+            // convert numerical states into readable characters
+            convertNumericalStatesIntoReadableCharacters((*it)->node, output, sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
+            
+            // the memory allocated to the current sequence chunk of INTERNAL nodes will be release later
+            
+            // write current converted chunk of the sequence to file
+            // only write sequence name in the first thread
+            if (thread_id == 0)
+            {
+                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                out << pre_output << output << "\n";
+            }
+            // don't write sequence name in other thread
+            else
+                out << output << "\n";
+        }
     }
-        
-    // avoid writing sequence of __root__
-    if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
-    {
-        // init a default sequence str
-        int sequence_length = round(expected_num_sites/length_ratio);
-        string output(segment_length * num_sites_per_state, '-');
-        node->sequence->sequence_str_chunks[thread_id] = output;
-        
-        // convert numerical states into readable characters
-        string input_sequence = input_msa[node->name];
-        if (input_sequence.length()>0)
-            // extract sequence and copying gaps from the input sequences to the output.
-            exportSequenceWithGaps(node, node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, input_sequence, state_mapping, thread_id, segment_start, segment_length);
-        else
-            // extract sequence without copying gaps from the input sequences to the output.
-            convertNumericalStatesIntoReadableCharacters(node, node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
-        
-        // release memory allocated to the sequence chunk
+    
+    // update the num_children_done_simulation
+    node->sequence->nums_children_done_simulation[thread_id]++;
+    
+    // delete sequence at internal node if all sequences of its children are simulated
+    if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence->nums_children_done_simulation[thread_id] >= (node->neighbors.size() - 1) && !(params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_write_internal_sequences))
         vector<short int>().swap(node->sequence->sequence_chunks[thread_id]);
-    }
-    
-    // convert internal sequence if it's an internal node and the user want to output internal sequences
-    if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
-    {
-        // init a default sequence str
-        int sequence_length = round(expected_num_sites/length_ratio);
-        string output(segment_length * num_sites_per_state, '-');
-        (*it)->node->sequence->sequence_str_chunks[thread_id] = output;
-        
-        // convert numerical states into readable characters
-        convertNumericalStatesIntoReadableCharacters((*it)->node, (*it)->node->sequence->sequence_str_chunks[thread_id], sequence_length, num_sites_per_state, state_mapping, thread_id, segment_start, segment_length);
-        
-        // the memory allocated to the current sequence chunk of INTERNAL nodes will be release later
-    }
 }
 
 /**
@@ -1614,51 +1816,15 @@ void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* no
     {
         mergeChunks(node);
         
-        // permute the internal states if they have not been converted into readable characters
-        if (node->sequence->sequence_str_chunks[0].length() == 0)
-        {
-            // caching the current states of all selected sites
-            map<int, short int> caching_sites;
-            for (int i = 0; i < fundi_items.size(); i++)
-                caching_sites[fundi_items[i].selected_site] = node->sequence->sequence_chunks[0][fundi_items[i].selected_site];
-            
-            // permuting sites in FunDi model
-            for (int i = 0; i < fundi_items.size(); i++)
-                node->sequence->sequence_chunks[0][fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
-        }
-        // otherwise, permute the converted characters
-        else
-        {
-            // caching the current converted characters (string) of all selected sites
-            map<int, string> caching_sites;
-            for (int i = 0; i < fundi_items.size(); i++)
-            {
-                string caching_str(num_sites_per_state, ' ');
-                caching_str[0] = node->sequence->sequence_str_chunks[0][fundi_items[i].selected_site * num_sites_per_state + 0];
-                
-                // if they are codon -> also record the other two characters
-                if (num_sites_per_state == 3)
-                {
-                    caching_str[1] = node->sequence->sequence_str_chunks[0][fundi_items[i].selected_site * num_sites_per_state + 1];
-                    caching_str[2] = node->sequence->sequence_str_chunks[0][fundi_items[i].selected_site * num_sites_per_state + 2];
-                }
-                
-                caching_sites[fundi_items[i].selected_site] = caching_str;
-            }
-            
-            // permuting sites in FunDi model
-            for (int i = 0; i < fundi_items.size(); i++)
-            {
-                node->sequence->sequence_str_chunks[0][fundi_items[i].new_position * num_sites_per_state + 0] = caching_sites[fundi_items[i].selected_site][0];
-                
-                // if they are codon -> also record the other two characters
-                if (num_sites_per_state == 3)
-                {
-                    node->sequence->sequence_str_chunks[0][fundi_items[i].new_position * num_sites_per_state + 1] = caching_sites[fundi_items[i].selected_site][1];
-                    node->sequence->sequence_str_chunks[0][fundi_items[i].new_position * num_sites_per_state + 2] = caching_sites[fundi_items[i].selected_site][2];
-                }
-            }
-        }
+        // permute selected sites in the sequence
+        // caching the current states of all selected sites
+        map<int, short int> caching_sites;
+        for (int i = 0; i < fundi_items.size(); i++)
+            caching_sites[fundi_items[i].selected_site] = node->sequence->sequence_chunks[0][fundi_items[i].selected_site];
+        
+        // permuting sites in FunDi model
+        for (int i = 0; i < fundi_items.size(); i++)
+            node->sequence->sequence_chunks[0][fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
     }
 }
 
@@ -2055,7 +2221,7 @@ void AliSimulator::simulateSeqByGillespie(int thread_id, int segment_start, int 
     
     double total_ins_rate = 0;
     double total_del_rate = 0;
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
         total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
         total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
@@ -2803,8 +2969,6 @@ void AliSimulator::resetTree(Node *node, Node *dad, int num_threads)
         
         // separate root sequence into chunks
         separateSeqIntoChunks(node, num_threads);
-        
-        node->sequence->sequence_str_chunks.resize(num_threads);
     }
     
     NeighborVec::iterator it;
@@ -2813,7 +2977,6 @@ void AliSimulator::resetTree(Node *node, Node *dad, int num_threads)
         (*it)->node->sequence->parent = node;
         (*it)->node->sequence->num_threads_done_simulation = 0;
         (*it)->node->sequence->sequence_chunks.resize(num_threads);
-        (*it)->node->sequence->sequence_str_chunks.resize(num_threads);
         node->sequence->nums_children_done_simulation.resize(num_threads);
         for (int i = 0; i < num_threads; i++)
             node->sequence->nums_children_done_simulation[i] = 0;
@@ -2851,36 +3014,24 @@ void AliSimulator::separateSeqIntoChunks(Node* node, int num_threads)
 
 void AliSimulator::mergeChunks(Node* node)
 {
-    // if chunks are already converted into readable characters -> merge chunks of characters
-    if (node->sequence->sequence_str_chunks[0].length() > 0)
+    // ignore merging if it was already merged
+    if (node->sequence->sequence_chunks.size() == 1) return;
+    
+    // count num of sites of all chunks
+    int total_sites = 0;
+    for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
+        total_sites += node->sequence->sequence_chunks[i].size();
+    
+    // merge other chunks into the first chunk
+    int site_pos = node->sequence->sequence_chunks[0].size();
+    node->sequence->sequence_chunks[0].resize(total_sites);
+    for (int i = 1; i < node->sequence->sequence_chunks.size(); i++)
     {
-        for (int i = 1; i < node->sequence->sequence_str_chunks.size(); i++)
-            node->sequence->sequence_str_chunks[0] += node->sequence->sequence_str_chunks[i];
-        node->sequence->sequence_str_chunks.resize(1);
-    }
-    // otherwise, merge chunks of sequence
-    else
-    {
-        // ignore merging if it was already merged
-        if (node->sequence->sequence_chunks.size() == 1) return;
-        
-        // count num of sites of all chunks
-        int total_sites = 0;
-        for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
-            total_sites += node->sequence->sequence_chunks[i].size();
-        
-        // merge other chunks into the first chunk
-        int site_pos = node->sequence->sequence_chunks[0].size();
-        node->sequence->sequence_chunks[0].resize(total_sites);
-        for (int i = 1; i < node->sequence->sequence_chunks.size(); i++)
+        for (int j = 0; j < node->sequence->sequence_chunks[i].size(); j++)
         {
-            for (int j = 0; j < node->sequence->sequence_chunks[i].size(); j++)
-            {
-                node->sequence->sequence_chunks[0][site_pos] = node->sequence->sequence_chunks[i][j];
-                site_pos++;
-            }
+            node->sequence->sequence_chunks[0][site_pos] = node->sequence->sequence_chunks[i][j];
+            site_pos++;
         }
-        
     }
 }
 

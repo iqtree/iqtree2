@@ -6,8 +6,6 @@
  */
 
 #include "alisim.h"
-#include <chrono>
-using namespace std::chrono;
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
@@ -382,22 +380,8 @@ void executeSimulation(Params params, IQTree *&tree)
     // load input MSA if any
     map<string,string> input_msa = loadInputMSA(alisimulator);
     
-    auto start_time = high_resolution_clock::now();
-    
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
-
-    if (params.outputfile_runtime.length() > 0 && MPIHelper::getInstance().isMaster())
-    {
-        auto end_time = high_resolution_clock::now();
-        
-        /* Getting number of milliseconds as a double. */
-        duration<double, std::milli> ms_double = end_time - start_time;
-
-        std::ofstream outfile;
-        outfile.open(params.outputfile_runtime+".txt", std::ios_base::app); // append instead of overwrite
-        outfile << "Model "+params.model_id+": "+convertDoubleToString(ms_double.count())+"\n";
-    }
     
     // delete alisimulator
     delete alisimulator;
@@ -539,7 +523,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     }
     
     // reset number of OpenMP threads to 1 in simulations with Indels
-    if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
+    if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
     {
         outWarning("OpenMP has not yet been supported in simulations with Indels. Only one thread will be used.");
         
@@ -641,7 +625,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 
                 // update new genome at tips from the original genome and the genome tree
                 // skip updating if using +ASC or Fundi model as they must be already updated
-                if (super_alisimulator->params->alisim_insertion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
+                if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
                     partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels);
             }
         }
@@ -658,7 +642,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // merge & write alignments to files if they have not yet been written
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
-            || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
+            || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, open_mode);
         
         // do not report model params when simulating MSAs with MPI
@@ -671,8 +655,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 super_alisimulator->tree->getModel()->writeInfo(cout);
         }
         
-        // remove tmp_data if using Insertion
-        if (super_alisimulator->params->alisim_insertion_ratio > 0)
+        // remove tmp_data if using Indels
+        if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
     }
 }
@@ -803,7 +787,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             AliSimulator::initializeStateMapping(alisimulator->num_sites_per_state, aln, state_mapping);
         
             // write sequences at tips to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
-            bool write_sequences_from_tmp_data = alisimulator->params->alisim_insertion_ratio > 0 && alisimulator->params->alisim_fundi_taxon_set.size() == 0 && !(alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE) && !alisimulator->tree->isSuperTree();
+            bool write_sequences_from_tmp_data = alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0 && alisimulator->params->alisim_fundi_taxon_set.size() == 0 && !(alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE) && !alisimulator->tree->isSuperTree();
             if (write_sequences_from_tmp_data)
                 writeSeqsFromTmpDataAndGenomeTreesIndels(alisimulator, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name);
         
@@ -838,7 +822,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 cout << "An alignment has just been exported to "<<file_path<<endl;
         
             // show actual output sequence length in simulations with Indels
-            if (alisimulator->params->alisim_insertion_ratio > 0)
+            if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
                 cout << "Output sequence length: " << convertIntToString(sequence_length) << endl;
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, file_path);
@@ -996,7 +980,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
 {
     // if write_sequences_from_tmp_data and this node is a leaf -> skip this node as its sequence was already written to the output file
     if ((!(node->isLeaf() && write_sequences_from_tmp_data))
-        &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0))) {
+        &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio > 0))) {
         #ifdef _OPENMP
         #pragma omp task firstprivate(node) shared(out, out_indels)
         #endif
@@ -1069,7 +1053,7 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
     if (alisimulator->params->alisim_inference_mode &&
         ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
         || alisimulator->tree->isSuperTree()
-        || alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0))
+        || alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0))
     {
         outWarning("AliSim will not copy gaps from the input alignment into the output alignments in simulations with Indels/Partitions/+ASC models.");
         return input_msa;

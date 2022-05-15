@@ -15,11 +15,6 @@ public:
    vector<vector<short int>> sequence_chunks;
    
    /**
-       chunks of sequence (in string)
-    */
-   vector<string> sequence_str_chunks;
-   
-   /**
        number of children which have completed simulating the sequence (for AliSim)
     */
    vector<short int> nums_children_done_simulation;
