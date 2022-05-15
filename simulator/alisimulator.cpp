@@ -912,7 +912,6 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                     for (int j = 0; j < input_streams.size(); j++)
                     {
                         safeGetline(input_streams[j], line);
-                        line = line.substr(0, line.find_first_of("\n\r"));
                         output += line;
                     }
                     
@@ -939,29 +938,23 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
             for (int i = 0; i < input_streams.size(); i++)
                 input_streams[i].close();
             
-            // close single_output stream and delete all intermidate files
+            // close single_output stream
             #ifdef _OPENMP
             #pragma omp barrier
             #pragma omp single
             #endif
-            {
-                closeOutputStream(single_output);
-                
-                // delete all intermidate files
-                for (int i = 0; i < input_streams.size(); i++)
-                {
-                    // add ".phy" or ".fa" to the output_filepath
-                    string tmp_output_filepath;
-                    if (params->aln_output_format != IN_FASTA)
-                        tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".phy";
-                    else
-                        tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".fa";
-                    
-                    // delete file
-                    remove(tmp_output_filepath.c_str());
-                }
-                
-            }
+            closeOutputStream(single_output);
+            
+            // delete all intermidate files
+            // add ".phy" or ".fa" to the output_filepath
+            string tmp_output_filepath;
+            if (params->aln_output_format != IN_FASTA)
+                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id) + ".phy";
+            else
+                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id) + ".fa";
+            // delete file
+            remove(tmp_output_filepath.c_str());
+
         }
         
         // show the output file name
