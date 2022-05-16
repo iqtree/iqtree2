@@ -1002,7 +1002,7 @@ void AliSimulator::initOutputFile(ostream *&out, int num_threads, int thread_id,
     {
         // init an output_filepath to temporarily output the sequences (when simulating Indels)
         if (write_sequences_to_tmp_data)
-            output_filepath = params->alisim_output_filename + params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID());
+            output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID());
         // otherwise, just add ".phy" or ".fa" to the output_filepath
         else
         {
