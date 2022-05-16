@@ -910,7 +910,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                 if (i == 0)
                 {
                     input_streams[i].seekg(0, input_streams[i].end);
-                    int length = input_streams[i].tellg();
+                    uint64_t length = input_streams[i].tellg();
                     int total_num_lines = length/line_length;
                     average_num_lines_per_thread = total_num_lines/num_threads;
                     
