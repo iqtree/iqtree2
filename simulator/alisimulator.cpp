@@ -884,8 +884,12 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                 }
             }
             
-            // init input streams
-            vector<igzstream> input_streams(num_threads);
+            // dummy variables
+            vector<ifstream> input_streams(num_threads);
+            int actual_num_lines_per_thread = 0;
+            int average_num_lines_per_thread = 0;
+            int line_num = 0;
+            string line;
             
             // open all files
             for (int i = 0; i < input_streams.size(); i++)
@@ -898,39 +902,56 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                     tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".fa";
                 
                 // open an input file
-                input_streams[i].open(tmp_output_filepath.c_str());
+                input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
+                
+                // count num of lines, set start position
+                safeGetline(input_streams[i], line);
+                int line_length = line.length() + 1;
+                if (i == 0)
+                {
+                    input_streams[i].seekg(0, input_streams[i].end);
+                    int length = input_streams[i].tellg();
+                    int total_num_lines = length/line_length;
+                    average_num_lines_per_thread = total_num_lines/num_threads;
+                    
+                    // compute actual_num_lines_per_thread
+                    actual_num_lines_per_thread = thread_id < num_threads - 1 ? average_num_lines_per_thread : total_num_lines - (thread_id * average_num_lines_per_thread);
+                }
+                // set start position
+                input_streams[i].seekg(thread_id * average_num_lines_per_thread * line_length);
             }
             
             // merge chunks of each sequence and write to the single output file
-            int line_num = 0;
-            string line;
-            for (; !input_streams[0].eof(); line_num++) {
-                // only one thread process a line
-                if (line_num % num_threads == thread_id)
+            for (; line_num < actual_num_lines_per_thread; line_num++)
+            {
+                string output = "";
+                for (int j = 0; j < input_streams.size(); j++)
                 {
-                    string output = "";
-                    for (int j = 0; j < input_streams.size(); j++)
+                    safeGetline(input_streams[j], line);
+                    // if using FASTA -> break sequence name into new line
+                    if (params->aln_output_format == IN_FASTA && j == 0)
                     {
-                        safeGetline(input_streams[j], line);
-                        output += line;
+                        // insert '>' into sequence name
+                        line = ">" + line;
+                        
+                        // insert break line
+                        for (int i = 1; i < line.length(); i++)
+                            if (line[i-1] == ' ' && line[i] != ' ')
+                            {
+                                line[i-1] = '\n';
+                                break;
+                            }
                     }
-                    
-                    // write the concatenated sequence into file
-                    if (output.length() > 0)
-                    {
-                        #ifdef _OPENMP
-                        #pragma omp critical
-                        #endif
-                        (*single_output) << output << "\n";
-                    }
+                    output += line;
                 }
-                // otherwise, just ignore the current line
-                else
+                
+                // write the concatenated sequence into file
+                if (output.length() > 0)
                 {
-                    for (int j = 0; j < input_streams.size(); j++)
-                    {
-                        input_streams[j].ignore(LLONG_MAX, '\n');
-                    }
+                    #ifdef _OPENMP
+                    #pragma omp critical
+                    #endif
+                    (*single_output) << output << "\n";
                 }
             }
             
@@ -954,7 +975,6 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                 tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id) + ".fa";
             // delete file
             remove(tmp_output_filepath.c_str());
-
         }
         
         // show the output file name
@@ -1320,7 +1340,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             // only write sequence name in the first thread
             if (thread_id == 0)
             {
-                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, true);
                 out << pre_output << output << "\n";
             }
             // don't write sequence name in other thread
@@ -1351,7 +1371,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             // only write sequence name in the first thread
             if (thread_id == 0)
             {
-                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, true);
                 out << pre_output << output << "\n";
             }
             // don't write sequence name in other thread
@@ -1375,7 +1395,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             // only write sequence name in the first thread
             if (thread_id == 0)
             {
-                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, true);
                 out << pre_output << output << "\n";
             }
             // don't write sequence name in other thread
@@ -1396,7 +1416,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
 *  export pre_output string (contains taxon name and ">" or "space" based on the output format
 *
 */
-string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name)
+string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP)
 {
     string pre_output = "";
     
@@ -1405,7 +1425,7 @@ string AliSimulator::exportPreOutputString(Node *node, InputType output_format, 
     // write node's id if node's name is empty
     if (pre_output.length() == 0) pre_output = convertIntToString(node->id);
     // in PHYLIP format
-    if (output_format != IN_FASTA)
+    if (output_format != IN_FASTA || force_PHYLIP)
         pre_output.resize(max_length_taxa_name, ' ');
     // in FASTA format
     else

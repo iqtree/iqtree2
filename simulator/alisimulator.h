@@ -446,7 +446,7 @@ public:
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
     *
     */
-    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
+    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP = false);
     
     /**
     *  update new genome from original genome and the genome tree for each tips (due to Indels)
