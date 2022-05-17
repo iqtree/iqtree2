@@ -512,16 +512,6 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
         ancestral_sequence = retrieveAncestralSequenceFromInputFile(super_alisimulator);
     
-    // show a warning if the user wants to write internal sequences in not-supported cases
-    if (super_alisimulator->params->alisim_write_internal_sequences
-        &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-           || super_alisimulator->tree->isSuperTree()))
-    {
-        outWarning("Could not write out the internal sequences when using partition, or ASC models. Only sequences at tips will be written to the output file.");
-        Params::getInstance().alisim_write_internal_sequences = false;
-        super_alisimulator->params->alisim_write_internal_sequences = false;
-    }
-    
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
     {
@@ -529,6 +519,16 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         
         Params::getInstance().num_threads = 1;
         omp_set_num_threads(Params::getInstance().num_threads);
+    }
+    
+    // show a warning if the user wants to write internal sequences in not-supported cases
+    if (super_alisimulator->params->alisim_write_internal_sequences
+        &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+           || super_alisimulator->tree->isSuperTree() || (super_alisimulator->params->alisim_fundi_taxon_set.size() > 0 && Params::getInstance().num_threads > 1)))
+    {
+        outWarning("Could not write out the internal sequences when using partition, ASC models, or FunDi model with multithreading. Only sequences at tips will be written to the output file.");
+        Params::getInstance().alisim_write_internal_sequences = false;
+        super_alisimulator->params->alisim_write_internal_sequences = false;
     }
     
     // iteratively generate multiple datasets for each tree
@@ -902,7 +902,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 }
                 
                 // insert redundant sites (inserted sites due to Indels) to the sequences
-                if (super_tree->params->alisim_insertion_ratio > 0)
+                if (super_tree->params->alisim_insertion_ratio + super_tree->params->alisim_deletion_ratio > 0)
                 {
                     vector<short int> site_index_step_mapping(max_site_index+1, 0);
                     for (j = i; j < super_tree->size(); j++)
@@ -964,7 +964,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
         int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
         
         // determine the real sequence_length if Indels is used
-        if (alisimulator->params->alisim_insertion_ratio > 0)
+        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
             sequence_length = alisimulator->seq_length_indels;
         
         //  get the num_leaves

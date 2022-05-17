@@ -357,7 +357,7 @@ protected:
     /**
         merge output files when using multiple threads
     */
-    void mergeOutputFiles(ostream *&single_output, int num_threads, int thread_id, string output_filepath, bool write_sequences_to_tmp_data);
+    void mergeOutputFiles(ostream *&single_output, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
     
 public:
     
