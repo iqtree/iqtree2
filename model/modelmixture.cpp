@@ -1153,6 +1153,24 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
 
+// All the models are separated by comma
+// This function is to report the starting positions of the next model
+// consider the mixture model like: GTR{0.1,0.2,0.3,0.4,0.5,0.6}+F{0.1,0.2,0.3,0.4},GTR{0.6,0.5,0.4,0.3,0.2,0.1}+F{0.4,0.3,0.2,0.1}
+size_t getNextModelPos(string& s, size_t curr_pos) {
+    int bracketNum = 0;
+    size_t p = curr_pos;
+    while (p < s.length()) {
+        if (s[p] == ',' && bracketNum == 0)
+            break;
+        else if (s[p] == '{')
+            bracketNum++;
+        else if (s[p] == '}')
+            bracketNum--;
+        p++;
+    }
+    return p;
+}
+
 void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
 {
@@ -1247,9 +1265,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
     
-    if (freq != FREQ_MIXTURE)
-        cout << "\nMixture model" << endl;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
+        /*
         size_t pos = model_list.find(',', cur_pos);
         size_t open_pos = model_list.find('{', cur_pos);
         size_t close_pos = model_list.find('}', cur_pos);
@@ -1261,6 +1278,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         }
 		if (pos == string::npos)
 			pos = model_list.length();
+        */
+        size_t pos = getNextModelPos(model_list, cur_pos);
 		if (pos <= cur_pos)
 			outError("One model name in the mixture is empty.");
 		string this_name = model_list.substr(cur_pos, pos-cur_pos);
@@ -1315,27 +1334,27 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
             StateFreqType model_freq = freq;
             size_t slen = this_name.length();
             size_t fpos = this_name.find("+F");
-            string fstr;
             if (fpos != string::npos) {
-                cout << "Model " << this_name << endl;
-                if (fpos+2 < this_name.length()) {
-                    fstr = this_name.substr(fpos,3);
-                    if (fstr == "+FO" || fstr == "+Fo") {
-                        model_freq = FREQ_ESTIMATE;
-                    } else if (fstr == "+FQ" || fstr == "+Fq") {
-                        model_freq = FREQ_EQUAL;
-                    } else if (fstr == "+F{") {
-                        size_t tpos = this_name.find("}", fpos);
-                        if (tpos != string::npos && tpos-fpos > 3) {
-                            model_freq = FREQ_USER_DEFINED;
-                            freq_params = this_name.substr(fpos+3,tpos-fpos-3);
-                        } else {
-                            outError("The user defined frequency model is incorrect");
-                        }
+                string fstr3 = "";
+                string fstr4 = "";
+                if (fpos+2 < this_name.length())
+                    fstr3 = this_name.substr(fpos, 3);
+                if (fpos+3 < this_name.length())
+                    fstr4 = this_name.substr(fpos, 4);
+                if (fstr4 == "+FO{" || fstr4 == "+Fo{" || fstr3 == "+F{") {
+                    size_t pos_f = this_name.find("{", fpos);
+                    size_t pos_t = this_name.find("}", fpos);
+                    if (pos_t != string::npos && pos_t-fpos > 1) {
+                        model_freq = FREQ_USER_DEFINED;
+                        freq_params = this_name.substr(pos_f+1,pos_t-pos_f-1);
                     } else {
-                        outError("Unknown frequency model " + fstr);
+                        outError("The user defined frequency model is incorrect");
                     }
-                } else {
+                } else if (fstr3 == "+FO" || fstr3 == "+Fo") {
+                    model_freq = FREQ_ESTIMATE;
+                } else if (fstr3 == "+FQ" || fstr3 == "+Fq") {
+                    model_freq = FREQ_EQUAL;
+                } else{
                     // "+F"
                     model_freq = FREQ_EMPIRICAL;
                 }
