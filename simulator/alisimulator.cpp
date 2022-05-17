@@ -907,7 +907,8 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                 // count num of lines, set start position
                 safeGetline(input_streams[i], line);
                 int line_length = line.length() + 1;
-                if (i == 0)
+                // when using FunDi, the entire sequences are written into one of output files -> need to check average_num_lines_per_thread == 0
+                if (i == 0 || average_num_lines_per_thread == 0)
                 {
                     input_streams[i].seekg(0, input_streams[i].end);
                     uint64_t length = input_streams[i].tellg();
