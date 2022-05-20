@@ -521,6 +521,16 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         omp_set_num_threads(Params::getInstance().num_threads);
     }
     
+    // do not support compression when outputting multiple data sets into a same file
+    if (Params::getInstance().do_compression && Params::getInstance().alisim_single_output)
+    {
+        outWarning("Compression is not supported when outputting multiple alignments into a single output file. AliSim will output file in normal format.");
+        
+        Params::getInstance().do_compression = false;
+        super_alisimulator->params->do_compression = false;
+    }
+
+    
     // show a warning if the user wants to write internal sequences in not-supported cases
     if (super_alisimulator->params->alisim_write_internal_sequences
         &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
@@ -645,8 +655,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, open_mode);
         
-        // do not report model params when simulating MSAs with MPI
-        if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
+        // only report model params when simulating the first MSA
+        if (i == 0)
         {
             // report model's parameters
             reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));

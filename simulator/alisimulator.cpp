@@ -806,7 +806,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         
         // close the output stream
         if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-            closeOutputStream(out);
+            closeOutputStream(out, num_threads > 1);
         
         // release mem for rstream
         finish_random(rstream);
@@ -1003,7 +1003,12 @@ void AliSimulator::initOutputFile(ostream *&out, int num_threads, int thread_id,
     {
         // init an output_filepath to temporarily output the sequences (when simulating Indels)
         if (write_sequences_to_tmp_data)
+        {
             output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID());
+            
+            // open the output stream (create new file)
+            openOutputStream(out, output_filepath, std::ios_base::out);
+        }
         // otherwise, just add ".phy" or ".fa" to the output_filepath
         else
         {
@@ -1017,10 +1022,10 @@ void AliSimulator::initOutputFile(ostream *&out, int num_threads, int thread_id,
                 output_filepath = output_filepath + thread_id_str + ".phy";
             else
                 output_filepath = output_filepath + thread_id_str + ".fa";
+            
+            // open the output stream (create new or append an existing file)
+            openOutputStream(out, output_filepath, open_mode, num_threads > 1);
         }
-        
-        // open the output stream
-        openOutputStream(out, output_filepath, open_mode);
         
         // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
         // only output the first line in the singlethreading mode; in multithreading mode -> the first line will be output later when merging output files
@@ -1035,10 +1040,10 @@ void AliSimulator::initOutputFile(ostream *&out, int num_threads, int thread_id,
 /**
     open an output stream
 */
-void AliSimulator::openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode)
+void AliSimulator::openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool force_uncompression)
 {
     try {
-        if (params->do_compression)
+        if (params->do_compression && !force_uncompression)
             out = new ogzstream(output_filepath.c_str(), open_mode);
         else
             out = new ofstream(output_filepath.c_str(), open_mode);
@@ -1051,9 +1056,9 @@ void AliSimulator::openOutputStream(ostream *&out, string output_filepath, std::
 /**
     close an output stream
 */
-void AliSimulator::closeOutputStream(ostream *&out)
+void AliSimulator::closeOutputStream(ostream *&out, bool force_uncompression)
 {
-    if (params->do_compression)
+    if (params->do_compression && !force_uncompression)
         ((ogzstream*)out)->close();
     else
         ((ofstream*)out)->close();
@@ -2652,7 +2657,7 @@ void AliSimulator::rootTree()
         
         // change the id of the intermediate node if it's equal to the root's id
         if (second_internal_node->id == new_root->id)
-            second_internal_node->id = (new_root->id * 10);
+            second_internal_node->id = (tree->nodeNum);
         
         // link new_root node with the intermediate node
         new_root->addNeighbor(second_internal_node, 0);
@@ -2662,6 +2667,7 @@ void AliSimulator::rootTree()
         tree->root = new_root;
         tree->rooted = true;
         tree->leafNum++;
+        tree->nodeNum++;
     }
 }
 

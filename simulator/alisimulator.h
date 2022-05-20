@@ -347,12 +347,12 @@ protected:
     /**
         open an output stream
     */
-    void openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode);
+    void openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool force_uncompression = false);
     
     /**
         close an output stream
     */
-    void closeOutputStream(ostream *&out);
+    void closeOutputStream(ostream *&out, bool force_uncompression = false);
     
     /**
         merge output files when using multiple threads
