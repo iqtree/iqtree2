@@ -1369,6 +1369,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
             len_children_ptr += ncat;
         }
     } else {
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+        {
         if (Params::getInstance().buffer_mem_save) {
             info.echildren = echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
             if (num_leaves > 0)
@@ -1384,7 +1388,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
             echildren = info.echildren;
             partial_lh_leaves = info.partial_lh_leaves;
         }
-
+        } // omp critical
     }
 
     double *eleft = echildren, *eright = echildren + block*nstates;
@@ -2027,11 +2031,20 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info
             }
         } // big for loop over ptn
     }
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+    {
+
     if (Params::getInstance().buffer_mem_save) {
         aligned_free(partial_lh_leaves);
         aligned_free(echildren);
         info.echildren = info.partial_lh_leaves = NULL;
     }
+        
+    } // omp critical
+
 }
 
 /*******************************************************
