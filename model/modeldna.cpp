@@ -303,10 +303,10 @@ void ModelDNA::readRates(string str) throw(const char*) {
 
 
 string ModelDNA::getNameParams(bool show_fixed_params) {
-	if (num_params == 0 && (!show_fixed_params || param_fixed.size() == 1)) return name;
+	if (name == "JC") return name;
 	ostringstream retname;
     retname << name;
-    if (!fixed_parameters) {
+    if (!fixed_parameters && num_params > 0) {
         retname << '{';
         int nrates = getNumRateEntries();
         int k = 0;
