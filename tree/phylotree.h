@@ -853,9 +853,9 @@ public:
         precompute info for models
     */
     template<class VectorClass, const int nstates>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
     template<class VectorClass>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
 
     /** 
         sort neighbor in descending order of subtree size (number of leaves within subree)
