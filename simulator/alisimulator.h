@@ -116,7 +116,7 @@ protected:
     *  reset tree (by reset some variables of nodes)
     *
     */
-    void resetTree(Node *node = NULL, Node *dad = NULL, int num_threads = -1);
+    void resetTree(Node *node = NULL, Node *dad = NULL);
     
     /**
     *  validate sequence length of codon
@@ -327,7 +327,7 @@ protected:
     /**
         separate root sequence into chunks
     */
-    void separateSeqIntoChunks(Node* node, int num_threads);
+    void separateSeqIntoChunks(Node* node);
     
     /**
         merge chunks into a single sequence
@@ -342,7 +342,7 @@ protected:
     /**
         init the output file
     */
-    void initOutputFile(ostream *&out, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    void initOutputFile(ostream *&out, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
     
     /**
         open an output stream
@@ -357,7 +357,7 @@ protected:
     /**
         merge output files when using multiple threads
     */
-    void mergeOutputFiles(ostream *&single_output, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    void mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
     
 public:
     
@@ -385,6 +385,10 @@ public:
     Insertion* latest_insertion = NULL;
     Insertion* first_insertion = NULL;
     
+    // variables to output sequences with multiple threads
+    uint64_t starting_pos = 0;
+    uint64_t output_line_length = 0;
+    int num_threads = 1;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;

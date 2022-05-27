@@ -715,12 +715,21 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
 */
 void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
+    // get the number of threads
+    #ifdef _OPENMP
+    #pragma omp parallel
+    #pragma omp single
+        num_threads = omp_get_num_threads();
+    #endif
+    
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     ostream *out = NULL;
     ostream *single_output = NULL;
     vector<string> state_mapping;
+    int default_segment_length = sequence_length / num_threads;
+    output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
     
     // check to use Posterior Mean Rates
     if (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED)
@@ -775,8 +784,6 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     resetTree();
     
     // simulate Sequences
-    int num_threads = 1;
-    int default_segment_length = sequence_length;
     int *rstream = NULL;
     #ifdef _OPENMP
     #pragma omp parallel private(rstream, out) shared(default_segment_length, num_threads)
@@ -786,16 +793,11 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
         init_random(ran_seed, false, &rstream);
             
-    #pragma omp single
-        {
-            num_threads = omp_get_num_threads();
-            default_segment_length /= num_threads;
-        }
         int actual_segment_length = thread_id < num_threads - 1 ? default_segment_length : sequence_length - (num_threads - 1) * default_segment_length;
     #endif
         
         // init the output stream
-        initOutputFile(out, num_threads, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
+        initOutputFile(out, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
         
         // initialize trans_matrix
         double *trans_matrix = new double[max_num_states*max_num_states];
@@ -815,7 +817,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         #ifdef _OPENMP
         #pragma omp barrier
         #endif
-        mergeOutputFiles(single_output, num_threads, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
+        mergeOutputFiles(single_output, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
             
     #ifdef _OPENMP
     }
@@ -857,7 +859,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
 /**
     merge output files
 */
-void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
+void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
 {
     if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
     {
@@ -880,7 +882,9 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                 if (params->aln_output_format != IN_FASTA)
                 {
                     int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                    *single_output << num_leaves << " " << round(expected_num_sites/length_ratio)*num_sites_per_state << endl;
+                    string first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
+                    starting_pos = first_line.length();
+                    *single_output << first_line;
                 }
             }
             
@@ -890,6 +894,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
             int average_num_lines_per_thread = 0;
             int line_num = 0;
             string line;
+            int starting_line_num = 0;
             
             // open all files
             for (int i = 0; i < input_streams.size(); i++)
@@ -917,42 +922,49 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
                     
                     // compute actual_num_lines_per_thread
                     actual_num_lines_per_thread = thread_id < num_threads - 1 ? average_num_lines_per_thread : total_num_lines - (thread_id * average_num_lines_per_thread);
+                    
+                    // compute the starting line number
+                    starting_line_num = thread_id * average_num_lines_per_thread;
                 }
                 // set start position
-                input_streams[i].seekg(thread_id * average_num_lines_per_thread * line_length);
+                input_streams[i].seekg(starting_line_num * line_length);
             }
             
             // merge chunks of each sequence and write to the single output file
-            for (; line_num < actual_num_lines_per_thread; line_num++)
+            for (line_num = starting_line_num; line_num < starting_line_num + actual_num_lines_per_thread; line_num++)
             {
                 string output = "";
                 for (int j = 0; j < input_streams.size(); j++)
                 {
                     safeGetline(input_streams[j], line);
-                    // if using FASTA -> break sequence name into new line
-                    if (params->aln_output_format == IN_FASTA && j == 0)
-                    {
-                        // insert '>' into sequence name
-                        line = ">" + line;
-                        
-                        // insert break line
-                        for (int i = 1; i < line.length(); i++)
-                            if (line[i-1] == ' ' && line[i] != ' ')
-                            {
-                                line[i-1] = '\n';
-                                break;
-                            }
-                    }
                     output += line;
                 }
                 
-                // write the concatenated sequence into file
                 if (output.length() > 0)
                 {
+                    // if using FASTA -> break sequence name into new line
+                    if (params->aln_output_format == IN_FASTA)
+                    {
+                        // insert '>' into sequence name
+                        output = ">" + output;
+                        
+                        // insert break line
+                        for (int i = 1; i < output.length(); i++)
+                            if (output[i-1] == ' ' && output[i] != ' ')
+                            {
+                                output[i-1] = '\n';
+                                break;
+                            }
+                    }
+                
+                    // write the concatenated sequence into file
                     #ifdef _OPENMP
                     #pragma omp critical
                     #endif
-                    (*single_output) << output << "\n";
+                    {
+                        single_output->seekp(starting_pos + line_num * output_line_length);
+                        (*single_output) << output << "\n";
+                    }
                 }
             }
             
@@ -997,7 +1009,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int num_threads, in
 /**
     init the output file
 */
-void AliSimulator::initOutputFile(ostream *&out, int num_threads, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
+void AliSimulator::initOutputFile(ostream *&out, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
 {
     if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
     {
@@ -1235,7 +1247,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                     else
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, num_threads > 1);
                         string output(sequence_length * num_sites_per_state, '-');
                         
                         // convert numerical states into readable characters
@@ -1267,7 +1279,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                     else
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, num_threads > 1);
                         string output(sequence_length * num_sites_per_state, '-');
                         
                         // convert numerical states into readable characters
@@ -1327,7 +1339,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 // only write sequence name in the first thread
                 if (thread_id == 0)
                 {
-                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, true);
+                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, num_threads > 1);
                     out << pre_output << output << "\n";
                 }
                 // don't write sequence name in other thread
@@ -1358,7 +1370,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 // only write sequence name in the first thread
                 if (thread_id == 0)
                 {
-                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, true);
+                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name,  num_threads > 1);
                     out << pre_output << output << "\n";
                 }
                 // don't write sequence name in other thread
@@ -1383,7 +1395,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             // only write sequence name in the first thread
             if (thread_id == 0)
             {
-                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, true);
+                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name,  num_threads > 1);
                 out << pre_output << output << "\n";
             }
             // don't write sequence name in other thread
@@ -1412,12 +1424,14 @@ string AliSimulator::exportPreOutputString(Node *node, InputType output_format, 
     pre_output = node->name;
     // write node's id if node's name is empty
     if (pre_output.length() == 0) pre_output = convertIntToString(node->id);
-    // in PHYLIP format
-    if (output_format != IN_FASTA || force_PHYLIP)
-        pre_output.resize(max_length_taxa_name, ' ');
+    pre_output.resize(max_length_taxa_name, ' ');
+    
     // in FASTA format
-    else
-        pre_output = ">" + pre_output + "\n";
+    if (output_format == IN_FASTA && !force_PHYLIP)
+    {
+        pre_output = ">" + pre_output;
+        pre_output[pre_output.length() - 1] = '\n';
+    }
     
     return pre_output;
 }
@@ -1912,6 +1926,7 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
     
     // initialize a new dummy alisimulator
     AliSimulator* tmp_alisimulator = new AliSimulator(params, tmp_tree, expected_num_sites, partition_rate);
+    tmp_alisimulator->num_threads = num_threads;
     
     // convert alisimulator to the correct type of simulator
     // get variables
@@ -2949,20 +2964,8 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
 *  reset tree (by setting the parents of all node to NULL) -> only using when simulating MSAs with openMP
 *
 */
-void AliSimulator::resetTree(Node *node, Node *dad, int num_threads)
+void AliSimulator::resetTree(Node *node, Node *dad)
 {
-    // init num_threads
-    if (num_threads == -1)
-    {
-        // set default value for num_threads
-        num_threads = 1;
-        #ifdef _OPENMP
-        #pragma omp parallel
-        #pragma omp single
-        num_threads = omp_get_num_threads();
-        #endif
-    }
-    
     // set starting node
     if (!node && !dad)
     {
@@ -2970,7 +2973,7 @@ void AliSimulator::resetTree(Node *node, Node *dad, int num_threads)
         dad = tree->root;
         
         // separate root sequence into chunks
-        separateSeqIntoChunks(node, num_threads);
+        separateSeqIntoChunks(node);
     }
     
     NeighborVec::iterator it;
@@ -2984,14 +2987,14 @@ void AliSimulator::resetTree(Node *node, Node *dad, int num_threads)
             node->sequence->nums_children_done_simulation[i] = 0;
         
         // browse 1-step deeper to the neighbor node
-        resetTree((*it)->node, node, num_threads);
+        resetTree((*it)->node, node);
     }
 }
 
 /**
     separate root sequence into chunks
 */
-void AliSimulator::separateSeqIntoChunks(Node* node, int num_threads)
+void AliSimulator::separateSeqIntoChunks(Node* node)
 {
     if (node->sequence->sequence_chunks.size() != num_threads)
     {

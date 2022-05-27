@@ -28,6 +28,9 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     map_seqname_node = alisimulator->map_seqname_node;
     latest_insertion = alisimulator->latest_insertion;
     first_insertion = alisimulator->first_insertion;
+    starting_pos = alisimulator->starting_pos;
+    output_line_length = alisimulator->output_line_length;
+    num_threads = alisimulator->num_threads;
 }
 
 /**

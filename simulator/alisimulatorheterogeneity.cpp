@@ -28,6 +28,9 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     map_seqname_node = alisimulator->map_seqname_node;
     latest_insertion = alisimulator->latest_insertion;
     first_insertion = alisimulator->first_insertion;
+    starting_pos = alisimulator->starting_pos;
+    output_line_length = alisimulator->output_line_length;
+    num_threads = alisimulator->num_threads;
 }
 
 /**
@@ -587,17 +590,9 @@ void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenera
         // otherwise re-generate sequence based on the state frequencies the model component for each site
         else
             tree->root->sequence->sequence_chunks[0] = regenerateSequenceMixtureModel(expected_num_sites, site_specific_model_index);
-        
-        // get num_threads
-        // set default value for num_threads
-        int num_threads = 1;
-        #ifdef _OPENMP
-        #pragma omp parallel
-        #pragma omp single
-        num_threads = omp_get_num_threads();
-        #endif
+    
         // separate root sequence into chunks
-        separateSeqIntoChunks(tree->root, num_threads);
+        separateSeqIntoChunks(tree->root);
     }
 
     
