@@ -514,12 +514,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
-    {
-        outWarning("OpenMP has not yet been supported in simulations with Indels. Only one thread will be used.");
-        
-        Params::getInstance().num_threads = 1;
-        omp_set_num_threads(Params::getInstance().num_threads);
-    }
+        outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
     
     // do not support compression when outputting multiple data sets into a same file
     if (Params::getInstance().do_compression && Params::getInstance().alisim_single_output)
