@@ -4,6 +4,8 @@ constrainttree.h
 candidateset.cpp candidateset.h
 iqtree.cpp
 iqtree.h
+iqtreemix.cpp
+iqtreemix.h
 matree.cpp
 matree.h
 memslot.cpp memslot.h

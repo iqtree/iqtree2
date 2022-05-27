@@ -1996,7 +1996,7 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
 
 template<class VectorClass>
 int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    
+
     if ((tip_partial_lh_computed & 2) == 0)
         computeTipPartialParsimony();
     
@@ -2090,6 +2090,5 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, Phyl
     //    cout << endl;
     return horizontal_add(tree_pars);
 }
-
 
 #endif /* PHYLOKERNEL_H_ */

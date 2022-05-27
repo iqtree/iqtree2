@@ -78,14 +78,14 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     double *partial_lh_leaves = info.partial_lh_leaves;
     
     if (Params::getInstance().buffer_mem_save) {
-        info.echildren = echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
+        echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
         if (num_leaves > 0)
-            info.partial_lh_leaves = partial_lh_leaves = aligned_alloc<double>(get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves));
+            partial_lh_leaves = aligned_alloc<double>(get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves));
         double *buffer_tmp = aligned_alloc<double>(nstates);
 #ifdef KERNEL_FIX_STATES
-        computePartialInfo<VectorClass, nstates>(info, (VectorClass*)buffer_tmp);
+        computePartialInfo<VectorClass, nstates>(info, (VectorClass*)buffer_tmp, echildren, partial_lh_leaves);
 #else
-        computePartialInfo<VectorClass>(info, (VectorClass*)buffer_tmp);
+        computePartialInfo<VectorClass>(info, (VectorClass*)buffer_tmp, echildren, partial_lh_leaves);
 #endif
         aligned_free(buffer_tmp);
     }
@@ -575,7 +575,6 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     if (Params::getInstance().buffer_mem_save) {
         aligned_free(partial_lh_leaves);
         aligned_free(echildren);
-        info.echildren = info.partial_lh_leaves = NULL;
     }
 }
 
