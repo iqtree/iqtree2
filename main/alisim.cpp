@@ -996,7 +996,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             string output(sequence_length * num_sites_per_state, '-');
             
             // convert non-empty sequence
-            AliSimulator::convertNumericalStatesIntoReadableCharacters(node, output, sequence_length, num_sites_per_state, state_mapping);
+            AliSimulator::convertNumericalStatesIntoReadableCharacters(node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, state_mapping);
             
             // preparing output (without gaps) for indels
             string output_indels = "";

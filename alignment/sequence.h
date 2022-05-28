@@ -39,6 +39,11 @@ public:
         number of gaps in the sequence
      */
     int num_gaps;
+    
+    /**
+        depth of the current node
+     */
+    int depth;
 
     /**
         constructor

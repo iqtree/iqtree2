@@ -110,13 +110,13 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
+    virtual void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
     
     /**
     *  reset tree (by reset some variables of nodes)
     *
     */
-    void resetTree(Node *node = NULL, Node *dad = NULL);
+    void resetTree(int &max_depth, bool store_seq_at_cache, Node *node = NULL, Node *dad = NULL);
     
     /**
     *  validate sequence length of codon
@@ -182,12 +182,18 @@ protected:
     /**
         write and delete the current chunk of sequence if possible
     */
-    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int>* dad_seq_chunk, vector<short int>* node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string, string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
-        branch-specific evolution
+        branch-specific evolution by multi threads
     */
-    void branchSpecificEvolution(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it);
+    void branchSpecificEvolution(int thread_id, int sequence_length, vector<short int>* &dad_seq_chunk, vector<short int>* &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it);
+    
+    
+    /**
+        branch-specific evolution by the master thread
+    */
+    void branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it);
     
     /**
         simulate a sequence for a node from a specific branch
@@ -197,12 +203,12 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(int thread_id, int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int>* &dad_seq_chunk, vector<short int>* &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
     
     /**
         initialize variables
     */
-    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, bool &write_sequences_to_tmp_data);
+    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache);
     
     /**
         process after simulating sequences
@@ -227,27 +233,27 @@ protected:
     /**
     *  export a sequence with gaps copied from the input sequence
     */
-    void exportSequenceWithGaps(Node *node, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int thread_id = 0, int segment_start = 0, int segment_length = -1);
+    void exportSequenceWithGaps(vector<short int> sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start = 0, int segment_length = -1);
     
     /**
         handle indels
     */
-    void simulateSeqByGillespie(int thread_id, int segment_start, int &segment_length, ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
+    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int>* &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
     
     /**
         handle substitution events
     */
-    void handleSubs(int thread_id, int segment_start, int segment_length, int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream);
+    void handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int>* &indel_sequence, int num_mixture_models, int* rstream);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<short int>* &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleDeletion(int sequence_length, vector<short int>* &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
     
     /**
         extract array of substitution rates and Jmatrix
@@ -257,7 +263,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(int thread_id, int segment_start, int segment_length, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
     
     /**
     *  insert a new sequence into the current sequence
@@ -312,12 +318,12 @@ protected:
     /**
         change state of sites due to Error model
     */
-    void changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop, int* rstream);
+    void changeSitesErrorModel(vector<int> sites, vector<short int>* &sequence, double error_prop, int* rstream);
     
     /**
         handle DNA error
     */
-    void handleDNAerr(int thread_id, int segment_start, int segment_length, double error_prop, vector<short int> &sequence, int* rstream, int model_index = -1);
+    void handleDNAerr(int segment_start, double error_prop, vector<short int>* &sequence, int* rstream, int model_index = -1);
     
     /**
         TRUE if posterior mean rate can be used
@@ -454,7 +460,7 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static void convertNumericalStatesIntoReadableCharacters(Node *node, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int thread_id = 0, int segment_start = 0, int segment_length = -1);
+    static void convertNumericalStatesIntoReadableCharacters(vector<short int> sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length = -1);
     
     /**
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)

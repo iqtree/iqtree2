@@ -36,7 +36,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int thread_id, int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int>* &dad_seq_chunk, vector<short int>* &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
 {
     // rescale ratio due to invariant sites
     double scale = 1.0/(1 - invariant_proportion);
@@ -48,16 +48,16 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int thread
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
     
     // estimate the sequence for the current neighbor
-    for (int i = 0; i < segment_length; i++)
+    for (int i = 0; i < (*node_seq_chunk).size(); i++)
     {
         
         // if this site is invariant or the parent's state is a gap -> preserve the dad's state
-        if (site_specific_rates[segment_start + i] == 0 || node->sequence->sequence_chunks[thread_id][i] == STATE_UNKNOWN)
-            (*it)->node->sequence->sequence_chunks[thread_id][i] = node->sequence->sequence_chunks[thread_id][i];
+        if (site_specific_rates[segment_start + i] == 0 || (*dad_seq_chunk)[i] == STATE_UNKNOWN)
+            (*node_seq_chunk)[i] = (*dad_seq_chunk)[i];
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {
-            int starting_index = node->sequence->sequence_chunks[thread_id][i]*max_num_states;
-            (*it)->node->sequence->sequence_chunks[thread_id][i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence->sequence_chunks[thread_id][i], rstream);
+            int parent_state = (*dad_seq_chunk)[i];
+            (*node_seq_chunk)[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, parent_state * max_num_states, max_num_states, parent_state, rstream);
         }
     }
 }
