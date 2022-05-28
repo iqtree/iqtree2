@@ -715,6 +715,107 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
 */
 void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
+    // get variables
+    int sequence_length = expected_num_sites;
+    ModelSubst *model = tree->getModel();
+    ostream *out = NULL;
+    ostream *single_output = NULL;
+    vector<string> state_mapping;
+    int default_segment_length;
+    int thread_id = 0;
+    int actual_segment_length = sequence_length;
+    bool write_sequences_to_tmp_data = false;
+    int *rstream = NULL;
+    
+    // init variables
+    initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, write_sequences_to_tmp_data);
+    
+    // simulate Sequences
+    #ifdef _OPENMP
+    #pragma omp parallel private(rstream, out, thread_id) shared(default_segment_length, num_threads)
+    {
+        thread_id = omp_get_thread_num();
+        // init random generators
+        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
+        init_random(ran_seed, false, &rstream);
+            
+        actual_segment_length = thread_id < num_threads - 1 ? default_segment_length : sequence_length - (num_threads - 1) * default_segment_length;
+    #endif
+        
+        // init the output stream
+        initOutputFile(out, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
+        
+        // initialize trans_matrix
+        double *trans_matrix = new double[max_num_states*max_num_states];
+        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+        
+        // delete trans_matrix array
+        delete[] trans_matrix;
+        
+        // close the output stream
+        if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+            closeOutputStream(out, num_threads > 1);
+        
+        // release mem for rstream
+        finish_random(rstream);
+        
+        // merge output files into a single file if using multithreading
+        #ifdef _OPENMP
+        #pragma omp barrier
+        #endif
+        mergeOutputFiles(single_output, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
+            
+    #ifdef _OPENMP
+    }
+    #endif
+    
+    // process after simulating sequences
+    postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
+}
+
+/**
+    process after simulating sequences
+*/
+void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data)
+{
+    // delete sub_rates, J_Matrix
+    delete[] sub_rates;
+    delete[] Jmatrix;
+    
+    // merge chunks into a single sequence if using multiple threads and sequences have not been outputted
+    if (num_threads > 1 && (output_filepath.length() == 0 || write_sequences_to_tmp_data))
+        mergeChunksAllNodes();
+    
+    // record the actual (final) seq_length due to Indels
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+        seq_length_indels = sequence_length;
+    
+    // process delayed Fundi if it is delayed due to Insertion events
+    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+    {
+        // update new genome at tips from original genome and the genome tree
+        updateNewGenomeIndels(seq_length_indels);
+        
+        processDelayedFundi(tree->root, tree->root);
+    }
+    
+    // removing constant states if it's necessary
+    if (length_ratio > 1)
+    {
+        // if using Indels, update new genome at tips from original genome and the genome tree
+        // skip updating if using Fundi as it must be already updated by Fundi
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
+            updateNewGenomeIndels(seq_length_indels);
+        
+        removeConstantSites();
+    }
+}
+
+/**
+    initialize variables
+*/
+void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, bool &write_sequences_to_tmp_data)
+{
     // get the number of threads
     #ifdef _OPENMP
     #pragma omp parallel
@@ -722,13 +823,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         num_threads = omp_get_num_threads();
     #endif
     
-    // get variables
-    int sequence_length = expected_num_sites;
-    ModelSubst *model = tree->getModel();
-    ostream *out = NULL;
-    ostream *single_output = NULL;
-    vector<string> state_mapping;
-    int default_segment_length = sequence_length / num_threads;
+    default_segment_length = sequence_length / num_threads;
     output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
     
     // check to use Posterior Mean Rates
@@ -740,10 +835,10 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         initSite2PatternID(sequence_length);
     
     // initialize variables (site_specific_rates; site_specific_rate_index; site_specific_model_index)
-    initVariables(sequence_length, true);
+    initVariablesRateHeterogeneity(sequence_length, true);
     
     // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
-    bool write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
+    write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
     
     // initialize state_mapping (mapping from state to characters)
     if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
@@ -782,78 +877,6 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     
     // reset variables at nodes (essential when simulating multiple alignments)
     resetTree();
-    
-    // simulate Sequences
-    int *rstream = NULL;
-    #ifdef _OPENMP
-    #pragma omp parallel private(rstream, out) shared(default_segment_length, num_threads)
-    {
-        int thread_id = omp_get_thread_num();
-        // init random generators
-        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
-        init_random(ran_seed, false, &rstream);
-            
-        int actual_segment_length = thread_id < num_threads - 1 ? default_segment_length : sequence_length - (num_threads - 1) * default_segment_length;
-    #endif
-        
-        // init the output stream
-        initOutputFile(out, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
-        
-        // initialize trans_matrix
-        double *trans_matrix = new double[max_num_states*max_num_states];
-        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
-        
-        // delete trans_matrix array
-        delete[] trans_matrix;
-        
-        // close the output stream
-        if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-            closeOutputStream(out, num_threads > 1);
-        
-        // release mem for rstream
-        finish_random(rstream);
-        
-        // merge output files into a single file if using multithreading
-        #ifdef _OPENMP
-        #pragma omp barrier
-        #endif
-        mergeOutputFiles(single_output, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
-            
-    #ifdef _OPENMP
-    }
-    #endif
-    
-    // delete sub_rates, J_Matrix
-    delete[] sub_rates;
-    delete[] Jmatrix;
-    
-    // merge chunks into a single sequence if using multiple threads and sequences have not been outputted
-    if (num_threads > 1 && (output_filepath.length() == 0 || write_sequences_to_tmp_data))
-        mergeChunksAllNodes();
-    
-    // record the actual (final) seq_length due to Indels
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
-        seq_length_indels = sequence_length;
-    
-    // process delayed Fundi if it is delayed due to Insertion events
-    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
-    {
-        // update new genome at tips from original genome and the genome tree
-        updateNewGenomeIndels(seq_length_indels);
-        
-        processDelayedFundi(tree->root, tree->root);
-    }
-    
-    // removing constant states if it's necessary
-    if (length_ratio > 1)
-    {
-        // if using Indels, update new genome at tips from original genome and the genome tree
-        // skip updating if using Fundi as it must be already updated by Fundi
-        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
-            updateNewGenomeIndels(seq_length_indels);
-        
-        removeConstantSites();
-    }
 }
 
 /**
@@ -1974,7 +1997,7 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
 {
     // initialize the site-specific rates
-    initVariables(sequence_length);
+    initVariablesRateHeterogeneity(sequence_length);
     
     // check to regenerate the root sequence if the user has specified specific frequencies for root
     if (tree->root->id == node->id && ((*it)->attributes["freqs"]).length() > 0)
@@ -2018,7 +2041,7 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(int thread_id, 
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulator::initVariables(int sequence_length, bool regenerate_root_sequence)
+void AliSimulator::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
 {
     // Do nothing, this method will be overrided in AliSimulatorHeterogeneity and AliSimulatorInvar
 }

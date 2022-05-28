@@ -200,9 +200,19 @@ protected:
     virtual void simulateASequenceFromBranchAfterInitVariables(int thread_id, int segment_start, int segment_length, ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
     
     /**
+        initialize variables
+    */
+    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, bool &write_sequences_to_tmp_data);
+    
+    /**
+        process after simulating sequences
+    */
+    void postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data);
+    
+    /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, bool regenerate_root_sequence = false);
+    virtual void initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence = false);
     
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model

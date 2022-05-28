@@ -576,7 +576,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorHeterogeneity::initVariables(int sequence_length, bool regenerate_root_sequence)
+void AliSimulatorHeterogeneity::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
 {    
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index, site_to_patternID);

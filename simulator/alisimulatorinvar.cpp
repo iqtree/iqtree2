@@ -65,7 +65,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int thread
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorInvar::initVariables(int sequence_length, bool regenerate_root_sequence)
+void AliSimulatorInvar::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
 {
     initSiteSpecificRates(site_specific_rates, sequence_length);
 }

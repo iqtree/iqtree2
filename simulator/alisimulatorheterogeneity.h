@@ -71,7 +71,7 @@ protected:
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, bool regenerate_root_sequence = false);
+    virtual void initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence = false);
     
     /**
     *  insert a new sequence into the current sequence
