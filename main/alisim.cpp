@@ -567,7 +567,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // check whether we should write output to a new file or append it into an existing one
         std::ios_base::openmode open_mode = std::ios_base::out;
         if (i > 0 && super_alisimulator->params->alisim_single_output)
-            open_mode = std::ios_base::app;
+            open_mode = std::ios_base::in|std::ios_base::out|std::ios_base::ate;
         
         // generate multiple alignments one by one
         if (super_alisimulator->tree->isSuperTree())

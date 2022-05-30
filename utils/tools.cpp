@@ -1448,7 +1448,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
-    params.model_id = "";
+    params.keep_seq_order = false;
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
     
@@ -5212,6 +5212,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.rebuild_indel_history_param = convert_double(argv[cnt]);
                 if (params.rebuild_indel_history_param < 0 || params.rebuild_indel_history_param > 1)
                     throw "<proportion> must be between 0 and 1.";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--keep-seq-order") == 0) {
+                params.keep_seq_order = true;
                 continue;
             }
             

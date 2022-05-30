@@ -2527,9 +2527,9 @@ public:
     string tmp_data_filename;
     
     /**
-    *  model id
+    *  TRUE to keep the order of output sequences
     */
-    string model_id;
+    bool keep_seq_order;
     
     /**
     *  param to rebuild the indel history when using indel

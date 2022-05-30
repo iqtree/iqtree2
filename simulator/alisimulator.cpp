@@ -926,8 +926,8 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 {
                     int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
                     string first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
-                    starting_pos = first_line.length();
                     *single_output << first_line;
+                    starting_pos = single_output->tellp();
                 }
             }
             
@@ -1014,7 +1014,9 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                     #pragma omp critical
                     #endif
                     {
-                        //single_output->seekp(pos);
+                        // jump to the correct position before writing if users want to keep the sequence order
+                        if (params->keep_seq_order)
+                            single_output->seekp(pos);
                         (*single_output) << output;
                     }
                 }
@@ -1088,7 +1090,10 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, string output_fi
                 output_filepath = output_filepath + thread_id_str + ".fa";
             
             // open the output stream (create new or append an existing file)
-            openOutputStream(out, output_filepath, open_mode, num_threads > 1);
+            if (num_threads > 1)
+                openOutputStream(out, output_filepath, std::ios_base::out, true);
+            else
+                openOutputStream(out, output_filepath, open_mode);
         }
         
         // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
