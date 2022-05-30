@@ -74,7 +74,7 @@ protected:
     *  randomly generate the ancestral sequence for the root node
     *  by default (initial_freqs = true) freqs could be randomly generated if they are not specified
     */
-    vector<short int> generateRandomSequence(int sequence_length, bool initial_freqs = true);
+    void generateRandomSequence(int sequence_length, vector<short int> &sequence, bool initial_freqs = true);
     
     /**
     *  randomly generate the base frequencies
@@ -104,13 +104,13 @@ protected:
     /**
     *  binary search an item from a set with accumulated probability array
     */
-    int binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> accumulated_probability_maxtrix, double random_number, int start, int end, int first);
+    int binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> &accumulated_probability_maxtrix, double random_number, int start, int end, int first);
     
     /**
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa, int* rstream);
+    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, int* rstream);
     
     /**
     *  reset tree (by reset some variables of nodes)
@@ -162,12 +162,12 @@ protected:
     /**
         selecting & permuting sites (FunDi models)
     */
-    vector<FunDi_Item> selectAndPermuteSites(double proportion, int num_sites);
+    void selectAndPermuteSites(vector<FunDi_Item> &fundi_items, double proportion, int num_sites);
     
     /**
         permuting selected sites (FunDi models)
     */
-    void permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node);
+    void permuteSelectedSites(vector<FunDi_Item> &fundi_items, Node* node);
     
     /**
         process delayed Fundi if it is delayed due to Insertion events
@@ -177,12 +177,12 @@ protected:
     /**
         merge and write sequence in simulations with Indels or FunDi model
     */
-    void mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         write and delete the current chunk of sequence if possible
     */
-    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string, string> input_msa, NeighborVec::iterator it, Node* node);
+    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         branch-specific evolution by multi threads
@@ -228,12 +228,12 @@ protected:
     /**
         generate a random sequence by state frequencies
     */
-    vector<short int> generateRandomSequenceFromStateFreqs(int sequence_length, double* state_freqs, int max_prob_pos);
+    void generateRandomSequenceFromStateFreqs(int sequence_length, vector<short int> &sequence, double* state_freqs, int max_prob_pos);
     
     /**
     *  export a sequence with gaps copied from the input sequence
     */
-    void exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start = 0, int segment_length = -1);
+    void exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> &state_mapping, int segment_start = 0, int segment_length = -1);
     
     /**
         handle indels
@@ -443,7 +443,7 @@ public:
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
+    void generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length
@@ -460,7 +460,7 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static void convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length = -1);
+    static void convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> &state_mapping, int segment_length = -1);
     
     /**
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)

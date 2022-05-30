@@ -230,7 +230,7 @@ void GenomeTree::convertGapsIntoNormal(GenomeNode *node)
 /**
     export new genome from original genome and genome tree
  */
-vector<short int> GenomeTree::exportNewGenome(vector<short int> ori_seq, int seq_length, int UNKOWN_STATE)
+vector<short int> GenomeTree::exportNewGenome(vector<short int> &ori_seq, int seq_length, int UNKOWN_STATE)
 {
     // init new genome
     vector<short int> new_seq(seq_length, UNKOWN_STATE);
@@ -278,7 +278,7 @@ vector<short int> GenomeTree::exportNewGenome(vector<short int> ori_seq, int seq
 /**
  export readable characters (for writing to file) from original genome and genome tree
  */
-void GenomeTree::exportReadableCharacters(vector<short int> ori_seq, int num_sites_per_state, vector<string> state_mapping, string &output)
+void GenomeTree::exportReadableCharacters(vector<short int> &ori_seq, int num_sites_per_state, vector<string> &state_mapping, string &output)
 {
     queue<GenomeNode*> genome_nodes;
     root->cumulative_gaps_from_parent = 0;

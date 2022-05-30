@@ -411,10 +411,9 @@ void showParameters(Params params, bool is_partition_model)
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
-vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator)
+void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, vector<short int> &sequence)
 {
     // get variables
-    vector<short int> sequence;
     char *aln_filepath = super_alisimulator->params->alisim_ancestral_sequence_aln_filepath;
     string sequence_name = super_alisimulator->params->alisim_ancestral_sequence_name;
     
@@ -498,8 +497,6 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
     
     // show warning
     outWarning("Using an ancestral sequence with base frequencies that are not compatible with the specification of the model may lead to unexpected results.");
-        
-    return sequence;
 }
 
 /**
@@ -510,7 +507,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // Load ancestral sequence from the input file if user has specified it
     vector<short int> ancestral_sequence;
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
-        ancestral_sequence = retrieveAncestralSequenceFromInputFile(super_alisimulator);
+        retrieveAncestralSequenceFromInputFile(super_alisimulator, ancestral_sequence);
     
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
@@ -669,7 +666,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
     copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad){
+void copySequencesToSuperTree(IntVector &site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
         // find the corresponding node in the current_tree
         Node *current_node = current_tree->findLeafName(node->name);
@@ -704,7 +701,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
     // show an error if continuous gamma is used in inference mode.
     if (alisimulator->params->alisim_inference_mode && alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->is_continuous_gamma)
@@ -981,7 +978,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
 {
     // if write_sequences_from_tmp_data and this node is a leaf -> skip this node as its sequence was already written to the output file
     if ((!(node->isLeaf() && write_sequences_from_tmp_data))
@@ -1174,7 +1171,7 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 /**
 *  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
 */
-void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
+void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name)
 {
     // read tmp_data line by line
     igzstream in;

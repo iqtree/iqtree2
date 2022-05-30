@@ -36,7 +36,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
 /**
     initialize site specific model index based on its weights in the mixture model
 */
-void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID)
+void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector &site_to_patternID)
 {
     new_site_specific_model_index.resize(sequence_length);
     
@@ -101,7 +101,7 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
 /**
     initialize site specific model index based on posterior model probability
 */
-void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector site_to_patternID)
+void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int sequence_length, vector<short int> &new_site_specific_model_index, IntVector &site_to_patternID)
 {
     // dummy variables
     int nmixture = tree->getModel()->getNMixtures();
@@ -131,7 +131,7 @@ void AliSimulatorHeterogeneity::intSiteSpecificModelIndexPosteriorProb(int seque
 /**
     regenerate ancestral sequence based on mixture model component base fequencies
 */
-vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int length, vector<short int> new_site_specific_model_index){
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int length, vector<short int> &new_site_specific_model_index){
     // dummy variables
     ModelSubst* model = tree->getModel();
     int num_models = model->getNMixtures();
@@ -200,7 +200,7 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
 /**
     regenerate sequence based on posterior mean state frequencies (for mixture models)
 */
-vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, IntVector site_to_patternID)
+vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPosteriorMean(int length, IntVector &site_to_patternID)
 {
     ASSERT(tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN);
     
@@ -243,7 +243,7 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPoste
 /**
     initialize caching accumulated_trans_matrix
 */
-void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, DoubleVector branch_lengths, double *trans_matrix, ModelSubst* model)
+void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double *cache_trans_matrix, int num_models, int num_rate_categories, DoubleVector &branch_lengths, double *trans_matrix, ModelSubst* model)
 {
     bool fuse_mixture_model = (model->isMixture() && model->isFused());
     
@@ -377,7 +377,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
 /**
     get site-specific on Posterior Mean Rates (Discrete Gamma/FreeRate)
 */
-void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length, IntVector site_to_patternID)
+void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, int sequence_length, IntVector &site_to_patternID)
 {
     int num_rates = rate_heterogeneity->getNDiscreteRate();
     
@@ -445,7 +445,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector
 /**
     get site-specific rates
 */
-void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> new_site_specific_model_index, int sequence_length, IntVector site_to_patternID)
+void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> &new_site_specific_model_index, int sequence_length, IntVector &site_to_patternID)
 {
     new_site_specific_rate_index.resize(sequence_length);
     site_specific_rates.resize(sequence_length, 1);

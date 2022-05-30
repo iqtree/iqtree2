@@ -38,7 +38,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     
     // innialize set of selected sites for permutation in FunDi model
     if (params->alisim_fundi_taxon_set.size()>0)
-        fundi_items = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
+        selectAndPermuteSites(fundi_items, params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 /**
@@ -69,7 +69,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     
     // innialize set of selected sites for permutation in FunDi model
     if (params->alisim_fundi_taxon_set.size()>0)
-        fundi_items = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
+        selectAndPermuteSites(fundi_items, params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 AliSimulator::~AliSimulator()
@@ -537,14 +537,14 @@ void AliSimulator::getOnlyVariantSites(vector<short int> &variant_state_mask, No
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
+void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
     // reset number of chunks of the root sequence to 1
     tree->MTree::root->sequence->sequence_chunks.resize(1);
     
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
-        tree->MTree::root->sequence->sequence_chunks[0] = generateRandomSequence(expected_num_sites);
+        generateRandomSequence(expected_num_sites, tree->MTree::root->sequence->sequence_chunks[0]);
     // otherwise, using the ancestral sequence + abundant sites
     else
     {
@@ -555,7 +555,8 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
         int num_abundant_sites = expected_num_sites - ancestral_sequence.size();
         if (num_abundant_sites > 0)
         {
-            vector<short int> abundant_sites = generateRandomSequence(num_abundant_sites);
+            vector<short int> abundant_sites;
+            generateRandomSequence(num_abundant_sites, abundant_sites);
             for (int site:abundant_sites)
                 tree->MTree::root->sequence->sequence_chunks[0].push_back(site);
         }
@@ -623,15 +624,14 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
 *  randomly generate the ancestral sequence for the root node
 *  by default (initial_freqs = true) freqs could be randomly generated if they are not specified
 */
-vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool initial_freqs)
+void AliSimulator::generateRandomSequence(int sequence_length, vector<short int> &sequence, bool initial_freqs)
 {
-    // initialize sequence
-    vector<short int> sequence;
-    sequence.resize(sequence_length);
-    
     // if the Frequency Type is FREQ_EQUAL -> randomly generate each site in the sequence follows the normal distribution
     if (tree->getModel()->getFreqType() == FREQ_EQUAL)
     {
+        // initialize sequence
+        sequence.resize(sequence_length);
+        
         for (int i = 0; i < sequence_length; i++)
             sequence[i] =  random_int(max_num_states);
     }
@@ -653,13 +653,11 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool
                 max_prob_pos = i;
         
         // randomly generate the sequence based on the state frequencies
-        sequence = generateRandomSequenceFromStateFreqs(sequence_length, state_freq, max_prob_pos);
+        generateRandomSequenceFromStateFreqs(sequence_length, sequence, state_freq, max_prob_pos);
         
         // delete state_freq
         delete []  state_freq;
     }
-    
-    return sequence;
 }
 
 void AliSimulator::getStateFrequenciesFromModel(IQTree* tree, double *state_freqs){
@@ -1138,7 +1136,7 @@ void AliSimulator::closeOutputStream(ostream *&out, bool force_uncompression)
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa, int* rstream)
+void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, int* rstream)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -1323,7 +1321,7 @@ void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
 /**
     merge and write sequence in simulations with Indels or FunDi model
 */
-void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
     // only handle simulations with Indel or Fundi model in this function
     if (params->alisim_fundi_taxon_set.size() > 0 || params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
@@ -1426,7 +1424,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
 /**
     write and delete the current chunk of sequence if possible
 */
-void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
     // we can only write and delete sequence chunk in normal simulations: without Indels, FunDi, ASC, etc
     if (params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0)
@@ -1634,7 +1632,7 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accum
 /**
 *  binary search an item from a set with accumulated probability array
 */
-int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> accumulated_probability_maxtrix, double random_number, int start, int end, int first)
+int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> &accumulated_probability_maxtrix, double random_number, int start, int end, int first)
 {
     // check search range
     if (start > end)
@@ -1780,7 +1778,7 @@ void AliSimulator::initializeStateMapping(int num_sites_per_state, Alignment *al
 *  convert numerical states into readable characters
 *
 */
-void AliSimulator::convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length)
+void AliSimulator::convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> &state_mapping, int segment_length)
 {
     segment_length = segment_length == -1 ? sequence_length : segment_length;
     ASSERT(segment_length <= sequence_chunk.size());
@@ -1859,11 +1857,10 @@ void AliSimulator::extractMaxTaxaNameLength()
 /**
     selecting & permuting sites (FunDi models)
 */
-vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
+void AliSimulator::selectAndPermuteSites(vector<FunDi_Item> &fundi_items, double proportion, int num_sites){
     ASSERT(proportion<1);
     
     // dummy variables
-    vector<FunDi_Item> fundi_items;
     IntVector tmp_selected_sites;
     int num_selected_sites = round(proportion*num_sites);
     
@@ -1932,14 +1929,12 @@ vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int nu
         fundi_items.push_back(tmp_fundi_item);
         fundi_items[0].new_position = position_pool[0];
     }
-    
-    return fundi_items;
 }
 
 /**
     permuting selected sites (FunDi models)
 */
-void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node)
+void AliSimulator::permuteSelectedSites(vector<FunDi_Item> &fundi_items, Node* node)
 {
     mergeChunks(node);
     
@@ -2181,7 +2176,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
     }
     
     // re-generate a new sequence for the root from the state frequencies
-    root->sequence->sequence_chunks[0] = generateRandomSequenceFromStateFreqs(sequence_length, state_freqs, max_prob_pos);
+    generateRandomSequenceFromStateFreqs(sequence_length, root->sequence->sequence_chunks[0], state_freqs, max_prob_pos);
     
     // release the memory of state_freqs
     delete[] state_freqs;
@@ -2190,9 +2185,8 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
 /**
     generate a random sequence by state frequencies
 */
-vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int sequence_length, double* state_freqs, int max_prob_pos)
+void AliSimulator::generateRandomSequenceFromStateFreqs(int sequence_length, vector<short int> &sequence, double* state_freqs, int max_prob_pos)
 {
-    vector<short int> sequence;
     sequence.resize(sequence_length);
     
     // convert the probability matrix into an accumulated probability matrix
@@ -2201,14 +2195,12 @@ vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int sequenc
     // randomly generate each site in the sequence follows the base frequencies defined by the user
     for (int i = 0; i < sequence_length; i++)
         sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freqs, 0, max_num_states, max_prob_pos, NULL);
-    
-    return sequence;
 }
 
 /**
 *  export a sequence with gaps copied from the input sequence
 */
-void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start, int segment_length)
+void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> &state_mapping, int segment_start, int segment_length)
 {
     segment_length = segment_length == -1 ? sequence_length : segment_length;
     
@@ -2548,7 +2540,8 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
         outError("Sorry! Could not generate a positive length (for insertion events) based on the insertion-distribution within 1000 attempts.");
     
     // insert new_sequence into the current sequence
-    vector<short int> new_sequence = generateRandomSequence(length, false);
+    vector<short int> new_sequence;
+    generateRandomSequence(length, new_sequence, false);
     insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
     
     // if RATE_MATRIX approach is used -> update total_sub_rate and sub_rate_by_site
