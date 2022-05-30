@@ -508,7 +508,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int>* &dad_seq_chunk, vector<short int>* &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths){
+void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths){
     
     // estimate the sequence for the current neighbor
     // check if trans_matrix could be caching (without rate_heterogeneity or the num of rate_categories is lowr than the threshold (5)) or not
@@ -543,14 +543,14 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
         intializeCachingAccumulatedTransMatrices(cache_trans_matrix, num_models, num_rate_categories, branch_lengths, trans_matrix, model);
 
         // estimate the sequence
-        for (int i = 0 ; i < (*node_seq_chunk).size(); i++)
+        for (int i = 0 ; i < node_seq_chunk.size(); i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
-            if ((*dad_seq_chunk)[i] == STATE_UNKNOWN)
-                (*node_seq_chunk)[i] = STATE_UNKNOWN;
+            if (dad_seq_chunk[i] == STATE_UNKNOWN)
+                node_seq_chunk[i] = STATE_UNKNOWN;
             else
             {
-                (*node_seq_chunk)[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[segment_start + i] , segment_start + i, num_rate_categories, (*dad_seq_chunk)[i], rstream);
+                node_seq_chunk[i] = estimateStateFromAccumulatedTransMatrices(cache_trans_matrix, site_specific_rates[segment_start + i] , segment_start + i, num_rate_categories, dad_seq_chunk[i], rstream);
             }
         }
         
@@ -560,15 +560,15 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
     // otherwise, estimating the sequence without trans_matrix caching
     else
     {
-        for (int i = 0 ; i < (*node_seq_chunk).size(); i++)
+        for (int i = 0 ; i < node_seq_chunk.size(); i++)
         {
             // if the parent's state is a gap -> the children's state should also be a gap
-            if ((*dad_seq_chunk)[i] == STATE_UNKNOWN)
-                (*node_seq_chunk)[i] = STATE_UNKNOWN;
+            if (dad_seq_chunk[i] == STATE_UNKNOWN)
+                node_seq_chunk[i] = STATE_UNKNOWN;
             else
             {
                 // randomly select the state, considering it's dad states, and the transition_probability_matrix
-                (*node_seq_chunk)[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[segment_start + i], site_specific_rates[segment_start + i], trans_matrix, (*it)->length, (*dad_seq_chunk)[i], segment_start + i, rstream);
+                node_seq_chunk[i] = estimateStateFromOriginalTransMatrix(model, site_specific_model_index[segment_start + i], site_specific_rates[segment_start + i], trans_matrix, (*it)->length, dad_seq_chunk[i], segment_start + i, rstream);
             }
         }
     }

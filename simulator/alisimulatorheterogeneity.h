@@ -66,7 +66,7 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int>* &dad_seq_chunk, vector<short int>* &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
     
     /**
         initialize variables (e.g., site-specific rate)
