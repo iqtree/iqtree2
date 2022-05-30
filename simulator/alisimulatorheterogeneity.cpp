@@ -661,7 +661,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
 /**
     initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
 */
-void AliSimulatorHeterogeneity::initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
+void AliSimulatorHeterogeneity::initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> &sequence)
 {
     // initialize variables
     total_sub_rate = 0;

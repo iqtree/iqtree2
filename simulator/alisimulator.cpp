@@ -497,7 +497,7 @@ void AliSimulator::removeConstantSites(){
 /**
     only get variant sites
 */
-void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad){
+void AliSimulator::getOnlyVariantSites(vector<short int> &variant_state_mask, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
         // dummy sequence
         vector<short int> variant_sites(variant_state_mask.size(),0);
@@ -1426,7 +1426,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
 /**
     write and delete the current chunk of sequence if possible
 */
-void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
     // we can only write and delete sequence chunk in normal simulations: without Indels, FunDi, ASC, etc
     if (params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0)
@@ -1780,7 +1780,7 @@ void AliSimulator::initializeStateMapping(int num_sites_per_state, Alignment *al
 *  convert numerical states into readable characters
 *
 */
-void AliSimulator::convertNumericalStatesIntoReadableCharacters(vector<short int> sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length)
+void AliSimulator::convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length)
 {
     segment_length = segment_length == -1 ? sequence_length : segment_length;
     ASSERT(segment_length <= sequence_chunk.size());
@@ -2208,7 +2208,7 @@ vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int sequenc
 /**
 *  export a sequence with gaps copied from the input sequence
 */
-void AliSimulator::exportSequenceWithGaps(vector<short int> sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start, int segment_length)
+void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start, int segment_length)
 {
     segment_length = segment_length == -1 ? sequence_length : segment_length;
     
@@ -2297,7 +2297,7 @@ void AliSimulator::extractRatesJMatrix(ModelSubst *model)
 /**
     initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
 */
-void AliSimulator::initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
+void AliSimulator::initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> &sequence)
 {
     // initialize variables
     total_sub_rate = 0;
@@ -2679,7 +2679,7 @@ void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<
 *  randomly select a valid position (not a deleted-site) for insertion/deletion event
 *
 */
-int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> sequence)
+int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> &sequence)
 {
     int position = -1;
     for (int i = 0; i < upper_bound; i++)

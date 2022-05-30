@@ -142,7 +142,7 @@ protected:
     /**
         only get variant sites
     */
-    void getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad);
+    void getOnlyVariantSites(vector<short int> &variant_state_mask, Node *node, Node *dad);
     
     /**
         estimate length_ratio (for models with +ASC)
@@ -182,7 +182,7 @@ protected:
     /**
         write and delete the current chunk of sequence if possible
     */
-    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string, string> input_msa, NeighborVec::iterator it, Node* node);
+    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> state_mapping, map<string, string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
         branch-specific evolution by multi threads
@@ -233,7 +233,7 @@ protected:
     /**
     *  export a sequence with gaps copied from the input sequence
     */
-    void exportSequenceWithGaps(vector<short int> sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start = 0, int segment_length = -1);
+    void exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping, int segment_start = 0, int segment_length = -1);
     
     /**
         handle indels
@@ -263,7 +263,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> &sequence);
     
     /**
     *  insert a new sequence into the current sequence
@@ -293,7 +293,7 @@ protected:
     *  randomly select a valid position (not a deleted-site) for insertion/deletion event
     *
     */
-    int selectValidPositionForIndels(int upper_bound, vector<short int> sequence);
+    int selectValidPositionForIndels(int upper_bound, vector<short int> &sequence);
     
     /**
         generate indel-size from its distribution
@@ -460,7 +460,7 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static void convertNumericalStatesIntoReadableCharacters(vector<short int> sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length = -1);
+    static void convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> state_mapping, int segment_length = -1);
     
     /**
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
