@@ -920,13 +920,17 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 openOutputStream(single_output, single_output_filepath, open_mode);
                 
                 // output the first line
+                string first_line = "";
                 if (params->aln_output_format != IN_FASTA)
                 {
                     int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                    string first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
+                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
                     *single_output << first_line;
-                    starting_pos = single_output->tellp();
                 }
+                if (!params->do_compression)
+                    starting_pos = single_output->tellp();
+                else
+                    starting_pos = first_line.length();
             }
             
             // dummy variables

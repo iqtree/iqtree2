@@ -514,9 +514,9 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
     
     // do not support compression when outputting multiple data sets into a same file
-    if (Params::getInstance().do_compression && Params::getInstance().alisim_single_output)
+    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
     {
-        outWarning("Compression is not supported when outputting multiple alignments into a single output file. AliSim will output file in normal format.");
+        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or keeping the order of output sequences. AliSim will output file in normal format.");
         
         Params::getInstance().do_compression = false;
         super_alisimulator->params->do_compression = false;
@@ -778,11 +778,19 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
+            int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
+            string first_line = "";
             if (alisimulator->params->aln_output_format != IN_FASTA)
             {
-                int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-                *out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
+                first_line = convertIntToString(num_leaves) + " " + convertIntToString(sequence_length*num_sites_per_state) + "\n";
+                *out << first_line;
             }
+            
+            // get the position to write output
+            uint64_t start_pos = first_line.length();
+            if (!alisimulator->params->do_compression)
+                start_pos = out->tellp();
+            uint64_t output_line_length = sequence_length * num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
@@ -793,13 +801,18 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             if (write_sequences_from_tmp_data)
                 writeSeqsFromTmpDataAndGenomeTreesIndels(alisimulator, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name);
         
-
+            int num_threads = 1;
             #ifdef _OPENMP
             #pragma omp parallel
             #pragma omp single
+            {
+                num_threads = omp_get_num_threads();
             #endif
-            // browsing all sequences, converting each sequence & caching & writing output string to file
-            writeASequenceToFile(aln, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, write_sequences_from_tmp_data, alisimulator->tree->root, alisimulator->tree->root);
+                // browsing all sequences, converting each sequence & caching & writing output string to file
+                writeASequenceToFile(aln, sequence_length, num_threads, alisimulator->params->keep_seq_order, start_pos, output_line_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, write_sequences_from_tmp_data, alisimulator->tree->root, alisimulator->tree->root);
+            #ifdef _OPENMP
+            }
+            #endif
 
             // close the output file for Indels
             if (write_indels_output)
@@ -978,7 +991,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, bool keep_seq_order, uint64_t start_pos, uint64_t output_line_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
 {
     // if write_sequences_from_tmp_data and this node is a leaf -> skip this node as its sequence was already written to the output file
     if ((!(node->isLeaf() && write_sequences_from_tmp_data))
@@ -991,6 +1004,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
             string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
             string output(sequence_length * num_sites_per_state, '-');
+            uint64_t output_pos = start_pos + node->id * output_line_length;
             
             // convert non-empty sequence
             AliSimulator::convertNumericalStatesIntoReadableCharacters(node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, state_mapping);
@@ -1015,6 +1029,10 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             #pragma omp critical
             #endif
             {
+                // jump to the correct position if user want to keep sequence order
+                if (num_threads > 1 && keep_seq_order)
+                    out.seekp(output_pos);
+                
                 // write output to file
                 out << output << "\n";
                 
@@ -1027,7 +1045,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, write_sequences_from_tmp_data, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, num_threads, keep_seq_order, start_pos, output_line_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, write_sequences_from_tmp_data, (*it)->node, node);
     }
 }
 
