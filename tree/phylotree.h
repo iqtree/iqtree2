@@ -1914,6 +1914,22 @@ public:
     virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream);
 
     /**
+     compute ancestral site concordance factor
+     @param branch target branch
+     @param nquartets number of quartets
+     @param[out] info concordance information
+     @param rstream random stream
+     */
+    virtual void computeAncestralSiteConcordance(Branch &branch, int nquartets, int *rstream,
+        double *marginal_ancestral_prob, int *marginal_ancestral_seq);
+
+    /**
+     compute ancestral sCF for all branches
+     */
+    void computeAllAncestralSiteConcordance();
+
+    
+    /**
      Compute gene concordance factor
      for each branch, assign how many times this branch appears in the input set of trees.
      Work fine also when the trees do not have the same taxon set.

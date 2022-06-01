@@ -1052,6 +1052,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.second_tree = NULL;
     params.support_tag = NULL;
     params.site_concordance = 0;
+    params.ancestral_site_concordance = false;
     params.site_concordance_partition = false;
     params.print_cf_quartets = false;
     params.print_df1_trees = false;
@@ -1962,6 +1963,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --scf please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--ascf") == 0) {
+                params.ancestral_site_concordance = true;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --ascf NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --ascf please";
                 continue;
             }
             if (strcmp(argv[cnt], "--scf-part") == 0 || strcmp(argv[cnt], "--cf-verbose") == 0) {

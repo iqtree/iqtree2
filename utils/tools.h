@@ -1365,6 +1365,11 @@ public:
         number of quartets for site concordance factor
      */
     int site_concordance;
+    
+    /**
+        true to compute site concordance using ancestral states at four surrounding nodes
+    */
+    bool ancestral_site_concordance;
 
     /**
      TRUE to print concordant sites per partition

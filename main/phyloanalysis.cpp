@@ -4024,6 +4024,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         else
             runMultipleTreeReconstruction(params, tree->aln, tree);
         
+        if (params.ancestral_site_concordance)
+            tree->computeAllAncestralSiteConcordance();
+        
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);
         }
