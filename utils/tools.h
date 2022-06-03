@@ -1367,9 +1367,11 @@ public:
     int site_concordance;
     
     /**
-        true to compute site concordance using ancestral states at four surrounding nodes
+        0 (default): do the published sCF (Minh, Matt, Rob 2020)
+        1 to compute site concordance using ancestral states at four surrounding nodes
+        2 to use ancestral state based on separate subtrees
     */
-    bool ancestral_site_concordance;
+    int ancestral_site_concordance;
 
     /**
      TRUE to print concordant sites per partition
