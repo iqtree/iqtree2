@@ -4229,7 +4229,7 @@ void assignBranchSupportNew(Params &params) {
     }
     string prefix = (params.out_prefix) ? params.out_prefix : params.user_file;
     string str = prefix + ".cf.tree";
-    tree->printTree(str.c_str());
+    tree->printTree(str.c_str(), WT_BR_LEN + WT_NEWLINE);
     cout << "Tree with concordance factors written to " << str << endl;
     str = prefix + ".cf.tree.nex";
     string filename = prefix + ".cf.stat";

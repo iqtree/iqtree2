@@ -19,8 +19,15 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     bool orig_kernel_nonrev;
     double *marginal_ancestral_prob;
     int *marginal_ancestral_seq;
-    if (params->ancestral_site_concordance)
+    if (params->ancestral_site_concordance) {
         initMarginalAncestralState(cout, orig_kernel_nonrev, marginal_ancestral_prob, marginal_ancestral_seq);
+        if (verbose_mode >= VB_MED) {
+            cout << "Node\tSite\tState";
+            for (size_t i = 0; i < aln->num_states; i++)
+                cout << "\tp_" << aln->convertStateBackStr(i);
+            cout << endl;
+        }
+    }
 
 #ifdef _OPENMP
     if (params->ancestral_site_concordance) {
@@ -352,6 +359,11 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         double *ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
         computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.first,
             ptn_ancestral_prob, marginal_ancestral_seq);
+//        PhyloNeighbor* nei = (PhyloNeighbor*)(*it)->node->findNeighbor(branch.first);
+//        computeMarginalAncestralState(nei, (PhyloNode*)(*it)->node,
+//            ptn_ancestral_prob, marginal_ancestral_seq);
+        if (verbose_mode >= VB_MED)
+            writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, marginal_ancestral_seq);
         first_ancestral_prob.push_back(ptn_ancestral_prob);
     }
 
@@ -364,6 +376,11 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         double *ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
         computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.second,
             ptn_ancestral_prob, marginal_ancestral_seq);
+//        PhyloNeighbor* nei = (PhyloNeighbor*)(*it)->node->findNeighbor(branch.second);
+//        computeMarginalAncestralState(nei, (PhyloNode*)(*it)->node,
+//            ptn_ancestral_prob, marginal_ancestral_seq);
+        if (verbose_mode >= VB_MED)
+            writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, marginal_ancestral_seq);
         second_ancestral_prob.push_back(ptn_ancestral_prob);
     }
     
@@ -466,8 +483,8 @@ void PhyloTree::computeAllAncestralSiteConcordance() {
     cout << getRealTime() - start_time << " sec" << endl;
     string prefix = params->out_prefix;
     string str = prefix + ".cf.tree";
-    printTree(str.c_str());
-    cout << "Tree with concordance factors written to " << str << endl;
+    printTree(str.c_str(), WT_BR_LEN + WT_NEWLINE);
+    cout << "Tree with ancestral concordance factors written to " << str << endl;
     str = prefix + ".cf.tree.nex";
     string filename = prefix + ".cf.stat";
     printNexus(str, WT_BR_LEN, "See " + filename + " for branch annotation meanings." +
