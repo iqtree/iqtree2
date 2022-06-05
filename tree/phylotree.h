@@ -74,6 +74,13 @@ class ParsimonyPathVector;
 class PhyloTreeThreadingContext;
 class LikelihoodBlockPairs;
 
+//All classes that build starting trees from distance
+//matrices (via neighbour-joining, or similar algoirhtms)
+//implement this interface...
+namespace StartTree {
+    class BuilderInterface;
+}
+
 #define BOOT_VAL_FLOAT
 #define BootValType float
 //#define BootValType double
@@ -797,7 +804,7 @@ public:
      @param  taskDescription - how to describe what is happening
      @param  bidirectional - if true, calculate parsimony in both directions
      @param  report_progress - if true, report progress
-     @param  neighbor - if not supplied, getRoot()->getFirstNeighbor() will be used
+     @param  neighbor - if not supplied, getRoot()->getNeighborByIndex(0) will be used
      @param  starting_node - if not supplied, getRoot() will be used
      @return parsimony score of the tree
      */
@@ -2320,6 +2327,10 @@ public:
             @param params program parameters
      */
     void computeBioNJ(Params &params);
+    bool computeDivergentBIONJSubtrees
+         ( const std::string& diverge_graph_file_path
+         , const std::string& bionj_tree_path 
+         , StartTree::BuilderInterface* builder);
 
     /**
         called by fixNegativeBranch to fix one branch
@@ -3052,10 +3063,13 @@ protected:
     void setSubsetNumbersForLeafNodes();    //Just the Leaves
     void setSubsetNumbersForAllNodes(); //All nodes, Interiors too
 
+    void dumpSubsetStructure();
     void dumpSubsetStructure(PhyloNode* node, 
                              PhyloNode* prev, int indent);
 
     void setUpSubtreesForDivergentModels(ModelSubst* top_model);
+    bool loadDivergenceGraph
+         (const Params& params, MTree& div_tree, NameToIDMap& name_to_id);
 
     int getSubTreeNumberForBranch(PhyloNode* dad, 
                                   PhyloNode* node) const;

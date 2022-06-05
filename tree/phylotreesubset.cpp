@@ -19,36 +19,18 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
         //No divergent models?  Nothing to do!
         return;
     }
-    std::string div_file_path = params->divergence_graph_file_path;
-    if (div_file_path.empty()) {
+    if (!params->haveDivergenceGraphFile()) {
         outError("Cannot use divergent models without a divergence graph");
     }
 
     //Load up divergence graph
-    MTree div_tree;
-    bool  is_div_tree_rooted = false;
-    std::cout << "Loading divergence graph"
-              << " from file: " << div_file_path 
-              << "." << std::endl;
-    div_tree.readTree(div_file_path.c_str(), is_div_tree_rooted);
-    Node* div_root = div_tree.getRoot();
-
-    //Set up a mapping from taxon name to taxon id.
+    MTree       div_tree;
     NameToIDMap name_to_id;
-    intptr_t taxa_in_alignment = aln->getMapFromNameToID(name_to_id);
-    intptr_t taxa_in_div_graph = div_tree.setNodeIdsFromMap(name_to_id);
-    if (taxa_in_alignment!=taxa_in_div_graph) {
-        std::stringstream complaint;
-        complaint << "There were " << taxa_in_alignment << " taxa"
-                  << " in the alignment, but only " 
-                  << taxa_in_div_graph
-                  << " of those taxa were mentioned,"
-                  << " in the divergence graph.";
-        outWarning(complaint.str());
-    }
+    loadDivergenceGraph(*params, div_tree, name_to_id);
 
     //For each divergent model, identify the way that it
     //partitions the taxa in the tree
+    Node* div_root = div_tree.getRoot();
     std::vector<IntVector> subsets_for_all_models;
     ASSERT(div_models.size()==1);
     for (ModelDivergent* div_model: div_models) {
@@ -95,6 +77,31 @@ void PhyloTree::setUpSubtreesForDivergentModels(ModelSubst* top_model) {
     showProgress();
 }
 
+bool PhyloTree::loadDivergenceGraph
+    (const Params& params, MTree& div_tree, NameToIDMap& name_to_id) {
+    auto div_file_path = params.divergence_graph_file_path;
+    bool is_div_tree_rooted = false;
+    std::cout << "Loading divergence graph"
+              << " from file: " << div_file_path 
+              << "." << std::endl;
+    div_tree.readTree(div_file_path.c_str(), is_div_tree_rooted);
+
+    //Set up a mapping from taxon name to taxon id.
+    intptr_t taxa_in_alignment = aln->getMapFromNameToID(name_to_id);
+    intptr_t taxa_in_div_graph = div_tree.setNodeIdsFromMap(name_to_id);
+    if (taxa_in_alignment!=taxa_in_div_graph) {
+        std::stringstream complaint;
+        complaint << "There were " << taxa_in_alignment << " taxa"
+                  << " in the alignment, but only " 
+                  << taxa_in_div_graph
+                  << " of those taxa were mentioned,"
+                  << " in the divergence graph.";
+        outWarning(complaint.str());
+        return false;
+    }
+    return true;
+}
+
 PhyloNodeVector PhyloTree::getAllNodesInTree() const {
     auto root = getRoot();
     PhyloNodeVector answer;
@@ -104,6 +111,9 @@ PhyloNodeVector PhyloTree::getAllNodesInTree() const {
 
 void PhyloTree::setSubsetNumbersForLeafNodes() {
     for (PhyloNode* leaf: getTaxaNodesInIDOrder()) {
+        if (leaf==getRoot()) {
+            continue;
+        }
         int subset_number = aln->getSequenceSubset(leaf->id);
         leaf->setSubsetNumber(subset_number);
     }
@@ -181,11 +191,23 @@ void PhyloTree::setSubsetNumbersForAllNodes() {
     }
 }
 
+void PhyloTree::dumpSubsetStructure() {
+    dumpSubsetStructure(getRoot(), nullptr, 0);
+}
+
 void PhyloTree::dumpSubsetStructure
         (PhyloNode* node, PhyloNode* prev, int indent) {
+    std::stringstream length_info;
+    if (prev!=nullptr) {
+        length_info.precision(6);
+        length_info << "(len " << node->findNeighbor(prev)->length << ")";
+    }
+
     LOG_LINE(VerboseMode::VB_MIN, std::string(indent, ' ')
+        << length_info.str()
         << node->id << " " << node->name 
-        << " (subset " << node->getSubsetNumber() << ")" );
+        << " (subset " << node->getSubsetNumber() << ")" 
+        << " (degree " << node->degree() << ")");
     FOR_EACH_ADJACENT_PHYLO_NODE(node, prev, it, adj) {
         dumpSubsetStructure(adj, node, indent+1);
     }
@@ -343,14 +365,13 @@ void PhyloTree::handleDivergentModelBoundary
 
     ASSERT((ptn_lower % vector_size) == 0);
     //Otherwise, formula for start_lh is invalid.
-    ASSERT((ptn_upper % vector_size) == 0);
 
-    LOG_LINE(VerboseMode::VB_MIN, "nstates=" << nstates
-             << ", ncat=" << ncat << ", fused=" << fused
-             << ", n_mix=" << n_mix << ", ncat_mix=" << ncat_mix
-             << ", v_by_s=" << v_by_s << ", block=" << v_by_s * ncat_mix
-             << ", ptn_lower=" << ptn_lower
-             << ", ptn_upper=" << ptn_upper);
+    //LOG_LINE(VerboseMode::VB_MIN, "nstates=" << nstates
+    //         << ", ncat=" << ncat << ", fused=" << fused
+    //         << ", n_mix=" << n_mix << ", ncat_mix=" << ncat_mix
+    //         << ", v_by_s=" << v_by_s << ", block=" << v_by_s * ncat_mix
+    //         << ", ptn_lower=" << ptn_lower
+    //         << ", ptn_upper=" << ptn_upper);
 
     //
     //Question: for mixture models, is information stored 
@@ -371,13 +392,13 @@ void PhyloTree::handleDivergentModelBoundary
     std::vector<double> cat_prop(cat_count, 1.0);
     for (auto c=start_cat_no; c<stop_cat_no; ++c) {
         int     denom          = fused ? 1 : ncat;
-        int     mymix          = c/denom;
-        int     mycat          = c%ncat;
+        int     mymix          = c / denom;
+        int     mycat          = c % ncat;
         cat_prop[c - start_cat_no ] 
             = rate_model->getProp(mycat) 
             * model_to_use->getMixtureWeight(mymix);
-        LOG_LINE(VerboseMode::VB_MIN, "cat_prop for cat " << c
-             << " is " << cat_prop[c - start_cat_no ]);
+        //LOG_LINE(VerboseMode::VB_MIN, "cat_prop for cat " << c
+        //     << " is " << cat_prop[c - start_cat_no ]);
     }
 
     double* partial_lh   = start_lh;
@@ -389,21 +410,21 @@ void PhyloTree::handleDivergentModelBoundary
         double log_lh_here = 0.0; //log of likelihood for the 
                                   //sites in this pattern block
         int v_size_here = (ptn + vector_size < ptn_upper) 
-                        ? vector_size : (ptn_upper-ptn);
+                        ? vector_size : (ptn_upper - ptn);
 
         for (int vector_index = 0; vector_index < v_size_here; ++vector_index) { 
             double lh_for_vector_posn = 0.0; //likelihood (over all states), 
                                              //this pattern            
             for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
                 double lh_for_state = 0.0; //likelihood over all rate categories
-                                           //and mixtures, for this pattern
+                                           //and mixtures, for state, for this pattern
                 int    cat          = start_cat_no;                
                 for (int cat_offset = start_cat_no * v_by_s
                      ; cat < stop_cat_no
                      ; cat_offset += v_by_s, ++cat) {
                     auto   ix      = cat_offset + state_offset + vector_index;
                     double lh_here = abs(partial_lh [ ix ])
-                                   * cat_prop   [ cat - start_cat_no ];
+                                   * cat_prop [ cat - start_cat_no ];
                     //Todo: what about scaling?!  Doesn't that need to be
                     //taken into account?  Somehow?
                     //LOG_LINE(VerboseMode::VB_MIN, "ptn+i=" << (ptn+vector_index)
@@ -412,10 +433,14 @@ void PhyloTree::handleDivergentModelBoundary
                 }
                 lh_for_vector_posn += lh_for_state;
             }
+            double log_lh_delta = (lh_for_vector_posn)==0
+                                  ? 0 : log(lh_for_vector_posn);
+            double freq = ptn_freq[ptn+vector_index];                                  
             //LOG_LINE(VerboseMode::VB_MIN, "ptn[" << (ptn+vector_index) <<"]"
-            //         << " has lh " << lh_for_vector_posn);
-            ASSERT(0<lh_for_vector_posn);
-            log_lh_here += log(lh_for_vector_posn) * ptn_freq[ptn+vector_index];        
+            //         << " has lh " << lh_for_vector_posn 
+            //         << " ln(lh) " << log_lh_delta
+            //         << " and frequency " << freq );
+            log_lh_here += log_lh_delta * freq;        
         }
         total_log_lh += log_lh_here;
     }
@@ -425,22 +450,22 @@ void PhyloTree::handleDivergentModelBoundary
         total_ptn_freq += static_cast<double>(ptn_freq[ptn]);
     }
 
-    double ptn_count      = ptn_upper - ptn_lower;
+    //double ptn_count      = ptn_upper - ptn_lower;
     double multiplier     = 1.0 / total_ptn_freq;;
     double log_lh_per_ptn = total_log_lh * multiplier;
     double lh_per_ptn     = exp(log_lh_per_ptn);    
-    LOG_LINE(VerboseMode::VB_MIN, "ptn_count is " << ptn_count
-             << ", total_ptn_freq is " << total_ptn_freq
-             << ", multiplier is "     << multiplier
-             << ", log_lh_per_ptn is " << log_lh_per_ptn 
-             << ", and lh_per_ptn is " << lh_per_ptn);
+    //LOG_LINE(VerboseMode::VB_MIN, "ptn_count is " << ptn_count
+    //         << ", total_ptn_freq is " << total_ptn_freq
+    //         << ", multiplier is "     << multiplier
+    //         << ", log_lh_per_ptn is " << log_lh_per_ptn 
+    //         << ", and lh_per_ptn is " << lh_per_ptn);
     
     partial_lh = start_lh;
     int start_cat_offset = start_cat_no * v_by_s;
     int stop_cat_offset  = stop_cat_no  * v_by_s;
-    LOG_LINE(VerboseMode::VB_MIN, 
-             "start_cat_offset is " << start_cat_offset
-             << ", stop_cat_offset is " << stop_cat_offset);
+    //LOG_LINE(VerboseMode::VB_MIN, 
+    //         "start_cat_offset is " << start_cat_offset
+    //         << ", stop_cat_offset is " << stop_cat_offset);
     for (intptr_t ptn = ptn_lower; ptn < ptn_upper
          ; partial_lh += block, ptn += vector_size) {
         for (int cat_offset = start_cat_offset

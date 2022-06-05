@@ -4675,8 +4675,16 @@ void PhyloTree::computeBioNJ(Params &params) {
             }
         } else if (this->dist_matrix!=nullptr) {
             double start_time = getRealTime();
-            wasDoneInMemory = treeBuilder->constructTreeInMemory
-            ( this->aln->getSeqNames(), dist_matrix, bionj_file);
+            if (params.haveDivergenceGraphFile() &&
+                treeBuilder->setSubtreeOnly(true)) {             
+                auto graph_file = params.divergence_graph_file_path;
+                wasDoneInMemory = computeDivergentBIONJSubtrees
+                                  (graph_file, bionj_file, treeBuilder);
+            }
+            else {
+                wasDoneInMemory = treeBuilder->constructTreeInMemory
+                ( this->aln->getSeqNames(), dist_matrix, bionj_file);
+            }
             if (wasDoneInMemory) {
                 //Don't log it yet!
                 timeToCalculateMatrix = getRealTime() - start_time;
@@ -4720,6 +4728,133 @@ void PhyloTree::computeBioNJ(Params &params) {
         cout << "Loading tree (from file " << bionj_file << ") took "
              << (getRealTime()-tree_load_start_time) << " sec." << endl;
     }
+}
+
+inline bool truncateFile(const std::string& file_name) {
+    //Todo: catch errors.  Log them.  Return false;
+    ofstream out;
+    out.open(file_name, std::ios_base::trunc);
+    out.close();
+    return true;
+}
+
+inline bool appendFile(const char* text, const std::string& file_name) {
+    //Todo: catch errors.  Log them.  Return false;
+    ofstream out;
+    out.open(file_name, std::ios_base::app);
+    out << text;
+    out.close();
+    return true;
+}
+
+bool PhyloTree::computeDivergentBIONJSubtrees
+    (const std::string& diverge_graph_file_path
+    ,const std::string& bionj_tree_path, StartTree::BuilderInterface* builder ) {
+    MTree       div_tree;
+    NameToIDMap name_to_id;
+    if (!loadDivergenceGraph(*params, div_tree, name_to_id)) {
+        return false;
+    }
+    Node* div_root = div_tree.getRoot();
+    Node* div_top  = div_root;
+    if (div_root->isLeaf()) {
+        div_top = div_root->firstNeighbor()->getNode();
+    }
+    class NumberedBranch : public Branch {
+        public:
+            typedef Branch super;
+            const char* prefix;
+            NumberedBranch(const NumberedBranch &rhs) = default;
+            NumberedBranch& operator=(const NumberedBranch &rhs) = default;
+            NumberedBranch(Node* node, Node* dad, const char* what_prefix) 
+                : super(node,dad), prefix(what_prefix) {                
+            }
+    };
+    std::vector<NumberedBranch> node_stack;
+    node_stack.emplace_back(div_top, div_top, "");
+
+    truncateFile(bionj_tree_path);
+    while (!node_stack.empty()) {
+        auto  top  = node_stack.back();
+        Node* node = top.first;
+        Node* dad  = top.second;
+        const char* prefix = top.prefix;
+        node_stack.pop_back();
+        if (node==nullptr) {
+            appendFile("):-1", bionj_tree_path);
+            continue;
+        }
+        appendFile(prefix, bionj_tree_path);
+        appendFile("(",    bionj_tree_path);
+        std::vector<size_t> leaf_taxa_ids;
+        StrVector           leaf_taxa_names;
+        NodeVector          interiors;
+        FOR_EACH_ADJACENT_NODE(node, dad, it, child) {
+            if (child->isLeaf()) {
+                if (child==div_root) {
+                    continue;
+                }
+                leaf_taxa_ids.push_back(child->id);
+                leaf_taxa_names.push_back(child->name);
+            } else {
+                interiors.push_back(child);
+            }
+        }
+        size_t taxon_count = leaf_taxa_ids.size();
+        if (taxon_count==1) {
+            std::stringstream single_node_subtree;
+            single_node_subtree << leaf_taxa_names.front() << ":-1";
+            appendFile(single_node_subtree.str().c_str(), bionj_tree_path);
+        }
+        if (1<taxon_count) {
+            std::vector<double> local_dist_matrix(taxon_count*taxon_count);
+            size_t k=0;
+            for (int i=0; i<taxon_count; ++i) {
+                size_t row_index = leaf_taxa_ids[i] * aln->getNSeq();
+                for (int j=0; j<taxon_count; ++j) {
+                    size_t src_index = row_index + leaf_taxa_ids[j];
+                    local_dist_matrix[++k] =
+                        dist_matrix[src_index];
+                }
+            }
+            if (!interiors.empty()) {
+                appendFile("(", bionj_tree_path);
+            }
+            builder->setIsRooted   (true);
+            builder->setSubtreeOnly(true);
+            builder->setAppendFile (true);
+            builder->constructTreeInMemory
+                (leaf_taxa_names, local_dist_matrix.data(), bionj_tree_path);
+            if (!interiors.empty()) {
+                appendFile("):-1", bionj_tree_path);
+            }
+        }
+        node_stack.emplace_back(nullptr, nullptr, "");
+        //When this is popped from the stack, a ")" will be output
+        //to match the "(" for the front of this interior node.
+        if (!interiors.empty()) {
+            for (Node* child : interiors) {                
+                node_stack.emplace_back(child, node, ", ");
+            }
+            if (taxon_count==0) {
+                node_stack.back().prefix = "";
+            }
+        }
+    }
+    appendFile(";\n", bionj_tree_path);
+
+    std::ifstream see_file;
+    see_file.open(bionj_tree_path, std::ios::in);
+    std::stringstream content_as_buffer;
+    content_as_buffer << see_file.rdbuf();
+    std::cout << content_as_buffer.str() << std::endl;
+
+    PhyloTree readback;
+    bool is_div_tree_rooted = false;
+    readback.readTree(bionj_tree_path.c_str(), is_div_tree_rooted);
+    readback.dumpSubsetStructure();
+
+    return true;
 }
 
 int PhyloTree::setNegativeBranch
@@ -4980,6 +5115,9 @@ void PhyloTree::doNNI(const NNIMove &move, bool clearLH) {
             *(nei21->split) += *((*it)->split);
         }
     }
+
+    //Dump the tree structure
+    //dumpSubsetStructure(getRoot(),nullptr,0);
 }
 
 void PhyloTree::changeNNIBrans(const NNIMove &nnimove) {

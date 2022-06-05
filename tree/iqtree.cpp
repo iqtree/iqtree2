@@ -3436,8 +3436,8 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI, const char* context) {
     const int MAXSTEPS        = leafNum;
     double    curBestScore    = candidateTrees.getBestScore();
 
-//    if (isMixlen())
-//        optimizeBranches();
+    //Dump the tree structure
+    //dumpSubsetStructure(getRoot(),nullptr,0);
 
     Branches nniBranches;
     Branches nonNNIBranches;
