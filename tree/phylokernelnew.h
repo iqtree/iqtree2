@@ -1263,13 +1263,14 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
     size_t* mix_addr         = mix_addr_vector.data();
 
     for (size_t c = 0; c < ncat_mix; c++) {
-        size_t m            = c/denom;
-        mix_addr_nstates[c] = m*nstates;
+        size_t m            = c / denom;
+        mix_addr_nstates[c] = m * nstates;
         mix_addr[c]         = mix_addr_nstates[c]*nstates;
     }
     const size_t  block        = nstates * ncat_mix;
     const size_t  tip_mem_size = max_orig_nptn * nstates;
-    const size_t  scale_size   = SAFE_NUMERIC ? (ptn_upper-ptn_lower) * ncat_mix : (ptn_upper-ptn_lower);
+    const size_t  ptn_count    = ptn_upper - ptn_lower;
+    const size_t  scale_size   = SAFE_NUMERIC ? ptn_count * ncat_mix : ptn_count;
     const double* eval         = model_to_use->getEigenvalues();
     const double* evec         = model_to_use->getEigenvectors();
     const double* inv_evec     = model_to_use->getInverseEigenvectors();
@@ -1495,14 +1496,13 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                             // compute real partial likelihood vector
                             for (size_t x = 0; x < nstates; x++) {
                                 VectorClass vchild = echild_ptr[0] * partial_lh_child[0];
-    //                            double *echild_ptr = echild + (c*nstatesqr+x*nstates);
                                 for (size_t i = 1; i < nstates; i++) {
                                     vchild = mul_add(echild_ptr[i], partial_lh_child[i], vchild);
                                 }
-                                echild_ptr += nstates;
+                                echild_ptr    += nstates;
                                 partial_lh[x] *= vchild;
                             }
-                            partial_lh += nstates;
+                            partial_lh       += nstates;
                             partial_lh_child += nstates;
                         }
                     } // if
@@ -2018,6 +2018,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
     }
 
     if (other_model != model_to_use) {
+        auto ptn_max = aln->size();
+        ptn_upper = ptn_upper < ptn_max ? ptn_upper : ptn_max;
         handleDivergentModelBoundary
             (info, model_to_use, other_model, rate_model, other_rate,
              ptn_lower, ptn_upper, packet_id,
@@ -2034,6 +2036,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info,
                                                 model_to_use, other_model,
                                                 rate_model, other_rate, tip_lh);
                 if (model_to_use!=other_model) {
+                    auto ptn_max = aln->size();
+                    ptn_upper = ptn_upper < ptn_max ? ptn_upper : ptn_max;
                     handleDivergentModelBoundary
                         (info, model_to_use, other_model, 
                          rate_model, other_rate,
