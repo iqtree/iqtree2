@@ -155,11 +155,16 @@ public:
 protected:
     std::vector<size_t>  rowToCluster; //*not* initialized by setSize
     ClusterTree<T>       clusters;     //*not* touched by setSize
-    bool                 isOutputToBeZipped;
     mutable Positions<T> rowMinima;    //*not* touched by setSize
     bool                 silent;
+    bool                 isOutputToBeZipped;
+    bool                 isOutputToBeAppended;
+    bool                 isRooted;
+    bool                 subtreeOnly;
 public:
-    UPGMA_Matrix():super(), isOutputToBeZipped(false), silent(false) {
+    UPGMA_Matrix(): super(), silent(false)
+                  , isOutputToBeZipped(false), isRooted(false)
+                  , subtreeOnly(false) {
     }
     virtual std::string getAlgorithmName() const {
         return "UPGMA";
@@ -193,6 +198,14 @@ public:
         calculateRowTotals();
         return true;
     }
+    virtual bool setIsRooted(bool rootIt) {
+        isRooted = rootIt;
+        return true;
+    }
+    virtual bool setSubtreeOnly(bool wantSubtree) {
+        subtreeOnly = wantSubtree;
+        return true;
+    }
     virtual void prepareToConstructTree() {
         //RapidNJ implementations use this to ensure that their
         //variance matrix is properly initialized.
@@ -210,7 +223,9 @@ public:
         double triangle = row_count * (row_count + 1.0) * 0.5;
         progress_display show_progress(triangle, taskName.c_str(), "", "");
         #endif
-        while ( 3 < row_count ) {
+
+        int degree_of_root = isRooted ? 2 : 3;
+        while ( degree_of_root < row_count ) {
             getMinimumEntry(best);
             cluster(best.column, best.row);
             #if USE_PROGRESS_DISPLAY
@@ -223,14 +238,21 @@ public:
         #endif
         return true;
     }
-    virtual void setZippedOutput(bool zipIt) {
+    virtual bool setZippedOutput(bool zipIt) {
         isOutputToBeZipped = zipIt;
+        return true;
+    }
+    virtual bool setAppendFile(bool appendIt) {
+        isOutputToBeAppended = appendIt;
+        return true;
     }
     virtual void beSilent() {
         silent = true;
     }
     bool writeTreeFile(int precision, const std::string &treeFilePath) const {
-        return clusters.writeTreeFile(isOutputToBeZipped, precision, treeFilePath);
+        return clusters.writeTreeFile(isOutputToBeZipped, precision,
+                                      treeFilePath, isOutputToBeAppended,
+                                      subtreeOnly);
     }
     bool calculateRMSOfTMinusD(const double* matrix, intptr_t rank, double& rms) {
         return clusters.calculateRMSOfTMinusD(matrix, rank, rms);
@@ -273,22 +295,31 @@ protected:
     virtual void finishClustering() {
         //But:  The formula is probably wrong. Felsenstein [2004] chapter 11 only
         //      covers UPGMA for rooted trees, and I don't know what
-        //      the right formula is.
+        //      the right formula is for unrooted trees.
         //
-        ASSERT( row_count == 3);
-        T weights[3];
+        ASSERT( row_count == 2 || row_count == 3);
+
+        std::vector<T> weights;
         T denominator = (T)0.0;
-        for (size_t i=0; i<3; ++i) {
+        for (size_t i=0; i<row_count; ++i) {
             weights[i]   = (T)clusters[rowToCluster[i]].countOfExteriorNodes;
             denominator += weights[i];
         }
-        for (size_t i=0; i<3; ++i) {
+        for (size_t i=0; i<row_count; ++i) {
             weights[i] /= ((T)2.0 * denominator);
         }
-        clusters.addCluster
-            ( rowToCluster[0], weights[1]*rows[0][1] + weights[2]*rows[0][2]
-            , rowToCluster[1], weights[0]*rows[0][1] + weights[2]*rows[1][2]
-            , rowToCluster[2], weights[0]*rows[0][2] + weights[1]*rows[1][2]);
+        if (row_count==3) {
+            //Unrooted tree. Last cluster has degree 3.
+            clusters.addCluster
+                ( rowToCluster[0], weights[1]*rows[0][1] + weights[2]*rows[0][2]
+                , rowToCluster[1], weights[0]*rows[0][1] + weights[2]*rows[1][2]
+                , rowToCluster[2], weights[0]*rows[0][2] + weights[1]*rows[1][2]);
+        } else {
+            //Rooted tree. Last cluster has degree 2.
+            clusters.addCluster
+                ( rowToCluster[0], weights[1]*rows[0][1]
+                , rowToCluster[1], weights[0]*rows[0][1] );
+        }
         row_count = 0;
     }
     virtual void cluster(intptr_t a, intptr_t b) {
@@ -361,6 +392,7 @@ protected:
             show_progress += (double)(row_count%1000);
         #endif
     }
+    
     size_t joinUpDuplicateClusters(DuplicateTaxa& vvc,
                                    progress_display& show_progress) {
         if (vvc.empty()) {

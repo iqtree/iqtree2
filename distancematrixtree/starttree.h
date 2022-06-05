@@ -33,22 +33,25 @@ namespace StartTree
     class BuilderInterface
     {
     public:
-        BuilderInterface() = default;
-        virtual ~BuilderInterface() = default;
-        virtual bool isBenchmark() const = 0;
-        virtual void setZippedOutput(bool zipIt) = 0;
+        BuilderInterface              () = default;
+        virtual ~BuilderInterface     () = default;
+        virtual bool isBenchmark      () const = 0;
+        virtual bool setZippedOutput  ( bool zipIt) = 0;
+        virtual bool setIsRooted      ( bool rootIt) = 0;
+        virtual bool setSubtreeOnly   ( bool wantSubtree) = 0;
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
-             , const std::string & newickTreeFilePath) = 0;
+            , const std::string & newickTreeFilePath) = 0;
         virtual bool constructTreeInMemory
             ( const StrVector &sequenceNames
-             , const double *distanceMatrix
-             , const std::string & newickTreeFilePath) = 0;
+            , const double *distanceMatrix
+            , const std::string & newickTreeFilePath) = 0;
 
         virtual const std::string& getName() const = 0;
         virtual const std::string& getDescription() = 0;
+        virtual bool setAppendFile(bool appendIt) = 0; //returns true if supported
         virtual void beSilent() = 0;
-        virtual void setPrecision(int precision) = 0;
+        virtual bool setPrecision(int precision) = 0;
     };
 
     class BenchmarkingTreeBuilder;
@@ -89,9 +92,13 @@ namespace StartTree
     protected:
         const std::string name;
         const std::string description;
+        bool  appendFile;
         bool  silent;
+        bool  isOutputToBeAppended;
         bool  isOutputToBeZipped;
         int   precision;
+        bool  isRooted;
+        bool  subtreeOnly;
 
         bool  constructTreeWith(B& builder) {
             double buildStart    = getRealTime();
@@ -99,6 +106,7 @@ namespace StartTree
             if (silent) {
                 builder.beSilent();
             }
+            builder.setIsRooted(isRooted);
             builder.constructTree();
             double buildElapsed = getRealTime() - buildStart;
             double buildCPU     = getCPUTime() - buildStartCPU;
@@ -120,7 +128,8 @@ namespace StartTree
     public:
         Builder(const char* nameToUse, const char *descriptionToGive)
         : name(nameToUse), description(descriptionToGive), silent(false)
-        , isOutputToBeZipped(false), precision(6) {
+        , isOutputToBeAppended(false), isOutputToBeZipped(false)
+        , precision(6), subtreeOnly(false) {
         }
         virtual void beSilent() override {
             silent = true;
@@ -134,12 +143,25 @@ namespace StartTree
         virtual bool isBenchmark() const override {
             return false;
         }
-        virtual void setZippedOutput(bool zipIt) override {
+        virtual bool setZippedOutput(bool zipIt) override {
             isOutputToBeZipped = zipIt;
+            return true;
+        }
+        virtual bool setAppendFile(bool appendIt) override {
+            isOutputToBeAppended = appendIt;
+            return true;
+        }
+        virtual bool setIsRooted(bool rootIt) override {
+            isRooted = rootIt;
+            return true;
+        }
+        virtual bool setSubtreeOnly(bool wantSubtree) override {
+            subtreeOnly = wantSubtree;
+            return true;
         }
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
-             , const std::string & newickTreeFilePath) override {
+            , const std::string & newickTreeFilePath) override {
             B builder;
             if (silent) {
                 builder.beSilent();
@@ -147,11 +169,14 @@ namespace StartTree
             if (!builder.loadMatrixFromFile(distanceMatrixFilePath)) {
                 return false;
             }
+            builder.setIsRooted(isRooted);
             constructTreeWith(builder);
             if (newickTreeFilePath.empty()) {
                 return true;
             }
             builder.setZippedOutput(isOutputToBeZipped);
+            builder.setAppendFile(isOutputToBeAppended);
+            builder.setSubtreeOnly(subtreeOnly);
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
         virtual bool constructTreeInMemory
@@ -172,13 +197,16 @@ namespace StartTree
                 std::cout << "Root Mean Square Error was " << rms << std::endl;
             }
             builder.setZippedOutput(isOutputToBeZipped);
+            builder.setAppendFile(isOutputToBeAppended);
+            builder.setSubtreeOnly(subtreeOnly);
             if (newickTreeFilePath.empty()) {
                 return true;
             }
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
-        virtual void setPrecision(int precision_to_use) override {
+        virtual bool setPrecision(int precision_to_use) override {
             precision = precision_to_use;
+            return true;
         }
     };
 
@@ -191,6 +219,8 @@ namespace StartTree
         bool isOutputToBeZipped;
         bool silent;
         int  precision;
+        bool subtreeOnly;
+        bool isRooted;
     public:
         BenchmarkingTreeBuilder(Factory& f, const char* nameToUse, 
                                 const char *descriptionToGive);
@@ -204,9 +234,12 @@ namespace StartTree
             ( const StrVector &sequenceNames
             , const double *distanceMatrix
             , const std::string& newickTreeFilePath) override;
-        virtual void setZippedOutput(bool zipIt) override;
-        virtual void beSilent() override;
-        virtual void setPrecision(int precisionToUse) override;
+        virtual bool setZippedOutput (bool zipIt) override;
+        virtual void beSilent        () override;
+        virtual bool setPrecision    (int precisionToUse) override;
+        virtual bool setAppendFile   (bool appendIt)      override;
+        virtual bool setIsRooted     (bool rootIt)        override;
+        virtual bool setSubtreeOnly  (bool wantSubtree)   override;
     };
 }
 

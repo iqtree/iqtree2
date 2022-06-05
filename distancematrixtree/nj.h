@@ -90,6 +90,7 @@ public:
     using super::calculateRowTotals;
     using super::getImbalance;
     using super::silent;
+    using super::isRooted;
 protected:
     mutable std::vector<T> scaledRowTotals; //used in getRowMinima
 public:
@@ -182,15 +183,23 @@ protected:
         removeRowAndColumn(b);
     }
     virtual void finishClustering() override {
-        ASSERT( row_count == 3);
+        ASSERT( row_count == 2 || row_count == 3);
         T halfD01 = (T)0.5 * rows[0][1];
-        T halfD02 = (T)0.5 * rows[0][2];
-        T halfD12 = (T)0.5 * rows[1][2];
-        clusters.addCluster
-            ( rowToCluster[0], halfD01 + halfD02 - halfD12
-            , rowToCluster[1], halfD01 + halfD12 - halfD02
-            , rowToCluster[2], halfD02 + halfD12 - halfD01);
-        row_count = 0;
+        if (row_count==3) {
+            T halfD02 = (T)0.5 * rows[0][2];
+            T halfD12 = (T)0.5 * rows[1][2];
+            clusters.addCluster
+                ( rowToCluster[0], halfD01 + halfD02 - halfD12
+                , rowToCluster[1], halfD01 + halfD12 - halfD02
+                , rowToCluster[2], halfD02 + halfD12 - halfD01);
+            row_count = 0;
+        }
+        else {
+            clusters.addCluster
+                ( rowToCluster[0], halfD01
+                , rowToCluster[1], halfD01);
+            row_count = 0;
+        }
     }
 };
 

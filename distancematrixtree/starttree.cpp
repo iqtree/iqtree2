@@ -101,7 +101,8 @@ BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
 BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse,
                                                  const char *descriptionToGive)
     : name(nameToUse), description(descriptionToGive)
-    , isOutputToBeZipped(false), silent(false), precision(4) {
+    , isOutputToBeZipped(false), silent(false), precision(4)
+    , subtreeOnly(false) {
     for (auto it=f.mapOfTreeBuilders.begin(); it!=f.mapOfTreeBuilders.end(); ++it) {
         if (!it->second->getName().empty()) {
             builders.push_back(it->second);
@@ -122,27 +123,44 @@ bool BenchmarkingTreeBuilder::isBenchmark() const {
 }
 
 bool BenchmarkingTreeBuilder::constructTree
-    ( const std::string &distanceMatrixFilePath
-     , const std::string & newickTreeFilePath) {
+    ( const std::string& distanceMatrixFilePath
+    , const std::string& newickTreeFilePath) {
     bool result = (!builders.empty());
     for (auto it=builders.begin(); it!=builders.end(); ++it) {
+        (*it)->setIsRooted(isRooted);
         (*it)->setZippedOutput(isOutputToBeZipped);
+        (*it)->setSubtreeOnly(subtreeOnly);
         result &= (*it)->constructTree(distanceMatrixFilePath,
                                        newickTreeFilePath);
     }
     return result;
 }
 
-void BenchmarkingTreeBuilder::setZippedOutput(bool zipIt) {
+bool BenchmarkingTreeBuilder::setZippedOutput(bool zipIt) {
     isOutputToBeZipped = zipIt;
+    return true;
 }
 
 void BenchmarkingTreeBuilder::beSilent() {
     silent = true;
 }
 
-void BenchmarkingTreeBuilder::setPrecision(int precisionToUse) {
+bool BenchmarkingTreeBuilder::setAppendFile(bool /*appendIt*/) {
+    return false;
+}
+
+bool BenchmarkingTreeBuilder::setSubtreeOnly(bool /*appendIt*/) {
+    return false;
+}
+
+bool BenchmarkingTreeBuilder::setPrecision(int precisionToUse) {
     precision = precisionToUse;
+    return true;
+}
+
+bool BenchmarkingTreeBuilder::setIsRooted(bool rootIt) {
+    isRooted = rootIt;
+    return true;
 }
 
 namespace {

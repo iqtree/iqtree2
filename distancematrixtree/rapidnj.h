@@ -94,6 +94,7 @@ protected:
     using super::rowToCluster;
     using super::clusters;
     using super::silent;
+    using super::isRooted;
     using super::finishClustering;
     using super::clusterDuplicates;
     using super::prepareToConstructTree;
@@ -237,7 +238,8 @@ public:
             #else
             double show_progress = 0;
             #endif
-            while (3<row_count) {
+            intptr_t degree_of_root = isRooted ? 2 : 3;
+            while (degree_of_root<row_count) {
                 Position<T> best;
                 super::getMinimumEntry(best);
                 cluster(best.column, best.row);

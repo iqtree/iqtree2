@@ -165,7 +165,9 @@ template <class T=double> struct StitchupGraph {
     std::vector< IntVector > setMembers;
     int                      nodeCount;
     bool                     silent;
-    StitchupGraph() : nodeCount(0), silent(false) {
+    bool                     isOutputToBeApended;
+    StitchupGraph() : nodeCount(0), silent(false)
+                    , isOutputToBeApended(false) {
     }
     void clear() {
         StitchupGraph temp;
@@ -333,9 +335,8 @@ template <class T=double> struct StitchupGraph {
         std::cout << std::endl;
     }
     template <class F>
-    bool writeTreeToOpenFile (int precision, 
-                              progress_display_ptr progress,
-                              F& out) const {
+    bool writeTreeToOpenFile (int precision, bool isSubtreeOnly,
+                              progress_display_ptr progress, F& out) const {
         out.precision(precision);
         auto lastEdge = stitches.end();
         --lastEdge;
@@ -353,14 +354,16 @@ template <class T=double> struct StitchupGraph {
             }
         }
         writeSubtree(stitchVector, nodeToEdge, nullptr, 
-                     lastNodeIndex, progress, out);
-        out << ";" << std::endl;
+                     lastNodeIndex, isSubtreeOnly, progress, out);
+        if (!isSubtreeOnly) {
+            out << ";" << std::endl;
+        }
         return true;
     }
     template <class F>
-    bool writeTreeToFile(int precision, 
-                         const std::string &treeFilePath, 
-                         F& out ) const {
+    bool writeTreeToFile(int precision, const std::string &treeFilePath, 
+                         bool isFileToBeOpenedForAppending, 
+                         bool subtreeOnly, F& out) const {
         bool success = false;
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
@@ -371,8 +374,11 @@ template <class T=double> struct StitchupGraph {
         #endif
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
-            out.open(treeFilePath.c_str(), std::ios_base::out);
-            success = writeTreeToOpenFile(precision, &progress, out);
+            auto openMode = isFileToBeOpenedForAppending
+                          ? std::ios_base::app : std::ios_base::trunc;
+            openMode |= std::ios_base::out;  
+            out.open(treeFilePath.c_str(), openMode);
+            success = writeTreeToOpenFile(precision, subtreeOnly, &progress, out);
         } catch (std::ios::failure &) {
             std::cerr << "IO error"
             << " opening/writing file: " << treeFilePath << std::endl;
@@ -392,14 +398,17 @@ template <class T=double> struct StitchupGraph {
     }
     template <class F>
     void writeSubtree ( const std::vector<Stitch<T>>& stitchVector, 
-                        std::vector<size_t>  nodeToEdge,
+                        std::vector<size_t> nodeToEdge,
                         const Stitch<T>* backstop, size_t nodeIndex,
+                        bool noBrackets,
                         progress_display_ptr progress, F& out) const {
         bool isLeaf = ( nodeIndex < leafNames.size() );
         if (isLeaf) {
             out << leafNames [ nodeIndex ] ;
         } else {
-            out << "(";
+            if (!noBrackets) {
+                out << "(";
+            }
             const char* sep = "";
             size_t x = nodeToEdge[nodeIndex];
             size_t y = stitchVector.size();
@@ -410,40 +419,58 @@ template <class T=double> struct StitchupGraph {
                     out << sep;
                     sep = ",";
                     writeSubtree(stitchVector, nodeToEdge, &stitchVector[x], 
-                                 child, progress, out);
+                                 child, false, progress, out);
                 }
                 ++progress;
             }
-            out << ")";
+            if (!noBrackets) {
+                out << ")";
+            }
         }
         if (backstop!=nullptr) {
             out << ":" << backstop->length;
         }
     }
     bool writeTreeFile(bool zipIt, int precision, 
-                       const std::string &treeFilePath) const {
+                       const std::string &treeFilePath,
+                       bool isOutputToBeAppended,
+                       bool subtreeOnly) const {
         if (treeFilePath == "STDOUT") {
             #if USE_PROGRESS_DISPLAY
             progress_display progress(stitches.size(), "", "", "");
             #else
             double progress=0;
             #endif
-            return writeTreeToOpenFile(precision, &progress, std::cout);
+            return writeTreeToOpenFile(precision, subtreeOnly,
+                                       &progress, std::cout);
         } else if (zipIt) {
             #if USE_GZSTREAM
             ogzstream     out;
             #else
             std::ofstream out;
             #endif
-            return writeTreeToFile(precision, treeFilePath, out);
+            return writeTreeToFile(precision, treeFilePath, 
+                                   isOutputToBeAppended, 
+                                   subtreeOnly, out);
         } else {
             std::fstream out;
-            return writeTreeToFile(precision, treeFilePath, out);
+            return writeTreeToFile(precision, treeFilePath,
+                                   isOutputToBeAppended, 
+                                   subtreeOnly, out);
         }
     }
 };
 
 template < class T=double> class StitchupMatrix: public SquareMatrix<T> {
+protected:
+protected:
+    StitchupGraph<T> graph;
+    bool             silent;
+    bool             isOutputToBeZipped;
+    bool             isOutputToBeAppended;
+    bool             isRooted;
+    bool             subtreeOnly;
+
 public:
     typedef SquareMatrix<T> super;
     using super::rows;
@@ -451,8 +478,9 @@ public:
     using super::row_count;
     using super::column_count;
     using super::loadDistancesFromFlatArray;
-    bool silent;
-    StitchupMatrix(): silent(false), isOutputToBeZipped(false)  {
+    StitchupMatrix(): silent(false), isOutputToBeZipped(false)
+                    , isOutputToBeAppended(false), isRooted(false)
+                    , subtreeOnly(false)  {
     }
     virtual std::string getAlgorithmName() const {
         return "STITCHUP";
@@ -478,13 +506,28 @@ public:
         return true;
     }
     bool writeTreeFile(int precision, const std::string &treeFilePath) const {
-        return graph.writeTreeFile(isOutputToBeZipped, precision, treeFilePath);
+        return graph.writeTreeFile(isOutputToBeZipped, precision, 
+                                   treeFilePath, isOutputToBeAppended,
+                                   subtreeOnly);
     }
-    virtual void setZippedOutput(bool zipIt) {
+    virtual bool setZippedOutput(bool zipIt) {
         isOutputToBeZipped = zipIt;
+        return true;
     }
     virtual void beSilent() {
         silent = true;
+    }
+    virtual bool setAppendFile(bool appendIt) {
+        isOutputToBeAppended = appendIt;
+        return true;
+    }
+    virtual bool setIsRooted(bool rootIt) {
+        isRooted = rootIt;
+        return true;
+    }
+    virtual bool setSubtreeOnly(bool wantSubtree) {
+        subtreeOnly = wantSubtree;
+        return true;
     }
     virtual void prepareToConstructTree() {
     }
@@ -512,7 +555,6 @@ public:
         #else
         double progress = 0.0;
         #endif
-        std::cout.precision(12);
         for (intptr_t join = 0; join + 1 < row_count; ++join) {
             LengthSortedStitch<T> shortest;
             size_t source;
@@ -536,9 +578,6 @@ public:
                                            intptr_t rank, double& rms) {
         return false; //not supported  
     }
-protected:
-    StitchupGraph<T>  graph;
-    bool            isOutputToBeZipped;
 };
 
 template < class T=double > class TaxonEdge {
@@ -579,6 +618,7 @@ public:
     //member functions from super-class
     using super::prepareToConstructTree;
     using super::cluster;
+    using super::isRooted;
     using super::finishClustering;
     
     virtual std::string getAlgorithmName() const override {
@@ -611,7 +651,9 @@ public:
         for (intptr_t t=0; t<taxon_count; ++t) {
             tr[t] = t;
         }
-        while (3<row_count) {
+
+        intptr_t degree_of_root = isRooted ? 2 : 3;
+        while (degree_of_root<row_count) {
             TaxonEdge<T> shortest;
             do {
                 shortest = heap.pop_min();

@@ -852,9 +852,15 @@ public:
     virtual bool isBenchmark() const override {
         return false;
     }
+    virtual bool setIsRooted(bool rootIt) override {
+        return false;
+    }
+    virtual bool setSubtreeOnly(bool wantSubtree) override {
+        return false;
+    }
     virtual bool constructTree
         ( const std::string &distanceMatrixFilePath
-         , const std::string & newickTreeFilePath) override {
+        , const std::string & newickTreeFilePath) override {
             BioNj bio2009;
             if (endsWith(distanceMatrixFilePath,".gz")) {
                 std::cerr << "BIONJ2009 cannot handle .gz inputs\n";
@@ -864,20 +870,24 @@ public:
             return true;
     }
     virtual bool constructTreeInMemory
-        ( const  StrVector& sequenceNames
-         , const double *distanceMatrix
-         , const std::string & newickTreeFilePath) override {
+        ( const  StrVector&  sequenceNames
+        , const double*      distanceMatrix
+        , const std::string& newickTreeFilePath) override {
             return false;
     }
-    virtual void setZippedOutput(bool zipIt) override {
+    virtual bool setZippedOutput(bool zipIt) override {
         if (zipIt) {
             std::cerr << "Warning: BIONJ2009 does not support gzip output (or input)" << std::endl;
         }
+        return false;
     }
     virtual void beSilent() override {
     }
-    virtual void setPrecision(int precision) override {
-        //IGNORED
+    virtual bool setAppendFile(bool appendIt) override {
+        return false;
+    }
+    virtual bool setPrecision(int precision) override {
+        return false;
     }
 };
 

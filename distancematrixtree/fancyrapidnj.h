@@ -69,6 +69,9 @@ template <class T=NJFloat> class FancyNJMatrix {
 protected:
     bool           be_silent;
     bool           zip_it;
+    bool           append_file;          
+    bool           is_rooted;
+    bool           omit_semicolon;
     ClusterTree<T> clusters;
     #if USE_GZSTREAM
         #if USE_PROGRESS_DISPLAY
@@ -149,8 +152,10 @@ protected:
     DuplicateTaxa duplicate_taxa;
 
 public:
-    FancyNJMatrix() : be_silent(false), zip_it(false), original_rank(0), 
-                      next_cluster_number(0), global_best_dist(0) {
+    FancyNJMatrix() : be_silent(false), zip_it(false), 
+                      append_file(0), is_rooted(false), 
+                      omit_semicolon(false), original_rank(0), 
+                      next_cluster_number(0),  global_best_dist(0) {
         #ifdef _OPENMP
             threadCount = omp_get_max_threads();
         #else
@@ -169,8 +174,13 @@ public:
     void beSilent() { 
         be_silent = true; 
     } 
-    virtual void setZippedOutput(bool zipIt) { 
-        zip_it = zipIt; 
+    virtual bool setAppendFile(bool appendIt) {
+        append_file = appendIt;
+        return true;
+    }
+    virtual bool setZippedOutput(bool zipIt) { 
+        zip_it = zipIt;
+        return true;
     }
     virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         INFILE(in);
@@ -253,6 +263,14 @@ public:
     }
     virtual void prepareToConstructTree() {
     }
+    virtual bool setIsRooted(bool rootIt) {
+        is_rooted = rootIt;
+        return true;
+    }
+    virtual bool setSubtreeOnly(bool wantSubtree) {
+        omit_semicolon = wantSubtree;
+        return true;
+    }
     virtual bool constructTree() {
         prepareToConstructTree();
         if (original_rank<3) {
@@ -309,7 +327,7 @@ public:
             row_cluster[high_row] = row_cluster[n-1];   
             mergeTime -= getRealTime();
             mergeClusters(best_cluster, other_cluster, next_cluster_number,
-                          raw_Dxy, n);
+                          raw_Dxy, n, is_rooted);
             mergeTime += getRealTime();
             ++next_cluster_number;
             #if USE_PROGRESS_DISPLAY
@@ -330,7 +348,8 @@ public:
     }
     virtual bool writeTreeFile     (int precision,
                                     const std::string &treeFilePath) const { 
-        return clusters.writeTreeFile(zip_it, precision, treeFilePath);
+        return clusters.writeTreeFile(zip_it, precision, treeFilePath, 
+                                      append_file, omit_semicolon);
     }
 protected:
     virtual void setRank(size_t n) {
@@ -460,7 +479,7 @@ protected:
                         row_cluster[high_row] = row_cluster[n-1];   
                         mergeTime -= getRealTime();
                         mergeClusters(x, y, next_cluster_number,
-                                        (T)0, n);
+                                        (T)0, n, false);
                         mergeTime += getRealTime();
                         next_level.push_back(next_cluster_number);
                         ++next_cluster_number;
@@ -670,7 +689,8 @@ protected:
     }
 
     void mergeClusters(int cluster_X, int cluster_Y, 
-                       int cluster_U, T Dxy, int n) {
+                       int cluster_U, T Dxy, int n,
+                       bool is_rooted) {
         allocateCluster(cluster_U);
         ASSERT(cluster_Y != cluster_X);
         if (cluster_Y<cluster_X) {
@@ -711,7 +731,7 @@ protected:
         }
         cluster_total[cluster_U]   = cTotal;
         auto stop                  = cluster_sorted_stop[cluster_U];
-        if (2<n) {
+        if (2<n || is_rooted) {
             ASSERT ( stop == entry );
             sorters[0].parallel_sort(start, stop-start);
             clusters.addCluster(cluster_X, length_to_X, 
