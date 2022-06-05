@@ -750,6 +750,10 @@ public:
     /* path of newick format file that describes the
        divergence graph */
     std::string divergence_graph_file_path;
+
+    inline bool haveDivergenceGraphFile() {
+        return !divergence_graph_file_path.empty();
+    }
     
     /** TRUE to infer fast ML tree for ModelFinder */
     bool modelfinder_ml_tree;
