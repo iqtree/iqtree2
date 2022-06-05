@@ -1,7 +1,10 @@
 ( 
     (LngfishAu, LngfishSA,LngfishAf)Fish,
-    (   Frog,
+    (   
         (Opossum,Platypus,Mouse,Rat,Whale,Cow,Seal,Human)Mammals,
-        (Turtle,Lizard,Sphenodon,Crocodile,Bird)Reptiles 
+        (
+            Frog,
+            (Turtle,Lizard,Sphenodon,Crocodile,Bird)Reptiles 
+        )NonMammalTetrapods
     )NonFish
 );
