@@ -4854,7 +4854,7 @@ bool PhyloTree::computeDivergentBIONJSubtrees
     }
     bionj_tree << ";\n";
     truncateFile(bionj_tree_path);
-    appendFile(bionj_tree.c_str(), bionj_tree.str());
+    appendFile(bionj_tree.str().c_str(), bionj_tree_path);
     std::cout << bionj_tree.str() << std::endl;
 
     PhyloTree readback;
