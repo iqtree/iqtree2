@@ -335,9 +335,8 @@ template <class T=double> struct StitchupGraph {
         std::cout << std::endl;
     }
     template <class F>
-    bool writeTreeToOpenFile (int precision, bool isSubtreeOnly,
+    bool writeTreeToOpenFile (bool isSubtreeOnly,
                               progress_display_ptr progress, F& out) const {
-        out.precision(precision);
         auto lastEdge = stitches.end();
         --lastEdge;
         size_t lastNodeIndex = lastEdge->source;
@@ -378,7 +377,8 @@ template <class T=double> struct StitchupGraph {
                           ? std::ios_base::app : std::ios_base::trunc;
             openMode |= std::ios_base::out;  
             out.open(treeFilePath.c_str(), openMode);
-            success = writeTreeToOpenFile(precision, subtreeOnly, &progress, out);
+            out.precision(precision);
+            success = writeTreeToOpenFile(subtreeOnly, &progress, out);
         } catch (std::ios::failure &) {
             std::cerr << "IO error"
             << " opening/writing file: " << treeFilePath << std::endl;
@@ -421,7 +421,9 @@ template <class T=double> struct StitchupGraph {
                     writeSubtree(stitchVector, nodeToEdge, &stitchVector[x], 
                                  child, false, progress, out);
                 }
-                ++progress;
+                if (progress!=nullptr) {
+                    ++(*progress);
+                }
             }
             if (!noBrackets) {
                 out << ")";
@@ -441,7 +443,8 @@ template <class T=double> struct StitchupGraph {
             #else
             double progress=0;
             #endif
-            return writeTreeToOpenFile(precision, subtreeOnly,
+            std::cout.precision(precision);
+            return writeTreeToOpenFile(subtreeOnly,
                                        &progress, std::cout);
         } else if (zipIt) {
             #if USE_GZSTREAM
@@ -509,6 +512,10 @@ public:
         return graph.writeTreeFile(isOutputToBeZipped, precision, 
                                    treeFilePath, isOutputToBeAppended,
                                    subtreeOnly);
+    }
+    template <class F>
+    bool writeTreeToOpenFile (F& out) const {
+        return graph.writeTreeToOpenFile(subtreeOnly, nullptr, out);
     }
     virtual bool setZippedOutput(bool zipIt) {
         isOutputToBeZipped = zipIt;

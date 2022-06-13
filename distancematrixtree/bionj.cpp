@@ -870,9 +870,15 @@ public:
             return true;
     }
     virtual bool constructTreeInMemory
-        ( const  StrVector&  sequenceNames
+        ( const StrVector&  sequenceNames
         , const double*      distanceMatrix
         , const std::string& newickTreeFilePath) override {
+            return false;
+    }
+    virtual bool constructTreeAndAppendToStream
+        ( const StrVector& sequenceNames
+        , const double*    distanceMatrix
+        , std::iostream&   newickTreeFilePath) override {
             return false;
     }
     virtual bool setZippedOutput(bool zipIt) override {

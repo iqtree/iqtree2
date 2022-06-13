@@ -348,9 +348,15 @@ public:
     }
     virtual bool writeTreeFile     (int precision,
                                     const std::string &treeFilePath) const { 
-        return clusters.writeTreeFile(zip_it, precision, treeFilePath, 
-                                      append_file, omit_semicolon);
+        return clusters.writeTreeFile
+               ( zip_it, precision, treeFilePath
+               , append_file, omit_semicolon );
     }
+    virtual bool writeTreeToOpenFile(std::iostream &stream) const { 
+        return clusters.writeTreeToOpenFile
+               ( omit_semicolon, stream );
+    }
+
 protected:
     virtual void setRank(size_t n) {
         original_rank       = n;

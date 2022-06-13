@@ -244,5 +244,13 @@ bool BenchmarkingTreeBuilder::constructTreeInMemory
     }
     return ok;
 }
+
+bool BenchmarkingTreeBuilder::constructTreeAndAppendToStream
+    ( const StrVector& sequenceNames
+    , const double*    distanceMatrix
+    , std::iostream&   newickTreeFilePath) {
+        return false;
+}
+
 };
 

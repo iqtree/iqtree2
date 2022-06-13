@@ -229,7 +229,8 @@ public:
                           ? std::ios_base::app : std::ios_base::trunc;
             openMode |= std::ios_base::out;  
             out.open(treeFilePath.c_str(), openMode );
-            writeTreeToOpenFile(precision, isSubtreeOnly, out);
+            out.precision(precision);
+            writeTreeToOpenFile(isSubtreeOnly, out);
             out.close();
             return true;
         } catch (std::ios::failure &) {
@@ -248,8 +249,7 @@ public:
         return here.clusterIndex + 1 == size();
     }
     template <class F> bool writeTreeToOpenFile
-        ( int precision, bool isSubtreeOnly, F& out) const {
-        out.precision(precision);
+        ( bool isSubtreeOnly, F& out) const {
         std::vector<Place> stack;
         bool failed = false; //Becomes true if clusters
         //defines cycles (should never happen)
@@ -304,7 +304,8 @@ public:
                        bool isOutputToBeAppended,
                        bool subtreeOnly) const {
         if (treeFilePath == "STDOUT") {
-            return writeTreeToOpenFile(precision, subtreeOnly, std::cout );
+            std::cout.precision(precision);
+            return writeTreeToOpenFile(subtreeOnly, std::cout );
         } else if (zipIt) {
             #if USE_GZSTREAM
             ogzstream     out;

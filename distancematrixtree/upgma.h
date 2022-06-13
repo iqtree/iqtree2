@@ -249,6 +249,9 @@ public:
     virtual void beSilent() {
         silent = true;
     }
+    bool writeTreeToOpenFile(std::iostream& stream) const {
+        return clusters.writeTreeToOpenFile(subtreeOnly, stream);
+    }
     bool writeTreeFile(int precision, const std::string &treeFilePath) const {
         return clusters.writeTreeFile(isOutputToBeZipped, precision,
                                       treeFilePath, isOutputToBeAppended,
@@ -257,7 +260,6 @@ public:
     bool calculateRMSOfTMinusD(const double* matrix, intptr_t rank, double& rms) {
         return clusters.calculateRMSOfTMinusD(matrix, rank, rms);
     }
-
 
 protected:
     void getMinimumEntry(Position<T> &best) {

@@ -45,7 +45,11 @@ namespace StartTree
         virtual bool constructTreeInMemory
             ( const StrVector &sequenceNames
             , const double *distanceMatrix
-            , const std::string & newickTreeFilePath) = 0;
+            , const std::string& newickTreeFilePath) = 0;
+        virtual bool constructTreeAndAppendToStream
+            ( const StrVector &sequenceNames
+            , const double *distanceMatrix
+            , std::iostream& treeStream) = 0;
 
         virtual const std::string& getName() const = 0;
         virtual const std::string& getDescription() = 0;
@@ -179,11 +183,8 @@ namespace StartTree
             builder.setSubtreeOnly(subtreeOnly);
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
-        virtual bool constructTreeInMemory
-            ( const StrVector &sequenceNames
-            , const double *distanceMatrix
-            , const std::string & newickTreeFilePath) override {
-            B builder;
+        bool constructTree(const StrVector &sequenceNames
+                          , const double *distanceMatrix, B& builder) {
             if (silent) {
                 builder.beSilent();
             }
@@ -199,11 +200,30 @@ namespace StartTree
             builder.setZippedOutput(isOutputToBeZipped);
             builder.setAppendFile(isOutputToBeAppended);
             builder.setSubtreeOnly(subtreeOnly);
+            return true;        
+        }
+        
+        virtual bool constructTreeInMemory
+            ( const StrVector &sequenceNames
+            , const double *distanceMatrix
+            , const std::string & newickTreeFilePath) override {
+            B builder;
+            constructTree(sequenceNames, distanceMatrix, builder);
             if (newickTreeFilePath.empty()) {
                 return true;
             }
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
+
+        virtual bool constructTreeAndAppendToStream
+            ( const StrVector &sequenceNames
+            , const double* distanceMatrix
+            , std::iostream& stream) override {
+            B builder;
+            constructTree(sequenceNames, distanceMatrix, builder);
+            return builder.writeTreeToOpenFile(stream);
+        }
+
         virtual bool setPrecision(int precision_to_use) override {
             precision = precision_to_use;
             return true;
@@ -234,6 +254,10 @@ namespace StartTree
             ( const StrVector &sequenceNames
             , const double *distanceMatrix
             , const std::string& newickTreeFilePath) override;
+        virtual bool constructTreeAndAppendToStream
+            ( const StrVector& sequenceNames
+            , const double*    distanceMatrix
+            , std::iostream&   stream) override;
         virtual bool setZippedOutput (bool zipIt) override;
         virtual void beSilent        () override;
         virtual bool setPrecision    (int precisionToUse) override;
