@@ -4809,14 +4809,15 @@ bool PhyloTree::computeDivergentBIONJSubtrees
         }
         else
         {
-            std::vector<double> local_dist_matrix(taxon_count*taxon_count);
+            std::vector<double> local_dist_matrix(taxon_count*taxon_count, 0.0);
             size_t k=0;
             for (int i=0; i<taxon_count; ++i) {
                 size_t row_index = leaf_taxa_ids[i] * aln->getNSeq();
                 for (int j=0; j<taxon_count; ++j) {
                     size_t src_index = row_index + leaf_taxa_ids[j];
-                    local_dist_matrix[++k] =
+                    local_dist_matrix[k] =
                         dist_matrix[src_index];
+                    ++k;
                 }
             }
             if (!interiors.empty()) {
