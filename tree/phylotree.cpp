@@ -4772,8 +4772,9 @@ bool PhyloTree::computeDivergentBIONJSubtrees
     };
     std::vector<NumberedBranch> node_stack;
     node_stack.emplace_back(div_top, div_top, "");
+    std::stringstream bionj_tree;
+    bionj_tree.precision(6);
 
-    truncateFile(bionj_tree_path);
     while (!node_stack.empty()) {
         auto  top  = node_stack.back();
         Node* node = top.first;
@@ -4781,11 +4782,10 @@ bool PhyloTree::computeDivergentBIONJSubtrees
         const char* prefix = top.prefix;
         node_stack.pop_back();
         if (node==nullptr) {
-            appendFile("):-1", bionj_tree_path);
+            bionj_tree << "):-1";
             continue;
         }
-        appendFile(prefix, bionj_tree_path);
-        appendFile("(",    bionj_tree_path);
+        bionj_tree << prefix << "(";
         std::vector<size_t> leaf_taxa_ids;
         StrVector           leaf_taxa_names;
         NodeVector          interiors;
@@ -4801,12 +4801,14 @@ bool PhyloTree::computeDivergentBIONJSubtrees
             }
         }
         size_t taxon_count = leaf_taxa_ids.size();
-        if (taxon_count==1) {
-            std::stringstream single_node_subtree;
-            single_node_subtree << leaf_taxa_names.front() << ":-1";
-            appendFile(single_node_subtree.str().c_str(), bionj_tree_path);
+        if (taxon_count==0) {
+
         }
-        if (1<taxon_count) {
+        else if (taxon_count==1) {
+            bionj_tree << leaf_taxa_names.front() << ":-1";
+        }
+        else
+        {
             std::vector<double> local_dist_matrix(taxon_count*taxon_count);
             size_t k=0;
             for (int i=0; i<taxon_count; ++i) {
@@ -4818,15 +4820,24 @@ bool PhyloTree::computeDivergentBIONJSubtrees
                 }
             }
             if (!interiors.empty()) {
-                appendFile("(", bionj_tree_path);
+                bionj_tree << "(";
             }
-            builder->setIsRooted   (true);
-            builder->setSubtreeOnly(true);
-            builder->setAppendFile (true);
-            builder->constructTreeInMemory
-                (leaf_taxa_names, local_dist_matrix.data(), bionj_tree_path);
+            if (taxon_count==2) {
+                double d = 0.5 * local_dist_matrix[1]; 
+                //elements 0,3 of local_dist_matrix are on
+                //the diagonal, 1,2 are off the diagonal.
+                bionj_tree << leaf_taxa_names[0] << ":" << d << ",";
+                bionj_tree << leaf_taxa_names[1] << ":" << d;
+            } 
+            else {
+                builder->setIsRooted   (true);
+                builder->setSubtreeOnly(true);
+                builder->setAppendFile (true);
+                builder->constructTreeAndAppendToStream
+                    (leaf_taxa_names, local_dist_matrix.data(), bionj_tree);
+            }
             if (!interiors.empty()) {
-                appendFile("):-1", bionj_tree_path);
+                bionj_tree << "):-1";
             }
         }
         node_stack.emplace_back(nullptr, nullptr, "");
@@ -4841,13 +4852,10 @@ bool PhyloTree::computeDivergentBIONJSubtrees
             }
         }
     }
-    appendFile(";\n", bionj_tree_path);
-
-    std::ifstream see_file;
-    see_file.open(bionj_tree_path, std::ios::in);
-    std::stringstream content_as_buffer;
-    content_as_buffer << see_file.rdbuf();
-    std::cout << content_as_buffer.str() << std::endl;
+    bionj_tree << ";\n";
+    truncateFile(bionj_tree_path);
+    appendFile(bionj_tree.c_str(), bionj_tree.str());
+    std::cout << bionj_tree.str() << std::endl;
 
     PhyloTree readback;
     bool is_div_tree_rooted = false;
