@@ -2939,7 +2939,12 @@ pair<int, int> IQTree::doNNISearch(bool write_info) {
     double curBestScore = getBestScore();
 
     if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
         printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
+        }
     }
 
     pair<int, int> nniInfos; // Number of NNIs and number of steps
@@ -2966,8 +2971,12 @@ pair<int, int> IQTree::doNNISearch(bool write_info) {
         if (getCurScore() > curBestScore + params->modelEps) {
             // Re-optimize model parameters (the sNNI algorithm)
             optimizeModelParameters(write_info, params->modelEps * 10);
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
             getModelFactory()->saveCheckpoint();
-
+        }
             // 2018-01-09: additional optimize root position
             // TODO: does not work with SuperTree yet
             if (rooted && !isSuperTree() && params->root_move_dist > 0)

@@ -926,6 +926,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
 
 void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
 {
+    if (params.numeric_precision > 0)
+        out.precision(params.numeric_precision);
+    
     out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
             << endl;
     if (tree.isSuperTree()) {

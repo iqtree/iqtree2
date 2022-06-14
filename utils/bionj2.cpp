@@ -113,7 +113,7 @@ public:
         row       = rhs.row;
         column    = rhs.column;
         value     = rhs.value;
-        imbalance = rhs.value;
+        imbalance = rhs.imbalance;
         return *this;
     }
     bool operator< ( const Position& rhs ) const {
@@ -1198,7 +1198,7 @@ public:
             //Note: Older versions of RapidNJ used maxTot rather than
             //      maxEarlierTotal here...
             rowMinima[r]          = getRowMinimum(row, maxEarlierTotal, qBest);
-            T      v              = rowMinima[row].value;
+            T      v              = rowMinima[r].value;
             {
                 if ( v < qBest ) {
                     #pragma omp critical(checkmin)
