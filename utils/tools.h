@@ -2532,6 +2532,11 @@ public:
     bool keep_seq_order;
     
     /**
+    *  TRUE to skip concatenate sequence chunks from intermediate files
+    */
+    bool no_merge;
+    
+    /**
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;

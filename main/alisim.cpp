@@ -522,6 +522,14 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         super_alisimulator->params->do_compression = false;
     }
 
+    // cannot skip concatenating sequence chunks from intermediate files in simulations with FunDi, Partitions, or +ASC models
+    if (Params::getInstance().num_threads > 1 && Params::getInstance().no_merge && (super_alisimulator->tree->isSuperTree() || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0 || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)))
+    {
+        outWarning("Cannot skip merging sequence chunks in simulations with FunDi, Partitions, or +ASC models. AliSim will concatenate sequence chunks from intermediate files into a single output file.");
+        
+        Params::getInstance().no_merge = false;
+        super_alisimulator->params->no_merge = false;
+    }
     
     // show a warning if the user wants to write internal sequences in not-supported cases
     if (super_alisimulator->params->alisim_write_internal_sequences

@@ -902,6 +902,9 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
 */
 void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
 {
+    // skip merging if users want to do so
+    if (params->no_merge) return;
+    
     if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
     {
         // merge output files into a single file
@@ -947,9 +950,9 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 // add ".phy" or ".fa" to the output_filepath
                 string tmp_output_filepath;
                 if (params->aln_output_format != IN_FASTA)
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".phy";
+                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".phy";
                 else
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i) + ".fa";
+                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".fa";
                 
                 // open an input file
                 input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
@@ -1083,7 +1086,7 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, string output_fi
             // only add thread_id to filename if using multiple threads
             string thread_id_str = "";
             if (num_threads > 1)
-                thread_id_str = "_" + convertIntToString(thread_id);
+                thread_id_str = "_" + convertIntToString(thread_id + 1);
             
             // add ".phy" or ".fa" to the output_filepath
             if (params->aln_output_format != IN_FASTA)
@@ -1455,12 +1458,22 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 // only write sequence name in the first thread
                 if (thread_id == 0)
                 {
-                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, num_threads > 1);
+                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, (num_threads > 1 && !params->no_merge));
                     out << pre_output << output << "\n";
                 }
-                // don't write sequence name in other thread
+                // write sequence chunk in other threads
                 else
-                    out << output << "\n";
+                {
+                    // if users skip concatenating sequence chunks from intermediate files -> write sequence name
+                    if (params->no_merge)
+                    {
+                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                        out << pre_output << output << "\n";
+                    }
+                    // don't write the sequence name in intermediate files
+                    else
+                        out << output << "\n";
+                }
             }
                 
             // avoid writing sequence of __root__
@@ -1483,12 +1496,22 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 // only write sequence name in the first thread
                 if (thread_id == 0)
                 {
-                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name,  num_threads > 1);
+                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name,  (num_threads > 1 && !params->no_merge));
                     out << pre_output << output << "\n";
                 }
-                // don't write sequence name in other thread
+                // write sequence chunk in other threads
                 else
-                    out << output << "\n";
+                {
+                    // if users skip concatenating sequence chunks from intermediate files -> write sequence name
+                    if (params->no_merge)
+                    {
+                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                        out << pre_output << output << "\n";
+                    }
+                    // don't write the sequence name in intermediate files
+                    else
+                        out << output << "\n";
+                }
             }
         }
         
@@ -1508,12 +1531,22 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             // only write sequence name in the first thread
             if (thread_id == 0)
             {
-                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name,  num_threads > 1);
+                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name,  (num_threads > 1 && !params->no_merge));
                 out << pre_output << output << "\n";
             }
-            // don't write sequence name in other thread
+            // write sequence chunk in other threads
             else
-                out << output << "\n";
+            {
+                // if users skip concatenating sequence chunks from intermediate files -> write sequence name
+                if (params->no_merge)
+                {
+                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
+                    out << pre_output << output << "\n";
+                }
+                // don't write the sequence name in intermediate files
+                else
+                    out << output << "\n";
+            }
         }
     }
     
