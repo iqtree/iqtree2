@@ -1448,6 +1448,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
+    params.indel_rate_variation = false;
     params.outputfile_runtime = "";
     params.model_id = "";
     params.tmp_data_filename = "tmp_data";
@@ -5228,6 +5229,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.rebuild_indel_history_param = convert_double(argv[cnt]);
                 if (params.rebuild_indel_history_param < 0 || params.rebuild_indel_history_param > 1)
                     throw "<proportion> must be between 0 and 1.";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--indel-rate-variation") == 0) {
+                params.indel_rate_variation = true;
                 continue;
             }
             
