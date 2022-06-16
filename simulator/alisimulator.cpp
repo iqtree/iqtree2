@@ -1042,9 +1042,9 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             // add ".phy" or ".fa" to the output_filepath
             string tmp_output_filepath;
             if (params->aln_output_format != IN_FASTA)
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id) + ".phy";
+                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".phy";
             else
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id) + ".fa";
+                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".fa";
             // delete file
             remove(tmp_output_filepath.c_str());
         }
