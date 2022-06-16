@@ -668,6 +668,30 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // remove tmp_data if using Indels
         if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
+        
+        // delete output alignments (for testing only)
+        if (super_alisimulator->params->delete_output)
+        {
+            string output_filename = output_filepath;
+            for (int thread_id = 0; thread_id < super_alisimulator->params->num_threads; thread_id++)
+            {
+                if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->no_merge)
+                    output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
+                
+                // add file extension
+                if (super_alisimulator->params->aln_output_format == IN_PHYLIP)
+                    output_filename += ".phy";
+                else
+                    output_filename += ".fa";
+                
+                // delete the output file
+                remove((output_filename).c_str());
+                
+                // stop deleting if output file was merging
+                if (!super_alisimulator->params->no_merge)
+                    break;
+            }
+        }
     }
 }
 

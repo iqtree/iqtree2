@@ -2537,6 +2537,11 @@ public:
     bool no_merge;
     
     /**
+    *  TRUE to delete output file (for testing only)
+    */
+    bool delete_output;
+    
+    /**
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;
