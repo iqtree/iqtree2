@@ -1855,7 +1855,7 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     double total_sub_rate = 0;
     vector<double> sub_rate_by_site;
     // If AliSim is using RATE_MATRIX approach -> initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
-    if (simulation_method == RATE_MATRIX)
+    if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
     {
         initVariables4RateMatrix(total_sub_rate, num_gaps, sub_rate_by_site, (*it)->node->sequence);
         
@@ -1870,10 +1870,26 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
     double total_del_rate = 0;
     if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
     {
-        total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
-        total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+        // compute total_ins_rate and total_del_rate
+        // constant indel-rates
+        if (!params->indel_rate_variation)
+        {
+            total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
+            total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+        }
+        // indel-rate variation
+        else
+        {
+            total_ins_rate = params->alisim_insertion_ratio * total_sub_rate;
+            total_del_rate = params->alisim_deletion_ratio * total_sub_rate;
+        }
     }
-    double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
+    
+    // compute total_event_rate
+    double total_event_rate = total_ins_rate + total_del_rate;
+    // only take into account the substitution rate if using Rate matrix simulation approach
+    if (simulation_method == RATE_MATRIX)
+        total_event_rate += total_sub_rate;
     
     // dummy variables
     int ori_seq_length = (*it)->node->sequence.size();
@@ -1934,10 +1950,25 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
             // update total_event_rate
             if (length_change != 0)
             {
-                total_ins_rate += params->alisim_insertion_ratio * length_change;
-                total_del_rate += params->alisim_deletion_ratio * length_change;
+                // constant indel-rate
+                if (!params->indel_rate_variation)
+                {
+                    total_ins_rate += params->alisim_insertion_ratio * length_change;
+                    total_del_rate += params->alisim_deletion_ratio * length_change;
+                }
+                // indel-rate variation
+                else
+                {
+                    total_ins_rate = params->alisim_insertion_ratio * total_sub_rate;
+                    total_del_rate = params->alisim_deletion_ratio * total_sub_rate;
+                }
             }
-            total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
+            
+            // re-compute total_event_rate
+            total_event_rate = total_ins_rate + total_del_rate;
+            // only take into account the substitution rate if using Rate matrix simulation approach
+            if (simulation_method == RATE_MATRIX)
+                total_event_rate += total_sub_rate;
         }
 
     }
@@ -2046,8 +2077,17 @@ void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int
 */
 int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
 {
-    // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
-    int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
+    // Randomly select the position/site (from the set of all sites) where the insertion event occurs
+    int position;
+    // with constant indel-rate -> based on a uniform distribution between 0 and the current length of the sequence
+    if (!params->indel_rate_variation)
+        position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
+    // with indel-rate variation -> based on the sub_rate_by_site
+    else
+    {
+        discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
+        position = random_discrete_dis(params->generator);
+    }
     
     // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
     int length = -1;
@@ -2068,7 +2108,7 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
     insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
     
     // if RATE_MATRIX approach is used -> update total_sub_rate and sub_rate_by_site
-    if (simulation_method == RATE_MATRIX)
+    if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
     {
         // update sub_rate_by_site of the inserted sites
         double sub_rate_change = 0;
@@ -2116,11 +2156,21 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     if (length <= 0)
         outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution within 1000 attempts.");
     
-    // Randomly select the position/site (from the set of all sites) where the deletion event occurs based on a uniform distribution between 0 and the current length of the sequence
+    // Randomly select the position/site (from the set of all sites) where the deletion event occurs
     int position = 0;
-    int upper_bound = sequence_length - length;
-    if (upper_bound > 0)
-        position = selectValidPositionForIndels(upper_bound, indel_sequence);
+    // with constant indel-rate -> based on a uniform distribution between 0 and the current length of the sequence
+    if (!params->indel_rate_variation)
+    {
+        int upper_bound = sequence_length - length;
+        if (upper_bound > 0)
+            position = selectValidPositionForIndels(upper_bound, indel_sequence);
+    }
+    // with indel-rate variation -> based on the sub_rate_by_site
+    else
+    {
+        discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
+        position = random_discrete_dis(params->generator);
+    }
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
     int real_deleted_length = 0;
@@ -2141,7 +2191,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
         }
         
         // if RATE_MATRIX approach is used -> update sub_rate_by_site
-        if (simulation_method == RATE_MATRIX)
+        if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
         {
             sub_rate_change -= sub_rate_by_site[position + i];
             sub_rate_by_site[position + i] = 0;
@@ -2149,7 +2199,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     }
     
     // if RATE_MATRIX approach is used -> update total_sub_rate
-    if (simulation_method == RATE_MATRIX)
+    if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
         total_sub_rate += sub_rate_change;
     
     // return deletion-size
