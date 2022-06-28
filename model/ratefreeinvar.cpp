@@ -11,9 +11,8 @@ RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool s
 : RateInvar(p_invar_sites, tree), RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
 {
 	cur_optimize = 0;
-    // the following two lines should be commented, as the same lines appear inside setNCategory() function
-	// name = "+I" + name;
-	// full_name = "Invar+" + full_name;
+	name = "+I" + name;
+	full_name = "Invar+" + full_name;
     setNCategory(ncat);
 }
 
@@ -48,8 +47,9 @@ void RateFreeInvar::setNCategory(int ncat) {
         rates[i] /= sum;
     }
     
-	name = "+I" + name;
-	full_name = "Invar+" + full_name;
+    // the following two lines should be commented, as the same lines appear inside the constructor
+	// name = "+I" + name;
+	// full_name = "Invar+" + full_name;
 }
 
 double RateFreeInvar::computeFunction(double value) {

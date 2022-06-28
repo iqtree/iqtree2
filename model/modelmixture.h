@@ -226,6 +226,12 @@ public:
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
 
+    /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
+     @param state character state
+     @param[out] state_lk state likehood vector of size num_states
+     */
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
+
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
