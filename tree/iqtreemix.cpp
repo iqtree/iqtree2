@@ -349,9 +349,9 @@ void IQTreeMix::separateModel(string modelName) {
         s = model_array[i];
         if (s.length() == 0) {
             continue;
-        } else if (s.length() > 5 && s.substr(0,4) == "MIX{" && s.substr(s.length()-1,1) == "}") {
+        } else if (s.length() > 6 && s.substr(0,5) == "TMIX{" && s.substr(s.length()-1,1) == "}") {
             // mixture model
-            s = s.substr(4,s.length()-5); // remove the beginning "MIX{" and the ending "}"
+            s = s.substr(5,s.length()-6); // remove the beginning "MIX{" and the ending "}"
             if (i==0) {
                 // unlinked substitution models (while site rates may or may not be linked)
                 bool siteRateAppear = false;
@@ -384,7 +384,7 @@ void IQTreeMix::separateModel(string modelName) {
                     siterate_names.push_back(submodel_array[k]);
                 }
             } else {
-                outError("The model: " + treemix_model + " is not correctly specified. Are you using more than one 'MIX'?");
+                outError("The model: " + treemix_model + " is not correctly specified. Are you using more than one 'TMIX'?");
             }
         } else if (i==0) {
             // linked substitution model
@@ -1772,7 +1772,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             // cout << "after optimizing tree weights, likelihood = " << score << endl;
         }
 
-        if (step % 50 == 0) {
+        if ((step <= 10) || (step<=100 && step%10==0) || (step%50==0)) {
             cout << "step=" << step; // << " substep1=" << substep1 << " substep2_tot=" << substep2_tot;
             cout << " score=" << score;
             /*
