@@ -2545,6 +2545,11 @@ public:
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;
+    
+    /**
+    *  TRUE to allow indel-rate variation
+    */
+    bool indel_rate_variation;
 };
 
 /**
