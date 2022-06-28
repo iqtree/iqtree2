@@ -1048,31 +1048,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
         outError("Sequencing error model " + seqerr + " is only supported for DNA");
     }
     // Now that PoMo stuff has been removed, check for model parameters.
-    // extract freqs (if specified)
-    size_t pos = model_str.find("+FO");
-    size_t end_pos;
-    if (pos != string::npos)
-    {
-        freq_type = FREQ_ESTIMATE;
-        model_str = model_str.substr(0, pos);
-    }
-    pos = model_str.find("+FQ");
-    if (pos != string::npos)
-    {
-        freq_type = FREQ_EQUAL;
-        model_str = model_str.substr(0, pos);
-    }
-    pos = model_str.find("+F{");
-    if (pos != string::npos)
-    {
-        freq_type = FREQ_USER_DEFINED;
-        string tmp_str = model_str.substr(pos+3, model_str.length()-pos-3);
-        end_pos = tmp_str.find(CLOSE_BRACKET);
-        freq_params = tmp_str.substr(0, end_pos);
-        model_str = model_str.substr(0, pos);
-    }
-    
-	pos = model_str.find(OPEN_BRACKET);
+	size_t pos = model_str.find(OPEN_BRACKET);
     if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
 			outError("Close bracket not found at the end of ", model_str);
@@ -1082,7 +1058,29 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
         
         // extract model params
         size_t end_pos = tmp_str.find(CLOSE_BRACKET);
-        model_params = tmp_str.substr(pos+1, end_pos-pos-1);
+        
+        // handle cases that user doesn't specify model parameters but supply state frequencies
+        size_t pos_plus = model_str.find('+');
+        if (pos_plus != string::npos)
+        {
+            model_params = "";
+            model_str = model_str.substr(0, pos_plus);
+        }
+        else
+            model_params = tmp_str.substr(pos+1, end_pos-pos-1);
+        
+        // extract freqs (if specified)
+        pos = tmp_str.find("+FQ");
+        if (pos != string::npos)
+            freq_type = FREQ_EQUAL;
+        pos = tmp_str.find("+F{");
+        if (pos != string::npos)
+        {
+            freq_type = FREQ_USER_DEFINED; 
+            tmp_str = tmp_str.substr(pos+3, tmp_str.length()-pos-3);
+            end_pos = tmp_str.find(CLOSE_BRACKET);
+            freq_params = tmp_str.substr(0, end_pos);
+        }
     }
 
 	/*
