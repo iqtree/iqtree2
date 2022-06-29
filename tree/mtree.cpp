@@ -463,6 +463,8 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     if (length_nei->length == -1.0)
         return; // NA branch length
     int prec = 10;
+    if (Params::getInstance().numeric_precision > 0)
+        prec = Params::getInstance().numeric_precision;
 	double length = length_nei->length;
     if (brtype & WT_BR_SCALE) length *= len_scale;
     if (brtype & WT_BR_LEN_SHORT) prec = 6;
@@ -1266,6 +1268,36 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
                 nodes.push_back((*it)->node);
                 nodes2.push_back(node);
             }
+        }
+    }
+}
+
+// output both nodes and also the node ids
+void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, IntVector &nodeids, Node *node, Node *dad, bool post_traversal) {
+    if (!node) node = root;
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)   {
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (!post_traversal) {
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+            nodeids.push_back((*it)->id);
+        }
+        getBranches(nodes, nodes2, nodeids, (*it)->node, node, post_traversal);
+        if (post_traversal) {
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+            nodeids.push_back((*it)->id);
         }
     }
 }

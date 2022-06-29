@@ -354,6 +354,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class ModelFactoryMixlen;
     friend class MemSlotVector;
     friend class ModelFactory;
+    friend class IQTreeMix;
 
 public:
     /**
@@ -503,7 +504,7 @@ public:
             get rate heterogeneity
             @return associated rate heterogeneity class
      */
-    RateHeterogeneity *getRate();
+    virtual RateHeterogeneity *getRate();
 
     void discardSaturatedSite(bool val);
 
@@ -523,11 +524,11 @@ public:
 	 */
 	virtual string getModelNameParams(bool show_fixed_params = false);
 
-    ModelSubst *getModel() {
+    virtual ModelSubst *getModel() {
         return model;
     }
 
-    ModelFactory *getModelFactory() {
+    virtual ModelFactory *getModelFactory() {
         return model_factory;
     }
 
@@ -543,6 +544,11 @@ public:
         @return true if this is a tree with mixture branch lengths, default: false
     */
     virtual bool isMixlen() { return false; }
+
+    /**
+        @return true if this is a mixture of trees, default: false
+    */
+    virtual bool isTreeMix() { return false; }
 
     /**
         @return number of mixture branch lengths, default: 1
@@ -688,7 +694,7 @@ public:
 
     template<class VectorClass>
     int computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
+    
 //    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
@@ -737,6 +743,13 @@ public:
      @return parsimony score of the tree
      */
     int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    /**
+     compute tree parsimony score along the patterns
+     @param ptn_scores (OUT) parsimony scores along the patterns
+     @return parsimony score of the tree
+     */
+    UINT computeParsimonyOutOfTreeSankoff(UINT* ptn_scores);
 
     /****************************************************************************
             likelihood function
@@ -845,9 +858,9 @@ public:
         precompute info for models
     */
     template<class VectorClass, const int nstates>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
     template<class VectorClass>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
 
     /** 
         sort neighbor in descending order of subtree size (number of leaves within subree)

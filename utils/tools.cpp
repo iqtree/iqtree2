@@ -1176,6 +1176,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_freerate = "2-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
+    params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
@@ -1451,6 +1452,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.keep_seq_order = false;
     params.no_merge = false;
     params.delete_output = false;
+    params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
     
@@ -1578,6 +1580,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -optalg_gammai <Brent|BFGS|EM>";
                 params.optimize_alg_gammai = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-optalg_treeweight") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -optalg_treeweight <BFGS|EM>";
+                params.optimize_alg_treeweight = argv[cnt];
                 continue;
             }
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
@@ -5229,6 +5238,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--delete-output") == 0) {
                 params.delete_output = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--indel-rate-variation") == 0) {
+                params.indel_rate_variation = true;
                 continue;
             }
             

@@ -358,7 +358,7 @@ protected:
     /**
         init the output file
     */
-    void initOutputFile(ostream *&out, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    void initOutputFile(ostream *&out, int thread_id, int actual_segment_length, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
     
     /**
         open an output stream

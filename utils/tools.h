@@ -1650,6 +1650,11 @@ public:
      *  Optimization algorithm for +I+G
      */
     string optimize_alg_gammai;
+    
+    /**
+     *  Optimization algorithm for tree weights in tree-mixture model
+     */
+    string optimize_alg_treeweight;
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
@@ -2545,6 +2550,11 @@ public:
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;
+    
+    /**
+    *  TRUE to allow indel-rate variation
+    */
+    bool indel_rate_variation;
 };
 
 /**

@@ -1014,6 +1014,7 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
         }
     }
 
+
     // also count MEM for nni_partial_lh
     mem_size += (max_lh_slots+2) * lh_scale_size;
     return mem_size;

@@ -23,6 +23,8 @@ using namespace std;
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
+class PhyloTree;
+
 /**
 Substitution model abstract class
 
@@ -32,6 +34,7 @@ class ModelSubst: public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
     friend class PartitionModel;
+    friend class IQTreeMix;
 
 public:
 	/**
@@ -279,6 +282,12 @@ public:
 	*/
 	virtual StateFreqType getFreqType() { return FREQ_EQUAL; }
 
+    /**
+        set the associated tree
+        @param tree the associated tree
+    */
+    virtual void setTree(PhyloTree *tree) {}
+    
     /** for reversible models, multiply likelihood with inverse eigenvectors for fast pruning algorithm
             @param[in/out] state_lk state likelihood multiplied with inverse eigenvectors
      */
@@ -401,6 +410,8 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
+
+    
     
 	/**
 		number of states
