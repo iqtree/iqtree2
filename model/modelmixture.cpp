@@ -2022,7 +2022,7 @@ string ModelMixture::getNameParams(bool show_fixed_params) {
     retname += OPEN_BRACKET;
     for (iterator it = begin(); it != end(); it++) {
         if (it != begin()) retname += ",";
-        retname += (*it)->getNameParams();
+        retname += (*it)->getNameParams(show_fixed_params);
     }
     retname += CLOSE_BRACKET;
     return retname;
