@@ -988,6 +988,14 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         parseBranchLength(seqname, branch_len);
 //        convert_double_vec(seqname.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
     }
+    // handle the case of multiple-length branches but lack of the average branch length
+    // e.g A[0.1/0.2/0.3/0.4] instead of A[0.1/0.2/0.3/0.4]:0.25
+    else if (in_comment.length() > 0)
+    {
+        // set default average branch length at 0
+        string default_avg_length = "0";
+        parseBranchLength(default_avg_length, branch_len);
+    }
 }
 
 /**
