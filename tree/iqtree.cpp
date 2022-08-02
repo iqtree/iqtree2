@@ -569,6 +569,12 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             cout << " rooted tree";
         }
         cout << endl;
+
+        cout << endl << endl;
+        cout << "Initial tree:" << endl;
+        printTree(cout);
+        cout << endl;
+
         setAlignment(aln);
         if (isSuperTree())
             wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&

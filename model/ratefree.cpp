@@ -546,6 +546,7 @@ double RateFree::optimizeWithEM() {
         }
         ASSERT(score < 0);
         
+        /*
         if (step > 0) {
             if (score <= old_score-0.1) {
                 phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
@@ -555,6 +556,7 @@ double RateFree::optimizeWithEM() {
             }
             ASSERT(score > old_score-0.1);
         }
+        */
         old_score = score;
         
                 

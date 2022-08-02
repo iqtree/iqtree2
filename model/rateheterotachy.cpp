@@ -38,6 +38,13 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
 			outWarning("Normalizing category proportions so that sum of them not equal to 1");
             normalize_frequencies(prop, ncategory, sum_prop);
         }
+        
+        cout << endl;
+        cout << "Initial weights:";
+        for (i = 0; i < ncategory; i++)
+            cout << " " << prop[i];
+        cout << endl << endl;
+        
 		// Minh: Please double check this one. It isn't quite so
 		// clear what fix_params is doing, as it seems to take values
 		// 0, 1 or 2.  -- MDW

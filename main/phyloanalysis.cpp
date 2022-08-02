@@ -3689,7 +3689,12 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
         } else if (pos != string::npos) {
-            tree = new PhyloTreeMixlen(alignment, 0);
+            int nMixLen = 0;
+            // get the number after "+H" or "*H"
+            if (pos+2 < alignment->model_name.length()) {
+                nMixLen = atoi(alignment->model_name.substr(pos+2).c_str());
+            }
+            tree = new PhyloTreeMixlen(alignment, nMixLen);
         } else
             tree = new IQTree(alignment);
     }
