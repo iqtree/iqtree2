@@ -471,6 +471,7 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     site_rates.clear();
     site_rate_trees.clear();
     separateModel(model_name);
+    params.optimize_alg_freerate = "2-BFGS";
 
     // initialize the models
     for (i=0; i<ntree; i++) {
@@ -484,7 +485,6 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
                 if (siterate_names[0] != "E")
                     curr_model += "+" + siterate_names[0];
                 params.optimize_alg_gammai = "BFGS";
-                params.optimize_alg_freerate = "2-BFGS";
                 params.optimize_alg_mixlen = "BFGS";
             } else {
                 if (siterate_names[i] != "E")
@@ -1297,11 +1297,19 @@ uint64_t IQTreeMix::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
     return mem;
 }
 
+void IQTreeMix::setNumThreads(int num_threads) {
+    for (size_t i = 0; i < size(); i++)
+        at(i)->setNumThreads(num_threads);
+    PhyloTree::setNumThreads(num_threads);
+}
+
 /**
     test the best number of threads
 */
 int IQTreeMix::testNumThreads() {
-    return at(0)->testNumThreads();
+    int bestNThres = at(0)->testNumThreads();
+    setNumThreads(bestNThres);
+    return bestNThres;
 }
 
 /**
@@ -1635,8 +1643,18 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     // show trees
     // cout << "Initial trees:" << endl;
     // showTree();
-    // score = computeLikelihood();
-    // cout << "Initial likelihood = " << score << endl;
+    score = computeLikelihood();
+    cout << "1. Initial log-likelihood: " << score;
+    if (verbose_mode >= VB_MED) {
+        cout << " weights=(";
+        for (i=0; i<ntree; i++) {
+            if (i>0)
+                cout << ",";
+            cout << weights[i];
+        }
+        cout << ")";
+    }
+    cout << endl;
 
     bool is_ptnfrq_posterior = false;
 
@@ -1772,19 +1790,17 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             // cout << "after optimizing tree weights, likelihood = " << score << endl;
         }
 
-        if ((step <= 10) || (step<=100 && step%10==0) || (step%50==0)) {
-            cout << "step=" << step; // << " substep1=" << substep1 << " substep2_tot=" << substep2_tot;
-            cout << " score=" << score;
-            /*
+        cout << step+2 << ". Current log-likelihood: " << score;
+        if (verbose_mode >= VB_MED) {
             cout << " weights=(";
             for (i=0; i<ntree; i++) {
                 if (i>0)
-                    cout << ", ";
+                    cout << ",";
                 cout << weights[i];
             }
-            cout << ")";*/
-            cout << endl;
+            cout << ")";
         }
+        cout << endl;
 
         if (score < prev_score + gradient_epsilon) {
             // converged
@@ -1884,31 +1900,59 @@ double IQTreeMix::treeLengthInternal( double epsilon, Node *node, Node *dad) {
 
 int IQTreeMix::getNParameters() {
     int df = 0;
+    int k;
     size_t i;
+    
+    if (verbose_mode >= VB_MED)
+        cout << endl << "Number of parameters:" << endl;
     for (i=0; i<models.size(); i++) {
-        df += (models[i]->getNDim() + models[i]->getNDimFreq());
+        k = models[i]->getNDim() + models[i]->getNDimFreq();
+        if (verbose_mode >= VB_MED) {
+            if (models.size() == 1)
+                cout << " linked model : " << k << endl;
+            else
+                cout << " model " << i+1 << " : " << k << endl;
+        }
+        df += k;
     }
     for (i=0; i<site_rates.size(); i++) {
+        if (verbose_mode >= VB_MED) {
+            if (site_rates.size() == 1)
+                cout << " linked site rate : " << site_rates[i]->getNDim() << endl;
+            else
+                cout << " siterate " << i+1 << " : " << site_rates[i]->getNDim() << endl;
+        }
         df += site_rates[i]->getNDim();
     }
     // for branch parameters
     if (params->fixed_branch_length != BRLEN_FIX) {
         if (isEdgeLenRestrict) {
+            if (verbose_mode >= VB_MED)
+                cout << " branch groups (for branch-len-restricted) : " << branch_group.size() << endl;
             df += branch_group.size();
         } else {
             for (i=0; i<size(); i++) {
-                df += at(i)->getNBranchParameters(BRLEN_OPTIMIZE);
+                k = at(i)->getNBranchParameters(BRLEN_OPTIMIZE);
+                if (verbose_mode >= VB_MED)
+                    cout << " branches of tree " << i+1 << " : " << k << endl;
+                df += k;
             }
         }
     }
     // for tree weights
     if (!isTreeWeightFixed) {
         if (weightGrpExist) {
+            if (verbose_mode >= VB_MED)
+                cout << " tree weight groups (for weight-restricted) : " << (weight_group_member.size() - 1) << endl;
             df += (weight_group_member.size() - 1);
         } else {
+            if (verbose_mode >= VB_MED)
+                cout << " tree weights : " << (size() - 1) << endl;
             df += (size() - 1);
         }
     }
+    if (verbose_mode >= VB_MED)
+        cout << " == Total : " << df << " == " << endl << endl;
     return df;
 }
 
@@ -2156,6 +2200,64 @@ int IQTreeMix::getNDim() {
         s = branch_group.size();
     }
     return s;
+}
+
+/**
+        get the name of the model
+ */
+string IQTreeMix::getModelName() {
+    size_t i;
+    string model = "";
+
+    if (isLinkModel) {
+        // for linked model
+        model += model_names[0];
+        
+        if (anySiteRate) {
+            model += "+";
+            if (isLinkSiteRate) {
+                // for linked site rate
+                model += siterate_names[0];
+            } else {
+                // for unlinked site rate
+                model += "TMIX{";
+                for (i=0; i<size(); i++) {
+                    if (i>0)
+                        model += ",";
+                    model += siterate_names[i];
+                }
+                model += "}";
+            }
+        }
+    } else {
+        // for unlinked model
+        model += "TMIX{";
+        if (anySiteRate && !isLinkSiteRate) {
+            // show both unlinked model and unlinked site rate
+            for (i=0; i<size(); i++) {
+                if (i>0)
+                    model += ",";
+                model += model_names[i] + "+" + siterate_names[i];
+            }
+        } else {
+            // show unlinked model only
+            for (i=0; i<size(); i++) {
+                if (i>0)
+                    model += ",";
+                model += model_names[i];
+            }
+        }
+        model += "}";
+        if (anySiteRate && isLinkSiteRate) {
+            // for linked site rate
+            model += "+" + siterate_names[0];
+        }
+    }
+    if (isEdgeLenRestrict)
+        model += "+TR";
+    else if (model.find("TMIX") == string::npos)
+        model += "+T";
+    return model;
 }
 
 // show the log-likelihoods and posterior probabilties for each tree along the sites

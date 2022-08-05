@@ -1838,7 +1838,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 //    if (!params.raxmllib) {
     cout << "Model of evolution: ";
-    if (iqtree.isSuperTree()) {
+    if (iqtree.isSuperTree() || iqtree.isTreeMix()) {
         cout << iqtree.getModelName() << " (" << model_df << " free parameters)" << endl;
     } else {
         cout << iqtree.getModelName() << " with ";
@@ -2801,6 +2801,18 @@ bool isTreeMixture(Params& params) {
     return (params.model_name.find("+T") != string::npos);
 }
 
+// get the number after "+T" for tree-mixture model
+int getTreeMixNum(Params& params) {
+    int n = 0;
+    size_t p = params.model_name.find("+T");
+    string str_n;
+    if (p != string::npos && p < params.model_name.length()-2) {
+        str_n = params.model_name.substr(p+2);
+        n = atoi(str_n.c_str());
+    }
+    return n;
+}
+
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     //    string dist_file;
@@ -2909,7 +2921,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     cout << endl;
     if (verbose_mode >= VB_MED) {
         cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
-        int model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+        int model_df;
+        if (iqtree->isTreeMix()) {
+            model_df = ((IQTreeMix*) iqtree)->getNParameters();
+        } else {
+            model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+        }
         printAnalysisInfo(model_df, *iqtree, params);
     }
 
@@ -4204,12 +4221,13 @@ int checkCharInFile(char* infile, char c) {
     return k;
 }
 
-IQTree *newIQTreeMix(Params &params, Alignment *alignment) {
-    int i, numTree;
+IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
+    int i;
     vector<IQTree*> trees;
     
     // check how many trees inside the user input file
-    numTree = checkCharInFile(params.user_file, ';');
+    if (numTree == 0)
+        numTree = checkCharInFile(params.user_file, ';');
     cout << "Number of input trees: " << numTree << endl;
     if (numTree <= 1) {
         outError("For using the tree mixture model, there must be at least 2 trees inside the tree file: " + string(params.user_file) + ", and each tree must be followed by the character ';'.");
@@ -4509,7 +4527,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         cout << "Tree-mixture model" << endl;
         // tree-mixture model
         if (params.user_file == NULL) {
-            outError("Tree file has to be inputed (using the option -te) for tree-mixture model");
+            // get the number after "+T" for tree-mixture model
+            int treeNum = getTreeMixNum(params);
+            if (treeNum == 0) {
+                outError("Specify the number of trees in the model or input the tree file using the option '-te' for tree-mixture model");
+            }
+            tree = newIQTreeMix(params, alignment, treeNum); // tree mixture model
+        } else {
+            tree = newIQTreeMix(params, alignment); // tree mixture model
         }
         if (params.compute_ml_tree_only) {
             outError("option compute_ml_tree_only cannot be set for tree-mixture model");

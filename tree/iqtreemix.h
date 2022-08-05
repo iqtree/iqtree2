@@ -157,6 +157,8 @@ public:
      */
     virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, bool full_mem = false);
 
+    virtual void setNumThreads(int num_threads);
+
     /**
         test the best number of threads
     */
@@ -247,6 +249,11 @@ public:
     virtual ModelSubst *getModel() {
         return at(0)->getModel();
     }
+
+    /**
+            get the name of the model
+     */
+    virtual string getModelName();
 
     // show the log-likelihoods and posterior probabilties for each tree along the sites
     void showLhProb(ofstream& out);
