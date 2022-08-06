@@ -3209,7 +3209,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
         tree_lh = 0.0;
         intptr_t unlikely_patterns = 0;
         #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:tree_lh,+:unlikely_patterns)
+        #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:tree_lh,unlikely_patterns)
         #endif
         for (intptr_t ptn = 0; ptn < orig_nptn; ++ptn) {
             if (!std::isfinite(buffers._pattern_lh[ptn])) {
