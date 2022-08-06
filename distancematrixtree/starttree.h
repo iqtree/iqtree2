@@ -24,6 +24,7 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <sstream>                //for std::stringstream
 #include <vector>
 #include <utils/timeutil.h>       //for getRealTime()
 #include <utils/vectortypes.h>    //for StrVector template class
@@ -43,9 +44,13 @@ namespace StartTree
             ( const std::string &distanceMatrixFilePath
             , const std::string & newickTreeFilePath) = 0;
         virtual bool constructTreeInMemory
-            ( const StrVector &sequenceNames
-            , const double *distanceMatrix
+            ( const StrVector&   sequenceNames
+            , const double*      distanceMatrix
             , const std::string& newickTreeFilePath) = 0;
+        virtual bool constructTreeStringInMemory
+            ( const StrVector& sequenceNames
+            , const double*    distanceMatrix
+            , std::string&     output_string) = 0;
         virtual bool constructTreeAndAppendToStream
             ( const StrVector &sequenceNames
             , const double *distanceMatrix
@@ -71,18 +76,20 @@ namespace StartTree
     protected:
         Factory();
         ~Factory();
-
         size_t getBuilderCount();
         void addBuilder(const std::string& name, BuilderInterface* builder);
-        BuilderInterface* getBuilder(const std::string& name);
-        BuilderInterface* getBuilder(const char* name);
+        BuilderInterface* getBuilder(const std::string& name) const;
+        BuilderInterface* getBuilder(const char* name) const;
+        BuilderInterface* getDefaultTreeBuilder() const;
     public:
         static Factory& getInstance();
         void   advertiseTreeBuilder(BuilderInterface* builder);
         void   setNameOfDefaultTreeBuilder(const char* name);
         static const std::string& getNameOfDefaultTreeBuilder();
         static BuilderInterface* getTreeBuilderByName(const std::string& name);
+        static BuilderInterface* getTreeBuilderByName(const char* name);
         std::string getListOfTreeBuilders() const;
+        StrVector getVectorOfTreeBuilderNames(bool withDescriptions) const;
     };
 
     template <class B> class Builder: public BuilderInterface
@@ -215,6 +222,19 @@ namespace StartTree
             return builder.writeTreeFile(precision, newickTreeFilePath);
         }
 
+        virtual bool constructTreeStringInMemory
+            ( const StrVector& sequenceNames
+            , const double*    distanceMatrix
+            , std::string&     output_string) override {
+            B builder;
+            constructTree(sequenceNames, distanceMatrix, builder);
+            std::stringstream stream;
+            stream.precision(precision);
+            bool rc =  builder.writeTreeToOpenFile(stream);
+            output_string = stream.str();
+            return rc;
+        }
+
         virtual bool constructTreeAndAppendToStream
             ( const StrVector &sequenceNames
             , const double* distanceMatrix
@@ -258,6 +278,10 @@ namespace StartTree
             ( const StrVector& sequenceNames
             , const double*    distanceMatrix
             , std::iostream&   stream) override;
+        virtual bool constructTreeStringInMemory
+            ( const StrVector& sequenceNames
+            , const double*    distanceMatrix
+            , std::string&     output_string) override;
         virtual bool setZippedOutput (bool zipIt) override;
         virtual void beSilent        () override;
         virtual bool setPrecision    (int precisionToUse) override;

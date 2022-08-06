@@ -23,8 +23,14 @@
 
 namespace StartTree {
 
-extern void addBioNJ2009TreeBuilders(Factory& f);
+#ifndef USE_BIONJ_2009
+#define USE_BIONJ_2009 (1)
+#endif
+#if (USE_BIONJ_2009)
+    extern void addBioNJ2009TreeBuilders(Factory& f);
+#endif
 extern void addBioNJ2020TreeBuilders(Factory& f);
+
 //extern void addStitchupTreeBuilders (Factory& f);
 
 Factory::Factory() {
@@ -45,7 +51,9 @@ size_t Factory::getBuilderCount() {
 Factory& Factory::getInstance() {
     static Factory instance;
     if (instance.getBuilderCount()==0) {
-        addBioNJ2009TreeBuilders(instance);
+        #if (USE_BIONJ_2009)
+            addBioNJ2009TreeBuilders(instance);
+        #endif
         addBioNJ2020TreeBuilders(instance);
         //addStitchupTreeBuilders(instance);
         BuilderInterface *bench = new BenchmarkingTreeBuilder(instance, "BENCHMARK", "Benchmark");
@@ -58,14 +66,14 @@ void Factory::addBuilder(const std::string& name, BuilderInterface* builder) {
     mapOfTreeBuilders [ name ] = builder;
 }
 
-BuilderInterface* Factory::getBuilder(const std::string& name) {
+BuilderInterface* Factory::getBuilder(const std::string& name) const {
     auto found = mapOfTreeBuilders.find(name);
     return ( found == mapOfTreeBuilders.end())
             ? nullptr
             : found->second;
 }
 
-BuilderInterface* Factory::getBuilder(const char* name) {
+BuilderInterface* Factory::getBuilder(const char* name) const {
     std::string s(name);
     return getBuilder(s);
 }
@@ -79,6 +87,21 @@ std::string Factory::getListOfTreeBuilders() const {
              << builder->getDescription() << "\n";
     }
     return list.str();
+}
+
+StrVector Factory::getVectorOfTreeBuilderNames(bool withDescriptions) const {
+    StrVector vector;
+    for (auto it=mapOfTreeBuilders.begin();
+         it!=mapOfTreeBuilders.end(); ++it) {
+        auto builder     = (*it).second;
+        std::string name = builder->getName();
+        if (withDescriptions) {
+            name += ": ";
+            name += builder->getDescription();
+        }
+        vector.emplace_back(name);
+    }
+    return vector;
 }
 
 void Factory::advertiseTreeBuilder(BuilderInterface* builder) {
@@ -96,6 +119,19 @@ const std::string& Factory::getNameOfDefaultTreeBuilder() {
 
 BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
     return getInstance().getBuilder(name);
+}
+
+BuilderInterface* Factory::getDefaultTreeBuilder() const {
+    return getBuilder(nameOfDefaultTreeBuilder);
+}
+
+BuilderInterface* Factory::getTreeBuilderByName(const char* name) {
+    if (name!=nullptr && strlen(name)!=0) {
+        return getInstance().getBuilder(name);
+    } 
+    else {
+        return getInstance().getDefaultTreeBuilder();
+    }
 }
 
 BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse,
@@ -192,6 +228,13 @@ namespace {
         }
         return t.substr(0,w);
     }
+}
+
+bool BenchmarkingTreeBuilder::constructTreeStringInMemory
+    ( const StrVector& sequenceNames
+    , const double*    distanceMatrix
+    , std::string&     output_string) {
+    return false;
 }
 
 bool BenchmarkingTreeBuilder::constructTreeInMemory

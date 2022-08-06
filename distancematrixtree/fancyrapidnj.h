@@ -82,8 +82,8 @@ protected:
             #define INFILE(name) Infile name
         #endif
     #else
-        typedef ifstream InFile;
-        #define INFILE(name) Infile name
+        typedef std::ifstream InFile;
+        #define INFILE(name) InFile name
     #endif
     typedef std::vector<T>    DistanceVector;
     struct MatrixEntry {
@@ -104,8 +104,8 @@ protected:
     typedef std::vector<MatrixEntry>  EntryVector;
     typedef std::vector<MatrixEntry*> EntryPtrVector;
 
-    size_t         original_rank;
-    size_t         next_cluster_number;
+    intptr_t       original_rank;
+    intptr_t       next_cluster_number;
     IntVector      cluster_in_play;
     DistanceVector cluster_total;
     DistanceVector cluster_total_scaled;
@@ -373,7 +373,7 @@ protected:
         cluster_unsorted_stop.resize (q, nullptr);
         cluster_row.resize           (q, -1);
         cluster_cutoff.resize        (q, 0.0);
-        for (int c=0; c<n; ++c) {
+        for (size_t c=0; c<n; ++c) {
             allocateCluster(c);
         }
         row_cluster.resize(original_rank);
@@ -465,7 +465,7 @@ protected:
             //of duplicate taxa to merge...
             while (1<cluster_members.size()) {
                 std::vector<intptr_t> next_level;
-                for (int i=0; i<cluster_members.size(); i+=2) {
+                for (size_t i=0; i<cluster_members.size(); i+=2) {
                     if (i+1==cluster_members.size()) {
                         next_level.push_back(cluster_members[i]);
                     } else {    
@@ -894,7 +894,7 @@ protected:
     }
 }; //FancyNJMatrix template class
 
-#ifdef USE_VECTORCLASS_LIBRARY
+#if USE_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector> 
 class VectorizedFancyNJMatrix: public FancyNJMatrix<T> {
 public:
