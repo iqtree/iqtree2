@@ -3213,20 +3213,28 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
         #endif
         for (intptr_t ptn = 0; ptn < orig_nptn; ++ptn) {
             if (!std::isfinite(buffers._pattern_lh[ptn])) {
+                if (unlikely_patterns==0) {
+                  std::stringstream complaint;
+                  complaint << "Artificially setting lh"
+                            << " for pattern " << ptn << " (was " 
+                            << buffers._pattern_lh[ptn] << ")";
+                  LOG_LINE(VerboseMode::VB_MED,complaint.str());
+                }
                 buffers._pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
-                unlikely_patterns+=1;
+                unlikely_patterns       += 1;
             }
             tree_lh += buffers._pattern_lh[ptn] * ptn_freq[ptn];
         }
         if (justWarned) {
             LOG_LINE(VerboseMode::VB_MED, "Fixed tree_lh was " << tree_lh
-                     << " (artifically set lh for " << unlikely_patterns 
+                     << " (artificially set lh for " << unlikely_patterns 
                      << " of " << orig_nptn << " patterns).");
         }
     }
     // robust phylogeny project, summing log-likelihood over the best sites
     if (params->robust_phy_keep < 1.0) {
         if (ASC_Holder || ASC_Lewis) {
+            hideProgress();
             outError("+ASC not supported with robust phylo");
         }
         size_t sites      = getAlnNSite();
@@ -3245,6 +3253,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
         }
     } else if (params->robust_median) {
         if (ASC_Holder || ASC_Lewis) {
+            hideProgress();
             outError("+ASC not supported with robust phylo");
         }
         size_t sites = getAlnNSite();
@@ -3477,8 +3486,9 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
     double tree_lh = all_tree_lh;
     if (!std::isfinite(tree_lh)) {
         if (!safe_numeric) {
+            hideProgress();
             outError("Numerical underflow (lh-from-buffer)."
-                     " Run again with the safe likelihood kernel via `-safe` option");
+                      " Run again with the safe likelihood kernel via `-safe` option");
         } else {
             if (!warnedAboutNumericalUnderflow) {
                 hideProgress();
@@ -3734,6 +3744,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD
     ddf = all_ddf;
 
     if (!SAFE_NUMERIC && !std::isfinite(df)) {
+        hideProgress();
         outError("Numerical underflow (lh-derivative-mixlen). Run again with the safe likelihood kernel via `-safe` option");
     }
 	if (ASC_Lewis) {

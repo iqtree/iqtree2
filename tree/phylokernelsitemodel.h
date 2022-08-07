@@ -245,6 +245,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
 					int nsite = aln->getNSite();
 					for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
 						if (aln->getPatternID(i) == ptn) {
+                            hideProgress();
 							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
 							x++;
 						}
@@ -349,6 +350,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor* dad_br
 					int nsite = aln->getNSite();
 					for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
 						if (aln->getPatternID(i) == ptn) {
+                            hideProgress();
 							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
 							x++;
 						}
@@ -533,6 +535,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD
     if (isnan(df) || isinf(df)) {
         df  = 0.0;
         ddf = 0.0;
+        hideProgress();
         outWarning("Numerical instability (some site-likelihood = 0)");
     }
 }
