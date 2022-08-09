@@ -59,7 +59,7 @@ IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : I
 
     clear();
     weights.clear();
-
+    
     // store the trees and initialize tree-weights
     ntree = trees.size();
     double init_weight = 1.0 / (double) ntree;
@@ -801,6 +801,7 @@ void IQTreeMix::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *da
     }
     for (i=0; i<ntree; i++) {
         at(i)->saveBranchLengths(len[i]);
+        // cout << "tree " << i+1 << " len[" << i << "].size() = " << len[i].size() << endl;
     }
 }
 
@@ -853,10 +854,14 @@ void IQTreeMix::checkBranchGrp() {
     // collect the branch lengths of the tree
     getBranchLengths(branch_len);
     
+    // cout << "nbranch = " << nbranch << endl;
+    
     for (i = 0; i < branch_group.size(); i++) {
         sum_treeweight = 0.0;
         for (j = 0; j < branch_group[i].size(); j++) {
             treeIdx = branch_group[i].at(j) / nbranch;
+            branchIdx = branch_group[i].at(j) % nbranch;
+            // cout << "i=" << i << " j=" << j << " id=" << branch_group[i].at(j) << " treeIdx=" << treeIdx << " branchIdx=" << branchIdx << endl << flush;
             sum_treeweight += weights[treeIdx];
         }
         grp_len = 0.0;
@@ -1144,6 +1149,15 @@ void IQTreeMix::computeBranchID() {
     branch_id.resize(nbranch * size());
     DoubleVector lenvec;
     IntVector ids;
+    
+    // convert the trees to unrooted if they are rooted
+    for (i=0; i<size(); i++) {
+        if (at(i)->rooted) {
+            at(i)->convertToUnrooted();
+            if (verbose_mode >= VB_MED)
+                cout << "Convert tree " << i+1 << " into an unrooted tree" << endl;
+        }
+    }
 
     for (j=0; j<size(); j++) {
         
@@ -1648,10 +1662,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 cout << ",";
             cout << weights[i];
         }
-        cout << ")" << endl;
-        for (i=0; i<site_rates.size(); i++) {
-            site_rates[i]->writeInfo(cout);
-        }
+        cout << ")";
     }
     cout << endl;
 
@@ -1741,7 +1752,6 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                     is_ptnfrq_posterior = false;
                 }
                 site_rates[0]->optimizeParameters(gradient2_epsilon);
-                site_rates[0]->writeInfo(cout);
                 /*
                 if (siterate_names[0].find("R") != string::npos) {
                     site_rates[0]->rescaleRates();
@@ -1758,7 +1768,6 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 }
                 for (i=0; i<site_rates.size(); i++) {
                     site_rates[i]->optimizeParameters(gradient2_epsilon);
-                    site_rates[i]->writeInfo(cout);
                     /*
                     if (siterate_names[i].find("R") != string::npos) {
                         site_rates[i]->rescaleRates();
