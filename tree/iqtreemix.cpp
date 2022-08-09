@@ -26,13 +26,9 @@ const int OPTIMIZE_STEPS = 10000;
 // The tree weights can be fixed by: T{0.2,0.3,0.5}, otherwise, optimization on tree weights will be performed.
 
 bool isRHS(string m) {
-    int i;
-    if (m=="I" || m=="G" || m=="R")
-        return true;
-    if (m.length() > 1 && (m[0]=='G' || m[0]=='R')) {
-        for (i=1; i<m.length(); i++) {
-            if (!isdigit(m[i]))
-                return false;
+    if (m.length() > 0 && (m[0]=='I' || m[0]=='G' || m[0]=='R')) {
+        if (m.length() > 1) {
+            return (isdigit(m[1]) || m[1]=='{');
         }
         return true;
     }
@@ -1652,7 +1648,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 cout << ",";
             cout << weights[i];
         }
-        cout << ")";
+        cout << ")" << endl;
+        for (i=0; i<site_rates.size(); i++) {
+            site_rates[i]->writeInfo(cout);
+        }
     }
     cout << endl;
 
@@ -1742,9 +1741,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                     is_ptnfrq_posterior = false;
                 }
                 site_rates[0]->optimizeParameters(gradient2_epsilon);
+                site_rates[0]->writeInfo(cout);
+                /*
                 if (siterate_names[0].find("R") != string::npos) {
                     site_rates[0]->rescaleRates();
-                }
+                }*/
                 // score = computeLikelihood();
                 // cout << "after optimizing linked site rate model, likelihood = " << score << endl;
             }
@@ -1757,9 +1758,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 }
                 for (i=0; i<site_rates.size(); i++) {
                     site_rates[i]->optimizeParameters(gradient2_epsilon);
+                    site_rates[i]->writeInfo(cout);
+                    /*
                     if (siterate_names[i].find("R") != string::npos) {
                         site_rates[i]->rescaleRates();
-                    }
+                    }*/
                     computeFreqArray(pattern_mix_lh, true, i);
                 }
                 // score = computeLikelihood();
