@@ -467,7 +467,6 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     site_rates.clear();
     site_rate_trees.clear();
     separateModel(model_name);
-    params.optimize_alg_freerate = "2-BFGS";
 
     // initialize the models
     for (i=0; i<ntree; i++) {
@@ -477,12 +476,13 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
             curr_model = model_names[i];
         }
         if (anySiteRate) {
+            params.optimize_alg_gammai = "BFGS";
+            params.optimize_alg_freerate = "2-BFGS";
             if (isLinkSiteRate) {
                 if (siterate_names[0] != "E")
                     curr_model += "+" + siterate_names[0];
-                params.optimize_alg_gammai = "BFGS";
-                params.optimize_alg_mixlen = "BFGS";
             } else {
+                params.optimize_alg_mixlen = "BFGS";
                 if (siterate_names[i] != "E")
                     curr_model += "+" + siterate_names[i];
             }
@@ -801,7 +801,6 @@ void IQTreeMix::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *da
     }
     for (i=0; i<ntree; i++) {
         at(i)->saveBranchLengths(len[i]);
-        // cout << "tree " << i+1 << " len[" << i << "].size() = " << len[i].size() << endl;
     }
 }
 
@@ -854,14 +853,10 @@ void IQTreeMix::checkBranchGrp() {
     // collect the branch lengths of the tree
     getBranchLengths(branch_len);
     
-    // cout << "nbranch = " << nbranch << endl;
-    
     for (i = 0; i < branch_group.size(); i++) {
         sum_treeweight = 0.0;
         for (j = 0; j < branch_group[i].size(); j++) {
             treeIdx = branch_group[i].at(j) / nbranch;
-            branchIdx = branch_group[i].at(j) % nbranch;
-            // cout << "i=" << i << " j=" << j << " id=" << branch_group[i].at(j) << " treeIdx=" << treeIdx << " branchIdx=" << branchIdx << endl << flush;
             sum_treeweight += weights[treeIdx];
         }
         grp_len = 0.0;
