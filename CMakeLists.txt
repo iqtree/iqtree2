@@ -82,7 +82,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH ".6")
+set (iqtree_VERSION_PATCH ".0.6.mix")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -576,8 +576,7 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inlin
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
 
 if(CLANG AND IQTREE_FLAGS MATCHES "static")
-    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
 endif()
 
 if (IQTREE_FLAGS MATCHES "libcxx")
