@@ -1450,7 +1450,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
     params.keep_seq_order = false;
-    params.no_merge = false;
     params.delete_output = false;
     params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
@@ -5228,11 +5227,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--keep-seq-order") == 0) {
                 params.keep_seq_order = true;
-                continue;
-            }
-            
-            if (strcmp(argv[cnt], "--no-merge") == 0) {
-                params.no_merge = true;
                 continue;
             }
             

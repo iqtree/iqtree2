@@ -177,6 +177,16 @@ enum SIMULATION_METHOD {
     RATE_MATRIX
 };
 
+/**
+ *  Specify 2 simulation approaches.
+ */
+enum SEQ_CHUNK_STATUS {
+    EMPTY,
+    OCCUPIED,
+    WRITING,
+    READING
+};
+
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
     double param_1 = -1, param_2 = -1;
@@ -2535,11 +2545,6 @@ public:
     *  TRUE to keep the order of output sequences
     */
     bool keep_seq_order;
-    
-    /**
-    *  TRUE to skip concatenate sequence chunks from intermediate files
-    */
-    bool no_merge;
     
     /**
     *  TRUE to delete output file (for testing only)

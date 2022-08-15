@@ -28,6 +28,8 @@
     #include <omp.h>
 #endif
 #include "utils/MPIHelper.h"
+#include "alignment/sequencechunk.h"
+
 struct FunDi_Item {
   int selected_site;
   int new_position;
@@ -375,6 +377,21 @@ protected:
     */
     void mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
     
+    /**
+        write sequence chunks (in readable strings) from cache to the output file
+    */
+    void writeSeqChunkFromCache(ostream *&output);
+    
+    /**
+        cache a sequence chunk (in readable string) into the cache (writing queue)
+    */
+    void cacheSeqChunkStr(int64_t pos, string seq_chunk_str);
+    
+    /**
+        seek an empty slot in the cache (writing queue), increase the cache size if necessary
+    */
+    int seekEmptyCacheSlot();
+    
 public:
     
     IQTree *tree;
@@ -405,6 +422,9 @@ public:
     uint64_t starting_pos = 0;
     uint64_t output_line_length = 0;
     int num_threads = 1;
+    int num_simulating_threads = 1;
+    int num_thread_done = 0;
+    vector<SequenceChunk> seq_str_cache;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
@@ -466,7 +486,7 @@ public:
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
     *
     */
-    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP = false);
+    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
     
     /**
     *  update new genome from original genome and the genome tree for each tips (due to Indels)

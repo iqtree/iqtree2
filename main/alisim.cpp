@@ -517,18 +517,9 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
     {
         outWarning("Compression is not supported when either outputting multiple alignments into a single output file or keeping the order of output sequences. AliSim will output file in normal format.");
-        
+
         Params::getInstance().do_compression = false;
         super_alisimulator->params->do_compression = false;
-    }
-
-    // cannot skip concatenating sequence chunks from intermediate files in simulations with FunDi, Partitions, or +ASC models
-    if (Params::getInstance().num_threads > 1 && Params::getInstance().no_merge && (super_alisimulator->tree->isSuperTree() || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0 || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)))
-    {
-        outWarning("Cannot skip merging sequence chunks in simulations with FunDi, Partitions, or +ASC models. AliSim will concatenate sequence chunks from intermediate files into a single output file.");
-        
-        Params::getInstance().no_merge = false;
-        super_alisimulator->params->no_merge = false;
     }
     
     // show a warning if the user wants to write internal sequences in not-supported cases
@@ -673,24 +664,14 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if (super_alisimulator->params->delete_output)
         {
             string output_filename = output_filepath;
-            for (int thread_id = 0; thread_id < super_alisimulator->params->num_threads; thread_id++)
-            {
-                if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->no_merge)
-                    output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
-                
-                // add file extension
-                if (super_alisimulator->params->aln_output_format == IN_PHYLIP)
-                    output_filename += ".phy";
-                else
-                    output_filename += ".fa";
-                
-                // delete the output file
-                remove((output_filename).c_str());
-                
-                // stop deleting if output file was merging
-                if (!super_alisimulator->params->no_merge)
-                    break;
-            }
+            // add file extension
+            if (super_alisimulator->params->aln_output_format == IN_PHYLIP)
+                output_filename += ".phy";
+            else
+                output_filename += ".fa";
+            
+            // delete the output file
+            remove((output_filename).c_str());
         }
     }
 }

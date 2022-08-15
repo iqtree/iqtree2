@@ -717,7 +717,6 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
     ostream *out = NULL;
-    ostream *single_output = NULL;
     vector<string> state_mapping;
     int default_segment_length;
     int thread_id = 0;
@@ -731,41 +730,73 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // init variables
     initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache);
     
+    // init the output stream
+    initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
+    
     // simulate Sequences
     #ifdef _OPENMP
-    #pragma omp parallel private(rstream, out, thread_id, sequence_cache, actual_segment_length)
+    #pragma omp parallel private(rstream, thread_id, sequence_cache, actual_segment_length)
     {
         thread_id = omp_get_thread_num();
         // init random generators
         int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
         init_random(ran_seed, false, &rstream);
             
-        actual_segment_length = thread_id < num_threads - 1 ? default_segment_length : sequence_length - (num_threads - 1) * default_segment_length;
+        actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
     #endif
         // init sequence cache
         if (store_seq_at_cache)
         {
-            sequence_cache.resize(max_depth + 1);
-            for (int i = 1; i < max_depth + 1; i++)
-                sequence_cache[i].resize(actual_segment_length);
+            // don't need to init sequence_cache for the writing thread
+            if (!(num_threads > 1 && thread_id == num_threads - 1))
+            {
+                sequence_cache.resize(max_depth + 1);
+                for (int i = 1; i < max_depth + 1; i++)
+                    sequence_cache[i].resize(actual_segment_length);
+                
+                // cache sequence at root
+                sequence_cache[0] = tree->root->sequence->sequence_chunks[thread_id];
+            }
             
-            // cache sequence at root
-            sequence_cache[0] = tree->root->sequence->sequence_chunks[thread_id];
+            // init common cache of writing queue
+            #ifdef _OPENMP
+            #pragma omp single
+            {
+                if (num_threads > 1)
+                    seq_str_cache.resize(num_simulating_threads * 5);
+            }
+            #endif
         }
         
-        // init the output stream
-        initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
-        
-        // initialize trans_matrix
-        double *trans_matrix = new double[max_num_states*max_num_states];
-        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
-        
-        // delete trans_matrix array
-        delete[] trans_matrix;
-        
-        // close the output stream
-        if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-            closeOutputStream(out, num_threads > 1);
+        // writing thread
+        if (num_threads > 1 && thread_id == num_threads - 1 && store_seq_at_cache)
+        {
+            while (num_thread_done < num_simulating_threads)
+            {
+                // check and write chunks in the cache to files
+                writeSeqChunkFromCache(out);
+            }
+            
+            // final round to check and write all chunks in the cache to files
+            writeSeqChunkFromCache(out);
+            
+        }
+        // simulating thread
+        else
+        {
+            // initialize trans_matrix
+            double *trans_matrix = new double[max_num_states*max_num_states];
+            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+            
+            // delete trans_matrix array
+            delete[] trans_matrix;
+            
+            // report simulation done for the current thread
+            #ifdef _OPENMP
+            #pragma omp atomic
+            num_thread_done++;
+            #endif
+        }
         
         // release sequence cache
         if (store_seq_at_cache)
@@ -773,19 +804,41 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         
         // release mem for rstream
         finish_random(rstream);
-        
-        // merge output files into a single file if using multithreading
-        #ifdef _OPENMP
-        #pragma omp barrier
-        #endif
-        mergeOutputFiles(single_output, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
             
     #ifdef _OPENMP
     }
     #endif
     
+    // close the output stream
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+        closeOutputStream(out);
+    
     // process after simulating sequences
     postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
+}
+
+void AliSimulator::writeSeqChunkFromCache(ostream *&out)
+{
+    for (int i = 0; i < seq_str_cache.size(); i++)
+    {
+        #pragma omp flush (seq_str_cache[i].chunk_status)
+        if (seq_str_cache[i].chunk_status == OCCUPIED)
+        {
+            // write the current chunk
+            #pragma omp atomic write
+            seq_str_cache[i].chunk_status = READING;
+            
+            #pragma omp flush (seq_str_cache[i].pos,seq_str_cache[i].chunk_str)
+            out->seekp(seq_str_cache[i].pos);
+            (*out) << seq_str_cache[i].chunk_str;
+            
+            // release the cache
+            string().swap(seq_str_cache[i].chunk_str);
+            #pragma omp flush (seq_str_cache[i].chunk_str)
+            seq_str_cache[i].chunk_status = EMPTY;
+            #pragma omp flush (seq_str_cache[i].chunk_status)
+        }
+    }
 }
 
 /**
@@ -835,11 +888,19 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     #ifdef _OPENMP
     #pragma omp parallel
     #pragma omp single
+    {
         num_threads = omp_get_num_threads();
+        num_simulating_threads = num_threads;
+        if (num_threads > 1)
+            num_simulating_threads = num_threads - 1;
+    }
     #endif
     
-    default_segment_length = sequence_length / num_threads;
-    output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
+    default_segment_length = sequence_length / num_simulating_threads;
+    output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + max_length_taxa_name;
+    
+    // reset num_thread_done
+    num_thread_done = 0;
     
     // check to use Posterior Mean Rates
     if (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED)
@@ -902,9 +963,6 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
 */
 void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
 {
-    // skip merging if users want to do so
-    if (params->no_merge) return;
-    
     if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
     {
         // merge output files into a single file
@@ -1083,36 +1141,30 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
         // otherwise, just add ".phy" or ".fa" to the output_filepath
         else
         {
-            // only add thread_id to filename if using multiple threads
-            string thread_id_str = "";
-            if (num_threads > 1)
-                thread_id_str = "_" + convertIntToString(thread_id + 1);
-            
             // add ".phy" or ".fa" to the output_filepath
             if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + thread_id_str + ".phy";
+                output_filepath = output_filepath + ".phy";
             else
-                output_filepath = output_filepath + thread_id_str + ".fa";
+                output_filepath = output_filepath + ".fa";
             
             // open the output stream (create new or append an existing file)
-            if (num_threads > 1)
-                openOutputStream(out, output_filepath, std::ios_base::out, true);
-            else
-                openOutputStream(out, output_filepath, open_mode);
+            openOutputStream(out, output_filepath, open_mode);
         }
         
         // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-        // only output the first line in the singlethreading mode;
-        // in multithreading mode:
-        // -> without merging intermediate output files -> also output the first line
-        // -> with merging step -> the first line will be output later when merging output files
-        if (params->aln_output_format == IN_PHYLIP
-            && (num_threads == 1
-                || (num_threads > 1 && params->no_merge)))
+        string first_line = "";
+        if (params->aln_output_format == IN_PHYLIP)
         {
             int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-            *out << num_leaves << " " << round(actual_segment_length/length_ratio)*num_sites_per_state << endl;
+            first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
+            *out << first_line;
         }
+        
+        // get the starting position for writing
+        if (!params->do_compression)
+            starting_pos = out->tellp();
+        else
+            starting_pos = first_line.length();
     }
 }
 
@@ -1374,7 +1426,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                     else
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, num_threads > 1);
+                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
                         string output(sequence_length * num_sites_per_state, '-');
                         
                         // convert numerical states into readable characters
@@ -1406,7 +1458,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                     else
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, num_threads > 1);
+                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
                         string output(sequence_length * num_sites_per_state, '-');
                         
                         // convert numerical states into readable characters
@@ -1459,26 +1511,23 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                     // extract sequence without copying gaps from the input sequences to the output.
                     convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
                 
-                // write current converted chunk of the sequence to file
+                // write current converted chunk of the sequence to the cache (writing queue)
                 // only write sequence name in the first thread
                 if (thread_id == 0)
+                    output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name) + output;
+                // add break-line in the last simulating thread
+                if (thread_id == num_simulating_threads - 1)
+                    output = output + "\n";
+                
+                //  cache output into the writing queue
+                if (num_threads > 1)
                 {
-                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, (num_threads > 1 && !params->no_merge));
-                    out << pre_output << output << "\n";
+                    int64_t pos = starting_pos + ((int64_t)(*it)->node->id) * output_line_length + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                    cacheSeqChunkStr(pos, output);
                 }
-                // write sequence chunk in other threads
+                // write output to file
                 else
-                {
-                    // if users skip concatenating sequence chunks from intermediate files -> write sequence name
-                    if (params->no_merge)
-                    {
-                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
-                        out << pre_output << output << "\n";
-                    }
-                    // don't write the sequence name in intermediate files
-                    else
-                        out << output << "\n";
-                }
+                    out << output;
             }
                 
             // avoid writing sequence of __root__
@@ -1497,26 +1546,23 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                     // extract sequence without copying gaps from the input sequences to the output.
                     convertNumericalStatesIntoReadableCharacters(dad_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
                 
-                // write current converted chunk of the sequence to file
+                // write current converted chunk of the sequence to the cache (writing queue)
                 // only write sequence name in the first thread
                 if (thread_id == 0)
+                    output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name) + output;
+                // add break-line in the last simulating thread
+                if (thread_id == num_simulating_threads - 1)
+                    output = output + "\n";
+                
+                //  cache output into the writing queue
+                if (num_threads > 1)
                 {
-                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name,  (num_threads > 1 && !params->no_merge));
-                    out << pre_output << output << "\n";
+                    int64_t pos = starting_pos + ((int64_t)node->id) * output_line_length + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                    cacheSeqChunkStr(pos, output);
                 }
-                // write sequence chunk in other threads
+                // write output to file
                 else
-                {
-                    // if users skip concatenating sequence chunks from intermediate files -> write sequence name
-                    if (params->no_merge)
-                    {
-                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
-                        out << pre_output << output << "\n";
-                    }
-                    // don't write the sequence name in intermediate files
-                    else
-                        out << output << "\n";
-                }
+                    out << output;
             }
         }
         
@@ -1535,23 +1581,20 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             // write current converted chunk of the sequence to file
             // only write sequence name in the first thread
             if (thread_id == 0)
+                output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name) + output;
+            // add break-line in the last simulating thread
+            if (thread_id == num_simulating_threads - 1)
+                output = output + "\n";
+            
+            //  cache output into the writing queue
+            if (num_threads > 1)
             {
-                string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name,  (num_threads > 1 && !params->no_merge));
-                out << pre_output << output << "\n";
+                int64_t pos = starting_pos + ((int64_t)(*it)->node->id) * output_line_length + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                cacheSeqChunkStr(pos, output);
             }
-            // write sequence chunk in other threads
+            // write output to file
             else
-            {
-                // if users skip concatenating sequence chunks from intermediate files -> write sequence name
-                if (params->no_merge)
-                {
-                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
-                    out << pre_output << output << "\n";
-                }
-                // don't write the sequence name in intermediate files
-                else
-                    out << output << "\n";
-            }
+                out << output;
         }
     }
     
@@ -1566,11 +1609,77 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
     }
 }
 
+void AliSimulator::cacheSeqChunkStr(int64_t pos, string seq_chunk_str)
+{
+    // seek an empty slot in the cache
+    int slot_id = seekEmptyCacheSlot();
+    
+    // store the current chunk to the selected slot
+    seq_str_cache[slot_id].chunk_str = seq_chunk_str;
+    seq_str_cache[slot_id].pos = pos;
+    #pragma omp flush (seq_str_cache[slot_id].chunk_status,seq_str_cache[slot_id].pos)
+    
+    // update the status of the selected slot
+    #pragma omp atomic write
+    seq_str_cache[slot_id].chunk_status = OCCUPIED;
+    #pragma omp flush (seq_str_cache[slot_id].chunk_status)
+}
+
+int AliSimulator::seekEmptyCacheSlot()
+{
+    int slot_id = -1;
+    int cache_size = seq_str_cache.size();
+    
+    // try to find an empty slot
+    for (int i = 0; i < cache_size; i++)
+    {
+        SEQ_CHUNK_STATUS latest_status = EMPTY;
+        if (seq_str_cache[i].chunk_status == EMPTY)
+        {
+            #pragma omp flush (seq_str_cache[i].chunk_status)
+            #pragma omp atomic capture
+            {
+                latest_status = seq_str_cache[i].chunk_status;
+                seq_str_cache[i].chunk_status = WRITING;
+            }
+            #pragma omp flush (seq_str_cache[i].chunk_status)
+            
+            // check if we found and ACTUALLY got seq_str_cache[i]
+            if (latest_status == EMPTY)
+            {
+                slot_id = i;
+                break;
+            }
+        }
+    }
+    
+    // if no empty slot found -> inscrease the cache size
+    if (slot_id == -1)
+    {
+       // don't need to resize if another thread already did it
+        #pragma omp flush (seq_str_cache)
+        if (cache_size == seq_str_cache.size())
+        {
+            // NHANLT: debug
+            cout << "DEBUG: resize cache" << endl;
+            #pragma omp critical(resize_cache)
+            seq_str_cache.resize(cache_size + num_simulating_threads);
+            #pragma omp flush (seq_str_cache)
+        }
+        
+        // seek empty slot again
+        return seekEmptyCacheSlot();
+    }
+    
+    // return seleted slot
+    return slot_id;
+}
+
 /**
 *  export pre_output string (contains taxon name and ">" or "space" based on the output format
 *
 */
-string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP)
+string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name)
 {
     string pre_output = "";
     
@@ -1581,7 +1690,7 @@ string AliSimulator::exportPreOutputString(Node *node, InputType output_format, 
     pre_output.resize(max_length_taxa_name, ' ');
     
     // in FASTA format
-    if (output_format == IN_FASTA && !force_PHYLIP)
+    if (output_format == IN_FASTA)
     {
         pre_output = ">" + pre_output;
         pre_output[pre_output.length() - 1] = '\n';
@@ -3203,23 +3312,24 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
 */
 void AliSimulator::separateSeqIntoChunks(Node* node)
 {
-    if (node->sequence->sequence_chunks.size() != num_threads)
+    if (node->sequence->sequence_chunks.size() != num_simulating_threads)
     {
         vector<short int> root_seq = node->sequence->sequence_chunks[0];
         assert(root_seq.size() == expected_num_sites);
-        node->sequence->sequence_chunks.resize(num_threads);
-        int default_segment_length = expected_num_sites / num_threads;
+        node->sequence->sequence_chunks.resize(num_simulating_threads);
+        int default_segment_length = expected_num_sites / num_simulating_threads;
         
         // resize the first chunk from the root sequence
         node->sequence->sequence_chunks[0].resize(default_segment_length);
         
         // clone other chunks
-        for (int i = 1; i < num_threads; i++)
+        for (int i = 1; i < num_simulating_threads; i++)
         {
-            int actual_segment_length = i < num_threads - 1 ? default_segment_length : expected_num_sites - (num_threads - 1) * default_segment_length;
+            int actual_segment_length = i < num_simulating_threads - 1 ? default_segment_length : expected_num_sites - (num_simulating_threads - 1) * default_segment_length;
             node->sequence->sequence_chunks[i].resize(actual_segment_length);
+            int starting_index = i * default_segment_length;
             for (int j = 0; j < actual_segment_length; j++)
-                node->sequence->sequence_chunks[i][j] = root_seq[i * default_segment_length + j];
+                node->sequence->sequence_chunks[i][j] = root_seq[starting_index + j];
         }
     }
 }
