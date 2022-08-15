@@ -5714,6 +5714,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       10.34, 12.12 (optionally prefixed by RY, WS or MK)" << endl
     << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)," << endl
     << "                       NONREV, UNREST (unrestricted model, equiv. 12.12)" << endl
+    << "                       NQ.pfam, NQ.bird, NQ.mammal, NQ.insect, NQ.plant, NQ.yeast" << endl
     << "           Otherwise:  Name of file containing user-model parameters" << endl
     << endl << "STATE FREQUENCY:" << endl
     << "  -m ...+F             Empirically counted frequencies from alignment" << endl
