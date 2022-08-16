@@ -821,22 +821,21 @@ void AliSimulator::writeSeqChunkFromCache(ostream *&out)
 {
     for (int i = 0; i < seq_str_cache.size(); i++)
     {
-        #pragma omp flush (seq_str_cache[i].chunk_status)
         if (seq_str_cache[i].chunk_status == OCCUPIED)
         {
             // write the current chunk
             #pragma omp atomic write
             seq_str_cache[i].chunk_status = READING;
             
-            #pragma omp flush (seq_str_cache[i].pos,seq_str_cache[i].chunk_str)
             out->seekp(seq_str_cache[i].pos);
             (*out) << seq_str_cache[i].chunk_str;
             
             // release the cache
-            string().swap(seq_str_cache[i].chunk_str);
-            #pragma omp flush (seq_str_cache[i].chunk_str)
+            // string().swap(seq_str_cache[i].chunk_str);
+            
+            // update status of the selected slot
+            #pragma omp atomic write
             seq_str_cache[i].chunk_status = EMPTY;
-            #pragma omp flush (seq_str_cache[i].chunk_status)
         }
     }
 }
@@ -1614,15 +1613,15 @@ void AliSimulator::cacheSeqChunkStr(int64_t pos, string seq_chunk_str)
     // seek an empty slot in the cache
     int slot_id = seekEmptyCacheSlot();
     
+    #pragma omp flush
     // store the current chunk to the selected slot
     seq_str_cache[slot_id].chunk_str = seq_chunk_str;
     seq_str_cache[slot_id].pos = pos;
-    #pragma omp flush (seq_str_cache[slot_id].chunk_status,seq_str_cache[slot_id].pos)
+    #pragma omp flush
     
     // update the status of the selected slot
     #pragma omp atomic write
     seq_str_cache[slot_id].chunk_status = OCCUPIED;
-    #pragma omp flush (seq_str_cache[slot_id].chunk_status)
 }
 
 int AliSimulator::seekEmptyCacheSlot()
@@ -1636,13 +1635,11 @@ int AliSimulator::seekEmptyCacheSlot()
         SEQ_CHUNK_STATUS latest_status = EMPTY;
         if (seq_str_cache[i].chunk_status == EMPTY)
         {
-            #pragma omp flush (seq_str_cache[i].chunk_status)
             #pragma omp atomic capture
             {
                 latest_status = seq_str_cache[i].chunk_status;
                 seq_str_cache[i].chunk_status = WRITING;
             }
-            #pragma omp flush (seq_str_cache[i].chunk_status)
             
             // check if we found and ACTUALLY got seq_str_cache[i]
             if (latest_status == EMPTY)
@@ -1657,14 +1654,14 @@ int AliSimulator::seekEmptyCacheSlot()
     if (slot_id == -1)
     {
        // don't need to resize if another thread already did it
-        #pragma omp flush (seq_str_cache)
+        #pragma omp flush
         if (cache_size == seq_str_cache.size())
         {
             // NHANLT: debug
             cout << "DEBUG: resize cache" << endl;
             #pragma omp critical(resize_cache)
             seq_str_cache.resize(cache_size + num_simulating_threads);
-            #pragma omp flush (seq_str_cache)
+            #pragma omp flush
         }
         
         // seek empty slot again
