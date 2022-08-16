@@ -763,7 +763,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             #pragma omp single
             {
                 if (num_threads > 1)
-                    seq_str_cache.resize(num_simulating_threads * 5);
+                    seq_str_cache.resize(num_simulating_threads * num_simulating_threads * tree->params->mem_limit_factor);
             }
             #endif
         }
@@ -821,7 +821,11 @@ void AliSimulator::writeSeqChunkFromCache(ostream *&out)
 {
     for (int i = 0; i < seq_str_cache.size(); i++)
     {
-        if (seq_str_cache[i].chunk_status == OCCUPIED)
+        SEQ_CHUNK_STATUS slot_status;
+        #pragma omp atomic read
+        slot_status = seq_str_cache[i].chunk_status;
+        
+        if (slot_status == OCCUPIED)
         {
             // write the current chunk
             #pragma omp atomic write
@@ -1521,7 +1525,8 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 //  cache output into the writing queue
                 if (num_threads > 1)
                 {
-                    int64_t pos = starting_pos + ((int64_t)(*it)->node->id) * output_line_length + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                    int64_t pos = ((int64_t)(*it)->node->id) * ((int64_t)output_line_length);
+                    pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
                     cacheSeqChunkStr(pos, output);
                 }
                 // write output to file
@@ -1556,7 +1561,8 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 //  cache output into the writing queue
                 if (num_threads > 1)
                 {
-                    int64_t pos = starting_pos + ((int64_t)node->id) * output_line_length + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                    int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
+                    pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
                     cacheSeqChunkStr(pos, output);
                 }
                 // write output to file
@@ -1588,7 +1594,9 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             //  cache output into the writing queue
             if (num_threads > 1)
             {
-                int64_t pos = starting_pos + ((int64_t)(*it)->node->id) * output_line_length + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                int64_t pos = ((int64_t)(*it)->node->id) * ((int64_t)output_line_length);
+                pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                
                 cacheSeqChunkStr(pos, output);
             }
             // write output to file
@@ -1627,45 +1635,35 @@ void AliSimulator::cacheSeqChunkStr(int64_t pos, string seq_chunk_str)
 int AliSimulator::seekEmptyCacheSlot()
 {
     int slot_id = -1;
-    int cache_size = seq_str_cache.size();
     
-    // try to find an empty slot
-    for (int i = 0; i < cache_size; i++)
+    while (slot_id == -1)
     {
-        SEQ_CHUNK_STATUS latest_status = EMPTY;
-        if (seq_str_cache[i].chunk_status == EMPTY)
+        #pragma omp flush
+        int cache_size = seq_str_cache.size();
+        
+        // try to find an empty slot
+        for (int i = 0; i < cache_size; i++)
         {
-            #pragma omp atomic capture
-            {
-                latest_status = seq_str_cache[i].chunk_status;
-                seq_str_cache[i].chunk_status = WRITING;
-            }
+            SEQ_CHUNK_STATUS latest_status;
+            #pragma omp atomic read
+            latest_status = seq_str_cache[i].chunk_status;
             
-            // check if we found and ACTUALLY got seq_str_cache[i]
             if (latest_status == EMPTY)
             {
-                slot_id = i;
-                break;
+                #pragma omp atomic capture
+                {
+                    latest_status = seq_str_cache[i].chunk_status;
+                    seq_str_cache[i].chunk_status = WRITING;
+                }
+                
+                // check if we found and ACTUALLY got seq_str_cache[i]
+                if (latest_status == EMPTY)
+                {
+                    slot_id = i;
+                    break;
+                }
             }
         }
-    }
-    
-    // if no empty slot found -> inscrease the cache size
-    if (slot_id == -1)
-    {
-       // don't need to resize if another thread already did it
-        #pragma omp flush
-        if (cache_size == seq_str_cache.size())
-        {
-            // NHANLT: debug
-            cout << "DEBUG: resize cache" << endl;
-            #pragma omp critical(resize_cache)
-            seq_str_cache.resize(cache_size + num_simulating_threads);
-            #pragma omp flush
-        }
-        
-        // seek empty slot again
-        return seekEmptyCacheSlot();
     }
     
     // return seleted slot

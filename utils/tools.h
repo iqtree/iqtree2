@@ -2557,6 +2557,11 @@ public:
     double rebuild_indel_history_param;
     
     /**
+    *  factor to limit memory usage
+    */
+    int mem_limit_factor;
+    
+    /**
     *  TRUE to allow indel-rate variation
     */
     bool indel_rate_variation;

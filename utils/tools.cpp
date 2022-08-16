@@ -1450,6 +1450,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
     params.keep_seq_order = false;
+    params.mem_limit_factor = 10;
     params.delete_output = false;
     params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
@@ -5227,6 +5228,18 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--keep-seq-order") == 0) {
                 params.keep_seq_order = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--mem-limit") == 0) {
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "Use --mem-limit <FACTOR>";
+                
+                params.mem_limit_factor = convert_int(argv[cnt]);
+                if (params.mem_limit_factor <= 0)
+                    throw "<FACTOR> must be positive";
+
                 continue;
             }
             
