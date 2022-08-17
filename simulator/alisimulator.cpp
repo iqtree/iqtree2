@@ -761,11 +761,11 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             // init common cache of writing queue
             #ifdef _OPENMP
             #pragma omp single
+            #endif
             {
                 if (num_threads > 1)
                     seq_str_cache.resize(num_simulating_threads * num_simulating_threads * tree->params->mem_limit_factor);
             }
-            #endif
         }
         
         // writing thread
@@ -794,8 +794,8 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             // report simulation done for the current thread
             #ifdef _OPENMP
             #pragma omp atomic
-            num_thread_done++;
             #endif
+            num_thread_done++;
         }
         
         // release sequence cache
@@ -822,13 +822,17 @@ void AliSimulator::writeSeqChunkFromCache(ostream *&out)
     for (int i = 0; i < seq_str_cache.size(); i++)
     {
         SEQ_CHUNK_STATUS slot_status;
+        #ifdef _OPENMP
         #pragma omp atomic read
+        #endif
         slot_status = seq_str_cache[i].chunk_status;
         
         if (slot_status == OCCUPIED)
         {
             // write the current chunk
+            #ifdef _OPENMP
             #pragma omp atomic write
+            #endif
             seq_str_cache[i].chunk_status = READING;
             
             out->seekp(seq_str_cache[i].pos);
@@ -838,7 +842,9 @@ void AliSimulator::writeSeqChunkFromCache(ostream *&out)
             // string().swap(seq_str_cache[i].chunk_str);
             
             // update status of the selected slot
+            #ifdef _OPENMP
             #pragma omp atomic write
+            #endif
             seq_str_cache[i].chunk_status = EMPTY;
         }
     }
@@ -887,6 +893,9 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
 */
 void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache)
 {
+    // check if we can store sequences at a fixed cache instead of at nodes
+    store_seq_at_cache = params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && (output_filepath.length() > 0 || write_sequences_to_tmp_data) && params->alisim_fundi_taxon_set.size() == 0;
+    
     // get the number of threads
     #ifdef _OPENMP
     #pragma omp parallel
@@ -894,13 +903,14 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     {
         num_threads = omp_get_num_threads();
         num_simulating_threads = num_threads;
-        if (num_threads > 1)
+        if (num_threads > 1 && store_seq_at_cache)
             num_simulating_threads = num_threads - 1;
     }
     #endif
     
     default_segment_length = sequence_length / num_simulating_threads;
-    output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + max_length_taxa_name;
+    seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
+    output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + seq_name_length;
     
     // reset num_thread_done
     num_thread_done = 0;
@@ -922,9 +932,6 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     // initialize state_mapping (mapping from state to characters)
     if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
         initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
-    
-    // check if we can store sequences at a fixed cache instead of at nodes
-    store_seq_at_cache = params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0 && params->alisim_fundi_taxon_set.size() == 0;
     
     // rooting the tree if it's unrooted
     if (!tree->rooted)
@@ -1323,8 +1330,8 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         #pragma omp single
         #endif
         {
-            node->sequence->sequence_chunks.resize(num_threads);
-            (*it)->node->sequence->sequence_chunks.resize(num_threads);
+            node->sequence->sequence_chunks.resize(num_simulating_threads);
+            (*it)->node->sequence->sequence_chunks.resize(num_simulating_threads);
         }
         
         // clone sequence chunk from cache
@@ -1526,7 +1533,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 if (num_threads > 1)
                 {
                     int64_t pos = ((int64_t)(*it)->node->id) * ((int64_t)output_line_length);
-                    pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                    pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : seq_name_length);
                     cacheSeqChunkStr(pos, output);
                 }
                 // write output to file
@@ -1562,7 +1569,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
                 if (num_threads > 1)
                 {
                     int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
-                    pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                    pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : seq_name_length);
                     cacheSeqChunkStr(pos, output);
                 }
                 // write output to file
@@ -1595,7 +1602,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             if (num_threads > 1)
             {
                 int64_t pos = ((int64_t)(*it)->node->id) * ((int64_t)output_line_length);
-                pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : max_length_taxa_name);
+                pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : seq_name_length);
                 
                 cacheSeqChunkStr(pos, output);
             }
@@ -1621,14 +1628,20 @@ void AliSimulator::cacheSeqChunkStr(int64_t pos, string seq_chunk_str)
     // seek an empty slot in the cache
     int slot_id = seekEmptyCacheSlot();
     
+    #ifdef _OPENMP
     #pragma omp flush
+    #endif
     // store the current chunk to the selected slot
     seq_str_cache[slot_id].chunk_str = seq_chunk_str;
     seq_str_cache[slot_id].pos = pos;
+    #ifdef _OPENMP
     #pragma omp flush
+    #endif
     
     // update the status of the selected slot
+    #ifdef _OPENMP
     #pragma omp atomic write
+    #endif
     seq_str_cache[slot_id].chunk_status = OCCUPIED;
 }
 
@@ -1638,19 +1651,25 @@ int AliSimulator::seekEmptyCacheSlot()
     
     while (slot_id == -1)
     {
+        #ifdef _OPENMP
         #pragma omp flush
+        #endif
         int cache_size = seq_str_cache.size();
         
         // try to find an empty slot
         for (int i = 0; i < cache_size; i++)
         {
             SEQ_CHUNK_STATUS latest_status;
+            #ifdef _OPENMP
             #pragma omp atomic read
+            #endif
             latest_status = seq_str_cache[i].chunk_status;
             
             if (latest_status == EMPTY)
             {
+                #ifdef _OPENMP
                 #pragma omp atomic capture
+                #endif
                 {
                     latest_status = seq_str_cache[i].chunk_status;
                     seq_str_cache[i].chunk_status = WRITING;

@@ -421,6 +421,7 @@ public:
     // variables to output sequences with multiple threads
     uint64_t starting_pos = 0;
     uint64_t output_line_length = 0;
+    uint64_t seq_name_length = 0;
     int num_threads = 1;
     int num_simulating_threads = 1;
     int num_thread_done = 0;
