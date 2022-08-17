@@ -387,6 +387,11 @@ protected:
     */
     int seekEmptyCacheSlot();
     
+    /**
+        wait for all threads to reach the manually-implemented-barrier
+    */
+    void waitAtBarrier(const unsigned short int barrier_count, Node* node);
+    
 public:
     
     IQTree *tree;

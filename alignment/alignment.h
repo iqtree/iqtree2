@@ -876,7 +876,7 @@ public:
     int num_informative_sites;
 
     /** number of variant sites */
-    int num_variant_sites = 0;
+    int num_variant_sites;
 
     /** number of sites used for parsimony computation, can be informative or variant */
     int num_parsimony_sites;

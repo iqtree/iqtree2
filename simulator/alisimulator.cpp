@@ -1175,19 +1175,7 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         }
         
         // manual implementation of barrier
-        #ifdef _OPENMP
-        #pragma omp atomic update
-        #endif
-        (*it)->node->sequence->num_threads_reach_barrier++;
-        // wait for all threads to reach this step
-        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-        while (num_threads_reach_barrier < num_simulating_threads)
-        {
-            #ifdef _OPENMP
-            #pragma omp atomic read
-            #endif
-            num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-        }
+        waitAtBarrier(1, (*it)->node);
         
         // clone sequence chunk from cache
         node->sequence->sequence_chunks[thread_id] = dad_seq_chunk;
@@ -1195,38 +1183,14 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
     }
     
     // manual implementation of barrier
-    #ifdef _OPENMP
-    #pragma omp atomic update
-    #endif
-    (*it)->node->sequence->num_threads_reach_barrier++;
-    // wait for all threads to reach this step
-    num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-    while ((*it)->node->sequence->num_threads_reach_barrier < 2 * num_simulating_threads)
-    {
-        #ifdef _OPENMP
-        #pragma omp atomic read
-        #endif
-        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-    }
+    waitAtBarrier(2, (*it)->node);
             
     // only the first thread simulate the sequence
     if (thread_id == 0)
         branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it);
     
     // manual implementation of barrier
-    #ifdef _OPENMP
-    #pragma omp atomic update
-    #endif
-    (*it)->node->sequence->num_threads_reach_barrier++;
-    // wait for all threads to reach this step
-    num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-    while ((*it)->node->sequence->num_threads_reach_barrier < 3 * num_simulating_threads)
-    {
-        #ifdef _OPENMP
-        #pragma omp atomic read
-        #endif
-        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-    }
+    waitAtBarrier(3, (*it)->node);
     
     // cache sequence chunks from node
     if (store_seq_at_cache)
@@ -1239,19 +1203,7 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         vector<short int>().swap(node->sequence->sequence_chunks[thread_id]);
         
         // manual implementation of barrier
-        #ifdef _OPENMP
-        #pragma omp atomic update
-        #endif
-        (*it)->node->sequence->num_threads_reach_barrier++;
-        // wait for all threads to reach this step
-        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-        while ((*it)->node->sequence->num_threads_reach_barrier < 4 * num_simulating_threads)
-        {
-            #ifdef _OPENMP
-            #pragma omp atomic read
-            #endif
-            num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
-        }
+        waitAtBarrier(4, (*it)->node);
         
         // wait to release memory allocated to the dad node
         #ifdef _OPENMP
@@ -1262,6 +1214,24 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
             vector<vector<short int>>().swap((*it)->node->sequence->sequence_chunks);
             vector<vector<short int>>().swap(node->sequence->sequence_chunks);
         }
+    }
+}
+
+void AliSimulator::waitAtBarrier(const unsigned short int barrier_count, Node* node)
+{
+    // manual implementation of barrier
+    #ifdef _OPENMP
+    #pragma omp atomic update
+    #endif
+    node->sequence->num_threads_reach_barrier++;
+    // wait for all threads to reach this step
+    unsigned short int num_threads_reach_barrier = node->sequence->num_threads_reach_barrier;
+    while (num_threads_reach_barrier < barrier_count * num_simulating_threads)
+    {
+        #ifdef _OPENMP
+        #pragma omp atomic read
+        #endif
+        num_threads_reach_barrier = node->sequence->num_threads_reach_barrier;
     }
 }
 
