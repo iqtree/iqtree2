@@ -835,6 +835,9 @@ void AliSimulator::writeSeqChunkFromCache(ostream *&out)
             #endif
             seq_str_cache[i].chunk_status = READING;
             
+            #ifdef _OPENMP
+            #pragma omp flush
+            #endif
             out->seekp(seq_str_cache[i].pos);
             (*out) << seq_str_cache[i].chunk_str;
             
@@ -1158,6 +1161,8 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
 */
 void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it)
 {
+    unsigned short int num_threads_reach_barrier = 0;
+    
     // clone sequence chunks from cache
     if (store_seq_at_cache)
     {
@@ -1174,10 +1179,14 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         #pragma omp atomic update
         #endif
         (*it)->node->sequence->num_threads_reach_barrier++;
-        // wait for all threads to finish their simulations of the parent sequence
-        while ((*it)->node->sequence->num_threads_reach_barrier < num_simulating_threads)
+        // wait for all threads to reach this step
+        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
+        while (num_threads_reach_barrier < num_simulating_threads)
         {
-            // do nothing, just wait
+            #ifdef _OPENMP
+            #pragma omp atomic read
+            #endif
+            num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
         }
         
         // clone sequence chunk from cache
@@ -1190,10 +1199,14 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
     #pragma omp atomic update
     #endif
     (*it)->node->sequence->num_threads_reach_barrier++;
-    // wait for all threads to finish their simulations of the parent sequence
+    // wait for all threads to reach this step
+    num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
     while ((*it)->node->sequence->num_threads_reach_barrier < 2 * num_simulating_threads)
     {
-        // do nothing, just wait
+        #ifdef _OPENMP
+        #pragma omp atomic read
+        #endif
+        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
     }
             
     // only the first thread simulate the sequence
@@ -1205,10 +1218,14 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
     #pragma omp atomic update
     #endif
     (*it)->node->sequence->num_threads_reach_barrier++;
-    // wait for all threads to finish their simulations of the parent sequence
+    // wait for all threads to reach this step
+    num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
     while ((*it)->node->sequence->num_threads_reach_barrier < 3 * num_simulating_threads)
     {
-        // do nothing, just wait
+        #ifdef _OPENMP
+        #pragma omp atomic read
+        #endif
+        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
     }
     
     // cache sequence chunks from node
@@ -1226,10 +1243,14 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         #pragma omp atomic update
         #endif
         (*it)->node->sequence->num_threads_reach_barrier++;
-        // wait for all threads to finish their simulations of the parent sequence
+        // wait for all threads to reach this step
+        num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
         while ((*it)->node->sequence->num_threads_reach_barrier < 4 * num_simulating_threads)
         {
-            // do nothing, just wait
+            #ifdef _OPENMP
+            #pragma omp atomic read
+            #endif
+            num_threads_reach_barrier = (*it)->node->sequence->num_threads_reach_barrier;
         }
         
         // wait to release memory allocated to the dad node
@@ -1519,13 +1540,8 @@ int AliSimulator::seekEmptyCacheSlot()
     
     while (slot_id == -1)
     {
-        #ifdef _OPENMP
-        #pragma omp flush
-        #endif
-        int cache_size = seq_str_cache.size();
-        
         // try to find an empty slot
-        for (int i = 0; i < cache_size; i++)
+        for (int i = 0; i < seq_str_cache.size(); i++)
         {
             SEQ_CHUNK_STATUS latest_status;
             #ifdef _OPENMP
