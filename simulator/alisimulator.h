@@ -28,7 +28,7 @@
     #include <omp.h>
 #endif
 #include "utils/MPIHelper.h"
-#include "alignment/sequencechunk.h"
+#include "alignment/sequencechunkstr.h"
 
 struct FunDi_Item {
   int selected_site;
@@ -373,11 +373,6 @@ protected:
     void closeOutputStream(ostream *&out, bool force_uncompression = false);
     
     /**
-        merge output files when using multiple threads
-    */
-    void mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
-    
-    /**
         write sequence chunks (in readable strings) from cache to the output file
     */
     void writeSeqChunkFromCache(ostream *&output);
@@ -425,7 +420,7 @@ public:
     int num_threads = 1;
     int num_simulating_threads = 1;
     int num_thread_done = 0;
-    vector<SequenceChunk> seq_str_cache;
+    vector<SequenceChunkStr> seq_str_cache;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;

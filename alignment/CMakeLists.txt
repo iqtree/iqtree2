@@ -19,8 +19,8 @@ superalignmentunlinked.cpp
 superalignmentunlinked.h
 sequence.cpp
 sequence.h
-sequencechunk.cpp
-sequencechunk.h
+sequencechunkstr.cpp
+sequencechunkstr.h
 )
 
 target_link_libraries(alignment simulator ncl gsl model)

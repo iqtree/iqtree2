@@ -26,6 +26,11 @@ public:
     short int num_threads_done_simulation;
     
     /**
+        number of OPENMP threads reach a barrier
+     */
+    unsigned short int num_threads_reach_barrier;
+    
+    /**
         pointer to the position of the insertion event that occurs after simulating sequence at this node
      */
     Insertion* insertion_pos;

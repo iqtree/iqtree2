@@ -4,7 +4,7 @@
 #include "utils/tools.h"
 
 /** class storing a chunk of readable sequence waiting in writing queue */
-class SequenceChunk {
+class SequenceChunkStr {
 public:
     SEQ_CHUNK_STATUS chunk_status;
     int64_t pos;
@@ -13,12 +13,12 @@ public:
     /**
         constructor
      */
-    SequenceChunk();
+    SequenceChunkStr();
     
     /**
         deconstructor
      */
-    ~SequenceChunk();
+    ~SequenceChunkStr();
     
 };
 

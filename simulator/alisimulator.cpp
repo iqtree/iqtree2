@@ -969,171 +969,6 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
 }
 
 /**
-    merge output files
-*/
-void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
-{
-    if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
-    {
-        // merge output files into a single file
-        if (num_threads > 1)
-        {
-            // open single_output stream
-            #ifdef _OPENMP
-            #pragma omp single
-            #endif
-            {
-                string single_output_filepath;
-                if (params->aln_output_format != IN_FASTA)
-                    single_output_filepath = output_filepath + ".phy";
-                else
-                    single_output_filepath = output_filepath + ".fa";
-                openOutputStream(single_output, single_output_filepath, open_mode);
-                
-                // output the first line
-                string first_line = "";
-                if (params->aln_output_format != IN_FASTA)
-                {
-                    int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
-                    *single_output << first_line;
-                }
-                if (!params->do_compression)
-                    starting_pos = single_output->tellp();
-                else
-                    starting_pos = first_line.length();
-            }
-            
-            // dummy variables
-            vector<ifstream> input_streams(num_threads);
-            int actual_num_lines_per_thread = 0;
-            int average_num_lines_per_thread = 0;
-            int line_num = 0;
-            string line;
-            uint64_t pos = 0;
-            
-            // open all files
-            for (int i = 0; i < input_streams.size(); i++)
-            {
-                // add ".phy" or ".fa" to the output_filepath
-                string tmp_output_filepath;
-                if (params->aln_output_format != IN_FASTA)
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".phy";
-                else
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".fa";
-                
-                // open an input file
-                input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
-                
-                // count num of lines, set start position
-                safeGetline(input_streams[i], line);
-                int line_length = line.length() + 1;
-                // when using FunDi, the entire sequences are written into one of output files -> need to check average_num_lines_per_thread == 0
-                if (i == 0 || average_num_lines_per_thread == 0)
-                {
-                    input_streams[i].seekg(0, input_streams[i].end);
-                    uint64_t length = input_streams[i].tellg();
-                    int total_num_lines = length/line_length;
-                    average_num_lines_per_thread = total_num_lines/num_threads;
-                    
-                    // compute actual_num_lines_per_thread
-                    actual_num_lines_per_thread = thread_id < num_threads - 1 ? average_num_lines_per_thread : total_num_lines - (thread_id * average_num_lines_per_thread);
-                    
-                    // compute the starting line number
-                    pos = thread_id * average_num_lines_per_thread;
-                }
-                // set start position
-                input_streams[i].seekg(pos * line_length);
-            }
-            
-            // compute pos in the output file
-            pos = starting_pos + (pos - 1) * output_line_length;
-            
-            // merge chunks of each sequence and write to the single output file
-            for (line_num = 0; line_num < actual_num_lines_per_thread; line_num++)
-            {
-                string output = "";
-                for (int j = 0; j < input_streams.size(); j++)
-                {
-                    safeGetline(input_streams[j], line);
-                    output += line;
-                }
-                
-                if (output.length() > 0)
-                {
-                    // if using FASTA -> break sequence name into new line
-                    if (params->aln_output_format == IN_FASTA)
-                    {
-                        // insert '>' into sequence name
-                        output = ">" + output;
-                        
-                        // insert break line
-                        for (int i = 1; i < output.length(); i++)
-                            if (output[i-1] == ' ' && output[i] != ' ')
-                            {
-                                output[i-1] = '\n';
-                                break;
-                            }
-                    }
-                    
-                    // add the break line for the current output
-                    output += "\n";
-                    
-                    // update pos for the current output line
-                    pos += output_line_length;
-                
-                    // write the concatenated sequence into file
-                    #ifdef _OPENMP
-                    #pragma omp critical
-                    #endif
-                    {
-                        // jump to the correct position before writing if users want to keep the sequence order
-                        if (params->keep_seq_order)
-                            single_output->seekp(pos);
-                        (*single_output) << output;
-                    }
-                }
-            }
-            
-            // close all files
-            for (int i = 0; i < input_streams.size(); i++)
-                input_streams[i].close();
-            
-            // close single_output stream
-            #ifdef _OPENMP
-            #pragma omp barrier
-            #pragma omp single
-            #endif
-            closeOutputStream(single_output);
-            
-            // delete all intermidate files
-            // add ".phy" or ".fa" to the output_filepath
-            string tmp_output_filepath;
-            if (params->aln_output_format != IN_FASTA)
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".phy";
-            else
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".fa";
-            // delete file
-            remove(tmp_output_filepath.c_str());
-        }
-        
-        // show the output file name
-        #ifdef _OPENMP
-        #pragma omp single
-        #endif
-        {
-            string single_output_filepath;
-            if (params->aln_output_format != IN_FASTA)
-                single_output_filepath = output_filepath + ".phy";
-            else
-                single_output_filepath = output_filepath + ".fa";
-            cout << "An alignment has just been exported to " << single_output_filepath << endl;
-        }
-       
-    }
-}
-
-/**
     init the output file
 */
 void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segment_length, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
@@ -1327,11 +1162,22 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
     if (store_seq_at_cache)
     {
         #ifdef _OPENMP
-        #pragma omp single
+        #pragma omp single nowait
         #endif
         {
             node->sequence->sequence_chunks.resize(num_simulating_threads);
             (*it)->node->sequence->sequence_chunks.resize(num_simulating_threads);
+        }
+        
+        // manual implementation of barrier
+        #ifdef _OPENMP
+        #pragma omp atomic update
+        #endif
+        (*it)->node->sequence->num_threads_reach_barrier++;
+        // wait for all threads to finish their simulations of the parent sequence
+        while ((*it)->node->sequence->num_threads_reach_barrier < num_simulating_threads)
+        {
+            // do nothing, just wait
         }
         
         // clone sequence chunk from cache
@@ -1339,19 +1185,31 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         (*it)->node->sequence->sequence_chunks[thread_id].resize(dad_seq_chunk.size());
     }
     
-    // wait for all threads to finish their simulations of the parent sequence
+    // manual implementation of barrier
     #ifdef _OPENMP
-    #pragma omp barrier
+    #pragma omp atomic update
     #endif
+    (*it)->node->sequence->num_threads_reach_barrier++;
+    // wait for all threads to finish their simulations of the parent sequence
+    while ((*it)->node->sequence->num_threads_reach_barrier < 2 * num_simulating_threads)
+    {
+        // do nothing, just wait
+    }
             
     // only the first thread simulate the sequence
     if (thread_id == 0)
         branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it);
     
-    // wait for the first thread to finish the simulation of the current sequence
+    // manual implementation of barrier
     #ifdef _OPENMP
-    #pragma omp barrier
+    #pragma omp atomic update
     #endif
+    (*it)->node->sequence->num_threads_reach_barrier++;
+    // wait for all threads to finish their simulations of the parent sequence
+    while ((*it)->node->sequence->num_threads_reach_barrier < 3 * num_simulating_threads)
+    {
+        // do nothing, just wait
+    }
     
     // cache sequence chunks from node
     if (store_seq_at_cache)
@@ -1363,10 +1221,20 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         vector<short int>().swap((*it)->node->sequence->sequence_chunks[thread_id]);
         vector<short int>().swap(node->sequence->sequence_chunks[thread_id]);
         
+        // manual implementation of barrier
+        #ifdef _OPENMP
+        #pragma omp atomic update
+        #endif
+        (*it)->node->sequence->num_threads_reach_barrier++;
+        // wait for all threads to finish their simulations of the parent sequence
+        while ((*it)->node->sequence->num_threads_reach_barrier < 4 * num_simulating_threads)
+        {
+            // do nothing, just wait
+        }
+        
         // wait to release memory allocated to the dad node
         #ifdef _OPENMP
-        #pragma omp barrier
-        #pragma omp single
+        #pragma omp single nowait
         #endif
         {
             // release memory allocated to the node
@@ -3310,6 +3178,7 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
         if ((*it)->node->sequence->depth > max_depth)
             max_depth = (*it)->node->sequence->depth;
         (*it)->node->sequence->num_threads_done_simulation = 0;
+        (*it)->node->sequence->num_threads_reach_barrier = 0;
         if (!store_seq_at_cache)
             (*it)->node->sequence->sequence_chunks.resize(num_threads);
         node->sequence->nums_children_done_simulation.resize(num_threads);
