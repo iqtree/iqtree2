@@ -373,19 +373,19 @@ protected:
     void closeOutputStream(ostream *&out, bool force_uncompression = false);
     
     /**
-        write sequence chunks (in readable strings) from cache to the output file
+        visit cache of each thread in round robin then write sequence chunks one by one
     */
     void writeSeqChunkFromCache(ostream *&output);
     
     /**
-        cache a sequence chunk (in readable string) into the cache (writing queue)
+        write all remaining chunks from cache
     */
-    void cacheSeqChunkStr(int64_t pos, string seq_chunk_str);
+    void writeAllSeqChunkFromCache(ostream *&output);
     
     /**
-        seek an empty slot in the cache (writing queue), increase the cache size if necessary
+        cache a sequence chunk (in readable string) into the cache (writing queue)
     */
-    int seekEmptyCacheSlot();
+    void cacheSeqChunkStr(int64_t pos, string seq_chunk_str, int thread_id);
     
     /**
         wait for all threads to reach the manually-implemented-barrier
@@ -426,6 +426,8 @@ public:
     int num_simulating_threads = 1;
     int num_thread_done = 0;
     vector<SequenceChunkStr> seq_str_cache;
+    vector<int> cache_start_indexes;
+    int cache_size_per_thread;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
