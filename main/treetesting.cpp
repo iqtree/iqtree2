@@ -141,6 +141,16 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
     
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
+    if (!tree->getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            wsl = WSL_MIXTURE;
+        }
+    }
     int ncat = tree->getNumLhCat(wsl);
     if (tree->isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)tree;
