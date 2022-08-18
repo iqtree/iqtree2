@@ -21,7 +21,7 @@
 #ifndef hammingdistance_h
 #define hammingdistance_h
 
-#ifdef USE_VECTORCLASS_LIBRARY
+#if USE_VECTORCLASS_LIBRARY
 #define  HAMMING_VECTOR (1)
 #include <vectorclass/vectorclass.h> //For Vec32c and Vec32cb classes
 #else

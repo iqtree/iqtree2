@@ -1368,12 +1368,16 @@ void PhyloTree::computeLikelihoodDervEigen
     df  = my_df;
     ddf = my_ddf;
     
-    assert(!isnan(df) && !isinf(df) && "Numerical underflow for lh-derivative");
+    if (isnan(df) || isinf(df)) {
+        hideProgress();
+        assert(!isnan(df) && !isinf(df) && "Numerical underflow for lh-derivative");
+    }
 
     if (isnan(df) || isinf(df)) {
         df  = 0.0;
         ddf = 0.0;
-//        outWarning("Numerical instability (some site-likelihood = 0)");
+        //hideProgress();
+        //outWarning("Numerical instability (some site-likelihood = 0)");
     }
 
     if (orig_nptn < nptn) {
@@ -1587,7 +1591,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor* dad_branch, PhyloN
             }
         }
     }
-    assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for lh-branch");
+    if (isnan(tree_lh) || isinf(tree_lh)) {
+        hideProgress();
+        assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for lh-branch");
+    }
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
         if (prob_const >= 1.0 || prob_const < 0.0) {

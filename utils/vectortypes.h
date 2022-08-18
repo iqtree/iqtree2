@@ -102,7 +102,7 @@ public:
     }
 };
 
-typedef CastingVector<bool, std::vector<char>> BoolVector;
+typedef CastingVector<bool, std::vector<char> > BoolVector;
 
 /**
         vector of char

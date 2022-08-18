@@ -120,7 +120,6 @@ public:
     void handle(char unknown_char, size_t sequenceIndex, char state);
 };
 
-
 inline void setUpReplacementArray(const std::string& chars_to_strip, 
                                   const std::string& replacement_chars,
                                   char *in_char_to_out_char /*array of 256*/) {

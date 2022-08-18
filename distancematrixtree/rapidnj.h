@@ -227,7 +227,7 @@ public:
         }
         clusterDuplicates();
         {
-            size_t nextPurge = (row_count+row_count)/3;
+            intptr_t nextPurge = (row_count+row_count)/3;
             #if USE_PROGRESS_DISPLAY
             std::string taskName;
             if (!silent) {
@@ -264,7 +264,7 @@ public:
         }
         return true;
     }
-    void sortRow(size_t r /*row index*/, size_t c /*upper bound on cluster index*/
+    void sortRow(intptr_t r /*row index*/, int c /*upper bound on cluster index*/
         ,  bool parallel, Sorter& sorter) {
         //1. copy data from a row of the D matrix into the S matrix
         //   (and write the cluster identifiers that correspond to
@@ -377,7 +377,7 @@ public:
         #ifdef _OPEN_MP
         #pragma omp parallel for num_threads(threadCount)
         #endif
-        for (size_t b=0; b<threadCount; ++b) {
+        for (int b=0; b<threadCount; ++b) {
             T      qBestForThread = qBest;
             size_t rStart         = (b*rSize)     / threadCount;
             size_t rStop          = ((b+1)*rSize) / threadCount;
@@ -398,7 +398,7 @@ public:
             }
             qLocalBest[b] = qBestForThread;
         }
-        for (size_t b=0; b<threadCount; ++b) {
+        for (int b=0; b<threadCount; ++b) {
             if ( qLocalBest[b] < qBest ) {
                 qBest = qLocalBest[b];
             }
@@ -715,6 +715,7 @@ public:
 typedef VectorizedBoundingMatrix
         <NJFloat, FloatVector, FloatBoolVector, NJMatrix<NJFloat> >
         Vectorized_RapidNJ;
+        
 typedef VectorizedBoundingMatrix
         <NJFloat, FloatVector, FloatBoolVector, BIONJMatrix<NJFloat> >
         Vectorized_RapidBIONJ;

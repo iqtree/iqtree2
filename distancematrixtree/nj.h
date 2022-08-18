@@ -397,7 +397,7 @@ public:
     }
 };
 
-#ifdef USE_VECTORCLASS_LIBRARY
+#if USE_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class SUPER=BIONJMatrix<T>, 
           class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedMatrix: public SUPER

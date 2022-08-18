@@ -82,17 +82,17 @@ const int max_translation_table = 25;
 Alignment::Alignment()
         : vector<Pattern>()
 {
-    num_states = 0;
-    frac_const_sites = 0.0;
-    frac_invariant_sites = 0.0;
-    seq_type = SeqType::SEQ_UNKNOWN;
-    STATE_UNKNOWN = 126;
-    pars_lower_bound = nullptr;
+    num_states                = 0;
+    frac_const_sites          = 0.0;
+    frac_invariant_sites      = 0.0;
+    seq_type                  = SeqType::SEQ_UNKNOWN;
+    STATE_UNKNOWN             = 126;
+    pars_lower_bound          = nullptr;
     isShowingProgressDisabled = false;
-    virtual_pop_size = 0;
-    num_parsimony_sites = 0;
-    num_variant_sites = 0;
-    num_informative_sites = 0;
+    virtual_pop_size          = 0;
+    num_parsimony_sites       = 0;
+    num_variant_sites         = 0;
+    num_informative_sites     = 0;
 }
 
 const string &Alignment::getSeqName(intptr_t i) const {
@@ -162,20 +162,21 @@ double chi2prob (int deg, double chi2)
 {
     double a = 0.5*deg;
     double x = 0.5*chi2;
-    return 1.0-RateGamma::cmpIncompleteGamma (x, a, RateGamma::cmpLnGamma(a));
+    return 1.0 - RateGamma::cmpIncompleteGamma (x, a, RateGamma::cmpLnGamma(a));
 //	return IncompleteGammaQ (0.5*deg, 0.5*chi2);
 } /* chi2prob */
 
 
 int Alignment::checkAbsentStates(const string& msg) {
     std::vector<double> state_freq_vector(num_states);
-    double *state_freq = state_freq_vector.data();
+    double* state_freq = state_freq_vector.data();
     computeStateFreq(state_freq, 0, nullptr);
     string absent_states, rare_states;
     int count = 0;
     // Skip check for PoMo.
-    if (seq_type == SeqType::SEQ_POMO)
-      return 0;
+    if (seq_type == SeqType::SEQ_POMO) {
+        return 0;
+    }
     for (int i = 0; i < num_states; i++)
         if (state_freq[i] == 0.0) {
             if (!absent_states.empty()) {
@@ -792,19 +793,20 @@ Alignment::Alignment(const char *filename,
     if (requested_sequence_type!=nullptr) {
         this->sequence_type = requested_sequence_type;
     }
-    aln_file = filename;
-    num_states = 0;
-    frac_const_sites = 0.0;
+
+
+    aln_file             = filename;
+    num_states           = 0;
+    frac_const_sites     = 0.0;
     frac_invariant_sites = 0.0;
-    seq_type = SeqType::SEQ_UNKNOWN;
-    STATE_UNKNOWN = 126;
-    pars_lower_bound = nullptr;
-    double readStart = getRealTime();
+    seq_type             = SeqType::SEQ_UNKNOWN;
+    STATE_UNKNOWN        = 126;
+    pars_lower_bound     = nullptr;
+    double readStart     = getRealTime();
+    intype               = detectInputFile(filename);
+
     std::cout << "Reading alignment file " << filename << " ... ";
-    intype = detectInputFile(filename);
-
     readAlignmentFile(intype, filename, requested_sequence_type);
-
     if (verbose_mode >= VerboseMode::VB_MED) {
         std::cout << "Time to read input file was "
                   << (getRealTime() - readStart) << " sec." << endl;
@@ -848,12 +850,12 @@ Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type,
     if (sequence_type) {
         this->sequence_type = sequence_type;
     }
-    num_states = 0;
-    frac_const_sites = 0.0;
+    num_states           = 0;
+    frac_const_sites     = 0.0;
     frac_invariant_sites = 0.0;
-    seq_type = SeqType::SEQ_UNKNOWN;
-    STATE_UNKNOWN = 126;
-    pars_lower_bound = nullptr;
+    seq_type             = SeqType::SEQ_UNKNOWN;
+    STATE_UNKNOWN        = 126;
+    pars_lower_bound     = nullptr;
     
     extractDataBlock(data_block);
 
@@ -996,7 +998,10 @@ void Alignment::computeUnknownState() {
         if (pomo_sampling_method == SamplingType::SAMPLING_SAMPLED) {
             STATE_UNKNOWN = num_states;
         }
-        else STATE_UNKNOWN = 0xffffffff; // only dummy, will be initialized later
+        else {
+            STATE_UNKNOWN = 0xffffffff; 
+            // only dummy, will be initialized later
+        }
         break;
     }
     default: STATE_UNKNOWN = num_states; break;
@@ -1796,9 +1801,9 @@ string Alignment::convertStateBackStr(StateType state) const {
         }
         assert(!codon_table.empty());
         state = codon_table[(int)state];
-        str = symbols_dna[state/16];
-        str += symbols_dna[(state%16)/4];
-        str += symbols_dna[state%4];
+        str   = symbols_dna[state/16];
+        str  += symbols_dna[(state%16)/4];
+        str  += symbols_dna[state%4];
         return str;
 	}
     // all other data types
@@ -2179,7 +2184,6 @@ void PatternInfoVector::loadPatterns(int nsite, int step, int nseq,
         Pattern&     pat  = aln->at(site / step);
         pat.resize(nseq);
         for (int seq = 0; seq < nseq; seq++) {
-            //char state = convertState(sequences[seq][site], seq_type);
             char state = char_to_state[(int)(sequences[seq][site])];
             if (seq_type == SeqType::SEQ_CODON || nt2aa) {
                 state = loadCodonState(sequences, site, seq, state, info);
@@ -2203,7 +2207,7 @@ void PatternInfoVector::loadPatterns(int nsite, int step, int nseq,
 char PatternInfoVector::loadCodonState(const StrVector& sequences, 
                                        int site, int seq, char state,
                                        PatternInfo& info) {
-                    // special treatment for codon
+    // special treatment for codon
     char state2 = char_to_state[(int)(sequences[seq][site+1])];
     char state3 = char_to_state[(int)(sequences[seq][site+2])];
     if (state < 4 && state2 < 4 && state3 < 4) {

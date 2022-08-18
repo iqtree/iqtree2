@@ -2912,13 +2912,15 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
                             + block*VectorClass::size() * packet_id;
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 VectorClass  lh_ptn(0.0);
-                VectorClass* lh_cat = (VectorClass*)(buffers._pattern_lh_cat + ptn*ncat_mix);
-                const VectorClass* partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-                const VectorClass* lh_node        = SITE_MODEL ? (VectorClass*)&partial_lh_node[ptn*nstates] : (VectorClass*)vec_tip;
+                auto lh_cat         = (VectorClass*)(buffers._pattern_lh_cat + ptn*ncat_mix);
+                auto partial_lh_dad = (const VectorClass*)(dad_branch->partial_lh + ptn*block);
+                auto lh_node        = (const VectorClass*)(SITE_MODEL 
+                                                           ? &partial_lh_node[ptn*nstates] 
+                                                           : vec_tip);
 
                 if (SITE_MODEL) {
                     // site-specific model
-                    const VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                    auto eval_ptr = (const VectorClass*) &eval[ptn*nstates];
                     for (size_t c = 0; c < ncat; c++) {
     #ifdef KERNEL_FIX_STATES
                         dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], lh_cat[c]);
@@ -3071,13 +3073,13 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; 
                  ptn+=VectorClass::size()) {
                 VectorClass  lh_ptn(0.0);
-                VectorClass* lh_cat = (VectorClass*)(buffers._pattern_lh_cat + ptn*ncat_mix);
-                const VectorClass* partial_lh_dad  = (VectorClass*)(dad_branch->partial_lh  + ptn*block);
-                const VectorClass* partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+                auto lh_cat          = (VectorClass*)(buffers._pattern_lh_cat + ptn*ncat_mix);
+                auto partial_lh_dad  = (const VectorClass*)(dad_branch->partial_lh  + ptn*block);
+                auto partial_lh_node = (const VectorClass*)(node_branch->partial_lh + ptn*block);
 
                 // compute likelihood per category
                 if (SITE_MODEL) {
-                    VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                    auto eval_ptr = (VectorClass*) &eval[ptn*nstates];
                     for (size_t c = 0; c < ncat; c++) {
     #ifdef KERNEL_FIX_STATES
                         dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], lh_cat[c]);
@@ -3205,23 +3207,34 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
         }
         // arbitrarily fix tree_lh if underflown for some sites
         tree_lh = 0.0;
-        
+        intptr_t unlikely_patterns = 0;
         #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:tree_lh)
+        #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:tree_lh,unlikely_patterns)
         #endif
         for (intptr_t ptn = 0; ptn < orig_nptn; ++ptn) {
             if (!std::isfinite(buffers._pattern_lh[ptn])) {
+                if (unlikely_patterns==0) {
+                  std::stringstream complaint;
+                  complaint << "Artificially setting lh"
+                            << " for pattern " << ptn << " (was " 
+                            << buffers._pattern_lh[ptn] << ")";
+                  LOG_LINE(VerboseMode::VB_MED,complaint.str());
+                }
                 buffers._pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+                unlikely_patterns       += 1;
             }
             tree_lh += buffers._pattern_lh[ptn] * ptn_freq[ptn];
         }
         if (justWarned) {
-            LOG_LINE(VerboseMode::VB_MED, "Fixed tree_lh was " << tree_lh);
+            LOG_LINE(VerboseMode::VB_MED, "Fixed tree_lh was " << tree_lh
+                     << " (artificially set lh for " << unlikely_patterns 
+                     << " of " << orig_nptn << " patterns).");
         }
     }
     // robust phylogeny project, summing log-likelihood over the best sites
     if (params->robust_phy_keep < 1.0) {
         if (ASC_Holder || ASC_Lewis) {
+            hideProgress();
             outError("+ASC not supported with robust phylo");
         }
         size_t sites      = getAlnNSite();
@@ -3240,6 +3253,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
         }
     } else if (params->robust_median) {
         if (ASC_Holder || ASC_Lewis) {
+            hideProgress();
             outError("+ASC not supported with robust phylo");
         }
         size_t sites = getAlnNSite();
@@ -3472,8 +3486,9 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD(LikelihoodBufferSet& bu
     double tree_lh = all_tree_lh;
     if (!std::isfinite(tree_lh)) {
         if (!safe_numeric) {
+            hideProgress();
             outError("Numerical underflow (lh-from-buffer)."
-                     " Run again with the safe likelihood kernel via `-safe` option");
+                      " Run again with the safe likelihood kernel via `-safe` option");
         } else {
             if (!warnedAboutNumericalUnderflow) {
                 hideProgress();
@@ -3729,6 +3744,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD
     ddf = all_ddf;
 
     if (!SAFE_NUMERIC && !std::isfinite(df)) {
+        hideProgress();
         outError("Numerical underflow (lh-derivative-mixlen). Run again with the safe likelihood kernel via `-safe` option");
     }
 	if (ASC_Lewis) {

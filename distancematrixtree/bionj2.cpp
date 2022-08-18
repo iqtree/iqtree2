@@ -69,31 +69,37 @@ void addBioNJ2020TreeBuilders(Factory& f) {
     ADVERTISE(UNJMatrix<NJFloat>,    "UNJ",     "Unweighted Neighbour Joining (Gascel [1997])");
     ADVERTISE(RapidNJ,               "NJ-R",    "Rapid Neighbour Joining"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
-    ADVERTISE(Vectorized_RapidNJ,    "NJ-R-V",  "Rapid Neighbour Joining (Vectorized)"
-                                                " (Simonsen, Mailund, Pedersen [2011])");
 
-    ADVERTISE(RapidNJ,            defaultName,  "Rapid Neighbour Joining"
+    ADVERTISE(RapidNJ,           defaultName,   "Rapid Neighbour Joining"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 
     ADVERTISE(FancyNJMatrix<NJFloat>,"ONJ-R",   "Rapid Neighbour Joining (a rival version)"
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 
+    #if USE_VECTORCLASS_LIBRARY
+    ADVERTISE(Vectorized_RapidNJ,    "NJ-R-V",  "Rapid Neighbour Joining (Vectorized)"
+                                                " (Simonsen, Mailund, Pedersen [2011])");
     ADVERTISE(VectorizedFancyNJMatrix<NJFloat>, "ONJ-R-V",  "Rapid Neighbour Joining (a rival version)"
                                                 " (Simonsen, Mailund, Pedersen [2011]) (Vectorized)");
+    #endif
 
-#ifdef USE_VECTORCLASS_LIBRARY
+    #if USE_VECTORCLASS_LIBRARY
     ADVERTISE(VectorNJ,             "NJ-V",    "Vectorized Neighbour Joining (Saitou, Nei [1987])");
-#endif
+    #endif
+
     ADVERTISE(BIONJMatrix<NJFloat>, "BIONJ",   "BIONJ (Gascuel, Cong [2009])");
     ADVERTISE(RapidBIONJ,           "BIONJ-R", "Rapid BIONJ (Saitou, Nei [1987], Gascuel [2009],"
                                                " Simonson Mailund Pedersen [2011])");
-#ifdef USE_VECTORCLASS_LIBRARY
+    #if USE_VECTORCLASS_LIBRARY
     ADVERTISE(VectorBIONJ,          "BIONJ-V", "Vectorized BIONJ (Gascuel, Cong [2009])");
-#endif
+    #endif
+
     ADVERTISE(UPGMA_Matrix<NJFloat>,"UPGMA",   "UPGMA (Sokal, Michener [1958])");
-#ifdef USE_VECTORCLASS_LIBRARY
+
+    #if USE_VECTORCLASS_LIBRARY
     ADVERTISE(VectorizedUPGMA_Matrix<NJFloat>, "UPGMA-V", "Vectorized UPGMA (Sokal, Michener [1958])");
-#endif
+    #endif
+
     ADVERTISE(BoundingMatrix<double>,"NJ-R-D", "Double precision Rapid Neighbour Joining");
     f.setNameOfDefaultTreeBuilder(defaultName);
     ADVERTISE(DistanceAuctionMatrix, "AUCTION",    "Auction Joining");

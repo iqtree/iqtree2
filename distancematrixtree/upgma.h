@@ -303,11 +303,11 @@ protected:
 
         std::vector<T> weights;
         T denominator = (T)0.0;
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             weights[i]   = (T)clusters[rowToCluster[i]].countOfExteriorNodes;
             denominator += weights[i];
         }
-        for (size_t i=0; i<row_count; ++i) {
+        for (intptr_t i=0; i<row_count; ++i) {
             weights[i] /= ((T)2.0 * denominator);
         }
         if (row_count==3) {
@@ -462,7 +462,7 @@ protected:
     }
 };
 
-#ifdef USE_VECTORCLASS_LIBRARY
+#if USE_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedUPGMA_Matrix: public UPGMA_Matrix<T>
 {

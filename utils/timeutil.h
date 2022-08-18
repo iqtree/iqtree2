@@ -23,9 +23,9 @@
 
 #if defined(DECENT_TREE)
 #if defined(_MSC_VER)
-#include "decenttree_msvc_config.h"
+#include <decenttree_msvc_config.h>
 #else
-#include "decenttree_config.h"
+#include <decenttree_config.h>
 #endif 
 #else
 #include <iqtree_config.h>

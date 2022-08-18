@@ -197,17 +197,17 @@ void PhyloTree::dumpSubsetStructure() {
 
 void PhyloTree::dumpSubsetStructure
         (PhyloNode* node, PhyloNode* prev, int indent) {
-    std::stringstream length_info;
+    std::stringstream log_line;
+    log_line << std::string(indent, ' ');
     if (prev!=nullptr) {
-        length_info.precision(6);
-        length_info << "(len " << node->findNeighbor(prev)->length << ")";
+        log_line.precision(6);
+        log_line << "(len " << node->findNeighbor(prev)->length << ")";
     }
+    log_line << node->id << " " << node->name 
+             << " (subset " << node->getSubsetNumber() << ")" 
+             << " (degree " << node->degree() << ")";             
+    LOG_LINE(VerboseMode::VB_MIN, log_line.str());
 
-    LOG_LINE(VerboseMode::VB_MIN, std::string(indent, ' ')
-        << length_info.str()
-        << node->id << " " << node->name 
-        << " (subset " << node->getSubsetNumber() << ")" 
-        << " (degree " << node->degree() << ")");
     FOR_EACH_ADJACENT_PHYLO_NODE(node, prev, it, adj) {
         dumpSubsetStructure(adj, node, indent+1);
     }
@@ -366,12 +366,12 @@ void PhyloTree::handleDivergentModelBoundary
     ASSERT((ptn_lower % vector_size) == 0);
     //Otherwise, formula for start_lh is invalid.
 
-    //LOG_LINE(VerboseMode::VB_MIN, "nstates=" << nstates
-    //         << ", ncat=" << ncat << ", fused=" << fused
-    //         << ", n_mix=" << n_mix << ", ncat_mix=" << ncat_mix
-    //         << ", v_by_s=" << v_by_s << ", block=" << v_by_s * ncat_mix
-    //         << ", ptn_lower=" << ptn_lower
-    //         << ", ptn_upper=" << ptn_upper);
+    LOG_LINE(VerboseMode::VB_MAX, "nstates=" << nstates
+             << ", ncat=" << ncat << ", fused=" << fused
+             << ", n_mix=" << n_mix << ", ncat_mix=" << ncat_mix
+             << ", v_by_s=" << v_by_s << ", block=" << v_by_s * ncat_mix
+             << ", ptn_lower=" << ptn_lower
+             << ", ptn_upper=" << ptn_upper);
 
     //
     //Question: for mixture models, is information stored 
@@ -385,6 +385,9 @@ void PhyloTree::handleDivergentModelBoundary
         stop_cat_no  *= ncat;
     }
 
+    std::vector<double> state_frequency(nstates, 0.0);
+    model->getStateFrequency(state_frequency.data(), 0);
+
     std::vector<double> log_lh_total(nstates, 0.0);
 
     //Get category proportions
@@ -397,8 +400,8 @@ void PhyloTree::handleDivergentModelBoundary
         cat_prop[c - start_cat_no ] 
             = rate_model->getProp(mycat) 
             * model_to_use->getMixtureWeight(mymix);
-        //LOG_LINE(VerboseMode::VB_MIN, "cat_prop for cat " << c
-        //     << " is " << cat_prop[c - start_cat_no ]);
+        LOG_LINE(VerboseMode::VB_MAX, "cat_prop for cat " << c
+             << " is " << cat_prop[c - start_cat_no ]);
     }
 
     double* partial_lh   = start_lh;
@@ -406,16 +409,15 @@ void PhyloTree::handleDivergentModelBoundary
 
     for (intptr_t ptn = ptn_lower; ptn < ptn_upper
          ; partial_lh += block, ptn += vector_size) {
-        int    state_offset = 0;
         double log_lh_here = 0.0; //log of likelihood for the 
                                   //sites in this pattern block
         int v_size_here = (ptn + vector_size < ptn_upper) 
                         ? vector_size : (ptn_upper - ptn);
 
         for (int vector_index = 0; vector_index < v_size_here; ++vector_index) { 
-            double lh_for_vector_posn = 0.0; //likelihood (over all states), 
-                                             //this pattern            
-            for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
+            double lh_for_vector_posn = 0.0; 
+            for (int state = 0, state_offset=0; state < nstates; 
+                 ++state, state_offset+=vector_size) {
                 double lh_for_state = 0.0; //likelihood over all rate categories
                                            //and mixtures, for state, for this pattern
                 int    cat          = start_cat_no;                
@@ -427,19 +429,22 @@ void PhyloTree::handleDivergentModelBoundary
                                    * cat_prop [ cat - start_cat_no ];
                     //Todo: what about scaling?!  Doesn't that need to be
                     //taken into account?  Somehow?
-                    //LOG_LINE(VerboseMode::VB_MIN, "ptn+i=" << (ptn+vector_index)
-                    //         << ", ix=" << ix << ", lh=" << lh_here);
-                    lh_for_state += lh_here;
+                    LOG_LINE(VerboseMode::VB_MAX, "ptn+i=" << (ptn+vector_index)
+                             << ", ix=" << ix << ", plh=" << partial_lh[ix]
+                             << ", lh=" << lh_here);
+                    if (std::isfinite(lh_here)) {
+                        lh_for_state += lh_here;
+                    }
                 }
-                lh_for_vector_posn += lh_for_state;
+                lh_for_vector_posn += lh_for_state * state_frequency[state];
             }
-            double log_lh_delta = (lh_for_vector_posn)==0
+            double log_lh_delta = (lh_for_vector_posn<=0)
                                   ? 0 : log(lh_for_vector_posn);
             double freq = ptn_freq[ptn+vector_index];                                  
-            //LOG_LINE(VerboseMode::VB_MIN, "ptn[" << (ptn+vector_index) <<"]"
-            //         << " has lh " << lh_for_vector_posn 
-            //         << " ln(lh) " << log_lh_delta
-            //         << " and frequency " << freq );
+            LOG_LINE(VerboseMode::VB_MAX, "ptn[" << (ptn+vector_index) <<"]"
+                     << " has lh " << lh_for_vector_posn 
+                     << " ln(lh) " << log_lh_delta
+                     << " and frequency " << freq );
             log_lh_here += log_lh_delta * freq;        
         }
         total_log_lh += log_lh_here;
@@ -450,34 +455,19 @@ void PhyloTree::handleDivergentModelBoundary
         total_ptn_freq += static_cast<double>(ptn_freq[ptn]);
     }
 
-    //double ptn_count      = ptn_upper - ptn_lower;
+    double ptn_count      = ptn_upper - ptn_lower;
     double multiplier     = 1.0 / total_ptn_freq;;
     double log_lh_per_ptn = total_log_lh * multiplier;
     double lh_per_ptn     = exp(log_lh_per_ptn);    
     //LOG_LINE(VerboseMode::VB_MIN, "ptn_count is " << ptn_count
     //         << ", total_ptn_freq is " << total_ptn_freq
+    //         << ", total_log_lh is " << total_log_lh
     //         << ", multiplier is "     << multiplier
     //         << ", log_lh_per_ptn is " << log_lh_per_ptn 
     //         << ", and lh_per_ptn is " << lh_per_ptn);
     
-    partial_lh = start_lh;
-    int start_cat_offset = start_cat_no * v_by_s;
-    int stop_cat_offset  = stop_cat_no  * v_by_s;
-    //LOG_LINE(VerboseMode::VB_MIN, 
-    //         "start_cat_offset is " << start_cat_offset
-    //         << ", stop_cat_offset is " << stop_cat_offset);
-    for (intptr_t ptn = ptn_lower; ptn < ptn_upper
-         ; partial_lh += block, ptn += vector_size) {
-        for (int cat_offset = start_cat_offset
-             ; cat_offset < stop_cat_offset
-             ; cat_offset += v_by_s) {
-            int state_offset = 0;
-            for (int state = 0; state < nstates; ++state, state_offset+=vector_size) {
-                for (int vector_index = 0; vector_index < vector_size; ++vector_index) {
-                    intptr_t ix = cat_offset + state_offset + vector_index;                   
-                    partial_lh [  ix ] = lh_per_ptn;
-                }
-            }
-        }
+    int lh_count = block * ptn_count / vector_size;
+    for (int i=0;i<lh_count;++i) {
+        start_lh[i] = log_lh_per_ptn;
     }
 }

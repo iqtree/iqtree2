@@ -224,7 +224,7 @@ void progress_display::appendUsage(bool verbed, double elapsedTime, double cpu,
 }
 
 void progress_display::formatAsProgressBar(std::string& message) {
-    int barLen = 80;
+    size_t barLen = 80;
     if (message.length() < barLen ) {
         message += std::string(barLen-message.length(), ' ');
     }
