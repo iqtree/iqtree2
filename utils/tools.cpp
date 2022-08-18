@@ -4669,7 +4669,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --date-no-outgroup   Exclude outgroup from time tree" << endl
     << "  --date-outlier NUM   Z-score cutoff to remove outlier tips/nodes (e.g. 3)" << endl
     << "  --date-options \"..\"  Extra options passing directly to LSD2" << endl
-    << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl
+    << "  --dating STRING      Dating method: LSD for least square dating (default)" << endl;
 #endif    
 
 #if (0)

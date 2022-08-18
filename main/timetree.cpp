@@ -221,7 +221,7 @@ void runLSD2(PhyloTree* tree) {
     string treefile = basename + ".subst";
     stringstream tree_stream, outgroup_stream, date_stream;
     tree->printTree(tree_stream);
-    StrVector arg = {"lsd", "-i", treefile, "-s", convertIntToString(tree->getAlnNSite()), "-o", basename};
+    vector<string> arg = {"lsd", "-i", treefile, "-s", convertIntToString(tree->getAlnNSite()), "-o", basename};
     if (Params::getInstance().date_debug) {
         ofstream out(treefile);
         out << tree_stream.str();
