@@ -24,13 +24,13 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                  bool append, const char *linename) {
     double *pattern_lh;
 
-    if (!tree->isTreeMix()) {
+    // if (!tree->isTreeMix()) {
         if (!ptn_lh) {
             pattern_lh = new double[tree->getAlnNPattern()];
             tree->computePatternLikelihood(pattern_lh);
         } else
             pattern_lh = ptn_lh;
-    }
+    // }
 
     try {
         ofstream out;
@@ -40,28 +40,14 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
         } else {
             out.open(filename);
         }
-        
+       
+        /*
         if (tree->isTreeMix()) {
             // tree mixture model
             IQTreeMix* treeMix = (IQTreeMix*) tree;
             treeMix->showLhProb(out);
-            /*
-            // also print out the pattern's likelihoods
-            string pfilename = filename;
-            pfilename += ".ptn";
-            ofstream pout;
-            pout.exceptions(ios::failbit | ios::badbit);
-            if (append) {
-                pout.open(pfilename.c_str(), ios::out | ios::app);
-            } else {
-                pout.open(pfilename.c_str());
-            }
-            treeMix->showPatternLhProb(pout);
-            pout.close();
-            if (!append)
-                cout << "pattern log-likelihoods printed to " << pfilename << endl;
-            */
         } else {
+         */
             if (!append)
                 out << 1 << " " << tree->getAlnNSite() << endl;
             if (!linename)
@@ -75,7 +61,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             for (size_t i = 0; i < tree->getAlnNSite(); i++)
                 out << " " << pattern_lh[pattern_index[i]];
             out << endl;
-        }
+        // }
         out.close();
         if (!append)
             cout << "Site log-likelihoods printed to " << filename << endl;
@@ -141,7 +127,9 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
     
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
-    if (!tree->getModel()->isMixture()) {
+    if (tree->isTreeMix()) {
+        wsl = WSL_TMIXTURE; // tree mixture model
+    } else if (!tree->getModel()->isMixture()) {
         if (wsl != WSL_RATECAT) {
             wsl = WSL_RATECAT;
         }
@@ -338,7 +326,9 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
     // error checking
-    if (!tree->getModel()->isMixture()) {
+    if (tree->isTreeMix())
+        wsl = WSL_TMIXTURE; // tree mixture model
+    else if (!tree->getModel()->isMixture()) {
         if (wsl != WSL_RATECAT) {
             outWarning("Switch now to '-wspr' as it is the only option for non-mixture model");
             wsl = WSL_RATECAT;

@@ -1279,6 +1279,8 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
         return getRate()->getNDiscreteRate();
     case WSL_MIXTURE:
         return getModel()->getNMixtures();
+    default:
+        return 0;
     }
 }
 
@@ -5836,7 +5838,9 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
 
 void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     // error checking
-    if (!getModel()->isMixture()) {
+    if (isTreeMix()) {
+        wsl = WSL_TMIXTURE;
+    } else if (!getModel()->isMixture()) {
         if (wsl != WSL_RATECAT) {
             outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
             wsl = WSL_RATECAT;

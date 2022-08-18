@@ -542,6 +542,25 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     }
 }
 
+int IQTreeMix::getNumLhCat(SiteLoglType wsl) {
+    int ncat = 0;
+    switch (wsl) {
+    case WSL_NONE: ASSERT(0 && "is not WSL_NONE"); return 0;
+    case WSL_SITE: ASSERT(0 && "is not WSL_SITE"); return 0;
+    case WSL_MIXTURE_RATECAT:
+        ncat = getRate()->getNDiscreteRate();
+        if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
+            ncat *= getModel()->getNMixtures();
+        return ncat;
+    case WSL_RATECAT:
+        return getRate()->getNDiscreteRate();
+    case WSL_MIXTURE:
+        return getModel()->getNMixtures();
+    case WSL_TMIXTURE:
+        return size();
+    }
+}
+
 // this function is designed for the situation that
 // only one tree has been updated.
 double IQTreeMix::computeLikelihood_oneTreeUpdated(int whichTree) {
@@ -619,8 +638,11 @@ double IQTreeMix::computeLikelihood(double *pattern_lh) {
 }
 
 double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
-    // this function is only for the linked mixture model
-    size_t nmix, t, p, m, i;
+    // this function only supports wsl = WSL_MIXTURE or WSL_TMIXTURE
+    
+    double* pattern_lh_tree;
+    PhyloTree* ptree;
+    size_t nmix, t, p, m, i, j, ptn;
     size_t tot_mem_size;
     double ptnLike, score;
     int index, indexlh;
@@ -629,27 +651,59 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
     size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
         get_safe_upper_limit(at(0)->model_factory->unobserved_ptns.size()));
     if (!_pattern_lh_cat) {
-        tot_mem_size = mem_size * at(0)->site_rate->getNDiscreteRate() * ((at(0)->model_factory->fused_mix_rate)? 1 : at(0)->model->getNMixtures());
+        if (wsl == WSL_TMIXTURE)
+            tot_mem_size = mem_size * ntree;
+        else
+            tot_mem_size = mem_size * at(0)->site_rate->getNDiscreteRate() * ((at(0)->model_factory->fused_mix_rate)? 1 : at(0)->model->getNMixtures());
         _pattern_lh_cat = aligned_alloc<double>(tot_mem_size);
     }
-    
-    // compute _pattern_lh_cat for each tree
-    for (t = 0; t < ntree; t++) {
-        if (t==0) {
-            nmix = at(t)->getModel()->getNMixtures();
-        } else if (nmix != at(t)->getModel()->getNMixtures()) {
-            outError("The number of classes inside each tree is not the same!");
+
+    if (wsl == WSL_TMIXTURE) {
+        // compute likelihood for each tree
+        pattern_lh_tree = _ptn_like_cat;
+        for (t=0; t<ntree; t++) {
+            // save the site rate's tree
+            ptree = at(t)->getRate()->getTree();
+            // set the tree t as the site rate's tree
+            // and compute the likelihood values
+            at(t)->getRate()->setTree(at(t));
+            at(t)->initializeAllPartialLh();
+            at(t)->clearAllPartialLH();
+            at(t)->computeLikelihood(pattern_lh_tree);
+            // set back the prevoius site rate's tree
+            at(t)->getRate()->setTree(ptree);
+            pattern_lh_tree += nptn;
         }
-        at(t)->computePatternLhCat(wsl);
-    }
-    
-    // compute the overall _pattern_lh_cat
-    for (p = 0; p < nptn * nmix; p++) {
-        ptnLike = 0.0;
+
+        // reorganize the array
+        i=0;
+        for (t=0; t<ntree; t++) {
+            j=t;
+            for (ptn=0; ptn<nptn; ptn++) {
+                _pattern_lh_cat[j] = exp(_ptn_like_cat[i]);
+                i++;
+                j+=ntree;
+            }
+        }
+    } else {
+        // compute _pattern_lh_cat for each tree
         for (t = 0; t < ntree; t++) {
-            ptnLike += at(t)->_pattern_lh_cat[p] * weights[t];
+            if (t==0) {
+                nmix = at(t)->getModel()->getNMixtures();
+            } else if (nmix != at(t)->getModel()->getNMixtures()) {
+                outError("The number of classes inside each tree is not the same!");
+            }
+            at(t)->computePatternLhCat(wsl);
         }
-        _pattern_lh_cat[p] = ptnLike;
+        
+        // compute the overall _pattern_lh_cat
+        for (p = 0; p < nptn * nmix; p++) {
+            ptnLike = 0.0;
+            for (t = 0; t < ntree; t++) {
+                ptnLike += at(t)->_pattern_lh_cat[p] * weights[t];
+            }
+            _pattern_lh_cat[p] = ptnLike;
+        }
     }
     
     score = computeLikelihood();
@@ -694,7 +748,45 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
  */
 void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
                                          double *pattern_lh_cat, SiteLoglType wsl) {
-    computeLikelihood(pattern_lh);
+
+    double* pattern_lh_tree;
+    size_t i,j,ptn,t;
+    double logLike = 0.0;
+    double subLike;
+    double score;
+    PhyloTree* ptree;
+    
+    // compute likelihood for each tree
+    pattern_lh_tree = _ptn_like_cat;
+    for (t=0; t<ntree; t++) {
+        // save the site rate's tree
+        ptree = at(t)->getRate()->getTree();
+        // set the tree t as the site rate's tree
+        // and compute the likelihood values
+        at(t)->getRate()->setTree(at(t));
+        at(t)->initializeAllPartialLh();
+        at(t)->clearAllPartialLH();
+        at(t)->computeLikelihood(pattern_lh_tree);
+        // set back the prevoius site rate's tree
+        at(t)->getRate()->setTree(ptree);
+        pattern_lh_tree += nptn;
+    }
+
+    // reorganize the array
+    i=0;
+    for (t=0; t<ntree; t++) {
+        j=t;
+        for (ptn=0; ptn<nptn; ptn++) {
+            if (pattern_lh_cat)
+                pattern_lh_cat[j] = _ptn_like_cat[i];
+            ptn_like_cat[j] = exp(_ptn_like_cat[i]);
+            i++;
+            j+=ntree;
+        }
+    }
+    
+    // compute the overall likelihood value by combining all the existing likelihood values of the trees
+    computeLikelihood_combine(pattern_lh);
 }
 
 void IQTreeMix::initializeAllPartialLh() {
