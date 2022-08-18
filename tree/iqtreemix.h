@@ -40,6 +40,11 @@ public:
     
     void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
+    /**
+     * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
+     */
+    virtual int getNumLhCat(SiteLoglType wsl);
+
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
     double computeLikelihood_combine(double *pattern_lh = NULL);
 
