@@ -90,20 +90,7 @@ public:
     /**
      * @return TRUE if this is a mixture model and all model components share the same rate matrix, FALSE otherwise
      */
-    virtual bool isMixtureSameQ() {
-        if (share_same_Q == -1)
-        {
-            share_same_Q = 1;
-            for (iterator it = begin() + 1; it != end(); it++)
-                if ((*it)->ModelSubst::getName() != at(0)->ModelSubst::getName())
-                {
-                    share_same_Q = 0;
-                    break;
-                }
-        }
-        
-        return share_same_Q == 1;
-    }
+    virtual bool isMixtureSameQ();
 
 
 	/**

@@ -1843,6 +1843,28 @@ bool ModelMixture::isFused() {
     return true;
 }
 
+bool ModelMixture::isMixtureSameQ() {
+    if (share_same_Q == -1)
+    {
+        share_same_Q = 1;
+        string model_name_0 = at(0)->ModelSubst::getName();
+        model_name_0 = model_name_0.substr(0, model_name_0.find("+"));
+        
+        for (iterator it = begin() + 1; it != end(); it++)
+        {
+            string model_name_i = (*it)->ModelSubst::getName();
+            model_name_i = model_name_i.substr(0, model_name_i.find("+"));
+            if (model_name_i != model_name_0)
+            {
+                share_same_Q = 0;
+                break;
+            }
+        }
+    }
+    
+    return share_same_Q == 1;
+}
+
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = true;
 
