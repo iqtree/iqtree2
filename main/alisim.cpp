@@ -111,8 +111,8 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
         else
             strcat(params.user_file,".treefile");
     }
-    // reload tree from tree_file
-    else
+    // NhanLT: we shouldn't reload the tree
+    /*else
     {
         // do not reload the tree from file in case with heterotachy
         if (!tree->getRate()->isHeterotachy())
@@ -166,7 +166,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
             auto end = getRealTime();
             cout<<" - Time spent on reloading trees: "<<end-start<<endl;
         }
-    }
+    }*/
     
     // update sequence_length
     if (params.original_params.find("--length") == std::string::npos)
