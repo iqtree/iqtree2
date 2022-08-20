@@ -83,6 +83,10 @@ void ParsimonyNNIMove::findMove(const PhyloTree& tree, /* problem, not const */
     if (tb.second->degree()!=3 ) {
         return;
     }
+    if (tb.first->getSubsetNumber() !=
+        tb.second->getSubsetNumber()) {
+        return;
+    }
     PhyloNode* left1;
     PhyloNode* left2;
     GET_OTHER_ADJACENT_PHYLO_NODES(tb.first, tb.second,
@@ -91,24 +95,36 @@ void ParsimonyNNIMove::findMove(const PhyloTree& tree, /* problem, not const */
     PhyloNode* right2;
     GET_OTHER_ADJACENT_PHYLO_NODES(tb.second, tb.first,
                                    right1, right2);
-    double cost1 = ParallelParsimonyCalculator::parsimonyLink4CostOutOfTree
-                   ( tree, left1, right1, tb.first, tb.second,
-                     left2, right2,
-                     path_parsimony[0], path_parsimony[1]);
-    TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "for " << source_branch_id
-                  << " cost1 " << cost1 << ","
-                  << " oldcost " << parsimony_score );
-    consider(source_branch_id, left1, tb, right2, parsimony_score - cost1);
-    
-    double cost2 = ParallelParsimonyCalculator::parsimonyLink4CostOutOfTree
-                   ( tree, left1, right2, tb.first,
-                     tb.second, left2, right1,
-                     path_parsimony[0], path_parsimony[1]);
-    TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "for " << source_branch_id
-                  << " cost2 " << cost2 << ","
-                  << " oldcost " << parsimony_score );
-    consider(source_branch_id, left1, tb, right1, parsimony_score - cost2);
-    positions_considered += 2;
+
+    int s[4];
+    s[0] = left1->getSubsetNumber();
+    s[1] = left2->getSubsetNumber();
+    s[2] = right1->getSubsetNumber();
+    s[3] = right2->getSubsetNumber();
+            
+    if (s[0]==s[3]) {
+        double cost1 = ParallelParsimonyCalculator::parsimonyLink4CostOutOfTree
+                    ( tree, left1, right1, tb.first, tb.second,
+                        left2, right2,
+                        path_parsimony[0], path_parsimony[1]);
+        TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "for " << source_branch_id
+                    << " cost1 " << cost1 << ","
+                    << " oldcost " << parsimony_score );
+        consider(source_branch_id, left1, tb, right2, parsimony_score - cost1);
+        ++positions_considered;
+    }
+        
+    if (s[0]==s[2]) {
+        double cost2 = ParallelParsimonyCalculator::parsimonyLink4CostOutOfTree
+                    ( tree, left1, right2, tb.first,
+                        tb.second, left2, right1,
+                        path_parsimony[0], path_parsimony[1]);
+        TREE_LOG_LINE(tree, VerboseMode::VB_DEBUG, "for " << source_branch_id
+                    << " cost2 " << cost2 << ","
+                    << " oldcost " << parsimony_score );
+        consider(source_branch_id, left1, tb, right1, parsimony_score - cost2);
+        ++positions_considered;
+    }
 }
 void ParsimonyNNIMove::finalize(PhyloTree& tree,
                                 const TargetBranchRange& branches) {
