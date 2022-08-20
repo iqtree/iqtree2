@@ -51,6 +51,11 @@ void ParsimonyLazySPRMove::LazySPRSearch::searchForForwardsSPR
         if (0<radius) {
             searchForForwardsSPR(next, current, radius);
         }
+        //This is a bit simplicstic!
+        if ( next->getSubsetNumber()!=current->getSubsetNumber() ||
+             next->getSubsetNumber()!=source.second->getSubsetNumber()) {
+            continue;
+        }
         int target_branch_id = (*it)->id;
         const TargetBranch& target = branches[target_branch_id];
         double cost    = source.getForwardConnectionCost(tree, target);
@@ -70,6 +75,11 @@ void ParsimonyLazySPRMove::LazySPRSearch::searchForBackwardsSPR
     FOR_EACH_ADJACENT_PHYLO_NODE(current, prev, it, next) {
         if (0<radius) {
             searchForBackwardsSPR(next, current, radius);
+        }
+        //This is a bit simplicstic!
+        if ( next->getSubsetNumber()!=current->getSubsetNumber() ||
+             next->getSubsetNumber()!=source.first->getSubsetNumber()) {
+            continue;
         }
         int target_branch_id = (*it)->id;
         const TargetBranch& target = branches[target_branch_id];
@@ -293,17 +303,20 @@ void ParsimonySPRMove::ProperSPRSearch::searchForForwardsSPR(PhyloNode* current,
     FOR_EACH_ADJACENT_PHYLO_NODE(current, prev, it, next) {
         //path_parsimony[radius+1] has already been set "above"
         //(in the callstack), or in prepareToSearch.
-        UINT*      on_path_vector  = path_parsimony[radius+1];
-        PhyloNode* off_path_node   = other_adjacent_node(current, next, prev);
-        UINT*      off_path_vector = current->findNeighbor(off_path_node)->get_partial_pars();
+        UINT*      on_path_vector   = path_parsimony[radius+1];
+        PhyloNode* off_path_node    = other_adjacent_node(current, next, prev);
+        UINT*      off_path_vector  = current->findNeighbor(off_path_node)->get_partial_pars();
         tree.computePartialParsimonyOutOfTree
             ( on_path_vector, off_path_vector
             , path_parsimony[radius] );
         if (1<radius) {
             searchForForwardsSPR(next, current, radius-1, parsimony);
         }
-        int target_branch_id = (*it)->id;
-        
+        //This is a bit simplicstic!
+        if ( next->getSubsetNumber()!=current->getSubsetNumber() ||
+             next->getSubsetNumber()!=source.second->getSubsetNumber()) {            
+            continue;
+        }
         double pruned_tree_score = tree.computePartialParsimonyOutOfTree
                                    ( current->findNeighbor(next)->get_partial_pars()
                                    , path_parsimony[radius], path_parsimony[0] );
@@ -319,7 +332,7 @@ void ParsimonySPRMove::ProperSPRSearch::searchForForwardsSPR(PhyloNode* current,
         
         if (put_answer_here.benefit<benefit) {
             put_answer_here.benefit          = benefit;
-            put_answer_here.target_branch_id = target_branch_id;
+            put_answer_here.target_branch_id = (*it)->id;
             put_answer_here.isForward        = true;
         }
         ++put_answer_here.positions_considered;
@@ -338,8 +351,11 @@ void ParsimonySPRMove::ProperSPRSearch::searchForBackwardsSPR
         if (1<radius) {
             searchForBackwardsSPR(next, current, radius-1, parsimony);
         }
-        int target_branch_id = (*it)->id;
-        
+        //This is a bit simplicstic!
+        if ( next->getSubsetNumber()!=current->getSubsetNumber() ||
+             next->getSubsetNumber()!=source.first->getSubsetNumber()) {
+            continue;
+        }
         double pruned_tree_score = tree.computePartialParsimonyOutOfTree
                                    ( current->findNeighbor(next)->get_partial_pars()
                                    , path_parsimony[radius], path_parsimony[0] );
@@ -355,7 +371,7 @@ void ParsimonySPRMove::ProperSPRSearch::searchForBackwardsSPR
         
         if (put_answer_here.benefit<benefit) {
             put_answer_here.benefit          = benefit;
-            put_answer_here.target_branch_id = target_branch_id;
+            put_answer_here.target_branch_id = (*it)->id;
             put_answer_here.isForward        = false;
         }
         ++put_answer_here.positions_considered;
