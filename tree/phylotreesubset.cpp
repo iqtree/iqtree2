@@ -425,13 +425,11 @@ void PhyloTree::handleDivergentModelBoundary
                      ; cat < stop_cat_no
                      ; cat_offset += v_by_s, ++cat) {
                     auto   ix      = cat_offset + state_offset + vector_index;
-                    double lh_here = abs(partial_lh [ ix ])
-                                   * cat_prop [ cat - start_cat_no ];
+                    double lh_here = abs(partial_lh [ ix ]) * cat_prop [ cat - start_cat_no ];
                     //Todo: what about scaling?!  Doesn't that need to be
                     //taken into account?  Somehow?
-                    LOG_LINE(VerboseMode::VB_MAX, "ptn+i=" << (ptn+vector_index)
-                             << ", ix=" << ix << ", plh=" << partial_lh[ix]
-                             << ", lh=" << lh_here);
+                    LOG_LINE(VerboseMode::VB_MAX, "ptn+vi=" << (ptn+vector_index)
+                             << ", ix=" << ix << ", lh=" << lh_here);
                     if (std::isfinite(lh_here)) {
                         lh_for_state += lh_here;
                     }
@@ -442,10 +440,10 @@ void PhyloTree::handleDivergentModelBoundary
                                   ? 0 : log(lh_for_vector_posn);
             double freq = ptn_freq[ptn+vector_index];                                  
             LOG_LINE(VerboseMode::VB_MAX, "ptn[" << (ptn+vector_index) <<"]"
-                     << " has lh " << lh_for_vector_posn 
+                     << " has likelihood " << lh_for_vector_posn 
                      << " ln(lh) " << log_lh_delta
                      << " and frequency " << freq );
-            log_lh_here += log_lh_delta * freq;        
+            log_lh_here += log_lh_delta * freq;
         }
         total_log_lh += log_lh_here;
     }
@@ -459,15 +457,21 @@ void PhyloTree::handleDivergentModelBoundary
     double multiplier     = 1.0 / total_ptn_freq;;
     double log_lh_per_ptn = total_log_lh * multiplier;
     double lh_per_ptn     = exp(log_lh_per_ptn);    
-    //LOG_LINE(VerboseMode::VB_MIN, "ptn_count is " << ptn_count
-    //         << ", total_ptn_freq is " << total_ptn_freq
-    //         << ", total_log_lh is " << total_log_lh
-    //         << ", multiplier is "     << multiplier
-    //         << ", log_lh_per_ptn is " << log_lh_per_ptn 
-    //         << ", and lh_per_ptn is " << lh_per_ptn);
+    LOG_LINE(VerboseMode::VB_MAX, 
+             "For " << model_to_use->getName() << " subtree"
+             << ", ptn_count is " << ptn_count
+             << ", total_ptn_freq is " << total_ptn_freq
+             << ", total_log_lh is "   << total_log_lh
+             << ", multiplier is "     << multiplier
+             << ", log_lh_per_ptn is " << log_lh_per_ptn 
+             << ", and lh_per_ptn is " << lh_per_ptn);
     
+    if (total_log_lh>=0) {
+        LOG_LINE(VerboseMode::VB_MAX, "Aaargh!");
+    }
+
     int lh_count = block * ptn_count / vector_size;
     for (int i=0;i<lh_count;++i) {
-        start_lh[i] = log_lh_per_ptn;
+        start_lh[i] = lh_per_ptn;
     }
 }
