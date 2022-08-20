@@ -369,6 +369,8 @@ class ModelPoMo : public ModelMarkov
 	 */
 	virtual void setRates() override;
 
+    virtual void logVariablesTo(std::stringstream& var_list) const override;
+
  protected:
     /*!<  Virtual population size of the PoMo model. */
     int N;

@@ -2135,42 +2135,15 @@ bool ModelMixture::getVariables(const double *variables) {
         changed |= model->getVariables(&variables[dim]);
         dim     += model->getNDim();
     }
-//	if (fix_prop) return;
-//	int i, ncategory = size();
-
-//	double *y = new double[ncategory+1];
-//	y[0] = 0; y[ncategory] = 1.0;
-//	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
-//	std::sort(y+1, y+ncategory);
-//	double sum = 0.0;
-//	for (i = 0; i < ncategory; ++i) {
-//		prop[i] = (y[i+1]-y[i]);
-//	}
-
-    // BQM 2015-05-19: modify using the same strategy 
-    // for FreeRate model (thanks to Thomas Wong)
-//	double sum = 1.0;
-//	for (i = 0; i < ncategory-1; ++i) {
-//		sum += variables[dim+i+1];
-//	}
-//	for (i = 0; i < ncategory-1; ++i) {
-//		prop[i] = variables[dim+i+1] / sum;
-//	}
-//	prop[ncategory-1] = 1.0 / sum;
-
-
-//	for (i = 0, sum = 0.0; i < ncategory; ++i)
-//		sum += prop[i]*at(i)->total_num_subst;
-//	for (i = 0; i < ncategory; ++i)
-//		at(i)->total_num_subst /= sum;
-
-//	if (verbose_mode >= VerboseMode::VB_MAX) {
-//		for (i = 0; i < ncategory; ++i)
-//			cout << "Component " << i << " prop=" << prop[i] << endl;
-//	}
-//	delete [] y;
-
     return changed;
+}
+
+void ModelMixture::logVariablesTo(std::stringstream& var_list) const {
+    var_list << " mixture of " << models.size() << "models";
+    for (auto model : models) {
+        var_list << "\n  ";
+        model->logVariablesTo(var_list);
+    }
 }
 
 void ModelMixture::setTree(PhyloTree* tree) {

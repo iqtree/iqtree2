@@ -777,8 +777,9 @@ bool ModelLieMarkov::getVariables(const double* variables) {
 		nrate -= (num_states - 1);
 	}
 	if (nrate > 0) {
-		for (i = 0; i < nrate; i++)
+		for (i = 0; i < nrate; ++i) {
 			changed |= (rates[i] != variables[i+1]);
+		}
 		memcpy(rates, variables+1, nrate * sizeof(double));
 	}
 

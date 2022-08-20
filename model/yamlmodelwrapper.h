@@ -444,6 +444,10 @@ public:
 	virtual RateHeterogeneity* getSpecifiedRateModel(PhyloTree* tree) override { 
         return model_info->getSpecifiedRateModel(tree);
     }
+
+    virtual void logVariablesTo(std::stringstream &var_list) const override {
+        model_info->logVariablesTo(var_list);
+    }
 };
 
 class YAMLModelDNA: public YAMLModelWrapper<ModelDNA> {

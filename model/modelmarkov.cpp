@@ -130,7 +130,7 @@ void ModelMarkov::makeReversible(bool make_unrooted) {
 
     delete [] rates;
     rates = new double[nrate];
-    for (int i=0; i < nrate; i++) {
+    for (int i=0; i < nrate; ++i) {
         rates[i] = 1.0;
     }
     size_t num_states_squared = num_states * num_states;
@@ -980,7 +980,7 @@ bool ModelMarkov::getVariables(const double *variables) {
     }
     bool changed = false;
     if (nrate > 0) {
-        for (int i = 0; i < nrate; i++) {
+        for (int i = 0; i < nrate; ++i) {
             changed |= (rates[i] != variables[i+1]);
         }
         memcpy(rates, variables+1, nrate * sizeof(double));
@@ -993,27 +993,31 @@ bool ModelMarkov::getVariables(const double *variables) {
             changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
         }
         memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
-
-//		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
-		//state_freq[num_states-1] = 0.1;
-		//scaleStateFreq();
-
-//		double sum = 0.0;
-//		for (int i = 0; i < num_states-1; i++)
-//			sum += state_freq[i];
-//		state_freq[num_states-1] = 1.0 - sum;
-//		double sum = 1.0;
-//		int i, j;
-//		for (i = 1; i < num_states; i++)
-//			sum += variables[nrate+i];
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				state_freq[i] = variables[nrate+j] / sum;
-//				j++;
-//			}
-//		state_freq[highest_freq_state] = 1.0/sum;
     }
     return changed;
+}
+
+void ModelMarkov::logVariablesTo(LoggingTarget* logging_target) const {
+    std::stringstream var_list;
+    var_list << getName() << " Variables: ";
+    logVariablesTo(var_list); 
+    TREE_LOG_LINE(*logging_target, YAMLModelVerbosity, var_list.str()); 
+}
+
+void ModelMarkov::logVariablesTo(std::stringstream& var_list) const {
+    const char* sep = "";
+    int nrates = getNumRateEntries();
+    if (nrates > 0) {
+        for (int i = 0; i < nrates; ++i) {
+            var_list << "r" << (i+1) << "=" << rates[i];
+            sep = ", ";
+        }
+    }    
+    if (state_freq!=nullptr) {
+        for (int f = 0; f < num_states; ++f) {
+            var_list << "f" << (f+1) << "=" << state_freq[f];
+        }
+    }
 }
 
 double ModelMarkov::targetFunk(double x[]) {

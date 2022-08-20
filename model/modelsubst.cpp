@@ -138,7 +138,7 @@ double ModelSubst::computeTrans(double time, int model_id,
 
 void ModelSubst::getRateMatrix(double *rate_mat) const {
     int nrate = getNumRateEntries();
-    for (int i = 0; i < nrate; i++) {
+    for (int i = 0; i < nrate; ++i) {
         rate_mat[i] = 1.0;
     }
 }
@@ -272,6 +272,12 @@ void ModelSubst::getDivergentModels
         (std::vector<ModelDivergent*>& div_models) {
     //Well, there aren't any.  But this may be overridden for
     //subclasses of ModelSubst.  Notably, ModelDivergent.
+}
+
+void ModelSubst::logVariablesTo(LoggingTarget* logging_target) const {
+}
+
+void ModelSubst::logVariablesTo(std::stringstream& var_list) const {
 }
 
 double* ModelSubst::getPatternInvar() const {

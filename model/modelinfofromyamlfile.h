@@ -495,6 +495,8 @@ public:
 
     //Variables
     const ModelInfoFromYAMLFile::Variables& getVariables() const;
+    void  logVariablesTo(LoggingTarget* logging_target) const;
+    void  logVariablesTo(std::stringstream& var_list) const;
     const ModelVariable* getVariableByName(const char*        name) const;
     const ModelVariable* getVariableByName(const std::string& name) const;
     bool   hasVariable     (const char* name)        const;
@@ -519,8 +521,6 @@ public:
                                       ModelParameterType param_type,
                                       int &i, PhyloTree* report_to_tree) const;                                          
 
-
-    void   logVariablesTo(LoggingTarget* logging_target) const;
     ModelVariable& assign(const std::string& var_name,
                           double value);
     ModelVariable& assign(const std::string& var_name,  

@@ -339,7 +339,7 @@ protected:
 	*/
 	virtual bool getVariables(const double *variables) override;
 
-
+	virtual void logVariablesTo(std::stringstream& var_list) const override;
 	/**
 		this function is called after optimizeWeights (YAMLModelMixture,
 		for example, needs to know when weights have changed, so it can

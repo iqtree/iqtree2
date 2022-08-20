@@ -58,7 +58,9 @@ ModelGTR::ModelGTR(PhyloTree* tree, bool count_rates)
 //	if (count_rates) 
 //		computeEmpiricalRate();
 //	else
-		for (i=0; i < nrate; i++) rates[i] = 1.0;
+		for (i=0; i < nrate; ++i) {
+			rates[i] = 1.0;
+		}
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
 	num_params = getNumRateEntries() - 1;
@@ -479,8 +481,9 @@ bool ModelGTR::getVariables(const double *variables) {
 		nrate -= (num_states - 1);
 	}
 	if (nrate > 0) {
-		for (i = 0; i < nrate; i++)
+		for (i = 0; i < nrate; ++i) {
 			changed |= (rates[i] != variables[i+1]);
+		}
 		memcpy(rates, variables+1, nrate * sizeof(double));
 	}
 

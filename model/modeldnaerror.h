@@ -116,6 +116,8 @@ protected:
     */
     virtual bool getVariables(const double *variables) override;
     
+    virtual void logVariablesTo(std::stringstream& var_list) const override;
+
 protected:
     
     /** sequencing error */

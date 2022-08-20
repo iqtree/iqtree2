@@ -191,6 +191,13 @@ bool ModelDNAError::getVariables(const double *variables) {
     return changed;
 }
 
+void ModelDNAError::logVariablesTo(std::stringstream& var_list) const {
+    super::logVariablesTo(var_list);
+    if (!fix_epsilon) {
+        var_list << ", epsilon=" << epsilon;
+    }
+}
+
 void ModelDNAError::setVariables(double *variables) {
     ModelDNA::setVariables(variables);
     if (!fix_epsilon) {

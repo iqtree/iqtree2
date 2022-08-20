@@ -188,6 +188,8 @@ protected:
 	*/
 	virtual bool getVariables(const double *variables) override;
 
+	void logVariablesTo(std::stringstream& var_list) const override;
+
 	virtual void getDivergentModels
              (DivergentModels& div_models) override;
 

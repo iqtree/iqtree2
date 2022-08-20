@@ -1048,7 +1048,10 @@ void ModelFileLoader::setModelStateFrequency(const YAML::Node& substitution_mode
                     "After setting frequency type"
                     " of " << info.model_name <<
                     " to " << low_freq << "...");
-    info.logVariablesTo(logging_target);
+    std::stringstream var_dump;
+    info.logVariablesTo(var_dump);
+    TREE_LOG_LINE(*logging_target, YAMLFrequencyVerbosity, 
+                  var_dump.str());
 }
 
 

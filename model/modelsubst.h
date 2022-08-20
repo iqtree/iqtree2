@@ -26,8 +26,8 @@ const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
 class PhyloTree;
+class LoggingTarget;
 class RateHeterogeneity;
-
 class ModelDivergent;	//Forward declare for getDivergentModels()
 
 typedef std::vector<ModelDivergent*> DivergentModels;
@@ -469,6 +469,10 @@ public:
 		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
 	virtual bool getVariables(const double *variables) { return false; }
+
+	virtual void logVariablesTo(LoggingTarget* logging_target) const;
+
+	virtual void logVariablesTo(std::stringstream& var_list) const;
 
 	virtual void getDivergentModels(DivergentModels& div_models);
 

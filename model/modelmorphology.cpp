@@ -145,7 +145,7 @@ void ModelMorphology::writeInfo(ostream &out) {
     if (num_params > 0) {
         out << "Rate parameters:";
         int nrate = getNumRateEntries();
-        for (int i = 0; i < nrate; i++) {
+        for (int i = 0; i < nrate; ++i) {
             out << " " << rates[i];
         }
         out << endl;

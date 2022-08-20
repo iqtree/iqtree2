@@ -202,6 +202,15 @@ bool ModelSet::getVariables(const double* variables)
     return changed;
 }
 
+void ModelSet::logVariablesTo(std::stringstream& var_list) const {
+    var_list << " set of " << models.size() << "models";
+    for (auto model : models) {
+        var_list << "\n  ";
+        model->logVariablesTo(var_list);
+    }
+}
+
+
 void ModelSet::setVariables(double* variables)
 {
 	ASSERT(models.size());

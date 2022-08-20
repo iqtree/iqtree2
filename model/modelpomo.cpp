@@ -618,6 +618,12 @@ bool ModelPoMo::getVariables(const double *variables) {
     return changed;
 }
 
+void ModelPoMo::logVariablesTo(std::stringstream& var_list) const {
+    super::logVariablesTo(var_list);
+    if (!fixed_heterozygosity) {
+        var_list << ", heterozygosity=" << heterozygosity;
+    }
+}
 
 // Dummy function, see declaration in header file.
 void ModelPoMo::setRates() {

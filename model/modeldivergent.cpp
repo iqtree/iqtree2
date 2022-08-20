@@ -204,8 +204,11 @@ double ModelDivergent::optimizeParameters
     VariableBounds vb(ndim+1);
 	double score;
 
-	setVariables(vb.variables);
-	setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
+    {
+        SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
+    	setVariables(vb.variables);
+	    setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
+    }
     //todo: optimization algorithm as a member variable instad.
     auto alg = phylo_tree->params->optimize_alg_freerate;
     if (contains(alg,"BFGS-B")) {
@@ -232,9 +235,18 @@ void ModelDivergent::setBounds(double* lower_bound, double* upper_bound,
                                bool*   bound_check) {
     int i = 1; //Numbering starts at 1
     for (ToleratedModelVariable& p : own_parameters) {
-        lower_bound[i] = p.getRange().first;
-        upper_bound[i] = p.getRange().second;
-        bound_check[i] = p.isFixed();
+        double lower = p.getRange().first;
+        double upper = p.getRange().second;
+        bool   fixed = p.isFixed();
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                      "Setting divergence model's own bound"
+                      << " [" << i << "] " 
+                      << p.getName() << " = " 
+                      << lower << ".." << upper 
+                      << (fixed ? " (fixed)" : "") );
+        lower_bound[i] = lower;
+        upper_bound[i] = upper;
+        bound_check[i] = fixed;
         ++i;
     }
     int offset = static_cast<int>(own_parameters.size());
@@ -253,10 +265,13 @@ void ModelDivergent::setBounds(double* lower_bound, double* upper_bound,
 void ModelDivergent::setVariables(double *variables) {
     int offset = 0; 
     for (ToleratedModelVariable& p : own_parameters) {
-        variables[offset+1] = p.getValue();
         ++offset;
+        variables[offset] = p.getValue();
+        TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                      "Setting divergence model's own parameter"
+                      << " [" << offset << "] " 
+                      << p.getName() << "=" << p.getValue());
     }
-    //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ModelMarkov* subtree_model : subtree_models) {
         TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
                       "Setting variables for subtree model " 

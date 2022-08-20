@@ -1107,21 +1107,27 @@ void ModelInfoFromYAMLFile::readModelVariablesByType
 }
 
 void ModelInfoFromYAMLFile::logVariablesTo
-        (LoggingTarget* logging_target) const {
+        (std::stringstream& var_list) const {
     if (verbose_mode < YAMLVariableVerbosity) {
         return;
     }
-    std::stringstream var_list;
-    const char* sep = "Variables: ";
+    const char* sep = "";
     for (auto itv : variables) {
         var_list << sep << itv.first << "=" << itv.second.getValue();
         sep = ", ";
     }
     std::string list = var_list.str();
     if (contains(list,"nan")) {
-        list += " ...?";
+        var_list << " ...?";
     }
-    TREE_LOG_LINE(*logging_target, YAMLModelVerbosity, list);
+}
+
+void ModelInfoFromYAMLFile::logVariablesTo
+        (LoggingTarget* logging_target) const {
+    std::stringstream var_list;
+    var_list << getName() << " Variables: ";
+    logVariablesTo(var_list);
+    TREE_LOG_LINE(*logging_target, YAMLVariableVerbosity, var_list.str());
 }
 
 ModelVariable& ModelInfoFromYAMLFile::assign(const std::string& var_name,

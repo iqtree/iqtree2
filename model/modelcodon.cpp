@@ -1061,6 +1061,19 @@ bool ModelCodon::getVariables(const double *variables) {
     return changed;
 }
 
+void ModelCodon::logVariablesTo(std::stringstream& var_list) const {
+    super::logVariablesTo(var_list);
+    if (!fix_omega) {
+        var_list << ", omega=" << omega;
+    }
+    if (!fix_kappa) {
+        var_list << ", kappa=" << kappa;
+    }
+    if (!fix_kappa2) {
+        var_list << ", kappa2=" << kappa2;
+    }
+}
+
 void ModelCodon::setVariables(double *variables) {
 	if (num_params > 0) {
         int j = 1;
