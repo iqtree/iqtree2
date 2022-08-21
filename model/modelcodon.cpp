@@ -1077,13 +1077,15 @@ void ModelCodon::logVariablesTo(std::stringstream& var_list) const {
 void ModelCodon::setVariables(double *variables) {
 	if (num_params > 0) {
         int j = 1;
-        if (!fix_omega)
+        if (!fix_omega) {
             variables[j++] = omega;
-        if (!fix_kappa)
+        }
+        if (!fix_kappa) {
             variables[j++] = kappa;
-        if (!fix_kappa2)
+        }
+        if (!fix_kappa2) {
             variables[j++] = kappa2;
-        
+        }
 		ASSERT(j == num_params+1);
 	}
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
@@ -1092,24 +1094,14 @@ void ModelCodon::setVariables(double *variables) {
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, 
                (num_states-1)*sizeof(double));
-
-        // BUG FIX 2015.08.28
-//        int nrate = getNDim();
-//        if (freq_type == StateFreqType::FREQ_ESTIMATE) nrate -= (num_states-1);
-//		int i, j;
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
-//				j++;
-//			}
 	}
 }
 
 void ModelCodon::setBounds(double *lower_bound, double *upper_bound, 
                            bool *bound_check) {
-	int i, ndim = getNDim();
+	int ndim = getNDim();
 
-	for (i = 1; i <= ndim; i++) {
+	for (int i = 1; i <= ndim; ++i) {
 		//cout << variables[i] << endl;
 		lower_bound[i] = MIN_OMEGA_KAPPA;
 		upper_bound[i] = MAX_OMEGA_KAPPA;
@@ -1117,7 +1109,7 @@ void ModelCodon::setBounds(double *lower_bound, double *upper_bound,
 	}
 
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
-		for (i = ndim-num_states+2; i <= ndim; i++) {
+		for (int i = ndim-num_states+2; i <= ndim; ++i) {
             lower_bound[i]  = Params::getInstance().min_state_freq;
             upper_bound[i] = 1.0;
             bound_check[i] = false;

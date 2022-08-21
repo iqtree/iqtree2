@@ -17,10 +17,10 @@
 
 #include "phylotree.h"
 #include <model/modeldivergent.h>
-
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+#include <utils/scoped_assignment.h> //for SCOPED_ASSIGN
 
 using namespace std;
 
@@ -2785,8 +2785,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
     double*     val          = nullptr;
     double*     buffer_partial_lh_ptr = buffers.buffer_partial_lh;
     double*     eval         = model_to_use->getEigenvalues();
-    ASSERT(eval);
     const double* ptn_invar  = model_to_use->getPatternInvar();
+
+    ASSERT(eval!=nullptr);
 
     std::vector<double> cat_length_vector(ncat);
     std::vector<double> cat_prop_vector(ncat);
@@ -2909,7 +2910,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
                 computePartialLikelihood(trav, ptn_lower, ptn_upper, packet_id, buffers);
             }
             double *vec_tip = buffer_partial_lh_ptr 
-                            + block*VectorClass::size() * packet_id;
+                            + block * VectorClass::size() * packet_id;
             for (intptr_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 VectorClass  lh_ptn(0.0);
                 auto lh_cat         = (VectorClass*)(buffers._pattern_lh_cat + ptn*ncat_mix);
@@ -2941,7 +2942,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
                         int state;
                         if (ptn+i < orig_nptn) {
                             if (stateRow!=nullptr) {
-                                state =  stateRow[ptn+i];
+                                state = stateRow[ptn+i];
                             } else {
                                 state = (aln->at(ptn+i))[dad->id];
                             }
@@ -2952,8 +2953,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
                         } else {
                             state = aln->STATE_UNKNOWN;
                         }
-                        const double* lh_tip = partial_lh_node + block*state;
-                        double* this_vec_tip = vec_tip +i;
+                        const double* lh_tip = partial_lh_node + block * state;
+                        double* this_vec_tip = vec_tip + i;
                         for (size_t c = 0; c < block; c++) {
                             *this_vec_tip = lh_tip[c];
                             this_vec_tip += VectorClass::size();
@@ -3215,7 +3216,18 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD
             if (!std::isfinite(buffers._pattern_lh[ptn])) {
                 if (unlikely_patterns==0) {
                   std::stringstream complaint;
-                  complaint << "Artificially setting lh"
+                  complaint << "When calculating branch likelihood "
+                            << " for the branch connecting "
+                            << " nodes " << dad->id
+                            << (dad->isLeaf() ? "(leaf)" : "") 
+                            << " and " << node->id
+                            << (node->isLeaf() ? "(leaf)" : "") 
+                            << "...\n";
+                  complaint << model_to_use->getName()
+                            << " Variables: ";
+                  SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MED);
+                  model_to_use->logVariablesTo(complaint);
+                  complaint << "\nArtificially setting lh"
                             << " for pattern " << ptn << " (was " 
                             << buffers._pattern_lh[ptn] << ")";
                   LOG_LINE(VerboseMode::VB_MED,complaint.str());

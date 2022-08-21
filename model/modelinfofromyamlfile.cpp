@@ -1916,7 +1916,6 @@ int ModelInfoFromYAMLFile::getNumberOfVariableProportions() const {
     return count;
 }
 
-
 bool ModelInfoFromYAMLFile::acceptParameterList(Params& params,
                                                 std::string parameter_list,
                                                 LoggingTarget* logging_target) {

@@ -343,12 +343,12 @@ ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_inf
                      "may not be subscripted");
         }
         double epsilon = p->value;
-        bool epsilon_is_fixed = model_info.isVariableFixed("epsilon");
+        bool   epsilon_is_fixed = model_info.isVariableFixed("epsilon");
         model_info.moveParameterToBack("epsilon",
                                        ModelParameterType::RATE);
         YAMLModelDNAError* emodel;
         emodel = new YAMLModelDNAError(model_info, model_info.parent_model==nullptr,
-                                       "", dummy_rate_params, freq_type,
+                                       "012345", dummy_rate_params, freq_type,
                                        dummy_freq_params, tree, report_to_tree);
         std::string error_model = model_info.getStringProperty("errormodel", "+E");
         emodel->setEpsilon(epsilon, epsilon_is_fixed, error_model);
@@ -362,7 +362,7 @@ ModelMarkov* ModelListFromYAMLFile::getDNAModel(ModelInfoFromYAMLFile& model_inf
     else {
         YAMLModelDNA* dmodel;
         dmodel = new YAMLModelDNA(model_info, model_info.parent_model==nullptr,
-                                  "", dummy_rate_params, freq_type,
+                                  "012345", dummy_rate_params, freq_type,
                                   dummy_freq_params, tree,
                                   report_to_tree);
         dmodel->acceptParameterList(*tree->params, parameter_list, report_to_tree);

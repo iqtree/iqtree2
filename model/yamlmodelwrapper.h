@@ -299,7 +299,7 @@ public:
         std::stringstream trace;
         trace << "ndim was " << ndim << ", freqs were ";
         const char* sep = "";
-        for (int i=0; i<num_states-1; ++i) {
+        for (int i=0; i<num_states; ++i) {
             trace << sep << state_freq[i];
             sep = ", ";
         }

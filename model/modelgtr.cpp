@@ -503,10 +503,12 @@ bool ModelGTR::getVariables(const double *variables) {
 
 double ModelGTR::targetFunk(double x[]) {
 	bool changed = getVariables(x);
-	if (state_freq[num_states-1] < 0) return 1.0e+12;
+	if (state_freq[num_states-1] < 0) {
+		return 1.0e+12;
+	}
+	assert(phylo_tree!=nullptr);
 	if (changed) {
 		decomposeRateMatrix();
-		assert(phylo_tree);
 		phylo_tree->clearAllPartialLH();
 	}
 	return -phylo_tree->computeLikelihood();
@@ -542,10 +544,7 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound,
 
 	if (freq_type == StateFreqType::FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
-//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
-//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
             lower_bound[i]  = MIN_FREQUENCY;
-//            upper_bound[i] = 100.0;
             upper_bound[i] = 1.0;
             bound_check[i] = false;
         }
@@ -557,22 +556,20 @@ double ModelGTR::optimizeParameters(double gradient_epsilon,
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
-	if (ndim == 0) return 0.0;
+	if (ndim == 0) {
+		return 0.0;
+	}
     
 	TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MAX, 
 		          "Optimizing " << name << " model parameters...");
 
-	//if (freq_type == StateFreqType::FREQ_ESTIMATE) {
-	//    scaleStateFreq(false);
-	//}
+	double* variables   = new double[ndim+1];
+	double* upper_bound = new double[ndim+1];
+	double* lower_bound = new double[ndim+1];
+	bool*   bound_check = new bool[ndim+1];
+	double  score;
 
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
-	double score;
-
-    for (int i = 0; i < num_states; i++) {
+    for (int i = 0; i < num_states; ++i) {
         if (state_freq[i] > state_freq[highest_freq_state]) {
             highest_freq_state = i;
 		}

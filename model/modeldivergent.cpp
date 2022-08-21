@@ -273,11 +273,13 @@ void ModelDivergent::setVariables(double *variables) {
                       << p.getName() << "=" << p.getValue());
     }
     for (ModelMarkov* subtree_model : subtree_models) {
+        auto num_vars_for_model = subtree_model->getNDim();
         TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
-                      "Setting variables for subtree model " 
+                      "Setting " << num_vars_for_model 
+                      << " variables for subtree model " 
                       << subtree_model->getName());
         subtree_model->setVariables(variables+offset);
-        offset+= subtree_model->getNDim();
+        offset += num_vars_for_model;
     }
 }
 
@@ -285,24 +287,38 @@ bool ModelDivergent::getVariables(const double *variables) {
     bool changed = false;
     int  offset  = 0;
 
+    SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ToleratedModelVariable& p : own_parameters) {
         ASSERT(!p.isFixed());
+        double oldValue  = p.getValue();
         double newValue  = variables[offset+1];
-        double delta     = fabs(p.getValue() - newValue);
+        double delta     = fabs(oldValue - newValue);
         double threshold = p.getTolerance();
         if (delta >= threshold) {
             changed = true;
+            TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                        "Updated divergence model's own parameter"
+                        << " [" << offset << "] " 
+                        << p.getName() << " from " << oldValue
+                        << " to " << newValue);
+        } else {
+            TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
+                        "Divergence model's own parameter"
+                        << " [" << offset << "] " 
+                        << p.getName() << "=" << p.getValue()
+                        << " was not changed");
         }
         p.setValue(newValue);
         ++offset;
     }
-    //SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     for (ModelMarkov* subtree_model : subtree_models) {
+        auto num_vars_for_model = subtree_model->getNDim();
         TREE_LOG_LINE(*phylo_tree, YAMLVariableVerbosity,
-                      "Getting variables for subtree model " 
+                      "Updating up to " << num_vars_for_model 
+                      << " variables for subtree model " 
                       << subtree_model->getName());
         changed |= subtree_model->getVariables(variables+offset);
-        offset  += subtree_model->getNDim();
+        offset  += num_vars_for_model;
     }
     return changed;
 }

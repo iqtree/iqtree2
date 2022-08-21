@@ -1039,11 +1039,6 @@ double ModelMarkov::targetFunk(double x[]) {
             return 1.0e+30;
         }
     }
-    //if (!is_reversible) {
-    //    for (int i = 0; i < num_states; i++)
-    //        if (state_freq[i] < MIN_FREQUENCY)
-    //            return 1.0e+30;
-    //}
     return -phylo_tree->computeLikelihood();
 }
 

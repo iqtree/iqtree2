@@ -219,13 +219,15 @@ void ModelSet::setVariables(double* variables)
 
 ModelSet::~ModelSet()
 {
-    for (auto rit = models.rbegin(); rit != models.rend(); rit++) {
+    for (auto rit = models.rbegin(); rit != models.rend(); ++rit) {
         (*rit)->eigenvalues = nullptr;
         (*rit)->eigenvectors = nullptr;
         (*rit)->inv_eigenvectors = nullptr;
         (*rit)->inv_eigenvectors_transposed = nullptr;
         delete (*rit);
+        (*rit) = nullptr;
     }
+    models.clear();
 }
 
 void ModelSet::joinEigenMemory() {

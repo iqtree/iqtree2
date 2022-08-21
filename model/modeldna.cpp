@@ -133,7 +133,6 @@ void ModelDNA::init(const char* model_name, const string& model_params,
     if (name != "") {
         setRateType(rate_type);
     } else {
-        //cout << "User-specified model "<< model_name << endl;
         if (setRateType(model_name)) {
             // model was six digits (e.g. 010010 for K2P/HKY)
             name = model_name;
@@ -281,7 +280,9 @@ std::string ModelDNA::getNameParams() const {
         int k = 0;
         for (int i = 0; i < nrates; i++) {
             if (param_spec[i] > k) {
-                if (k>0) retname << ',';
+                if (k>0) {
+                    retname << ',';
+                }
                 retname << rates[i];
                 k++;
             }
@@ -296,45 +297,33 @@ bool ModelDNA::setRateType(string rate_str) {
 	//char first_type = 127;
 	//char last_type = 0;
 	//char t = first_type;
-	int num_ch = static_cast<int>(rate_str.length());
-	int i;
+	auto num_ch     = rate_str.length();
+    auto rate_count = getNumRateEntries();
 
-	if (num_ch != getNumRateEntries()) {
-		//outError("Model specification has wrong length!");
+	if ( num_ch != rate_count ) {
+        std::stringstream complaint;
+        complaint << "Model specification has wrong length, "
+                  << " number of rate entries (" << rate_count << ")"
+                  << " is not the same as the length"
+                  << " (" << num_ch << ") of the rate string, "
+                  << " \"" << rate_str << "\".";                  
+		outWarning(complaint.str());
 		return false;
 	}
+
 	// only accept string of digits
-    for (i = 0; i < num_ch; ++i) {
+    for (int i = 0; i < num_ch; ++i) {
         if (!isdigit(rate_str[i])) {
             return false;
         }
     }
-	/*
-	if (rate_str[num_ch-1] != '0') {
-		//outError("Model specification must end with '0'");
-		return false;
-	}
-	for (i = 0; i < num_ch; i++) {
-		if (rate_str[i] > last_type) last_type = rate_str[i];
-		if (rate_str[i] < first_type) first_type = rate_str[i];
-	}
-	if (first_type != rate_str[num_ch-1]) {
-		//outError("Model specification must contain digits!");
-		return false;
-	}
-
-     num_params = last_type - first_type;
-     param_spec = "";
-     for (i = 0; i < num_ch; i++) {
-     param_spec.push_back(rate_str[i]-first_type);
-     }*/
 
     map<char,char> param_k;
     num_params = 0;
     param_spec = "";
     // last entry get ID of 0 for easy management
     param_k[rate_str[num_ch-1]] = 0;
-    for (i = 0; i < num_ch; ++i) {
+    for (int i = 0; i < num_ch; ++i) {
         if (param_k.find(rate_str[i]) == param_k.end()) {
             num_params++;
             param_k[rate_str[i]] = (char)num_params;
@@ -345,18 +334,18 @@ bool ModelDNA::setRateType(string rate_str) {
     }
 
 	ASSERT(param_spec.length() == num_ch);
-	double *avg_rates = new double[num_params+1];
-	int *num_rates = new int[num_params+1];
+	double* avg_rates = new double [ num_params + 1 ];
+	int*    num_rates = new int    [ num_params + 1 ];
 	memset(avg_rates, 0, sizeof(double) * (num_params+1));
 	memset(num_rates, 0, sizeof(int) * (num_params+1));
-	for (i = 0; i < param_spec.size(); ++i) {
+	for (int i = 0; i < param_spec.size(); ++i) {
 		avg_rates[(int)param_spec[i]] += rates[i];
 		num_rates[(int)param_spec[i]]++;
 	}
-    for (i = 0; i <= num_params; ++i) {
+    for (int i = 0; i <= num_params; ++i) {
         avg_rates[i] /= num_rates[i];
     }
-	for (i = 0; i < param_spec.size(); ++i) {
+	for (int i = 0; i < param_spec.size(); ++i) {
         if (avg_rates[0] > 0.0) {
             rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
         }
@@ -366,7 +355,7 @@ bool ModelDNA::setRateType(string rate_str) {
 	}
 	if (verbose_mode >= VerboseMode::VB_DEBUG) {
 		cout << "Initialized rates: ";
-        for (i = 0; i < param_spec.size(); ++i) {
+        for (int i = 0; i < param_spec.size(); ++i) {
 			cout << rates[i] << " ";
         }
 		cout << endl;
