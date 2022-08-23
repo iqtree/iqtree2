@@ -447,6 +447,10 @@ void reportModel(ostream &out, PhyloTree &tree) {
         out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
         i = 0;
         int nmix = mmodel->getNMixtures();
+        
+        // force showing full params if running AliSim
+        bool show_full_params = tree.params->alisim_active;
+        
         for (i = 0; i < nmix; i++) {
             ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
             out.width(4);
@@ -456,7 +460,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
             out.width(7);
             out << (m)->total_num_subst << "  ";
             out.width(7);
-            out << mmodel->getMixtureWeight(i) << "  " << (m)->getNameParams() << endl;
+            out << mmodel->getMixtureWeight(i) << "  " << (m)->getNameParams(show_full_params) << endl;
 
             if (tree.aln->seq_type == SEQ_POMO) {
                 out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
@@ -954,6 +958,10 @@ void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
         PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
         PhyloSuperTree::iterator it;
         int part;
+        
+        // force showing full params if running AliSim
+        bool show_full_params = tree.params->alisim_active;
+
         if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
             out << "  ID  Model         TreeLen  Parameters" << endl;
         else
@@ -964,9 +972,9 @@ void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
             out << right << (part+1) << "  ";
             out.width(14);
             if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
-                out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
+                out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams(show_full_params) << endl;
             else
-                out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
+                out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams(show_full_params) << endl;
         }
         out << endl;
         /*
