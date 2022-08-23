@@ -1576,7 +1576,8 @@ void SuperAlignment::printAlignment(InputType format, ostream &out, const char* 
                                     , int exclude_sites, const char *ref_seq_name)
 {
     Alignment *concat = concatenateAlignments();
-    concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
+    if (!concat->isSuperAlignment())
+        concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
     delete concat;
     if (format == IN_NEXUS)
         printPartition(out, NULL, true);
