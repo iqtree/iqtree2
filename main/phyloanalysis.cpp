@@ -1519,6 +1519,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             }
             out << endl;
         }
+        
+        // export AliSim command if needed
+        exportAliSimCMD(params, tree, out);
 
         time_t cur_time;
         time(&cur_time);
@@ -1540,31 +1543,29 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
     }
     
     printOutfilesInfo(params, tree);
-    
-    // export AliSim command if needed
-    exportAliSimCMD(params, tree);
 }
 
-void exportAliSimCMD(Params &params, IQTree &tree)
+void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
 {
-    // only show alisim command if users specify --alisim
-    if (!params.alisim_active) return;
-    
     // make sure this method will not make IQTREE crashed
     if (!(params.aln_file || params.partition_file) || !params.out_prefix || !tree.aln || !tree.getModel()
         || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH))
         return;
     
-    cout << "ALISIM COMMAND" << endl;
-    cout << "--------------" << endl;
+    out << "ALISIM COMMAND" << endl;
+    out << "--------------" << endl;
     
+    string more_info = "For more information on using AliSim, please visit: www.iqtree.org/doc/AliSim";
     
     // skip unsupported models
     if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
     {
-        cout << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        out << "Currently, we only support exporting AliSim commands automatically from the analysis for common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        out << more_info << endl << endl;
         return;
     }
+    
+    out << "To simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis, you can use the following command:" << endl << endl;
     
     // init alisim command
     string alisim_cmd = "--alisim simulated_MSA";
@@ -1618,7 +1619,24 @@ void exportAliSimCMD(Params &params, IQTree &tree)
     }
     
     // output alisim cmd
-    cout << alisim_cmd << endl << endl;
+    out << alisim_cmd << endl << endl;
+    
+    out << "To mimic the alignment used to produce this analysis, i.e. simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis *and* copying the same gap positions as the original alignment, you can use the following command:" << endl << endl;
+    
+    if (params.aln_file)
+        out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA" << endl << endl;
+    else
+        out << "iqtree -s <alignment.phy> --alisim mimicked_MSA" << endl << endl;
+
+
+    out << "To simulate any number of alignments in either of the two commandlines above, use the --num-alignments options, for example mimic 100 alignments you would use the command line:" << endl << endl;
+
+    if (params.aln_file)
+        out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA --num-alignments 100" << endl << endl;
+    else
+        out << "iqtree -s <alignment.phy> --alisim mimicked_MSA --num-alignments 100" << endl << endl;
+    
+    out << more_info << endl << endl;
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {
