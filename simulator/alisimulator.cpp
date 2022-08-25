@@ -765,7 +765,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             {
                 if (num_threads > 1)
                 {
-                    cache_size_per_thread = tree->params->mem_limit_factor;
+                    cache_size_per_thread = num_simulating_threads * tree->params->mem_limit_factor;
                     seq_str_cache.resize(num_simulating_threads * cache_size_per_thread);
                     cache_start_indexes.resize(num_simulating_threads);
                     cache_start_indexes[0] = 0;
