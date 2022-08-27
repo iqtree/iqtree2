@@ -497,220 +497,197 @@ string getASCName(ASCType ASC_type) {
 }
 
 Params::Params() :
-    constraint_tree_file(nullptr), tree_gen(NONE),
-    opt_gammai(true),     opt_gammai_fast(false),       opt_gammai_keep_bran(false),
-    testAlphaEpsAdaptive(false), randomAlpha(false),    testAlphaEps(0.1),
-    exh_ai(false),        alpha_invar_file(nullptr),    out_file(nullptr), sub_size(0),
-    pd_proportion(0.0),   min_proportion(0.0),          step_proportion(0.01),
-    min_size(0),          step_size(1),
-    find_all(false),      run_mode(DETECTED),           detected_mode(DETECTED),
-    param_file(nullptr),  initial_file(nullptr),        initial_area_file(nullptr),
-    pdtaxa_file(nullptr), areas_boundary_file(nullptr), boundary_modifier(1.0),
-    dist_file(nullptr),   generate_dist_file(false),    dist_format("square"),
-    incremental(false),   dist_compression_level(1),    compute_obs_dist(false),
-    count_unknown_as_different(false),                  compute_jc_dist(true),
-    use_alignment_summary_for_distance_calculation(true), 
-    use_custom_matrix_diagonal_math(true),
-    compute_likelihood(true), compute_ml_dist(true), 
-    compute_ml_tree(true), compute_ml_tree_only(false),
-    budget_file(nullptr),  overlap(0), 
-    is_rooted(false),      root_move_dist(2),
-    root_find(false),      root_test(false), 
-    sample_size(-1),       repeated_time(1),
-    //smode(EXHAUSTIVE), 
-
-    nr_output(0),   intype(InputType::IN_OTHER), 
-    budget(-1),     min_budget(-1),     step_budget(1), root(nullptr), num_splits(0),
-    min_len(0.001), mean_len(0.1),      max_len(0.999), num_zero_len(0),
-    pd_limit(100),  calc_pdgain(false), multi_tree(false),
-    second_tree(nullptr),        support_tag(nullptr),
-    site_concordance(0),         site_concordance_partition(false),
-    print_cf_quartets(false),    print_df1_trees(false),
-    internode_certainty(0),      tree_weight_file(nullptr),
-    consensus_type(CT_NONE),     find_pd_min(false), branch_cluster(0),
-    taxa_order_file(nullptr),    endemic_pd(false),  exclusive_pd(false),
-    complement_area(nullptr),    scaling_factor(-1), numeric_precision(-1),
-    binary_programming(false),   quad_programming(false), 
-    test_input(TEST_NONE),       tree_burnin(0), tree_max_count(1000000),
-    split_threshold(0.0),        split_threshold_str(nullptr), split_weight_threshold(-1000),
-    collapse_zero_branch(false), split_weight_summary(SW_SUM),
-    gurobi_format(true),         gurobi_threads(1),
-    num_bootstrap_samples(0),    bootstrap_spec(nullptr), transfer_bootstrap(0),
-    aln_file(nullptr),           phylip_sequential_format(false),
-    symtest(SYMTEST_NONE),       symtest_only(false), symtest_remove(0),
-    symtest_keep_zero(false),    symtest_type(0), symtest_pcutoff(0.05),
-    symtest_stat(false),         symtest_shuffle(1),
-    //params.treeset_file = NULL;
-    topotest_replicates(0),      topotest_optimize_model(false),
-    do_weighted_test(false),     do_au_test(false), siteLL_file(nullptr),
-    partition_file(nullptr),     partition_type(BRLEN_OPTIMIZE),
-    partfinder_rcluster(100),    partfinder_rcluster_max(0),
-    partition_merge(MERGE_NONE), merge_models("1"), merge_rates("1"),
-    partfinder_log_rate(true),   remove_empty_seq(true), terrace_aware(true),
-    terrace_analysis(false),     sequence_type(nullptr),
-    aln_output(nullptr),         aln_site_list(nullptr), 
-    aln_output_format(InputType::IN_PHYLIP), output_format(FORMAT_NORMAL),
-    newick_extended_format(false), gap_masked_aln(nullptr), 
-    concatenate_aln(nullptr),    aln_nogaps(false), aln_no_const_sites(false),
-    print_aln_info(false),       tree_spr(false), max_spr_iterations(0),
-    nexus_output(false),         k_representative(4), loglh_epsilon(0.001),
-    numSmoothTree(1),            use_compute_parsimony_tree_new(true),   //default to parallelized one
-    use_batch_parsimony_addition(false), 
-    distance_uses_max_threads(false),  parsimony_pll_spr(false),
-    parsimony_uses_max_threads(false), parsimony_nni_iterations(0), 
-    use_lazy_parsimony_spr(false),     parsimony_spr_iterations(0), 
-    use_lazy_parsimony_tbr(false),     parsimony_tbr_iterations(0), 
-    parsimony_hybrid_iterations(0),    
+    memCheck(false), stableSplitThreshold(0.9), adaptPertubation(false), 
+    opt_gammai(true), opt_gammai_fast(false),
+    opt_gammai_keep_bran(false), testAlphaEpsAdaptive(false),
+    randomAlpha(false), testAlphaEps(0.1), exh_ai(false),
+    alpha_invar_file(nullptr), tabu(false), five_plus_five(false),
+    fixStableSplits(false), numSupportTrees(20), maxCandidates(20),
+    numInitTrees(100), spr_radius(20), sankoff_cost_file(nullptr),
+    numNNITrees(20), popSize(5),
+    speednni(true), // turn on reduced hill-climbing NNI by default now
+    initPS(0.5), modelEps(0.01), modelfinder_eps(0.1),
+    use_compute_parsimony_tree_new(true),   //default to parallelized one
+    use_batch_parsimony_addition(false), distance_uses_max_threads(false),
+    parsimony_uses_max_threads(false), parsimony_nni_iterations(0),
+    parsimony_pll_spr(false), parsimony_spr_iterations(0),
+    use_lazy_parsimony_spr(false), parsimony_hybrid_iterations(0),
+    tbr_radius(10), parsimony_tbr_iterations(0), 
+    use_lazy_parsimony_tbr(false), 
     optimize_ml_tree_with_parsimony(false),
-
-    nni5(true),                    nni5_num_eval(1), 
-    brlen_num_traversal(1),        leastSquareBranch(false),
-    pars_branch_length(false),     bayes_branch_length(false),
-    manuel_analytic_approx(false), leastSquareNNI(false), 
-    ls_var_type(OLS),              maxCandidates(20),
-    popSize(5),                    p_delete(-1),
-    min_iterations(-1),            max_iterations(1000),
-    num_param_iterations(100),
-    stop_condition(SC_UNSUCCESS_ITERATION), 
-    stop_confidence(0.95),
-
-    num_runs(1),
-
-    model_name(""),           model_opt_steps(10), model_set("ALL"),
-    model_extra_set(nullptr), model_subset(nullptr),
-    state_freq_set(nullptr),  ratehet_set("AUTO"),
-    score_diff_thres(10.0),   modelomatic(false),
-    model_test_again(false),  model_test_and_tree(0),
-    model_test_separate_rate(false), optimize_mixmodel_weight(false), 
-    optimize_rate_matrix(false),     store_trans_matrix(false),
-
+    snni(true), // turn on sNNI default now
+    nni_type(NNI5), //Sometimes set, in IQTree::refineBootTrees()
+    ls_var_type(OLS), nni5(true), nni5_num_eval(1),
+    brlen_num_traversal(1), numSmoothTree(1),
+    leastSquareBranch(false), manuel_analytic_approx(false),
+    pars_branch_length(false), bayes_branch_length(false),
+    leastSquareNNI(false), loglh_epsilon(0.001),
+    reinsert_par(false), bestStart(true), maxtime(1000000),
+    parbran(false), pll(false), unsuccess_iteration(100),
+    binary_aln_file(nullptr),
+    speedup_iter(0), //Set by "-sp_iter" command-line parameter. Does nothing.
+    startCPUTime(0.0),        //set in runModelFinder and runTreeReconstruction (timing info)
+    start_real_time(0),       //Likewise (timing info).
+    iteration_multiple(1), user_file(),
+	start_tree(START_TREE_TYPE::STT_PLL_PARSIMONY),
+    start_tree_subtype_name(StartTree::Factory::getNameOfDefaultTreeBuilder()),
+    divergence_graph_file_path(), modelfinder_ml_tree(true),
+    final_model_opt(true), constraint_tree_file(nullptr), out_prefix(),
+    aln_file(nullptr), phylip_sequential_format(false),
+    symtest(SYMTEST_NONE), symtest_only(false), symtest_remove(0),
+    symtest_keep_zero(false), symtest_type(0), symtest_pcutoff(0.05),
+    symtest_stat(false), symtest_shuffle(1), treeset_file(),
+    topotest_replicates(0), topotest_optimize_model(false),
+    do_weighted_test(false), do_au_test(false), partition_file(nullptr),
+    partition_type(BRLEN_OPTIMIZE), partition_merge(MERGE_NONE),
+    partfinder_rcluster(100), partfinder_rcluster_max(0),
+    merge_models("1"), merge_rates("1"), partfinder_log_rate(true),
+    remove_empty_seq(true), terrace_aware(true), terrace_analysis(false),
+    sequence_type(nullptr), aln_output(nullptr), siteLL_file(nullptr),
+    gap_masked_aln(nullptr), concatenate_aln(nullptr), 
+    aln_site_list(nullptr),
+    ref_seq_name(nullptr),    //reference sequence name, used when printing alignments
+                              //passed to Alignment::printAlignment (which doesn't use it!)
+    aln_output_format(InputType::IN_PHYLIP),
+    output_format(FORMAT_NORMAL), newick_extended_format(false),
+    aln_nogaps(false), aln_no_const_sites(false),
+    print_aln_info(false), out_file(nullptr), sub_size(0),
+    min_size(0), step_size(1), pd_proportion(0.0), min_proportion(0.0),
+    step_proportion(0.01), sample_size(-1), find_all(false),
+    tree_gen(NONE), num_splits(0), run_mode(DETECTED),
+    detected_mode(DETECTED), param_file(nullptr), initial_file(nullptr),
+    initial_area_file(nullptr), pdtaxa_file(nullptr),
+    areas_boundary_file(nullptr), boundary_modifier(1.0),
+    dist_file(nullptr), generate_dist_file(false), incremental(false),
+    incremental_method(), additional_alignment_files(),
+    compute_obs_dist(false), count_unknown_as_different(false),
+    add_uninformative_sites_to_parsimony_length(false),
+    count_uninformative_sites_for_parsimony(true), 
+    compute_jc_dist(true), //But header file says default is false!!
+    use_alignment_summary_for_distance_calculation(true), 
+    use_custom_matrix_diagonal_math(true), compute_ml_dist(true),
+    compute_likelihood(true), compute_ml_tree(true),
+    compute_ml_tree_only(false), budget_file(nullptr), overlap(0), 
+    repeated_time(1), nr_output(0), intype(InputType::IN_OTHER),
+    budget(-1), min_budget(-1), step_budget(1), root(nullptr), 
+    is_rooted(false), root_move_dist(2), root_find(false),
+    root_test(false), min_len(0.001), mean_len(0.1), max_len(0.999),
+    num_zero_len(0), ran_seed(0), //Random seeds will be set later
+    run_time(0), //Timing information, set during execution
+    pd_limit(100), calc_pdgain(false), multi_tree(false),
+    second_tree(nullptr), support_tag(nullptr),
+    site_concordance(0), site_concordance_partition(false),
+    print_cf_quartets(false), print_df1_trees(false),
+    internode_certainty(0), second_align(nullptr),
+    consensus_type(CT_NONE), tree_weight_file(nullptr),
+    find_pd_min(false), endemic_pd(false), exclusive_pd(false),
+    complement_area(nullptr), branch_cluster(0), 
+    taxa_order_file(nullptr), scaling_factor(-1),
+    binary_programming(false), test_input(TEST_NONE),
+    tree_burnin(0), tree_max_count(1000000), split_threshold(0.0),
+    split_threshold_str(nullptr), split_weight_threshold(-1000),
+    collapse_zero_branch(false), split_weight_summary(SW_SUM),
+    quad_programming(false), tree_spr(false), max_spr_iterations(0),
+    nexus_output(false), k_representative(4), p_delete(-1),
+    min_iterations(-1), max_iterations(1000),
+    stop_condition(SC_UNSUCCESS_ITERATION), stop_confidence(0.95),
+    num_param_iterations(100), num_runs(1), model_name(""),
+    yaml_model_file(""), model_name_init(""), model_opt_steps(10),
+    model_set("ALL"), model_extra_set(nullptr), model_subset(nullptr),
+    state_freq_set(nullptr), ratehet_set("AUTO"), score_diff_thres(10.0),
+    model_def_file(""), modelomatic(false), model_test_again(false),
+    model_test_and_tree(0), model_test_separate_rate(false),
+    optimize_mixmodel_weight(false), num_mixlen(1),
+    optimize_rate_matrix(false), store_trans_matrix(false),
     freq_type(StateFreqType::FREQ_UNKNOWN), keep_zero_freq(true),
-    min_state_freq(MIN_FREQUENCY),       min_rate_cats(2), 
-    num_rate_cats(4),                    max_rate_cats(10),
-    gamma_shape(-1.0),                   min_gamma_shape(MIN_GAMMA_SHAPE),
-    gamma_median(false),                 p_invar_sites(-1.0),
-    optimize_model_rate_joint(false),    optimize_by_newton(true),
-    optimize_alg_freerate("2-BFGS,EM"),  optimize_alg_mixlen("EM"), 
-    optimize_alg_gammai("EM"),           optimize_from_given_params(false),
-    fixed_branch_length(BRLEN_OPTIMIZE), min_branch_length(0.0),
+    min_state_freq(MIN_FREQUENCY), num_rate_cats(4), min_rate_cats(2),
+    max_rate_cats(10), gamma_shape(-1.0), 
+    min_gamma_shape(MIN_GAMMA_SHAPE), gamma_median(false),
+    p_invar_sites(-1.0), optimize_model_rate_joint(false),
+    optimize_by_newton(true), optimize_alg_freerate("2-BFGS,EM"),
+    optimize_alg_mixlen("EM"), optimize_alg_gammai("EM"),
+    optimize_from_given_params(false), fixed_branch_length(BRLEN_OPTIMIZE), 
+    min_branch_length(0.0),
     // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
     // phyloanalysis::2908.
     max_branch_length(10.0),// Nov 22 2016: reduce from 100 to 10!
     iqp_assess_quartet(IQP_DISTANCE), iqp(false),
-    write_intermediate_trees(0),      writeDistImdTrees(false),
-    rf_dist_mode(0),                  rf_same_pair(false),
-    normalize_tree_dist(false),       loose_robinson_foulds(false),
-    mvh_site_rate(false),             rate_mh_type(true),               
-    discard_saturated_site(false),
-    mean_rate(1.0),                   aLRT_threshold(101),
-    aLRT_replicates(0),               aLRT_test(false),
-    aBayes_test(false),               localbp_replicates(0),
-
-    lk_safe_scaling(false),     numseq_safe_scaling(2000),
-    ignore_any_errors(false),   kernel_nonrev(false),
-    print_site_lh(WSL_NONE),    print_partition_lh(false),
-    print_site_prob(WSL_NONE),  print_site_state_freq(WSF_NONE),
-    print_site_rate(0),         print_trees_site_posterior(0),
-    min_ancestral_prob(0.0),    print_ancestral_sequence(AST_NONE),
-    print_tree_lh(false),       lambda(1), speed_conf(1.0),
-    whtest_simulations(1000),   mcat_type(MCAT_LOG + MCAT_PATTERN),
-    rate_file(nullptr),         ngs_file(nullptr),
-    ngs_mapped_reads(nullptr),  ngs_ignore_gaps(true),
-    do_pars_multistate(false),  gene_pvalue_file(nullptr),
-    gene_scale_factor(-1),      gene_pvalue_loga(false),
-    second_align(nullptr),      ncbi_taxid(0),
-    ncbi_taxon_level(nullptr),  ncbi_names_file(nullptr),
-    ncbi_ignore_level(nullptr),
-
-	eco_dag_file(nullptr),      eco_type(nullptr),
-	eco_detail_file(nullptr),   k_percent(0),
-	diet_min(0), diet_max(0),   diet_step(0),
-	eco_weighted(false),        eco_run(0),
-
-	upper_bound(false),         upper_bound_NNI(false),  upper_bound_frac(0.0),
-
-    gbo_replicates(0),          ufboot_epsilon(0.5),     check_gbo_sample_size(0), 
-    use_rell_method(true),      use_elw_method(false),   use_weighted_bootstrap(false),
-    use_max_tree_per_bootstrap(true), max_candidate_trees(0), distinct_trees(false),
-    online_bootstrap(true),     min_correlation(0.99),   step_iterations(100),
-
-	print_ufboot_trees(0),      jackknife_prop(0.0),     robust_phy_keep(1.0),     
-    robust_median(false),       nni_cutoff(-1000000.0),  estimate_nni_cutoff(false), 
-    nni_sort(false),            testNNI(false),          approximate_nni(false),   
-    do_compression(false),
-
-    new_heuristic(true),        iteration_multiple(1),   initPS(0.5),
-
-    modelEps(0.01),             modelfinder_eps(0.1),    parbran(false),
-    binary_aln_file(nullptr),   maxtime(1000000),        reinsert_par(false),
-    bestStart(true),            snni(true),     // turn on sNNI default now
-    unsuccess_iteration(100),   speednni(true), // turn on reduced hill-climbing NNI by default now
-    numInitTrees(100),          fixStableSplits(false),  
-    stableSplitThreshold(0.9),  five_plus_five(false),   memCheck(false),
-    tabu(false),                adaptPertubation(false),numSupportTrees(20),
-    spr_radius(20),             tbr_radius(10), 
-    sankoff_cost_file(nullptr), numNNITrees(20),
-    avh_test(0),                bootlh_test(0),   bootlh_partitions(nullptr),
-    site_freq_file(nullptr),    tree_freq_file(nullptr),
-    num_threads(1),             num_threads_max(10000),
-    openmp_by_model(false),     model_test_criterion(MTC_BIC),
-//     model_test_stop_rule(MTC_ALL),
-    model_test_sample_size(0),  root_state(nullptr),
-    print_bootaln(false),       print_boot_site_freq(false),
-    print_subaln(false),        print_partition_info(false),
-    print_conaln(false),        count_trees(false),
-    pomo(false),                pomo_random_sampling(false),
-	//  pomo_counts_file_flag(false),
-	pomo_pop_size(9),           print_branch_lengths(false),
-    max_mem_is_in_bytes(false), lh_mem_save(LM_PER_NODE), // auto detect
+    gurobi_format(true), gurobi_threads(1), num_bootstrap_samples(0),
+    bootstrap_spec(nullptr), transfer_bootstrap(0),
+    subsampling(0), subsampling_seed(0), write_intermediate_trees(0),
+    writeDistImdTrees(false), write_candidate_trees(false),
+    rf_dist_mode(0), rf_same_pair(false), normalize_tree_dist(false),
+    loose_robinson_foulds(false), mvh_site_rate(false), 
+    rate_mh_type(true), discard_saturated_site(false), mean_rate(1.0),
+    aLRT_threshold(101), aLRT_replicates(0), aLRT_test(false),
+    aBayes_test(false), localbp_replicates(0), 
+    SSE(LK_386), /* added by JB, 21-Aug-2022. Wasn't set! */
+    lk_safe_scaling(false), numseq_safe_scaling(2000),
+    ignore_any_errors(false), kernel_nonrev(false), 
+    print_site_lh(WSL_NONE), print_partition_lh(false),
+    print_site_prob(WSL_NONE), print_ancestral_sequence(AST_NONE),
+    min_ancestral_prob(0.0), print_site_state_freq(WSF_NONE),
+    print_site_rate(0), print_trees_site_posterior(0),
+    print_tree_lh(false), print_branch_lengths(false),
+    nni_lh(false), //Set to true by "-nni_lh" command-line 
+                   //parameter. Does nothing.
+    lambda(1), speed_conf(1.0), new_heuristic(true),
+    whtest_simulations(1000), whtest_delta(0), //Only set in WHTest()
+    whtest_delta_quantile(0), whtest_p_value(0),  
+    //Set, later, only if model isWeissAndVonHaeselerTest() true
+    mcat_type(MCAT_LOG + MCAT_PATTERN), rate_file(nullptr),
+    ngs_file(nullptr), ngs_mapped_reads(nullptr),
+    ngs_ignore_gaps(true), do_pars_multistate(false),
+    gene_pvalue_file(nullptr), gene_scale_factor(-1),
+    gene_pvalue_loga(false), ncbi_taxid(0),
+    ncbi_taxon_level(nullptr), ncbi_ignore_level(nullptr),
+    ncbi_names_file(nullptr), eco_dag_file(nullptr),
+    eco_detail_file(nullptr), eco_type(nullptr), k_percent(0),
+    diet_min(0), diet_max(0), diet_step(0), eco_run(0),
+    eco_weighted(false), upper_bound(false), upper_bound_NNI(false),
+    upper_bound_frac(0.0), gbo_replicates(0), ufboot_epsilon(0.5),
+    check_gbo_sample_size(0), use_rell_method(true),
+    use_elw_method(false), use_weighted_bootstrap(false),
+    use_max_tree_per_bootstrap(true), max_candidate_trees(0),
+    distinct_trees(false), online_bootstrap(true),
+    min_correlation(0.99), step_iterations(100),
+    print_ufboot_trees(0), jackknife_prop(0.0),
+    robust_phy_keep(1.0), robust_median(false),
+    estimate_nni_cutoff(false), nni_cutoff(-1000000.0),
+    nni_sort(false), testNNI(false), approximate_nni(false),
+    do_compression(false), avh_test(0), bootlh_test(0),
+    bootlh_partitions(nullptr), numeric_precision(-1),
+    site_freq_file(nullptr), tree_freq_file(nullptr), num_threads(1),
+    num_threads_max(10000), openmp_by_model(false),
+    model_test_criterion(MTC_BIC), model_test_sample_size(0),
+    root_state(nullptr), print_bootaln(false), 
+    print_boot_site_freq(false), print_subaln(false),
+    print_partition_info(false), print_conaln(false),
+    link_alpha(false), link_model(false), model_joint(nullptr),
+    count_trees(false), pomo(false), pomo_random_sampling(false),
+    pomo_pop_size(9), lh_mem_save(LM_PER_NODE), // auto detect
     buffer_mem_save(false),
-	start_tree(START_TREE_TYPE::STT_PLL_PARSIMONY),
-    start_tree_subtype_name(StartTree::Factory::getNameOfDefaultTreeBuilder()),
-
-    modelfinder_ml_tree(true),    final_model_opt(true),
-	print_splits_file(false),     print_splits_nex_file(true),
-    ignore_identical_seqs(true),  write_init_tree(false),
-    write_candidate_trees(false), write_branches(false),
+    max_mem_size(1.0), //Fraction of the number of nodes in tree that will
+                       //have partial likelihood vectors, kept in memory. 
+    max_mem_is_in_bytes(false), print_splits_file(false),
+    print_splits_nex_file(true), ignore_identical_seqs(true),
+    write_init_tree(false), write_branches(false),
     freq_const_patterns(nullptr), no_rescale_gamma_invar(false),
     compute_seq_identity_along_tree(false),
-    compute_seq_composition(true),
-    lmap_num_quartets(-1),        lmap_cluster_file(nullptr),
-    print_lmap_quartet_lh(false), num_mixlen(1),
-    link_alpha(false),            link_model(false), 
-    model_joint(nullptr),
-    ignore_checkpoint(false),     checkpoint_dump_interval(60),
-    force_unfinished(false),      suppress_output_flags(0),
-    ufboot2corr(false),           u2c_nni5(false), 
-    date_with_outgroup(true),
-    date_debug(false),            date_replicates(0),
-    clock_stddev(-1.0),           date_outlier(-1.0),
-    
+    compute_seq_composition(true), ignore_checkpoint(false),
+    lmap_num_quartets(-1), lmap_cluster_file(nullptr),
+    checkpoint_dump_interval(60), print_lmap_quartet_lh(false), 
+    force_unfinished(false), suppress_output_flags(0),
     matrix_exp_technique(MET_EIGEN3LIB_DECOMPOSITION),
-
+    ufboot2corr(false), u2c_nni5(false), dating_method(),
+    dating_options(), date_file(), date_tip(), date_root(),
+    date_with_outgroup(true), date_debug(false),
+    date_replicates(0), clock_stddev(-1.0), date_outlier(-1.0),
     suppress_list_of_sequences(false),
     suppress_zero_distance_warnings(false),
     suppress_duplicate_sequence_warnings(false),
-    
-    max_mem_size(1.0),        //Fraction of the number of nodes in tree that will
-                              //have partial likelihood vectors, kept in memory. 
-    whtest_p_value(0),        //Set, later, only if model isWeissAndVonHaeselerTest() true
-    whtest_delta_quantile(0), //Only set in WHTest()
-    whtest_delta(0),          //Only set in WHTest()
-    speedup_iter(0),          //Set by "-sp_iter" command-line parameter. Does nothing.
-    nni_lh(false),            //Set to true by "-nni_lh" command-line parameter. Does nothing.
-    subsampling_seed(0), ran_seed(0), //Random seeds will be set later
-    run_time(0),              //Timing information, set during execution
-    count_uninformative_sites_for_parsimony(true), 
-    add_uninformative_sites_to_parsimony_length(false),
-    pll(false),               //Will be set in constructor body (depending on whether PLL defined)
-    ref_seq_name(nullptr),    //reference sequence name, used when printing alignments
-                              //passed to Alignment::printAlignment (which doesn't use it!)
-    start_real_time(0),       //Likewise (timing info).
-    startCPUTime(0.0),        //set in runModelFinder and runTreeReconstruction (timing info)
-    nni_type(NNI5)            //Sometimes set, in IQTree::refineBootTrees()
-    {
-
+    dist_format("square"), dist_compression_level(1) {
     #ifdef __AVX512KNL
         params.SSE = LK_AVX512;
     #else
@@ -721,7 +698,6 @@ Params::Params() :
     #else
         pll = false;
     #endif
-
 }
 
 void parseArg(int argc, char *argv[], Params &params) {
@@ -730,7 +706,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     progress_display::setProgressDisplay(false);
     #endif
     verbose_mode = VerboseMode::VB_MIN;
-
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;

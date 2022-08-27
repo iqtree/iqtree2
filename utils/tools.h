@@ -577,12 +577,10 @@ public:
 	 */
 	int popSize;
 
-
 	/**
 	 *  heuristics for speeding up NNI evaluation
 	 */
 	bool speednni;
-
 
 	/**
 	 *  portion of NNI used for perturbing the tree
@@ -620,11 +618,11 @@ public:
     bool   use_lazy_parsimony_tbr;
 
     bool   optimize_ml_tree_with_parsimony;
-	/**
-	 *  New search heuristics (DEFAULT: ON)
-	 */
-	bool snni;
-    
+
+    /**
+     *  New search heuristics (DEFAULT: ON)
+     */
+    bool snni;
 
 	/**
 	 *  Specify how the branch lengths are optimzed after each NNI operation
@@ -989,7 +987,6 @@ public:
      */
     int sample_size;
 
-
     /**
             TRUE if want to find all optimal PD-k set
             with the same maximal PD score
@@ -1104,13 +1101,12 @@ public:
             TRUE to compute the Juke-Cantor distances, default: FALSE
      */
     bool compute_jc_dist;
-    
-    
+        
     /**
             TRUE to use AlignmentSummary implementation to calculate observed (or Jukes-Cantor) distances
      */
     bool use_alignment_summary_for_distance_calculation;
-    
+
     bool use_custom_matrix_diagonal_math;
 
     /**
@@ -1277,6 +1273,7 @@ public:
             2nd alignment used in computing multinomialProb (Added by MA)
      */
     char *second_align;
+
     /**
             type of consensus building
      */
@@ -1479,6 +1476,7 @@ public:
 
     /** number of mixture branch lengths, default 1 */
     int num_mixlen;
+
     /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
     bool optimize_rate_matrix;
 
@@ -1498,7 +1496,6 @@ public:
     
     /** minimal state frequency for optimisation, default=0.0001 */
     double min_state_freq;
-
 
     /**
             the number of rate categories
@@ -1575,7 +1572,6 @@ public:
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
 
-
     /**
             criterion to assess important quartet
      */
@@ -1634,12 +1630,6 @@ public:
      *  Write trees obtained at the end of each NNI search
      */
     bool write_candidate_trees;
-
-
-    /**
-        TRUE to avoid duplicated trees while writing intermediate trees
-     */
-//    bool avoid_duplicated_trees;
 
     /**
             Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
@@ -1784,12 +1774,11 @@ public:
      *  Output log-likelihood
      */
     bool nni_lh;
-
+        
     /**
      *  Lambda in PhyML algorithm
      */
     double lambda;
-
     /**
      * Confidence level for the speed up heuristics
      */
@@ -1807,7 +1796,6 @@ public:
     double whtest_delta_quantile;
     double whtest_p_value;
 
-
     /**
             bit-wise type including MCAT_LOG, MCAT_MEAN
      */
@@ -1820,19 +1808,19 @@ public:
             2  f_2
             ...
      */
-    char *rate_file;
+    char* rate_file;
 
     /***** NGS stuffs   ********/
 
     /**
             next-generation sequencing input file for Fritz project
      */
-    char *ngs_file;
+    char* ngs_file;
 
     /**
             next-generation sequencing input file containing mapped reads to the reference genome
      */
-    char *ngs_mapped_reads;
+    char* ngs_mapped_reads;
 
     bool ngs_ignore_gaps;
 
@@ -1841,7 +1829,7 @@ public:
     /**
             File containing p-values of the genes, for GSS project with Roland
      */
-    char *gene_pvalue_file;
+    char* gene_pvalue_file;
 
     /**
             scaling factor for the p-values
@@ -1863,68 +1851,68 @@ public:
     /**
             NCBI taxon rank, restricting the tree to that rank
      */
-    const char *ncbi_taxon_level;
+    const char* ncbi_taxon_level;
 
     /**
             rank to ingore, e.g., "no rank", branch length to such node will be set to zero
      */
-    const char *ncbi_ignore_level;
+    const char* ncbi_ignore_level;
 
     /**
             typically names.dmp from NCBI
      */
-    const char *ncbi_names_file;
+    const char* ncbi_names_file;
 
     /**********************************************/
     /******* variables for ECOpd analysis *********/
 
-	/**
-		eco_dag_file - contains the food web in matrix form (n species, nxn matrix), 0 for no connection, 1 for predation of j predator on i prey
-	*/
-	char *eco_dag_file;
+    /**
+        eco_dag_file - contains the food web in matrix form (n species, nxn matrix), 0 for no connection, 1 for predation of j predator on i prey
+    */
+    char* eco_dag_file;
 
     /**
-		eco_detail_file - contains IDs of species present in the final set and/or species absent in the TREE or SPLIT system, but present in the food web
-	*/
-	const char *eco_detail_file;
-
-	/*
-	 * the type of the phylo input - tree or network
-	 */
-	const char *eco_type;
-
-	/*
-		k% - percent of species to be conserved
-	 */
-	int k_percent;
+        eco_detail_file - contains IDs of species present in the final set and/or species absent in the TREE or SPLIT system, but present in the food web
+    */
+    const char* eco_detail_file;
 
     /*
-		diet - percent of species diet to be preserved for species survival
-	*/
-	int diet_min;
-	int diet_max;
-	int diet_step;
+     * the type of the phylo input - tree or network
+     */
+    const char* eco_type;
 
     /*
-		eco_run - run number, used when random branch length is assigned to the edges of an input tree
-	*/
-	int eco_run;
+        k% - percent of species to be conserved
+     */
+    int k_percent;
 
     /*
-		eco_weighted - indicates whether to treat the food web as weighted or not weighted
-	*/
-	bool eco_weighted;
+        diet - percent of species diet to be preserved for species survival
+     */
+    int diet_min;
+    int diet_max;
+    int diet_step;
+
+    /*
+        eco_run - run number, used when random branch length is assigned to the edges of an input tree
+     */
+    int eco_run;
+
+    /*
+        eco_weighted - indicates whether to treat the food web as weighted or not weighted
+     */
+    bool eco_weighted;
 
     /**********************************************/
     /****** variables for upper bound tests *******/
-	bool upper_bound;
-	bool upper_bound_NNI;
-	/*
-	 * fraction of current likelihood by which UB will be increased.
-	 * if UBincreased < L, ignore corresponding NNI Add a comment to this line
-	 */
-	double upper_bound_frac;
+    bool upper_bound;
+    bool upper_bound_NNI;
 
+    /*
+     * fraction of current likelihood by which UB will be increased.
+     * if UBincreased < L, ignore corresponding NNI Add a comment to this line
+     */
+    double upper_bound_frac;
 
     /**********************************************/
     /**** variables for ultra-fast bootstrap ******/
@@ -1934,10 +1922,10 @@ public:
      */
     int gbo_replicates;
 
-	/* interval (l-epsilon,l+epsilon) indicates tie for bootstrap tree
-	 * in this case, one tree is picked up at random
-	 */
-	double ufboot_epsilon;
+    /* interval (l-epsilon,l+epsilon) indicates tie for bootstrap tree
+     * in this case, one tree is picked up at random
+     */
+    double ufboot_epsilon;
 
     /**
             TRUE to check with different max_candidate_trees
@@ -1945,7 +1933,7 @@ public:
     int check_gbo_sample_size;
 
     /**
-            TRUE to use RELL method of Simodaira Hasegawa, FALSE otherwise
+        TRUE to use RELL method of Simodaira Hasegawa, FALSE otherwise
      */
     bool use_rell_method;
 
@@ -1980,11 +1968,9 @@ public:
     /** number of iterations between bootstrap stopping rule check */
     int step_iterations;
 
-    /** TRUE to store all candidate trees in memory */
-//    bool store_candidate_trees;
 
-	/** true to print all UFBoot trees to a file */
-	int print_ufboot_trees;
+    /** true to print all UFBoot trees to a file */
+    int print_ufboot_trees;
 
     /**********************************************/
     /**** variables for jackknife ******************/
@@ -2002,33 +1988,26 @@ public:
     double robust_median;
     
     /****** variables for NNI cutoff heuristics ******/
-
     /**
-            TRUE to empirically estimate nni_cutoff
+        TRUE to empirically estimate nni_cutoff
      */
     bool estimate_nni_cutoff;
 
     /**
-            logl difference with zero-branch tree, to cutoff before evaluating NNI
+        logl difference with zero-branch tree, to cutoff before evaluating NNI
      */
     double nni_cutoff;
 
     /**
-            sort the NNI before evaluating
+        sort the NNI before evaluating
      */
     bool nni_sort;
-
-    /**
-            Obsolete: TRUE to optimize 5 branches around NNI
-     */
-    //bool nni_opt_5branches;
 
     /** print some output info for NNI */
     bool testNNI;
 
     /** TRUE to do approximate NNIs with approximate branch lengths before a normal NNI */
     bool approximate_nni;
-
 
     /** TRUE to compress big file using zlib */
     bool do_compression;
@@ -2039,12 +2018,12 @@ public:
     int avh_test;
 
     /**
-            number of bootstrap samples for Arndt's bootstrap plot
+        number of bootstrap samples for Arndt's bootstrap plot
      */
     int bootlh_test;
 
     /**
-            partition definition for Arndt's bootstrap plot
+        partition definition for Arndt's bootstrap plot
      */
     char* bootlh_partitions;
 
@@ -2056,12 +2035,12 @@ public:
      * site_ID state1_freq state2_freq ... staten_freq
      * where site_ID is from 1 to m (m=number of sites)
      */
-    char *site_freq_file;
+    char* site_freq_file;
 
     /**
         user tree file used to estimate site-specific state frequency model 
     */
-    char *tree_freq_file;
+    char* tree_freq_file;
 
     /** number of threads for OpenMP version     */
     int num_threads;
@@ -2082,27 +2061,27 @@ public:
     int model_test_sample_size;
 
     /** root state, for Tina's zoombie domain */
-    char *root_state;
+    char* root_state;
 
-	/**
-	 * TRUE to print bootstrap alignments, default: false
-	 */
-	bool print_bootaln;
+    /**
+     * TRUE to print bootstrap alignments, default: false
+     */
+   bool print_bootaln;
 
     /** TRUE to print bootstrapped site frequency for e.g. PMSF */
     bool print_boot_site_freq;
 
-	/** true to print sub alignments of super alignment, default: false */
-	bool print_subaln;
+    /** true to print sub alignments of super alignment, default: false */
+    bool print_subaln;
 
-	/** print partition information */
-	bool print_partition_info;
+    /** print partition information */
+    bool print_partition_info;
 
-	/** TRUE to print concatenated alignment, default: false */
-	bool print_conaln;
+    /** TRUE to print concatenated alignment, default: false */
+    bool print_conaln;
 
-	/** TRUE to link alpha among Gamma model over partitions */
-	bool link_alpha;
+    /** TRUE to link alpha among Gamma model over partitions */
+    bool link_alpha;
 
     /** TRUE to link substitution models over partitions */
     bool link_model;
@@ -2110,8 +2089,8 @@ public:
     /** name of the joint model across partitions */
     char* model_joint;
     
-	/** true to count all distinct trees visited during tree search */
-	bool count_trees;
+    /** true to count all distinct trees visited during tree search */
+    bool count_trees;
 
     /// True if PoMo is run; otherwise false.
     bool pomo;
@@ -2119,13 +2098,13 @@ public:
     /// True if sampled input method is used (-st CR..); otherwise false.
     bool pomo_random_sampling;
 
-	/// Virtual population size for PoMo model.
-	int pomo_pop_size;
+    /// Virtual population size for PoMo model.
+    int pomo_pop_size;
 
-	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
-	 * 0: store all partial likelihood vectors
-	 * 1: only store 1 partial likelihood vector per node */
-	LhMemSave lh_mem_save;
+    /* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
+     * 0: store all partial likelihood vectors
+     * 1: only store 1 partial likelihood vector per node */
+    LhMemSave lh_mem_save;
     
     /** true to save buffer, default: false */
     bool buffer_mem_save;
@@ -2139,12 +2118,11 @@ public:
      */
     bool max_mem_is_in_bytes;
     
-	/* TRUE to print .splits file in star-dot format */
-	bool print_splits_file;
+    /* TRUE to print .splits file in star-dot format */
+    bool print_splits_file;
     
     /* TRUE to print .splits.nex file in NEXUS format */
     bool print_splits_nex_file;
-
     
     /** TRUE (default) to ignore identical sequences and add them back at the end */
     bool ignore_identical_seqs;
@@ -2156,7 +2134,8 @@ public:
     bool write_branches;
     
     /** frequencies of const patterns to be inserted into alignment */
-    char *freq_const_patterns;
+    char* freq_const_patterns;
+
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
     bool no_rescale_gamma_invar;
 
@@ -2168,16 +2147,18 @@ public:
     
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
+
     /** number of quartets for likelihood mapping */
     int64_t lmap_num_quartets;
 
     /**
             file containing the cluster information for clustered likelihood mapping
      */
-    char *lmap_cluster_file;
+    char* lmap_cluster_file;
 
     /** time (in seconds) between checkpoint dump */
     int checkpoint_dump_interval;
+
     /** TRUE to print quartet log-likelihoods to .quartetlh file */
     bool print_lmap_quartet_lh;
 
@@ -2202,8 +2183,8 @@ public:
      * Diep:
      * Data members for UFBoot2-Corr
      */
-	bool ufboot2corr; // to turn on the correction mode for UFBoot under model violations, enable by "-bb <nrep> -correct
-	bool u2c_nni5; // to use NNI5 during Refinement Step of UFBoot2-Corr
+    bool ufboot2corr; // to turn on the correction mode for UFBoot under model violations, enable by "-bb <nrep> -correct
+    bool u2c_nni5; // to use NNI5 during Refinement Step of UFBoot2-Corr
 
     /** method for phylogenetic dating, currently only LSD is supported */
     string dating_method;
