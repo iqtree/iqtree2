@@ -100,10 +100,10 @@ void YAMLFileParameter::logParameterState(const char* verb,
         msg  << "parameter " << name;
     }
 
-    msg  << " of type " << type_name
-         << ", with range " << range.first
-         << " to " << range.second
-         << ", and initial value " << value;
+    msg << " of type " << type_name
+        << ", with range " << range.first
+        << " to " << range.second
+        << ", and initial value " << value;
 
     if (0<tolerance) {
         msg << ", and tolerance " << tolerance;
@@ -950,12 +950,13 @@ void ModelInfoFromYAMLFile::setBounds(int param_count,
                     if (i <= param_count) { 
                         lower_bound[i] = p.range.first;
                         upper_bound[i] = p.range.second;
-                        bound_check[i] = false;
+                        bound_check[i] = p.range.is_set;
                         TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
                                     "Set bound " << i 
                                     << " : " << var_name 
                                     << " [" << lower_bound[i]
-                                    << ".." << upper_bound[i] << "]");
+                                    << ".." << upper_bound[i] << "] "
+                                    << (p.range.is_set ? "checked" : "not checked"));
                     } else if (is_freq) {
                         ASSERT(i <= param_count + 1);
                         TREE_LOG_LINE(*report_to_tree, YAMLVariableVerbosity,
