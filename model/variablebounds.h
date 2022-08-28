@@ -4,6 +4,7 @@
 
 class VariableBounds {
 public:
+	int     variable_count;
 	double* variables;
 	double* variables2;
 	double* upper_bound;
