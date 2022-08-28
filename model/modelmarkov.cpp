@@ -1002,6 +1002,7 @@ void ModelMarkov::logVariablesTo(LoggingTarget* logging_target) const {
     var_list << getName() << " Variables: ";
     logVariablesTo(var_list); 
     TREE_LOG_LINE(*logging_target, YAMLModelVerbosity, var_list.str()); 
+    return;
 }
 
 void ModelMarkov::logVariablesTo(std::stringstream& var_list) const {
