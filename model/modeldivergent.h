@@ -5,6 +5,7 @@
 
 #include "modelmarkov.h"
 #include "modelinfofromyamlfile.h" //for ModelVariable class
+#include "variablebounds.h"
 
 #define MODEL_UNASSIGNED (-1)
 
@@ -59,6 +60,11 @@ public:
     virtual void   setOptimizeSteps(int optimize_steps) override;
 	virtual double optimizeParameters(double gradient_epsilon,
                                       PhyloTree* report_to_tree) override;
+        void dumpVariableBounds(VerboseMode loggingLevel,
+                                const char* description, 
+                                const VariableBounds& vb) const;
+
+
 	virtual void   setBounds(double *lower_bound, double *upper_bound, 
                              bool *bound_check) override;
 	virtual void   setVariables(double *variables) override;

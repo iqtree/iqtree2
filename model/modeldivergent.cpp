@@ -186,6 +186,24 @@ void ModelDivergent::setOptimizeSteps(int steps) {
     optimize_steps = steps;
 }
 
+void ModelDivergent::dumpVariableBounds
+    (VerboseMode loggingLevel, const char* description, 
+     const VariableBounds& vb) const {
+    if (verbose_mode > loggingLevel) {
+        return;
+    }
+    std::stringstream var_list;
+    var_list << description << " wuz...";
+    for (int i=0; i<=vb.variable_count; ++i) {
+        var_list << "\n  " << vb.variables[i] << " in "
+                    << vb.lower_bound[i] << ".."
+                    << vb.upper_bound[i] << " check="
+                    << vb.bound_check[i];
+    }
+    TREE_LOG_LINE(*phylo_tree, VerboseMode::VB_MIN,
+                    var_list.str());
+}
+
 double ModelDivergent::optimizeParameters
         (double gradient_epsilon, PhyloTree* report_to_tree) {
     if (phylo_tree!=nullptr) {
@@ -203,11 +221,11 @@ double ModelDivergent::optimizeParameters
                   "Optimizing " << name << " model parameters...");
     VariableBounds vb(ndim+1);
 	double score;
-
     {
-        SCOPED_ASSIGN(YAMLVariableVerbosity, VerboseMode::VB_MIN);
     	setVariables(vb.variables);
 	    setBounds(vb.lower_bound, vb.upper_bound, vb.bound_check);
+        dumpVariableBounds(YAMLVariableVerbosity, 
+                           "setVariables & setBound initial state", vb);
     }
     //todo: optimization algorithm as a member variable instad.
     auto alg = phylo_tree->params->optimize_alg_freerate;
@@ -223,6 +241,8 @@ double ModelDivergent::optimizeParameters
                                     TOL_RATE));
     }
 	bool changed = getVariables(vb.variables);
+    dumpVariableBounds(YAMLVariableVerbosity, 
+                       "setVariables & setBound optimized state", vb);
     if (changed) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
