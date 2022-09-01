@@ -785,6 +785,9 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
             }
             
             // final round to check and write all chunks in the cache to files
+            #ifdef _OPENMP
+            #pragma omp flush
+            #endif
             writeAllSeqChunkFromCache(out);
             
         }
@@ -830,28 +833,13 @@ void AliSimulator::writeSeqChunkFromCache(ostream *&out)
     {
         for (int i = cache_start_indexes[thread_id]; i < cache_start_indexes[thread_id] + cache_size_per_thread; i++)
         {
-            SEQ_CHUNK_STATUS slot_status;
-            #ifdef _OPENMP
-            #pragma omp atomic read
-            #endif
-            slot_status = seq_str_cache[i].chunk_status;
-            
-            if (slot_status == OCCUPIED)
+            if (seq_str_cache[i].chunk_status == OCCUPIED)
             {
-                /*// write the current chunk
-                #ifdef _OPENMP
-                #pragma omp atomic write
-                #endif
-                seq_str_cache[i].chunk_status = READING;*/
-                
                 #ifdef _OPENMP
                 #pragma omp flush
                 #endif
                 out->seekp(seq_str_cache[i].pos);
                 (*out) << seq_str_cache[i].chunk_str;
-                
-                // release the cache
-                // string().swap(seq_str_cache[i].chunk_str);
                 
                 // update status of the selected slot
                 #ifdef _OPENMP
@@ -870,22 +858,13 @@ void AliSimulator::writeAllSeqChunkFromCache(ostream *&out)
 {
     for (int i = 0; i < seq_str_cache.size(); i++)
     {
-        SEQ_CHUNK_STATUS slot_status;
-        #ifdef _OPENMP
-        #pragma omp atomic read
-        #endif
-        slot_status = seq_str_cache[i].chunk_status;
-        
-        if (slot_status == OCCUPIED)
+        if (seq_str_cache[i].chunk_status == OCCUPIED)
         {
             #ifdef _OPENMP
             #pragma omp flush
             #endif
             out->seekp(seq_str_cache[i].pos);
             (*out) << seq_str_cache[i].chunk_str;
-            
-            // release the cache
-            // string().swap(seq_str_cache[i].chunk_str);
             
             // update status of the selected slot
             #ifdef _OPENMP
@@ -1529,38 +1508,17 @@ void AliSimulator::cacheSeqChunkStr(int64_t pos, string seq_chunk_str, int threa
 {
     // seek an empty slot in the cache
     int slot_id = -1;
+    int start_slot = cache_start_indexes[thread_id];
+    int end_slot = start_slot + cache_size_per_thread;
+    int i = start_slot;
     while (slot_id == -1)
     {
         // try to find an empty slot
-        for (int i = cache_start_indexes[thread_id]; i < cache_start_indexes[thread_id] + cache_size_per_thread; i++)
-        {
-            SEQ_CHUNK_STATUS latest_status;
-            #ifdef _OPENMP
-            #pragma omp atomic read
-            #endif
-            latest_status = seq_str_cache[i].chunk_status;
-            
-            if (latest_status == EMPTY)
-            {
-                /*#ifdef _OPENMP
-                #pragma omp atomic capture
-                #endif
-                {
-                    latest_status = seq_str_cache[i].chunk_status;
-                    seq_str_cache[i].chunk_status = WRITING;
-                }
-                
-                // check if we found and ACTUALLY got seq_str_cache[i]
-                if (latest_status == EMPTY)
-                {
-                    slot_id = i;
-                    break;
-                }*/
-                
-                slot_id = i;
-                break;
-            }
-        }
+        if (seq_str_cache[i].chunk_status == EMPTY)
+            slot_id = i;
+        // otherwise, move to next slot
+        else
+            i >= end_slot - 1 ? i = start_slot : ++i;
     }
     
     #ifdef _OPENMP

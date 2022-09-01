@@ -1450,7 +1450,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
     params.keep_seq_order = false;
-    params.mem_limit_factor = 10;
+    params.mem_limit_factor = 2;
     params.delete_output = false;
     params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
