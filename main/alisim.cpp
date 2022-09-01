@@ -509,6 +509,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
         retrieveAncestralSequenceFromInputFile(super_alisimulator, ancestral_sequence);
     
+    // terminate if users employ more MPI processes than the number of alignments
+    if (MPIHelper::getInstance().getNumProcesses() > super_alisimulator->params->alisim_dataset_num)
+        outError("You are employing more MPI processes (" + convertIntToString(MPIHelper::getInstance().getNumProcesses()) + ") than the number of alignments (" + convertIntToString(super_alisimulator->params->alisim_dataset_num) + "). Please reduce the number of MPI processes to save the computational resources and try again!");
+    
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
         outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
