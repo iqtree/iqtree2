@@ -638,7 +638,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     }
 
     iqtree->getModelFactory()->restoreCheckpoint();
-    iqtree->ensureNumberOfThreadsIsSet(nullptr);
+    iqtree->ensureNumberOfThreadsIsSet(&params);
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
     params.modelEps = params.modelfinder_eps;

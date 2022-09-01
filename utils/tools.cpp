@@ -5409,6 +5409,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
+    // terminate if using AliSim with -ft or -fs site-specific model (ModelSet)
+    // computeTransMatix has not yet implemented for ModelSet
+    if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
+        outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
     
     // set default filename for the random tree if AliSim is running in Random mode
     if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
@@ -5589,8 +5593,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
-    << "  --export-alisim-cmd  Export a command-line from the inferred tree and model params" << endl
-    << "                       to simulate new MSAs with AliSim" << endl
     << endl << "CHECKPOINT:" << endl
     << "  --redo               Redo both ModelFinder and tree search" << endl
     << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl
