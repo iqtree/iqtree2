@@ -4319,6 +4319,8 @@ void assignBranchSupportNew(Params &params) {
         cout << "Site concordance factors for quartets printed to " << filename << endl;
     }
     
+    outWarning("You probably want the --scfl option. The site concordance factor\n implemented with the --scf option is based on parsimony (described here:\n https://doi.org/10.1093/molbev/msaa106). It has since been superseded by a more\n accurate likelihood-based approach which is implemented in the --scfl option, and\n is described in the paper \"Updated site concordance factors minimize effects of\n homoplasy and taxon sampling\" by Yu et al.. Please see the tutorial here for more\n information: http://www.iqtree.org/doc/Concordance-Factor");
+    
     if (!params.site_concordance_partition)
         return;
     

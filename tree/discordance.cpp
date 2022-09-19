@@ -32,7 +32,7 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
 #ifdef _OPENMP
     if (params->ancestral_site_concordance) {
         if (omp_get_num_threads() != 1) {
-            outError("--ascf does not support multi-threading, do not use -nt option");
+            outError("--scfl does not support multi-threading, do not use -nt option");
         }
     }
 #pragma omp parallel
@@ -557,14 +557,14 @@ void PhyloTree::computeAllAncestralSiteConcordance() {
             PUT_ATTR(branch, label);
     }
     map<string,string> meanings;
-    cout << "Computing ancestral site concordance factor (asCF)..." << endl;
+    cout << "Computing site concordance factor using likelihood..." << endl;
     double start_time = getRealTime();
     computeSiteConcordance(meanings);
     cout << getRealTime() - start_time << " sec" << endl;
     string prefix = params->out_prefix;
     string str = prefix + ".cf.tree";
     printTree(str.c_str(), WT_BR_LEN + WT_NEWLINE);
-    cout << "Tree with ancestral concordance factors written to " << str << endl;
+    cout << "Tree with site concordance factors written to " << str << endl;
     str = prefix + ".cf.tree.nex";
     string filename = prefix + ".cf.stat";
     printNexus(str, WT_BR_LEN, "See " + filename + " for branch annotation meanings." +

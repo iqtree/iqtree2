@@ -1956,6 +1956,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (strcmp(argv[cnt], "--scf") == 0) {
+                if (params.ancestral_site_concordance != 0)
+                    throw "Do not specify both --scf and --scfl";
                 params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
                 cnt++;
                 if (cnt >= argc)
@@ -1966,6 +1968,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (strcmp(argv[cnt], "--ascf") == 0) {
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify both --scf and --ascf";
                 params.ancestral_site_concordance = 1;
                 cnt++;
                 if (cnt >= argc)
@@ -1975,14 +1979,20 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Positive --ascf please";
                 continue;
             }
-            if (strcmp(argv[cnt], "--bscf") == 0) {
+            if (strcmp(argv[cnt], "--bscf") == 0 || strcmp(argv[cnt], "--scfl") == 0) {
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify both --scf and --scfl";
                 params.ancestral_site_concordance = 2;
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --bscf NUM_QUARTETS";
+                    throw "Use --scfl NUM_QUARTETS";
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
-                    throw "Positive --ascf please";
+                    throw "Positive --scfl please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--scf1") == 0) {
+                throw "--scf1 option does not exist. Do you mean --scfl?";
                 continue;
             }
             if (strcmp(argv[cnt], "--scf-part") == 0 || strcmp(argv[cnt], "--cf-verbose") == 0) {
@@ -5799,6 +5809,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --gcf FILE           Set of source trees for gene concordance factor (gCF)" << endl
     << "  --df-tree            Write discordant trees associated with gDF1" << endl
     << "  --scf NUM            Number of quartets for site concordance factor (sCF)" << endl
+    << "  --scfl NUM           Like --scf but using likelihood (recommended)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
