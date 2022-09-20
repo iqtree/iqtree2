@@ -1948,6 +1948,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             
             if (strcmp(argv[cnt], "--gcf") == 0) {
+                if (params.ancestral_site_concordance != 0)
+                    throw "Do not specify both --gcf and --scfl";
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
                 cnt++;
                 if (cnt >= argc)
@@ -1981,7 +1983,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--bscf") == 0 || strcmp(argv[cnt], "--scfl") == 0) {
                 if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
-                    throw "Do not specify both --scf and --scfl";
+                    throw "Do not specify --scf or --gcf with --scfl";
                 params.ancestral_site_concordance = 2;
                 cnt++;
                 if (cnt >= argc)

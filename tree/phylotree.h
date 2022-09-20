@@ -1924,6 +1924,11 @@ public:
     virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream);
 
     /**
+     allocate a new vector of ancestral probability, aware of partition models
+     */
+    double* newAncestralProb();
+    
+    /**
      compute ancestral site concordance factor
      @param branch target branch
      @param nquartets number of quartets

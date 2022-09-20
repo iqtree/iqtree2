@@ -29,12 +29,17 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
         }
     }
 
+    bool do_openmp = (params->ancestral_site_concordance == 0);
+    
 #ifdef _OPENMP
     if (params->ancestral_site_concordance) {
         if (omp_get_num_threads() != 1) {
-            outError("--scfl does not support multi-threading, do not use -nt option");
+            outWarning("--scfl works but does not yet support multi-threading");
         }
     }
+#endif
+
+#if defined(_OPENMP) && (do_openmp == true)
 #pragma omp parallel
     {
         int *rstream;
@@ -71,7 +76,7 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
             node->name += sup_str;
         }
     }
-#ifdef _OPENMP
+#if defined(_OPENMP) && (do_openmp == true)
         finish_random(rstream);
     }
 #endif
@@ -411,6 +416,23 @@ void PhyloTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNod
     }
 }
 
+double* PhyloTree::newAncestralProb() {
+    if (isSuperTree()) {
+        PhyloSuperTree* stree = (PhyloSuperTree*)(this);
+        size_t total_size = 0;
+        for (auto it = stree->begin(); it != stree->end(); it++) {
+            size_t nptn = (*it)->getAlnNPattern();
+            size_t nstates = (*it)->model->num_states;
+            total_size += nptn*nstates;
+        }
+        return aligned_alloc<double>(total_size);
+    } else {
+        size_t nptn = getAlnNPattern();
+        size_t nstates = model->num_states;
+        return aligned_alloc<double>(nptn*nstates);
+    }
+}
+
 void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, int *rstream,
         double *marginal_ancestral_prob, int* marginal_ancestral_seq)
 {
@@ -419,8 +441,6 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
 //    vector<Neighbor*> second_nei;
     vector<double*> first_ancestral_prob;
     vector<double*> second_ancestral_prob;
-    size_t nptn = getAlnNPattern();
-    size_t nstates = model->num_states;
 
     // extract two nodes adjecent to branch.first
     FOR_NEIGHBOR_DECLARE(branch.first, branch.second, it) {
@@ -428,7 +448,7 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         if (rooted && (*it)->node == root)
             return;
 //        first_nei.push_back(*it);
-        double *ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
+        double *ptn_ancestral_prob = newAncestralProb();
         if (params->ancestral_site_concordance == 1)
             computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.first,
                 ptn_ancestral_prob, marginal_ancestral_seq);
@@ -449,7 +469,7 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
         if (rooted && (*it)->node == root)
             return;
 //        second_nei.push_back(*it);
-        double *ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
+        double *ptn_ancestral_prob = newAncestralProb();
         if (params->ancestral_site_concordance == 1)
             computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.second,
                 ptn_ancestral_prob, marginal_ancestral_seq);
@@ -463,6 +483,9 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
             writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, marginal_ancestral_seq);
         second_ancestral_prob.push_back(ptn_ancestral_prob);
     }
+    
+    ASSERT(first_ancestral_prob.size() >= 2);
+    ASSERT(second_ancestral_prob.size() >= 2);
     
     uint64_t sum_sites = 0;
     double sCF = 0.0; // concordance factor
@@ -491,17 +514,41 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
 
         size_t support[3] = {0, 0, 0};
 
-        for (size_t ptn = 0; ptn < nptn; ptn++) {
-            StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+ptn*nstates, rstream);
-            StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+ptn*nstates, rstream);
-            StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+ptn*nstates, rstream);
-            StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+ptn*nstates, rstream);
-            if (first_state0 == first_state1 && second_state0 == second_state1 && first_state0 != second_state0)
-                support[0] += aln->at(ptn).frequency;
-            else if (first_state0 == second_state0 && first_state1 == second_state1 && first_state0 != first_state1)
-                support[1] += aln->at(ptn).frequency;
-            else if (first_state0 == second_state1 && first_state1 == second_state0 && first_state0 != first_state1)
-                support[2] += aln->at(ptn).frequency;
+        if (isSuperTree()) {
+            PhyloSuperTree* stree = (PhyloSuperTree*)this;
+            size_t start_pos = 0;
+            for (auto it = stree->begin(); it != stree->end(); it++) {
+                size_t nptn = (*it)->getAlnNPattern();
+                size_t nstates = (*it)->model->num_states;
+                for (size_t ptn = 0; ptn < nptn; ptn++) {
+                    StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+ptn*nstates+start_pos, rstream);
+                    StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+ptn*nstates+start_pos, rstream);
+                    StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+ptn*nstates+start_pos, rstream);
+                    StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+ptn*nstates+start_pos, rstream);
+                    if (first_state0 == first_state1 && second_state0 == second_state1 && first_state0 != second_state0)
+                        support[0] += (*it)->aln->at(ptn).frequency;
+                    else if (first_state0 == second_state0 && first_state1 == second_state1 && first_state0 != first_state1)
+                        support[1] += (*it)->aln->at(ptn).frequency;
+                    else if (first_state0 == second_state1 && first_state1 == second_state0 && first_state0 != first_state1)
+                        support[2] += (*it)->aln->at(ptn).frequency;
+                }
+                start_pos += nptn*nstates;
+            }
+        } else {
+            size_t nptn = getAlnNPattern();
+            size_t nstates = model->num_states;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+ptn*nstates, rstream);
+                StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+ptn*nstates, rstream);
+                StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+ptn*nstates, rstream);
+                StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+ptn*nstates, rstream);
+                if (first_state0 == first_state1 && second_state0 == second_state1 && first_state0 != second_state0)
+                    support[0] += aln->at(ptn).frequency;
+                else if (first_state0 == second_state0 && first_state1 == second_state1 && first_state0 != first_state1)
+                    support[1] += aln->at(ptn).frequency;
+                else if (first_state0 == second_state1 && first_state1 == second_state0 && first_state0 != first_state1)
+                    support[2] += aln->at(ptn).frequency;
+            }
         }
         size_t sum = support[0] + support[1] + support[2];
         sum_sites += sum;
@@ -543,6 +590,10 @@ void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, i
 //        else
 //            nei->putAttr(keys[i%3] + convertIntToString(i/3), "NA");
 //    }
+    for (auto it2 = second_ancestral_prob.rbegin(); it2 != second_ancestral_prob.rend(); it2++)
+        aligned_free(*it2);
+    for (auto it1 = first_ancestral_prob.rbegin(); it1 != first_ancestral_prob.rend(); it1++)
+        aligned_free(*it1);
 }
 
 
