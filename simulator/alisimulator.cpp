@@ -1515,6 +1515,9 @@ void AliSimulator::waitAtBarrier(const unsigned short int barrier_count, Node* n
     unsigned short int num_threads_reach_barrier = node->sequence->num_threads_reach_barrier;
     while (num_threads_reach_barrier < barrier_count * num_simulating_threads)
     {
+        #ifdef _OPENMP
+        #pragma omp atomic read
+        #endif
         num_threads_reach_barrier = node->sequence->num_threads_reach_barrier;
     }
 }
