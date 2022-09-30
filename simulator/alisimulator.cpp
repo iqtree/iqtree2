@@ -1002,7 +1002,8 @@ void AliSimulator::executeIM(int thread_id, int sequence_length, int default_seg
             {
                 if (num_threads > 1)
                 {
-                    cache_size_per_thread = num_simulating_threads * tree->params->mem_limit_factor;
+                    // default cache_size_per_thread = num_simulating_threads * 2;
+                    cache_size_per_thread = tree->params->mem_limit_factor == 0 ? num_simulating_threads * 2 : ceil(tree->leafNum * tree->params->mem_limit_factor);
                     seq_str_cache.resize(num_simulating_threads * cache_size_per_thread);
                     cache_start_indexes.resize(num_simulating_threads);
                     cache_start_indexes[0] = 0;

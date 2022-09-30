@@ -2567,7 +2567,7 @@ public:
     /**
     *  factor to limit memory usage
     */
-    int mem_limit_factor;
+    double mem_limit_factor;
     
     /**
     *  TRUE to allow indel-rate variation

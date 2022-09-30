@@ -1450,7 +1450,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
     params.alisim_single_output = false;
     params.keep_seq_order = false;
-    params.mem_limit_factor = 2;
+    params.mem_limit_factor = 0;
     params.delete_output = false;
     params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
@@ -5238,9 +5238,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc || argv[cnt][0] == '-')
                     throw "Use --mem-limit <FACTOR>";
                 
-                params.mem_limit_factor = convert_int(argv[cnt]);
-                if (params.mem_limit_factor <= 0)
-                    throw "<FACTOR> must be positive";
+                params.mem_limit_factor = convert_double(argv[cnt]);
+                if (params.mem_limit_factor <= 0 || params.mem_limit_factor > 1)
+                    throw "<FACTOR> must be in range (0,1]";
 
                 continue;
             }
