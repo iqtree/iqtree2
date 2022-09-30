@@ -1455,6 +1455,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
+    params.alisim_openmp_alg = IM;
+    params.no_merge = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5247,6 +5249,29 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.delete_output = true;
                 continue;
             }
+            
+            if (strcmp(argv[cnt], "--openmp-alg") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --openmp-alg <ALG>";
+                
+                string openmp_algorithm = argv[cnt];
+                transform(openmp_algorithm.begin(), openmp_algorithm.end(), openmp_algorithm.begin(), ::toupper);
+                
+                if (openmp_algorithm == "IM")
+                    params.alisim_openmp_alg = IM;
+                else if (openmp_algorithm == "EM")
+                    params.alisim_openmp_alg = EM;
+                else
+                    throw "AliSim-OpenMP algorithm should be IM or EM.";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--no-merge") == 0) {
+                params.no_merge = true;
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--indel-rate-variation") == 0) {
                 params.indel_rate_variation = true;
                 continue;

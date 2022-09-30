@@ -31,6 +31,7 @@ AliSimulatorHeterogeneity::AliSimulatorHeterogeneity(AliSimulator *alisimulator)
     starting_pos = alisimulator->starting_pos;
     output_line_length = alisimulator->output_line_length;
     num_threads = alisimulator->num_threads;
+    force_output_PHYLIP = alisimulator->force_output_PHYLIP;
 }
 
 /**

@@ -392,6 +392,26 @@ protected:
     */
     void waitAtBarrier(const unsigned short int barrier_count, Node* node);
     
+    /**
+    *  simulate sequences with AliSim-OpenMP-IM algorithm
+    */
+    void executeIM(int thread_id, int sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream);
+    
+    /**
+    *  simulate sequences with AliSim-OpenMP-EM algorithm
+    */
+    void executeEM(int thread_id, int sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream);
+    
+    /**
+        merge output files when using multiple threads
+    */
+    void mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    
+    /**
+        output a sequence to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+    */
+    void outputOneSequence(Node* node, string &output, int thread_id, int segment_start, ostream &out);
+    
 public:
     
     IQTree *tree;
@@ -428,6 +448,7 @@ public:
     vector<SequenceChunkStr> seq_str_cache;
     vector<int> cache_start_indexes;
     int cache_size_per_thread;
+    bool force_output_PHYLIP = false;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
@@ -489,8 +510,8 @@ public:
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
     *
     */
-    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
-    
+    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP = false);
+
     /**
     *  update new genome from original genome and the genome tree for each tips (due to Indels)
     */

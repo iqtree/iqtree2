@@ -178,6 +178,14 @@ enum SIMULATION_METHOD {
 };
 
 /**
+ *  Specify 2 AliSim-OpenMP algorithms.
+ */
+enum ALI_OPENMP_ALG {
+    IM,
+    EM
+};
+
+/**
  *  Specify 2 simulation approaches.
  */
 enum SEQ_CHUNK_STATUS {
@@ -2565,6 +2573,17 @@ public:
     *  TRUE to allow indel-rate variation
     */
     bool indel_rate_variation;
+    
+    /**
+    *  AliSim-OpenMP algorithm
+    */
+    ALI_OPENMP_ALG alisim_openmp_alg;
+    
+    /**
+    *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
+    */
+    bool no_merge;
+
 };
 
 /**
