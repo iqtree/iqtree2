@@ -395,12 +395,12 @@ protected:
     /**
     *  simulate sequences with AliSim-OpenMP-IM algorithm
     */
-    void executeIM(int thread_id, int sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream);
+    void executeIM(int thread_id, int &sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream);
     
     /**
     *  simulate sequences with AliSim-OpenMP-EM algorithm
     */
-    void executeEM(int thread_id, int sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream);
+    void executeEM(int thread_id, int &sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream);
     
     /**
         merge output files when using multiple threads

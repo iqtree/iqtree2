@@ -740,7 +740,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
 }
 
-void AliSimulator::executeEM(int thread_id, int sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream)
+void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream)
 {
     ostream *single_output = NULL;
     
@@ -965,7 +965,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
     }
 }
 
-void AliSimulator::executeIM(int thread_id, int sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream)
+void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream)
 {
     // init the output stream
     initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
