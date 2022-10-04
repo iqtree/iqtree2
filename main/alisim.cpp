@@ -554,6 +554,26 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         super_alisimulator->params->alisim_write_internal_sequences = false;
     }
     
+    // check to output a single file
+    if (super_alisimulator->params->alisim_single_output && super_alisimulator->params->alisim_dataset_num == 1)
+            super_alisimulator->params->alisim_single_output = false;
+    
+    // don't allow --no-merge and --single-output
+    if (super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->alisim_single_output && super_alisimulator->params->no_merge)
+    {
+        outWarning("Ignore --single-output option since it is not supported if using with --no-merge option.");
+        super_alisimulator->params->alisim_single_output = false;
+    }
+        
+    // ignore --single-output in version with MPI
+#ifdef _IQTREE_MPI
+    if (super_alisimulator->params->alisim_single_output)
+    {
+        outWarning("Ignore --single-output option since it is not supported in IQ-TREE version with MPI. Alignments will be outputted in separated files.");
+        super_alisimulator->params->alisim_single_output = false;
+    }
+#endif
+    
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
@@ -564,19 +584,6 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         
         // output the simulated aln at the current execution localtion
         string output_filepath = super_alisimulator->params->alisim_output_filename;
-        
-        // check to output a single file
-        if (super_alisimulator->params->alisim_single_output && super_alisimulator->params->alisim_dataset_num == 1)
-                super_alisimulator->params->alisim_single_output = false;
-        
-        // ignore --single-output in version with MPI
-#ifdef _IQTREE_MPI
-        if (super_alisimulator->params->alisim_single_output)
-        {
-            outWarning("Ignore --single-output option since it is not supported in IQ-TREE version with MPI. Alignments will be outputted in separated files.");
-            super_alisimulator->params->alisim_single_output = false;
-        }
-#endif
         
         // only add alignment id if users want to generate multiple alignments
         if (super_alisimulator->params->alisim_dataset_num > 1 && !super_alisimulator->params->alisim_single_output)
