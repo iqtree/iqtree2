@@ -1055,7 +1055,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, 
     if ((!(node->isLeaf() && write_sequences_from_tmp_data))
         &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio > 0))) {
         #ifdef _OPENMP
-        #pragma omp task firstprivate(node) shared(out, out_indels)
+        #pragma omp task firstprivate(node) shared(out, out_indels, state_mapping)
         #endif
         {
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
