@@ -716,33 +716,33 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
-    ostream *out = NULL;
     vector<string> state_mapping;
     int default_segment_length;
     int thread_id = 0;
-    int actual_segment_length = sequence_length;
     bool write_sequences_to_tmp_data = false;
-    int *rstream = NULL;
     bool store_seq_at_cache = true;
     int max_depth = 0;
-    vector<vector<short int>> sequence_cache;
     
     // init variables
     initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache);
     
     // execute one of the AliSim-OpenMP algorithms to simulate sequences
     if (params->alisim_openmp_alg == IM)
-        executeIM(thread_id, sequence_length, default_segment_length, actual_segment_length, model, input_msa, out, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, sequence_cache, max_depth, state_mapping, rstream);
+        executeIM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
     else
-        executeEM(thread_id, sequence_length, default_segment_length, actual_segment_length, model, input_msa, out, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, sequence_cache, max_depth, state_mapping, rstream);
+        executeEM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
     
     // process after simulating sequences
     postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
 }
 
-void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream)
+void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
 {
     ostream *single_output = NULL;
+    ostream *out = NULL;
+    int *rstream = NULL;
+    vector<vector<short int>> sequence_cache;
+    int actual_segment_length = sequence_length;
     
     // simulate Sequences
     #ifdef _OPENMP
@@ -965,8 +965,13 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
     }
 }
 
-void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_segment_length, int &actual_segment_length, ModelSubst *model, map<string,string> input_msa, ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, vector<vector<short int>> &sequence_cache, int max_depth, vector<string> &state_mapping, int *&rstream)
+void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
 {
+    int actual_segment_length = sequence_length;
+    ostream *out = NULL;
+    int *rstream = NULL;
+    vector<vector<short int>> sequence_cache;
+    
     // init the output stream
     initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
     
