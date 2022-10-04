@@ -972,6 +972,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 // insert redundant sites (inserted sites due to Indels) to the sequences
                 if (super_tree->params->alisim_insertion_ratio + super_tree->params->alisim_deletion_ratio > 0)
                 {
+                    cout << endl << "Actual sequence length of partitions (due to Indels):" << endl;
                     vector<short int> site_index_step_mapping(max_site_index+1, 0);
                     for (j = i; j < super_tree->size(); j++)
                     {
@@ -984,6 +985,10 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                             int real_sequence_length = 0;
                             determineSequenceLength(current_tree->root, current_tree->root, stop, real_sequence_length);
                             int num_inserted_sites = real_sequence_length - expected_num_sites;
+                            
+                            // output actual sequence length of the current partition
+                            string partition_name = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::name;
+                            cout << partition_name << ": " << real_sequence_length * (current_tree->aln->seq_type == SEQ_CODON?3:1) << endl;
                             
                             if (num_inserted_sites > 0)
                             {
