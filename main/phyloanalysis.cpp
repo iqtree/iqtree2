@@ -4038,6 +4038,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         else
             runMultipleTreeReconstruction(params, tree->aln, tree);
         
+        if (params.ancestral_site_concordance)
+            tree->computeAllAncestralSiteConcordance();
+        
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);
         }
@@ -4240,7 +4243,7 @@ void assignBranchSupportNew(Params &params) {
     }
     string prefix = (params.out_prefix) ? params.out_prefix : params.user_file;
     string str = prefix + ".cf.tree";
-    tree->printTree(str.c_str());
+    tree->printTree(str.c_str(), WT_BR_LEN + WT_NEWLINE);
     cout << "Tree with concordance factors written to " << str << endl;
     str = prefix + ".cf.tree.nex";
     string filename = prefix + ".cf.stat";
@@ -4329,6 +4332,8 @@ void assignBranchSupportNew(Params &params) {
         out.close();
         cout << "Site concordance factors for quartets printed to " << filename << endl;
     }
+    
+    outWarning("You probably want the --scfl option. The site concordance factor\n implemented with the --scf option is based on parsimony (described here:\n https://doi.org/10.1093/molbev/msaa106). It has since been superseded by a more\n accurate likelihood-based approach which is implemented in the --scfl option, and\n is described in the paper \"Updated site concordance factors minimize effects of\n homoplasy and taxon sampling\" by Yu et al.. Please see the tutorial here for more\n information: http://www.iqtree.org/doc/Concordance-Factor");
     
     if (!params.site_concordance_partition)
         return;

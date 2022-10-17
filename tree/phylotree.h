@@ -1056,8 +1056,18 @@ public:
         @param dad_branch branch leading to an internal node where to obtain ancestral sequence
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+        @param[out] ptn_ancestral_seq vector of state with highest probability
     */
     virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        compute ancestral sequence probability for an internal node by partial_lh of that subtree
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    virtual void computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
@@ -1913,6 +1923,27 @@ public:
      */
     virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream);
 
+    /**
+     allocate a new vector of ancestral probability, aware of partition models
+     */
+    double* newAncestralProb();
+    
+    /**
+     compute ancestral site concordance factor
+     @param branch target branch
+     @param nquartets number of quartets
+     @param[out] info concordance information
+     @param rstream random stream
+     */
+    virtual void computeAncestralSiteConcordance(Branch &branch, int nquartets, int *rstream,
+        double *marginal_ancestral_prob, int *marginal_ancestral_seq);
+
+    /**
+     compute ancestral sCF for all branches
+     */
+    void computeAllAncestralSiteConcordance();
+
+    
     /**
      Compute gene concordance factor
      for each branch, assign how many times this branch appears in the input set of trees.
