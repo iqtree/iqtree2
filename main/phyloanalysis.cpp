@@ -2913,6 +2913,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
     printMiscInfo(params, *iqtree, pattern_lh);
 
+    if (params.alisim_fundi_taxon_set.size() > 0 && !params.alisim_active) {
+        cout << "Optimizing FunDi model..." << endl;
+        double score = iqtree->optimizeFundiModel();
+        cout << "FunDi log-likelihood: " << score << endl;
+    }
+    
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
         string out_file = (string)params.out_prefix + ".roottest.trees";

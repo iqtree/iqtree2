@@ -2764,6 +2764,116 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     return tree_lh;
 }
 
+double PhyloTree::computeFundiLikelihood() {
+    ASSERT(model);
+    ASSERT(site_rate);
+    ASSERT(root->isLeaf());
+    unordered_set<string> taxa_set;
+    pair<Node*,Neighbor*> central_branch = {nullptr, nullptr};
+    for (auto it = params->alisim_fundi_taxon_set.begin();
+         it != params->alisim_fundi_taxon_set.end(); it++) {
+        taxa_set.insert(*it);
+    }
+    
+    cout << "rho = " << params->alisim_fundi_proportion << endl;
+    
+    findNodeNames(taxa_set, central_branch, root, nullptr);
+    if (!central_branch.first) {
+        outWarning("Tree does not contain FunDi central node");
+        return 0.0;
+    }
+    if (!central_branch.second) {
+        outWarning("Tree does not contain FunDi central branch");
+        return 0.0;
+    }
+    
+    if (central_branch.first->isLeaf() || central_branch.second->node->isLeaf()) {
+        outWarning("FundDi central branch must be an internal branch");
+        return 0.0;
+    }
+    
+    cout << "Central branch length: " << central_branch.second->length << endl;
+    do_fundi = true;
+    /*
+    current_it = (PhyloNeighbor*) central_branch.second;
+    current_it_back = (PhyloNeighbor*)(central_branch.second->node->findNeighbor(central_branch.first));
+    double score;
+    score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+    cout << "Current LnL: " << score << endl;
+    double cur_length = current_it->length;
+    double best_score = score;
+    double best_length = cur_length;
+    for (double length = 0.0; length <= cur_length; length += 0.001) {
+        current_it->length = length;
+        current_it_back->length = length;
+        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+        cout << "For length " << length << " LnL: " << score << endl;
+        if (best_score < score) {
+            best_score = score;
+            best_length = length;
+        }
+    }
+    cout << "best_LnL: " << best_score << " best_brlen: " << best_length << endl;
+    current_it->length = cur_length;
+    current_it_back->length = cur_length;
+     */
+
+    auto orig_optimize_by_newton = optimize_by_newton;
+    optimize_by_newton = false;
+    double cur_length = central_branch.second->length;
+    optimizeOneBranch((PhyloNode*)central_branch.first, (PhyloNode*)(central_branch.second->node), false);
+    double best_length = central_branch.second->length;
+    double best_score = computeLikelihoodBranch((PhyloNeighbor*)central_branch.second, (PhyloNode*) central_branch.first);
+
+    if (params->alisim_fundi_proportion == 0.0) {
+        cout << "Doing grid search for rho..." << endl;
+        // optimize rho now
+        double best_rho = 0.0;
+        for (double rho = 0.01; rho <= 1.0; rho += 0.01) {
+            params->alisim_fundi_proportion = rho;
+            optimizeOneBranch((PhyloNode*)central_branch.first, (PhyloNode*)(central_branch.second->node), false);
+            double this_length = central_branch.second->length;
+            double this_score = computeLikelihoodBranch((PhyloNeighbor*)central_branch.second, (PhyloNode*) central_branch.first);
+            if (best_score < this_score) {
+                best_score = this_score;
+                best_length = this_length;
+                best_rho = rho;
+            }
+        }
+        cout << "Best FunDi parameter rho: " << best_rho << endl;
+    }
+
+    current_it->length = best_length;
+    current_it_back->length = best_length;
+    do_fundi = false;
+    optimize_by_newton = orig_optimize_by_newton;
+    cout << "Best FunDi central branch length: " << best_length << endl;
+    setCurScore(best_score);
+    
+    return best_score;
+}
+
+double PhyloTree::optimizeFundiModel() {
+    if (safe_numeric) {
+        outError("safe_numeric must be false");
+    }
+    auto orig_kernel_nonrev = params->kernel_nonrev;
+    if (!orig_kernel_nonrev) {
+        // switch to nonrev kernel to compute _pattern_lh_cat_state
+        params->kernel_nonrev = true;
+        setLikelihoodKernel(sse);
+        clearAllPartialLH();
+    }
+    double score = computeFundiLikelihood();
+    if (!orig_kernel_nonrev) {
+        // switch back to REV kernel
+        params->kernel_nonrev = orig_kernel_nonrev;
+        setLikelihoodKernel(sse);
+        clearAllPartialLH();
+    }
+    return score;
+}
+
 void PhyloTree::moveRoot(Node *node1, Node *node2) {
     // unplug root from tree
     Node *root_dad = root->neighbors[0]->node;
