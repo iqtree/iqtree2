@@ -1581,6 +1581,7 @@ void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
+    
     size_t ptn, nptn = aln->getNPattern();
     size_t cat, ncat = getNumLhCat(wsl);
     // Right now only Naive version store _pattern_lh_cat!
