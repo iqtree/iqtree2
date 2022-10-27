@@ -2838,8 +2838,8 @@ double PhyloTree::computeFundiLikelihood() {
     if (params->alisim_fundi_proportion > 0.0) {
         // optimize fundi branch length while keeping rho fixed
         optimizeOneBranch((PhyloNode*)central_branch.first, (PhyloNode*)(central_branch.second->node), false);
-        double best_length = central_branch.second->length;
-        double best_score = computeLikelihoodBranch((PhyloNeighbor*)central_branch.second, (PhyloNode*) central_branch.first);
+        best_length = central_branch.second->length;
+        best_score = computeLikelihoodBranch((PhyloNeighbor*)central_branch.second, (PhyloNode*) central_branch.first);
         current_it->length = best_length;
         current_it_back->length = best_length;
     } else {
