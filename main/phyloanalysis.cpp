@@ -2915,8 +2915,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.alisim_fundi_taxon_set.size() > 0 && !params.alisim_active) {
         cout << "Optimizing FunDi model..." << endl;
+        double start_time = getRealTime();
         double score = iqtree->optimizeFundiModel();
         cout << "FunDi log-likelihood: " << score << endl;
+        cout << "Time taken to optimize FunDi model: " << getRealTime() - start_time << " sec" << endl;
     }
     
     if (params.root_test) {

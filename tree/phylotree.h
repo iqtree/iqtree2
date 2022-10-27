@@ -2409,6 +2409,19 @@ protected:
     bool do_fundi = false;
 
     /**
+        return the number of dimensions
+    */
+    virtual int getNDim();
+
+
+    /**
+        the target function which needs to be optimized
+        @param x the input vector x
+        @return the function value at x
+    */
+    virtual double targetFunk(double x[]);
+
+    /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
      * likelihood --> avoid calling malloc everytime
      */
