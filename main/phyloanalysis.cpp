@@ -538,7 +538,12 @@ void reportRate(ostream &out, PhyloTree &tree) {
     }
     
     RateHeterogeneity *rate_model = tree.getRate();
-    out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
+    // NHANLT: temporarily fixed bug when reporting continuous gamma model
+    // Note: I use RateGamma class (to avoid potential bug if users want to use continuous Gamma for the inference process) and an addition flag is_continuous_gamma to detect continuous Gamma
+    if (tree.getModelFactory()->is_continuous_gamma)
+        out << "Model of rate heterogeneity: Continuous Gamma" << endl;
+    else
+        out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
     rate_model->writeInfo(out);
 
     if (rate_model->getNDiscreteRate() > 1 || rate_model->getPInvar() > 0.0) {
