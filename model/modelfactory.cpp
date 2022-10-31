@@ -171,17 +171,13 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
     }
-        
-    // handle continuous gamma model
+    // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
     if (model_str.find("+GC") != std::string::npos) {
-        is_continuous_gamma = true;
-        // remove 'C' from model_str to make sure it doesn't cause error when parsing model
         std::string tmp_model_str(1, model_str[0]);
         for (int c_index = 1; c_index < model_str.length(); c_index++)
             if (!(model_str[c_index-1]=='G' && model_str[c_index]=='C'))
                 tmp_model_str = tmp_model_str + model_str[c_index];
-        model_str = tmp_model_str;
-        model_name = model_str;
+        model_name = tmp_model_str;
     }
 
     /********* preprocessing model string ****************/
@@ -715,17 +711,45 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     /******************** initialize site rate heterogeneity ****************************/
-
     string::size_type posI = rate_str.find("+I");
     string::size_type posG = rate_str.find("+G");
     string::size_type posG2 = rate_str.find("*G");
-    if (posG != string::npos && posG2 != string::npos) {
-        cout << "NOTE: both +G and *G were specified, continue with "
-            << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
+    string::size_type posGC = rate_str.find("+GC");
+        
+    // avoid wrong detection of +G of users specify +GC
+       if (posG != string::npos && posG == posGC)
+           posG = rate_str.find("+G", posG + 2);
+    
+    // choose discrete/continuous gamma
+    if (posG != string::npos && posGC != string::npos) {
+        cout << "NOTE: both +G and +GC were specified, continue with "
+            << ((posG < posGC)? rate_str.substr(posG,2) : rate_str.substr(posGC,3)) << endl;
+            
+        is_continuous_gamma = posGC < posG;
     }
-    if (posG2 != string::npos && posG2 < posG) {
-        posG = posG2;
-        fused_mix_rate = true;
+    if (posG2 != string::npos && posGC != string::npos) {
+        cout << "NOTE: both *G and +GC were specified, continue with "
+            << ((posG2 < posGC)? rate_str.substr(posG2,2) : rate_str.substr(posGC,3)) << endl;
+        
+        is_continuous_gamma = posGC < posG2;
+    }
+    
+    // if using continuous Gamma
+    if (is_continuous_gamma)
+    {
+        posG = posGC;
+    }
+    // if using discrete Gamma
+    else
+    {
+        if (posG != string::npos && posG2 != string::npos) {
+            cout << "NOTE: both +G and *G were specified, continue with "
+                << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
+        }
+        if (posG2 != string::npos && posG2 < posG) {
+            posG = posG2;
+            fused_mix_rate = true;
+        }
     }
 
     string::size_type posR = rate_str.find("+R"); // FreeRate model
@@ -797,6 +821,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             num_rate_cats = convert_int(rate_str.substr(posG+2).c_str(), end_pos);
             if (num_rate_cats < 1) outError("Wrong number of rate categories");
         }
+        // add padding postition if using +GC
+        end_pos = is_continuous_gamma ? 1 : end_pos;
+        // avoid using continuous Gamma without AliSim
+        if (is_continuous_gamma && !params.alisim_active)
+            outError("Sorry! Currently, continuous Gamma model is only supported to simulate alignments with AliSim.");
         if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] == OPEN_BRACKET) {
             close_bracket = rate_str.find(CLOSE_BRACKET, posG);
             if (close_bracket == string::npos)
@@ -811,6 +840,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         } else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
             outError("Wrong model name ", rate_str);
     }
+    // if not using Gamma, make sure is_continuous_gamma = false;
+    else
+        is_continuous_gamma = false;
     if (posR != string::npos) {
         // FreeRate model
         int end_pos = 0;
