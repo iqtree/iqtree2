@@ -352,6 +352,28 @@ void AliSimulatorHeterogeneity::getSiteSpecificRatesDiscrete(vector<short int> &
     // convert the probability matrix of rate categories into an accumulated probability matrix of rate categories
     convertProMatrixIntoAccumulatedProMatrix(category_probability_matrix, 1, num_rate_categories);
     
+    // BUG FIXED
+    // normallize the accumulated probability matrix if sum of the weights of all categories is less than 1
+    if (category_probability_matrix[num_rate_categories - 1] + tree->getRate()->getPInvar() < 1)
+    {
+        outWarning("Normalizing weights of rate categories so that sum of them is 1!");
+        double inverse_sum = 1.0 / (category_probability_matrix[num_rate_categories - 1] + tree->getRate()->getPInvar());
+        double prev_accumulated_weight = 0;
+        for (int i = 0; i < num_rate_categories - 1; i++)
+        {
+            category_probability_matrix[i] *= inverse_sum;
+            
+            // update the weight of the rate category
+            tree->getRate()->setProp(i, category_probability_matrix[i] - prev_accumulated_weight);
+            prev_accumulated_weight = category_probability_matrix[i];
+        }
+        
+        // update the weight for the last rate category
+        category_probability_matrix[num_rate_categories - 1] = 1 - tree->getRate()->getPInvar();
+        tree->getRate()->setProp(num_rate_categories - 1, category_probability_matrix[num_rate_categories - 1] - prev_accumulated_weight);
+        
+    }
+    
     // initialize the site-specific rates
     for (int i = 0; i < sequence_length; i++)
     {
