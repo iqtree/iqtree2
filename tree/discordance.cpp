@@ -621,6 +621,51 @@ void PhyloTree::computeAllAncestralSiteConcordance() {
     printNexus(str, WT_BR_LEN, "See " + filename + " for branch annotation meanings." +
                      " This file is best viewed in FigTree.");
     cout << "Annotated tree (best viewed in FigTree) written to " << str << endl;
+    str = prefix + ".cf.branch";
+    printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
+    cout << "Tree with branch IDs written to " << str << endl;
+    ofstream out;
+    out.open(filename.c_str());
+    out << "# Concordance factor statistics" << endl
+        << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#   tab=read.table('" <<  filename << "',header=TRUE)" << endl
+        << "# Columns are tab-separated with following meaning:" << endl
+        << "#   ID: Branch ID" << endl;
+    map<string,string>::iterator mit;
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] != '*')
+            out << "#   " << mit->first << ": " << mit->second << endl;
+    out << "#   Label: Existing branch label" << endl;
+    out << "#   Length: Branch length" << endl;
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] == '*')
+            out << "# " << mit->first << ": " << mit->second << endl;
+    out << "ID";
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] != '*')
+            out << "\t" << mit->first;
+    out << "\tLabel\tLength" << endl;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        int ID = brit->second->id;
+        out << ID;
+        for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+            if (mit->first[0] == '*')
+                continue; // ignore NOTES
+            out << '\t';
+            string val;
+            if (branch->getAttr(mit->first, val))
+                out << val;
+            else
+                out << "NA";
+        }
+        double length = branch->length;
+        string label;
+        GET_ATTR(branch, label);
+        out << '\t' << label << '\t' << length << endl;
+    }
+    out.close();
+    cout << "Concordance factors per branch printed to " << filename << endl;
 
 }
 
