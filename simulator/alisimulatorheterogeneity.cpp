@@ -58,17 +58,31 @@ void AliSimulatorHeterogeneity::intializeSiteSpecificModelIndex(int sequence_len
             // get the weights of model components
             bool isFused = model->isFused();
             mixture_max_weight_pos = 0;
-            for (int i = 0; i < num_models; i++)
+            
+            // fused model, take the weight from site_rate
+            if (isFused)
             {
-                // fused model, take the weight from site_rate
-                if (isFused)
-                    mixture_accumulated_weight[i] = tree->getRate()->getProp(i) / (1.0 - tree->getRate()->getPInvar());
-                else
+                double fused_denominator = 1.0 / (1.0 - tree->getRate()->getPInvar());
+                for (int i = 0; i < num_models; i++)
+                {
+                    mixture_accumulated_weight[i] = tree->getRate()->getProp(i) * fused_denominator;
+                    
+                    // finding the max probability position
+                    if (mixture_accumulated_weight[i] > mixture_accumulated_weight[mixture_max_weight_pos])
+                        mixture_max_weight_pos = i;
+                }
+            }
+            // otherwise, non-fused models -> take the mixture weight
+            else
+            {
+                for (int i = 0; i < num_models; i++)
+                {
                     mixture_accumulated_weight[i] = model->getMixtureWeight(i);
-                
-                // finding the max probability position
-                if (mixture_accumulated_weight[i] > mixture_accumulated_weight[mixture_max_weight_pos])
-                    mixture_max_weight_pos = i;
+                    
+                    // finding the max probability position
+                    if (mixture_accumulated_weight[i] > mixture_accumulated_weight[mixture_max_weight_pos])
+                        mixture_max_weight_pos = i;
+                }
             }
                 
             // convert the model_prop into an accumulated model_prop

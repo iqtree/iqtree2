@@ -2563,12 +2563,15 @@ void AliSimulator::extractRatesJMatrix(ModelSubst *model)
         // convert Q_Matrix to J_Matrix;
         int starting_index_J = starting_index_sub_rates * max_num_states;
         for (int i = 0; i < max_num_states; i++)
-        for (int j = 0; j < max_num_states; j++)
         {
-            if (i == j)
-                Jmatrix[starting_index_J+i*max_num_states+j] = 0;
-            else
-                Jmatrix[starting_index_J+i*max_num_states+j] = tmp_Q_matrix[i*max_num_states+j]/sub_rates[starting_index_sub_rates + i];
+            double denominator = 1.0 / sub_rates[starting_index_sub_rates + i];
+            for (int j = 0; j < max_num_states; j++)
+            {
+                if (i == j)
+                    Jmatrix[starting_index_J+i*max_num_states+j] = 0;
+                else
+                    Jmatrix[starting_index_J+i*max_num_states+j] = tmp_Q_matrix[i*max_num_states+j] * denominator;
+            }
         }
     }
     
@@ -2667,7 +2670,7 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
     while (branch_length > 0)
     {
         // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
-        double waiting_time = random_double_exponential_distribution(1/total_event_rate, rstream);
+        double waiting_time = random_double_exponential_distribution(1.0 / total_event_rate, rstream);
         
         if (waiting_time > branch_length)
             break;
