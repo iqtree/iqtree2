@@ -421,6 +421,7 @@ public:
     int expected_num_sites;
     double partition_rate;
     double length_ratio = 1;
+    double inverse_length_ratio = 1;
     short int max_length_taxa_name = 10;
     vector<FunDi_Item> fundi_items;
     short int STATE_UNKNOWN;

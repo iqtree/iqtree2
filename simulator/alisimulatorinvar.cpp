@@ -17,6 +17,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     params = alisimulator->params;
     num_sites_per_state = alisimulator->num_sites_per_state;
     length_ratio = alisimulator->length_ratio;
+    inverse_length_ratio = alisimulator->inverse_length_ratio;
     expected_num_sites = alisimulator->expected_num_sites;
     partition_rate = alisimulator->partition_rate;
     invariant_proportion = invar_prop;

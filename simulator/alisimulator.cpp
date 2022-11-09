@@ -470,12 +470,13 @@ void AliSimulator::removeConstantSites(){
     // dummy variables
     int num_variant_states = -1;
     vector<short int> variant_state_mask;
+    int rounded_length = round(expected_num_sites * inverse_length_ratio);
     
     // create a variant state mask
-    createVariantStateMask(variant_state_mask, num_variant_states, round(expected_num_sites/length_ratio), tree->root, tree->root);
+    createVariantStateMask(variant_state_mask, num_variant_states, rounded_length, tree->root, tree->root);
     
     // return error if num_variant_states is less than the expected_num_variant_states
-    if (num_variant_states < round(expected_num_sites/length_ratio)){
+    if (num_variant_states < rounded_length){
         outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(length_ratio));
     }
     
@@ -504,6 +505,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> &variant_state_mask, No
         
         // initialize the number of variant sites
         int num_variant_states = 0;
+        int rounded_length = round(expected_num_sites * inverse_length_ratio);
         
         // browse sites one by one
         for (int i = 0; i < node->sequence->sequence_chunks[0].size(); i++)
@@ -516,7 +518,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> &variant_state_mask, No
                 
                 // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
                 // keep checking if Indels is used
-                if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
+                if (num_variant_states >= rounded_length && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
                     break;
             }
         
@@ -828,7 +830,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 if (params->aln_output_format != IN_FASTA)
                 {
                     int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
+                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites * inverse_length_ratio) * num_sites_per_state) + "\n";
                     *single_output << first_line;
                 }
                 if (!params->do_compression)
@@ -1175,7 +1177,7 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     
     default_segment_length = sequence_length / num_simulating_threads;
     seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
-    output_line_length = round(expected_num_sites / length_ratio) * num_sites_per_state + 1 + seq_name_length;
+    output_line_length = round(expected_num_sites * inverse_length_ratio) * num_sites_per_state + 1 + seq_name_length;
     
     // reset num_thread_done
     num_thread_done = 0;
@@ -1287,12 +1289,12 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 // -> with merging step -> the first line will be output later when merging output files
                 if (num_threads == 1
                     || (num_threads > 1 && params->no_merge))
-                    *out << num_leaves << " " << round(actual_segment_length / length_ratio) * num_sites_per_state << endl;
+                    *out << num_leaves << " " << round(actual_segment_length * inverse_length_ratio) * num_sites_per_state << endl;
             }
             // if using AliSim-OpenMP-IM algorithm
             else
             {
-                first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites/length_ratio)*num_sites_per_state) + "\n";
+                first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites * inverse_length_ratio) * num_sites_per_state) + "\n";
                 *out << first_line;
             }
         }
@@ -1660,7 +1662,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             if ((*it)->node->isLeaf())
             {
                 // init a default sequence str
-                int sequence_length = round(expected_num_sites/length_ratio);
+                int sequence_length = round(expected_num_sites * inverse_length_ratio);
                 string output(segment_length * num_sites_per_state, '-');
                 
                 // convert numerical states into readable characters
@@ -1680,7 +1682,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
             {
                 // init a default sequence str
-                int sequence_length = round(expected_num_sites/length_ratio);
+                int sequence_length = round(expected_num_sites * inverse_length_ratio);
                 string output(segment_length * num_sites_per_state, '-');
                 
                 // convert numerical states into readable characters
@@ -1701,7 +1703,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
         if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
         {
             // init a default sequence str
-            int sequence_length = round(expected_num_sites/length_ratio);
+            int sequence_length = round(expected_num_sites * inverse_length_ratio);
             string output(segment_length * num_sites_per_state, '-');
             
             // convert numerical states into readable characters
@@ -1966,7 +1968,7 @@ void AliSimulator::validataSeqLengthCodon()
 *  update the expected_num_sites due to the change of the sequence_length
 */
 void AliSimulator::refreshExpectedNumSites(){
-    expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+    expected_num_sites = round(params->alisim_sequence_length / num_sites_per_state * length_ratio);
 }
 
 /**
@@ -1976,6 +1978,7 @@ void AliSimulator::estimateLengthRatio()
 {
     // By default (without +ASC), length_ratio is set at 1
     length_ratio = 1;
+    inverse_length_ratio = 1;
         
     // Handle the case with +ASC
     if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
@@ -2045,6 +2048,9 @@ void AliSimulator::estimateLengthRatio()
             // update the length_ratio with a 10% (0.1) additional length_ratio (for backup purpose)
             length_ratio = 1/(1-estimated_length_ratio) + 0.1;
         }
+        
+        // compute inverse_length_ratio
+        inverse_length_ratio = 1.0 / length_ratio;
     }
 }
 

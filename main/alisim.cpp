@@ -1034,7 +1034,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
     // other cases (without partitions), just write sequences to a single file
     else
     {
-        int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
+        int sequence_length = round(alisimulator->expected_num_sites * alisimulator->inverse_length_ratio);
         
         // determine the real sequence_length if Indels is used
         if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
@@ -1153,7 +1153,7 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
         seq_names = tmp_aln->getSeqNames();
 
         // show a warning if the length of input alignment is unequal to that of simulated sequence
-        int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
+        int sequence_length = round(alisimulator->expected_num_sites * alisimulator->inverse_length_ratio);
         if (sequences.size() > 0 && sequences[0].length() != sequence_length*alisimulator->num_sites_per_state)
             outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
         
