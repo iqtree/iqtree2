@@ -96,7 +96,7 @@ protected:
     /**
     *  convert an probability matrix into an accumulated probability matrix
     */
-    void convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns);
+    void convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns, bool force_round_1 = true);
 
     /**
     *  binary search an item from a set with accumulated probability array
