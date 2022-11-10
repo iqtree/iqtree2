@@ -123,7 +123,7 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             tree->getTaxaName(super_taxa_names);
         
         // compute super_tree_length
-        double super_tree_length = ((PhyloSuperTree*) tree)->treeLength();
+        double inverse_super_tree_length = 1.0 / ((PhyloSuperTree*) tree)->treeLength();
         
         // sum of rate*n_sites and total sites (for rate normalization)
         double sum = 0;
@@ -191,12 +191,12 @@ void AliSimulator::initializeIQTreeFromTreeFile()
                 if (current_tree_length <= 0)
                     outError("Please specify tree length for each partition in the input NEXUS file.");
                 else
-                    ((PhyloSuperTree*) tree)->part_info[i].part_rate = current_tree_length/super_tree_length;
+                    ((PhyloSuperTree*) tree)->part_info[i].part_rate = current_tree_length * inverse_super_tree_length;
                 
                 // update sum of rate*n_sites and num_sites (for rate normalization)
                 sum += ((PhyloSuperTree*) tree)->part_info[i].part_rate * current_tree->aln->getNSite();
                 if (current_tree->aln->seq_type == SEQ_CODON && ((PhyloSuperTree*) tree)->rescale_codon_brlen)
-                    num_sites += 3*current_tree->aln->getNSite();
+                    num_sites += 3 * current_tree->aln->getNSite();
                 else
                     num_sites += current_tree->aln->getNSite();
             }
@@ -847,6 +847,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             int line_num = 0;
             string line;
             uint64_t pos = 0;
+            double inverse_num_threads = 1.0 / num_threads;
             
             // open all files
             for (int i = 0; i < input_streams.size(); i++)
@@ -870,13 +871,15 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                     input_streams[i].seekg(0, input_streams[i].end);
                     uint64_t length = input_streams[i].tellg();
                     int total_num_lines = length/line_length;
-                    average_num_lines_per_thread = total_num_lines/num_threads;
-                    
-                    // compute actual_num_lines_per_thread
-                    actual_num_lines_per_thread = thread_id < num_threads - 1 ? average_num_lines_per_thread : total_num_lines - (thread_id * average_num_lines_per_thread);
+                    average_num_lines_per_thread = total_num_lines * inverse_num_threads;
                     
                     // compute the starting line number
                     pos = thread_id * average_num_lines_per_thread;
+                    
+                    // compute actual_num_lines_per_thread
+                    actual_num_lines_per_thread = thread_id < (num_threads - 1) ? average_num_lines_per_thread : total_num_lines - pos;
+                    
+                    
                 }
                 // set start position
                 input_streams[i].seekg(pos * line_length);
@@ -1868,7 +1871,7 @@ void AliSimulator::convertProMatrixIntoAccumulatedProMatrix(double *probability_
     for (int r = 0; r < num_rows; r++, probability_maxtrix_pointer += num_columns)
     {
         for (int c = 1; c < num_columns; c++)
-            probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c-1];
+            probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c - 1];
     }
     
     // force rounding the last entry of each row to one to avoid potential bug due to numerical precision, e.g, 0.99999999 < 1
@@ -1912,7 +1915,7 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accum
         return -1; // return -1 ~ not found
     
     // compute the center index
-    int center = (start + end)/2;
+    int center = (start + end) * 0.5;
     
     // if item is found at the center index -> return result
     if ((random_number <= accumulated_probability_maxtrix[center])
@@ -1937,7 +1940,7 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(vector<double
         return -1; // return -1 ~ not found
     
     // compute the center index
-    int center = (start + end)/2;
+    int center = (start + end) * 0.5;
     
     // if item is found at the center index -> return result
     if ((random_number <= accumulated_probability_maxtrix[center])
@@ -2052,7 +2055,7 @@ void AliSimulator::estimateLengthRatio()
                 estimated_length_ratio = 0.5;
             
             // update the length_ratio with a 10% (0.1) additional length_ratio (for backup purpose)
-            length_ratio = 1/(1-estimated_length_ratio) + 0.1;
+            length_ratio = 1.0 / (1 - estimated_length_ratio) + 0.1;
         }
         
         // compute inverse_length_ratio
@@ -2172,7 +2175,7 @@ void AliSimulator::selectAndPermuteSites(vector<FunDi_Item> &fundi_items, double
     
     // dummy variables
     IntVector tmp_selected_sites;
-    int num_selected_sites = round(proportion*num_sites);
+    int num_selected_sites = round(proportion * num_sites);
     
     // select random unique sites one by one
     for (int i = 0; i < num_selected_sites; i++)
@@ -2671,8 +2674,9 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
         // constant indel-rates
         if (!params->indel_rate_variation)
         {
-            total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
-            total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+            int tmp_num = sequence_length - num_gaps;
+            total_ins_rate = params->alisim_insertion_ratio * (tmp_num + 1);
+            total_del_rate = params->alisim_deletion_ratio * (tmp_num - 1 + computeMeanDelSize(sequence_length));
         }
         // indel-rate variation
         else
@@ -3201,7 +3205,7 @@ void AliSimulator::computeSwitchingParam(int seq_length)
         }
         
         // compute the switching param
-        params->alisim_simulation_thresh = a/seq_length;
+        params->alisim_simulation_thresh = a / seq_length;
     }
 }
 
@@ -3497,11 +3501,12 @@ void AliSimulator::separateSeqIntoChunks(Node* node)
         node->sequence->sequence_chunks[0].resize(default_segment_length);
         
         // clone other chunks
-        for (int i = 1; i < num_simulating_threads; i++)
+        int starting_index = default_segment_length;
+        for (int i = 1; i < num_simulating_threads; i++, starting_index += default_segment_length)
         {
             int actual_segment_length = i < num_simulating_threads - 1 ? default_segment_length : expected_num_sites - (num_simulating_threads - 1) * default_segment_length;
             node->sequence->sequence_chunks[i].resize(actual_segment_length);
-            int starting_index = i * default_segment_length;
+            
             for (int j = 0; j < actual_segment_length; j++)
                 node->sequence->sequence_chunks[i][j] = root_seq[starting_index + j];
         }

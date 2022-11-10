@@ -41,7 +41,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
 void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
 {
     // rescale ratio due to invariant sites
-    double scale = 1.0/(1 - invariant_proportion);
+    double scale = 1.0 / (1 - invariant_proportion);
     
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate * params->alisim_branch_scale * (*it)->length * scale, trans_matrix);

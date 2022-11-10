@@ -998,7 +998,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                             
                             // output actual sequence length of the current partition
                             string partition_name = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::name;
-                            cout << partition_name << ": " << real_sequence_length * (current_tree->aln->seq_type == SEQ_CODON?3:1) << endl;
+                            cout << partition_name << ": " << (current_tree->aln->seq_type == SEQ_CODON ? (real_sequence_length * 3) : real_sequence_length) << endl;
                             
                             if (num_inserted_sites > 0)
                             {
@@ -1268,7 +1268,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     // dummy variables
     GenomeTree* genome_tree = NULL;
     Insertion* previous_insertion = NULL;
-    int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON?3:1;
+    int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON ? 3 : 1;
     int seq_length_times_num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length;
     int rebuild_indel_his_step = alisimulator->params->rebuild_indel_history_param * alisimulator->tree->leafNum;
     int rebuild_indel_his_thresh = rebuild_indel_his_step;
