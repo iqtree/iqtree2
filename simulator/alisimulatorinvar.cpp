@@ -58,6 +58,8 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segmen
             node_seq_chunk[i] = dad_seq_chunk[i];
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {
+            // NHANLT: potential improvement
+            // cache parent_state * max_num_states
             int parent_state = dad_seq_chunk[i];
             node_seq_chunk[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, parent_state * max_num_states, max_num_states, parent_state, rstream);
         }

@@ -706,8 +706,9 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
     }
     
     // normalize the frequencies so that sum of them is 1
+    sum = 1.0 / sum;
     for (int i = 0; i < max_num_states; i++)
-    base_frequencies[i] /= sum;
+        base_frequencies[i] *= sum;
 }
 
 /**
@@ -772,7 +773,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
         
         // initialize trans_matrix
-        double *trans_matrix = new double[max_num_states*max_num_states];
+        double *trans_matrix = new double[max_num_states * max_num_states];
         simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
         
         // delete trans_matrix array
@@ -1040,7 +1041,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         else
         {
             // initialize trans_matrix
-            double *trans_matrix = new double[max_num_states*max_num_states];
+            double *trans_matrix = new double[max_num_states * max_num_states];
             simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
             
             // delete trans_matrix array
@@ -1210,8 +1211,9 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     
     // initialize sub_rates, J_Matrix from Q_matrix
     int num_mixture_models = model->getNMixtures();
-    sub_rates = new double[num_mixture_models*max_num_states];
-    Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
+    int num_mixtures_times_num_states = num_mixture_models * max_num_states;
+    sub_rates = new double[num_mixtures_times_num_states];
+    Jmatrix = new double[num_mixtures_times_num_states * max_num_states];
     extractRatesJMatrix(model);
     
     // init genome_tree, and the initial empty insertion for root if using Indels
@@ -2567,29 +2569,34 @@ void AliSimulator::extractRatesJMatrix(ModelSubst *model)
 {
     // get num_mixture_models
     int num_mixture_models = model->getNMixtures();
-    double* tmp_Q_matrix = new double[max_num_states*max_num_states];
+    int max_num_states_square = max_num_states * max_num_states;
+    double* tmp_Q_matrix = new double[max_num_states_square];
+    int starting_index_sub_rates = 0;
+    int starting_index_J = 0;
+    int max_num_states_plus_one = max_num_states + 1;
     
-    for (int mixture = 0; mixture <num_mixture_models; mixture++)
+    for (int mixture = 0; mixture <num_mixture_models; mixture++, starting_index_sub_rates += max_num_states, starting_index_J += max_num_states_square)
     {
         // get the Rate (Q) Matrix
         model->getQMatrix(tmp_Q_matrix, mixture);
         
         // extract sub rate for each state from q_matrix
-        int starting_index_sub_rates = mixture * max_num_states;
-        for (int i = 0; i < max_num_states; i++)
-            sub_rates[starting_index_sub_rates + i] = - tmp_Q_matrix[i * (max_num_states + 1)];
+        int tmp_Q_matrix_index = 0;
+        for (int i = 0; i < max_num_states; i++, tmp_Q_matrix_index += max_num_states_plus_one)
+            sub_rates[starting_index_sub_rates + i] = - tmp_Q_matrix[tmp_Q_matrix_index];
         
         // convert Q_Matrix to J_Matrix;
-        int starting_index_J = starting_index_sub_rates * max_num_states;
-        for (int i = 0; i < max_num_states; i++)
+        int i_times_max_num_states = 0;
+        for (int i = 0; i < max_num_states; i++, i_times_max_num_states += max_num_states)
         {
             double denominator = 1.0 / sub_rates[starting_index_sub_rates + i];
+            int tmp_index = starting_index_J + i_times_max_num_states;
             for (int j = 0; j < max_num_states; j++)
             {
                 if (i == j)
-                    Jmatrix[starting_index_J+i*max_num_states+j] = 0;
+                    Jmatrix[tmp_index + j] = 0;
                 else
-                    Jmatrix[starting_index_J+i*max_num_states+j] = tmp_Q_matrix[i*max_num_states+j] * denominator;
+                    Jmatrix[tmp_index + j] = tmp_Q_matrix[i_times_max_num_states + j] * denominator;
             }
         }
     }
@@ -2598,7 +2605,7 @@ void AliSimulator::extractRatesJMatrix(ModelSubst *model)
     delete[] tmp_Q_matrix;
     
     // convert Jmatrix to accumulated Jmatrix
-    convertProMatrixIntoAccumulatedProMatrix(Jmatrix, num_mixture_models*max_num_states, max_num_states);
+    convertProMatrixIntoAccumulatedProMatrix(Jmatrix, num_mixture_models * max_num_states, max_num_states);
 }
 
 /**
@@ -2633,7 +2640,7 @@ void AliSimulator::initVariables4RateMatrix(int segment_start, double &total_sub
     
     // update total_sub_rate
     for (int i = 0; i < max_num_states; i++)
-        total_sub_rate += sub_rate_count[i]*sub_rates[i];
+        total_sub_rate += sub_rate_count[i] * sub_rates[i];
 }
 
 /**
@@ -2907,9 +2914,10 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
         sub_rate_by_site.insert(sub_rate_by_site.begin()+position, length, 0);
         for (int i = position; i < position + length; i++)
         {
-            int mixture_index = site_specific_model_index.size() == 0? 0:site_specific_model_index[i];
-            double site_rate = site_specific_rates.size() > 0?site_specific_rates[i]:1;
-            sub_rate_by_site[i] = site_rate*sub_rates[mixture_index*max_num_states + indel_sequence[i]];
+            // NHANLT: potential improvement
+            // cache site_specific_model_index[i] * max_num_states
+            double sub_rate_from_model = site_specific_model_index.size() == 0 ? sub_rates[indel_sequence[i]] : sub_rates[site_specific_model_index[i] * max_num_states + indel_sequence[i]];
+            sub_rate_by_site[i] = site_specific_rates.size() > 0 ? (site_specific_rates[i] * sub_rate_from_model) : sub_rate_from_model;
             sub_rate_change += sub_rate_by_site[i];
         }
         
@@ -3021,12 +3029,13 @@ void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<
             mixture_index = site_specific_model_index[segment_start + pos];
     }
     
-    int starting_index = mixture_index*max_num_states*max_num_states + max_num_states*current_state;
-    indel_sequence[pos] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(Jmatrix, starting_index, max_num_states, max_num_states/2, rstream);
+    int mixture_index_times_num_states = (mixture_index == 0 ? 0 : (mixture_index * max_num_states));
+    int starting_index = (mixture_index_times_num_states + current_state) * max_num_states;
+    indel_sequence[pos] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(Jmatrix, starting_index, max_num_states, max_num_states * 0.5, rstream);
     
     // update total_sub_rate
-    double current_site_rate = site_specific_rates.size() == 0 ? 1 : site_specific_rates[segment_start + pos];
-    double sub_rate_change = current_site_rate*(sub_rates[mixture_index*max_num_states + indel_sequence[pos]] - sub_rates[mixture_index*max_num_states + current_state]);
+    double sub_rate_change = sub_rates[mixture_index_times_num_states + indel_sequence[pos]] - sub_rates[mixture_index_times_num_states + current_state];
+    sub_rate_change = (site_specific_rates.size() == 0 ? sub_rate_change : (sub_rate_change * site_specific_rates[segment_start + pos]));
     total_sub_rate += sub_rate_change;
     
     // update sub_rate_by_site

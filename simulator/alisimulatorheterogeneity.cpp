@@ -154,7 +154,7 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
     int num_states = tree->aln->getMaxNumStates();
     
     // initialize base frequencies maxtrix
-    double * base_freqs_all_components = new double[num_models*num_states];
+    double * base_freqs_all_components = new double[num_models * num_states];
     double * base_freqs_one_component = new double[num_states];
     
     // retrieve base frequencies of each model component
@@ -176,11 +176,14 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
     
     // re-generate the sequence
     vector <short int> new_sequence(length, num_states);
+    int num_states_minus_one = num_states - 1;
     for (int i = 0; i < length; i++)
     {
         double rand_num = random_double();
-        int starting_index = new_site_specific_model_index[i]*num_states;
-        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(base_freqs_all_components, rand_num, starting_index, starting_index + num_states - 1, starting_index) - starting_index;
+        // NHANLT: potential improvement
+        // cache new_site_specific_model_index[i]*num_states
+        int starting_index = new_site_specific_model_index[i] * num_states;
+        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(base_freqs_all_components, rand_num, starting_index, starting_index + num_states_minus_one, starting_index) - starting_index;
     }
     
     // delete base_freqs_one_component
@@ -199,7 +202,7 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
     int nmixture = tree->getModel()->getNMixtures();
     if (!ptn_state_freq)
     {
-        ptn_state_freq = new double[nptn*max_num_states];
+        ptn_state_freq = new double[nptn * max_num_states];
         
         SiteFreqType tmp_site_freq_type = tree->params->print_site_state_freq;
         tree->params->print_site_state_freq = WSF_POSTERIOR_MEAN;
@@ -228,8 +231,9 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPoste
     if (!ptn_accumulated_state_freq)
     {
         int nptn = tree->aln->getNPattern();
-        ptn_accumulated_state_freq = new double[nptn*max_num_states];
-        memcpy(ptn_accumulated_state_freq, ptn_state_freq, nptn*max_num_states* sizeof(double));
+        int nptn_times_max_num_states = nptn * max_num_states;
+        ptn_accumulated_state_freq = new double[nptn_times_max_num_states];
+        memcpy(ptn_accumulated_state_freq, ptn_state_freq, nptn_times_max_num_states * sizeof(double));
         
         // convert ptn_state_freq to ptn_accumulated_state_freq
         convertProMatrixIntoAccumulatedProMatrix(ptn_accumulated_state_freq, nptn, max_num_states);
@@ -237,14 +241,15 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModelPoste
     
     // re-generate the sequence
     vector <short int> new_sequence(length, max_num_states);
+    int max_num_states_minus_one = max_num_states - 1;
     for (int i = 0; i < length; i++)
     {
         double rand_num = random_double();
         // extract pattern id from site id
         int site_pattern_id = site_to_patternID[i];
         
-        int starting_index = site_pattern_id*max_num_states;
-        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_accumulated_state_freq, rand_num, starting_index, starting_index + max_num_states - 1, starting_index) - starting_index;
+        int starting_index = site_pattern_id * max_num_states;
+        new_sequence[i] = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_accumulated_state_freq, rand_num, starting_index, starting_index + max_num_states_minus_one, starting_index) - starting_index;
     }
     
     // delete ptn_accumulated_state_freq if we don't need to use it for handling insertions (in Indels)
@@ -290,7 +295,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
             double branch_length_by_category = rate_heterogeneity->isHeterotachy()?branch_lengths[category_index]:branch_lengths[0];
             
             // compute the transition matrix
-            model->computeTransMatrix(combine_rate*branch_length_by_category*rate, trans_matrix, model_index);
+            model->computeTransMatrix(combine_rate * branch_length_by_category * rate, trans_matrix, model_index);
             
             // copy the transition matrix to the cache_trans_matrix
             for (int trans_index = 0; trans_index < num_state_square; trans_index++)
@@ -299,7 +304,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
     }
     
     // convert cache_trans_matrix into an accumulated cache_trans_matrix
-    convertProMatrixIntoAccumulatedProMatrix(cache_trans_matrix, num_models*num_rate_categories*max_num_states, max_num_states);
+    convertProMatrixIntoAccumulatedProMatrix(cache_trans_matrix, num_models * num_rate_categories * max_num_states, max_num_states);
 }
 
 /**
@@ -308,12 +313,18 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
 int AliSimulatorHeterogeneity::estimateStateFromAccumulatedTransMatrices(double *cache_trans_matrix, double site_specific_rate, int site_index, int num_rate_categories, int dad_state, int* rstream)
 {
     // randomly select the state, considering it's dad states, and the accumulated trans_matrices
-    int model_index = site_specific_model_index[site_index];
-    int category_index = site_specific_rate_index[site_index];
-    int starting_index = ((model_index * num_rate_categories + category_index) * max_num_states + dad_state) * max_num_states;
+    int model_index_times_num_rate_categories = site_specific_model_index[site_index];
+    if (model_index_times_num_rate_categories > 0)
+        model_index_times_num_rate_categories *= num_rate_categories;
     
-    ASSERT(category_index > RATE_ZERO_INDEX);
+    int starting_index = site_specific_rate_index[site_index];
+    ASSERT(starting_index > RATE_ZERO_INDEX);
+    starting_index += model_index_times_num_rate_categories;
+    if (starting_index > 0)
+        starting_index *= max_num_states;
     
+    starting_index = (starting_index + dad_state) * max_num_states;
+  
     return getRandomItemWithAccumulatedProbMatrixMaxProbFirst(cache_trans_matrix, starting_index, max_num_states, dad_state, rstream);
 }
 
@@ -337,7 +348,7 @@ int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *
     if (model->isMixture() && model->isMixtureSameQ() && params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)
     {
         ASSERT(site_to_patternID.size() > site_index && ptn_state_freq);
-        double *tmp_state_freqs = ptn_state_freq + site_to_patternID[site_index]*max_num_states;
+        double *tmp_state_freqs = ptn_state_freq + site_to_patternID[site_index] * max_num_states;
         #ifdef _OPENMP
         #pragma omp critical
         #endif
@@ -351,8 +362,10 @@ int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *
     else
         model->computeTransMatrix(combine_rate*branch_length*rate, trans_matrix, model_component_index, dad_state);
     
+    // NHANLT: potential improvement
+    // cache dad_state * max_num_states
     // iteratively select the state, considering it's dad states, and the transition_probability_matrix
-    int starting_index = dad_state*max_num_states;
+    int starting_index = dad_state * max_num_states;
     return getRandomItemWithProbabilityMatrix(trans_matrix, starting_index, max_num_states, rstream);
 }
 
@@ -580,7 +593,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
         int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
-        double *cache_trans_matrix = new double[num_models*num_rate_categories*max_num_states*max_num_states];
+        double *cache_trans_matrix = new double[num_models * num_rate_categories * max_num_states * max_num_states];
         
         // initialize a set of branch_lengths
         DoubleVector branch_lengths;
@@ -735,28 +748,44 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(int segment_start, doub
     {
         int num_models = tree->getModel()->isMixture()?tree->getModel()->getNMixtures():1;
         int num_rate_categories  = tree->getRateName().empty()?1:rate_heterogeneity->getNDiscreteRate();
-        int total_elements = num_models*num_rate_categories*max_num_states;
+        int total_elements = num_models * num_rate_categories * max_num_states;
         double *cache_sub_rates = new double[total_elements];
         vector<int> sub_rate_count(total_elements, 0);
         
         // initialize cache_sub_rates
         bool fuse_mixture_model = (tree->getModel()->isMixture() && tree->getModel()->isFused());
-        for (int model_index = 0; model_index < num_models; model_index++)
-        for (int rate_category_index = 0; rate_category_index < num_rate_categories; rate_category_index++)
+        int overall_index = 0;
+        int model_index_times_num_states = 0;
+
+        for (int model_index = 0; model_index < num_models; model_index++, model_index_times_num_states += max_num_states)
         {
-            // skip computing unused cache_sub_rates if a mixture with fused site rate is used
-            if (fuse_mixture_model && model_index != rate_category_index)
-                continue;
-            
-            // extract site's rate
-            double rate = rate_heterogeneity->getNRate() == 1?1:rate_heterogeneity->getRate(rate_category_index);
-            
-            // compute cache_sub_rates
-            for (int state = 0; state < max_num_states; state++)
-                cache_sub_rates[model_index*num_rate_categories*max_num_states + rate_category_index*max_num_states + state] = sub_rates[model_index * max_num_states + state]*rate;
+            for (int rate_category_index = 0; rate_category_index < num_rate_categories; rate_category_index++, overall_index += max_num_states)
+            {
+                // skip computing unused cache_sub_rates if a mixture with fused site rate is used
+                if (fuse_mixture_model && model_index != rate_category_index)
+                    continue;
+                
+                // extract site's rate
+                double rate = rate_heterogeneity->getNRate() == 1 ? 1 : rate_heterogeneity->getRate(rate_category_index);
+                
+                // compute cache_sub_rates
+                if (rate == 1)
+                {
+                    for (int state = 0; state < max_num_states; state++)
+                        cache_sub_rates[overall_index + state] = sub_rates[model_index_times_num_states + state];
+                }
+                else
+                {
+                    for (int state = 0; state < max_num_states; state++)
+                        cache_sub_rates[overall_index + state] = sub_rates[model_index_times_num_states + state] * rate;
+                }
+            }
         }
         
+        // NHANLT: potential improvement
+        // cache rate_index * max_num_states
         // compute sub_rate_by_site
+        int num_categories_times_num_states = num_rate_categories * max_num_states;
         for (int i = 0; i < sequence.size(); i++)
         {
             // not compute the substitution rate for gaps/deleted sites or constant sites
@@ -767,7 +796,7 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(int segment_start, doub
                 int rate_index = site_specific_rate_index[segment_start + i];
                 
                 // update sub_rate_by_site for the current site
-                int index = model_index*num_rate_categories*max_num_states + rate_index*max_num_states + sequence[i];
+                int index = (model_index == 0 ? 0 : (model_index * num_categories_times_num_states)) + (rate_index == 0 ? 0 : (rate_index * max_num_states)) + sequence[i];
                 sub_rate_count[index]++;
                 sub_rate_by_site[i] = cache_sub_rates[index];
             }
@@ -790,16 +819,19 @@ void AliSimulatorHeterogeneity::initVariables4RateMatrix(int segment_start, doub
     // otherwise, sub_rate_by_site for all sites one by one
     else
     {
-        for (int i = 0; i < sequence.size(); i++)
+        int segment_start_plus_i = segment_start;
+        for (int i = 0; i < sequence.size(); i++, ++segment_start_plus_i)
         {
             // not compute the substitution rate for gaps/deleted sites or constant sites
-            if (sequence[i] != STATE_UNKNOWN && site_specific_rates[segment_start + i] != 0)
+            if (sequence[i] != STATE_UNKNOWN && site_specific_rates[segment_start_plus_i] != 0)
             {
                 // get the mixture model index
-                int model_index = site_specific_model_index[segment_start + i];
+                int model_index_times_num_states = site_specific_model_index[segment_start_plus_i];
+                model_index_times_num_states = model_index_times_num_states == 0 ? 0 : (model_index_times_num_states * max_num_states);
+
                 
                 // update sub_rate_by_site for the current site
-                sub_rate_by_site[i] = sub_rates[model_index * max_num_states + sequence[i]]*site_specific_rates[segment_start + i];
+                sub_rate_by_site[i] = sub_rates[model_index_times_num_states + sequence[i]] * site_specific_rates[segment_start_plus_i];
             }
             else
             {
