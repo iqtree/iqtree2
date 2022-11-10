@@ -1,0 +1,75 @@
+\href{https://github.com/Cibiv/IQ-TREE/releases}{\texttt{ }} \href{https://anaconda.org/bioconda/iqtree}{\texttt{ }} \href{https://travis-ci.org/bqminh/IQ-TREE}{\texttt{ }} \href{https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html}{\texttt{ }}
+
+Efficient and versatile phylogenomic software by maximum likelihood \href{http://www.iqtree.org}{\texttt{ http\+://www.\+iqtree.\+org}}\hypertarget{md__r_e_a_d_m_e_autotoc_md0}{}\doxysection{Introduction}\label{md__r_e_a_d_m_e_autotoc_md0}
+The IQ-\/\+TREE software was created as the successor of IQPNNI and \href{http://www.tree-puzzle.de}{\texttt{ TREE-\/\+PUZZLE}} (thus the name IQ-\/\+TREE). IQ-\/\+TREE was motivated by the rapid accumulation of phylogenomic data, leading to a need for efficient phylogenomic software that can handle a large amount of data and provide more complex models of sequence evolution. To this end, IQ-\/\+TREE can utilize multicore computers and distributed parallel computing to speed up the analysis. IQ-\/\+TREE automatically performs checkpointing to resume an interrupted analysis.
+
+As input IQ-\/\+TREE accepts all common sequence alignment formats including PHYLIP, FASTA, Nexus, Clustal and MSF. As output IQ-\/\+TREE will write a self-\/readable report file (name suffix {\ttfamily .iqtree}), a NEWICK tree file ({\ttfamily .treefile}) which can be visualized by tree viewer programs such as \href{http://tree.bio.ed.ac.uk/software/figtree/}{\texttt{ Fig\+Tree}}, \href{http://dendroscope.org}{\texttt{ Dendroscope}} or \href{http://itol.embl.de}{\texttt{ i\+TOL}}.\hypertarget{md__r_e_a_d_m_e_autotoc_md1}{}\doxysection{Key features of IQ-\/\+TREE}\label{md__r_e_a_d_m_e_autotoc_md1}
+
+\begin{DoxyItemize}
+\item {\bfseries{Efficient search algorithm}}\+: Fast and effective stochastic algorithm to reconstruct phylogenetic trees by maximum likelihood. IQ-\/\+TREE compares favorably to RAx\+ML and Phy\+ML in terms of likelihood while requiring similar amount of computing time (\href{http://dx.doi.org/10.1093/molbev/msu300}{\texttt{ Nguyen et al., 2015}}).
+\item {\bfseries{Ultrafast bootstrap}}\+: An ultrafast bootstrap approximation (UFBoot) to assess branch supports. UFBoot is 10 to 40 times faster than RAx\+ML rapid bootstrap and obtains less biased support values (\href{http://dx.doi.org/10.1093/molbev/mst024}{\texttt{ Minh et al., 2013}}).
+\item {\bfseries{Ultrafast model selection}}\+: An ultrafast and automatic model selection (Model\+Finder) which is 10 to 100 times faster than j\+Model\+Test and Prot\+Test. Model\+Finder also finds best-\/fit partitioning scheme like Partition\+Finder (\href{https://doi.org/10.1038/nmeth.4285}{\texttt{ Kalyaanamoorthy et al., 2017}}).
+\item {\bfseries{Phylogenetic testing}}\+: Several fast branch tests like SH-\/a\+LRT and a\+Bayes test (\href{http://dx.doi.org/10.1093/sysbio/syr041}{\texttt{ Anisimova et al., 2011}}) and tree topology tests like the approximately unbiased (AU) test (\href{http://dx.doi.org/10.1080/10635150290069913}{\texttt{ Shimodaira, 2002}}).
+\end{DoxyItemize}
+
+The strength of IQ-\/\+TREE is the availability of a wide variety of phylogenetic models\+:
+
+
+\begin{DoxyItemize}
+\item {\bfseries{Common models}}\+: All \href{http://www.iqtree.org/doc/Substitution-Models}{\texttt{ common substitution models}} for DNA, protein, codon, binary and morphological data with \href{http://www.iqtree.org/doc/Substitution-Models/\#rate-heterogeneity-across-sites}{\texttt{ rate heterogeneity among sites}} and \href{http://www.iqtree.org/doc/Substitution-Models/\#ascertainment-bias-correction}{\texttt{ ascertainment bias correction}} for e.\+g. SNP data.
+\item {\bfseries{\href{http://www.iqtree.org/doc/Complex-Models/\#partition-models}{\texttt{ Partition models}}}}\+: Allowing individual models for different genomic loci (e.\+g. genes or codon positions), mixed data types, mixed rate heterogeneity types, linked or unlinked branch lengths between partitions.
+\item {\bfseries{Mixture Models}}\+: \href{http://www.iqtree.org/doc/Complex-Models/\#mixture-models}{\texttt{ fully customizable mixture models}} and \href{http://www.iqtree.org/doc/Substitution-Models/\#protein-models}{\texttt{ empirical protein mixture models}} and.
+\item {\bfseries{Polymorphism-\/aware models (Po\+Mo)}}\+: \href{http://www.iqtree.org/doc/Polymorphism-Aware-Models}{\texttt{ http\+://www.\+iqtree.\+org/doc/\+Polymorphism-\/\+Aware-\/\+Models}}
+\end{DoxyItemize}\hypertarget{md__r_e_a_d_m_e_autotoc_md2}{}\doxysection{IQ-\/\+TREE web service}\label{md__r_e_a_d_m_e_autotoc_md2}
+For a quick start you can also try the IQ-\/\+TREE web server, which performs online computation using a dedicated computing cluster. It is very easy to use with as few as just 3 clicks! Try it out at
+
+\href{http://iqtree.cibiv.univie.ac.at}{\texttt{ http\+://iqtree.\+cibiv.\+univie.\+ac.\+at}}\hypertarget{md__r_e_a_d_m_e_autotoc_md3}{}\doxysection{User support}\label{md__r_e_a_d_m_e_autotoc_md3}
+Please refer to the \href{http://www.iqtree.org/doc/}{\texttt{ user documentation}} and \href{http://www.iqtree.org/doc/Frequently-Asked-Questions}{\texttt{ frequently asked questions}}. If you have further questions, feedback, feature requests, and bug reports, please sign up the following Google group (if not done yet) and post a topic to the
+
+\href{https://groups.google.com/d/forum/iqtree}{\texttt{ https\+://groups.\+google.\+com/d/forum/iqtree}}
+
+{\itshape The average response time is one working day.}\hypertarget{md__r_e_a_d_m_e_autotoc_md4}{}\doxysection{Citations}\label{md__r_e_a_d_m_e_autotoc_md4}
+When using Model\+Finder please cite\+:
+
+
+\begin{DoxyItemize}
+\item S. Kalyaanamoorthy, B.\+Q. Minh, T.\+K.\+F. Wong, A. von Haeseler, L.\+S. Jermiin (2017) Model\+Finder\+: Fast model selection for accurate phylogenetic estimates. {\itshape Nat. Methods}, 14\+:587-\/589. \href{https://doi.org/10.1038/nmeth.4285}{\texttt{ https\+://doi.\+org/10.\+1038/nmeth.\+4285}}
+\end{DoxyItemize}
+
+When performing tree reconstruction please cite\+:
+
+
+\begin{DoxyItemize}
+\item L.-\/T. Nguyen, H.\+A. Schmidt, A. von Haeseler, and B.\+Q. Minh (2015) IQ-\/\+TREE\+: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. {\itshape Mol. Biol. Evol.}, 32, 268-\/274. \href{https://doi.org/10.1093/molbev/msu300}{\texttt{ https\+://doi.\+org/10.\+1093/molbev/msu300}}
+\end{DoxyItemize}
+
+For the ultrafast bootstrap (UFBoot) please cite\+:
+
+
+\begin{DoxyItemize}
+\item D.\+T. Hoang, O. Chernomor, A. von Haeseler, B.\+Q. Minh, and L.\+S. Vinh (2017) UFBoot2\+: Improving the ultrafast bootstrap approximation. {\itshape Mol. Biol. Evol.}, in press. \href{https://doi.org/10.1093/molbev/msx281}{\texttt{ https\+://doi.\+org/10.\+1093/molbev/msx281}}
+\end{DoxyItemize}
+
+When using posterior mean site frequency model (PMSF) please cite\+:
+
+
+\begin{DoxyItemize}
+\item H.\+C. Wang, B.\+Q. Minh, S. Susko, A.\+J. Roger (in press) Modeling site heterogeneity with posterior mean site frequency profiles accelerates accurate phylogenomic estimation. {\itshape Syst. Biol.} \href{https://doi.org/10.1093/sysbio/syx068}{\texttt{ https\+://doi.\+org/10.\+1093/sysbio/syx068}}
+\end{DoxyItemize}
+
+When using partition models please cite\+:
+
+
+\begin{DoxyItemize}
+\item O. Chernomor, A. von Haeseler, B.\+Q. Minh (2016) Terrace aware data structure for phylogenomic inference from supermatrices. {\itshape Syst. Biol.}, 65\+:997-\/1008. \href{https://doi.org/10.1093/sysbio/syw037}{\texttt{ https\+://doi.\+org/10.\+1093/sysbio/syw037}}
+\end{DoxyItemize}
+
+When using polymorphism-\/aware models please cite\+:
+
+
+\begin{DoxyItemize}
+\item D. Schrempf, B.\+Q. Minh, N. De Maio, A. von Haeseler, C. Kosiol (2016) Reversible polymorphism-\/aware phylogenetic models and their application to tree inference. {\itshape J. Theor. Biol.}, 407\+:362-\/370. \href{https://doi.org/10.1016/j.jtbi.2016.07.042}{\texttt{ https\+://doi.\+org/10.\+1016/j.\+jtbi.\+2016.\+07.\+042}}
+\end{DoxyItemize}\hypertarget{md__r_e_a_d_m_e_autotoc_md5}{}\doxysubsubsection{Credits and Acknowledgements}\label{md__r_e_a_d_m_e_autotoc_md5}
+Some parts of the code were taken from the following packages/libraries\+: \href{http://www.libpll.org}{\texttt{ Phylogenetic likelihood library}}, \href{http://www.tree-puzzle.de}{\texttt{ TREE-\/\+PUZZLE}}, \href{http://dx.doi.org/10.1093/oxfordjournals.molbev.a025808}{\texttt{ BIONJ}}, \href{http://dx.doi.org/10.1093/bioinformatics/btg319}{\texttt{ Nexus Class Libary}}, \href{http://eigen.tuxfamily.org/}{\texttt{ Eigen library}}, \href{http://www.sprng.org}{\texttt{ SPRNG library}}, \href{http://www.zlib.net}{\texttt{ Zlib library}}, \href{http://www.cs.unc.edu/Research/compgeom/gzstream/}{\texttt{ gzstream library}}, \href{http://www.agner.org/optimize/}{\texttt{ vectorclass library}}, \href{https://www.gnu.org/software/gsl/}{\texttt{ GNU scientific library}}.
+
+IQ-\/\+TREE was partially funded by the \href{http://www.fwf.ac.at/}{\texttt{ Austrian Science Fund -\/ FWF}} (grant no. I 760-\/B17 from 2012-\/2015 and and I 2508-\/B29 from 2016-\/2019) and the \href{https://www.univie.ac.at/}{\texttt{ University of Vienna}} (Initiativkolleg I059-\/N). 

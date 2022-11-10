@@ -1383,6 +1383,13 @@ public:
         number of quartets for site concordance factor
      */
     int site_concordance;
+    
+    /**
+        0 (default): do the published sCF (Minh, Matt, Rob 2020)
+        1 to compute site concordance using ancestral states at four surrounding nodes
+        2 to use ancestral state based on separate subtrees
+    */
+    int ancestral_site_concordance;
 
     /**
      TRUE to print concordant sites per partition

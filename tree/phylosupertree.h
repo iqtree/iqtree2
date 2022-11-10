@@ -424,6 +424,15 @@ public:
     virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
+    /**
+        compute ancestral sequence probability for an internal node by partial_lh of that subtree
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    virtual void computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
     virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     /**

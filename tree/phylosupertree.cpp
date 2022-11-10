@@ -1387,6 +1387,33 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
     }
 }
 
+void PhyloSuperTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq)
+{
+    SuperNeighbor *snei = (SuperNeighbor*)dad_branch;
+    SuperNeighbor *snei_back = (SuperNeighbor*)dad_branch->node->findNeighbor(dad);
+    int part = 0;
+    for (auto it = begin(); it != end(); it++, part++) {
+        size_t nptn = (*it)->getAlnNPattern();
+        size_t nstates = (*it)->model->num_states;
+        if (snei->link_neighbors[part]) {
+            (*it)->computeSubtreeAncestralState(snei->link_neighbors[part], (PhyloNode*)snei_back->link_neighbors[part]->node,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+        } else {
+            // branch does not exist in partition tree
+            double eqprob = 1.0/nstates;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                for (size_t i = 0; i < nstates; i++)
+                    ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+                ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
+            }
+        }
+        ptn_ancestral_prob += nptn*nstates;
+        ptn_ancestral_seq += nptn;
+    }
+
+}
+
 void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
     int part = 1;
