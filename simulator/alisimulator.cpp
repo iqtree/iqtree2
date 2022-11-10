@@ -25,9 +25,9 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     estimateLengthRatio();
     
     if (expected_number_sites == -1)
-        expected_num_sites = round(params->alisim_sequence_length/num_sites_per_state*length_ratio);
+        expected_num_sites = (num_sites_per_state == 1 ? round(params->alisim_sequence_length * length_ratio) : round(params->alisim_sequence_length / num_sites_per_state * length_ratio));
     else
-        expected_num_sites = round(expected_number_sites*length_ratio);
+        expected_num_sites = round(expected_number_sites * length_ratio);
     partition_rate = new_partition_rate;
     
     // check if base frequencies for DNA models are specified correctly
@@ -59,9 +59,9 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     estimateLengthRatio();
     
     if (expected_number_sites == -1)
-        expected_num_sites = round(params->alisim_sequence_length/num_sites_per_state*length_ratio);
+        expected_num_sites = (num_sites_per_state == 1 ? round(params->alisim_sequence_length * length_ratio) : round(params->alisim_sequence_length / num_sites_per_state * length_ratio));
     else
-        expected_num_sites = round(expected_number_sites*length_ratio);
+        expected_num_sites = round(expected_number_sites * length_ratio);
     partition_rate = new_partition_rate;
     
     // extract max length of taxa names
@@ -830,7 +830,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 if (params->aln_output_format != IN_FASTA)
                 {
                     int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites * inverse_length_ratio) * num_sites_per_state) + "\n";
+                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(num_sites_per_state == 1 ? round(expected_num_sites * inverse_length_ratio) : (round(expected_num_sites * inverse_length_ratio) * num_sites_per_state)) + "\n";
                     *single_output << first_line;
                 }
                 if (!params->do_compression)
@@ -1177,7 +1177,8 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     
     default_segment_length = sequence_length / num_simulating_threads;
     seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
-    output_line_length = round(expected_num_sites * inverse_length_ratio) * num_sites_per_state + 1 + seq_name_length;
+    output_line_length = round(expected_num_sites * inverse_length_ratio);
+    output_line_length = num_sites_per_state == 1 ? (output_line_length + 1 + seq_name_length) : (output_line_length * num_sites_per_state + 1 + seq_name_length);
     
     // reset num_thread_done
     num_thread_done = 0;
@@ -1590,7 +1591,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
                         string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, force_output_PHYLIP);
-                        string output(sequence_length * num_sites_per_state, '-');
+                        string output(num_sites_per_state == 1 ? sequence_length : (sequence_length * num_sites_per_state), '-');
                         
                         // convert numerical states into readable characters
                         string input_sequence = input_msa[(*it)->node->name];
@@ -1622,7 +1623,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                     {
                         // export pre_output string (containing taxon name and ">" or "space" based on the output format)
                         string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, force_output_PHYLIP);
-                        string output(sequence_length * num_sites_per_state, '-');
+                        string output(num_sites_per_state == 1 ? sequence_length : (sequence_length * num_sites_per_state), '-');
                         
                         // convert numerical states into readable characters
                         string input_sequence = input_msa[node->name];
@@ -1663,7 +1664,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             {
                 // init a default sequence str
                 int sequence_length = round(expected_num_sites * inverse_length_ratio);
-                string output(segment_length * num_sites_per_state, '-');
+                string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
                 
                 // convert numerical states into readable characters
                 string input_sequence = input_msa[(*it)->node->name];
@@ -1683,7 +1684,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             {
                 // init a default sequence str
                 int sequence_length = round(expected_num_sites * inverse_length_ratio);
-                string output(segment_length * num_sites_per_state, '-');
+                string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
                 
                 // convert numerical states into readable characters
                 string input_sequence = input_msa[node->name];
@@ -1704,7 +1705,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
         {
             // init a default sequence str
             int sequence_length = round(expected_num_sites * inverse_length_ratio);
-            string output(segment_length * num_sites_per_state, '-');
+            string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
             
             // convert numerical states into readable characters
             convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
@@ -1767,7 +1768,7 @@ void AliSimulator::outputOneSequence(Node* node, string &output, int thread_id, 
         if (num_threads > 1)
         {
             int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
-            pos += starting_pos + (segment_start * num_sites_per_state) + (thread_id == 0 ? 0 : seq_name_length);
+            pos += starting_pos + (num_sites_per_state == 1 ? segment_start : (segment_start * num_sites_per_state)) + (thread_id == 0 ? 0 : seq_name_length);
             cacheSeqChunkStr(pos, output, thread_id);
         }
         // write output to file
@@ -1995,12 +1996,15 @@ void AliSimulator::estimateLengthRatio()
             
             // initialize a string concatenating all characters of all states (eg, ACGT for DNA)
             string all_characters;
-            all_characters.resize(max_num_states*num_sites_per_state);
-            for (int i = 0; i < max_num_states; i++)
+            all_characters.resize(max_num_states * num_sites_per_state);
+            int index = 0;
+            for (int i = 0; i < max_num_states; i++, index += num_sites_per_state)
             {
                 string characters_from_state = tree->aln->convertStateBackStr(i);
+                // NHANLT: potential improvement
+                // change to use pointer to avoid accessing []
                 for (int j = 0; j < num_sites_per_state; j++)
-                    all_characters[i*num_sites_per_state+j] = characters_from_state[j];
+                    all_characters[index + j] = characters_from_state[j];
             }
             
             // convert tree to unrooted tree if it's now rooted
@@ -2019,7 +2023,7 @@ void AliSimulator::estimateLengthRatio()
             
             // build all constant site patterns
             char *sequence_type = strcpy(new char[tree->aln->sequence_type.length() + 1], tree->aln->sequence_type.c_str());
-            tree->aln->buildPattern(sequences, sequence_type, nseq, nsite*num_sites_per_state);
+            tree->aln->buildPattern(sequences, sequence_type, nseq, nsite * num_sites_per_state);
             
             // compute the likelihood scores of all patterns
             double *patterns_llh = new double[tree->aln->getNPattern()];
@@ -2084,17 +2088,22 @@ void AliSimulator::convertNumericalStatesIntoReadableCharacters(vector<short int
     
     // convert normal data
     if (num_sites_per_state == 1)
+    {
         for (int i = 0; i < segment_length; i++)
             output[i] = state_mapping[sequence_chunk[i]][0];
+    }
     // convert CODON
     else
-        for (int i = 0; i < segment_length; i++)
+    {
+        int index = 0;
+        for (int i = 0; i < segment_length; i++, index += num_sites_per_state)
         {
             string codon_str = state_mapping[sequence_chunk[i]];
-            output[i*num_sites_per_state] = codon_str[0];
-            output[i*num_sites_per_state + 1] = codon_str[1];
-            output[i*num_sites_per_state + 2] = codon_str[2];
+            output[index] = codon_str[0];
+            output[index + 1] = codon_str[1];
+            output[index + 2] = codon_str[2];
         }
+    }
 }
 
 /**
@@ -2523,24 +2532,28 @@ void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, str
             }
         }
         // convert CODON
-        else {
-            for (int i = 0; i < segment_length; i++){
+        else
+        {
+            int index = 0;
+            int segment_start_plus_index = segment_start;
+            for (int i = 0; i < segment_length; i++, index += num_sites_per_state, segment_start_plus_index += num_sites_per_state)
+            {
                 // handle gaps
-                if (segment_start + (i + 1) * num_sites_per_state - 1 < input_sequence.length()
-                    && (input_sequence[segment_start + i * num_sites_per_state] == '-'
-                            || input_sequence[segment_start + i * num_sites_per_state + 1] == '-'
-                            || input_sequence[segment_start + i * num_sites_per_state + 2] == '-')){
+                if (segment_start_plus_index + 2 < input_sequence.length()
+                    && (input_sequence[segment_start_plus_index] == '-'
+                            || input_sequence[segment_start_plus_index + 1] == '-'
+                            || input_sequence[segment_start_plus_index + 2] == '-')){
                     // insert gaps
-                    output[i * num_sites_per_state] =  input_sequence[segment_start + i * num_sites_per_state];
-                    output[i * num_sites_per_state + 1] =  input_sequence[segment_start + i * num_sites_per_state + 1];
-                    output[i * num_sites_per_state + 2] =  input_sequence[segment_start + i * num_sites_per_state + 2];
+                    output[index] =  input_sequence[segment_start_plus_index];
+                    output[index + 1] =  input_sequence[segment_start_plus_index + 1];
+                    output[index + 2] =  input_sequence[segment_start_plus_index + 2];
                 }
                 else
                 {
                     string codon_str = state_mapping[sequence_chunk[i]];
-                    output[i * num_sites_per_state] = codon_str[0];
-                    output[i * num_sites_per_state + 1] = codon_str[1];
-                    output[i * num_sites_per_state + 2] = codon_str[2];
+                    output[index] = codon_str[0];
+                    output[index + 1] = codon_str[1];
+                    output[index + 2] = codon_str[2];
                 }
             }
         }

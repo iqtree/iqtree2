@@ -181,8 +181,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
         // in normal case (without partitions) -> using the sequence length in the tree
         else
         {
-            int num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
-            params.alisim_sequence_length = tree->aln->getNSite() * num_sites_per_state;
+            params.alisim_sequence_length = (tree->aln->seq_type == SEQ_CODON ? (tree->aln->getNSite() * 3) : tree->aln->getNSite());
         }
     }
 }
@@ -197,8 +196,7 @@ int computeTotalSequenceLengthAllPartitions(PhyloSuperTree *super_tree)
     for (int i = 0; i < super_tree->size(); i++)
     {
         Alignment *aln = super_tree->at(i)->aln;
-        int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-        total_length += aln->getNSite() * num_sites_per_state;
+        total_length += (aln->seq_type == SEQ_CODON ? (aln->getNSite() * 3) : aln->getNSite());
     }
     return total_length;
 }
@@ -464,8 +462,8 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
     int max_num_states = src_tree->aln->getMaxNumStates();
     
     // convert the input sequence into (numerical states) sequence
-    int num_sites_per_state = src_tree->aln->seq_type == SEQ_CODON?3:1;
-    int sequence_length = super_alisimulator->params->alisim_sequence_length/num_sites_per_state;
+    int num_sites_per_state = src_tree->aln->seq_type == SEQ_CODON ? 3 : 1;
+    int sequence_length = (src_tree->aln->seq_type == SEQ_CODON ? (super_alisimulator->params->alisim_sequence_length / 3) : super_alisimulator->params->alisim_sequence_length);
     
     // make sure the length of the ancestral sequence must be equal to the total length of all partitions
     if (super_alisimulator->tree->isSuperTree() && sequence_length != super_alisimulator->tree->getAlnNSite())
@@ -474,14 +472,19 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
     sequence.resize(sequence_length);
     ostringstream err_str;
     int num_error = 0;
-    for (int i = 0; i < sequence_length; i++)
+    if (src_tree->aln->seq_type == SEQ_CODON)
     {
-        if (src_tree->aln->seq_type == SEQ_CODON)
+        int site_index = 0;
+        for (int i = 0; i < sequence_length; i++, site_index += num_sites_per_state)
         {
-            int site_index = i*num_sites_per_state;
+            // NHANLT: potential improvement
+            // change to use pointer of sequence_str to avoid accessing sequence_str[]
             sequence[i] = src_tree->aln->getCodonStateTypeFromSites(src_tree->aln->convertState(sequence_str[site_index], SEQ_DNA), src_tree->aln->convertState(sequence_str[site_index+1], SEQ_DNA), src_tree->aln->convertState(sequence_str[site_index+2], SEQ_DNA), sequence_name, site_index, err_str, num_error);
         }
-        else
+    }
+    else
+    {
+        for (int i = 0; i < sequence_length; i++)
         {
             sequence[i] = src_tree->aln->convertState(sequence_str[i]);
         
@@ -619,7 +622,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // create position_spec in case aln_files are specified in a directory
                 if (super_alisimulator->params->partition_file && isDirectory(super_alisimulator->params->partition_file))
                 {
-                    ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = "1-" + convertIntToString(super_tree->at(partition_index)->aln->getNSite()*num_sites_per_state);
+                    int total_num_states = super_tree->at(partition_index)->aln->getNSite();
+                    if (num_sites_per_state != 1)
+                        total_num_states *= num_sites_per_state;
+                    ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = "1-" + convertIntToString(total_num_states);
                 }
                 
                 // extract site_ids of the partition
@@ -627,7 +633,11 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // convert position_spec from "*" to "start-end"
                 if (!info_spec_str.compare("*") && super_tree->at(partition_index)->aln->getNSite() > 0)
                 {
-                    info_spec_str = "1-" + convertIntToString(super_tree->at(partition_index)->aln->getNSite()*num_sites_per_state);
+                    int total_num_states = super_tree->at(partition_index)->aln->getNSite();
+                    if (num_sites_per_state != 1)
+                        total_num_states *= num_sites_per_state;
+                    
+                    info_spec_str = "1-" + convertIntToString(total_num_states);
                     ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = info_spec_str;
                 }
                 
@@ -831,11 +841,11 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-            int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
+            int seq_length_times_num_sites_per_state = (aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length);
             string first_line = "";
             if (alisimulator->params->aln_output_format != IN_FASTA)
             {
-                first_line = convertIntToString(num_leaves) + " " + convertIntToString(sequence_length*num_sites_per_state) + "\n";
+                first_line = convertIntToString(num_leaves) + " " + convertIntToString(seq_length_times_num_sites_per_state) + "\n";
                 *out << first_line;
             }
             
@@ -843,7 +853,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             uint64_t start_pos = first_line.length();
             if (!alisimulator->params->do_compression)
                 start_pos = out->tellp();
-            uint64_t output_line_length = sequence_length * num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
+            uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
@@ -1061,7 +1071,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, 
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
             string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-            string output(sequence_length * num_sites_per_state, '-');
+            string output(aln->seq_type == SEQ_CODON ? (3 * sequence_length) : sequence_length, '-');
             uint64_t output_pos = start_pos + node->id * output_line_length;
             
             // convert non-empty sequence
@@ -1154,7 +1164,7 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
 
         // show a warning if the length of input alignment is unequal to that of simulated sequence
         int sequence_length = round(alisimulator->expected_num_sites * alisimulator->inverse_length_ratio);
-        if (sequences.size() > 0 && sequences[0].length() != sequence_length*alisimulator->num_sites_per_state)
+        if (sequences.size() > 0 && sequences[0].length() != (alisimulator->num_sites_per_state == 1 ? sequence_length : (sequence_length * alisimulator->num_sites_per_state)))
             outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
         
         // return InputMSA;
@@ -1259,6 +1269,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     GenomeTree* genome_tree = NULL;
     Insertion* previous_insertion = NULL;
     int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON?3:1;
+    int seq_length_times_num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length;
     int rebuild_indel_his_step = alisimulator->params->rebuild_indel_history_param * alisimulator->tree->leafNum;
     int rebuild_indel_his_thresh = rebuild_indel_his_step;
 
@@ -1290,7 +1301,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         
         // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
         string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-        string output(sequence_length * num_sites_per_state, '-');
+        string output(seq_length_times_num_sites_per_state, '-');
         
         // build a new genome tree from the list of insertions if the genome tree has not been initialized (~NULL)
         if (!genome_tree)
