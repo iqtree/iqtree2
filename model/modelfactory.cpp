@@ -733,6 +733,10 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         
         is_continuous_gamma = posGC < posG2;
     }
+        
+    // only GC
+    if (posGC != string::npos && posG == string::npos && posG2 == string::npos)
+        is_continuous_gamma = true;
     
     // if using continuous Gamma
     if (is_continuous_gamma)
