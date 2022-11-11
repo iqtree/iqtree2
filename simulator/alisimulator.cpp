@@ -1868,19 +1868,26 @@ int AliSimulator::getRandomItemWithProbabilityMatrix(double *probability_maxtrix
 void AliSimulator::convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns, bool force_round_1)
 {
     double* probability_maxtrix_pointer = probability_maxtrix;
-    for (int r = 0; r < num_rows; r++, probability_maxtrix_pointer += num_columns)
-    {
-        for (int c = 1; c < num_columns; c++)
-            probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c - 1];
-    }
-    
     // force rounding the last entry of each row to one to avoid potential bug due to numerical precision, e.g, 0.99999999 < 1
     if (force_round_1)
     {
-        probability_maxtrix_pointer = probability_maxtrix;
-        int last_entry_index = num_columns - 1;
+        int num_colmns_minus_one = num_columns - 1;
         for (int r = 0; r < num_rows; r++, probability_maxtrix_pointer += num_columns)
-            probability_maxtrix_pointer[last_entry_index] = 1;
+        {
+            for (int c = 1; c < num_colmns_minus_one; c++)
+                probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c - 1];
+            
+            // force rounding the last item in each row to one
+            probability_maxtrix_pointer[num_colmns_minus_one] = 1.0;
+        }
+    }
+    else
+    {
+        for (int r = 0; r < num_rows; r++, probability_maxtrix_pointer += num_columns)
+        {
+            for (int c = 1; c < num_columns; c++)
+                probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c - 1];
+        }
     }
 }
 
