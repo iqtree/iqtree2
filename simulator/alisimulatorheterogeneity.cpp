@@ -476,14 +476,16 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector
             memcpy(ptn_accumulated_rate_dis, tree->getPatternLhCatPointer(), num_ptns_times_num_rates * sizeof(double));
         
             // convert ptn_rate_dis into ptn_accumulated_rate_dis
-            convertProMatrixIntoAccumulatedProMatrix(ptn_accumulated_rate_dis, num_ptns, num_rates);
+            convertProMatrixIntoAccumulatedProMatrix(ptn_accumulated_rate_dis, num_ptns, num_rates, false);
             
             // normalize ptn_accumulated_rate_dis
             int i_times_num_rates = 0;
             int num_rates_minus_one = num_rates - 1;
+            double invar_prob = tree->getRate()->getPInvar();
+            double max_accumulated_prob = 1 - invar_prob;
             for (int i = 0; i < num_ptns; i++, i_times_num_rates += num_rates)
             {
-                double inverse_row_sum = 1.0 / ptn_accumulated_rate_dis[i_times_num_rates + num_rates_minus_one];
+                double inverse_row_sum = max_accumulated_prob / ptn_accumulated_rate_dis[i_times_num_rates + num_rates_minus_one];
                 for (int j = 0; j < num_rates; j++)
                     ptn_accumulated_rate_dis[i_times_num_rates + j] *= inverse_row_sum;
             }
@@ -509,9 +511,20 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector
             int site_pattern_id = site_to_patternID[i];
             int starting_index = site_pattern_id * num_rates;
             double rand_num = random_double();
-            int rate_cat = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_accumulated_rate_dis, rand_num, starting_index, starting_index + num_rates - 1, starting_index) - starting_index;
-            site_specific_rates[i] = rate_heterogeneity->getRate(rate_cat);
-            new_site_specific_rate_index[i] = rate_cat;
+            int rate_cat = binarysearchItemWithAccumulatedProbabilityMatrix(ptn_accumulated_rate_dis, rand_num, starting_index, starting_index + num_rates - 1, starting_index);
+            
+            // if rate_category == -1 <=> this site is invariant
+            if (rate_cat == -1)
+            {
+                site_specific_rates[i] = 0;
+                new_site_specific_rate_index[i] = RATE_ZERO_INDEX;
+            }
+            else // otherwise, get the rate of that rate_category
+            {
+                rate_cat -= starting_index;
+                site_specific_rates[i] = rate_heterogeneity->getRate(rate_cat);
+                new_site_specific_rate_index[i] = rate_cat;
+            }
         }
     
     // delete ptn_accumulated_rate_dis if we don't need to use it for handling insertions (in Indels)
