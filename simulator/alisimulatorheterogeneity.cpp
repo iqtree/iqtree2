@@ -271,7 +271,7 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
     bool fuse_mixture_model = (model->isMixture() && model->isFused());
     
     // initialize the cache_trans_matrix
-    double combine_rate = partition_rate * params->alisim_branch_scale;
+    double partition_rate_times_branch_scale = partition_rate * params->alisim_branch_scale;
     double* cache_trans_matrix_pointer = cache_trans_matrix;
     int num_state_square = max_num_states * max_num_states;
     for (int model_index = 0; model_index < num_models; model_index++)
@@ -279,11 +279,12 @@ void AliSimulatorHeterogeneity::intializeCachingAccumulatedTransMatrices(double 
         // Bug fixed
         // in mixture model where each mixture component has a specific rate then we need to use that rate to compute the transition matrix
         // we need to use total_num_subst * total_num_subst (instead of total_num_subst) to cancel "/total_num_subst" in the computeTrans function
+        double combine_rate = partition_rate_times_branch_scale;
         if (model->isMixture())
         {
             double total_num_subst = ((ModelMarkov*) model->getMixtureClass(model_index))->total_num_subst;
             if (fabs(total_num_subst - 1.0) > 1e-6)
-                combine_rate *=  total_num_subst * total_num_subst;
+                combine_rate *=  total_num_subst;
         }
         
         for (int category_index = 0; category_index < num_rate_categories; category_index++, cache_trans_matrix_pointer += num_state_square)
@@ -342,7 +343,7 @@ int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *
     {
         double total_num_subst = ((ModelMarkov*) model->getMixtureClass(model_component_index))->total_num_subst;
         if (fabs(total_num_subst - 1.0) > 1e-6)
-            combine_rate *=  total_num_subst * total_num_subst;
+            combine_rate *=  total_num_subst;
     }
     
     // update state freqs of the model component based on posterior mean site_freqs if needed
