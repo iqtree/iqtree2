@@ -619,7 +619,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
         if (rate_heterogeneity->isHeterotachy() && lengths.length() > 0)
         {
             // parse lengths
-            convert_double_vec_with_distributions(lengths.c_str(), branch_lengths, '/');
+            convert_double_vec_with_distributions(lengths.c_str(), branch_lengths, true, '/');
             
             if (num_rate_categories != branch_lengths.size())
                 outError("The number of lengths ("+convertIntToString(branch_lengths.size())+") is different from the number of caterogies ("+convertIntToString(num_rate_categories)+"). Please check and try again!");

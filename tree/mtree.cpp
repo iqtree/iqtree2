@@ -823,10 +823,10 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     double len;
     // randomly generate branch length based on a user-defined distribution
     if (Params::getInstance().branch_distribution)
-        len = random_number_from_distribution(Params::getInstance().branch_distribution);
+        len = random_number_from_distribution(Params::getInstance().branch_distribution, true);
     // or parse it from tree file
     else
-        len = convert_double_with_distribution(lenstr.c_str());
+        len = convert_double_with_distribution(lenstr.c_str(), true);
     
     if (in_comment.empty() || in_comment_contains_key_value) {
         branch_len.push_back(len);
@@ -843,11 +843,11 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
             
             branch_len.clear();
             for (int i = 0; i < (num_separators + 1); i++)
-                branch_len.push_back(random_number_from_distribution(Params::getInstance().branch_distribution));
+                branch_len.push_back(random_number_from_distribution(Params::getInstance().branch_distribution, true));
         }
         // or parse them from tree file
         else
-            convert_double_vec_with_distributions(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+            convert_double_vec_with_distributions(in_comment.c_str(), branch_len, true, BRANCH_LENGTH_SEPARATOR);
     }
 //    char* str = (char*)in_comment.c_str() + 1;
 //    int pos;
@@ -895,7 +895,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             
             // randomly generate branch lengths if users supply a distribution name and a tree topology without branch lengths.
             if (Params::getInstance().branch_distribution && brlen.size() == 0)
-                brlen.push_back(random_number_from_distribution(Params::getInstance().branch_distribution));
+                brlen.push_back(random_number_from_distribution(Params::getInstance().branch_distribution, true));
             
             root->addNeighbor(node, brlen);
             node->addNeighbor(root, brlen);

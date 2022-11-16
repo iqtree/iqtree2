@@ -1202,10 +1202,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			if (pos_rate != string::npos) {
 				size_t pos_weight = this_name.find(':', pos_rate+1);
 				if (pos_weight == string::npos) {
-					rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str());
+					rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str(), true);
 				} else {
-					rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-					weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str());
+					rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str(), true);
+					weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str(), true);
 					fix_prop = true;
 					if (weight <= 0.0)
 						outError("Mixture component weight is negative!");
@@ -1288,10 +1288,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		if (pos_rate != string::npos) {
 			size_t pos_weight = this_name.find(':', pos_rate+1);
 			if (pos_weight == string::npos) {
-				rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str());
+				rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str(), true);
 			} else {
-				rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-				weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str());
+				rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str(), true);
+				weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str(), true);
 				fix_prop = true;
 				if (weight <= 0.0)
 					outError("Mixture component weight is negative!");

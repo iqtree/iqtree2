@@ -2468,7 +2468,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
         size_t pos = freqs.find('/');
         
         // convert frequency from string to double
-        state_freqs[i] = convert_double_with_distribution(freqs.substr(0, pos).c_str());
+        state_freqs[i] = convert_double_with_distribution(freqs.substr(0, pos).c_str(), true);
         total_freq += state_freqs[i];
         
         // update the position with the highest frequency
@@ -3101,7 +3101,7 @@ int AliSimulator::generateIndelSize(IndelDistribution indel_dis)
             random_size = random_int_geometric(indel_dis.param_1);
             break;
         default:
-            random_size = random_number_from_distribution(indel_dis.user_defined_dis);
+            random_size = random_number_from_distribution(indel_dis.user_defined_dis, true);
             break;
     }
     return random_size;
