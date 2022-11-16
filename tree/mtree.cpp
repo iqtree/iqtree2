@@ -1686,10 +1686,10 @@ Node *MTree::findNodeName(string &name, Node *node, Node *dad) {
     }
     return NULL;
 }
-
+/* WRONG IMPLEMENTATION
 bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res, Node *node, Node *dad) {
     int presence = 0;
-    Neighbor *target = NULL;
+    Neighbor *target = nullptr;
     FOR_NEIGHBOR_IT(node, dad, it) {
         if ((*it)->node->isLeaf()) {
             if (taxa_set.find((*it)->node->name) != taxa_set.end()) {
@@ -1700,16 +1700,18 @@ bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*>
                 presence++;
             else
                 target = *it;
-            if (res.first)
-                return false;
+            //if (res.first)
+              //  return false;
         }
     }
     // all presence or absence
     if (presence == 0)
         return false;
     // inbetween: detect it!
-    if (!res.first) {
+    if (presence == node->neighbors.size()-1) {
         res.first = node;
+        if (target == nullptr)
+            target = node->findNeighbor(dad);
         res.second = target;
         if (target != node->neighbors[0]) {
             // move target into the first neighbor
@@ -1727,6 +1729,40 @@ bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*>
     }
     return false;
 }
+*/
+
+// slow version but correct
+bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res, Node *node, Node *dad) {
+    BranchVector branches;
+    SplitGraph sg;
+    Split sp(leafNum);
+    convertSplits(sg, &sp, &branches);
+    // iterator over all branch and compute rootstrap supports
+    ASSERT(branches.size() == sg.getNSplits());
+    int i;
+    Split this_split(leafNum);
+    for (auto it = taxa_set.begin(); it != taxa_set.end(); it++) {
+        string name = *it;
+        Node *taxon = findLeafName(name);
+        if (taxon == nullptr) {
+            cout << "Taxon " << *it << " not found in tree" << endl;
+            return false;
+        }
+        this_split.addTaxon(taxon->id);
+    }
+    if (this_split.shouldInvert())
+        this_split.invert();
+    for (i = 0; i < branches.size(); i++)
+        if (*sg[i] == this_split) {
+            // FOUND!
+            res.first = branches[i].first;
+            res.second = branches[i].first->findNeighbor(branches[i].second);
+            return true;
+        }
+    return false;
+}
+
+
 
 Node *MTree::findLeafName(string &name, Node *node, Node *dad) {
     if (!node) node = root;

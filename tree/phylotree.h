@@ -1447,6 +1447,14 @@ public:
 
     void moveRoot(Node *node1, Node *node2);
 
+    virtual double computeFundiLikelihood();
+
+    /**
+     optimize \rho and branch length of the central branch by FunDi model (Gaston, Susko, Roger 2011)
+     @return log-likelihood of FunDi model
+     */
+    virtual double optimizeFundiModel();
+    
     /**
         Optimize root position for rooted tree
         @param root_dist maximum distance to move root
@@ -2394,6 +2402,24 @@ protected:
             TRUE to discard saturated for Meyer & von Haeseler (2003) model
      */
     bool discard_saturated_site;
+    
+    /**
+     true to switch to fundi likelihood (Gaston, Susko, Roger 2011)
+     */
+    bool do_fundi = false;
+
+    /**
+        return the number of dimensions
+    */
+    virtual int getNDim();
+
+
+    /**
+        the target function which needs to be optimized
+        @param x the input vector x
+        @return the function value at x
+    */
+    virtual double targetFunk(double x[]);
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the
