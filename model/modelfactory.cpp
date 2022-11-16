@@ -812,7 +812,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             close_bracket = rate_str.find(CLOSE_BRACKET, posI);
             if (close_bracket == string::npos)
                 outError("Close bracket not found in ", rate_str);
-            p_invar_sites = convert_double_with_distribution(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
+            p_invar_sites = convert_double_with_distribution(rate_str.substr(posI+3, close_bracket-posI-3).c_str(), true);
             if (p_invar_sites < 0 || p_invar_sites >= 1)
                 outError("p_invar must be in [0,1)");
         } else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+' && rate_str[posI+2] != '*')
@@ -834,7 +834,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             close_bracket = rate_str.find(CLOSE_BRACKET, posG);
             if (close_bracket == string::npos)
                 outError("Close bracket not found in ", rate_str);
-            gamma_shape = convert_double_with_distribution(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
+            gamma_shape = convert_double_with_distribution(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str(), false);
 //            if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
 //                stringstream str;
 //                str << "Gamma shape parameter " << gamma_shape << "out of range ["

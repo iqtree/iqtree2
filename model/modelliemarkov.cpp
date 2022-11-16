@@ -359,7 +359,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         if (model_params.find('/') != std::string::npos)
             separator = '/';
         
-        convert_double_vec_with_distributions(model_params.c_str(), vec, separator);
+        convert_double_vec_with_distributions(model_params.c_str(), vec, false, separator);
         if (vec.size() != num_params) 
             outError("String '"+ model_params + "' does not have exactly " + convertIntToString(num_params) + " parameters");
         for (int i = 0; i < num_params; i++) {
@@ -413,7 +413,7 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
             // randomly generate an input frequency which is less than 0.5
             int num_freqs = 1;
             double* freqs = new double[num_freqs];
-            freqs[0] = random_number_from_distribution_with_upperbound("uniform", 0.5);
+            freqs[0] = random_number_from_distribution_with_upperbound("uniform", 0.5, true);
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);
@@ -431,7 +431,7 @@ void ModelLieMarkov::initStateFreqsAliSim(StateFreqType expected_freq_type)
             int num_freqs = 2;
             double* freqs = new double[num_freqs];
             for (int i = 0; i < num_freqs; i++)
-                freqs[i] = random_number_from_distribution_with_upperbound("uniform", 0.5);
+                freqs[i] = random_number_from_distribution_with_upperbound("uniform", 0.5, true);
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);
@@ -529,7 +529,7 @@ void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_par
         case FREQ_EMPIRICAL:
         {
             // extract/generate freqs one by one
-            convert_double_array_with_distributions(freq_params, state_freq, num_states, separator);
+            convert_double_array_with_distributions(freq_params, state_freq, num_states, true, separator);
             
             // normalize state freqs
             normalize_frequencies(state_freq, num_states, -1, true);
@@ -543,7 +543,7 @@ void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_par
             // extract/generate input base frequency
             int num_freqs = 1;
             double* freqs = new double[num_freqs];
-            freqs[0] = convert_double_with_distribution_and_upperbound(freq_params, 0.5);
+            freqs[0] = convert_double_with_distribution_and_upperbound(freq_params, 0.5, true);
             
             // set state freqs
             mappingFreqs(expected_freq_type, freqs);
@@ -572,7 +572,7 @@ void ModelLieMarkov::readFreqs(StateFreqType expected_freq_type, string freq_par
                 string token = freq_params.substr(0, pos);
                 
                 // convert/generate a double
-                freqs[i] = convert_double_with_distribution_and_upperbound(token, 0.5);
+                freqs[i] = convert_double_with_distribution_and_upperbound(token, 0.5, true);
                 
                 // remove the current double/distribution name from tmp_str
                 freq_params.erase(0, pos + 1);

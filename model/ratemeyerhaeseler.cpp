@@ -73,7 +73,7 @@ void RateMeyerHaeseler::readRateFile(char *rate_file) {
 			if (site <= 0 || site > nsites) throw "Wrong site number (must be between 1 and #sites)";
 			site--;
 			ss >> tmp;
-			rate = convert_double_with_distribution(tmp.c_str());
+			rate = convert_double_with_distribution(tmp.c_str(), true);
 			if (rate < 0.0) throw "Negative rate not allowed";
 			if (rate <= 0.0) rate = MIN_SITE_RATE;
 			int ptn = phylo_tree->aln->getPatternID(site);

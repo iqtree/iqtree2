@@ -112,7 +112,7 @@ double randomLen(Params &params) {
     // randomly generate branch lengths based on
     // a user-specified distribution
     if (params.branch_distribution)
-        return random_number_from_distribution(params.branch_distribution);
+        return random_number_from_distribution(params.branch_distribution, true);
     // or an exponential distribution (by default)
     else
     {
@@ -384,7 +384,7 @@ double convert_double(const char *str, int &end_pos) {
 	return d;
 }
 
-double convert_double_with_distribution(const char *str, int &end_pos, char separator)
+double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator)
 {
     // convert normal double
     char *endptr;
@@ -399,7 +399,7 @@ double convert_double_with_distribution(const char *str, int &end_pos, char sepa
         else
             end_pos = tmp_str.length();
             
-        d = random_number_from_distribution(tmp_str.substr(0, end_pos));
+        d = random_number_from_distribution(tmp_str.substr(0, end_pos), non_negative);
     }
     else
         end_pos = endptr - str;
@@ -424,7 +424,7 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
     } while (*endptr != 0);
 }
 
-void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator)
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, bool non_negative, char separator)
 {
     string tmp_str(str);
     vec.clear();
@@ -436,7 +436,7 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
         string token = tmp_str.substr(0, pos);
         
         // convert/generate a double
-        double d = convert_double_with_distribution(token.c_str());
+        double d = convert_double_with_distribution(token.c_str(), non_negative);
         vec.push_back(d);
         
         // remove the current double/distribution name from tmp_str
@@ -447,7 +447,7 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
     }
 }
 
-void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, char separator)
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, bool non_negative, char separator)
 {
     // validate the number of items
     size_t num_separators = std::count(tmp_str.begin(), tmp_str.end(), separator);
@@ -461,7 +461,7 @@ void convert_double_array_with_distributions(string tmp_str, double* array, int 
         string token = tmp_str.substr(0, pos);
         
         // convert/generate a double
-        array[i] = convert_double_with_distribution(token.c_str());
+        array[i] = convert_double_with_distribution(token.c_str(), non_negative);
         
         // remove the current double/distribution name from tmp_str
         tmp_str.erase(0, pos + 1);
@@ -660,7 +660,7 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
         infile.close();
 }
 
-double random_number_from_distribution(string distribution_name)
+double random_number_from_distribution(string distribution_name, bool non_negative)
 {
     // randomly generate a number from a uniform distribution
     if (distribution_name.compare("uniform") == 0)
@@ -678,21 +678,33 @@ double random_number_from_distribution(string distribution_name)
             outError("Expecting a double or a distribution name, but found an empty string");
     }
     
-    // convert random_numbers_str to istringstream
-    istringstream iss_random_numbers(random_numbers_str);
-    
-    // draw a random number
-    int rand_index = random_int(distribution.pool_size) + 1;
-    
-    // extract the selected number from iss_random_numbers
+    // attempt up to 1000 times to pick a random (positive) number from the distribution
     double random_number;
-    for (int i = 0; i<rand_index; i++)
-        iss_random_numbers >> random_number;
+    for (int attempt = 0; attempt < 1000; ++attempt)
+    {
+        // convert random_numbers_str to istringstream
+        istringstream iss_random_numbers(random_numbers_str);
+        
+        // draw a random number
+        int rand_index = random_int(distribution.pool_size) + 1;
+        
+        // extract the selected number from iss_random_numbers
+        for (int i = 0; i<rand_index; i++)
+            iss_random_numbers >> random_number;
+        
+        // don't need to retry if the random number meets the output requirement
+        if (!non_negative || random_number >= 0)
+            break;
+    }
+    
+    // validate the output number
+    if (non_negative && random_number < 0)
+        outError("Sorry! We failed to generate a random non-negative number from the distribution " + distribution_name + " after 1,000 attempts!");
     
     return random_number;
 }
 
-double convert_double_with_distribution(const char *str)
+double convert_double_with_distribution(const char *str, bool non_negative)
 {
     string input(str);
     // convert the number from the input string if possible
@@ -700,10 +712,10 @@ double convert_double_with_distribution(const char *str)
         return convert_double(str);
     // if a distribution is specified -> randomly generate a number from that distribution
     else
-        return random_number_from_distribution(input);
+        return random_number_from_distribution(input, non_negative);
 }
 
-double convert_double_with_distribution_and_upperbound(string input, double upper_bound)
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound, bool non_negative)
 {
     double random_double = 0;
     if (is_number(input))
@@ -713,19 +725,19 @@ double convert_double_with_distribution_and_upperbound(string input, double uppe
             outError("The input number ("+input+") must be less than "+convertDoubleToString(upper_bound)+". Please check and try again!");
     }
     else
-        random_double = random_number_from_distribution_with_upperbound(input, upper_bound);
+        random_double = random_number_from_distribution_with_upperbound(input, upper_bound, non_negative);
     
     return random_double;
 }
 
-double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound)
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound, bool non_negative)
 {
     double random_double;
     
     // limit 1000 attempts to generate a random number from user-specified distribution
     for (int i = 0; i < 1000; i++)
     {
-        random_double = random_number_from_distribution(distribution_name);
+        random_double = random_number_from_distribution(distribution_name, non_negative);
         if (random_double < upper_bound && random_double >= 0)
             break;
     }
@@ -799,7 +811,7 @@ void random_frequencies_from_distributions(double *freqs, int num_states, string
         string distribution_name = list_distribution_names.substr(0, pos);
         list_distribution_names.erase(0, pos + 1);
         
-        freqs[i] = random_number_from_distribution(distribution_name);
+        freqs[i] = random_number_from_distribution(distribution_name, true);
         total_freq += freqs[i];
     }
     
