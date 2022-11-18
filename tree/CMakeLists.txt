@@ -23,6 +23,8 @@ genomenode.h
 genomenode.cpp
 genometree.h
 genometree.cpp
+phylohmm.h
+phylohmm.cpp
 phylokernel.h
 phylokernelnew.h
 phylokernelnonrev.h

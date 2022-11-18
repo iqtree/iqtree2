@@ -29,6 +29,7 @@
 #include "treetesting.h"
 #include "tree/upperbounds.h" // Olga: functions for Upper Bounds analysis
 #include "utils/pllnni.h"
+#include "tree/phylohmm.h"
 
 class PhyloTree;
 class IQTree;

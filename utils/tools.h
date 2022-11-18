@@ -2550,6 +2550,11 @@ public:
     *  TRUE to allow indel-rate variation
     */
     bool indel_rate_variation;
+    
+    /**
+     * perform HMM after
+     */
+    bool perform_hmm;
 };
 
 /**

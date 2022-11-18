@@ -997,7 +997,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
     /*    if (params.model_name == "WHTEST")
      cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
-
+    if (params.perform_hmm)
+        cout << "  HMM result file:               " << params.out_prefix << ".hmm" << endl;
+    
     cout << endl;
 
 }
@@ -3021,6 +3023,16 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.out_file)
         iqtree->printTree(params.out_file);
+    
+    // run HMM analysis if necessary
+    if (params.perform_hmm) {
+        string hmm_result_file = params.out_prefix;
+        hmm_result_file += ".hmm";
+        // initialize the HMM
+        PhyloHMM phylohmm(iqtree);
+        // perform HMM analysis and report the results to a file
+        phylohmm.performHMMAnalysis(hmm_result_file.c_str());
+    }
 
     delete[] pattern_lh;
 
@@ -4154,7 +4166,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         if (params.compute_ml_tree_only) {
             outError("option compute_ml_tree_only cannot be set for tree-mixture model");
         }
-        tree = newIQTreeMix(params, alignment); // tree mixture model
     } else {
         tree = newIQTree(params, alignment);
     }
@@ -4305,7 +4316,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
             ((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
         }
     }
-
+    
     checkpoint->putBool("finished", true);
     checkpoint->dump(true);
 }
@@ -4315,7 +4326,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     Alignment *alignment;
     
     runPhyloAnalysis(params, checkpoint, tree, alignment);
-
+    
     // 2015-09-22: bug fix, move this line to before deleting tree
     alignment = tree->aln;
     delete tree;

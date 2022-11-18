@@ -830,7 +830,6 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh) {
  */
 void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
                                          double *pattern_lh_cat, SiteLoglType wsl) {
-
     double* pattern_lh_tree;
     size_t i,j,ptn,t;
     double logLike = 0.0;
@@ -859,8 +858,6 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
     for (t=0; t<ntree; t++) {
         j=t;
         for (ptn=0; ptn<nptn; ptn++) {
-            if (pattern_lh_cat)
-                pattern_lh_cat[j] = _ptn_like_cat[i];
             ptn_like_cat[j] = _ptn_like_cat[i];
             // ptn_like_cat[j] = exp(_ptn_like_cat[i]);
             i++;
@@ -868,10 +865,16 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
         }
     }
     
+    if (pattern_lh_cat) {
+        memcpy(pattern_lh_cat, ptn_like_cat, sizeof(double) * nptn * ntree);
+    }
+
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
-    score = computeLikelihood_combine(pattern_lh);
-    if (cur_logl != NULL)
-        *cur_logl = score;
+    if (pattern_lh != NULL || cur_logl != NULL) {
+        score = computeLikelihood_combine(pattern_lh);
+        if (cur_logl != NULL)
+            *cur_logl = score;
+    }
 }
 
 void IQTreeMix::initializeAllPartialLh() {
@@ -1298,17 +1301,16 @@ void IQTreeMix::restoreCheckpoint() {
 void IQTreeMix::setMinBranchLen(Params& params) {
     size_t i;
     int num_prec;
-    cout << "IQTreeMix::setMinBranchLen is invoked" << endl;
     if (params.min_branch_length <= 0.0) {
-        params.min_branch_length = 1e-6;
+        params.min_branch_length = MAST_MIN_BRANCH_LEN; // 1e-6;
         if (size() > 0) {
             if (!at(0)->isSuperTree() && at(0)->getAlnNSite() >= 100000) {
-                params.min_branch_length = 0.1 / (at(0)->getAlnNSite());
+                params.min_branch_length = MAST_MIN_BRANCH_LEN; // 0.1 / (at(0)->getAlnNSite());
                 num_prec = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
                 for (i=0; i<size(); i++)
                     at(i)->num_precision = num_prec;
                 cout.precision(12);
-                cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
+                // cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
                 cout.precision(3);
             }
         }
@@ -1320,7 +1322,7 @@ void IQTreeMix::setMinBranchLen(Params& params) {
             cout.precision(3);
         }
     }
-    cout << "params.min_branch_length = 1e-6" << endl;
+    cout << setprecision(5) << "Minimum branch length: " << params.min_branch_length << endl;
 }
 
 /** set pointer of params variable */
@@ -1340,7 +1342,6 @@ void IQTreeMix::computeBranchID() {
 
     StrVector taxname;
     NodeVector nodes1, nodes2;
-    Split* split;
     string split_str0, split_str1, split_str;
     size_t i,j,l;
     size_t branch_idx;
@@ -1372,10 +1373,11 @@ void IQTreeMix::computeBranchID() {
 
         at(j)->getTaxaName(taxname);
         at(j)->getBranches(nodes1,nodes2,ids);
-        at(j)->buildNodeSplit();
+        // at(j)->resetCurScore();
+        // at(j)->buildNodeSplit();
         for (i=0; i<nodes1.size(); i++) {
             branch_idx = j * nbranch + ids[i];
-            split = at(j)->getSplit(nodes2[i], nodes1[i]);
+            Split* split = at(j)->_getSplit(nodes2[i], nodes1[i]);
             split_str0 = "";
             split_str1 = "";
             for (l=0; l<split->size(); l++) {
@@ -1393,6 +1395,7 @@ void IQTreeMix::computeBranchID() {
                     }
                 }
             }
+            delete split;
             // select the smaller one according to lexical order
             if (split_str0 < split_str1)
                 split_str = split_str0;
@@ -1511,7 +1514,6 @@ uint64_t IQTreeMix::getMemoryRequiredThreaded(size_t ncategory, bool full_mem) {
 }
 
 void IQTreeMix::setNumThreads(int num_threads) {
-    cout << "[IQTreeMix::setNumThreads] num_threads = " << num_threads << endl;
     for (size_t i = 0; i < size(); i++)
         at(i)->setNumThreads(num_threads);
     PhyloTree::setNumThreads(num_threads);
@@ -1884,6 +1886,13 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     }
     cout << endl;
 
+    /*
+    setCurScore(score);
+    stop_rule.setCurIt(0);
+    delete[] pattern_mix_lh;
+    ptn_invar = prev_ptn_invar;
+    return getTreeString();
+*/
     bool is_ptnfrq_posterior = false;
 
     nsubstep1 = nsubstep1_start;

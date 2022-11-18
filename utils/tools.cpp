@@ -1454,6 +1454,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_id = "";
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
+    params.perform_hmm = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5270,6 +5271,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (!params.alisim_ancestral_sequence_aln_filepath || params.alisim_ancestral_sequence_name.length() == 0)
                     throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
                 
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-hmm") == 0) {
+                params.perform_hmm = true;
                 continue;
             }
 

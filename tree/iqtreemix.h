@@ -21,6 +21,9 @@
 //#include "phylokernelnew.h"
 #include <vectorclass/vectorclass.h>
 
+// by default, the minimum branch length for MAST model is 0.0001
+#define MAST_MIN_BRANCH_LEN 0.00001
+
 class IQTreeMix : public IQTree, public vector<IQTree*> {
 public:
     
