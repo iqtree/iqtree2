@@ -1142,6 +1142,7 @@ ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
+    optimizing_gtr = false;
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
@@ -1151,6 +1152,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
+    optimizing_gtr = false;
     optimize_steps = 0;
 	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
@@ -1172,6 +1174,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector freq_weights;
 	fix_prop = false;
 	optimizing_submodels = false;
+    optimizing_gtr = false;
 
 	if (freq == FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
@@ -1559,8 +1562,18 @@ int ModelMixture::getNDim() {
     if (!optimizing_submodels && !fix_prop) {
         dim = size() - 1;
     }
+    if (optimizing_gtr) {
+        for (iterator it = begin(); it != end(); it++) {
+            auto params = (*it)->num_params;
+            if (it != begin())
+                (*it)->num_params = 0;
+            dim += (*it)->getNDim();
+            (*it)->num_params = params;
+        }
+    } else {
     for (iterator it = begin(); it != end(); it++) {
         dim += (*it)->getNDim();
+    }
     }
 	return dim;
 }
@@ -1597,19 +1610,26 @@ int ModelMixture::getNDimFreq() {
 }
 
 double ModelMixture::targetFunk(double x[]) {
+    cout << "targetFunk called: ";
+    int ndim = getNDim();
+    for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
+    cout << endl;
 	getVariables(x);
-//	decomposeRateMatrix();
-	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		if ((*it)->getNDim() > 0)
-			(*it)->decomposeRateMatrix();
-		dim += ((*it)->getNDim());
-	}
-	ASSERT(phylo_tree);
-	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
-		phylo_tree->clearAllPartialLH();
-//	if (prop[size()-1] < 0.0) return 1.0e+12;
-	return -phylo_tree->computeLikelihood();
+    
+ 
+    //	decomposeRateMatrix();
+    	int dim = 0;
+    	for (iterator it = begin(); it != end(); it++) {
+    		if ((*it)->getNDim() > 0)
+    			(*it)->decomposeRateMatrix();
+    		dim += ((*it)->getNDim());
+    	}
+    	ASSERT(phylo_tree);
+    	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
+    		phylo_tree->clearAllPartialLH();
+    //	if (prop[size()-1] < 0.0) return 1.0e+12;
+    	return -phylo_tree->computeLikelihood();
+    
 }
 
 double ModelMixture::optimizeWeights() {
@@ -1848,6 +1868,10 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 
     int dim = getNDim();
     double score = 0.0;
+    if (dim != 0) {
+        score = 1.0;
+    }
+    double* gtr_score = nullptr;
 
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
@@ -1858,8 +1882,15 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     else if (!fix_prop) {
         score = optimizeWeights();
     }
+    optimizing_submodels = false;
+    
+//  optimize a gtr matrix if specified
+    if (Params::getInstance().optimize_linked_gtr) {
+        double s = optimizeLinkedSubst(gradient_epsilon);
+        gtr_score = &s;
+    }
+
 //	double score = ModelGTR::optimizeParameters(gradient_epsilon);
-	optimizing_submodels = false;
     if (getNDim() == 0) {
         return score;
     }
@@ -1877,6 +1908,104 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
     }
+	return score;
+}
+
+double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
+    optimizing_gtr = true;
+
+    if (fixed_parameters) {
+        return 0.0;
+    }
+	int ndim = getNDim();
+	
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
+    
+    if (verbose_mode >= VB_MAX) {
+        cout << "Optimizing " << name << " linked GTR matrix..." << endl;
+    }
+
+	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	double score;
+
+    int nval = (num_states * (num_states - 1))/2 - 1; //number of values per class (5 for DNA)
+
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > state_freq[highest_freq_state]) {
+            highest_freq_state = i;
+        }
+    }
+
+	// by BFGS algorithm
+	setVariables(variables);
+	setBounds(lower_bound, upper_bound, bound_check);
+    
+    //testing: change variables to repeat the first class
+    /*
+    for(int i=1; i<getNMixtures(); i++){
+        memcpy(variables+1+(i*nval), variables+1, nval*sizeof(double));
+    }
+    */
+    cout << endl;
+
+    cout << "calling minimizeMultiDimen with the following parameters:\n";
+    cout << "variables = "; for(int i=1; i<=ndim; i++) { cout << variables[i] << "; "; } cout << "\n";
+    cout << "ndim = " << ndim << "\n";
+    cout << "lower_bound = "; for(int i=1; i<=ndim; i++) { cout << lower_bound[i] << "; "; } cout << "\n";
+    cout << "upper_bound = "; for(int i=1; i<=ndim; i++) { cout << upper_bound[i] << "; "; } cout << "\n";
+    cout << "bound_check = "; for(int i=1; i<=ndim; i++) { cout << bound_check[i] << "; "; } cout << "\n";
+    cout << "gradient_epsilon = " << gradient_epsilon << "\n";
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+
+    bool changed = getVariables(variables);
+
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
+        scaleStateFreq(true);
+        changed = true;
+    }
+    if (changed) {
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
+    }
+	
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+    optimizing_gtr = false;
+
+    //TEST OUTPUT
+    cout << endl << "optlgtr finished" << endl;
+    cout << "weights = "; for(int i=0; i<getNMixtures(); i++) { cout << prop[i] << "; "; } cout << endl;
+    for(int i=0; i<getNMixtures(); i++){
+        at(i)->writeInfo(cout);
+    }
+    cout << endl;
+    
+    double sf[num_states]; getStateFrequency(sf);
+    cout << "state_freq = "; for(int i=0; i<num_states; i++) { cout << sf[i] << "; "; } cout << endl;
+    int nrate = getNumRateEntries();
+    double *matrix = new double[nrate];
+    int nmix = getNMixtures();
+    for(int mix = 0; mix<nmix; mix++){
+        at(mix)->getRateMatrix(matrix);
+        cout << "Matrix " << mix << ": [" << matrix[0];
+        for(int i=0; i<nrate; i++){
+            cout << "," << matrix[i];
+            //matrix[i] += 0.01; 
+        }
+        cout << "]" << endl;
+        //at(mix)->setRateMatrix(matrix);
+    }
+    cout << endl;
+    
+
 	return score;
 }
 
@@ -1899,6 +2028,15 @@ void ModelMixture::decomposeRateMatrix() {
 
 void ModelMixture::setVariables(double *variables) {
 	int dim = 0;
+    // Please do similar to 
+    if (optimizing_gtr) {       
+        for (iterator it = begin(); it != end(); it++) {
+            auto freq = (*it)->freq_type;
+             (*it)->freq_type = FREQ_USER_DEFINED;
+		    (*it)->setVariables(&variables[dim]);
+             (*it)->freq_type = freq;
+        }
+    } else
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->setVariables(&variables[dim]);
 		dim += (*it)->getNDim();
@@ -1927,10 +2065,20 @@ void ModelMixture::setVariables(double *variables) {
 bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
     bool changed = false;
+    if (optimizing_gtr) {
+        for (iterator it = begin(); it != end(); it++) {
+            // assign exchange erates for each mixture compontent to variables
+            auto freq = (*it)->freq_type;
+            (*it)->freq_type = FREQ_USER_DEFINED;
+            changed |= (*it)->getVariables(&variables[dim]);
+            (*it)->freq_type = freq;
+        }
+    } else {
 	for (iterator it = begin(); it != end(); it++) {
 		changed |= (*it)->getVariables(&variables[dim]);
 		dim += (*it)->getNDim();
 	}
+    }
 //	if (fix_prop) return;
 //	int i, ncategory = size();
 
@@ -1970,10 +2118,19 @@ bool ModelMixture::getVariables(double *variables) {
 
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
-		dim += (*it)->getNDim();
-	}
+    if(optimizing_gtr) {
+        for (iterator it = begin(); it != end(); it++) {
+            auto freq = (*it)->freq_type;
+            (*it)->freq_type=FREQ_USER_DEFINED;
+            (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+            (*it)->freq_type=freq;
+        }
+    } else {
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+            dim += (*it)->getNDim();
+        }
+    }
 //	if (fix_prop) return;
 //	int i, ncategory = size();
 //	for (i = 1; i < ncategory; i++) {

@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblbfgsb.a CMakeFiles/lbfgsb.dir/lbfgsb_new.cpp.o
+/usr/bin/ranlib liblbfgsb.a

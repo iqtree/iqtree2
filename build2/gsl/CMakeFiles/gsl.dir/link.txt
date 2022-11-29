@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgsl.a CMakeFiles/gsl.dir/binomial_tpe.cpp.o CMakeFiles/gsl.dir/multinomial.cpp.o CMakeFiles/gsl.dir/pow_int.cpp.o CMakeFiles/gsl.dir/gauss.cpp.o CMakeFiles/gsl.dir/gaussinv.cpp.o CMakeFiles/gsl.dir/gausspdf.cpp.o
+/usr/bin/ranlib libgsl.a

@@ -1658,6 +1658,9 @@ public:
      */
     string optimize_alg_gammai;
 
+    /** TRUE if you want to exchange the rate matrix for an optimized GTR matrix */
+    bool optimize_linked_gtr;
+
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
      * treat these as fixed model parameters (if false), or treat them as 

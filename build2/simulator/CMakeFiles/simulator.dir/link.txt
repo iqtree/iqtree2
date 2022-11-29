@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsimulator.a CMakeFiles/simulator.dir/alisimulator.cpp.o CMakeFiles/simulator.dir/alisimulatorinvar.cpp.o CMakeFiles/simulator.dir/alisimulatorheterogeneity.cpp.o CMakeFiles/simulator.dir/alisimulatorheterogeneityinvar.cpp.o
+/usr/bin/ranlib libsimulator.a

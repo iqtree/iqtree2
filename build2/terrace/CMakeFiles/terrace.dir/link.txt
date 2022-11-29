@@ -1,0 +1,2 @@
+/usr/bin/ar qc libterrace.a CMakeFiles/terrace.dir/terracenode.cpp.o CMakeFiles/terrace.dir/terracetree.cpp.o CMakeFiles/terrace.dir/presenceabsencematrix.cpp.o CMakeFiles/terrace.dir/terrace.cpp.o
+/usr/bin/ranlib libterrace.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libalignment.a CMakeFiles/alignment.dir/pattern.cpp.o CMakeFiles/alignment.dir/alignment.cpp.o CMakeFiles/alignment.dir/alignmentpairwise.cpp.o CMakeFiles/alignment.dir/alignmentsummary.cpp.o CMakeFiles/alignment.dir/maalignment.cpp.o CMakeFiles/alignment.dir/superalignment.cpp.o CMakeFiles/alignment.dir/superalignmentpairwise.cpp.o CMakeFiles/alignment.dir/superalignmentpairwiseplen.cpp.o CMakeFiles/alignment.dir/superalignmentunlinked.cpp.o
+/usr/bin/ranlib libalignment.a

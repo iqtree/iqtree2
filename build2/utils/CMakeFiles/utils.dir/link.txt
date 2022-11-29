@@ -1,0 +1,2 @@
+/usr/bin/ar qc libutils.a CMakeFiles/utils.dir/eigendecomposition.cpp.o CMakeFiles/utils.dir/gzstream.cpp.o CMakeFiles/utils.dir/optimization.cpp.o CMakeFiles/utils.dir/stoprule.cpp.o CMakeFiles/utils.dir/tools.cpp.o CMakeFiles/utils.dir/pllnni.cpp.o CMakeFiles/utils.dir/checkpoint.cpp.o CMakeFiles/utils.dir/MPIHelper.cpp.o CMakeFiles/utils.dir/starttree.cpp.o CMakeFiles/utils.dir/bionj.cpp.o CMakeFiles/utils.dir/bionj2.cpp.o CMakeFiles/utils.dir/progress.cpp.o CMakeFiles/utils.dir/operatingsystem.cpp.o
+/usr/bin/ranlib libutils.a

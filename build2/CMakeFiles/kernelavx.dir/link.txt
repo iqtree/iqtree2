@@ -1,0 +1,2 @@
+/usr/bin/ar qc libkernelavx.a CMakeFiles/kernelavx.dir/tree/phylotreeavx.cpp.o
+/usr/bin/ranlib libkernelavx.a

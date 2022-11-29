@@ -1178,6 +1178,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
+    params.optimize_linked_gtr = false;
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1579,6 +1580,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -optalg_gammai <Brent|BFGS|EM>";
                 params.optimize_alg_gammai = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-optlgtr") == 0) {
+                params.optimize_linked_gtr = true;
                 continue;
             }
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnclextra.a CMakeFiles/nclextra.dir/mpdablock.cpp.o CMakeFiles/nclextra.dir/msetsblock.cpp.o CMakeFiles/nclextra.dir/msplitsblock.cpp.o CMakeFiles/nclextra.dir/modelsblock.cpp.o
+/usr/bin/ranlib libnclextra.a

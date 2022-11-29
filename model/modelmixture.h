@@ -210,6 +210,12 @@ public:
     */
     double optimizeWithEM(double gradient_epsilon);
 
+	/**
+	    optimize GTR matrix for all classes
+	    @param gradient_epsilon 
+	    @return log-likelihood of optimized GTR matrix 
+	 */
+	double optimizeLinkedSubst(double gradient_epsilon);
 
     /** 
         set number of optimization steps
@@ -316,6 +322,7 @@ public:
 protected:
 
 	bool optimizing_submodels;
+	bool optimizing_gtr;
 
     /** number of optimization steps, default: ncategory*2 */
     int optimize_steps;    

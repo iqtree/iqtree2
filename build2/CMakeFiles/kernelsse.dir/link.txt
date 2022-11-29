@@ -1,0 +1,2 @@
+/usr/bin/ar qc libkernelsse.a CMakeFiles/kernelsse.dir/tree/phylokernelsse.cpp.o
+/usr/bin/ranlib libkernelsse.a

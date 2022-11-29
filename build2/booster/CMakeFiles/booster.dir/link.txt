@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbooster.a CMakeFiles/booster.dir/bitset_index.c.o CMakeFiles/booster.dir/hashmap.c.o CMakeFiles/booster.dir/io.c.o CMakeFiles/booster.dir/sort.c.o CMakeFiles/booster.dir/tree.c.o CMakeFiles/booster.dir/booster.c.o CMakeFiles/booster.dir/hashtables_bfields.c.o CMakeFiles/booster.dir/prng.c.o CMakeFiles/booster.dir/stats.c.o CMakeFiles/booster.dir/tree_utils.c.o
+/usr/bin/ranlib libbooster.a
