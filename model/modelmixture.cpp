@@ -1562,7 +1562,8 @@ int ModelMixture::getNDim() {
     if (!optimizing_submodels && !fix_prop) {
         dim = size() - 1;
     }
-    if (optimizing_gtr) {
+    // should check this variable instead of optimizing_gtr
+    if (Params::getInstance().optimize_linked_gtr) {
         for (iterator it = begin(); it != end(); it++) {
             auto params = (*it)->num_params;
             if (it != begin())
@@ -1610,10 +1611,12 @@ int ModelMixture::getNDimFreq() {
 }
 
 double ModelMixture::targetFunk(double x[]) {
-    cout << "targetFunk called: ";
-    int ndim = getNDim();
-    for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
-    cout << endl;
+    if (verbose_mode >= VB_DEBUG) {
+        cout << "targetFunk called: ";
+        int ndim = getNDim();
+        for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
+        cout << endl;
+    }
 	getVariables(x);
     
  
@@ -1877,7 +1880,23 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
     if (dim > 0) {
+        
+        // set num_params to 0 when linking exchange rates
+        IntVector params;
+        if (Params::getInstance().optimize_linked_gtr) {
+            for (iterator it = begin(); it != end(); it++) {
+                params.push_back((*it)->num_params);
+                (*it)->num_params = 0;
+            }
+        }
         score = optimizeWithEM(gradient_epsilon);
+        // restore num_params
+        if (Params::getInstance().optimize_linked_gtr) {
+            int i = 0;
+            for (iterator it = begin(); it != end(); it++, i++) {
+                (*it)->num_params = params[i];
+            }
+        }
     }
     else if (!fix_prop) {
         score = optimizeWeights();
@@ -1912,7 +1931,6 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 }
 
 double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
-    optimizing_gtr = true;
 
     if (fixed_parameters) {
         return 0.0;
@@ -1921,7 +1939,11 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 	
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
-    
+
+    // For Justin, setting true should be moved here, otherwise returns
+    // above will not reset it to false
+    optimizing_gtr = true;
+
     if (verbose_mode >= VB_MAX) {
         cout << "Optimizing " << name << " linked GTR matrix..." << endl;
     }
@@ -1932,7 +1954,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 	bool *bound_check = new bool[ndim+1];
 	double score;
 
-    int nval = (num_states * (num_states - 1))/2 - 1; //number of values per class (5 for DNA)
+    //int nval = (num_states * (num_states - 1))/2 - 1; //number of values per class (5 for DNA)
 
     for (int i = 0; i < num_states; i++) {
         if (state_freq[i] > state_freq[highest_freq_state]) {
@@ -1950,6 +1972,8 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
         memcpy(variables+1+(i*nval), variables+1, nval*sizeof(double));
     }
     */
+    
+    if (verbose_mode >= VB_DEBUG) {
     cout << endl;
 
     cout << "calling minimizeMultiDimen with the following parameters:\n";
@@ -1959,6 +1983,8 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     cout << "upper_bound = "; for(int i=1; i<=ndim; i++) { cout << upper_bound[i] << "; "; } cout << "\n";
     cout << "bound_check = "; for(int i=1; i<=ndim; i++) { cout << bound_check[i] << "; "; } cout << "\n";
     cout << "gradient_epsilon = " << gradient_epsilon << "\n";
+    }
+    
     score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 
     bool changed = getVariables(variables);
@@ -1981,6 +2007,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     optimizing_gtr = false;
 
     //TEST OUTPUT
+    if (verbose_mode >= VB_DEBUG) {
     cout << endl << "optlgtr finished" << endl;
     cout << "weights = "; for(int i=0; i<getNMixtures(); i++) { cout << prop[i] << "; "; } cout << endl;
     for(int i=0; i<getNMixtures(); i++){
@@ -2004,6 +2031,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
         //at(mix)->setRateMatrix(matrix);
     }
     cout << endl;
+    }
     
 
 	return score;
