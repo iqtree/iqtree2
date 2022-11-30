@@ -1,2 +1,0 @@
-/usr/bin/ar qc libterracetphast.a CMakeFiles/terracetphast.dir/terracetphast.cpp.o
-/usr/bin/ranlib libterracetphast.a

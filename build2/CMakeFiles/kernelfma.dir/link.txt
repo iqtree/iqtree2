@@ -1,2 +1,0 @@
-/usr/bin/ar qc libkernelfma.a CMakeFiles/kernelfma.dir/tree/phylokernelfma.cpp.o
-/usr/bin/ranlib libkernelfma.a

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libphyloYAML.a CMakeFiles/phyloYAML.dir/statespace.cpp.o
-/usr/bin/ranlib libphyloYAML.a

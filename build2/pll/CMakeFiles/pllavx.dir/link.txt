@@ -1,2 +1,0 @@
-/usr/bin/ar qc libpllavx.a CMakeFiles/pllavx.dir/avxLikelihood.c.o
-/usr/bin/ranlib libpllavx.a

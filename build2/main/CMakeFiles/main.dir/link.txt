@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmain.a CMakeFiles/main.dir/main.cpp.o CMakeFiles/main.dir/phyloanalysis.cpp.o CMakeFiles/main.dir/phylotesting.cpp.o CMakeFiles/main.dir/treetesting.cpp.o CMakeFiles/main.dir/timetree.cpp.o CMakeFiles/main.dir/alisim.cpp.o CMakeFiles/main.dir/terraceanalysis.cpp.o
-/usr/bin/ranlib libmain.a
