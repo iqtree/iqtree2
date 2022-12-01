@@ -1582,7 +1582,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_gammai = argv[cnt];
                 continue;
             }
-            if (strcmp(argv[cnt], "-optlgtr") == 0) {
+            if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
                 params.optimize_linked_gtr = true;
                 continue;
             }
