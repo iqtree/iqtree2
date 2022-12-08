@@ -843,17 +843,29 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
             int seq_length_times_num_sites_per_state = (aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length);
             string first_line = "";
+            uint64_t start_pos = 0;
             if (alisimulator->params->aln_output_format != IN_FASTA)
             {
                 first_line = convertIntToString(num_leaves) + " " + convertIntToString(seq_length_times_num_sites_per_state) + "\n";
                 *out << first_line;
+                
+                // get the position to write output
+                start_pos = first_line.length();
+                
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++start_pos;
+                #endif
             }
             
-            // get the position to write output
-            uint64_t start_pos = first_line.length();
             if (!alisimulator->params->do_compression)
                 start_pos = out->tellp();
             uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
+        
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            output_line_length += alisimulator->params->aln_output_format == IN_FASTA ? 2 : 1;
+            #endif
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;

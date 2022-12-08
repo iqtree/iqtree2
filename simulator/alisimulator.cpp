@@ -842,9 +842,9 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             
             // dummy variables
             vector<ifstream> input_streams(num_threads);
-            int actual_num_lines_per_thread = 0;
-            int average_num_lines_per_thread = 0;
-            int line_num = 0;
+            uint64_t actual_num_lines_per_thread = 0;
+            uint64_t average_num_lines_per_thread = 0;
+            uint64_t line_num = 0;
             string line;
             uint64_t pos = 0;
             double inverse_num_threads = 1.0 / num_threads;
@@ -864,13 +864,19 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 
                 // count num of lines, set start position
                 safeGetline(input_streams[i], line);
-                int line_length = line.length() + 1;
+                uint64_t line_length = line.length() + 1;
+                
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++line_length;
+                #endif
+                
                 // when using FunDi, the entire sequences are written into one of output files -> need to check average_num_lines_per_thread == 0
                 if (i == 0 || average_num_lines_per_thread == 0)
                 {
                     input_streams[i].seekg(0, input_streams[i].end);
                     uint64_t length = input_streams[i].tellg();
-                    int total_num_lines = length/line_length;
+                    uint64_t total_num_lines = length/line_length;
                     average_num_lines_per_thread = total_num_lines * inverse_num_threads;
                     
                     // compute the starting line number
@@ -1180,9 +1186,21 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     #endif
     
     default_segment_length = sequence_length / num_simulating_threads;
+    
+    // for Windows only, the line break is \r\n instead of only \n
+    #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+    seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 2 : 0);
+    #else
     seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
+    #endif
+    
     output_line_length = round(expected_num_sites * inverse_length_ratio);
     output_line_length = num_sites_per_state == 1 ? (output_line_length + 1 + seq_name_length) : (output_line_length * num_sites_per_state + 1 + seq_name_length);
+    
+    // for Windows only, the line break is \r\n instead of only \n
+    #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+    ++output_line_length;
+    #endif
     
     // reset num_thread_done
     num_thread_done = 0;
