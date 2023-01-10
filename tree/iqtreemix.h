@@ -21,6 +21,13 @@
 //#include "phylokernelnew.h"
 #include <vectorclass/vectorclass.h>
 
+// by default, the minimum branch length for MAST model is 0.000001
+#define MAST_MIN_BRANCH_LEN 1e-6;
+
+// for checking the scaling for the likelihood values
+#define TINY_SCALE_DIFF 0.5
+#define ONE_LOG_SCALE_DIFF 178.0
+
 class IQTreeMix : public IQTree, public vector<IQTree*> {
 public:
     
@@ -56,7 +63,7 @@ public:
     // update_which_tree: only that tree has been updated
     void computeSiteTreeLogLike(int update_which_tree);
     
-    virtual double computeLikelihood(double *pattern_lh = NULL);
+    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
     
     virtual double computePatternLhCat(SiteLoglType wsl);
     
@@ -102,7 +109,7 @@ public:
      prerequisite: computeLikelihood() has been invoked
      
      */
-    double optimizeTreeWeightsByEM(double* pattern_mix_lh, double gradient_epsilon, int max_steps, bool& tree_weight_converge);
+    double optimizeTreeWeightsByEM(double* pattern_mix_lh, double logl_epsilon, int max_steps, bool& tree_weight_converge);
     double optimizeTreeWeightsByBFGS(double gradient_epsilon);
     
     double optimizeBranchLensByBFGS(double gradient_epsilon);
@@ -191,7 +198,7 @@ public:
     void initializeTreeWeights();
     void initializeTreeWeights2();
     
-    string optimizeModelParameters(bool printInfo, double logl_epsilon);
+    virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
     
     /**
      print tree to .treefile
@@ -271,28 +278,9 @@ public:
      */
     virtual string getModelName();
     
-    // show the log-likelihoods and posterior probabilties for each tree along the sites
-    void showLhProb(ofstream& out);
-    
     // compute parsimony scores for each tree along the patterns
     // results are stored in the array patn_parsimony
     void computeParsimony();
-    
-    // show the log-likelihoods and posterior probabilties for each tree along the patterns
-    void showPatternLhProb(ofstream& out);
-    
-    // show the log-likelihoods and posterior probabilties for each tree along the patterns
-    void showOrderedPatternLhProb(ofstream& out);
-    
-    /**
-     original pattern frequencies (unchange)
-     */
-    int* patn_freqs;
-    
-    /**
-     logarithms of pattern frequencies
-     */
-    double* patn_freq_logs;
     
     /**
      whether pattern is constant
@@ -325,7 +313,12 @@ public:
      pattern likelihoods for all trees
      */
     double* ptn_like_cat;
-    
+
+    /**
+     scaling factors for all trees
+     */
+    double* ptn_scale_cat;
+
     /**
      log-likelihoods of each tree for each pattern
      */
@@ -415,12 +408,12 @@ private:
     /**
      optimize tree k separately
      */
-    void optimizeTreeSeparately(int k, bool printInfo, double gradient_epsilon);
+    void optimizeTreeSeparately(int k, bool printInfo, double logl_epsilon, double gradient_epsilon);
     
     /**
      optimize each tree separately
      */
-    void optimizeTreesSeparately(bool printInfo, double logl_epsilon);
+    void optimizeTreesSeparately(bool printInfo, double logl_epsilon, double gradient_epsilon);
     
     /**
      If there are multiple tree weights belonging to the same group

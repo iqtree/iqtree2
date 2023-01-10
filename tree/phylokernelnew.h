@@ -2649,12 +2649,13 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
-double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
+double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
-double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
+double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
 #endif
 {
+    // cout << "PhyloTree::computeLikelihoodBrachGenericSIMD enter" << endl << flush;
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
@@ -2689,6 +2690,18 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     ASCType ASC_type = model_factory->getASC();
     bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
     bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
+
+    // When "save_log_value" is false, any of the following four things cannot happen:
+    // 1. (params->robust_phy_keep < 1.0)
+    // 2. (params->robust_median)
+    // 3. ASC_Holder
+    // 4. ASC_Lewis
+    if (!save_log_value) {
+        ASSERT(!(params->robust_phy_keep < 1.0));
+        ASSERT(!(params->robust_median));
+        ASSERT(!ASC_Holder);
+        ASSERT(!ASC_Lewis);
+    }
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -2747,6 +2760,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
 
     if (dad->isLeaf()) {
+        // cout << "PhyloTree::computeLikelihoodBrachGenericSIMD dad->isLeaf()" << endl << flush;
     	// special treatment for TIP-INTERNAL NODE case
 //    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
         double *partial_lh_node;
@@ -2797,10 +2811,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         auto stateRow = this->getConvertedSequenceByNumber(dad->id);
         auto unknown  = aln->STATE_UNKNOWN;
     	// now do the real computation
+        // cout << "num_packets = " << num_packets << endl;
+        // cout << "num_threads = " << num_threads << endl;
+        // cout << "nptn = " << nptn << endl;
 #ifdef _OPENMP
 #pragma omp parallel for  schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
+            // cout << "packet_id = " << packet_id << " ptn_lower = " << limits[packet_id] << " ptn_upper = " << limits[packet_id+1] << endl;
             VectorClass vc_tree_lh(0.0);
             VectorClass vc_prob_const(0.0);
             size_t ptn_lower = limits[packet_id];
@@ -2915,8 +2933,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 // Sum later to avoid underflow of invariant sites
                 lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
                 if (ptn < orig_nptn) {
-                    lh_ptn = log(lh_ptn) + vc_min_scale;
-                    lh_ptn.store_a(&_pattern_lh[ptn]);
+                    if (save_log_value) {
+                        lh_ptn = log(lh_ptn) + vc_min_scale;
+                        lh_ptn.store_a(&_pattern_lh[ptn]);
+                    } else {
+                        lh_ptn.store_a(&_pattern_lh[ptn]);
+                        vc_min_scale.store_a(&_pattern_scaling[ptn]);
+                        lh_ptn = log(lh_ptn) + vc_min_scale;
+                    }
                     vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
                 } else {
                     // ascertainment bias correction
@@ -3047,8 +3071,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
                 if (ptn < orig_nptn) {
-                    lh_ptn = log(lh_ptn) + vc_min_scale;
-                    lh_ptn.store_a(&_pattern_lh[ptn]);
+                    if (save_log_value) {
+                        lh_ptn = log(lh_ptn) + vc_min_scale;
+                        lh_ptn.store_a(&_pattern_lh[ptn]);
+                    } else {
+                        lh_ptn.store_a(&_pattern_lh[ptn]);
+                        vc_min_scale.store_a(&_pattern_scaling[ptn]);
+                        lh_ptn = log(lh_ptn) + vc_min_scale;
+                    }
                     vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
                 } else {
                     // ascertainment bias correction
@@ -3095,10 +3125,18 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     if (!std::isfinite(tree_lh)) {
         tree_lh = 0.0;
         for (size_t ptn = 0; ptn < orig_nptn; ptn++) {
-          if (!std::isfinite(_pattern_lh[ptn])) {
-                _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+            double ptn_lh = _pattern_lh[ptn];
+            if (!std::isfinite(_pattern_lh[ptn])) {
+                cout << "Pattern " << ptn << " likelihood is underflown" << endl;
+                if (save_log_value) {
+                    _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+                } else {
+                    _pattern_lh[ptn] = 1.0;
+                    _pattern_scaling[ptn] = LOG_SCALING_THRESHOLD*4;
+                }
+                ptn_lh = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
             }
-            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+            tree_lh += ptn_lh * ptn_freq[ptn];
         }
     }
 

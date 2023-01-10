@@ -745,7 +745,12 @@ public:
      */
     double modelfinder_eps;
 
-	/**
+    /**
+     logl epsilon for Tree Mixture
+     */
+    double treemix_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;

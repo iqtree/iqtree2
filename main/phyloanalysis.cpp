@@ -2980,6 +2980,8 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     bool   finishedInitTree = false;
     double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
+    if (iqtree->isTreeMix())
+        initEpsilon = params.treemix_eps;
     string initTree;
     
     //None of his will work until there is actually a tree

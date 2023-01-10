@@ -937,9 +937,9 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
-    typedef double (PhyloTree::*ComputeLikelihoodBranchType)(PhyloNeighbor*, PhyloNode*);
+    typedef double (PhyloTree::*ComputeLikelihoodBranchType)(PhyloNeighbor*, PhyloNode*, bool);
     ComputeLikelihoodBranchType computeLikelihoodBranchPointer;
 
     /**
@@ -959,15 +959,15 @@ public:
 
     double computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
-    double computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
     template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
-    double computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
-    double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
-    double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -1037,9 +1037,10 @@ public:
             compute the tree likelihood
             @param pattern_lh (OUT) if not NULL, the function will assign pattern log-likelihoods to this vector
                             assuming pattern_lh has the size of the number of patterns
+            @param save_log_value, report the log-likelihood values or likelihood values to the array pattern_lh
             @return tree likelihood
      */
-    virtual double computeLikelihood(double *pattern_lh = NULL);
+    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
 
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
@@ -2342,6 +2343,11 @@ protected:
             will be computed if not NULL and using non-reversible kernel 
     */
     double *_pattern_lh_cat_state;
+
+    /**
+            internal pattern scaling factor, stored after calling computeLikelihoodBranch() when save_log_value = false
+     */
+    double *_pattern_scaling;
 
     /**
             associated substitution model
