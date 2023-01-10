@@ -1285,6 +1285,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     params.modelEps = 0.01;
     params.modelfinder_eps = 0.1;
+    params.treemix_eps = 0.001;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -4232,6 +4233,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.suppress_duplicate_sequence_warnings = true;
                 params.optimize_alg_freerate = "1-BFGS";
                 params.opt_gammai = false;
+                params.treemix_eps = 0.001;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -4366,6 +4368,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Model epsilon must be positive";
 				if (params.modelEps > 1.0)
 					throw "Model epsilon must not be larger than 1.0";
+                params.treemix_eps = params.modelEps;
 				continue;
 			}
 

@@ -263,7 +263,7 @@ public:
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihood(double *pattern_lh = NULL);
+    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
 
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
