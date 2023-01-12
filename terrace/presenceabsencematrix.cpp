@@ -328,7 +328,7 @@ void PresenceAbsenceMatrix::remove_taxon(string taxon_name){
     
 }
 
-int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m){
+int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m, int thread_num){
     
     //cout<<"\n"<<"=================================================="<<"\n"<<"INITIAL tree and Taxon Order:"<<"\n"<<"\n";
     int i,j,k;
@@ -346,7 +346,9 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
     
     for(j=0; j<taxa_num; j++){
         if(taxon_cov[j]==0){
-            cout<<"ERROR: taxon "<<j<<" ("<<taxa_names[j]<<")"<<" is not covered by any partition (row sum = 0). Remove it from the dataset.\n";
+            if(thread_num == 0)
+                cout<<"ERROR: taxon "<<j<<" ("<<taxa_names[j]<<")"<<" is not covered by any partition (row sum = 0). Remove it from the dataset.\n";
+            
             assert(taxon_cov[j]!=0);
         }
     }
@@ -362,29 +364,30 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
             }
         }
         if(part_cov[i]+uniq_taxa[i] == taxa_num){
-            cout<<"\n"<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
-            cout<<"INPUT INFO:"<<"\n";
-            cout<<"---------------------------------------------------------"<<"\n";
-            cout<<"Number of taxa: "<<taxa_num<<"\n";
-            cout<<"Number of partitions: "<<part_num<<"\n";
-            cout<<"Number of special taxa (row sum = 1): "<<uniq_taxa_num<<"\n";
-            percent_missing();
-            cout<<"% of missing entries in supermatrix: "<<missing_percent<<"\n";
-            cout<<"---------------------------------------------------------"<<"\n";
-            cout<<"\n"<<"INFO: "<<"\n";
-            cout<<"At least one partition (partition "<<i+1<<") covers all taxa."<<"\n"<<"There are only trivial terraces (contain just 1 tree) for this dataset. Great!"<<"\n"<<"\n";
-            cout<<"---------------------------------------------------------"<<"\n";
-            cout<<"SUMMARY:"<<"\n";
-            cout<<"Number of trees on terrace: "<<1<<"\n";
-            cout<<"Number of intermediated trees visited: "<<0<<"\n";
-            cout<<"Number of dead ends encountered: "<<0<<"\n";
-            cout<<"---------------------------------------------------------"<<"\n";
-            cout<<"Total wall-clock time used: "<<getRealTime()-Params::getInstance().start_real_time<<" seconds ("<<convert_time(getRealTime()-Params::getInstance().start_real_time)<<")"<<"\n";
-            cout<<"Total CPU time used: "
-            << getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")" << "\n";
-            cout<<"\n";
-            
-            exit(0);
+            if(thread_num == 0){
+                cout<<"\n"<<"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++"<<"\n";
+                cout<<"INPUT INFO:"<<"\n";
+                cout<<"---------------------------------------------------------"<<"\n";
+                cout<<"Number of taxa: "<<taxa_num<<"\n";
+                cout<<"Number of partitions: "<<part_num<<"\n";
+                cout<<"Number of special taxa (row sum = 1): "<<uniq_taxa_num<<"\n";
+                percent_missing();
+                cout<<"% of missing entries in supermatrix: "<<missing_percent<<"\n";
+                cout<<"---------------------------------------------------------"<<"\n";
+                cout<<"\n"<<"INFO: "<<"\n";
+                cout<<"At least one partition (partition "<<i+1<<") covers all taxa."<<"\n"<<"There are only trivial terraces (contain just 1 tree) for this dataset. Great!"<<"\n"<<"\n";
+                cout<<"---------------------------------------------------------"<<"\n";
+                cout<<"SUMMARY:"<<"\n";
+                cout<<"Number of trees on terrace: "<<1<<"\n";
+                cout<<"Number of intermediated trees visited: "<<0<<"\n";
+                cout<<"Number of dead ends encountered: "<<0<<"\n";
+                cout<<"---------------------------------------------------------"<<"\n";
+                cout<<"Total wall-clock time used: "<<getRealTime()-Params::getInstance().start_real_time<<" seconds ("<<convert_time(getRealTime()-Params::getInstance().start_real_time)<<")"<<"\n";
+                cout<<"Total CPU time used: "
+                << getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")" << "\n";
+                cout<<"\n";
+            }
+            return -1;
         }
     }
     
@@ -475,7 +478,9 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
     
     int part_init = -1;
     if(m==0){
-        cout<<"Partition "<<part_max+1<<" is chosen for the initial tree."<<"\n";
+        if(thread_num == 0)
+            cout<<"Partition "<<part_max+1<<" is chosen for the initial tree."<<"\n";
+
         part_init = part_max;
         // count the number of unique taxa to insert on part_init
         uniq_taxa_to_insert_num=uniq_taxa_num;
@@ -485,8 +490,10 @@ int PresenceAbsenceMatrix::getINFO_init_tree_taxon_order(vector<string> &taxa_na
             }
         }
     } else {
-        cout<<"The initial tree will be created by removing from the input tree "<<m<<" leaves."<<"\n";
-        cout<<"Note, that this procedure does not guarantee generating all trees from a stand! It is only meant to investigate, if at least some trees from a stand can be generated."<<"\n";
+        if(thread_num == 0){
+            cout<<"The initial tree will be created by removing from the input tree "<<m<<" leaves."<<"\n";
+            cout<<"Note, that this procedure does not guarantee generating all trees from a stand! It is only meant to investigate, if at least some trees from a stand can be generated."<<"\n";
+        }
     }
     
     IntVector ordered_ids;

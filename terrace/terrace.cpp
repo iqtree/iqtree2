@@ -5,22 +5,57 @@
  *      Author: Olga
  */
 
+#include "global_vars.h"
 #include "terrace.hpp"
 #include "main/terraceanalysis.h"
 #include "terracenode.hpp"
 #include "tree/mtreeset.h"
 #include "utils/timeutil.h"
+#include <string.h>
+#include <memory.h>
+#include <chrono>
+#include <thread>
+#include <pthread.h>
+#include <mutex>
+#include <omp.h>
+
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <utility>
+
+#define TERRACE_TREES_UPDATE_NUM      (1<<10)
+#define INTERMEDIATE_TREES_UPDATE_NUM (1<<13)
+#define DEAD_ENDS_UPDATE_NUM          (1<<10)
 
 Terrace::Terrace(){};
 Terrace::~Terrace(){
 
-    for(vector<TerraceTree*>::reverse_iterator it=induced_trees.rbegin(); it<induced_trees.rend();it++){
-        delete (*it);
-    }
-    induced_trees.clear();
+    //std::cout << "Terrace destructor called " << std::endl;
+    //this_thread::sleep_for(std::chrono::seconds(1));
     
-    delete matrix;
-    master_terrace = nullptr;
+    if(master_terrace == nullptr){
+        
+        for(int i = induced_trees.size()-1; i>=0; i--){
+            delete induced_trees[i];
+        }
+
+    } else {
+        delete master_terrace;
+        master_terrace = nullptr;
+
+        for(int i = 0; i<path_size; i++){
+            delete[] path_up_to_now[i];
+            //delete[] inserted_taxa[i];
+        }
+
+        delete[] path_up_to_now;
+
+        //delete[] inserted_taxa;
+
+    }
+    
+    //induced_trees.clear();
 };
 
 void Terrace::init(){
@@ -37,6 +72,7 @@ void Terrace::init(){
     intermediate_max_trees = 10000000;
     seconds_max = 604800; // the default value is 7 days
     
+    master_terrace = nullptr;
 }
 
 Terrace::Terrace(const char *infile_tree, bool is_rooted,const char *infile_matrix){
@@ -45,11 +81,11 @@ Terrace::Terrace(const char *infile_tree, bool is_rooted,const char *infile_matr
     
     readTree(infile_tree,is_rooted);
     if(rooted){
-        cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\nConverting rooted tree to unrooted...\n";
+        //cout<<"WARNING: The species-tree/terrace analysis is only available for unrooted trees!\nConverting rooted tree to unrooted...\n";
         convertToUnrooted();
     }
     
-    matrix = new PresenceAbsenceMatrix();
+    matrix = make_shared_global<PresenceAbsenceMatrix>();
     matrix->read_pr_ab_matrix(infile_matrix);
     
     taxa_num = matrix->pr_ab_matrix.size();
@@ -59,7 +95,7 @@ Terrace::Terrace(const char *infile_tree, bool is_rooted,const char *infile_matr
   
 };
 
-Terrace::Terrace(TerraceTree tree, PresenceAbsenceMatrix *m){
+Terrace::Terrace(TerraceTree &tree, std::shared_ptr<PresenceAbsenceMatrix> &m){
     
     init();
 
@@ -75,7 +111,7 @@ Terrace::Terrace(TerraceTree tree, PresenceAbsenceMatrix *m){
     
     matrix = m;
     
-    taxa_num = leafNum;
+    taxa_num = matrix->pr_ab_matrix.size();
     part_num = matrix->pr_ab_matrix[0].size();
     
     get_part_trees();
@@ -83,7 +119,8 @@ Terrace::Terrace(TerraceTree tree, PresenceAbsenceMatrix *m){
     fillLeafNodes();
 }
 
-Terrace::Terrace(TerraceTree tree, PresenceAbsenceMatrix *m, vector<TerraceTree*> input_induced_trees){
+
+Terrace::Terrace(TerraceTree &tree, vector<TerraceTree*> input_induced_trees){
  
     init();
     
@@ -97,7 +134,7 @@ Terrace::Terrace(TerraceTree tree, PresenceAbsenceMatrix *m, vector<TerraceTree*
         copyTree(&tree,taxa_set);
     }
     
-    matrix = m;
+    //matrix = m;
     
     taxa_num = leafNum;
     part_num = input_induced_trees.size();
@@ -122,7 +159,7 @@ Terrace::Terrace(vector<TerraceTree*> input_induced_trees){
         }
     }
     
-    matrix = new PresenceAbsenceMatrix();
+    matrix = make_shared_global<PresenceAbsenceMatrix>();
     matrix->get_from_subtrees(induced_trees);
     
     //printInfo();
@@ -261,6 +298,7 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
         if (node->isLeaf()) // two-taxa parent tree
             dad = (TerraceNode*)node->neighbors[0]->node;
     }
+
     TerraceNeighbor *nei = NULL;
     TerraceNeighbor *dad_nei = NULL;
     if (dad) {
@@ -271,6 +309,7 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
         nei->link_neighbors[part] = NULL;
         dad_nei->link_neighbors[part] = NULL;
     }
+
     if (node->isLeaf()) {
         ASSERT(dad);
         
@@ -319,7 +358,7 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
     }
     
     if (!dad) {
-        // Check, if the final dad has empty_branches and map them to branch, which is available.
+        // Check, if the final dad has empty_bsranches and map them to branch, which is available.
         // Note, that if there are some empty branches/taxa, there will be exactly one branch available for mapping.
         if(!node->empty_br_node_nei.empty()){
             FOR_NEIGHBOR_DECLARE(node, NULL, it) {
@@ -353,6 +392,7 @@ void Terrace::linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bo
     }
     linkBranch(part, nei, dad_nei, back_branch_map, back_taxon_map);
 }
+
 
 void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_nei, bool back_branch_map, bool back_taxon_map) {
     
@@ -520,6 +560,7 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
             }
         }
         if (!appear) {
+            
             ASSERT(!dad_part);
             dad_part = (TerraceNode*)(*it)->node;
         }
@@ -538,6 +579,7 @@ void Terrace::linkBranch(int part, TerraceNeighbor *nei, TerraceNeighbor *dad_ne
         ((TerraceNeighbor*)dad_nei->link_neighbors[part])->link_neighbors_lowtop_back.push_back(dad_nei);
     }
 }
+
 
 void Terrace::update_map(int part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node, TerraceNode *dad){
     
@@ -799,10 +841,9 @@ void Terrace::create_Top_Low_Part_Tree_Pairs(vector<Terrace*> &part_tree_pairs, 
     
     int i=0;
     NodeVector aux_taxon_nodes;
-    vector<TerraceTree*> aux_induced_part_trees;
     IntVector parts;
     bool back_branch_map = false, back_taxon_map = true;
-
+    
     if(!terrace->root){
         cout<<"Since no represenative tree was provided, performing a basic compatibility check..\n";
         /* ---------------------------------------------------------------------------------------------
@@ -853,20 +894,22 @@ void Terrace::create_Top_Low_Part_Tree_Pairs(vector<Terrace*> &part_tree_pairs, 
         }
         delete [] rfdist;
     }
-    
+
     for(i=0; i<terrace->part_num; i++){
-        aux_induced_part_trees.clear();
+        vector<TerraceTree*> aux_induced_part_trees;
         aux_induced_part_trees.push_back(induced_trees[i]);
-        Terrace *aux_terrace = new Terrace(*(terrace->induced_trees[i]), nullptr, aux_induced_part_trees);
+        Terrace *aux_terrace = new Terrace(*(terrace->induced_trees[i]), aux_induced_part_trees);
         aux_terrace->linkTrees(back_branch_map, back_taxon_map);
         part_tree_pairs.push_back(aux_terrace);
+        aux_induced_part_trees.clear();
+        //delete aux_induced_part_trees[0];
     }
 }
+
 
 void Terrace::getAllowedBranches(string taxon_name, vector<Terrace*> aux_terrace, NodeVector *node1_vec, NodeVector *node2_vec){
     // INFO/CHECK: make sure that your branches have proper unique ids, below code relies on that.
     //cout<<"\n"<<"**********************************************"<<"\n"<<"\n";
-    //cout<<"IN getALLOWEDbranches: "<<taxon_name<<"\n";
     //cout<<"\n"<<"**********************************************"<<"\n"<<"\n";
 
     //printMapInfo();
@@ -944,10 +987,9 @@ void Terrace::getAllowedBranches(string taxon_name, vector<Terrace*> aux_terrace
             node2_vec->push_back((TerraceNode*)brNodes[b][1]);
         }
     }
-    //cout<<"IN getALLOWEDbranches: "<<taxon_name<<":"<<node1_vec->size()<<"\n";
 }
 
-void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, TerraceNode *node_2_branch, vector<Terrace*> part_tree_pairs){
+void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, TerraceNode *node_2_branch, vector<Terrace*> part_tree_pairs, bool constructing_thread){
     
     //cout<<"=========================================================\n";
     //cout<<"GOING TO INSERT: "<<node_name<<"\n";
@@ -1088,118 +1130,359 @@ void Terrace::extendNewTaxon(string node_name, TerraceNode *node_1_branch, Terra
     
     //cout<<"INTERMEDIATE_INFO_TAXA_"<<leafNum<<"_INSERTED_"<<node_name<<"_TREE_";
     //printTree(cout, WT_BR_SCALE | WT_NEWLINE);
+    if(constructing_thread){
+        return;
+    }
     
-    intermediated_trees_num +=1;
+    if (!initial_split_done){
+        if(real_thread_num == 0)
+            intermediated_trees_num++;
+    } else {
+       intermediated_trees_num++;
+    }
+    
+    if(pContext->complete || intermediated_trees_num >= INTERMEDIATE_TREES_UPDATE_NUM){
+
+        global_intermediate_trees += this->intermediated_trees_num;
+        cur_intermediate_trees = global_intermediate_trees;
+        this->intermediated_trees_num = 0;
+
+        if(pContext->complete || cur_intermediate_trees >= intermediate_max_trees){
+
+            global_terrace_trees += this->terrace_trees_num;
+            global_intermediate_trees += this->intermediated_trees_num;
+            global_dead_ends += this->dead_ends_num;
+            
+            stop = true;
+
+            {   
+                omp_set_lock(&pContext->test_intermediate_trees_mutex);
+                if(!pContext->complete){
+                    write_warning_stop(1);
+                    pContext->complete = true;
+                }
+                pContext->condition_met = true;
+                omp_unset_lock(&pContext->test_intermediate_trees_mutex);
+            }
+            
+        }
+    }
+
+
+
     if(verbose_mode>=VB_MED){
-        if((intermediated_trees_num+terrace_trees_num) % 100000 == 0 and terrace_trees_num < 10000000){
-            cout<<"... trees generated - "<<intermediated_trees_num + terrace_trees_num<<"; intermediated - "<<intermediated_trees_num<<"; stand - "<<terrace_trees_num<<"; dead paths - "<<dead_ends_num<<"\n";
-        }else if(terrace_trees_num == 10000000){
-            cout<<"Since the stand size already reached 10 million trees, no intermediate results will be printed, but the generation continues...\n";
+        if((cur_intermediate_trees+cur_terrace_trees) % 100000 == 0 and cur_terrace_trees < 10000000){
+            
+            #pragma omp single
+            std::cout<<"... trees generated - "<<global_intermediate_trees + global_terrace_trees<<"; intermediated - "<< global_intermediate_trees <<"; stand - "<<global_terrace_trees<<"; dead paths - "<<global_dead_ends<<"\n";
+                    
+        }else if(cur_terrace_trees > 10000000){
+            
+            #pragma omp single
+            std::cout<<"Since the stand size already reached 10 million trees, no intermediate results will be printed, but the generation continues...\n";
         }
     }
+
+
+    //inter_locker.unlock();
     
-    if(intermediated_trees_num == intermediate_max_trees){
-        for(const auto &p: part_tree_pairs){
-            p->unset_part_trees();
-        }
-        write_warning_stop(1);
-    }
-    
-    double time= getCPUTime()-Params::getInstance().startCPUTime;
+
+    double time = getRealTime() - this->start_real_time;
     if(seconds_max!=-1 and time > seconds_max){
-        write_warning_stop(3);
+        
+        global_terrace_trees += this->terrace_trees_num;
+        global_intermediate_trees += this->intermediated_trees_num;
+        global_dead_ends += this->dead_ends_num;
+        
+        stop = true;
+
+        {    
+            omp_set_lock(&pContext->time_mutex);
+            if(!pContext->complete){
+                write_warning_stop(3);
+                pContext->complete = true;
+            }
+            pContext->condition_met = true;
+            omp_unset_lock(&pContext->time_mutex);
+        }
+        
     }
+
+    //time_locker.unlock();
+    
+    
 }
 
-void Terrace::generateTerraceTrees(Terrace *terrace, vector<Terrace*> &part_tree_pairs, vector<string> &list_taxa_to_insert, int taxon_to_insert, vector<string> *ordered_taxa_to_insert){
+void Terrace::generateTerraceTrees(Terrace *terrace, 
+                                    vector<Terrace*> &part_tree_pairs, 
+                                    vector<string> &list_taxa_to_insert, 
+                                    int taxon_to_insert,
+                                    bool use_dynamic_order,
+                                    bool thread_call,
+                                    string _taxon_name,
+                                    vector<int>* ids1,
+                                    vector<int>* ids2){
+    
     
     string taxon_name;
-    taxon_name = list_taxa_to_insert[taxon_to_insert];
     NodeVector node1_vec_branch, node2_vec_branch;
-    if(ordered_taxa_to_insert){
+
+    if(taxon_to_insert == 0 && !thread_call){
+        //std::cout << "Trying hard to..." << std::endl;
+        path_size = list_taxa_to_insert.size();
+        path_up_to_now = new int*[path_size];
+        //inserted_taxa = new char*[path_size];
+
+        for(int i = 0; i<path_size; i++){
+            path_up_to_now[i] = new int[2];
+            //inserted_taxa[i] = new char[max_string_size+1];
+        }
+        //std::cout << "Done " << std::endl;
+    }
+
+    if(thread_call){
+        taxon_name = _taxon_name;
+        for(int i = 0; i<ids1->size(); i++){
+            node1_vec_branch.push_back(findNodeID(ids1->at(i)));
+            node2_vec_branch.push_back(findNodeID(ids2->at(i)));
+        }
+        //getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
+        //sorting_vector(node1_vec_branch, node2_vec_branch);
+                                
+    }  else{
         
-        if(ordered_taxa_to_insert->size()>1){
-            taxon_name = getNextTaxon(part_tree_pairs,ordered_taxa_to_insert,node1_vec_branch,node2_vec_branch);
+        taxon_name = list_taxa_to_insert[taxon_to_insert];
+        
+        if(use_dynamic_order){
+            
+            taxon_name = getNextTaxon(part_tree_pairs,&list_taxa_to_insert, taxon_to_insert, node1_vec_branch,node2_vec_branch);
+            
             if(list_taxa_to_insert[taxon_to_insert]!=taxon_name){
                 vector<string>::iterator it_t = std::find(list_taxa_to_insert.begin()+taxon_to_insert+1,list_taxa_to_insert.end(),taxon_name);
                 assert(it_t!=list_taxa_to_insert.end() && "ERROR: in generateTerraceTrees: taxon not found in the remainder of the list!");
                 list_taxa_to_insert.erase(it_t);
                 list_taxa_to_insert.insert(list_taxa_to_insert.begin()+taxon_to_insert, taxon_name);
             }
-        }else{
-            if(ordered_taxa_to_insert->size()==1){
-                ordered_taxa_to_insert->clear();
-            }
             
+        }else{
             getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
         }
-    }else{
-        getAllowedBranches(taxon_name, part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
     }
+
+    //if(node1_vec_branch.size()>1)
+        
     
     //cout<<"\n"<<"*******************************************************"<<"\n";
     //cout<<"GENERATE_TERRACE_TREES | TAXON "<<taxon_name<<"\n";
     //cout<<"*******************************************************"<<"\n";
     
-    
     int j, id;
     
     if(!node1_vec_branch.empty()){
-        //cout<<"NUM_OF_ALLOWED_BRANCHES_"<<taxon_name<<"_"<<node1_vec_branch.size()<<"\n";
-        //cout<<"ALL ALLOWED BRANCHES:"<<"\n";
-        //for(j=0; j<node1_vec_branch.size(); j++){
-        //    cout<<j<<":"<<node1_vec_branch[j]->id<<"-"<<node2_vec_branch[j]->id<<"\n";
-        //}
-        
-        for(j=0; j<node1_vec_branch.size(); j++){
-            //cout<<"-----------------------------------"<<"\n"<<"INSERTing taxon "<<taxon_name<<" on branch "<<j+1<<" out of "<<node1_vec_branch.size()<<": "<<node1_vec_branch[j]->id<<"-"<<node2_vec_branch[j]->id<<"\n"<<"-----------------------------------"<<"\n";
+
+        if(parallel_exec){    
             
-            //id = terrace->matrix->findTaxonID(taxon_name);
-            //assert(id!=-1);
-            extendNewTaxon(taxon_name,(TerraceNode*)node1_vec_branch[j],(TerraceNode*)node2_vec_branch[j],part_tree_pairs);
-            //this->printTree(cout,WT_NEWLINE);
+            if(!initial_split_done){
             
-            if(taxon_to_insert != list_taxa_to_insert.size()-1){
+                int parallel_case = 0;
+                int initial_num_threds = remaining_threads_to_assign;
                 
-                generateTerraceTrees(terrace, part_tree_pairs, list_taxa_to_insert, taxon_to_insert+1,ordered_taxa_to_insert);
-                
-                // INFO: IF NEXT TAXON DOES NOT HAVE ALLOWED BRANCHES CURRENT TAXON IS DELETED AND NEXT BRANCH IS EXPLORED.
-                remove_one_taxon(taxon_name,part_tree_pairs);
-            } else {
-                if(terrace_out){
-                    if(trees_out_lim==0 or terrace_trees_num<trees_out_lim){
-                    //terrace_trees.push_back(getTreeTopologyString(this));
+                if (node1_vec_branch.size() > 1){
+                    
+                    if(initial_split_done_index == -1 ) initial_split_done_index = taxon_to_insert;
+
+                    if (node1_vec_branch.size() >= remaining_threads_to_assign && remaining_threads_to_assign > 0){
+                        parallel_case = 1;
+                        remaining_threads_to_assign = 0;
+                        initial_split_done = true;
+                    }
+
+                    else if (node1_vec_branch.size() < remaining_threads_to_assign && remaining_threads_to_assign > 0){
                         
-                    //ofstream out;
-                    //out.exceptions(ios::failbit | ios::badbit);
-                    //out.open(out_file,std::ios_base::app);
-                    printTree(out, WT_BR_SCALE | WT_NEWLINE);
-                    //out.close();
+                        parallel_case = 2;
+                        remaining_threads_to_assign = remaining_threads_to_assign - node1_vec_branch.size() + 1;
+                        if (real_thread_num >= (initial_num_threds -  node1_vec_branch.size()+1)){
+                            initial_split_done = true;
+
+                        } else {
+                            initial_split_done = false;
+                        }
                     }
                 }
-                terrace_trees_num+=1;
-                intermediated_trees_num-=1;
-                //if(terrace_trees_num % 1000 == 0){
-                //    cout<<"... generated tree "<<terrace_trees_num<<"\n";
-                //}
-                //printTree(cout, WT_BR_SCALE | WT_NEWLINE);
-                if(terrace_trees_num == terrace_max_trees){
-                    write_warning_stop(2);
+
+                if (parallel_case > 0) keepIndicesAssignedToThread_initial(node1_vec_branch, node2_vec_branch, parallel_case, real_thread_num, initial_num_threds);
+
+            } else{
+
+                if(thread_call){
+                    //print_debug(node1_vec_branch, node2_vec_branch, taxon_to_insert);
+                    keepIndicesAssignedToThread(node1_vec_branch, node2_vec_branch);
+
+                } else{
+                    
+                    if((list_taxa_to_insert.size() - 1 - taxon_to_insert >= 3) && node1_vec_branch.size()>1 ){
+                        
+                        if(omp_test_lock(&this->pContext->taskReader)){
+
+                            if(pContext->taskCount < taskThreshold ){
+                                
+                                sorting_vector(node1_vec_branch, node2_vec_branch);
+
+                                vector<int> ids1;
+                                vector<int> ids2;
+                                for(int k = 0; k<node1_vec_branch.size(); k++){
+                                    ids1.push_back(node1_vec_branch[k]->id);
+                                    ids2.push_back(node2_vec_branch[k]->id);
+                                }
+                                
+                                split_threads(this, 
+                                            list_taxa_to_insert, 
+                                            taxon_to_insert, 
+                                            use_dynamic_order,
+                                            taxon_name,
+                                            ids1,
+                                            ids2);
+                                
+                                omp_unset_lock(&this->pContext->taskReader);
+                                this->artificial_thread_num = 0;
+                                keepIndicesAssignedToThread(node1_vec_branch, node2_vec_branch);
+                            } else {
+
+                                omp_unset_lock(&this->pContext->taskReader);
+                            }
+                        }
+                    }
+                    
                 }
-                remove_one_taxon(taxon_name,part_tree_pairs);
+            }
+        }
+        //strcpy(inserted_taxa[taxon_to_insert], taxon_name.c_str());
+        
+        for(j=0; j<node1_vec_branch.size(); j++){
+            
+            path_up_to_now[taxon_to_insert][0] = ((TerraceNode*)node1_vec_branch[j])->id;
+            path_up_to_now[taxon_to_insert][1] = ((TerraceNode*)node2_vec_branch[j])->id;
+            
+            if(!stop){
+                
+                //taxon_name.copy(inserted_taxa[0], max_string_size);
+
+                extendNewTaxon(taxon_name,(TerraceNode*)node1_vec_branch[j],(TerraceNode*)node2_vec_branch[j],part_tree_pairs);
+                
+                if(taxon_to_insert != list_taxa_to_insert.size()-1){
+                    
+                    generateTerraceTrees(terrace, 
+                                        part_tree_pairs, 
+                                        list_taxa_to_insert, 
+                                        taxon_to_insert+1,
+                                        use_dynamic_order,
+                                        false,
+                                        "");
+                    
+                    // INFO: IF NEXT TAXON DOES NOT HAVE ALLOWED BRANCHES CURRENT TAXON IS DELETED AND NEXT BRANCH IS EXPLORED.
+                    if(parallel_exec){
+                        if(taxon_to_insert>=initial_split_done_index)
+                            remove_one_taxon(taxon_name,part_tree_pairs);
+                    
+                    } else {
+                        remove_one_taxon(taxon_name,part_tree_pairs);
+                    }
+
+                } else {
+
+                    if(terrace_out){
+                        if(trees_out_lim==0 or global_terrace_trees<trees_out_lim){
+                            //terrace_trees.push_back(getTreeTopologyString(this));
+                                
+                            //ofstream out;
+                            //out.exceptions(ios::failbit | ios::badbit);
+                            //out.open(out_file,std::ios_base::app);
+                            omp_set_lock(&pContext->printLocker);
+                            printTree(out, WT_BR_SCALE | WT_NEWLINE);
+                            omp_unset_lock(&pContext->printLocker);
+                            //out.close();
+                        }
+                    }
+                    
+                
+                    if(!initial_split_done){
+                        if(real_thread_num == 0){
+                            terrace_trees_num++;
+                            intermediated_trees_num--;
+                        }
+                    } else{
+                        terrace_trees_num++;
+                        intermediated_trees_num--;
+                    }
+
+                    if(pContext->complete || terrace_trees_num >= TERRACE_TREES_UPDATE_NUM){
+                        
+                        global_terrace_trees += this->terrace_trees_num;
+                        cur_terrace_trees = global_terrace_trees;
+                        terrace_trees_num = 0;
+
+                        if(pContext->complete || cur_terrace_trees >= terrace_max_trees){
+                            
+                            global_terrace_trees += this->terrace_trees_num;
+                            global_intermediate_trees += this->intermediated_trees_num;
+                            global_dead_ends += this->dead_ends_num;
+                            
+                            stop = true;
+
+                            {   
+                                omp_set_lock(&pContext->test_terrace_trees_mutex);
+                                if(!pContext->complete){
+                                    pContext->complete = true;
+                                    write_warning_stop(2);
+                                }
+                                pContext->condition_met = true;
+                                omp_unset_lock(&pContext->test_terrace_trees_mutex);
+                            }
+                            return;
+                        }
+                    }
+                    
+                    //terrace_check.unlock();
+                    remove_one_taxon(taxon_name,part_tree_pairs);
+                }
             }
         }
     } else {
         //cout<<"NUM_OF_ALLOWED_BRANCHES_"<<taxon_name<<"_0_dead_end"<<"\n";
         //cout<<"For a given taxon "<<taxon_name<<" there are no allowed branches.. Dead end.."<<"\n";
-        dead_ends_num +=1;
+        
+
+        if(!initial_split_done){
+            if(real_thread_num == 0)
+                dead_ends_num++;
+        } else{
+            dead_ends_num++;
+        }
+
+        if(dead_ends_num >= DEAD_ENDS_UPDATE_NUM){
+            global_dead_ends += dead_ends_num;
+            dead_ends_num = 0;
+        }
+
     }
+
+}
+
+void Terrace::print_debug(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch, int taxon_to_insert, bool give_birth, int thread_num){
     
-    if(ordered_taxa_to_insert){
-        taxon_name = list_taxa_to_insert[taxon_to_insert];
-        ordered_taxa_to_insert->insert(ordered_taxa_to_insert->begin(),taxon_name);
-        //cout<<"Added taxon back: "<<taxon_name<<"|ordered_taxa_to_insert->size()="<<ordered_taxa_to_insert->size()<<"\n";
+    //pthread_mutex_lock(&pContext->working_mutex);
+    std::cout << "\n--------------------------------------" << std::endl;
+    if(give_birth){
+        std::cout << "Give birth to " << thread_num << std::endl;
     }
+    std::cout << "Thread " << real_thread_num << " at " << taxon_to_insert << ": ";
+
+    for(int i = 0; i<node1_vec_branch.size(); i++){
+        std::cout << node1_vec_branch[i]->id << ", ";
+    }
+    std::cout << '\n';
+    getchar();
+    //pthread_mutex_unlock(&pContext->working_mutex);
 
 }
 
@@ -1596,12 +1879,12 @@ void Terrace::write_terrace_trees_to_file(){
     << getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")" << "\n";
     cout<<"---------------------------------------------------------"<<"\n";
     
-    cout<<"Printing "<<terrace_trees_num<<" trees from the stand to file "<<"\n"<<out_file<<"..."<<"\n";
+    cout<<"Printing "<<global_terrace_trees<<" trees from the stand to file "<<"\n"<<out_file<<"..."<<"\n";
         
-    if(trees_out_lim==0 or trees_out_lim > terrace_trees_num){
-        trees_out_lim = terrace_trees_num;
+    if(trees_out_lim==0 or trees_out_lim > global_terrace_trees){
+        trees_out_lim = global_terrace_trees;
     } else {
-        cout<<"WARNING: The number of generated trees from the stand ("<<terrace_trees_num<<") is larger than the output treshold ("<<trees_out_lim<<" trees). Only "<<trees_out_lim<<" trees will be written to the file."<<"\n";
+        cout<<"WARNING: The number of generated trees from the stand ("<<global_terrace_trees<<") is larger than the output treshold ("<<trees_out_lim<<" trees). Only "<<trees_out_lim<<" trees will be written to the file."<<"\n";
     }
     
     ofstream out;
@@ -1615,6 +1898,185 @@ void Terrace::write_terrace_trees_to_file(){
 
 }
 
+string Terrace::getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *list_taxa_to_insert, int taxon_to_insert, NodeVector &node1_vec_main, NodeVector &node2_vec_main){
+    
+    string taxon_name;
+    int len = 2*leafNum - 2;
+    
+    //NodeVector branch_end_1, branch_end_2;
+    //this->getBranches(branch_end_1, branch_end_2);
+
+    int bond = 0, diff = list_taxa_to_insert->size()-matrix->uniq_taxa_to_insert_num-taxon_to_insert;
+    //cout<<ordered_taxa_to_insert->size()<<"|"<<matrix->uniq_taxa_num<<"|"<<diff<<"|"<<ordered_taxa_to_insert->size()-matrix->uniq_taxa_num<<"\n";
+    if(diff > 0){
+        // if there are more non-uniq taxa, only check the number of allowed branches for them, and choose one of them as the next taxon
+        bond=matrix->uniq_taxa_to_insert_num;
+    }
+    
+    int i_best;
+
+    for(int i=taxon_to_insert; i<list_taxa_to_insert->size()-bond; i++){
+        
+        NodeVector node1_vec_branch, node2_vec_branch;
+        getAllowedBranches(list_taxa_to_insert->at(i), part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
+
+        if(node1_vec_branch.size()<=len){
+            
+            if(node1_vec_branch.size()==0){
+                
+                node1_vec_main.clear();
+                node2_vec_main.clear();
+                taxon_name = list_taxa_to_insert->at(i);
+                
+                return taxon_name;
+
+            }
+
+            if(node1_vec_branch.size()==len){
+                
+                if(taxon_name.compare(list_taxa_to_insert->at(i))>0){
+                    i_best = i;
+                    len=node1_vec_branch.size();
+                    
+                    taxon_name = list_taxa_to_insert->at(i);
+
+                    node1_vec_main.clear();
+                    node2_vec_main.clear();
+                    node1_vec_main=move(node1_vec_branch);
+                    node2_vec_main=move(node2_vec_branch);
+                
+                }
+                
+            } else {
+                    
+                i_best = i;
+                len=node1_vec_branch.size();
+                
+                taxon_name = list_taxa_to_insert->at(i);
+
+                node1_vec_main.clear();
+                node2_vec_main.clear();
+                node1_vec_main=move(node1_vec_branch);
+                node2_vec_main=move(node2_vec_branch);
+            } 
+        }
+    }
+
+    return taxon_name;
+}
+
+void Terrace::sorting_vector(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch){
+    
+    int initial_size = node1_vec_branch.size();
+    std::vector<int> ids;
+    
+    std::vector<std::pair<Node*, int>> node1_vec;
+    std::vector<std::pair<Node*, int>> node2_vec;
+    
+    for(int i = 0; i<node1_vec_branch.size(); i++){
+        node1_vec.push_back(std::pair<Node*, int>(node1_vec_branch[i], node1_vec_branch[i]->id));
+        node2_vec.push_back(std::pair<Node*, int>(node2_vec_branch[i], node1_vec_branch[i]->id));
+    }
+
+    auto sort_by_scores = [](const std::pair<Node*,int>& _lhs, const std::pair<Node*,int>& _rhs) { return _lhs.second < _rhs.second; };
+
+    std::sort(node1_vec.begin(), node1_vec.end(), sort_by_scores);
+    std::sort(node2_vec.begin(), node2_vec.end(), sort_by_scores);
+
+    node1_vec_branch.clear();
+    node2_vec_branch.clear();
+
+    for(int i = 0; i<initial_size; i++){
+        node1_vec_branch.push_back(node1_vec[i].first);
+        node2_vec_branch.push_back(node2_vec[i].first);
+    }
+}
+
+// have to fix this or remove it
+void Terrace::keepIndicesAssignedToThread(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch){
+
+    //sorting_vector(node1_vec_branch, node2_vec_branch);
+
+    int initial_size = node1_vec_branch.size();
+    
+    if(this->artificial_thread_num == 0){
+        
+        //for(int i = (initial_size/2)-1; i>=0; i--){
+        for(int i = initial_size-1; i>=0; i=i-2){
+            node1_vec_branch.erase(node1_vec_branch.begin() + i);
+            node2_vec_branch.erase(node2_vec_branch.begin() + i);
+        }
+        
+        //node1_vec_branch.erase(node1_vec_branch.begin() + initial_size-1);
+        //node2_vec_branch.erase(node2_vec_branch.begin() + initial_size-1);
+        
+    } else {
+        //for(int i = initial_size-1; i>(initial_size/2)-1; i--){
+        for(int i = initial_size-2; i>=0; i=i-2){
+            node1_vec_branch.erase(node1_vec_branch.begin() + i);
+            node2_vec_branch.erase(node2_vec_branch.begin() + i);
+        }
+    }
+}
+
+void Terrace::keepIndicesAssignedToThread_initial(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch, int parallel_case, int thread_num, int nun_threads_remaining){
+
+    sorting_vector(node1_vec_branch, node2_vec_branch);
+    std::vector<bool> toKeep;
+
+    if (parallel_case == 1){
+        for(int j=0; j<node1_vec_branch.size(); j++){
+            if(!( j>=thread_num  && ( (j==thread_num) || (j - thread_num) % nun_threads_remaining == 0))){
+                toKeep.push_back(false);
+            } else {
+                toKeep.push_back(true);
+            }
+        }
+    }
+
+    if (parallel_case == 2){
+        for(int j=0; j<node1_vec_branch.size(); j++){
+            if (j == 0){
+                if(thread_num >= (nun_threads_remaining -  node1_vec_branch.size()+1)){
+                    toKeep.push_back(false);
+                } else{
+                    toKeep.push_back(true);  
+                }
+            }
+
+            else{
+                
+                if (thread_num < nun_threads_remaining -  node1_vec_branch.size() + 1){
+                    toKeep.push_back(false);
+                }
+                
+                else{
+                    if(thread_num != (nun_threads_remaining -  node1_vec_branch.size() +j) ){
+                        toKeep.push_back(false);
+                    } else {
+                        toKeep.push_back(true);
+                    }
+                } 
+            }
+        }
+        
+    }
+
+    assert(toKeep.size() == node1_vec_branch.size());
+
+    size_t last = 0;
+    for (size_t i = 0; i < node1_vec_branch.size(); i++) {
+        if (toKeep[i]) {
+            node1_vec_branch[last] = node1_vec_branch[i];
+            node2_vec_branch[last] = node2_vec_branch[i];
+            last++;
+        }
+    }
+
+    node1_vec_branch.erase(node1_vec_branch.begin() + last, node1_vec_branch.end());
+    node2_vec_branch.erase(node2_vec_branch.begin() + last, node2_vec_branch.end());
+}
+
 void Terrace::write_summary_generation(){
 
     //Params::getInstance().run_time = (getCPUTime() - Params::getInstance().startCPUTime);
@@ -1626,9 +2088,9 @@ void Terrace::write_summary_generation(){
     
     cout<<"---------------------------------------------------------"<<"\n";
     cout<<"SUMMARY:"<<"\n";
-    cout<<"Number of trees on stand: "<<terrace_trees_num<<"\n";
-    cout<<"Number of intermediated trees visited: "<<intermediated_trees_num<<"\n";
-    cout<<"Number of dead ends encountered: "<<dead_ends_num<<"\n";
+    cout<<"Number of trees on stand: "<< global_terrace_trees<<"\n";
+    cout<<"Number of intermediated trees visited: "<< global_intermediate_trees<<"\n";
+    cout<<"Number of dead ends encountered: "<< global_dead_ends<<"\n";
     cout<<"---------------------------------------------------------"<<"\n";
     
     // If there is an input tree (root != nullptr), try BACKWARD approach
@@ -1646,13 +2108,13 @@ void Terrace::write_summary_generation(){
             cout<<"---------------------------------------------------------"<<"\n";
             cout<<"WARNING: Due to complexity of the input data, the FORWARD approach could not generate trees from the stand.\nThe BACKWARD approach is triggered for exploratory purposes.\nThis approach DOES NOT guarantee generating all trees from the stand.\n";
             cout<<"---------------------------------------------------------"<<"\n";
-            
-            Terrace *master = master_terrace;
+            Terrace* master = master_terrace;
             const int m = 10; // Maybe % of missing taxa?
-            delete this;
+            //delete this;
+            
             run_generate_trees(master, Params::getInstance(),m);
             
-            exit(0);
+            //exit(0);
         }
     
     }
@@ -1666,7 +2128,7 @@ void Terrace::write_summary_generation(){
     cout<<"Total CPU time used: "
     << getCPUTime()-Params::getInstance().startCPUTime << " seconds (" << convert_time(getCPUTime()-Params::getInstance().startCPUTime) << ")" << "\n";
     cout<<"\n";
-    exit(0);
+    
 }
 
 void Terrace::write_warning_stop(int type){
@@ -1675,10 +2137,10 @@ void Terrace::write_warning_stop(int type){
     cout<<"WARNING: stopping condition is active!"<<"\n";
     cout<<"The total number of trees on the stand is NOT yet computed!"<<"\n";
     cout<<"Check summary at the current step.";
-    if(terrace_trees_num==UINT_MAX){
+    if(global_terrace_trees==UINT_MAX){
         type=4;
         cout<<"The number of trees on the stand reached maximum value for unsigned int.\n";
-    }else if (intermediated_trees_num==UINT_MAX){
+    }else if (global_intermediate_trees==UINT_MAX){
         type=4;
         cout<<"The number of intermediate trees reached maximum value for unsigned int.\n";
     }else{
@@ -1718,56 +2180,6 @@ void Terrace::write_warning_stop(int type){
     write_summary_generation();
     time_t end_time;
     time(&end_time);
-    cout << "Date and Time: " << ctime(&end_time);
-    exit(0);
+    //cout << "Date and Time: " << ctime(&end_time);
+    //exit(0);
 }
-
-string Terrace::getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *ordered_taxa_to_insert,NodeVector &node1_vec_main, NodeVector &node2_vec_main){
-    
-    string taxon_name;
-    int len = 2*taxa_num-3;
-    vector<string>::iterator it_NEO;
-    
-    //NodeVector branch_end_1, branch_end_2;
-    //this->getBranches(branch_end_1, branch_end_2);
-    
-    int bond = 0, diff = ordered_taxa_to_insert->size()-matrix->uniq_taxa_to_insert_num;
-    //cout<<ordered_taxa_to_insert->size()<<"|"<<matrix->uniq_taxa_num<<"|"<<diff<<"|"<<ordered_taxa_to_insert->size()-matrix->uniq_taxa_num<<"\n";
-    if(diff > 0){
-        // if there are more non-uniq taxa, only check the number of allowed branches for them, and choose one of them as the next taxon
-        bond=matrix->uniq_taxa_to_insert_num;
-    }
-    
-    for(auto it=ordered_taxa_to_insert->begin(); it!=ordered_taxa_to_insert->end()-bond;it++){
-        NodeVector node1_vec_branch, node2_vec_branch;
-        //getAllowedBranches((*it), part_tree_pairs, &node1_vec_branch, &node2_vec_branch, &branch_end_1, &branch_end_2);
-        getAllowedBranches((*it), part_tree_pairs, &node1_vec_branch, &node2_vec_branch);
-        if(node1_vec_branch.size()==0){
-            node1_vec_main.clear();
-            node2_vec_main.clear();
-            taxon_name = (*it);
-            ordered_taxa_to_insert->erase(it);
-            return taxon_name;
-        }else if(node1_vec_branch.size()<len){
-            len=node1_vec_branch.size();
-            taxon_name = (*it);
-            it_NEO = it;
-            
-            node1_vec_main.clear();
-            node2_vec_main.clear();
-            node1_vec_main=move(node1_vec_branch);
-            node2_vec_main=move(node2_vec_branch);
-        }else if(len==2*taxa_num-3 && node1_vec_branch.size()==len){
-            taxon_name = (*it);
-            it_NEO = it;
-            
-            node1_vec_main.clear();
-            node2_vec_main.clear();
-            node1_vec_main=move(node1_vec_branch);
-            node2_vec_main=move(node2_vec_branch);
-        }
-    }
-
-    ordered_taxa_to_insert->erase(it_NEO);
-    return taxon_name;
-};

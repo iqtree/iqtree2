@@ -1,4 +1,7 @@
 add_library(terrace
+global_vars.h
+ParallelContext.hpp
+ParallelContext.cpp
 terracenode.cpp
 terracenode.hpp
 terracetree.cpp

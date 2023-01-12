@@ -16,9 +16,11 @@ Analysis with Gentrius
 -----
 There are several ways and inputs one can use to start the analysis. Here are the examples of command lines:
 
-1.  __iqtree2 -gentrius <file 1> -pr_ab_matrix <file 2>__
-2.  __iqtree2 -gentrius <file 1> -s <file 3> -p <file 4>__
-3.  __iqtree2 -gentrius <file 5>__
+1.  __./iqtree2 -nt <NThreads\> --gentrius <file 1> -pr_ab_matrix <file 2>__
+2.  __./iqtree2 -nt <NThreads\> --gentrius <file 1> -s <file 3> -p <file 4>__
+3.  __./iqtree2 -nt <NThreads\> --gentrius <file 5>__
+    
+    - Nthreads: how many threads to be used 
 
     - File 1: a species-tree to be analysed
 

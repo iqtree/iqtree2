@@ -14,23 +14,17 @@ TerraceTree::TerraceTree(): MTree(){
     nodeNum = 0;
     root = nullptr;
 };
-TerraceTree::~TerraceTree(){
-   
-    if(brNodes.size()>0){
-        for(int id=0; id<branchNum; id++){
-            brNodes[id]={nullptr,nullptr};
-            brNodes.erase(id);
-        }
-    }
-    if(leafNodes.size()>0){
-        for(auto t=leafNodes.begin(); t!=leafNodes.end();t++){
-            leafNodes.erase(t);
-        }
-    }
 
-    if (root != NULL)
+TerraceTree::~TerraceTree(){
+
+    brNodes.clear();
+    leafNodes.clear();
+
+    if (root != NULL){
         freeNode();
+    }
     root = NULL;
+    
 };
 
 
