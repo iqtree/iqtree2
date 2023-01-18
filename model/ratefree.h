@@ -11,6 +11,7 @@
 #include "rategamma.h"
 
 class RateFree: public RateGamma {
+    friend class IQTreeMix;
 public:
 	/**
 		constructor
@@ -41,6 +42,13 @@ public:
 		@return true if this is a Gamma model (default: false)
 	*/	
     virtual int isGammaRate() { return 0; }
+
+    /**
+     *  @return true as this is a Free Rate model (default: false)
+     */
+    virtual bool isFreeRate() const {
+        return true;
+    }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

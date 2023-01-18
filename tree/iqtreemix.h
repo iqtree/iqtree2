@@ -17,6 +17,7 @@
 #include "iqtree.h"
 #include "utils/MPIHelper.h"
 #include "model/modelmarkov.h"
+#include "model/ratefree.h"
 // #include "phylokernel.h"
 //#include "phylokernelnew.h"
 #include <vectorclass/vectorclass.h>
@@ -56,7 +57,7 @@ public:
     virtual int getNumLhCat(SiteLoglType wsl);
     
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
-    double computeLikelihood_combine(double *pattern_lh = NULL);
+    double computeLikelihood_combine(double *pattern_lh = NULL, bool save_log_value = true);
     
     // compute the log-likelihood values for every site and tree
     // updated array: _ptn_like_cat
@@ -426,7 +427,16 @@ private:
      set all the branches of the same group to their average
      */
     void checkBranchGrp();
-    
+
+    // For the linked RHAS model
+    // Store the RHAS variables of tree 0 to the array rhas_var
+    void storeTree0RHAS();
+
+    // For the linked RHAS model
+    // Replace the RHAS variables of tree t by those of tree 0
+    // The array rhas_var should have stored the updated RHAS variables of tree 0
+    void copyRHASfrTree0(int t);
+
     // -------------------------------------
     // for BFGS optimzation on tree weights
     // -------------------------------------
@@ -524,6 +534,16 @@ private:
      is the tree weights fixed
      */
     bool isTreeWeightFixed;
+    
+    /**
+     is nested openmp
+     */
+    bool isNestedOpenmp;
+    
+    /**
+     variables for the shared RHAS model
+     */
+    double *rhas_var;
 };
 
 #endif /* iqtreemix_h */
