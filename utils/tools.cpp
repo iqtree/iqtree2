@@ -4305,7 +4305,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.suppress_duplicate_sequence_warnings = true;
                 params.optimize_alg_freerate = "1-BFGS";
                 params.opt_gammai = false;
-                params.treemix_eps = 0.001;
+                params.treemix_eps = 0.01;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
