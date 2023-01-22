@@ -659,6 +659,7 @@ endif(ZLIB_FOUND)
 ##################################################################
 
 add_compile_definitions(USE_PROGRESS_DISPLAY=1)
+add_compile_definitions(USE_VECTORCLASS_LIBRARY=1)
 
 option(USE_BOOSTER "Use Booster for transfer bootstrap expectation" ON)
 if (USE_BOOSTER)
