@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "maalignment.h"
+#include <utils/stringfunctions.h> //for convert_double() function
 
 void MaAlignment::readLogLL(char *fileName)
 {

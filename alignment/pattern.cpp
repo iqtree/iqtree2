@@ -72,7 +72,7 @@ int Pattern::computeGapChar(int num_states, int STATE_UNKNOWN) const {
     for (const uint32_t* block=dataStart; block<blockStop; block+=vecSize) {
         Vec8ui a;
         a.load(block);
-        num -= horizontal_add( Vec8ui(a == unknown) );
+        num -= horizontal_add( Vec8i(a == unknown) );
     }
     for (const uint32_t* single=blockStop; single<dataStop; ++single) {
         if (*single == STATE_UNKNOWN) {

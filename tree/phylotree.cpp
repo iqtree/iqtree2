@@ -20,7 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-#include "utils/starttree.h"
+#include "distancematrixtree/starttree.h"
 #include "utils/progress.h"  //for progress_display
 //#include "rateheterogeneity.h"
 #include "alignment/alignmentpairwise.h"
@@ -3700,7 +3700,7 @@ void PhyloTree::computeBioNJ(Params &params) {
     bionj_file += ".bionj";
     this->decideDistanceFilePath(params);
     auto treeBuilder
-        = StartTree::Factory::getTreeBuilderByName
+        = StartTree::Registry::getTreeBuilderByName
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
 #ifdef _OPENMP

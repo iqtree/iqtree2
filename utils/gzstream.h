@@ -32,8 +32,8 @@
 // standard C++ with new header file names and std:: namespace
 #include <iostream>
 #include <fstream>
-//#include "zlib-1.2.7/zlib.h"
 #include <zlib.h>
+#include "progress.h"
 
 #define GZ_NO_COMPRESSION (1L << 11)
 
@@ -60,16 +60,21 @@ private:
     size_t           compressed_position; //only tracked for read (input) streams
     
     int flush_buffer();
+    
+    progress_display_ptr progress;
+    
 public:
-    gzstreambuf() : opened(0), compressed_length(0), compressed_position(0) {
+    gzstreambuf() : file(nullptr), opened(0), mode(0)
+                  , compressed_length(0), compressed_position(0)
+                  , progress(nullptr) {
         setp( buffer, buffer + (bufferSize-1));
         setg( buffer + 4,     // beginning of putback area
               buffer + 4,     // read position
               buffer + 4);    // end position      
         // ASSERT: both input & output capabilities will not be used together
     }
-    int is_open() { return opened; }
-    gzstreambuf* open( const char* name, int open_mode, int compression_level=1);
+    int is_open() const { return opened; }
+    gzstreambuf* open( const char* name, int open_mode, int compression_level=9);
     gzstreambuf* close();
     ~gzstreambuf() { close(); }
     
@@ -77,8 +82,12 @@ public:
     virtual int     underflow();
     virtual int     sync();
 
-    size_t getCompressedLength();
-    size_t getCompressedPosition();
+    size_t getCompressedLength()   const;
+    size_t getCompressedPosition() const;
+    
+    #if USE_PROGRESS_DISPLAY
+    void setProgress(progress_display_ptr p);
+    #endif
 };
 
 class gzstreambase : virtual public std::ios {
@@ -86,15 +95,18 @@ protected:
     gzstreambuf buf;
 public:
     gzstreambase() { init(&buf); }
-    gzstreambase( const char* name, int open_mode);
+    gzstreambase( const char* name, int open_mode, int compression_level = 9);
     ~gzstreambase();
-    void open( const char* name, int open_mode);
+    void open( const char* name, int open_mode, int compression_level=9);
     void close();
 	z_off_t get_raw_bytes(); // BQM: return number of uncompressed bytes
 
+    const gzstreambuf* rdbuf() const { return &buf; }
     gzstreambuf* rdbuf() { return &buf; }
-    size_t getCompressedLength()   { return buf.getCompressedLength(); }
-    size_t getCompressedPosition() { return buf.getCompressedPosition(); }
+    size_t getCompressedLength() const  {
+        return buf.getCompressedLength(); }
+    size_t getCompressedPosition() const {
+        return buf.getCompressedPosition(); }
 };
 
 // ----------------------------------------------------------------------------
@@ -106,24 +118,51 @@ public:
 class igzstream : public gzstreambase, public std::istream {
 public:
     igzstream() : gzstreambase(), std::istream( &buf) {}
-    igzstream( const char* name, int open_mode = std::ios::in)
-        : gzstreambase( name, open_mode), std::istream( &buf) {}  
+    explicit igzstream( const char* name, int open_mode = std::ios::in)
+        : gzstreambase( name, open_mode), std::istream( &buf) {}
+    const gzstreambuf* rdbuf() const { return gzstreambase::rdbuf(); }
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }
     void open( const char* name, int open_mode = std::ios::in) {
         gzstreambase::open( name, open_mode);
     }
+    bool is_open() const {
+        const gzstreambuf* buf = rdbuf();
+        return buf!=nullptr && buf->is_open();
+    }
+};
+
+class pigzstream: public igzstream {
+protected:
+    std::string format_name;
+    progress_display_ptr progress;
+public:
+    typedef igzstream super;
+    explicit pigzstream(const char* format);
+    void open( const char* name, int open_mode = std::ios::in);
+    void close();
+    void done();
+    
+    const gzstreambuf* rdbuf() const;
+    gzstreambuf* rdbuf();
+    
+    void hideProgress() const;
+    void showProgress() const;
+    ~pigzstream();
 };
 
 class ogzstream : public gzstreambase, public std::ostream {
 public:
     ogzstream() : gzstreambase(), std::ostream( &buf) {
     }
-    ogzstream( const char* name, int mode = std::ios::out)
-        : gzstreambase( name, mode), std::ostream( &buf) {
+    explicit ogzstream( const char* name, int mode = std::ios::out,
+                        int compression_level = 9)
+        : gzstreambase( name, mode, compression_level)
+        , std::ostream( &buf) {
     }
     gzstreambuf* rdbuf() { return gzstreambase::rdbuf(); }
-    void open( const char* name, int open_mode = std::ios::out) {
-        gzstreambase::open( name, open_mode);
+    void open( const char* name, int open_mode = std::ios::out,
+               int compression_level = 9) {
+        gzstreambase::open( name, open_mode, compression_level);
     }
 };
 

@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "msetsblock.h"
 #include "utils/tools.h"
+#include <utils/stringfunctions.h> //for convert_double() function
 
 MSetsBlock::MSetsBlock()
  : NxsBlock()

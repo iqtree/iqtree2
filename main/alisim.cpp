@@ -6,6 +6,8 @@
  */
 
 #include "alisim.h"
+#include <utils/safe_io.h>         //for getSafeLine() function
+#include <utils/stringfunctions.h> //for convertIntToString() function
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
@@ -1163,8 +1165,8 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
     if (alisimulator->params->aln_file && !alisimulator->params->alisim_no_copy_gaps)
     {
         // initialize dummy variables
-        vector<string> seq_names;
-        vector<string> sequences;
+        StrVector seq_names;
+        StrVector sequences;
         int nseq = 0, nsite = 0;
         Alignment *aln = alisimulator->tree->aln;
         char *sequence_type_char = strcpy(new char[aln->sequence_type.length() + 1], aln->sequence_type.c_str());
@@ -1287,7 +1289,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
 
     for (; !in.eof(); line_num++)
     {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "" || (alisimulator->params->aln_output_format == IN_PHYLIP && line_num == 1)) continue;
         

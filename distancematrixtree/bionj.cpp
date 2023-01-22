@@ -16,9 +16,16 @@
 ;                                                                           ;
 \*;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;*/
 
-//_OPENMP and #pragma omp lines added by James Barbetti
+//Lines tagged //JB added by James Barbetti in 2020.
 #ifdef _OPENMP
     #define NJ_OMP
+#endif
+#ifdef _MSC_VER
+    #ifndef _CRT_SECURE_NO_WARNINGS
+        #define _CRT_SECURE_NO_WARNINGS //JB2020-12-17 Warnings about strcpy, fopen, etc.
+    #endif
+    #pragma warning(disable: 4244)  //JB2020-12-17 Warnings about double -> float conversions
+    #pragma warning(disable: 4305)  //JB2020-12-17 Warnings about double -> float truncations
 #endif
 
 #include <exception>
@@ -27,8 +34,10 @@
 #include <string.h>
 #include <time.h>
 
-#include "utils/timeutil.h" //JB2020-06-18 for getRealTime()
+#include <utils/timeutil.h>    //JB2020-06-18 for getRealTime()
 #include "starttree.h"
+#include <utils/stringfunctions.h> //JB2022-11-27 for endsWith()
+#include <utils/vectortypes.h>     //JB2021-05-09 for StrVector
 
 #define PREC 8                             /* precision of branch-lengths  */
 #define PRC  100
@@ -435,7 +444,7 @@ float Sum_S(int i, float **delta)          /* get sum Si form the diagonal */
     void Best_pair(float **delta, int r, int *a, int *b, int n)
     {
         float Qmin;                        /* current minimun of the criterion */
-        Qmin=1.0e300;
+        Qmin=1.0e36;                          //JB2020-12-17 Don't overflow float! (formerly 1e300).
         float* rowQmin      = new float[n+1]; //JB2020-06-16 Row minima found in parallel
         int*   rowMinColumn = new int[n+1];   //JB2020-06-16 And which columns they were in
         int    step = (n<240) ? 1 : (n / 120);//JB2020-06-17 Blocks of adjacent rows
@@ -531,7 +540,7 @@ void Finish(float **delta, int n, POINTERS *trees, FILE *output)
   char *str;
   WORD *bidon;
   WORD *ele;
-  int last[3];                            /* the last three subtrees     */
+  int last[3] = {0,  0, 0 };                            /* the last three subtrees     */
 
   str=(char *)calloc(LEN,sizeof(char));
 
@@ -633,17 +642,16 @@ float Reduction10(int a, int b, int i, float lamda, float vab,
 float Lamda(int a, int b, float vab, float **delta, int n, int r)
 {
   float lamda=0.0;
-  int i;
 
   if(vab==0.0)
     lamda=0.5;
   else
     {
-      for(i=1; i <= n ; i++)
-	{
-          if(a != i && b != i && !Emptied(i,delta))
+      for(int i=1; i <= n ; i++) {
+          if(a != i && b != i && !Emptied(i,delta)) {
             lamda=lamda + (Variance(b,i,delta) - Variance(a,i,delta));
-	}
+          }
+	    }
       lamda=0.5 + lamda/(2*(r-2)*vab);
     }                                              /* Formula (9) and the  */
   if(lamda > 1.0)                                /* constraint that lamda*/
@@ -819,32 +827,55 @@ public :
 //JB2020-06-26 Begin - Adapter, so that BioNj is available
 //for doing tree construction (via -starttree BIONJ2009).
 
-namespace {
-    bool endsWith(const std::string s, const char* suffix) {
-        auto suffixLen = strlen(suffix);
-        if (s.length() < suffixLen) {
-            return false;
-        }
-        return s.substr(s.length()-suffixLen, suffixLen) == suffix;
-    }
-};
-
-class BIONJ2009Adapter: public StartTree::BuilderInterface {
+/**
+ * @brief Adapter, for the original BIONJ implementation,
+ *        to make it callable to decentTree. 
+ * @note  Many of the StartTree::BuilderInterface member
+ *        functions are declared boolean *because* this 
+ *        class doesn't offer the requested function,
+ *        (and, so, returns false, indicating that fact).
+ */
+class BIONJ2009Adapter: 
+public StartTree::BuilderInterface {
 protected:
     std::string name = "BIONJ2009";
     std::string description = "The reference (2009) version of BIONJ (with OMP parallelization)";
 public:
     BIONJ2009Adapter() {
     }
-    virtual const std::string& getName() {
+    virtual const std::string& getName() const override {
         return name;
     }
-    virtual const std::string& getDescription() {
+    virtual const std::string& getDescription() override {
         return description;
     }
+    virtual bool isBenchmark() const override {
+        return false;
+    }
+    virtual bool setIsRooted(bool rootIt) override {
+        return false; //trees with degree-2 top node are not supported
+    }
+    virtual bool setSubtreeOnly(bool wantSubtree) override {
+        return false; //outputting of subtrees without ( [subtree] ) ;
+                      //enclosing parentheses and a trailing semi-colon
+                      //is not supported.
+    }
+    /**
+     * @brief 
+     * 
+     * @param  distanceMatrixFilePath - the path of the input phylip format file
+     * @param  newickTreeFilePath - the path to which the output newick format
+     *         tree is to be written.
+     * @return true  - if it succeeds
+     * @return false - if it fails (an error message explaining the reason
+     *         for the failure will be written to std::cerr)
+     * @note   the input file must be uncompressed (no zlib support), and the
+     *         matrix must be square (upper and lower triangle formats are
+     *         no supported).
+     */
     virtual bool constructTree
         ( const std::string &distanceMatrixFilePath
-         , const std::string & newickTreeFilePath) {
+        , const std::string & newickTreeFilePath) override {
             BioNj bio2009;
             if (endsWith(distanceMatrixFilePath,".gz")) {
                 std::cerr << "BIONJ2009 cannot handle .gz inputs\n";
@@ -853,21 +884,72 @@ public:
             bio2009.create(distanceMatrixFilePath.c_str(), newickTreeFilePath.c_str());
             return true;
     }
+
+    /**
+     * @brief  This function is not supported.  It could be (write the input
+     *         matrix to a file, and then read that file), but why go to 
+     *         so much trouble?! When BIONJMatrix supports phylogenetic
+     *         inference from an in-memory distance matrix already, and runs
+     *         so much faster?
+     * @param  sequenceNames      - a vector of sequence names
+     * @param  distanceMatrix     - a pointer to a flat array, containing a
+     *                              square matrix, in row-major order
+     * @param  newickTreeFilePath - the name of the file to write to
+     * @return false - because this function is not supported.
+     */
     virtual bool constructTreeInMemory
-        ( const std::vector<std::string> &sequenceNames
-         , double *distanceMatrix
-         , const std::string & newickTreeFilePath) {
+        ( const StrVector&   sequenceNames
+        , const double*      distanceMatrix
+        , const std::string& newickTreeFilePath) override {
             return false;
     }
-    virtual void setZippedOutput(bool zipIt) {
+    /**
+     * @brief  This function is not supported.
+     * @param  sequenceNames      - a vector of sequence names
+     * @param  distanceMatrix     - a pointer to a flat array, containing a
+     *                              square matrix, in row-major order
+     * @param  output_string 
+     * @return false - because this function is not supported
+     */
+    virtual bool constructTreeStringInMemory
+        ( const StrVector& sequenceNames
+        , const double*    distanceMatrix
+        , std::string&     output_string) override {
+            return false;
+    }
+    /**
+     * @brief This function is not supported
+     * @param  sequenceNames    - a vector of sequence names
+     * @param  distanceMatrix   - a pointer to a flat array, containing a
+     *                            square matrix, in row-major order
+     * @param  newickTreeStream - the stream to which to append the output  
+     * @return false - because this function is not supported.
+     */
+    virtual bool constructTreeAndAppendToStream
+        ( const StrVector& sequenceNames
+        , const double*    distanceMatrix
+        , std::iostream&   newickTreeStream) override {
+            return false;
+    }
+    virtual bool setZippedOutput(bool zipIt) override {
         if (zipIt) {
             std::cerr << "Warning: BIONJ2009 does not support gzip output (or input)" << std::endl;
         }
+        return false;
+    }
+    virtual void beSilent() override {
+      //Does nothing. The BIONJ implementation is already "silent".
+    }
+    virtual bool setAppendFile(bool appendIt) override {
+        return false; //not supported
+    }
+    virtual bool setPrecision(int precision) override {
+        return false; //not supported
     }
 };
 
 namespace StartTree {
-    void addBioNJ2009TreeBuilders(Factory& f) {
+    void addBioNJ2009TreeBuilders(Registry& f) {
         f.advertiseTreeBuilder(new BIONJ2009Adapter());
     }
 }

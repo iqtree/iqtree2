@@ -27,6 +27,7 @@
 #include <sstream>
 #include "pda/hashsplitset.h"
 #include "pda/splitset.h"
+#include <utils/stringfunctions.h> //for convertIntToString() function
 //#include "candidateset.h"
 
 const char ROOT_NAME[] = "__root__"; // special name that does not occur elsewhere in the tree

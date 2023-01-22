@@ -48,6 +48,8 @@
 #include "gzstream.h"
 #include "guidedbootstrap.h"
 #include "timeutil.h"
+#include <utils/vectortypes.h> //for DoubleVector and IntVector
+
 
 void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, DoubleVector &trees_logl)
 {

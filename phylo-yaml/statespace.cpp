@@ -307,10 +307,12 @@ void parseList(YAML::const_iterator first, YAML::const_iterator last, StrVector 
     }
     StrVector last_list;
     first++;
-    if (first != last)
+    if (first != last) {
         parseList(first, last, last_list);
-    else
-        last_list = { "" };
+    }
+    else {
+        last_list.emplace_back("");
+    }
     for (auto sit = this_list.begin(); sit != this_list.end(); sit++)
         for (auto sit2 = last_list.begin(); sit2 != last_list.end(); sit2++ )
             list.push_back(*sit + *sit2);

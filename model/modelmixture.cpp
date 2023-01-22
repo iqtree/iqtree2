@@ -17,6 +17,7 @@
 #include "modelpomo.h"
 //#include "phylokernelmixture.h"
 #include "modelpomomixture.h"
+#include <utils/stringfunctions.h> //for convertDoubleToString() function (and others)
 
 using namespace std;
 
@@ -1332,7 +1333,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
             
             // for Mixture model, check the frequency of the model
             StateFreqType model_freq = freq;
-            size_t slen = this_name.length();
             size_t fpos = this_name.find("+F");
             if (fpos != string::npos) {
                 string fstr3 = "";

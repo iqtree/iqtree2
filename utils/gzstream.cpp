@@ -32,6 +32,7 @@
 #include "gzstream.h"
 #include <iostream>
 #include <string.h>  // for memcpy
+#include <sstream>   // for std::stringstream
 
 #ifdef GZSTREAM_NAMESPACE
 namespace GZSTREAM_NAMESPACE {
@@ -46,8 +47,9 @@ namespace GZSTREAM_NAMESPACE {
 // --------------------------------------
 
 gzstreambuf* gzstreambuf::open( const char* name, int open_mode, int compression_level) {
-    if ( is_open())
+    if ( is_open()) {
         return (gzstreambuf*)0;
+    }
     mode = open_mode;
     // no append nor read/write mode
     if ((mode & std::ios::ate) || (mode & std::ios::app)
@@ -67,8 +69,15 @@ gzstreambuf* gzstreambuf::open( const char* name, int open_mode, int compression
     *fmodeptr = '\0';
     
     //BEGIN - Figure out length of the compressed file
-    if ( mode & std::ios::in) {
-        FILE *fp = fopen(name, "rb");
+    if (mode & std::ios::in) {
+        FILE* fp = nullptr;
+        #ifdef _MSC_VER
+            if (fopen_s(&fp, name, "rb") != 0) {
+                fp = nullptr;
+            }
+        #else
+            fp = fopen(name, "rb");
+        #endif  
         if (fp) {
             fseek(fp, 0, SEEK_END);
             #if defined(WIN64)
@@ -113,7 +122,7 @@ int gzstreambuf::underflow() { // used for input buffer only
     if ( ! (mode & std::ios::in) || ! opened)
         return EOF;
     // Josuttis' implementation of inbuf
-    long n_putback = gptr() - eback();
+    intptr_t n_putback = gptr() - eback();
     if ( n_putback > 4)
         n_putback = 4;
     memcpy( buffer + (4 - n_putback), gptr() - n_putback, n_putback);
@@ -123,6 +132,9 @@ int gzstreambuf::underflow() { // used for input buffer only
         return EOF;
     
     compressed_position = gzoffset(file);
+    if (progress!=nullptr) {
+        (*progress) = (double) compressed_position;
+    }
     
     // reset buffer pointers
     setg( buffer + (4 - n_putback),   // beginning of putback area
@@ -167,31 +179,39 @@ int gzstreambuf::sync() {
     return 0;
 }
 
-size_t gzstreambuf::getCompressedLength() {
+size_t gzstreambuf::getCompressedLength() const {
     return compressed_length;
 }
 
-size_t gzstreambuf::getCompressedPosition() {
+size_t gzstreambuf::getCompressedPosition() const {
     return compressed_position;
 }
 
+#if USE_PROGRESS_DISPLAY
+void  gzstreambuf::setProgress(progress_display_ptr p) {
+    progress = p;
+}
+#endif
 
 // --------------------------------------
 // class gzstreambase:
 // --------------------------------------
 
-gzstreambase::gzstreambase( const char* name, int mode) {
+gzstreambase::gzstreambase( const char* name, int mode,
+                            int compression_level) {
     init( &buf);
-    open( name, mode);
+    open( name, mode, compression_level);
 }
 
 gzstreambase::~gzstreambase() {
     buf.close();
 }
 
-void gzstreambase::open( const char* name, int open_mode) {
-    if ( ! buf.open( name, open_mode))
+void gzstreambase::open( const char* name, int open_mode,
+                         int compression_level) {
+    if ( ! buf.open( name, open_mode, compression_level)) {
         clear( rdstate() | std::ios::badbit);
+    }
 }
 
 void gzstreambase::close() {
@@ -202,6 +222,87 @@ void gzstreambase::close() {
 
 z_off_t gzstreambase::get_raw_bytes() {
 	return gztell(buf.file);
+}
+
+pigzstream::pigzstream(const char* format)
+    : igzstream(), format_name(format), progress(nullptr) {
+}
+
+void pigzstream::open( const char* name, int open_mode) {
+    if (progress!=nullptr) {
+        delete progress;
+    }
+    if (name!=nullptr && name[0]!='\0') {
+        #if USE_PROGRESS_DISPLAY
+            std::stringstream task;
+            task << "Reading " << format_name << " file " << name;
+            progress = new progress_display(0.0, task.str().c_str(), "", "" );
+            buf.setProgress(progress);
+            try {
+                igzstream::open( name, open_mode);
+                progress->setWorkRemaining((double)getCompressedLength());
+            }
+            catch (...) {
+                progress->markAsFailed();
+                throw;
+            }
+            if ( !is_open() ) {
+                //Error path!  If the open failed, the task won't be "done"
+                //it will be failed
+                progress->markAsFailed();
+            }
+        #else
+            igzstream::open( name, open_mode);
+            if (!is_open() ) {
+                std::cerr << "Could not open file: " << name << std::endl;
+            }
+        #endif
+    }
+}
+
+void pigzstream::close() {
+    super::close();
+    done();
+}
+
+void pigzstream::done() {
+    #if USE_PROGRESS_DISPLAY
+    if (progress!=nullptr) {
+        progress->done();
+        delete progress;
+    }
+    #endif
+    progress = nullptr;
+}
+
+const gzstreambuf* pigzstream::rdbuf() const {
+    (*progress) = (double)buf.getCompressedPosition();
+    return gzstreambase::rdbuf();
+}
+gzstreambuf* pigzstream::rdbuf() {
+    (*progress) = (double)buf.getCompressedPosition();
+    return gzstreambase::rdbuf();
+}
+
+void pigzstream::hideProgress() const {
+    #if USE_PROGRESS_DISPLAY
+    if (progress==nullptr) {
+        return;
+    }
+    progress->hide();
+    #endif
+}
+void pigzstream::showProgress() const {
+    #if USE_PROGRESS_DISPLAY
+    if (progress==nullptr) {
+        return;
+    }
+    progress->show();
+    #endif
+}
+
+pigzstream::~pigzstream() {
+    done();
 }
 
 #ifdef GZSTREAM_NAMESPACE

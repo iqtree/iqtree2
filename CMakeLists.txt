@@ -658,6 +658,8 @@ endif(ZLIB_FOUND)
 # subdirectories containing necessary libraries for the build
 ##################################################################
 
+add_compile_definitions(USE_PROGRESS_DISPLAY=1)
+
 option(USE_BOOSTER "Use Booster for transfer bootstrap expectation" ON)
 if (USE_BOOSTER)
     add_subdirectory(booster)
@@ -669,6 +671,7 @@ add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
 add_subdirectory(utils)
+add_subdirectory(distancematrixtree)
 add_subdirectory(pda)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
@@ -730,7 +733,7 @@ endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree2 ncl nclextra utils distancematrixtree pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         if (USE_TERRAPHAST)
             set_target_properties(terracetphast terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
@@ -792,7 +795,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+target_link_libraries(iqtree2 pll ncl nclextra utils distancematrixtree pda lbfgsb whtest sprng vectorclass model
     gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 	
 if (USE_TERRAPHAST)

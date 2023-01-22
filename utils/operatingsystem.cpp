@@ -10,6 +10,7 @@
 #include <sstream>
 #if defined(WIN32) || defined(WIN64)
     #include <io.h> //for _isatty
+    #include <stdio.h> //for _fileno (explicit include needed for GCC 9.2 builds)
 #else
     #include <unistd.h> //for isatty
 #endif
@@ -33,7 +34,7 @@ std::string getOSName() {
 
 bool isStandardOutputATerminal() {
 #if defined(WIN32) || defined(WIN64)
-    return _isatty(fileno(stdout));
+    return _isatty(_fileno(stdout));
 #else
     return isatty(fileno(stdout));
 #endif

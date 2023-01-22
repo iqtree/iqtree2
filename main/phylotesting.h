@@ -8,10 +8,11 @@
 #ifndef PHYLOTESTING_H_
 #define PHYLOTESTING_H_
 
-#include "utils/tools.h"
-#include "utils/checkpoint.h"
-#include "nclextra/modelsblock.h"
-#include "alignment/superalignment.h"
+#include <utils/tools.h>
+#include <utils/checkpoint.h>
+#include <nclextra/modelsblock.h>
+#include <alignment/superalignment.h>
+#include <utils/stringfunctions.h> //for convertIntToString() function
 
 class PhyloTree;
 class IQTree;

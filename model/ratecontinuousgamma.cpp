@@ -25,11 +25,11 @@ void RateContinuousGamma::saveCheckpoint() {
     startCheckpoint();
     CKP_SAVE(gamma_shape);
     checkpoint->endStruct();
-    RateContinuousGamma::saveCheckpoint();
+    RateHeterogeneity::saveCheckpoint();
 }
 
 void RateContinuousGamma::restoreCheckpoint() {
-    RateContinuousGamma::restoreCheckpoint();
+    RateHeterogeneity::restoreCheckpoint();
     startCheckpoint();
     CKP_RESTORE(gamma_shape);
     checkpoint->endStruct();

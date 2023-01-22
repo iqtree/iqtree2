@@ -5,11 +5,14 @@
  *      Author: minh
  */
 
+#include <cstdio>
+
 #include "checkpoint.h"
+#include "safe_io.h" //for safeGetLine() function
 #include "tools.h"
 #include "timeutil.h"
 #include "gzstream.h"
-#include <cstdio>
+#include <utils/stringfunctions.h> //for convertIntToString() function
 
 const char* CKP_HEADER =     "--- # IQ-TREE Checkpoint ver >= 1.6";
 const char* CKP_HEADER_OLD = "--- # IQ-TREE Checkpoint";
@@ -40,7 +43,7 @@ void Checkpoint::load(istream &in) {
     size_t pos;
     int listid = 0;
     while (!in.eof()) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         pos = line.find('#');
         if (pos != string::npos)
             line.erase(pos);
@@ -84,7 +87,7 @@ bool Checkpoint::load() {
         // remove the failbit
         in.exceptions(ios::badbit);
         string line;
-        if (!safeGetline(in, line)) {
+        if (!safeGetLine(in, line)) {
             in.close();
             return false;
         }

@@ -23,7 +23,7 @@
 
 
 #include "tools.h"
-#include "starttree.h" //for START_TREE_RECOGNIZED macro.
+#include <distancematrixtree/starttree.h> //for START_TREE_RECOGNIZED macro.
 #include "timeutil.h"
 #include "MPIHelper.h"
 #ifndef CLANG_UNDER_VS
@@ -45,6 +45,7 @@
 #include <cxxabi.h>
 #endif
 
+#include "stringfunctions.h"
 #include "tools.h"
 #include "timeutil.h"
 #include "progress.h"
@@ -133,70 +134,6 @@ double randomLen(Params &params) {
     }
 }
 
-std::istream& safeGetline(std::istream& is, std::string& t)
-{
-    t.clear();
-
-    // The characters in the stream are read one-by-one using a std::streambuf.
-    // That is faster than reading them one-by-one using the std::istream.
-    // Code that uses streambuf this way must be guarded by a sentry object.
-    // The sentry object performs various tasks,
-    // such as thread synchronization and updating the stream state.
-
-    std::istream::sentry se(is, true);
-    std::streambuf* sb = is.rdbuf();
-
-    for(;;) {
-        int c = sb->sbumpc();
-        switch (c) {
-        case '\n':
-            return is;
-        case '\r':
-            if(sb->sgetc() == '\n')
-                sb->sbumpc();
-            return is;
-        case EOF:
-            // Also handle the case when the last line has no line ending
-            if(t.empty())
-                is.setstate(std::ios::eofbit);
-            return is;
-        default:
-            t += (char)c;
-        }
-    }
-}
-
-//From Tung
-
-string convertIntToString(int number) {
-    stringstream ss; //create a stringstream
-    ss << number; //add number to the stream
-    return ss.str(); //return a string with the contents of the stream
-}
-
-string convertInt64ToString(int64_t number) {
-    stringstream ss; //create a stringstream
-    ss << number; //add number to the stream
-    return ss.str(); //return a string with the contents of the stream
-}
-
-string convertDoubleToString(double number) {
-    stringstream ss; //create a stringstream
-    ss << number; //add number to the stream
-    return ss.str(); //return a string with the contents of the stream
-}
-
-bool iEquals(const string a, const string b)
-{
-    unsigned int sz = a.size();
-    if (b.size() != sz)
-        return false;
-    for (unsigned int i = 0; i < sz; ++i)
-        if (tolower(a[i]) != tolower(b[i]))
-            return false;
-    return true;
-}
-
 //From Tung
 
 bool copyFile(const char SRC[], const char DEST[]) {
@@ -283,106 +220,6 @@ int getFilesInDir(const char *path, StrVector &filenames)
     return 0;
 #endif
 }
-int convert_int(const char *str) {
-    char *endptr;
-    int i = strtol(str, &endptr, 10);
-
-    if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
-        string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        outError(err);
-    }
-
-    return i;
-}
-
-int convert_int(const char *str, int &end_pos) {
-	char *endptr;
-	int i = strtol(str, &endptr, 10);
-
-	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL) {
-		string err = "Expecting integer, but found \"";
-		err += str;
-		err += "\" instead";
-		throw err;
-	}
-	end_pos = endptr - str;
-	return i;
-}
-
-void convert_int_vec(const char *str, IntVector &vec) {
-    char *beginptr = (char*)str, *endptr;
-    vec.clear();
-    do {
-		int i = strtol(beginptr, &endptr, 10);
-
-		if ((i == 0 && endptr == beginptr) || abs(i) == HUGE_VALL) {
-			string err = "Expecting integer, but found \"";
-			err += beginptr;
-			err += "\" instead";
-			throw err;
-		}
-		vec.push_back(i);
-		if (*endptr == ',') endptr++;
-		beginptr = endptr;
-    } while (*endptr != 0);
-}
-
-
-int64_t convert_int64(const char *str) {
-    char *endptr;
-    int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
-
-    if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
-        string err = "Expecting large integer , but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-
-    return i;
-}
-
-int64_t convert_int64(const char *str, int &end_pos) {
-	char *endptr;
-	int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
-
-	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL) {
-		string err = "Expecting large integer, but found \"";
-		err += str;
-		err += "\" instead";
-		throw err;
-	}
-	end_pos = endptr - str;
-	return i;
-}
-
-
-double convert_double(const char *str) {
-    char *endptr;
-    double d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
-        string err = "Expecting floating-point number, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    return d;
-}
-
-double convert_double(const char *str, int &end_pos) {
-	char *endptr;
-	double d = strtod(str, &endptr);
-	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF) {
-		string err = "Expecting floating-point number, but found \"";
-		err += str;
-		err += "\" instead";
-		throw err;
-	}
-	end_pos = endptr - str;
-	return d;
-}
 
 double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator)
 {
@@ -404,24 +241,6 @@ double convert_double_with_distribution(const char *str, int &end_pos, bool non_
     else
         end_pos = endptr - str;
     return d;
-}
-
-void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
-    char *beginptr = (char*)str, *endptr;
-    vec.clear();
-    do {
-		double d = strtod(beginptr, &endptr);
-
-		if ((d == 0.0 && endptr == beginptr) || fabs(d) == HUGE_VALF) {
-			string err = "Expecting floating-point number, but found \"";
-			err += beginptr;
-			err += "\" instead";
-			throw err;
-		}
-		vec.push_back(d);
-		if (*endptr == separator) endptr++;
-		beginptr = endptr;
-    } while (*endptr != 0);
 }
 
 void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, bool non_negative, char separator)
@@ -466,120 +285,6 @@ void convert_double_array_with_distributions(string tmp_str, double* array, int 
         // remove the current double/distribution name from tmp_str
         tmp_str.erase(0, pos + 1);
     }
-}
-
-string convert_time(const double sec) {
-    int sec_int = (int) floor(sec);
-    int secs = sec_int % 60;
-    int mins = (sec_int % 3600) / 60;
-    int hours = sec_int / 3600;
-    stringstream ss;
-    ss << hours << "h:" << mins << "m:" << secs << "s";
-    return ss.str();
-}
-
-void convert_range(const char *str, int &lower, int &upper, int &step_size) {
-    char *endptr;
-
-    // parse the lower bound of the range
-    int d = strtol(str, &endptr, 10);
-    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
-        string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    //lower = d;
-    int d_save = d;
-    upper = d;
-    if (*endptr == 0) return;
-
-
-    // parse the upper bound of the range
-    str = endptr + 1;
-    d = strtol(str, &endptr, 10);
-    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || (*endptr != 0 && *endptr != ':')) {
-        string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-
-    lower = d_save;
-    upper = d;
-    if (*endptr == 0) return;
-
-    // parse the step size of the range
-    str = endptr + 1;
-    d = strtol(str, &endptr, 10);
-    if ((d == 0 && endptr == str) || abs(d) == HUGE_VALL || *endptr != 0) {
-        string err = "Expecting integer, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    step_size = d;
-}
-
-void convert_range(const char *str, double &lower, double &upper, double &step_size) {
-    char *endptr;
-
-    // parse the lower bound of the range
-    double d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
-        string err = "Expecting floating-point number, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    //lower = d;
-    double d_save = d;
-    upper = d;
-    if (*endptr == 0) return;
-
-
-    // parse the upper bound of the range
-    str = endptr + 1;
-    d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || (*endptr != 0 && *endptr != ':')) {
-        string err = "Expecting floating-point number, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-
-    lower = d_save;
-    upper = d;
-    if (*endptr == 0) return;
-
-    // parse the step size of the range
-    str = endptr + 1;
-    d = strtod(str, &endptr);
-    if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
-        string err = "Expecting floating-point number, but found \"";
-        err += str;
-        err += "\" instead";
-        throw err;
-    }
-    step_size = d;
-}
-
-void convert_string_vec(const char *str, StrVector &vec, char separator) {
-    char *beginptr = (char*)str, *endptr;
-    vec.clear();
-    string elem;
-    do {
-    	endptr = strchr(beginptr, separator);
-    	if (!endptr) {
-    		elem.assign(beginptr);
-    		vec.push_back(elem);
-    		return;
-    	}
-    	elem.assign(beginptr, endptr-beginptr);
-    	vec.push_back(elem);
-		beginptr = endptr+1;
-    } while (*endptr != 0);
-
 }
 
 bool renameString(string &name) {
@@ -1345,7 +1050,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.lh_mem_save = LM_PER_NODE; // auto detect
     params.buffer_mem_save = false;
 	params.start_tree = STT_PLL_PARSIMONY;
-    params.start_tree_subtype_name = StartTree::Factory::getNameOfDefaultTreeBuilder();
+    params.start_tree_subtype_name = StartTree::Registry::getNameOfDefaultTreeBuilder();
 
     params.modelfinder_ml_tree = true;
     params.final_model_opt = true;

@@ -21,7 +21,8 @@
 
 #include <string.h>
 #include <sstream>
-#include "utils/tools.h"
+#include <utils/tools.h>
+#include <utils/stringfunctions.h> //for convert_int() function
 #include "gurobiwrapper.h"
 
 #define tolerance 0.000001

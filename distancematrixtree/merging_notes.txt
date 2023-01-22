@@ -1,0 +1,46 @@
+Notes for the merge from the decenttree project, 22-Jan-2023.
+
+1. Files that are specific to distance matrix tree inference 
+   algorithms that were in the utils folder have been moved to
+   a new distancematrixtree folder, and build a library of
+   the same name.
+2. They've been updated to match what was in the decenttree
+   project's folder (of the same name) as at 22-Jan-2023.
+3. Some of these files have (in the decenttree project) been
+   split up into other files (particularly header files).
+   (a) rapidnj.h > nj.h > upgma.h > distancematrix.h 
+   (b) clustertree.h                 (tree representations)
+   (c) flatmatrix.h + flatmatrix.cpp (distance matrices)
+   (d) hashrow.h                     (hashing of matrix rows)
+   (e) sequence.cpp + sequence.h     (sequence-loading into 
+4. There are a number of additional files in the utils folder:
+   (a) argument.cpp + argument.h (command-line argument parsing)
+   (b) my_assert.h               (assertions, drawn out of tools.h)
+   (c) vectortypes.cpp + vectortypes.h (vector types, drawn out of tools.h)
+   (d) parallel_sort.h + parallel_mergesort.h (merge sort)
+5. Some other files in utils folder have been heavily updated
+   (mostly, additional docstring comments explaining what 
+   functions do - if there's anything else, it's listed below):
+   (a) progress.cpp + progress.h
+   (b) gzstream.cpp + gzstream.h (Microsoft MSVC use of fopen_s())
+       (also there's a pigzstream : an igzstream that reports progress,
+       and the compression level can be passed as an extra optional
+       parameter to ogzstream).
+   (c) hammingdistance.h
+   (d) heapsort.h
+   (e) operatingsystem.cpp + operatingsystem.h
+       (Microsoft MSVC / Windows console file path is different!)
+   (f) timeutil.h (Microsoft MSVC, use the Windows time structures)
+6. decentTree target is no longer built in utils folder
+   (it isn't built at all.  I'll probably address this in a later commit).
+7. Changes to files in the alignment folder are mostly needed because
+   of functions moved out of utils/tools.cpp (see 4), especially
+   safeGetLine().
+8. Changes to files in the main folder are mostly about switching
+   over std::vector<string> to StrVector (in a few places where that
+   is now needed).
+9. I corrected what looked like "stack overflow" bugs in 
+   RateContinuousGamma (in the model folder).
+10.Likewise, I made AliSimulator's destructor virtual (it wasn't!).
+11.The top-most CMakeLists.txt, distancematrixtree (folder and lib) 
+   are added, and USE_PROGRESS_DISPLAY is defined to 1.

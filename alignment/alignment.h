@@ -470,7 +470,7 @@ public:
      *  Get a list of all sequence names
      *  @return vector containing the sequence names
      */
-    vector<string>& getSeqNames();
+    StrVector& getSeqNames();
 
     /**
             @param seq_name sequence name
@@ -1011,7 +1011,7 @@ protected:
     /**
             sequence names
      */
-    vector<string> seq_names;
+    StrVector seq_names;
     
     /**
             expected num_sites

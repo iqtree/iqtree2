@@ -21,12 +21,21 @@
 #ifndef TIMEUTIL_H
 #define TIMEUTIL_H
 
+#if defined(DECENT_TREE)
+#if defined(_MSC_VER)
+#include <decenttree_msvc_config.h>
+#else
+#include <decenttree_config.h>
+#endif 
+#else
 #include <iqtree_config.h>
+#endif
 #include <stdlib.h>
 
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>    //for floor()
 #if !defined(_MSC_VER)
 #include <sys/time.h>
 #endif
@@ -44,46 +53,62 @@
 #endif
 #endif
 
-#ifdef HAVE_GETRUSAGE
+//
+//For GCC builds on windows, HAVE_GETRUSAGE will be set, but sys/resource.h will not exist
+//So check for windows-but-not-cygwin first.
+//
+
+#if (defined _WIN32 || defined __WIN32__ || defined WIN64) && ! defined __CYGWIN__
+	#include <windows.h>
+#elif (defined HAVE_GETRUSAGE && !defined _WIN64 && !defined _WIN32 && !defined WIN32)
 	#include <sys/resource.h>
-#else 
-	#if (defined _WIN32 || defined __WIN32__ || defined WIN64) && ! defined __CYGWIN__
-	# include <windows.h>
-	#else
-	# include <sys/times.h>
-	# include <unistd.h>
-	#endif
-#endif /* HAVE_GETRUSAGE */
+#else
+	#include <sys/times.h>
+	#include <unistd.h>
+#endif
 
 /*********************************************
  * gettimeofday()
  ********************************************/
 #ifndef HAVE_GETTIMEOFDAY
-	#if defined WIN32 || defined _WIN32 || defined __WIN32__
-	#include <sys/timeb.h>
-	#include <sys/types.h>
-	#include <winsock.h>
+    #if defined WIN32 || defined _WIN32 || defined __WIN32__
+        #include <sys/timeb.h>
+        #include <sys/types.h>
+        #include <winsock.h>
 
-	struct timezone {
-		char dummy;
-	};
+		#ifdef _MSC_VER
+        struct timezone {
+            char dummy;
+        };
+		#endif
 
-	__inline void gettimeofday(struct timeval* t, void* timezone)
-	{       
-		struct _timeb timebuffer;
-		_ftime( &timebuffer );
-		t->tv_sec=timebuffer.time;
-		t->tv_usec=1000*timebuffer.millitm;
-	}
-	#else /* UNIX */
-	#include <sys/time.h>
-	__inline void gettimeofday(struct timeval* t, void* timezone) {
-		time_t cur_time;
-		time(&cur_time);
-		t->tv_sec = cur_time;
-		t->tv_usec = 0;
-	}
-	#endif
+        __inline int my_gettimeofday(struct timeval* t, void* timezone)
+        {
+        #ifdef _MSC_VER
+            struct __timeb64 timebuffer;
+            _ftime64_s(&timebuffer);
+            t->tv_sec = (long)timebuffer.time;
+            t->tv_usec = 1000 * timebuffer.millitm;
+        #else
+            struct _timeb timebuffer;
+            _ftime( &timebuffer );
+            t->tv_sec = (long)timebuffer.time;
+            t->tv_usec = 1000 * timebuffer.millitm;
+        #endif
+            return 0;
+        }
+    #else /* UNIX */
+        #include <sys/time.h>
+        __inline int my_gettimeofday(struct timeval* t, void* timezone) {
+            time_t cur_time;
+            time(&cur_time);
+            t->tv_sec = cur_time;
+            t->tv_usec = 0;
+            return 0;
+        }
+    #endif
+    #define gettimeofday my_gettimeofday
+    #define HAVE_GETTIMEOFDAY (1)
 #endif /* HAVE_GETTIMEOFDAY */
 
 
@@ -93,11 +118,7 @@
  * with correction for OpenMP
  */
 __inline double getCPUTime() {
-#ifdef HAVE_GETRUSAGE
-	struct rusage usage;
-	getrusage(RUSAGE_SELF, &usage);
-	return (usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1.0e6);
-#elif (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
 	/* Fill in the ru_utime and ru_stime members.  */
 	FILETIME creation_time;
 	FILETIME exit_time;
@@ -112,6 +133,10 @@ __inline double getCPUTime() {
 		uint64_t user_usec = ((((uint64_t) user_time.dwHighDateTime << 32) | (uint64_t) user_time.dwLowDateTime) + 5) / 10;
 		return (double)user_usec / 1.0e6;
 	}
+#elif (defined HAVE_GETRUSAGE)
+	struct rusage usage;
+	getrusage(RUSAGE_SELF, &usage);
+	return (usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1.0e6);
 #else
 	/* Fill in the ru_utime and ru_stime members.  */
 	struct tms time;
@@ -214,7 +239,7 @@ inline uint64_t getTotalSystemMemory()
  */
 __inline uint64_t getMemorySize( )
 {
-#if defined(_WIN32) && (defined(__CYGWIN__) || defined(__CYGWIN32__) || !defined(_WIN64))
+#if (defined(_WIN32) && !defined(_WIN64) && (defined(__CYGWIN__) || defined(__CYGWIN32__)))
 	/* Cygwin under Windows. ------------------------------------ */
 	/* New 64-bit MEMORYSTATUSEX isn't available.  Use old 32.bit */
 #warning "getMemorySize() will be wrong if RAM is actually > 4GB"
@@ -283,7 +308,6 @@ __inline uint64_t getMemorySize( )
 	return 0L;			/* Unknown OS. */
 #endif
 }
-
 
 #define HOW_LONG(x) \
 { std::cout.precision(6); double startTime = getRealTime(); \

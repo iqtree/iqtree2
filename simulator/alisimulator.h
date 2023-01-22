@@ -476,9 +476,9 @@ public:
     AliSimulator(Params *params, IQTree *tree, int expected_number_sites = -1, double new_partition_rate = 1);
     
     /**
-        deconstructor
+        destructor
     */
-    ~AliSimulator();
+    virtual ~AliSimulator();
     
     /**
     *  simulate sequences for all nodes in the tree

@@ -48,25 +48,8 @@
 #define SPRNG
 #include "sprng/sprng.h"
 
-// redefine assertion
-inline void _my_assert(const char* expression, const char *func, const char* file, int line)
-{
-    char *sfile = (char*)strrchr(file, '/');
-    if (!sfile) sfile = (char*)file; else sfile++;
-    cerr << sfile << ":" << line << ": " << func << ": Assertion `" << expression << "' failed." << endl;
-    abort();
-}
- 
-#ifdef NDEBUG
-#define ASSERT(EXPRESSION) ((void)0)
-#else
-    #if defined(__GNUC__) || defined(__clang__)
-        #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __PRETTY_FUNCTION__, __FILE__, __LINE__))
-    #else
-        #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
-    #endif
-#endif
-
+#include "vectortypes.h"
+#include "my_assert.h"
 
 #define USE_HASH_MAP
 
@@ -271,49 +254,6 @@ private:
     double m_a, m_b, m_coeff;
 };
 
-/**
-        vector of double number
- */
-typedef vector<double> DoubleVector;
-
-/**
-        vector of int
- */
-typedef vector<int> IntList;
-
-
-/**
-        vector of int
- */
-typedef vector<int> IntVector;
-
-/**
-        vector of bool
- */
-typedef vector<bool> BoolVector;
-
-
-/**
-        vector of char
- */
-typedef vector<char> CharVector;
-
-/**
-        vector of string
- */
-typedef vector<string> StrVector;
-
-
-/**
-        matrix of double number
- */
-#define mmatrix(T) vector< vector<T> >
-
-/**
-        matrix of double
- */
-
-typedef mmatrix(double) DoubleMatrix;
 
 typedef unsigned int UINT;
 
@@ -2705,10 +2645,6 @@ void outError(const char *error, string msg, bool quit = true);
 void outWarning(const char *warn);
 void outWarning(string warn);
 
-
-/** safe version of std::getline to deal with files from different platforms */ 
-std::istream& safeGetline(std::istream& is, std::string& t);
-
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
 
@@ -2768,22 +2704,6 @@ const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
-
-/**
- * convert int to string
- * @param int
- * @return string
- */
-string convertIntToString(int number);
-string convertInt64ToString(int64_t number);
-
-string convertDoubleToString(double number);
-
-/**
- case-insensitive comparison between two strings
- @return true if two strings are equal.
- */
-bool iEquals(const string a, const string b);
     
 /**
  *
@@ -2814,65 +2734,6 @@ int isDirectory(const char *path);
 int getFilesInDir(const char *path, StrVector &filenames);
 
 /**
-        convert string to int, with error checking
-        @param str original string
-        @return the number
- */
-int convert_int(const char *str);
-
-/**
-    convert string to int64, with error checking
-    @param str original string
-    @return the number
- */
-int64_t convert_int64(const char *str);
-
-/**
-        convert string to int, with error checking
-        @param str original string
-        @param end_pos end position
-        @return the number
- */
-int convert_int(const char *str, int &end_pos);
-
-/**
-        convert comma-separated string to integer vector, with error checking
-        @param str original string with integers separated by comma
-        @param vec (OUT) integer vector
- */
-void convert_int_vec(const char *str, IntVector &vec);
-
-/**
-        convert string to int64_t, with error checking
-        @param str original string
-        @return the number
- */
-int64_t convert_int64(const char *str);
-
-/**
-        convert string to int64_t, with error checking
-        @param str original string
-        @param end_pos end position
-        @return the number
- */
-int64_t convert_int64(const char *str, int &end_pos);
-
-/**
-        convert string to double, with error checking
-        @param str original string
-        @return the double
- */
-double convert_double(const char *str);
-
-/**
-        convert string to double, with error checking
-        @param str original string
-        @param end_pos end position
-        @return the double
- */
-double convert_double(const char *str, int &end_pos);
-
-/**
         convert string to double, or generate it from a distribution
         @param str original string
         @param end_pos end position
@@ -2881,14 +2742,6 @@ double convert_double(const char *str, int &end_pos);
         @return the double
  */
 double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator = ',');
-
-/**
-        convert comma-separated string to integer vector, with error checking
-        @param str original string with integers separated by comma
-        @param vec (OUT) integer vector
-        @param separator char separating elements
- */
-void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',');
 
 /**
         convert comma-separated string to double vector or generate double vector from distributions
@@ -2924,34 +2777,6 @@ void normalize_frequencies_from_index(double* freqs, int num_states, int startin
         @param total_freq sum of all original state frequencies
  */
 void normalize_frequencies(double* freqs, int num_states, double total_freqs = -1, bool show_warning = false);
-
-/**
- * Convert seconds to hour, minute, second
- * @param sec
- * @return string represent hour, minute, second
- */
-string convert_time(const double sec);
-
-
-/**
-        convert a string to to range lower:upper:step_size with error checking
-        @param str original string
-        @param lower (OUT) lower bound of the range
-        @param upper (OUT) upper bound of the range
-        @param step_size (OUT) step size of the range
- */
-void convert_range(const char *str, int &lower, int &upper, int &step_size);
-
-/**
-        convert a string to to range lower:upper:step_size with error checking
-        @param str original string
-        @param lower (OUT) lower bound of the range
-        @param upper (OUT) upper bound of the range
-        @param step_size (OUT) step size of the range
- */
-void convert_range(const char *str, double &lower, double &upper, double &step_size);
-
-void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',');
 
 /**
         read distributions from built-in string or user-specified file
@@ -3496,22 +3321,6 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type);
                            bool *bound_check, 
                            double min_freq, 
                            StateFreqType freq_type);
-
-template <typename T>
-string NumberToString ( T Number )
-{
-    ostringstream ss;
-    ss << Number;
-    return ss.str();
-}
-
-template <typename T>
-T StringToNumber ( const string &Text )
-{
-    istringstream ss(Text);
-    T result;
-    return ss >> result ? result : 0;
-}
 
 // Calculate logarithm of binomial coefficient N choose i.
 double binomial_coefficient_log(unsigned int N, unsigned int i);

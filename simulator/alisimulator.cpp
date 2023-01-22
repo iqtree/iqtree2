@@ -9,6 +9,8 @@
 #include "alisimulatorheterogeneity.h"
 #include "alisimulatorheterogeneityinvar.h"
 #include "alisimulatorinvar.h"
+#include <utils/safe_io.h> //for safeGetLine() function
+#include <utils/stringfunctions.h> //for convertDoubleToString() and convertIntToString()
 
 AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, double new_partition_rate)
 {
@@ -863,7 +865,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
                 
                 // count num of lines, set start position
-                safeGetline(input_streams[i], line);
+                safeGetLine(input_streams[i], line);
                 uint64_t line_length = line.length() + 1;
                 
                 // for Windows only, the line break is \r\n instead of only \n
@@ -900,7 +902,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 string output = "";
                 for (int j = 0; j < input_streams.size(); j++)
                 {
-                    safeGetline(input_streams[j], line);
+                    safeGetLine(input_streams[j], line);
                     output += line;
                 }
                 
@@ -3167,11 +3169,12 @@ void AliSimulator::rootTree()
 {
     // dummy variables
     Node* new_root = new Node();
-    Node* second_internal_node;
+    Node* second_internal_node = nullptr;
     
     // extract the intermediate node
-    if (tree && tree->root && tree->root->neighbors.size() > 0)
+    if (tree && tree->root && tree->root->neighbors.size() > 0) {
         second_internal_node = tree->root->neighbors[0]->node;
+    }
     if (second_internal_node)
     {
         // update new_root

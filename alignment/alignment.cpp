@@ -16,9 +16,11 @@
 #include <sstream>
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
-#include "utils/gzstream.h"
-#include "utils/timeutil.h" //for getRealTime()
-#include "utils/progress.h" //for progress_display
+#include <utils/gzstream.h>
+#include <utils/safe_io.h>         //for safeGetLine() function
+#include <utils/stringfunctions.h> //for convertIntToString() and convert_int_vec functions
+#include <utils/timeutil.h>        //for getRealTime()
+#include <utils/progress.h>        //for progress_display
 #include "alignmentsummary.h"
 
 #include <Eigen/LU>
@@ -90,7 +92,7 @@ void Alignment::addSeqName(string seq_name)
     }
 }
 
-vector<string>& Alignment::getSeqNames() {
+StrVector& Alignment::getSeqNames() {
 	return seq_names;
 }
 
@@ -1913,7 +1915,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             addPatternLazy(pat, site/step, 1, gaps_only);
             num_gaps_only += gaps_only ? 1 : 0;
         }
-        progress += step;
+        progress += static_cast<double>(step);
     }
     progress.done();
     updatePatterns(0);
@@ -1961,7 +1963,7 @@ void Alignment::doReadPhylip(char *filename, char *sequence_type, StrVector &seq
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -2042,7 +2044,7 @@ void Alignment::doReadPhylipSequential(char *filename, char *sequence_type, StrV
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -2118,7 +2120,7 @@ void Alignment::doReadFasta(char *filename, char *sequence_type, StrVector &sequ
     {
         progress_display progress(in.getCompressedLength(), "Reading fasta file", "", "");
         for (; !in.eof(); line_num++) {
-            safeGetline(in, line);
+            safeGetLine(in, line);
             if (line == "") {
                 continue;
             }
@@ -2214,14 +2216,14 @@ void Alignment::doReadClustal(char *filename, char *sequence_type, StrVector &se
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    safeGetline(in, line);
+    safeGetLine(in, line);
     if (line.substr(0, 7) != "CLUSTAL") {
         throw "ClustalW file does not start with 'CLUSTAL'";
     }
 
     int seq_count = 0;
     for (line_num = 2; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         trimString(line);
         if (line == "") {
             seq_count = 0;
@@ -2290,7 +2292,7 @@ void Alignment::doReadMSF(char *filename, char *sequence_type, StrVector &sequen
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    safeGetline(in, line);
+    safeGetLine(in, line);
     if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
@@ -2299,7 +2301,7 @@ void Alignment::doReadMSF(char *filename, char *sequence_type, StrVector &sequen
     bool seq_started = false;
 
     for (line_num = 2; !in.eof(); line_num++) {
-        safeGetline(in, line);
+        safeGetLine(in, line);
         trimString(line);
         if (line == "") {
             continue;
@@ -3168,7 +3170,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
             addPatternLazy(pat, site-removed_sites, 1, gaps_only); //JB 27-Jul-2020 Parallelized
         }
         if (siteMod == 100 ) {
-            progress += 100;
+            progress += 100.0;
             siteMod  = 0;
         }
         ++siteMod;
