@@ -1899,7 +1899,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
                 (*it)->setRateMatrix(matrix);
             }
             
-            if(Params::getInstance().rates_file) {
+            //if(Params::getInstance().rates_file) {
                 //write initial matrix contents to file 
                 string fname = Params::getInstance().out_prefix;
                 fname += ".ratemat_init";
@@ -1913,7 +1913,8 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
                     writer << endl;
                     writer.close();
                 }
-            }
+                f.close();
+            //}
         }
         score = optimizeWithEM(gradient_epsilon);
         // restore num_params
@@ -2045,7 +2046,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     }
     
     //write matrix contents to file 
-    if (Params::getInstance().rates_file) {
+    //if (Params::getInstance().rates_file) {
         string fname = Params::getInstance().out_prefix;
         fname += ".ratemat";
         ofstream writer(fname);
@@ -2058,7 +2059,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
         }
         writer << endl;
         writer.close();
-    }
+    //}
 
 	return score;
 }
