@@ -855,8 +855,8 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
             if (!isReversible())
                 outError("Cannot initialize from non-reversible model");
         } else {
-            // initialize rate matrix with LG
-            nxs_model = models_block->findModel("LG");
+            // initialize rate matrix with a model (default: POISSON)
+            nxs_model = models_block->findModel(Params::getInstance().gtr20_model);
             ASSERT(nxs_model);
             readParametersString(nxs_model->description, false);
             rescaleRates(rates, getNumRateEntries());

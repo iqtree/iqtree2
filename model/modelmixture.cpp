@@ -1874,7 +1874,6 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     if (dim != 0) {
         score = 1.0;
     }
-    double* gtr_score = nullptr;
 
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
@@ -1887,6 +1886,33 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
             for (iterator it = begin(); it != end(); it++) {
                 params.push_back((*it)->num_params);
                 (*it)->num_params = 0;
+            }
+            //divide all values in intial matrix by the last value
+            int nrate = getNumRateEntries();
+            double *matrix = new double[nrate];
+            at(0)->getRateMatrix(matrix);
+            double div = matrix[nrate-1];
+            for(int i=0; i<nrate; i++){
+                matrix[i] = matrix[i] / div;
+            }
+            for (iterator it = begin(); it != end(); it++) {
+                (*it)->setRateMatrix(matrix);
+            }
+            
+            if(Params::getInstance().rates_file) {
+                //write initial matrix contents to file 
+                string fname = Params::getInstance().out_prefix;
+                fname += ".ratemat_init";
+                ifstream f(fname.c_str());
+                if(!f.good()) {
+                    ofstream writer(fname);
+                    writer << matrix[0];
+                    for(int i=1; i<nrate; i++){
+                        writer << " " << matrix[i];
+                    }
+                    writer << endl;
+                    writer.close();
+                }
             }
         }
         score = optimizeWithEM(gradient_epsilon);
@@ -1905,8 +1931,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     
 //  optimize a gtr matrix if specified
     if (Params::getInstance().optimize_linked_gtr) {
-        double s = optimizeLinkedSubst(gradient_epsilon);
-        gtr_score = &s;
+        score = optimizeLinkedSubst(gradient_epsilon);
     }
 
 //	double score = ModelGTR::optimizeParameters(gradient_epsilon);
@@ -2017,22 +2042,23 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     
     double sf[num_states]; getStateFrequency(sf);
     cout << "state_freq = "; for(int i=0; i<num_states; i++) { cout << sf[i] << "; "; } cout << endl;
-    int nrate = getNumRateEntries();
-    double *matrix = new double[nrate];
-    int nmix = getNMixtures();
-    for(int mix = 0; mix<nmix; mix++){
-        at(mix)->getRateMatrix(matrix);
-        cout << "Matrix " << mix << ": [" << matrix[0];
-        for(int i=0; i<nrate; i++){
-            cout << "," << matrix[i];
-            //matrix[i] += 0.01; 
-        }
-        cout << "]" << endl;
-        //at(mix)->setRateMatrix(matrix);
-    }
-    cout << endl;
     }
     
+    //write matrix contents to file 
+    if (Params::getInstance().rates_file) {
+        string fname = Params::getInstance().out_prefix;
+        fname += ".ratemat";
+        ofstream writer(fname);
+        int nrate = getNumRateEntries();
+        double *matrix = new double[nrate];
+        at(0)->getRateMatrix(matrix);
+        writer << matrix[0];
+        for(int i=1; i<nrate; i++){
+            writer << " " << matrix[i];
+        }
+        writer << endl;
+        writer.close();
+    }
 
 	return score;
 }
@@ -2056,7 +2082,6 @@ void ModelMixture::decomposeRateMatrix() {
 
 void ModelMixture::setVariables(double *variables) {
 	int dim = 0;
-    // Please do similar to 
     if (optimizing_gtr) {       
         for (iterator it = begin(); it != end(); it++) {
             auto freq = (*it)->freq_type;
@@ -2149,9 +2174,18 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
     if(optimizing_gtr) {
         for (iterator it = begin(); it != end(); it++) {
             auto freq = (*it)->freq_type;
+            int ndim = (*it)->getNDim();
             (*it)->freq_type=FREQ_USER_DEFINED;
             (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
             (*it)->freq_type=freq;
+            //debug (justin)
+            if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
+                for(int i=1; i<=ndim; i++){
+                    bound_check[i] = true; 
+                    if(i <= 189) {upper_bound[i] = 100;} else {upper_bound[i] = 1;} 
+                }
+            }
+            //end debug
         }
     } else {
         for (iterator it = begin(); it != end(); it++) {

@@ -1179,6 +1179,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
     params.optimize_linked_gtr = false;
+    params.gtr20_model = "POISSON";
+    params.guess_multiplier = 1/70;
+    params.rates_file = false;
+    params.reset_method = "const";
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1586,6 +1590,37 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_linked_gtr = true;
                 continue;
             }
+
+            //begin justin debug flags
+            if (strcmp(argv[cnt], "--gtr20-model") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -gtr20-model <POISSON/LG>";
+                params.gtr20_model = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "--guess-multiplier") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -guess-multiplier <value>";
+                params.guess_multiplier = convert_double(argv[cnt]);
+                continue;
+            } 
+            if (strcmp(argv[cnt], "--rates-file") == 0) {
+                params.rates_file = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--reset-method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --reset-method <const/random>";
+                if(strcmp(argv[cnt], "const") != 0 && strcmp(argv[cnt], "random") != 0) 
+                    throw "Invalid option for --reset-method : use 'const' or 'random'";
+                params.reset_method = argv[cnt];
+                continue;
+            }
+            //end justin debug flags
+
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
 				params.is_rooted = true;
 				continue;

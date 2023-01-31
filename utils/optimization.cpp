@@ -739,10 +739,14 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
     if (restart) {
       // TODO: Dominik observed that this warning is printed even during model
       // testing. A quieter solution might be preferred.
-	cout << "Restart estimation at the boundary... " << std::endl;
+		cout << "Restart estimation at the boundary... " << std::endl;
         for (i = 1; i <= ndim; i++) {
-	    guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
-	}
+			if(Params::getInstance().reset_method == "const"){
+				guess[i] = guess[i] * Params::getInstance().guess_multiplier;
+			} else {
+				guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
+			}
+		}
     }	
     return (restart);
 }
