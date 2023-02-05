@@ -10,6 +10,7 @@
 #include <sstream>
 #if defined(WIN32) || defined(WIN64)
     #include <io.h> //for _isatty
+    #include <stdio.h> //for _fileno (explicit include needed for GCC 9.2 builds)
 #else
     #include <unistd.h> //for isatty
 #endif

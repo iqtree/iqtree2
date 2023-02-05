@@ -30,16 +30,37 @@
 #include <string>  //for std::string
 #include <sstream> //for std::stringstream
 
+/**
+ * @brief  Read a line from a stream into a string buffer
+ * @tparam S  - the type of the input stream (S must have
+ *              an S::entry type exposing a rdbuf() member
+ *              function returning a std::sreambuf pointer)
+ *              (in practice, S will likely be a 
+ *               std:ifstream).
+ * @param  is - reference to the input stream
+ * @param  t  - reference to a std::istringstream to read
+ * @return S& a reference to the input file stream
+ *              (will be positioned after the linefeed at
+ *               the end of the line; or at end of file,
+ *               if the file ended before the line did).
+ * @note   The content of t is cleared before reading
+ *         behins.  This function does not append the 
+ *         std::istringstream.
+ * @note   Trailing "\n" or "\r\n" will be skipped over, 
+ *         and will NOT be read into t.
+ * @note   The characters in the stream are read one-by-one 
+ *         using a std::streambuf. That is faster than 
+ *         reading them one-by-one using the std::istream
+ *         (or whatever).
+ *         Code that uses streambuf this way must be 
+ *         guarded by a sentry object. The sentry object 
+ *         performs various tasks, such as thread 
+ *         synchronization and updating the stream state.
+ */
 template <class S=std::istringstream> 
 S& safeGetLine(S& is, std::string& t)
 {
     t.clear();
-
-    // The characters in the stream are read one-by-one using a std::streambuf.
-    // That is faster than reading them one-by-one using the std::istream.
-    // Code that uses streambuf this way must be guarded by a sentry object.
-    // The sentry object performs various tasks,
-    // such as thread synchronization and updating the stream state.
 
     typename S::sentry se(is, true);
     std::streambuf* sb = is.rdbuf();
@@ -50,13 +71,15 @@ S& safeGetLine(S& is, std::string& t)
         case '\n':
             return is;
         case '\r':
-            if(sb->sgetc() == '\n')
+            if(sb->sgetc() == '\n') {
                 sb->sbumpc();
+            }
             return is;
         case EOF:
             // Also handle the case when the last line has no line ending
-            if(t.empty())
+            if(t.empty()) {
                 is.setstate(std::ios::eofbit);
+            }
             return is;
         default:
             t += (char)c;
@@ -64,6 +87,23 @@ S& safeGetLine(S& is, std::string& t)
     }
 }
 
+/**
+ * @brief  Get a line from a stream, and trim off leading
+ *         and trailing white space.
+ * @tparam S - the type of the input stream (see safeGetLine
+ *             for a summary of what is required of S)
+ * @param  is   - reference to the input file stream
+ * @param  line - reference to the string variable into
+ *                which the trimmed line is to be read.
+ * @return S& a reference to the input stream
+ *         (will be positioned after the linefeed at
+ *          the end of the line; or at end of file,
+ *          if the file ended before the line did). 
+ * @note   Implemented in terms of safeGetLine().
+ * @note   Leading ' ' and '\t' characters are trimmed.
+ *         Trailing ' ', '\t', '\r', and '\n' characters
+ *         are trimmed.
+ */
 template <class S=std::istringstream> 
 S& safeGetTrimmedLine(S& is, std::string& line) {
     safeGetLine(is, line);
@@ -94,14 +134,37 @@ S& safeGetTrimmedLine(S& is, std::string& line) {
     return is;
 }
 
+/**
+ * @brief  Read a line from an input stream and load it up
+ *         into a std::stringstream (passed in by reference).
+ * @tparam S - the type of the input stream.
+ * @param  is - reference to the input file stream
+ * @param  lineStream - reference to the output string stream
+ * @return S& - reference to the input file stream
+ *              (will be positioned after the linefeed at
+ *               the end of the line; or at end of file,
+ *               if the file ended before the line did).
+ */
 template <class S=std::istringstream> 
-S& safeGetTrimmedLineAsStream(S& is, std::stringstream& lineStream) {
+S& safeGetTrimmedLineAsStream
+    (S& is, std::stringstream& lineStream) {
     std::string lineString;
     safeGetTrimmedLine<S>(is, lineString);
     lineStream.str(lineString);
     return is;
 }
 
+/**
+ * @brief  Returns true if a stream's read pointer
+ *         is positioned at the end of the stream
+ * @tparam S  - the type of the input stream.   
+ *         S must support exceptions(), operator>>,
+ *         eof() and ungetc() all working just as
+ *         std::ifstream's same-named member functions do.
+ * @param  in - a reference to the input stream
+ * @return true  - if read pointer positioned at end
+ * @return false - otherwise
+ */
 template <class S> bool isAtEndOfFile(S& in) {
     char ch;
     in.exceptions(std::ios::goodbit);

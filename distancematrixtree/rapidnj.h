@@ -80,6 +80,43 @@
 namespace StartTree
 {
 
+/**
+ * @brief  Applies branch-and-bound trickery (as per the 
+ *         RapidNJ paper - see details at the top of this file)
+ * @tparam T the distance type
+ * @tparam SUPER the superclass, that is to be "munged" into a branch-and-bound
+ *         version that will (on average), run a lot faster. It is assumed that 
+ *         SUPER is NJMatrix, inherits from NJMatrix, or is 
+ *         "duck-type-equivalent" to NJMatrix.
+ * @note   The mutable members are calculated repeatedly, from others, in 
+ *         member functions marked as const. They're declared at the class 
+ *         level so that they don't need to be reallocated over and over again.
+ *         It's all about amortizing allocation and deallocation cost (the
+ *         price paid for that is a slight reduction in readability. -James B)
+ * @note   Mapping members to the RapidNJ papers:
+ *         rows           is the D matrix
+ *         entriesSorted  is the S matrix
+ *         entryToCluster is the I matrix
+ * @note   scaledMaxEarlierClusterTotal[c] is the largest row total for a 
+ *         cluster with a lower number, than cluster c (where c is the index
+ *         and the cluster number) (if c indicates a cluster for which there 
+ *         are still rows in the distance matrix: call this an in-play cluster).
+ *         This is a tighter bound, when searching for the minimum Qij... 
+ *         and processing distances from cluster c to earlier clusters, 
+ *         than the largest row total for ALL the live clusters.
+ *         See section 2.5 of Simonsen, Mailund, Pedersen [2011].
+ * @note   rowOrderChosen is a vector of int rather than bool because 
+ *         simultaneous non-overlapping random-access writes to elements of 
+ *         std::vector<bool> *can* interfere with each other (because 
+ *         std::vector<bool> maps multiple nearby elements onto bitfields, 
+ *         so the writes... *do* overlap) (ouch!).
+ * @note   If _OPENMP is defined, it is assumed that the threadcount,
+ *         as returned by omp_get_max_threads() won't change during
+ *         execution! Or at least, it won't change between the construction
+ *         of a BoundingMatrix<T,S> instance, and its destruction.
+ * @note   several "hide the OMP" functions, getThreadCount() and
+ *         getThreadNumber() should perhaps move to NJMatrix<T>.
+ */
 template <class T=NJFloat, class SUPER=BIONJMatrix<T>>
 class BoundingMatrix: public SUPER
 {
@@ -98,30 +135,7 @@ protected:
     using super::finishClustering;
     using super::clusterDuplicates;
     using super::prepareToConstructTree;
-    //
-    //Note 1: mutable members are calculated repeatedly, from
-    //        others, in member functions marked as const.
-    //        They're declared at the class level so that they
-    //        don't need to be reallocated over and over again.
-    //Note 2: Mapping members to the RapidNJ papers:
-    //        rows           is the D matrix
-    //        entriesSorted  is the S matrix
-    //        entryToCluster is the I matrix
-    //Note 3: scaledMaxEarlierClusterTotal[c] is the largest row total
-    //        for a cluster with a lower number, than cluster c
-    //        (if c indicates a cluster for which there are still rows
-    //        in the distance matrix: call this a live cluster).
-    //        This is a tighter bound, when searching for
-    //        the minimum Qij... and processing distances from
-    //        cluster c to earlier clusters, than the largest
-    //        row total for ALL the live clusters.
-    //        See section 2.5 of Simonsen, Mailund, Pedersen [2011].
-    //Note 4: rowOrderChosen is a vector of int rather than bool
-    //        because simultaneous non-overlapping random-access writes
-    //        to elements of std::vector<bool> *can* interfere with each other
-    //        (because std::vector<bool> maps multiple nearby elements onto
-    //         bitfields, so the writes... *do* overlap) (ouch!).
-    //
+
     std::vector<intptr_t> clusterToRow;   //Maps clusters to their rows (-1 means not mapped)
                                           //for each cluster
     std::vector<T>        clusterTotals;  //"Row" totals indexed by cluster
@@ -141,7 +155,7 @@ protected:
     SquareMatrix<int> entryToCluster;//The I matrix: for each entry in S, which
                                      //cluster the row (that the entry came from)
                                      //was mapped to (at the time).
-    int    threadCount;
+    int                 threadCount;
     std::vector<Sorter> sorters;
     
 public:
@@ -154,6 +168,11 @@ public:
         #endif
         sorters.resize(threadCount);
     }
+    /**
+     * @brief  Get the (current) thread count (returns 1 if _OPENMP is
+     *         not defined)
+     * @return intptr_t - the current rhead count
+     */
     intptr_t getThreadCount() const {
         intptr_t t=1;
         #ifdef _OPENMP
@@ -166,6 +185,14 @@ public:
         #endif
         return t;
     }
+    /**
+     * @brief  Get the (current) threads thread number, between 0 
+     *         inclusive and getThreadCount() exclusive (well, so we
+     *         hope! If the number of threads hasn't changed since 
+     *         we last called getThreadCount()! -James B)
+     *         (returns 0 if _OPENMP is not defined)
+     * @return intptr_t - the current rhead count
+     */
     intptr_t getThreadNumber() const {
         #ifdef _OPENMP
             return omp_get_thread_num();
@@ -176,9 +203,15 @@ public:
     virtual std::string getAlgorithmName() const {
         return "Rapid" + super::getAlgorithmName();
     }
+
+    /**
+     * @brief  Sets up auxiliary arrays, and infers a phylogenetic tree.
+     * @return true 
+     * @return false 
+     */
     virtual bool constructTree() {
         //0. Ensure variance matrix is initialized
-        prepareToConstructTree();
+        prepareToConstructTree(); //Need this if SUPER is BIONJMatrix
 
         //1. Set up vectors indexed by cluster number,
         clusterToRow.resize(row_count);
@@ -202,8 +235,6 @@ public:
             const char* taskName = silent
                 ? "" :  "Setting up auxiliary I and S matrices";
             progress_display setupProgress(row_count, taskName, "sorting", "row");
-            #else
-            double setupProgress = 0.0;
             #endif
             //2. Set up the matrix with row sorted by distance
             //   And the matrix that tracks which distance is
@@ -218,10 +249,12 @@ public:
                 int threadNum = getThreadNumber();
                 for (intptr_t r=threadNum; r<row_count; r+=threadCount) {
                     sortRow(r,r,false,sorters[threadNum]);
-                    ++setupProgress;
                     //copies the "left of the diagonal" portion of
                     //row r from the D matrix and sorts it
                     //into ascending order.
+                    #if USE_PROGRESS_DISPLAY
+                        ++setupProgress;
+                    #endif
                 }
             }
         }
@@ -235,8 +268,6 @@ public:
             }
             double triangle = row_count * (row_count + 1.0) * 0.5;
             progress_display show_progress(triangle, taskName.c_str(), "", "");
-            #else
-            double show_progress = 0;
             #endif
             intptr_t degree_of_root = isRooted ? 2 : 3;
             while (degree_of_root<row_count) {
@@ -255,7 +286,9 @@ public:
                     }
                     nextPurge = (row_count + row_count)/3;
                 }
+                #if USE_PROGRESS_DISPLAY
                 show_progress+=row_count;
+                #endif
             }
             #if USE_PROGRESS_DISPLAY
             show_progress.done();
@@ -263,7 +296,21 @@ public:
             finishClustering();
         }
         return true;
-    }
+    }    
+    /**
+     * @brief Calculate row r of the S and I matrices, from row r
+     *        of the D matrix.
+     * @param r        - the row number
+     * @param c        - upper bound on cluster index (but NOT a cluster index!)
+     * @param parallel - true if a the sort should be parallel (when running
+     *                   in code that was multi-threaded higher up, this should
+     *                   be false.  When running in code that wasn't this could
+     *                   be true; it is up to the caller).
+     * @param sorter   - a sorter (a sorting algorithm implementation, perhaps
+     *                   with memory allocated for auxiliary arrays that it uses
+     *                   to sort), that is "owned" by the current thread.
+     * @note 
+     */
     void sortRow(intptr_t r /*row index*/, int c /*upper bound on cluster index*/
         ,  bool parallel, Sorter& sorter) {
         //1. copy data from a row of the D matrix into the S matrix
@@ -296,11 +343,14 @@ public:
         }
         clusterPartners[c] = w;
     }
+
+    /**
+     * @brief Scan a row of the I matrix, so as to remove entries that refer 
+     *        to clusters that are no longer in-play. Remove the corresponding
+     *        values in the same row of the S matrix, at the same time.
+     * @param r the row number
+     */
     void purgeRow(intptr_t r /*row index*/) const {
-        //Scan a row of the I matrix, so as to remove
-        //entries that refer to clusters that are no longer
-        //being processed. Remove the corresponding values
-        //in the same row of the S matrix.
         T*    values         = entriesSorted.rows[r];
         int*  clusterIndices = entryToCluster.rows[r];
         int   c              = rowToCluster[r];
@@ -321,6 +371,19 @@ public:
         }
         clusterPartners[c] = w;
     }
+    /**
+     * @brief Join the clusters (clusterA and clusterB, below) that correspond
+     *        to rows a and b of the working distance matrix (0<=a<b<n, where
+     *        n is the current rank of the working distance matrix).
+     * @param a the lower-numbered row
+     * @param b the higher-numbered row
+     * @note  It is assumed a<b, but this is NOT checked.
+     * @note  It is assumed that distances, for the merged cluster, 
+     *        will be written over the top of row a of the D 
+     *        matrix and the D matrix's rank (row count and column count),
+     *        reduced by one, by super::cluster().
+     *        Yes, this IS tight long-range coupling. -James B.
+     */
     virtual void cluster(intptr_t a, intptr_t b) {
         size_t clusterA         = rowToCluster[a];
         size_t clusterB         = rowToCluster[b];
@@ -330,7 +393,9 @@ public:
         clusterToRow[clusterB]  = notMappedToRow;
         clusterTotals[clusterB] = -infiniteDistance;
         size_t clusterC         = clusters.size(); //cluster # of new cluster
+
         super::cluster(a,b);
+
         if (b<row_count) {
             clusterToRow[clusterMoved] = static_cast<int>(b);
         }
@@ -362,13 +427,17 @@ public:
         }
         sortRow(a, clusterC, true, sorters[0]);
     }
+    /**
+     * @brief Derive a bound (on the best adjusted distance), by looking
+     *        at the first entry (for a live cluster), in each row of 
+     *        the S matrix.
+     * @param qBest 
+     * @note  Since we always have to check these entries when we process
+     *        the row, why not process them up front, hoping to get a
+     *        better bound on min(V) (and perhaps even "rule" entire rows
+     *        "out of consideration", using that bound)? -James B).
+     */
     void deriveBoundFromFirstColumn(T& qBest) const {
-        //
-        //Since we always have to check these entries when we process
-        //the row, why not process them up front, hoping to get a
-        //better bound on min(V) (and perhaps even "rule" entire rows
-        //"out of consideration", using that bound)? -James B).
-        //
         intptr_t rSize = rowMinima.size();
         std::vector<T> qLocalBestVector;
         qLocalBestVector.resize( threadCount, qBest);
@@ -379,8 +448,9 @@ public:
         #endif
         for (int b=0; b<threadCount; ++b) {
             T      qBestForThread = qBest;
-            size_t rStart         = (b*rSize)     / threadCount;
-            size_t rStop          = ((b+1)*rSize) / threadCount;
+            int    b_plus_1       = (b + 1);
+            size_t rStart         = (b*rSize)        / threadCount;
+            size_t rStop          = (b_plus_1*rSize) / threadCount;
             for (size_t r=rStart; r < rStop
                     && rowMinima[r].value < infiniteDistance; ++r) {
                 intptr_t rowA     = rowMinima[r].row;
@@ -405,6 +475,20 @@ public:
         }
     }
 
+    /**
+     * @brief Partially sort the row minima (in parallel)
+     * @note  The algorithm used here is roughly to compare and perhaps 
+     *        reorder rows in the first half of the input (rounded up)
+     *        with rows in the second (rounded down) (in parallel!), 
+     *        then repeat...) to find the minimum.
+     * @note  the point is that each compare-perhaps-reorder operation
+     *        in a given "reduce the problem by half" pass is entirely
+     *        independent of all the others, and they can be done in
+     *        parallel.
+     * @note  A "conditional-move" version might be faster than 
+     *        swapping conditionally (if (rowMinima[j] < rowMinima[i])).
+     *        (I don't remember whether I tried that. -James B)
+     */
     void partiallySortRowMinima() const {
         intptr_t rSize     = rowMinima.size();
         #ifdef _OPENMP
@@ -428,20 +512,21 @@ public:
         }
     }
 
+    /**
+     * @brief Rig the order in which rows are scanned based on which rows 
+     *        (might) have the lowest row minima based on what we saw last 
+     *        time.
+     * @param qBest 
+     * @note  The original RapidNJ puts the second-best row from last time 
+     *        first. And, apart from that, goes in (cyclical) row order.
+     *        But rows in the D, S, and I matrices are (all) shuffled
+     *        in memory, so why not do all the rows in ascending order
+     *        of their best Q-values from the last iteration?
+     *        Or, better yet... From this iteration?!
+     *        The idea is to (hopefully) find better bounds sooner.
+     */
     void decideOnRowScanningOrder(T& qBest) const {
-        //
-        //Rig the order in which rows are scanned based on
-        //which rows (might) have the lowest row minima
-        //based on what we saw last time.
-        //
-        //The original RapidNJ puts the second-best row from last time first.
-        //And, apart from that, goes in row order.
-        //But rows in the D, S, and I matrices are (all) shuffled
-        //in memory, so why not do all the rows in ascending order
-        //of their best Q-values from the last iteration?
-        //Or, better yet... From this iteration?!
-        //
-        
+
         deriveBoundFromFirstColumn(qBest);
              
         partiallySortRowMinima();
@@ -480,15 +565,20 @@ public:
         }
     }
 
+    /**
+     * @brief Get the Row Minima (that is, the minimum adjusted 
+     *        inter-cluster distance, for each row, r), by looking up
+     *        (for each row, r), the associated cluster, y, and 
+     *        in the S row for y, finding the adjusted distance 
+     *        for each other in-play cluster, x, that might be less
+     *        than our current upper bound on the global minimum
+     *        adjusted distance.
+     * @note  Rather than multiplying distances by (n-2) repeatedly, 
+     *        it is cheaper to work with scaled cluster totals,
+     *        multiplied by (1.0/(T)(n-2)).
+     *        Better n multiplications than 0.5*n*(n-1).
+     */
     virtual void getRowMinima() const {
-        //
-        //Note: Rather than multiplying distances by (n-2)
-        //      repeatedly, it is cheaper to work with cluster
-        //      totals multiplied by (1.0/(T)(n-2)).
-        //      Better n multiplications than 0.5*n*(n-1).
-        //Note 2: Note that these are indexed by cluster number,
-        //      and *not* by row number.
-        //
         size_t c           = clusters.size();
         T      nless2      = (T)( row_count - 2 );
         T      tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ((T)1.0 / nless2);
@@ -527,6 +617,24 @@ public:
         }
     }
 
+    /**
+     * @brief Get the cluster merge description (Position<T>), with
+     *        the minimum adjusted distance between the two merged clusters,
+     *        that will merge a cluster, x, with a cluster number less 
+     *        than that of the cluster, y, the cluster correpsonding to 
+     *        row (row) in the current distance matrix, with y.
+     * @param row    - row number in the current distance matrix
+     * @param maxTot - the maximum (scaled) cluster distance total, 
+     *                 for any cluster, with a cluster number less 
+     *                 than y (used to get a slightly tighter bound,
+     *                 on how bad a raw distance, read from S can be,
+     *                 if it is still to be possible for the adjusted
+     *                 distance, to the same cluster the raw distance
+     *                 is to, to be equal to or better than qBest).
+     * @param qBest  - a copy of an upper bound on the global minimum
+     *                 (possibly found earlier).
+     * @return Position<T> 
+     */
     virtual Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const {
         T nless2      = (T)( row_count - 2 );
         T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ( (T)1.0 / nless2 );
@@ -569,7 +677,25 @@ public:
 typedef BoundingMatrix<NJFloat,   NJMatrix<NJFloat>>    RapidNJ;
 typedef BoundingMatrix<NJFloat,   BIONJMatrix<NJFloat>> RapidBIONJ;
 
+
 #if USE_VECTORCLASS_LIBRARY
+/**
+ * @brief  Munging class, that adds vectorization to a BoundingMatrix<T> class
+ *         (or to another class that is duck-type equivalent to
+ *          BoundingMatrix<T>)
+ * @tparam T - the distance type
+ * @tparam V - the vector type (for a continguous blocks of T, that can 
+ *             be Single Instruction Multiple Data (SMD) instructions)
+ * @tparam VB - the corresponding boolean vector type
+ * @tparam M     - the matrix type
+ * @tparam SUPER - the immediate super class
+ * @note   binary search - see indexOfFirstGreater() - is used, to figure
+ *         out how many distances will need to be read from the row of S
+ *         (the hope is that log(w) unpredictable distance comparisons will 
+ *          be cheaper than the w predictable comparisons, that would
+ *          otherwise be needed) 
+ *         (in practice this hope seems to be realized. -James B)
+ */
 template <class T=NJFloat, class V=FloatVector, 
           class VB=FloatBoolVector,
           class M=BIONJMatrix<T>, class SUPER=BoundingMatrix<T,M> >
@@ -607,6 +733,16 @@ public:
             per_thread_vector_storage.push_back( ptr ) ;
         }
     }
+    /**
+     * @brief  Binary search
+     * @param  data  pointer to (sorted) block of (distance) T
+     * @param  hi    number of distances in the block
+     * @param  bound the bound to search for
+     * @return size_t - the index (in data) of the first element in the
+     *         block that is greater than bound. Or, if there isn't one, hi.
+     * @note   this is a binary search after the style of Bottenbruch
+     *         (see his 1962 paper).
+     */
     size_t indexOfFirstGreater(const T* data, size_t hi, T bound) const {
         size_t lo = 0;
         while (lo<hi) {
@@ -620,9 +756,21 @@ public:
         return lo;
     }
 
+    /**
+     * @brief  Get the Postion<T> description of the best cluster merge,
+     *         for which the higher-numbered cluster, y, is the one that
+     *         corresponds to row (row) of the current distance matrix,
+     *         by reading row (row) of both the S and I matrices.
+     * @param  row    - the row number 
+     * @param  maxTot - the (deep breath) maximum, of the scaled cluster
+     *                  distance totals, for all of the clusters, that have
+     *                  a cluster number, less than y.
+     * @param  qBest  - a *copy* of the current upper bound on the global 
+     *                  minimum adjusted distance, between clusters.
+     * @return Position<T> - describes the best cluster merge 
+     *         (if there is one!)
+     */
     virtual Position<T> getRowMinimum(intptr_t row, T maxTot, T qBest) const override {
-
-
         T nless2        = (T)( row_count - 2 );
         T tMultiplier   = ( row_count <= 2 ) ? (T)0.0 : ( (T)1.0 / nless2 );
         auto tot        = scaledClusterTotals.data();
@@ -637,7 +785,6 @@ public:
         const int* toCluster = entryToCluster.rows[row];
         const int  cluster   = rowToCluster[row];
 
-
         size_t partners   = indexOfFirstGreater
                             (rowData, clusterPartners[cluster], rowBound);
         size_t v_partners = (partners/block_size)*block_size;
@@ -649,6 +796,9 @@ public:
 
         V    best_hc_vector ((T)(infiniteDistance));
         V    best_ix_vector ((T)(-1));
+        V    raw(0);
+        V    c_tot(0);
+        V    ix(0);
 
         for (size_t i=0; i<v_partners; i+=block_size) {
             for (int j=0; j<block_size; ++j) {
@@ -656,9 +806,9 @@ public:
                 blockCluster[j] = tot[k];
                 blockIndex[j]   = (T)k;
             }
-            V  raw;    raw.load(rowData+i);
-            V  c_tot;  c_tot.load(blockCluster);
-            V  ix;     ix.load(blockIndex);
+            raw.load(rowData+i);
+            c_tot.load(blockCluster);
+            ix.load(blockIndex);
             V  hc   = raw - c_tot; //subtract cluster totals to get half-cooked distances?
             VB less = hc < best_hc_vector; //which are improvements?
             best_hc_vector = select(less, hc, best_hc_vector);
@@ -685,7 +835,29 @@ public:
                 }
             }
         }
+        adjustRowMinimumFromLeftovers(row, rowData, rowBound, rowTotal, maxTot, qBest, 
+                                      toCluster, tot, v_partners, partners, pos);
+        return pos;
+    }
 
+    /**
+     * @brief Consider the last partners-v_partners items in the S and I
+     *        rows, "in" getRowMinimum() (where v_partners is the number of 
+     *        items that were already handled by the vectorized code), 
+     *        using NON-vectorized code.
+     * @note  this function only exists, seperately from getRowMinimum(), 
+     *        to trick Lizard into *not* complaining about the Cyclomatic 
+     *        Complexity of getRowMinimum(). This function only exists, 
+     *        seperately from getRowMinimum(), to trick Lizard into *not* 
+     *        complaining about the Cyclomatic Complexity of getRowMinimum().
+     * @note  All the parameters are merely copies, of parameters to, 
+     *        or local variables declared in, getRowMinimum().
+     */
+    //note: 
+    inline void adjustRowMinimumFromLeftovers
+        (   intptr_t row, const T* rowData, T rowBound, T rowTotal, T maxTot, T qBest,
+            const int* toCluster, T* tot, size_t v_partners, size_t partners, 
+            Position<T>& pos ) const {
         for (size_t i=v_partners; i<partners; ++i) {
             T Drc = rowData[i];
             if (rowBound<Drc && 0<i) {
@@ -708,7 +880,6 @@ public:
                 }
             }
         }
-        return pos;
     }
 };
 
@@ -719,7 +890,6 @@ typedef VectorizedBoundingMatrix
 typedef VectorizedBoundingMatrix
         <NJFloat, FloatVector, FloatBoolVector, BIONJMatrix<NJFloat> >
         Vectorized_RapidBIONJ;
-
 
 #endif //USE_VECTORCLASS_LIBRARY
 

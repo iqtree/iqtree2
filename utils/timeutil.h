@@ -53,16 +53,19 @@
 #endif
 #endif
 
-#ifdef HAVE_GETRUSAGE
+//
+//For GCC builds on windows, HAVE_GETRUSAGE will be set, but sys/resource.h will not exist
+//So check for windows-but-not-cygwin first.
+//
+
+#if (defined _WIN32 || defined __WIN32__ || defined WIN64) && ! defined __CYGWIN__
+	#include <windows.h>
+#elif (defined HAVE_GETRUSAGE && !defined _WIN64 && !defined _WIN32 && !defined WIN32)
 	#include <sys/resource.h>
-#else 
-	#if (defined _WIN32 || defined __WIN32__ || defined WIN64) && ! defined __CYGWIN__
-	# include <windows.h>
-	#else
-	# include <sys/times.h>
-	# include <unistd.h>
-	#endif
-#endif /* HAVE_GETRUSAGE */
+#else
+	#include <sys/times.h>
+	#include <unistd.h>
+#endif
 
 /*********************************************
  * gettimeofday()
@@ -73,9 +76,11 @@
         #include <sys/types.h>
         #include <winsock.h>
 
+		#ifdef _MSC_VER
         struct timezone {
             char dummy;
         };
+		#endif
 
         __inline int my_gettimeofday(struct timeval* t, void* timezone)
         {
@@ -113,11 +118,7 @@
  * with correction for OpenMP
  */
 __inline double getCPUTime() {
-#ifdef HAVE_GETRUSAGE
-	struct rusage usage;
-	getrusage(RUSAGE_SELF, &usage);
-	return (usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1.0e6);
-#elif (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
 	/* Fill in the ru_utime and ru_stime members.  */
 	FILETIME creation_time;
 	FILETIME exit_time;
@@ -132,6 +133,10 @@ __inline double getCPUTime() {
 		uint64_t user_usec = ((((uint64_t) user_time.dwHighDateTime << 32) | (uint64_t) user_time.dwLowDateTime) + 5) / 10;
 		return (double)user_usec / 1.0e6;
 	}
+#elif (defined HAVE_GETRUSAGE)
+	struct rusage usage;
+	getrusage(RUSAGE_SELF, &usage);
+	return (usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1.0e6);
 #else
 	/* Fill in the ru_utime and ru_stime members.  */
 	struct tms time;
@@ -234,7 +239,7 @@ inline uint64_t getTotalSystemMemory()
  */
 __inline uint64_t getMemorySize( )
 {
-#if defined(_WIN32) && (defined(__CYGWIN__) || defined(__CYGWIN32__) || !defined(_WIN64))
+#if (defined(_WIN32) && !defined(_WIN64) && (defined(__CYGWIN__) || defined(__CYGWIN32__)))
 	/* Cygwin under Windows. ------------------------------------ */
 	/* New 64-bit MEMORYSTATUSEX isn't available.  Use old 32.bit */
 #warning "getMemorySize() will be wrong if RAM is actually > 4GB"

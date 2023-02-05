@@ -11,7 +11,6 @@
 #include <stdint.h> //for definition of intptr_t
 #include <vector>   //for definition of std::vector template class
 
-
 template <class T> class ParallelSorter {
 public:
     virtual void parallel_sort     (T* data, intptr_t count) = 0;

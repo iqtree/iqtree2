@@ -33,16 +33,23 @@ typedef std::vector<int> IntVector;
 typedef std::vector<intptr_t> Int64Vector;
 
 /**
-        vector of bool
+ * @brief  A subclass of vector (or other container) class S, where the
+ *         elements in (or members of) S are treated as though they are 
+ *         of type T.
+ * @tparam T - the type we want to pretend is stored in the container
+ * @tparam S - the container superclass, that contains members of a type
+ *             (which should be interconvertible with T, via implicit
+ *              casting).
+ * @note   S must implement an S::size_type constructor.
+ * @note   S must have S::const_iterator and S::iterator derived types
+ * @note   S must implement const and non-const implementations 
+ *           of begin() and end() that return S::const_iterator 
+ *           and S::iterator.
+ * @note   S must implement const and non-const operator[].
+ * @note   All other member functions of S are exposed just as they are,
+ *         for CastingVector<T,S> inherits publicly from S.
  */
-
-
 template <class T, class S> class CastingVector: public S {
-    //
-    //A subclass of vector (or other container) class S,
-    //where the entries in S are treated as though
-    //they are of type T (via implicit casting).
-    //
 public:
     typedef S super;
     typedef typename S::size_type size_type;
@@ -102,6 +109,17 @@ public:
     }
 };
 
+/**
+ * @brief In single-threaded code, this is equivalent to std::vector<bool>
+ *        (but uses about 8 times as much memory!).
+ *        In multi-threaded code, this is NOT equivalent.  Because the
+ *        elements are char rather than individual bits in bit-fields.
+ *        So reads and writes of individual elements, in separate threads,
+ *        are less likely to interfere with one another (but concurrent write
+ *        access is still potentially problematic, if two or more threads 
+ *        write to and/or read from the same element).
+ * 
+ */
 typedef CastingVector<bool, std::vector<char> > BoolVector;
 
 /**
@@ -110,7 +128,7 @@ typedef CastingVector<bool, std::vector<char> > BoolVector;
 typedef std::vector<char> CharVector;
 
 /**
-        vector of string
+        vector of std::string
  */
 class StrVector: public std::vector<std::string> {
 public:
@@ -120,6 +138,17 @@ public:
     explicit StrVector(size_t size);
     ~StrVector() = default;
 
+    /**
+     * @brief  Append string literals, from an array of const char*.
+     * @tparam COUNT - the number of string literals in the array.
+     * @param  literals - the array of const char* string literals.
+     * @param  force_upper_case - true if the strings are to be forced to
+     *         upper case.
+     * @return StrVector& - reference to *this.
+     * @note   upper-case is done character-by-character via toupper()
+     *         (which may well NOT be appropriate in languages other 
+     *          than English) -James B.
+     */
     template <int COUNT> StrVector& appendLiterals(const char* (&literals)[COUNT], 
                                                    bool force_upper_case = false) {
         for (int i=0; i<COUNT; ++i) {
@@ -132,15 +161,68 @@ public:
         }
         return *this;
     }
+
+    /**
+     * @brief  Set to the string literals, read from an array of const char*.
+     * @tparam COUNT - the number of string literals in the array.
+     * @param  literals - the array of const char* string literals.
+     * @param  force_upper_case - true if the strings are to be forced to
+     *         upper case. false (the default), if not.
+     * @return StrVector& - reference to *this.
+     * @note   implemented in terms of appendLiterals().
+     */
     template <int COUNT> StrVector& setToLiterals(const char* (&literals)[COUNT], 
                                                   bool force_upper_case = false ) {
         clear();
         return appendLiterals(literals, force_upper_case);
     }
+
+    /**
+     * @brief  indicate whether a given string literal is currently
+     *         contained by *this.
+     * @param  find_me a (const char*) string literal 
+     * @return true  - if it (find_me) is contained in *this.
+     * @return false - if it is not.
+     * @note   Comparison is done via std::string's operator==.
+     */
     bool contains(const char* find_me)        const;
+
+    /**
+     * @brief  indicate whether a given string literal is currently
+     *         contained by *this.
+     * @param  find_me the string (a const std::string reference) to
+     *         look for.
+     * @return true  - if it (find_me) is contained in *this.
+     * @return false - if it is not.
+     * @note   Comparison is done via std::string's operator==.
+     */
     bool contains(const std::string& find_me) const;
+
+    /**
+     * @brief  construct a string, by concating all the strings in *this,
+     *         in order, separating (not terminating) strings from *this
+     *         with a specified separator.
+     * @param  separator - the (const char* string literal) separator to use
+     * @return std::string - the constructed string
+     * @note   if size() yields zero, returns an empty string.
+     */
     std::string join(const char* separator)   const;
+
+    /**
+     * @brief  construct a string, by concating all the strings in *this,
+     *         in order, separating (not terminating) strings from *this
+     *         with a specified separator.
+     * @param  separator - the (const char* string literal) separator to use
+     * @return std::string - the constructed string
+     * @note   if size() yields zero, returns an empty string.
+     */
     std::string join(const std::string& separator) const;
+
+    /**
+     * @brief  sort the strings in *this into lexicographic order.
+     * @note   sorting uses std::sort, and comparison is done using std::less.
+     */
+
     void sort();
 };
 
@@ -154,6 +236,5 @@ public:
  */
 
 typedef mmatrix(double) DoubleMatrix;
-
 
 #endif /* vectortypes_h */

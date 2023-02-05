@@ -98,9 +98,9 @@ namespace StartTree
 
 template <class T=double> class Stitch { //an Edge in a stitch-up graph
 public:
-    size_t source;      //
-    size_t destination; //
-    T      length;      //
+    intptr_t source;      //
+    intptr_t destination; //
+    T        length;      //
     Stitch() : source(0), destination(0), length(0) { }
     Stitch(size_t sourceIndex, size_t destinationIndex, T edgeLength):
         source(sourceIndex), destination(destinationIndex), length(edgeLength) {
@@ -275,7 +275,7 @@ template <class T=double> struct StitchupGraph {
         size_t   degree    = 0;  //Degree of that node
         for (auto it=stitches.begin(); it!=stitches.end(); ++it) {
             if (it->source != node) {
-                if (node!=-1) {
+                if (node != -1) {
                     if (degree!=2) {
                         replacements[node] = node;
                         replacementLengths[node] = 0;
@@ -339,10 +339,10 @@ template <class T=double> struct StitchupGraph {
                               progress_display_ptr progress, F& out) const {
         auto lastEdge = stitches.end();
         --lastEdge;
-        size_t lastNodeIndex = lastEdge->source;
-        size_t edgeCount = stitches.size();
+        size_t   lastNodeIndex = lastEdge->source;
+        intptr_t edgeCount = stitches.size();
         std::vector<Stitch<T>> stitchVector;
-        std::vector<size_t>    nodeToEdge;
+        std::vector<intptr_t>  nodeToEdge;
         nodeToEdge.resize(lastNodeIndex+1, edgeCount);
         int j = 0;
         for (auto it=stitches.begin(); it!=stitches.end(); ++it, ++j) {
@@ -363,7 +363,7 @@ template <class T=double> struct StitchupGraph {
     bool writeTreeToFile(int precision, const std::string &treeFilePath, 
                          bool isFileToBeOpenedForAppending, 
                          bool subtreeOnly, F& out) const {
-        bool success = false;
+        bool success = false;           
         std::string desc = "Writing STITCH tree to ";
         desc+=treeFilePath;
         #if USE_PROGRESS_DISPLAY
@@ -373,7 +373,7 @@ template <class T=double> struct StitchupGraph {
         #endif
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
-            auto openMode = isFileToBeOpenedForAppending
+            std::ios_base::openmode openMode = isFileToBeOpenedForAppending
                           ? std::ios_base::app : std::ios_base::trunc;
             openMode |= std::ios_base::out;  
             out.open(treeFilePath.c_str(), openMode);
@@ -386,7 +386,7 @@ template <class T=double> struct StitchupGraph {
         } catch (const char *str) {
             std::cerr << "Writing newick file failed: " << str << std::endl;
             return false;
-        } catch (std::string &str) {
+        } catch (const std::string &str) {
             std::cerr << "Writing newick file failed: " << str << std::endl;
             return false;
         }
@@ -398,11 +398,11 @@ template <class T=double> struct StitchupGraph {
     }
     template <class F>
     void writeSubtree ( const std::vector<Stitch<T>>& stitchVector, 
-                        std::vector<size_t> nodeToEdge,
-                        const Stitch<T>* backstop, size_t nodeIndex,
+                        std::vector<intptr_t> nodeToEdge,
+                        const Stitch<T>* backstop, intptr_t nodeIndex,
                         bool noBrackets,
                         progress_display_ptr progress, F& out) const {
-        bool isLeaf = ( nodeIndex < leafNames.size() );
+        bool isLeaf = ( nodeIndex < (intptr_t)leafNames.size() );
         if (isLeaf) {
             out << leafNames [ nodeIndex ] ;
         } else {
@@ -410,8 +410,8 @@ template <class T=double> struct StitchupGraph {
                 out << "(";
             }
             const char* sep = "";
-            size_t x = nodeToEdge[nodeIndex];
-            size_t y = stitchVector.size();
+            intptr_t x = nodeToEdge[nodeIndex];
+            intptr_t y = stitchVector.size();
             nodeToEdge[nodeIndex] = y;
             for (; x<y && stitchVector[x].source == nodeIndex; ++x) {
                 size_t child = stitchVector[x].destination;
@@ -488,7 +488,7 @@ public:
     virtual std::string getAlgorithmName() const {
         return "STITCHUP";
     }
-    virtual void addCluster(const std::string &name) {
+    virtual void addCluster(const std::string &name) override {
         graph.addLeaf(name);
     }
     virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
@@ -551,27 +551,28 @@ public:
                 stitches.emplace_back(row, col, rowData[col]);
             }
         }
+        size_t heapSize = stitches.size();
         MinHeapOnArray< LengthSortedStitch<T> >
-            heap ( stitches.data(), stitches.size()
+            heap ( stitches.data(), heapSize
                  , silent ? "" : "Constructing min-heap of possible edges" );
+        
         size_t iterations = 0;
         #if USE_PROGRESS_DISPLAY
         double row_count_triangle = 0.5*(double)row_count*(double)(row_count+1);
         const char* task_name = silent ? "" : "Assembling Stitch-up Graph";
         progress_display progress(row_count_triangle, task_name );
-        #else
-        double progress = 0.0;
         #endif
         for (intptr_t join = 0; join + 1 < row_count; ++join) {
             LengthSortedStitch<T> shortest;
-            size_t source;
-            size_t dest;
+            size_t source = 0;
+            size_t dest   = 0;
             do {
                 shortest = heap.pop_min();
                 source   = shortest.source;
                 dest     = shortest.destination;
                 ++iterations;
-            } while ( graph.areLeavesInSameSet(source,dest) );
+            } while ( graph.areLeavesInSameSet(source,dest)
+                      && iterations<=heapSize && !heap.empty() );
             graph.staple(source, dest, shortest.length);
             progress += (join+1);
         }
@@ -581,8 +582,9 @@ public:
         graph.removeThroughThroughNodes();
         return true;
     }
-    virtual bool calculateRMSOfTMinusD(const double* matrix, 
-                                           intptr_t rank, double& rms) {
+
+     virtual bool calculateRMSOfTMinusD(const double* matrix, 
+                                        intptr_t rank, double& rms) {
         return false; //not supported  
     }
 };
@@ -647,11 +649,11 @@ public:
     void constructTreeFromEdgeHeap(MinHeapOnArray< TaxonEdge <T> > &heap,
                                    progress_display& progress) {
         intptr_t taxon_count = row_count;
-        size_t iterations = 0;
+        size_t   iterations  = 0;
 
-        std::vector<size_t> taxonToRow;
+        std::vector<intptr_t> taxonToRow;
         taxonToRow.resize(taxon_count);
-        size_t* tr = taxonToRow.data();
+        intptr_t* tr = taxonToRow.data();
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
@@ -660,16 +662,18 @@ public:
         }
 
         intptr_t degree_of_root = isRooted ? 2 : 3;
+        size_t   heap_size = heap.size();
         while (degree_of_root<row_count) {
             TaxonEdge<T> shortest;
             do {
                 shortest = heap.pop_min();
                 ++iterations;
-            } while ( tr[shortest.taxon1] == tr[shortest.taxon2] );
+            } while ( tr[shortest.taxon1] == tr[shortest.taxon2] 
+                    && iterations < heap_size);
             size_t rA = tr[shortest.taxon1];
             size_t rB = tr[shortest.taxon2];
-            size_t r1 = (rA<rB) ? rA : rB;
-            size_t r2 = (rB<rA) ? rA : rB;
+            intptr_t r1 = (rA<rB) ? rA : rB;
+            intptr_t r2 = (rB<rA) ? rA : rB;
             cluster( r1, r2);
             #ifdef _OPENMP
             #pragma omp parallel for
@@ -717,7 +721,7 @@ public:
     }
 };
 
-void addStitchupTreeBuilders(Factory& f) {
+void addStitchupTreeBuilders(Registry& f) {
     f.advertiseTreeBuilder( new Builder<StitchupMatrix<double>>
         ("STITCH",      "Family Stitch-up (Lowest Cost)"));
     f.advertiseTreeBuilder( new Builder<NearestTaxonClusterJoiningMatrix<double>>

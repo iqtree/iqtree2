@@ -20,6 +20,7 @@
 #include "starttree.h"
 #include <iostream> //for std::cout
 #include <sstream>  //for std::stringstream
+#include <utils/stringfunctions.h> //for contains
 
 namespace StartTree {
 
@@ -27,16 +28,16 @@ namespace StartTree {
 #define USE_BIONJ_2009 (1)
 #endif
 #if (USE_BIONJ_2009)
-    extern void addBioNJ2009TreeBuilders(Factory& f);
+    extern void addBioNJ2009TreeBuilders(Registry& f);
 #endif
-extern void addBioNJ2020TreeBuilders(Factory& f);
+extern void addBioNJ2020TreeBuilders(Registry& f);
 
-//extern void addStitchupTreeBuilders (Factory& f);
+//extern void addStitchupTreeBuilders (Registry& f);
 
-Factory::Factory() {
+Registry::Registry() {
 }
 
-Factory::~Factory() {
+Registry::~Registry() {
     for (auto it=mapOfTreeBuilders.begin();
          it!=mapOfTreeBuilders.end(); ++it) {
         delete it->second;
@@ -44,12 +45,12 @@ Factory::~Factory() {
     mapOfTreeBuilders.clear();
 }
 
-size_t Factory::getBuilderCount() {
+size_t Registry::getBuilderCount() {
     return mapOfTreeBuilders.size();
 }
 
-Factory& Factory::getInstance() {
-    static Factory instance;
+Registry& Registry::getInstance() {
+    static Registry instance;
     if (instance.getBuilderCount()==0) {
         #if (USE_BIONJ_2009)
             addBioNJ2009TreeBuilders(instance);
@@ -62,23 +63,34 @@ Factory& Factory::getInstance() {
     return instance;
 }
 
-void Factory::addBuilder(const std::string& name, BuilderInterface* builder) {
+void Registry::addBuilder(const std::string& name, BuilderInterface* builder) {
+    auto found = mapOfTreeBuilders.find(name);
+    if ( found != mapOfTreeBuilders.end()) {
+        if (found->second != builder ) {
+            //If replacing an existing distance matrix phylogenetic inferefence
+            //implementation (owned by the registry), then the existing one
+            //needs to be deleted (otherwise, any memory allocated for it
+            //will be leaked).
+            delete found->second;
+            found->second = nullptr;
+        }
+    }
     mapOfTreeBuilders [ name ] = builder;
 }
 
-BuilderInterface* Factory::getBuilder(const std::string& name) const {
+BuilderInterface* Registry::getBuilder(const std::string& name) const {
     auto found = mapOfTreeBuilders.find(name);
     return ( found == mapOfTreeBuilders.end())
             ? nullptr
             : found->second;
 }
 
-BuilderInterface* Factory::getBuilder(const char* name) const {
+BuilderInterface* Registry::getBuilder(const char* name) const {
     std::string s(name);
     return getBuilder(s);
 }
 
-std::string Factory::getListOfTreeBuilders() const {
+std::string Registry::getListOfTreeBuilders() const {
     std::stringstream list;
     for (auto it=mapOfTreeBuilders.begin();
          it!=mapOfTreeBuilders.end(); ++it) {
@@ -89,7 +101,7 @@ std::string Factory::getListOfTreeBuilders() const {
     return list.str();
 }
 
-StrVector Factory::getVectorOfTreeBuilderNames(bool withDescriptions) const {
+StrVector Registry::getVectorOfTreeBuilderNames(bool withDescriptions) const {
     StrVector vector;
     for (auto it=mapOfTreeBuilders.begin();
          it!=mapOfTreeBuilders.end(); ++it) {
@@ -104,28 +116,28 @@ StrVector Factory::getVectorOfTreeBuilderNames(bool withDescriptions) const {
     return vector;
 }
 
-void Factory::advertiseTreeBuilder(BuilderInterface* builder) {
+void Registry::advertiseTreeBuilder(BuilderInterface* builder) {
     std::string name = builder->getName();
     addBuilder( name, builder );
 }
 
-void Factory::setNameOfDefaultTreeBuilder(const char* name) {
+void Registry::setNameOfDefaultTreeBuilder(const char* name) {
     nameOfDefaultTreeBuilder = name;
 }
 
-const std::string& Factory::getNameOfDefaultTreeBuilder() {
+const std::string& Registry::getNameOfDefaultTreeBuilder() {
     return getInstance().nameOfDefaultTreeBuilder;
 }
 
-BuilderInterface* Factory::getTreeBuilderByName(const std::string& name) {
+BuilderInterface* Registry::getTreeBuilderByName(const std::string& name) {
     return getInstance().getBuilder(name);
 }
 
-BuilderInterface* Factory::getDefaultTreeBuilder() const {
+BuilderInterface* Registry::getDefaultTreeBuilder() const {
     return getBuilder(nameOfDefaultTreeBuilder);
 }
 
-BuilderInterface* Factory::getTreeBuilderByName(const char* name) {
+BuilderInterface* Registry::getTreeBuilderByName(const char* name) {
     if (name!=nullptr && strlen(name)!=0) {
         return getInstance().getBuilder(name);
     } 
@@ -134,7 +146,7 @@ BuilderInterface* Factory::getTreeBuilderByName(const char* name) {
     }
 }
 
-BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Factory& f, const char* nameToUse,
+BenchmarkingTreeBuilder::BenchmarkingTreeBuilder(Registry& f, const char* nameToUse,
                                                  const char *descriptionToGive)
     : name(nameToUse), description(descriptionToGive)
     , isOutputToBeZipped(false), silent(false), precision(4)
@@ -205,6 +217,11 @@ namespace {
         s.precision( (w>=2) ? (w-2) : 0);
         s << n;
         std::string t = s.str();
+
+        if (contains(t,"e")) {
+            return t;
+        }
+
         if (1.0 <= n ) {
             if ( t.length() < (size_t)w ) {
                 return std::string(w-t.length(), ' ') + t;

@@ -23,14 +23,14 @@
 //               (Biomedical Engineering Systems and Technologies:
 //               3rd International Joint Conference, BIOSTEC 2010,
 //               Revised Selected Papers), volume 127, pages 334-344,
-//               Springer Verlag, 2011.
+//               Springer Verlag, 2011. [Simonsen+Mailund+Pedersen]
 //
 //  FancyNJMatrix<T> differs from BoundingMatrix<T, NJMatrix<T>> in several
 //  respects, because it implemented with space efficiency performance in mind 
 //  (BoundingMatrix was NOT; it was implemented to be easy to read, easy
 //  to "map" back to the paper it is based on).
 //
-//  Copyright James Barbetti (2021)
+//  Copyright James Barbetti (2021-22)
 //
 //  LICENSE:
 //* This program is free software; you can redistribute it and/or modify
@@ -62,16 +62,27 @@
 #include "hashrow.h"                  //for HashRow
 #include "utils/parallel_mergesort.h" //for MergeSorter
 
-#define  FNJ_TRACE(x) (0)
+#define  FNJ_TRACE(x) {}
 
 namespace StartTree {
+/**
+ * @brief  An alternative implementation of the Rapid NJ algorithm
+ *         (somewhat closer to the [Simonsen+Mailund+Pedersen] one,
+ *         with { cluster, distance } entries in a matrix vector 
+ *         of row vectors (rather than a single flattened out array).
+ * @tparam T 
+ */
 template <class T=NJFloat> class FancyNJMatrix {
 protected:
-    bool           be_silent;
-    bool           zip_it;
-    bool           append_file;          
-    bool           is_rooted;
-    bool           omit_semicolon;
+    bool           be_silent;      //true if log messages are to be suppressed
+    bool           zip_it;         //true if output is to be compressed
+    bool           append_file;    //true if the output file is to be appended
+                                   //(false if it is to be truncated)
+    bool           is_rooted;      //true if the "top" node is to be degree 2
+                                   //(false if it to be dgree 3)
+    bool           omit_semicolon; //true if the semi-colon at the end of the
+                                   //output is to be omitted (e.g. when 
+                                   //calculating a subtree rather than a tree).
     ClusterTree<T> clusters;
     #if USE_GZSTREAM
         #if USE_PROGRESS_DISPLAY
@@ -104,17 +115,22 @@ protected:
     typedef std::vector<MatrixEntry>  EntryVector;
     typedef std::vector<MatrixEntry*> EntryPtrVector;
 
-    intptr_t       original_rank;
-    intptr_t       next_cluster_number;
-    IntVector      cluster_in_play;
-    DistanceVector cluster_total;
-    DistanceVector cluster_total_scaled;
+    intptr_t       original_rank;        //the rank of the matrix before any
+                                         //clusters were joined
+    intptr_t       next_cluster_number;  //the cluster number to use next
+    IntVector      cluster_in_play;      //indicates which clusters are in use
+                                         //(it's an IntVector, rather than a vector
+                                         //of bool, because std::vector<bool> tends
+                                         //*not* to be multi-thread-friendly).
+                                         //For each cluster:
+    DistanceVector cluster_total;        // - The total of distances to other clsuters
+    DistanceVector cluster_total_scaled; // - The same, scaled (divided by (n-2))
     DistanceVector cluster_cutoff;
-    EntryPtrVector cluster_sorted_start;
+    EntryPtrVector cluster_sorted_start; 
     EntryPtrVector cluster_sorted_stop;
     EntryPtrVector cluster_unsorted_start;
     EntryPtrVector cluster_unsorted_stop;
-    IntVector      cluster_row;
+    IntVector      cluster_row;            //maps a cluster number to a row number
 
                                   //when searching for clusters to merge:...
     IntVector      row_cluster;   //cluster number, y, of i(th) clusters still in play
@@ -129,12 +145,20 @@ protected:
     DistanceVector x_distances;   //distances to cluster x
     DistanceVector y_distances;   //distances to cluster y
 
-    int            threadCount;
-    typedef MergeSorter<MatrixEntry> Sorter;
-    std::vector<Sorter> sorters;
+    int            threadCount;               //the number of threads
+    typedef MergeSorter<MatrixEntry> Sorter;  //used for sorting matrix rows
+    std::vector<Sorter> sorters;              //mergesorting contexts (one per thread)
+                                              //(mergesorting requires an auxiliary array,
+                                              // and allocation of those arrays is amortized)
 
-    volatile T     global_best_dist;
+    volatile T     global_best_dist;          //best adusted distance found in curent iteration
 
+    /**
+    * @brief  Get the thread number of the current thread (e.g. for looking)
+    *         up the entry in sorters, that keeps track of the auxiliary arrays
+    *         allocated for the current thread.
+    * @return int - either the current thread number or (if not multithreading), 0.
+    */
     int getThreadNumber() const {
         #ifdef _OPENMP
             return omp_get_thread_num();
@@ -142,6 +166,11 @@ protected:
             return 0;
         #endif
     }
+
+    /**
+     * @brief  return the number of threads of execution
+     * @return int - the number of threads (always 1 if _OPENMP is not defined)
+     */
     int getThreadCount() const {
         #ifdef _OPENMP
             return omp_get_num_threads();
@@ -149,6 +178,7 @@ protected:
             return 1;
         #endif
     }
+
     DuplicateTaxa duplicate_taxa;
 
 public:
@@ -163,25 +193,54 @@ public:
         #endif
         sorters.resize(threadCount);
     }
+
     ~FancyNJMatrix() {
         for (int c=0; c<original_rank; ++c) {
             deallocateCluster(c);
         }
     }
+
     std::string getAlgorithmName() const {
         return "FancyNJ";
     }
+
+    /**
+     * @brief Turn off logging messages.
+     */
     void beSilent() { 
         be_silent = true; 
-    } 
+    }
+
+    /**
+     * @brief  Control whether output files are to be appended (true)
+     *         or overwritten (false).
+     * @param  appendIt - whether output files are to be appended
+     * @return true - always succeeds (this implementation appends when asked to)
+     */
     virtual bool setAppendFile(bool appendIt) {
         append_file = appendIt;
         return true;
     }
+
+    /**
+     * @brief  Control whether output files are to be compressed (true)
+     *         or not (false).
+     * @param  appendIt - whether output files are to be compressed
+     * @return true - always succeeds (this implementation supports 
+     *         compression)
+     */
     virtual bool setZippedOutput(bool zipIt) { 
         zip_it = zipIt;
         return true;
     }
+
+    /**
+     * @brief  load sequence names and a distance matrix, from the file
+     *         matching the specified file path
+     * @param  distanceMatrixFilePath - the file path
+     * @return true  - on success
+     * @return false - on failure (error message will be logged to std::cerr)
+     */
     virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         INFILE(in);
         try {
@@ -202,11 +261,30 @@ public:
             return false;
         }
     }
+
+    /**
+     * @brief  Load sequence names and a distance matrix from an open file
+     * @param  in the file to load it from 
+     * @return true  - if the load was successful
+     * @return false - if there was an error (error message logged to std::cerr)
+     */
     virtual bool loadMatrixFromOpenFile(InFile& in) {
         FlatMatrix dummy;
         loadDistanceMatrixFromOpenFile(in, !be_silent, dummy);
         return this->loadMatrix(dummy.getSequenceNames(), dummy.getDistanceMatrix());
     }
+
+    /**
+     * @brief  Load a vector of sequence names, and a matrix of distances
+     * @param  names   a vector of n (unique!) sequence names
+     * @param  matrix  a pointer to the first element of a flat matrix of 
+     *                 size n*n (the distances between the sequences,
+     *                 stored in row-major order).
+     * @return true  - on success
+     * @return false - on failure
+     * @note   loading of data from (matrix) is parallelized, over rows,
+     *         if _OPENMP is defined.
+     */
     virtual bool loadMatrix(const StrVector& names,
                             const double* matrix) {
         #if USE_PROGRESS_DISPLAY
@@ -222,10 +300,16 @@ public:
             clusters.addCluster(name);
         }
         setRank(names.size()); //sets original_rank
+
+        //
+        //A weird thing here. Visual Studio C++ doesn't like 0<=r.
+        //But it is perfectly happy with r>=0.  That's a bug,
+        //but it can't be helped.
+        //
         #ifdef _OPENMP
         #pragma omp parallel for schedule(dynamic) if(1<threadCount)
         #endif
-        for (int r=original_rank-1; 0<=r; --r ) {
+        for (intptr_t r=original_rank-1; r>=0; --r ) {
             const double* row       = matrix + r * original_rank;
             MatrixEntry*  data      = cluster_sorted_start[r];
             MatrixEntry*  unsorted  = cluster_unsorted_start[r];
@@ -258,19 +342,49 @@ public:
         #endif
 
         identifyDuplicateTaxa(matrix);
-
         return true;
     }
+    /**
+     * @brief Hook for code that must execute before a tree is constructed
+     *        (there is any, so this does nothing at all)
+     */
     virtual void prepareToConstructTree() {
     }
+
+    /**
+     * @brief  Indicate whether the tree, to be inferred, is to have a top node
+     *         with a degree of 2 (if true), or of 3 (if false)
+     * @param  rootIt true, for a subtree (top node degree 2), false otherwise
+     * @return true   - if last/top "last-joined" node's degree is to be 2
+     * @return false  - if last node's degree is to be 3
+     */
     virtual bool setIsRooted(bool rootIt) {
         is_rooted = rootIt;
         return true;
     }
+
+    /**
+     * @brief  Indicate whether output is to include ( and ) characters
+     *         around the output for the tree or subtree (true if no '('
+     *         or ')' characters are wanted, false otherwise).
+     * @param  wantSubtree true if '(' and ')' characters to be dropped
+     * @return true  - this implementation supports outputting subtrees.
+     */
     virtual bool setSubtreeOnly(bool wantSubtree) {
         omit_semicolon = wantSubtree;
         return true;
     }
+
+    /**
+     * @brief  construct a tree via phylogenetic inference, using the
+     *         Rapid NJ algorithm.
+     * @return true  - on success (always!)
+     * @return false - on failure (never!)
+     * @note   periodically, items in per-cluster rows, that refer to
+     *         clusters that are "no longer in play" (that have already
+     *         been joined into larger clusters), are stripped out.
+     *         the code for this is tagged PURGE.
+     */
     virtual bool constructTree() {
         prepareToConstructTree();
         if (original_rank<3) {
@@ -284,8 +398,7 @@ public:
         double recalcTime  = 0.0;
         double previewTime = 0.0;
         double mergeTime   = 0.0;
-
-        int  next_purge = n * 7 / 8;
+        int    next_purge  = n * 7 / 8;
 
         intptr_t duplicate_merges = clusterDuplicateTaxa 
                                     (n, recalcTime, mergeTime);
@@ -301,6 +414,7 @@ public:
 
         for ( ; 1 < n ; --n) {
             if (n<=next_purge) {
+                //PURGE
                 purgeTime -= getRealTime();
                 removeOutOfPlayClusters(next_cluster_number);
                 next_purge = n*7/8;
@@ -324,7 +438,8 @@ public:
             int high_row      = (best_row < other_row) ? other_row : best_row;
             T   raw_Dxy       = clusterDistance(other_cluster, best_cluster);
             row_cluster[low_row]  = next_cluster_number;
-            row_cluster[high_row] = row_cluster[n-1];   
+            int n_less_1          = n - 1;
+            row_cluster[high_row] = row_cluster[n_less_1];
             mergeTime -= getRealTime();
             mergeClusters(best_cluster, other_cluster, next_cluster_number,
                           raw_Dxy, n, is_rooted);
@@ -342,28 +457,82 @@ public:
         reportConstructionDone(duplicate_merges, purgeTime, recalcTime, previewTime, mergeTime);
         return true;
     }
+
+    /**
+     * @brief  Calculate the root-mean-square of the matrix of 
+     *         differences between the tree-distances (between taxa) 
+     *         implied by the edge lengths in (clusters), and the
+     *         input distances (in a distance matrix, which should be
+     *         a copy of the input that was provided to the phylogenetic
+     *         inference algorithm).
+     * @param  matrix a flat matrix (rank*rank) of doubles in row-major 
+     *                order.
+     * @param  rank   the rank of the flat matrix.
+     * @param  rms    the root mean square will be written here.
+     * @return true if the calculation succeeded
+     * @note   it is assumed that rank is equal to the number of leaf
+     *         taxa in clusters, and that the rows and columns in
+     *         the distance matrix (pointed to by matrix) correspond
+     *         one-to-one and in order to the first (rank) clusters.
+     * @note   it is assumed that the distance matrix is symmetric.
+     *         it is assumed that the diagnal entries of the distance 
+     *         matrix are all zeroes.
+     */
     virtual bool calculateRMSOfTMinusD(const double* matrix, 
                                        intptr_t rank, double& rms) {
         return clusters.calculateRMSOfTMinusD(matrix, rank, rms);
     }
+
+    /**
+     * @brief  Write the current tree, in newick format to the file
+     *         matching the supplied file path.
+     * @param  precision the number of digits after the decimal point
+     *                   in distances, reported between nodes in the tree.
+     * @param  treeFilePath the file path to write to
+     * @return true  - if the write succeeds
+     * @return false - if the write fails
+     * @note   zip_it (compression on/off), append_file (append rather than overwrite,
+     *         and omit_semicolon (subtree only, no leading '(', trailing ");") 
+     *         are all honoured).
+     */
     virtual bool writeTreeFile     (int precision,
                                     const std::string &treeFilePath) const { 
         return clusters.writeTreeFile
                ( zip_it, precision, treeFilePath
                , append_file, omit_semicolon );
     }
+    /**
+     * @brief  Append the current tree, in newick format to an open I/O stream.
+     * @param  stream the output stream (std::ostream) to write to.
+     * @return true  - if the write succeeds
+     * @return false - if the write fails
+     * @note   zip_it (compression on/off), append_file (append rather than overwrite,
+     *         and omit_semicolon (subtree only, no leading '(', trailing ");") 
+     *         are all honoured).
+     * @note   it is expected that the caller will have set the precision already.
+     */
     virtual bool writeTreeToOpenFile(std::iostream &stream) const { 
         return clusters.writeTreeToOpenFile
                ( omit_semicolon, stream );
     }
 
 protected:
+    /**
+     * @brief Set the number of leaf taxa (or sequences)
+     * @param n the number of leaf taxa
+     */
     virtual void setRank(size_t n) {
         original_rank       = n;
         next_cluster_number = n;
-        size_t q = n+n-2; //number of clusters that will be needed
+        size_t q = n+n-1; //number of clusters that will be needed
                           //in total, during the course of the tree
-                          //construction: n leaves, n-2 interiors.
+                          //construction: n leaves, and n-1 interiors
+                          //(at the very end of processing, for an 
+                          //unrooted tree, the last two clusters 
+                          //will be merged; so n-1 not n-2), see
+                          //the appendToLastCluster call, near the
+                          //end of mergeClusters().
+                          //
         cluster_in_play.resize       (q, 1);
         cluster_total.resize         (q, 0.0);
         cluster_total_scaled.resize  (q, 0.0);
@@ -389,13 +558,20 @@ protected:
         }
     }
 
+    /**
+     * @brief Allocate resources (in particular a MatrixEntry row)
+     *        for a cluster.  The matrix entry row will be large 
+     *        enough for TWO copies of the entries needed for the
+     *        cluster with this index ("just big enough").
+     * @param c the cluster index
+     */
     void allocateCluster(int c) {
         ASSERT(cluster_sorted_start[c] == nullptr);
-        size_t       q       = original_rank + original_rank-2;
+        size_t       q             = original_rank + original_rank - 2;
         //Cluster, c, 0 through n-1, has c previous clusters
         //When     c, n through q-1, is created, it'll have q-c
-        size_t       entries = (c<original_rank) ? c : q-c;
-        MatrixEntry* data    = new MatrixEntry[entries*2];
+        size_t       entries       = (c<original_rank) ? c : ( q - c );
+        MatrixEntry* data          = new MatrixEntry[entries*2];
         cluster_sorted_start[c]    = data;
         data                      += entries;
         cluster_sorted_stop[c]     = data;
@@ -404,6 +580,12 @@ protected:
         cluster_unsorted_stop[c]   = data;
     }
 
+    /**
+     * @brief  identify duplicate taxa.  Record equivalence classes
+     *         in the duplicate_taxa member.
+     * @param  matrix the input distance matrix (an n*n matrix, 
+     *         of inter-taxon distances, stored in row-major order).
+     */
     void identifyDuplicateTaxa(const double* matrix) {
         //1. Calculate row hashes
         #if USE_PROGRESS_DISPLAY
@@ -440,9 +622,23 @@ protected:
         #endif
     }
 
+    /**
+     * @brief  Identify, and cluster, taxa that are identical (or, at least,
+     *         have identical rows in the supplied distance matrix).
+     * @param  n          - the number of taxa
+     * @param  recalcTime - used to return how long it took to identify
+     *                      clusters of duplciate taxa (elapsed seconds).
+     * @param  mergeTime  - used to return how long it took to join the
+     *                      clusters of duplicate tax (elapsed seconds).
+     * @return intptr_t   - how many cluster joins were done (the number
+     *                      of taxa that were duplicates, minus the number
+     *                      of taxon equivalence classes).
+     * @note on entry, duplciate_taxa has already been set.
+     *       usually, in identifyDuplicateTaxa().
+     *       (yes, this member function is "episodic").
+     */
     intptr_t clusterDuplicateTaxa(int& n, double& recalcTime, 
                                   double& mergeTime) {
-        //writes: row_cluster                                      
         if (duplicate_taxa.empty()) {
             return 0;
         }
@@ -478,11 +674,12 @@ protected:
 
                         int low_row  = cluster_row[x];
                         int high_row = cluster_row[y];
+                        int n_less_1 = n - 1;
                         if (high_row<low_row) {
                             std::swap(low_row, high_row);
                         }
                         row_cluster[low_row]  = next_cluster_number;
-                        row_cluster[high_row] = row_cluster[n-1];   
+                        row_cluster[high_row] = row_cluster[n_less_1];   
                         mergeTime -= getRealTime();
                         mergeClusters(x, y, next_cluster_number,
                                         (T)0, n, false);
@@ -505,6 +702,14 @@ protected:
         return duplicate_merges;
     }
 
+    /**
+     * @brief Recalculate cluster totals, for clusters 0..next_cluster_num
+     *        and map current rows to in-play clusters (an in-play
+     *        cluster is one that has not yet been joined to make a
+     *        larger cluster).
+     * @param n - the number of clusters in play
+     * @param next_cluster_num - the next unused cluster number 
+     */
     void recalculateTotals(int n, int next_cluster_num) {
         //writes: row_cluster and cluster_row
         double cutoff           = -infiniteDistance;
@@ -526,17 +731,39 @@ protected:
             }
         }
     }
+    /**
+     * @brief For each cluster, y, that is currently in play, find the
+     *        first MatrixEntry<T>, in that cluster's block of 
+     *        matrix entries for LOWER numbered clusters (which is
+     *        sorted by raw distance from y), that refers to a
+     *        cluster that is till in play (if any!).
+     * @param n - the number of clusters currently in play
+     * @param q - the number of nodes there will be, in a
+     *            complete unrooted tree:(n0-1)*2, where n0 is
+     *            the number of rows in the input distance matrix
+     * @note  reads:  row_cluster
+     * @note  writes: row_raw_dist, row_best_distance, row_choice
+     * @note  doesn't usually update cluster_sorted_start[y],
+     *        but will deallocate the memory allocated for the 
+     *        cluster, if its block of matrix entries no longer
+     *        has any distances to (lower-numbered) in-play clusters
+     *        in it. 
+     */
     void previewRows(int n, int q) {
-        //reads: row_cluster
-        //writes: row_rw_dist, row_best_distance, row_choice
-
         global_best_dist = infiniteDistance;
         FNJ_TRACE("\nPreview for n=" << n << "\n");
+
+        //Problem here: reduction(min) not supported in Visual Studio C++ 19 on Windows
+        //because Visual Studio C++ only supports OpenMP 2.0, and reduction(min) is OpenMP 3.1
         #ifdef _OPENMP
+        #ifndef _MSC_VER
         #pragma omp parallel for reduction(min:global_best_dist)
+        #else
+        #pragma omp parallel for
         #endif
-        for (int r = 0; r < n; ++r ) {
-            int  y     = row_cluster[r];
+        #endif
+        for (int r = 0; r < n; ++r ) /* r is current row number */ {
+            int  y     = row_cluster[r]; //y is cluster number
             auto scan  = cluster_sorted_start[y]; 
             auto stop  = cluster_sorted_stop[y];
             bool found = false;
@@ -555,9 +782,14 @@ protected:
                               << ", Ry=" << cluster_total_scaled[y]
                               << ", Dxy-Rx-Ry=" << row_best_dist[r]
                               << "\n");
+                    #ifdef _MSC_VER
+                    #ifdef _OPENMP
+                    #pragma omp critical
+                    #endif
+                    #endif              
                     if (row_best_dist[r]<global_best_dist) {
                         global_best_dist = row_best_dist[r];
-                    }
+                    }                    
                     break;
                 } else {
                     FNJ_TRACE("For y=" << y << ", cluster x=" 
@@ -573,6 +805,25 @@ protected:
         }
     }
 
+    /**
+     * @brief For each row, r, and corresponding in-play cluster, y,
+     *        find the best choice (of MatrixEntry) for cluster y 
+     *        (and so, for row r), and also the raw, and adjusted 
+     *        distance, of that best choice.
+     * @param n - the number of clusters currently in play
+     * @param q - the number of nodes there will be, in a
+     *            complete unrooted tree:(n0-1)*2, where n0 is
+     *            the number of rows in the input distance matrix
+     * @note  reads:   rows_by_dist (ordered by increasing preview 
+     *                               distance, to get r)
+     *                 row_cluster  (indexed by r to get y)
+     * @note  updates: row_raw_dist, row_best_dist, row_choice 
+     *                 (all of these vectors are indexed by r)
+     * @note  if _OPENMP is defined, parallelizes over rows.
+     *        each thread, (i) of the (step) running threads looks
+     *        at those rows that correspond to entries that are
+     *        (i) modulo (step) in rows_by_dist.
+     */
     void findPreferredPartners(int n, int q) {
         //reads:   row_cluster
         //updates: row_raw_dist, row_best_dist, row_choice
@@ -602,20 +853,48 @@ protected:
         }
     }
 
+    /**
+     * @brief Find an ordering of rows, ordering each row (r), according to 
+     *        the (Dcj - Rc - Rj) "cooked" distance, to the first entry 
+     *        (for cluster x) from the cluster (y) mapped to row r.
+     *        (Here: Dcj is the distance between clusters c and j, Rc
+     *         is the scaled row total, sum divided by (n-2), for cluster c,
+     *         and Rj the same for cluster j).
+     * @param n            - the number of clsuters currently inplay
+     * @param rows_by_dist - a vector of pair<T,int>, where first is the
+     *                       adjusted distance, and second the row number
+     * @note  reads: row_best_dist.
+     * @note  Sorts using std::sort().  Possibly for VERY large inputs, 
+     *        it might be worth sorting with a parallel sorting 
+     *        implementation.  But I haven't done that. -James B.
+     */
     void chooseRowSearchOrder(int n, std::vector< std::pair<T, int> >& rows_by_dist) {
-        //
-        //Find an ordering of rows, ordering each row (r),
-        //according to the (Dcj - Rc - Rj) "cooked" distance, 
-        //to the first entry (for cluster x) from the cluster (y)
-        //mapped to row r.
-        //
         for (int r = 0; r < n; ++r ) {
             rows_by_dist.emplace_back(row_best_dist[r], r);
         }
         std::sort(rows_by_dist.begin(), rows_by_dist.end());
     }
 
-    virtual void findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) {
+    /**
+    * @brief For a given cluster, y, corresponding to a specified row, r,
+    *        of the working distance matrix, find the MatrixEntry,
+    *        and corresponding distance, for the (earlier-numbered)
+    *        cluster, x, still in play, that has the lowest adjusted 
+    *        distance to cluster y.
+    * @param r - row number (of the cluster, in the working distance matrix)
+    * @param y - cluster number
+    * @note  reads: row_choice, row_best_dist.
+    * @note  writes:row_best_dist and row_choice.
+    * @note  Rather than searching (and comparing distances, until it
+    *        is no longer possible, for a MatrixEntry<T> in y's block of
+    *        lower-numbered MatrixEntry<T>, to be for a cluster, x, 
+    *        such that the adjusted distance to x, from y, will be the 
+    *        lowest), using the current cutoff, this code performs a 
+    *        binary search, for an entry beyond the initial cutoff.
+    *        The idea is to spend log_2(CX(y)) unpredictable dstiance 
+    *        comparisons before the scanning loop, to save CX(y) in it.
+    */
+    virtual bool findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) {
         int best_x         = row_choice[r];    //other cluster
         T   best_hc_dist   = row_best_dist[r]  + cluster_total_scaled[y];
         T   cutoff         = best_hc_dist      + cluster_cutoff[y];
@@ -636,6 +915,7 @@ protected:
         //previewRows().
         auto dataStart = cluster_sorted_start[y] + 1; 
         auto dataStop  = cluster_sorted_stop[y];
+        bool found     = false;
 
         dataStop = findFirstGreaterDistance
                     (dataStart, dataStop, cutoff);
@@ -646,13 +926,30 @@ protected:
             if (best_hc_dist<=dist_half_cooked) {
                 continue;
             }
+            found         = true;
             best_hc_dist  = dist_half_cooked;
             best_x        = x; //best cluster found
         }
         row_best_dist[r] = best_hc_dist - cluster_total_scaled[y];
         row_choice[r]    = best_x;
+        return found;
     }
 
+    /**
+     * @brief  Find, in a block of contiguous MatrixEntry<T> rows,
+     *         indicated by (start, stop), sorted by distance, 
+     *         the first entry that has a distance greater than (dist),
+     *         and return a pointer to it. If there ISN'T one, 
+     *         return stop.
+     * @param  start - first MatrixEntry<T> to look at
+     * @param  stop  - one more than the last MatrixEntry<T> to look at
+     *                 (or, if you prefer, the first one, after than,
+     *                 NOT to look at)
+     * @param  dist  - the threshold distance, we are looking to find
+     *                 a "boundary" element for.
+     * @return MatrixEntry* the first such element. Or (stop) if there are
+     *         no elements with a distance greater than (dist).
+     */
     MatrixEntry* findFirstGreaterDistance(MatrixEntry* start, 
                                           MatrixEntry* stop, T dist) {
         while (start<stop) {
@@ -667,6 +964,20 @@ protected:
         return start;
     }
 
+    /**
+     * @brief  Given, row_choice and row_best_dist have been set,
+     *         (indicating for each row, r, and corresponding cluster, y,
+     *          which lower-numbered cluster x, if any, has the minimal
+     *          adjusted distance to y), find the best row.
+     * @param  n - the number of clusters currently in play
+     * @param  q - a dummy cluster number (indicating no cluster!) 
+     *           - in practice, (n0-1)*2 where n0 is the number of
+     *             rows that there were in the initial distance matrix.
+     * @return int - the row, r, which corresponds to the cluster, y, 
+     *               which has the mimimum minimum distance to a 
+     *               lower-numbered in-play cluster, x.
+     * @note   reads:  row_choice, row_best_dist
+     */
     int chooseBestRow(int n, int q) {
         //reads: row_best_dist, row_choice
         int best_row  = q;
@@ -694,6 +1005,19 @@ protected:
         return best_row;
     }
 
+    /**
+     * @brief merge two existing clusters, into a new cluster
+     * @param cluster_X - the first existing cluster
+     * @param cluster_Y - the second
+     * @param cluster_U - the new cluster to be built by joining
+     *                    clusters cluster_X and cluster_Y
+     * @param Dxy       - the raw (not the adjusted) distance between
+     *                    the two existing clusters
+     * @param n         - the number of clusters still in play
+     * @param is_rooted - indicates whether the last cluster is to have
+     *                    degree 2 (true), or degree 3 (false).
+     * @note  it is assumed 0 <= cluster_X < cluster_Y < cluster_U.
+     */
     void mergeClusters(int cluster_X, int cluster_Y, 
                        int cluster_U, T Dxy, int n,
                        bool is_rooted) {
@@ -760,6 +1084,11 @@ protected:
         markClusterAsUsedUp(cluster_Y);
     }
 
+    /**
+    * @brief mark a cluster as no longer being in play (because it has
+    *        been merged into another cluster).
+    * @param c - the cluster number
+    */
     void markClusterAsUsedUp(int c) {
         cluster_in_play[c]       = 0;
         cluster_total[c]         = -infiniteDistance;
@@ -768,6 +1097,11 @@ protected:
         deallocateCluster(c);
     }
 
+    /**
+    * @brief Free up the memory allocated on behalf of a cluser that is
+    *        no longer in play.
+    * @param c - the cluster number.
+    */
     void deallocateCluster(int c) {
         delete [] cluster_sorted_start[c];
         cluster_sorted_start[c]   = nullptr;
@@ -776,16 +1110,42 @@ protected:
         cluster_unsorted_stop[c]  = nullptr;
     }
 
+    /**
+    * @brief Get the raw distances, from cluster c, to lower-numbered clusters
+    * @param c - cluster number
+    * @param u -
+    * @param distances - a vector, of distances (i.e. a vector of T),
+    *                    initialized on entry, to infiniteDistance, 
+    *                    of size at least n (where n is the number of
+    *                    clusters currently in play)).  
+    *                    On exit, distance[b] will
+    *                    be set to the raw distance between b and c, if
+    *                    and only if b is currently in play.
+    * @note  The sorted distances, from cluster cluster_X, and from 
+    *        cluster cluster_Y, are likely to be in different orders.
+    *        That is why unsorted distances are used, by getDistances();
+    *        (despite the name, those are already in cluster-number order).
+    * @note  For clusters b<c, distances can be read from cluster c's
+    *        unsorted distances row. But for c<b clusters, distances have
+    *        to be read from the index c entry in the unsorted distances
+    *        row for cluster b.
+    *        This is the whole reason that unsorted distances have to be 
+    *        tracked in the first place!  So they can be looked up, here,
+    *        like this, via clusterDistance() - see below.  -James B.
+    */
     void getDistances(int c, int u, DistanceVector& distances) {
         //It's better to read from cluster_unsorted_start, 
         //since reading (and, more to the point, writing) 
         //in cluster number order is cache-friendlier.
-        auto start = cluster_unsorted_start[c];
-        auto stop  = cluster_unsorted_stop[c];
+        MatrixEntry* start       = cluster_unsorted_start[c];
+        MatrixEntry* stop        = cluster_unsorted_stop[c];
+        intptr_t     entry_count = stop - start;
+
         #ifdef _OPENMP
         #pragma omp parallel for if(1<threadCount)
         #endif
-        for (auto scan = start; scan<stop; ++scan) {
+        for (intptr_t i = 0; i<entry_count; ++i) {
+            MatrixEntry* scan = start + i;
             int       p  = scan->cluster_num;
             distances[p] = (0<cluster_in_play[p]) 
                          ? scan->distance : distances[p];
@@ -802,23 +1162,28 @@ protected:
         }
     }
 
+    /**
+     * @brief Finds:  record of raw distance, to a, from b, using an 
+     *                interpolation search in the "unsorted" entries 
+     *                for cluster b (which, it so happens, are written 
+     *                in cluster order).
+     * @param  a lower-numbered cluster's cluster index
+     * @param  b higher-numberd cluster's cluster index
+     * @return T distance type
+     * @note   Assumes that a is less than b (but doesn't check that is!)
+     * @note   Why:   Theoretically, an interpolation search over x entries... 
+     *                has a running time proportional to 
+     *                the log of the log of x, where x = max(b-1, n0+n0-2-b),
+     *                where n0 is the number of rows there were in the input
+     *                distance matrix.
+     * @note   Since: An overhead of n*n*log(log(n)) reads isn't serious 
+     *                (since, we can hope that each of the ~ order n*n ~ 
+     *                interpolation searches only results in at most 
+     *                two or three cache misses).
+     * @note   A binary search would take time proportional to log(x)
+     *         which is more by a factor proportional to log(x).
+     */
     T clusterDistance(int a, int b) {
-        //Assumes:  a is less than b
-        //Finds:    record of raw distance, to a, from b,
-        //          using an interpolation search in the
-        //          "unsorted" entries for cluster b
-        //          (which, it so happens, are written 
-        //           in cluster order).
-        //Why?:     Theoretically, an interpolation search 
-        //          over x entries... has a running time 
-        //          proportional to the log of the log of x,
-        //          where x = max(b-1, n+n-2-b).
-        //Since:    An overhead of n*n*log(log(n)) reads 
-        //          isn't serious (since, we can hope that
-        //          each of the ~ order n*n ~ interpolation 
-        //          searches only results in one or two cache 
-        //          misses).
-        //         
         auto start = cluster_unsorted_start[b];
         int  count = cluster_unsorted_stop[b] - start;
         int  low   = 0;
@@ -852,6 +1217,20 @@ protected:
         return infiniteDistance;
     }
 
+    /**
+     * @brief For each cluster that is currently in play,
+     *        examine the block of distance-sorted MatrixEntry<T>,
+     *        and "shrink" the block (by adjusting the boundary
+     *        from the left, to point to the first entry for an
+     *        "in-play" cluster, shuffling "live" entries back 
+     *        toward the left of the block, and then adjusting
+     *        the boundary on the right, to point after the last
+     *        live entry.
+     * @param used_cluster_count 
+     * @note  reads:  cluster_in_play
+     *        reads:  cluster_sorted_start, cluster_sorted_stop
+     * @note  writes: cluster_sorted_start, cluster_sorted_stop
+     */
     void removeOutOfPlayClusters(int used_cluster_count) {
         #ifdef _OPENMP
         #pragma omp parallel for
@@ -876,6 +1255,24 @@ protected:
             cluster_unsorted_stop[c] = w;
         }
     }
+
+    /**
+     * @brief Log a summary of what has been done, neighbour joining 
+     *        a phylogenetic tree, for the taxa, given the input distance
+     *        matrix.  Most of the information here is about how much
+     *        time was spent on various activities.
+     * @param duplicate_merges - how many merges there were of clusters
+     *                           containing duplicate taxa
+     * @param purgeTime        - total time spent removing "out-of-play"
+     *                           MatrixEntry<T> elements from the sorted
+     *                           by distance blocks, for "in-play" clusters.
+     * @param recalcTime       - time spent recalculating distances
+     * @param previewTime      - time spent getting "previews" (first live
+     *                           cluster in each cluster's sorted-by-distance
+     *                           MatrixEntry<T> block).
+     * @param mergeTime        - time spent merging clusters
+     * @note  All times are in seconds.
+     */
     void reportConstructionDone(intptr_t duplicate_merges, 
                                 double purgeTime,
                                 double recalcTime, 
@@ -894,6 +1291,16 @@ protected:
     }
 }; //FancyNJMatrix template class
 
+/**
+ * @brief Vectorized version of FancyNJMatrix
+ * @note  The only method that is vectorized is findPartnerForOneCluster().
+ *        (Since that's the one that "matters" most, by far). Between
+ *        n0*n0 and n0^3 (~ probably about no~2.5) operations on T.
+ * @note  I didn't judge it worth vectorizing getDistances(), as that
+ *        only does O(n0*n0) operations on T. -James B.
+ * @note  Nor did I judge it worth vectorizing chooseBestRow(). 
+ *        For the same reason. -James B.
+ */
 #if USE_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector> 
 class VectorizedFancyNJMatrix: public FancyNJMatrix<T> {
@@ -942,7 +1349,7 @@ public:
         }
     }
 
-    virtual void findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) override {
+    virtual bool findPartnerForOneCluster(int r /*row*/, int y /*cluster*/) override {
         auto thread_num     = getThreadNumber();
         int  best_x         = row_choice[r];    //other cluster
         T    best_hc_dist   = row_best_dist[r]  + cluster_total_scaled[y];
@@ -976,7 +1383,10 @@ public:
 
         V    best_hc_vector = best_hc_dist;
         V    best_ix_vector = (T)best_x;
-
+        V    raw(0);
+        V    tot(0);
+        V    ix(0);
+        bool found = false;
         for (auto scan=dataStart; scan<blockStop; scan+=block_size) {
             for (int i=0; i<block_size; ++i) {
                 blockRawDist[i] = scan[i].distance;
@@ -984,10 +1394,10 @@ public:
                 blockIndex[i]   = scan[i].cluster_num;
             }
 
-            V  raw;  raw.load(blockRawDist);
-            V  tot;  tot.load(blockCluster);
-            V  ix;   ix.load(blockIndex);
-            V  hc   = raw - tot; //subtract cluster totals to get half-cooked distances?
+            raw.load(blockRawDist);
+            tot.load(blockCluster);
+            ix.load(blockIndex);
+            V  hc(raw - tot); //subtract cluster totals to get half-cooked distances?
             VB less = hc < best_hc_vector; //which are improvements?
             best_hc_vector = select(less, hc, best_hc_vector);
             best_ix_vector = select(less, ix, best_ix_vector);
@@ -996,7 +1406,6 @@ public:
         if (dataStart<blockStop) {
             best_hc_vector.store(blockHCDist);
             best_ix_vector.store(blockIndex);
-            bool found = false;
             for (int i=0; i<block_size; ++i) {
                 if (blockHCDist[i] < best_hc_dist ) {
                     best_hc_dist = blockHCDist[i];
@@ -1011,15 +1420,17 @@ public:
             T   dist_raw         = scan->distance;
             T   dist_half_cooked = dist_raw 
                                  - cluster_total_scaled[x];
-            if (best_hc_dist<=dist_half_cooked) {
+            if (best_hc_dist<=dist_half_cooked) {                
                 continue;
             }
+            found         = true;
             best_hc_dist  = dist_half_cooked;
             best_x        = x; //best cluster found
         }
 
         row_best_dist[r] = best_hc_dist - cluster_total_scaled[y];
         row_choice[r]    = best_x;
+        return found;
     } //findPartnerForOneCluster
 }; //VectorizedFancyNJMatrix
 #endif //USE_VECTORCLASS_LIBRARY

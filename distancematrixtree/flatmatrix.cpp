@@ -40,7 +40,8 @@
 #include <fstream>      //for std::ofstream
 #endif
 
-FlatMatrix::FlatMatrix(): rowCount(0), distanceMatrix(nullptr), borrowed(false) {
+FlatMatrix::FlatMatrix(): rowCount(0), distanceMatrix(nullptr), 
+                          borrowed(false) {
 }
 
 FlatMatrix::FlatMatrix(const StrVector& sequence_names,
@@ -77,6 +78,10 @@ void FlatMatrix::setSequenceName(intptr_t i,
     sequenceNames[i] = new_name;
 }
 
+/**
+ * @brief set the rank of the matrix and make it square
+ * @param rows 
+ */
 void FlatMatrix::setSize(intptr_t rows) {
     if (!borrowed) {
         delete [] distanceMatrix;
@@ -107,6 +112,21 @@ void FlatMatrix::addCluster(const std::string& clusterName) {
     sequenceNames.emplace_back(clusterName);
 }
 
+/**
+ * @brief  Write a distance matrix, to the specified file, with the
+ *         specified format, using the specified precision for representing
+ *         distances, the specified (gzip/zlib) compression.  Possibly
+ *         reporting progress as the file is written.
+ * @param  format            - "upper", "lower", or "square"
+ *                             OR "upper.gz", "lower.gz", or "square.gz",
+ *                             to ask for gzip compression.
+ * @param  precision         - the number of digits after the decimal point
+ * @param  compression_level - the level of compression (0 through 9)
+ * @param  report_progress   - true if progress is to be reported
+ * @param  file_name         - the path of the file
+ * @return true  - on success
+ * @return false - on failure (error messages will be written to std::cerr)
+ */
 bool FlatMatrix::writeToDistanceFile(const std::string& format,
                                      int precision,
                                      int compression_level,
@@ -150,7 +170,7 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
             writeDistancesToOpenFile(format, precision, out, &progress);
             out.close();
         }
-    } catch (std::ios::failure) {
+    } catch (const std::ios::failure &) {
         return false;
     }
     #if USE_PROGRESS_DISPLAY        
@@ -159,6 +179,25 @@ bool FlatMatrix::writeToDistanceFile(const std::string& format,
     return true;
 }
 
+/**
+ * @brief  write a distance matrix, in the specifed format, with the specified
+ *         precision, to an output stream (possibly reporting progress while
+ *         doing so)
+ * @tparam S - the type of the output stream
+ * @tparam P - the type of the progress-display instance 
+ *             that progress points to
+ * @param  format    - "upper", "lower", or "square" (no ".gz" on the end!)
+ * @param  precision - the number of digits to use, after the decimal point
+ *                     for each distance in the distance matrix.
+ *                     if this is more than 10, it will be ignored and 10
+ *                     will be used.
+ * @param  out       - the output stream (might by an std::iostream or a
+ *                     std::stringstream)
+ * @param  progress  - true if progress is to be reported as the write proceeds
+ * @note   Doesn't detect errors.  Exceptions will be thrown.
+ *         The caller expects any such exceptions will be caught by
+ *         a catch ( const std::ios::failure & ) {} block.
+ */
 template <class S, class P>
 void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
                                           int precision, S &out,
@@ -191,6 +230,14 @@ void FlatMatrix::writeDistancesToOpenFile(const std::string& format,
     out.flush();
 }
 
+/**
+ * @brief Write distances, in a row of a distance matrix, to a stringstream
+ * @param nseqs    - the number of sequences (used for calculating indices)
+ * @param seq1     - the row number
+ * @param rowStart - the first column, for which to write a distance in the row
+ * @param rowStop  - the first column, NOT to write a distance to, in the row
+ * @param line     - the stringstream (for the line being constructed)
+ */
 void FlatMatrix::appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1, 
                                           intptr_t rowStart, intptr_t rowStop,
                                           std::stringstream& line) const {
@@ -204,6 +251,11 @@ void FlatMatrix::appendRowDistancesToLine(intptr_t nseqs,    intptr_t seq1,
     }
 }
 
+/**
+ * @brief  Return the maximum length of a sequence name, over all of the
+ *         sequences.
+ * @return size_t - the maximum length
+ */
 size_t FlatMatrix::getMaxSeqNameLength() const {
     size_t   len   = 0;
     intptr_t nseqs = sequenceNames.size();

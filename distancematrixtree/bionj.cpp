@@ -36,7 +36,8 @@
 
 #include <utils/timeutil.h>    //JB2020-06-18 for getRealTime()
 #include "starttree.h"
-#include <utils/vectortypes.h> //JB2021-05-09 for StrVector
+#include <utils/stringfunctions.h> //JB2022-11-27 for endsWith()
+#include <utils/vectortypes.h>     //JB2021-05-09 for StrVector
 
 #define PREC 8                             /* precision of branch-lengths  */
 #define PRC  100
@@ -826,17 +827,16 @@ public :
 //JB2020-06-26 Begin - Adapter, so that BioNj is available
 //for doing tree construction (via -starttree BIONJ2009).
 
-namespace {
-    bool endsWith(const std::string s, const char* suffix) {
-        auto suffixLen = strlen(suffix);
-        if (s.length() < suffixLen) {
-            return false;
-        }
-        return s.substr(s.length()-suffixLen, suffixLen) == suffix;
-    }
-};
-
-class BIONJ2009Adapter: public StartTree::BuilderInterface {
+/**
+ * @brief Adapter, for the original BIONJ implementation,
+ *        to make it callable to decentTree. 
+ * @note  Many of the StartTree::BuilderInterface member
+ *        functions are declared boolean *because* this 
+ *        class doesn't offer the requested function,
+ *        (and, so, returns false, indicating that fact).
+ */
+class BIONJ2009Adapter: 
+public StartTree::BuilderInterface {
 protected:
     std::string name = "BIONJ2009";
     std::string description = "The reference (2009) version of BIONJ (with OMP parallelization)";
@@ -853,11 +853,26 @@ public:
         return false;
     }
     virtual bool setIsRooted(bool rootIt) override {
-        return false;
+        return false; //trees with degree-2 top node are not supported
     }
     virtual bool setSubtreeOnly(bool wantSubtree) override {
-        return false;
+        return false; //outputting of subtrees without ( [subtree] ) ;
+                      //enclosing parentheses and a trailing semi-colon
+                      //is not supported.
     }
+    /**
+     * @brief 
+     * 
+     * @param  distanceMatrixFilePath - the path of the input phylip format file
+     * @param  newickTreeFilePath - the path to which the output newick format
+     *         tree is to be written.
+     * @return true  - if it succeeds
+     * @return false - if it fails (an error message explaining the reason
+     *         for the failure will be written to std::cerr)
+     * @note   the input file must be uncompressed (no zlib support), and the
+     *         matrix must be square (upper and lower triangle formats are
+     *         no supported).
+     */
     virtual bool constructTree
         ( const std::string &distanceMatrixFilePath
         , const std::string & newickTreeFilePath) override {
@@ -869,22 +884,51 @@ public:
             bio2009.create(distanceMatrixFilePath.c_str(), newickTreeFilePath.c_str());
             return true;
     }
+
+    /**
+     * @brief  This function is not supported.  It could be (write the input
+     *         matrix to a file, and then read that file), but why go to 
+     *         so much trouble?! When BIONJMatrix supports phylogenetic
+     *         inference from an in-memory distance matrix already, and runs
+     *         so much faster?
+     * @param  sequenceNames      - a vector of sequence names
+     * @param  distanceMatrix     - a pointer to a flat array, containing a
+     *                              square matrix, in row-major order
+     * @param  newickTreeFilePath - the name of the file to write to
+     * @return false - because this function is not supported.
+     */
     virtual bool constructTreeInMemory
         ( const StrVector&   sequenceNames
         , const double*      distanceMatrix
         , const std::string& newickTreeFilePath) override {
             return false;
     }
+    /**
+     * @brief  This function is not supported.
+     * @param  sequenceNames      - a vector of sequence names
+     * @param  distanceMatrix     - a pointer to a flat array, containing a
+     *                              square matrix, in row-major order
+     * @param  output_string 
+     * @return false - because this function is not supported
+     */
     virtual bool constructTreeStringInMemory
         ( const StrVector& sequenceNames
         , const double*    distanceMatrix
         , std::string&     output_string) override {
             return false;
     }
+    /**
+     * @brief This function is not supported
+     * @param  sequenceNames    - a vector of sequence names
+     * @param  distanceMatrix   - a pointer to a flat array, containing a
+     *                            square matrix, in row-major order
+     * @param  newickTreeStream - the stream to which to append the output  
+     * @return false - because this function is not supported.
+     */
     virtual bool constructTreeAndAppendToStream
         ( const StrVector& sequenceNames
         , const double*    distanceMatrix
-        , std::iostream&   newickTreeFilePath) override {
+        , std::iostream&   newickTreeStream) override {
             return false;
     }
     virtual bool setZippedOutput(bool zipIt) override {
@@ -894,17 +938,18 @@ public:
         return false;
     }
     virtual void beSilent() override {
+      //Does nothing. The BIONJ implementation is already "silent".
     }
     virtual bool setAppendFile(bool appendIt) override {
-        return false;
+        return false; //not supported
     }
     virtual bool setPrecision(int precision) override {
-        return false;
+        return false; //not supported
     }
 };
 
 namespace StartTree {
-    void addBioNJ2009TreeBuilders(Factory& f) {
+    void addBioNJ2009TreeBuilders(Registry& f) {
         f.advertiseTreeBuilder(new BIONJ2009Adapter());
     }
 }

@@ -75,8 +75,26 @@
 
 namespace StartTree
 {
+
+/**
+ * @brief  Neighbour Joining implementation
+ * @tparam T the distance type
+ * @note   The main structure is a D matrix 
+ *         (a matrix of distances) and a U vector
+ *         (a vector of row totals for that matrix)
+ * @note   The textbook implementation uses formulae that feature 
+ *         row totals, and multiplies distances by (n-2).  This 
+ *         implementation calculates "scaled" row totals, which are
+ *         row totals, U', multiplied by (1/(n-2)), so simpler
+ *         formulae of the form Dij-U'i-U'j rather than (n-2)Dij-Ui-Uj,
+ *         can be used (since we're just comparing magnitudes to determine
+ *         which pair of clusters to join, it doesn't matter if those 
+ *         magnitudes are all rescaled.
+ *         This trick saves a multiplication on every evaluation, at the
+ *         cost of row_count multiplications (to calculate U' from U)
+ *         per iteration.
+ */
 template <class T=NJFloat> class NJMatrix: public UPGMA_Matrix<T>
-    //NJMatrix is a D matrix (a matrix of distances).
 {
 public:
     typedef UPGMA_Matrix<T> super;
@@ -99,13 +117,15 @@ public:
         return "NJ";
     }
 protected:
+    /**
+     * @brief Calculate scaled row totals, U' (in scaledRowTotals)
+     *        by multiplying row totals, U (in rowTotals) by
+     *        (1/(n-2)). If U' is used, it isn't necessarily to 
+     *        multiply distances (from the D matrix) by (n-2)
+     *        when comparing adjusted distances to determine which
+     *        cluster to join.
+     */
     virtual void calculateScaledRowTotals() const {
-        //
-        //Note: Rather than multiplying distances by (n-2)
-        //      repeatedly, it is cheaper to work with row
-        //      totals multiplied by (1/(T)(n-2)).
-        //      Better n multiplications than n*(n-1)/2.
-        //
         scaledRowTotals.resize(row_count);
         T nless2      = (T)( row_count - 2 );
         T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ((T)1.0 / nless2);
@@ -116,10 +136,29 @@ protected:
             scaledRowTotals[r] = rowTotals[r] * tMultiplier;
         }
     }
+    /**
+     * @brief Override of calculateRowTotals() - that ensures that the
+     *        scaled row totals are also recalculated.
+     */
     virtual void calculateRowTotals() const override {
         super::calculateRowTotals();
         calculateScaledRowTotals();
     }
+    /**
+     * @brief determine, for each row, r, which column,row pair of 
+     *        clusters (with column c less than row r), would be the
+     *        "best" choice for the next pair of clusters to join.
+     * @note  scaled row totals are looked up "around" the  
+     *        scaledRowTotals vector via a "naked" array pointer, 
+     *        tot to avoid range-checking overhead.
+     * @note  bestVrc is, initially, the "best" value of Drc - U'c 
+     *        for the part of the current row in the lower-left 
+     *        triangle (c between 0 and r-1 inclusive). U'r 
+     *        is only subtracted *after* the minimum for (Drc - U'c)
+     *        has been found.  We don't need to calculate 
+     *        Drc - U'c - U'r except for the c for which Drc - U'c
+     *        was minimized.
+     */
     virtual void getRowMinima() const override {
         calculateScaledRowTotals();
         rowMinima.resize(row_count);
@@ -145,9 +184,30 @@ protected:
                                          , getImbalance(row, bestColumn));
         }
     }
+    /**
+     * @brief Join two clusters (corresponding with column a and
+     *        row b in the matrix), and update row totals on the go.
+     * @param a the column 
+     * @param b the row (a<b)
+     * @note  It is assumed throughout that 0<a<b<row_count.
+     * @note  Most implementations of Neighbour Joining periodically
+     *        recalculate row totals "from scratch" (the fear is that
+     *        rounding error will otherwise accumulate).  Originally
+     *        I had code to do that, periodically.  But it didn't 
+     *        seem to make much real difference.  -James B.
+     * @note  In the following c is the cluster that results by joining
+     *        the clusters corresponding to rows a and b.  In practice,
+     *        cluster c will (by the time this function returns) 
+     *        correspond to the (a)th row/column in the matrix.
+     *        And what *was* cluster (row_count-1) will correspond 
+     *        to the (b)th row/column.
+     * @note  If we think of NJ as a "variant" of BIONJ, it is as 
+     *        though we always have lambda=0.5.  And mu (1-lambda) 
+     *        is also 0.5.  That's why those variable names are used.      
+     * @note  Perhaps scaledRowTotals[i] ought to be updated here, too.
+     *        But then every subclass would have to do the same.      
+     */
     virtual void cluster(intptr_t a, intptr_t b) override {
-        //Cluster two active rows, identified by row indices a and b).
-        //Assumed 0<=a<b<n
         T nless2        = (T)(row_count-2);
         T tMultiplier   = (row_count<3) ? (T)0.0 : ((T)0.5 / nless2);
         T lambda        = (T)0.5;
@@ -171,7 +231,6 @@ protected:
                 aRow[i]       = Dci;
                 rows[i][a]    = Dci;
                 rowTotals[i] += Dci - Dai - Dbi;
-                                //JB2020-06-18 Adjust row totals on fly
                 cTotal       += Dci;
             }
         }
@@ -182,6 +241,13 @@ protected:
         rowToCluster[b] = rowToCluster[row_count-1];
         removeRowAndColumn(b);
     }
+    /**
+     * @brief Finish the tree, by joining the last two or three clusters.
+     *        (Conventionally there are three clusters, but if neighbour
+     *        joining is being used to cluster a subtree, when honouring
+     *        a constraint tree, depending on what the caller wants, the
+     *        "top" node of the tree might have degree 2 rather than 3).
+     */
     virtual void finishClustering() override {
         ASSERT( row_count == 2 || row_count == 3);
         T halfD01 = (T)0.5 * rows[0][1];
@@ -203,9 +269,18 @@ protected:
     }
 };
 
+/**
+ * @brief  Unweighted Neighbour Joining implementation
+ * @tparam T the distance type.
+ * @note   This is based on NJMatrix<T> (and why not, when the only
+ *         difference between the two algorithms is how distances
+ *         between newly joined clusters, and other existing clusters
+ *         are calculated.
+ */
 template <class T=NJFloat> class UNJMatrix: public NJMatrix<T> {
 protected:
-    intptr_t original_n;
+    intptr_t original_n; //Needed in formulae used in distance formulae
+                         //during clutering.
 public:
     typedef NJMatrix<T> super;
     UNJMatrix(): super(), original_n(0) { }
@@ -225,24 +300,29 @@ protected:
     using super::rowToCluster;
     using super::removeRowAndColumn;
     
+    /**
+     * @brief Join two clusters (those corresponding to rows a and b
+     *        in the working distance matrix).
+     * @param a the lower-numbered row (or, if you prefer the column,
+     *          in the lower-left triangle of the matrix)
+     * @param b the higher-numbered row (a<b)
+     * @note  It is assumed a<b.
+     * @note  The clusters are weighted in terms of the number of 
+     *        taxa they contain (aCount and bCount), as per [GAS1997].
+     *        (Conceptually, the leaf nodes for the taxa are NOT weighted,
+     *        and standard NJ is "downweighting" each taxon, with a weight 
+     *        of 1/aCount in the cluster for row a, and by a weight 
+     *        of 1/bCount in the cluster for row b; but in practice, 
+     *        "undoing the effect of the weighting" requires more 
+     *        multiplication, and more time).  
+     *        So UNJMatrix runs slower than NJMatrix! The End. -James B.
+     * @note  The greek letter lambda is given a different role
+     *        in [GAS1997], but I wanted to use it in a fashion
+     *        a bit more consistent with later BIONJ implementations
+     *        (since BIONJ is much more widely used). -James B.
+     * @note  mu is just (1-lambda).
+     */
     virtual void cluster(intptr_t a, intptr_t b) override {
-        //Cluster two active rows, identified by row indices a and b).
-        //Assumes: 0<=a<b<n
-        //
-        //The clusters are weighted in terms of the number of taxa they
-        //contain (aCount and bCount), as per [GAS1997].
-        //(Conceptually, the leaf nodes for the taxa are NOT weighted,
-        // and standard NJ is "downweighting" each taxon, with a weight of
-        // 1/aCount in the cluster for row a, and by a weight of
-        // 1/bCount in the cluster for row b; but in practice, "undoing
-        // the effect of the weighting" requires more multiplication, and
-        // more time).
-        //
-        //Note: The greek letter lambda is given a different role
-        //      in [GAS1997], but I wanted to use it in a fashion
-        //      a bit more consistent with later BIONJ implementations.
-        //      -James B. 19-Oct-2020.
-        //
         size_t aCount     = clusters[rowToCluster[a]].countOfExteriorNodes;
         size_t bCount     = clusters[rowToCluster[b]].countOfExteriorNodes;
         size_t cCount     = aCount + bCount;
@@ -294,6 +374,19 @@ protected:
     }
 };
 
+/**
+ * @brief  Implementation of the BIONJ neighbour joining variant
+ * @tparam T the distance type
+ * @note   The big difference between BIONJ and NJ is that BIONJ
+ *         maintains an auxiliary V matrix, of "estimated variances"
+ *         of "positions" of clusters in a notional genetic "space".
+ *         The variance member is V.  Row and column rearrangements
+ *         in V duplicate those in the primary distance matrix, D.
+ *         Values in the V matrix are used for determining lambda
+ *         (the "weight" to be assigned to the first cluster, when 
+ *         merging two clusters, corresponding to rows a and b, a<b,
+ *         in the D matrix).
+ */
 template <class T=NJFloat> class BIONJMatrix : public NJMatrix<T> {
 public:
     typedef NJMatrix<T> super;
@@ -321,11 +414,32 @@ public:
         bool rc = super::loadMatrix(names, matrix);
         return rc;
     }
+    /**
+     * @brief Calculate lambda, the weight to give distances 
+     *        to the cluster that currently corresponds to
+     *        row a of the distance matrix, if it is joined
+     *        with the custer that currently corresponds to
+     *        row b of the distance matrix (given row numbers
+     *        a and b, 0<=a<b<row_count).
+     * @param a   the lower row number  (0<=a)
+     * @param b   the higher row number (a<b<row_count)
+     * @param Vab the estimated variance of the genetic 
+     *            distance between the clusters that currently
+     *            correspond to rows a and b of the distance matrix.
+     * @return T  lambda, the weight to give distances to the a cluster,
+     *            between 0 and 1.  mu, the weight to give distances
+     *            to the b cluster, is always (1-lambda).
+     * @note      The code that adds for all i, and then subtracts
+     *            for a and b, runs faster than would code that,
+     *            for all i, checked that i!=a && i!=b before deciding
+     *            whether to add.  Yes, there's a slight increase in 
+     *            rounding error, but the performance benefit appears
+     *            to be worth it. -James B.
+     */
     inline T chooseLambda(intptr_t a, intptr_t b, T Vab) {
-        //Assumed 0<=a<b<n
         T lambda = 0;
         if (Vab==0.0) {
-            return 0.5;
+            return 0.5; //special case (to avoid division by zero)
         }
         auto vRowA = variance.rows[a];
         auto vRowB = variance.rows[b];
@@ -343,6 +457,19 @@ public:
         if (lambda<0.0) lambda=(T)0.0;
         return lambda;
     }
+    /**
+     * @brief Join the clusters that currently correspond to rows
+     *        a and b of the distance matrix.  Update row totals
+     *        (but not scaled row totals), and variances, too.      
+     * @param a the lower row number  (0<=a<b)
+     * @param b the higher row number (a<b<row_count)
+     * @note  The bits of this that differ, in a meaningful way, from 
+     *        the corresponding code in NJMatrix are tagged with BIO.
+     *        In NJ, lambda is always 0.5, and elements in V for the new
+     *        cluster (which overwrite what is in row a in V), need to
+     *        be calcualted.  And lastly, what is done to the D matrix
+     *        to shrink it, also has to be "echoed" on the V matrix.
+     */
     virtual void cluster(intptr_t a, intptr_t b) override {
         //Assumed 0<=a<b<n
         //Bits that differ from super::cluster tagged BIO
@@ -398,18 +525,27 @@ public:
 };
 
 #if USE_VECTORCLASS_LIBRARY
+/**
+ * @brief 
+ * 
+ * @tparam T the distance type
+ * @tparam SUPER the superclass (in practice, NJMatrix<T>, 
+ *         UNJMatrix<T>, or BIONJMatrix<T>) this class is to
+ *         vectorize.  
+ * @tparam V  the vector type
+ * @tparam VB the boolean vector type
+ * @note   This works by overriding getRowMinima() with 
+ *         a vectorized version.
+ * @note   This can't subclass UPGMAMatrix<T> (so don't try
+ *         using it with SUPER=UPGMAMatrix<T>!), because 
+ *         that has a rather different getRowMinima().
+ *         There's a separate class for vectorizing that.
+ */
 template <class T=NJFloat, class SUPER=BIONJMatrix<T>, 
           class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedMatrix: public SUPER
 {
     typedef SUPER super;
-    //
-    //Note: this is a first attempt at hand-vectorizing
-    //      BIONJMatrix::getRowMinima (via Agner Fog's
-    //      vectorclass library).
-    //      It can subclass either NJMatrix or BIONJMatrix.
-    //      It cannot subclass UPGMA_Matrix.
-    //
     using super::rows;
     using super::row_count;
     using super::rowMinima;
@@ -426,12 +562,29 @@ public:
     virtual std::string getAlgorithmName() const {
         return "Vectorized-" + super::getAlgorithmName();
     }
+    /**
+     * @brief Override for calculateRowTotals().
+     *        Make sure the scaled total and row number
+     *        scratch vectors are large enough.
+     */
     virtual void calculateRowTotals() const {
         super::calculateRowTotals();
         size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
         scratchTotals.resize(row_count + fluff, 0.0);
         scratchColumnNumbers.resize(row_count + fluff, 0.0);
     }
+    /**
+     * @brief Get the Row Minima object
+     * @note  tot is an *aligned* pointer to 
+     *        elements in a "scratch" vector of rescaled
+     *        row totals, calculated each time this member
+     *        is called.
+     * @note  nums is an *aligned* pointer to elements in
+     *        a "scratch" vector, which is used to keep 
+     *        track of *where* (which is to say, which)
+     *        column, each adjusted distance in the current
+     *        row comes from.
+     */
     virtual void getRowMinima() const {
         T nless2      = (T)( row_count - 2 );
         T tMultiplier = ( row_count <= 2 ) ? (T)0.0 : ((T)1.0 / nless2);
@@ -461,12 +614,15 @@ public:
                      //from which that value came.
             
             intptr_t colStop = row - blockSize;
+            V  rowVector(0);
+            V  totVector(0);
+            V  numVector(0);
             for (col=0; col<colStop; col+=blockSize) {
-                V  rowVector; rowVector.load_a(rowData+col);
-                V  totVector; totVector.load_a(tot+col);
+                rowVector.load_a(rowData+col);
+                totVector.load_a(tot+col);
                 V  adjVector = rowVector - totVector;
                 VB less      = adjVector < minVector;
-                V  numVector; numVector.load_a(nums+col);
+                numVector.load_a(nums+col);
                 ixVector     = select(less, numVector, ixVector);
                 minVector    = select(less, adjVector, minVector);
             }
@@ -495,5 +651,4 @@ public:
     typedef VectorizedMatrix<NJFloat, BIONJMatrix<NJFloat>> VectorBIONJ;
 #endif
 }
-
 #endif /* nj_h */

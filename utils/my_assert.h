@@ -14,6 +14,7 @@
 
 #include <stdlib.h>
 #include <iostream>
+#include <string.h> //for strrchr (needed for GCC 9.2 builds)
 
 // for MSVC
 #ifndef __func__
@@ -35,7 +36,7 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
     abort();
 }
 
-inline void _my_assert(std::string str_expression, const char *func, const char* file, int line) {
+inline void _my_assert(const std::string str_expression, const char *func, const char* file, int line) {
     _my_assert(str_expression.c_str(), func, file, line);
 }
 

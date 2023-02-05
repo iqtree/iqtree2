@@ -40,7 +40,7 @@
 //                             of the clusters are.  This is used for
 //                             tie-breaking, and to try to avoid
 //                             degenerate trees when many taxa are
-//                             identical.
+//                             (almost) identical.
 //     (d) cluster           - given two row/column numbers a and b
 //                             (where a is less), for rows that
 //                             correspond to clusters to be joined,
@@ -90,7 +90,6 @@
 #include "clustertree.h"             //for ClusterTree template class
 #include "utils/parallel_mergesort.h"
 
-
 #if (!USE_PROGRESS_DISPLAY)
 typedef double progress_display;
 #endif
@@ -107,16 +106,29 @@ typedef  Vec8fb   FloatBoolVector;
 
 namespace StartTree
 {
+
+/**
+ * @brief  A position (row, column) in an UPGMA or NJ matrix
+ *         Note that column should be strictly less than row,
+ *         as that is the convention in RapidN. 
+ *         A "nullatory" position has row and column 
+ *         both set to 0.
+ * @tparam T the floating-point type used to represent 
+ *           distances
+ */
 template <class T=NJFloat> struct Position
 {
-    //A position (row, column) in an UPGMA or NJ matrix
-    //Note that column should be strictly less than row.
-    //(Because that is the convention in RapidNJ).
+    //
 public:
-    intptr_t row;
-    intptr_t column;
-    T        value;
-    size_t   imbalance;
+    intptr_t row;       //should be < column
+    intptr_t column;    //should be > row (unless both zero)
+    T        value;     //
+    size_t   imbalance; //indicates how out-of-balance a join
+                        //between the clusters (indicated by row
+                        //and column) would be. Typically the 
+                        //absolute value of the differences
+                        //between the counts of taxa.
+                        
     Position() : row(0), column(0), value(0), imbalance(0) {}
     Position(size_t r, size_t c, T v, size_t imbalance_val)
         : row(r), column(c), value(v), imbalance(imbalance_val) {}
@@ -141,6 +153,11 @@ template <class T> class Positions : public std::vector<Position<T>>
 {
 };
 
+/**
+ * @brief  A matrix, of distances, between clusters used by the UPGMA
+ *         algorithm.
+ * @tparam T the floating point type that represents a distance.
+ */
 template <class T=NJFloat> class UPGMA_Matrix: public SquareMatrix<T> {
     //UPGMA_Matrix is a D matrix (a matrix of distances).
 public:
@@ -149,11 +166,11 @@ public:
     using super::setSize;
     using super::loadDistancesFromFlatArray;
     using super::calculateRowTotals;
-    using super::removeRowAndColumn;
+    using super::removeRowAndColumn;  //reduces matrix rank by 1
     using super::row_count;
-    using super::column_count;
+    using super::column_count;        
 protected:
-    std::vector<size_t>  rowToCluster; //*not* initialized by setSize
+    std::vector<size_t>  rowToCluster;
     ClusterTree<T>       clusters;     //*not* touched by setSize
     mutable Positions<T> rowMinima;    //*not* touched by setSize
     bool                 silent;
@@ -166,29 +183,69 @@ public:
                   , isOutputToBeZipped(false), isRooted(false)
                   , subtreeOnly(false) {
     }
+    /**
+     * @brief  return the name of the algorithm this isntance
+     *         implements (subclasses override it).
+     * @return std::string - the name of the algorithm
+     */
     virtual std::string getAlgorithmName() const {
         return "UPGMA";
     }
-    virtual void setSize(intptr_t rank) {
+    /**
+     * @brief Set the number of rows and columns
+     * @param rank 
+     * @note  initializes rowToCluster 
+     * @note  does not write anything into clusters
+     * @note  does not initialize rowMinima
+     */
+    virtual void setSize(intptr_t rank) override {
         super::setSize(rank);
         rowToCluster.clear();
         for (intptr_t r=0; r<row_count; ++r) {
             rowToCluster.emplace_back(r);
         }
     }
-    virtual void addCluster(const std::string &name) {
+    /**
+     * @brief Add a cluster (with the specified name) to
+     *        the clusters.  The name is what will be 
+     *        displayed in a newick format tree.       
+     * @param name 
+     * @note  This is normally called only for leaf taxa.
+     */
+    virtual void addCluster(const std::string &name) override {
         clusters.addCluster(name);
     }
+
+    /**
+     * @brief  Load sequence names, and distances
+     *         from the phylip-format distance matrix
+     *         file indicated by the supplied file path.
+     * @param  distanceMatrixFilePath 
+     * @return true  - if the distance matrix file is loaded
+     * @return false - if an error prevents the loading of
+     *         the sequence names and distances, from the file. 
+     */
     virtual bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         bool rc = loadDistanceMatrixInto(distanceMatrixFilePath, true, *this);
         calculateRowTotals();
         return rc;
     }
+
+    /**
+     * @brief  Load sequence names, and a distance matrix
+     * @param  names  an n-item vector of leaf taxon names
+     * @param  matrix a flat n*n square matrix, stored in row major order.
+     * @return true   always.
+     * @note   Assumes that 2<names.size(), all names are distinct
+     * @note   Assumes matrix is symmetric, with 
+     *         both matrix[row*names.size()+col]
+     *         *and* matrix[col*names.size()+row]
+     *         containing the distance between taxon row and taxon col.
+     * @note   Assumes that the entries down the diagonal are all zero
+     *         (If they're not, they'll be blindly copied anyway).
+     */
     virtual bool loadMatrix(const StrVector& names,
                             const double* matrix) {
-        //Assumptions: 2 < names.size(), all names distinct
-        //  matrix is symmetric, with matrix[row*names.size()+col]
-        //  containing the distance between taxon row and taxon col.
         setSize(static_cast<intptr_t>(names.size()));
         clusters.clear();
         for (auto it = names.begin(); it != names.end(); ++it) {
@@ -198,18 +255,59 @@ public:
         calculateRowTotals();
         return true;
     }
+
+    /**
+     * @brief  Sets a flag that indicates whether we are building a
+     *         subtree (where the "last" node of the tree has degree 2)
+     *         Usually these routines are used to construct unrooted
+     *         trees (where the "last" node of the tree has degree 3).
+     * @param  rootIt true, if the "last" node is to be of degree 2.
+     *                false, if the "last" node is to be of degree 3.
+     * @return true - indicating that this implementation allows rooted true
+     */
     virtual bool setIsRooted(bool rootIt) {
         isRooted = rootIt;
         return true;
     }
+
+    /**
+     * @brief  Controls whether the children of the "last" node will
+     *         be output as ( node1 node2 [node3] );
+     *         (which is the default, false), or whether they will 
+     *         be as node1 node [node3] ... without the enclosing (, )
+     *         and the terminating semi-colon.
+     * @param  wantSubtree true if the (, ), and ; are to be omitted.
+     * @return true - indicating this implementation can be asked to
+     *         generate a subtree (stuff hanging off a node, inside a
+     *         larger tree). wantSubtree=true is used for doing neighbour 
+     *         joining of subtrees, to generate a tree that is
+     *         consistent with a constraint tree.
+     */
     virtual bool setSubtreeOnly(bool wantSubtree) {
         subtreeOnly = wantSubtree;
         return true;
     }
+
+    /**
+     * @brief Called before tree construction begins (can be overridden
+     *        in subclasses that must carry out additional preparation
+     *        before it can construct a tree).
+     * @note  BIONJ implementations use this to ensure that their
+     *        variance matrix is properly initialized.
+     */
     virtual void prepareToConstructTree() {
-        //RapidNJ implementations use this to ensure that their
-        //variance matrix is properly initialized.
     }
+
+    /**
+     * @brief  Construct a tree 
+     * @return true - always
+     * @note   clusterDuplicates() handles taxa that are identical
+     *         (effectively, taxa which correspond to rows, in the
+     *         distance matrix, that are identical, are considered
+     *         to be identical).  It could... do nothing. That's okay.
+     * @note   the heavy lifting is done by the getMinimumEntry() and
+     *         cluster() member functions which subclasses may override.
+     */
     virtual bool constructTree() {
         prepareToConstructTree();
         clusterDuplicates();
@@ -238,42 +336,130 @@ public:
         #endif
         return true;
     }
+
+    /**
+     * @brief  Called to indicate that output is to be compressed.
+     *         This won't have any real effect unless compression
+     *         libraries are used and linked (unless USE_GZSTREAM
+     *         is defined and is non-zero)
+     * @param  zipIt - true if compression is rquested
+     * @return true - always returns true
+     */
     virtual bool setZippedOutput(bool zipIt) {
         isOutputToBeZipped = zipIt;
         return true;
     }
+
+    /**
+     * @brief  Indicate whether the output file is, if it already exists,
+     *         to be appended (true) or overwritten (false)
+     * @param  appendIt true for append, false for overwrite
+     * @return true - always returns true (this implementation supports 
+     *         appending output files).
+     */
     virtual bool setAppendFile(bool appendIt) {
         isOutputToBeAppended = appendIt;
         return true;
     }
+
+    /**
+     * @brief Called to suppress logging and displaying of progress.
+     */
     virtual void beSilent() {
         silent = true;
     }
+
+    /**
+     * @brief  Writes a tree (or subtree) to an open file
+     * @param  stream the file to write to
+     * @return true if it could be written, false if an error occurs
+     * @note   if something goes wrong, an error message ought have
+     *         been logged to std::cerr before this returns control
+     *         to the caller.
+     * @note   it is assumed that the precision (the number of digits
+     *         to display after a decimal point, for a number), will
+     *         already have been set before this member function is
+     *         called.
+     */
     bool writeTreeToOpenFile(std::iostream& stream) const {
         return clusters.writeTreeToOpenFile(subtreeOnly, stream);
     }
+
+    /**
+     * @brief  Overwrites, or appends, the file with specified path.
+     * @param  precision    how many digits of precision
+     * @param  treeFilePath the name of the file path
+     * @return true  if the file is overwritten or appended successfully.
+     * @return false if an error occurs
+     * @note   member variables that control behaviour:
+     *         isOutputToBeZipped   - if true, file compressed in gzip format
+     *         isOutputToBeAppended - if true, file is to be appended
+     *         subtreeOnly - if true, the leading (, trailing ) and ; for
+     *         the "last" or "top" node are to be omitted.
+     */
     bool writeTreeFile(int precision, const std::string &treeFilePath) const {
         return clusters.writeTreeFile(isOutputToBeZipped, precision,
                                       treeFilePath, isOutputToBeAppended,
                                       subtreeOnly);
     }
+    
+    /**
+     * @brief  Calculate the root-mean-square of the matrix of 
+     *         differences between the tree-distances (between taxa) 
+     *         implied by the edge lengths in (clusters), and the
+     *         input distances (in a distance matrix, which should be
+     *         a copy of the input that was provided to the phylogenetic
+     *         inference algorithm).
+     * @param  matrix a flat matrix (rank*rank) of doubles in row-major 
+     *                order.
+     * @param  rank   the rank of the flat matrix.
+     * @param  rms    the root mean square will be written here.
+     * @return true if the calculation succeeded
+     * @note   it is assumed that rank is equal to the number of leaf
+     *         taxa in clusters, and that the rows and columns in
+     *         the distance matrix (pointed to by matrix) correspond
+     *         one-to-one and in order to the first (rank) clusters.
+     * @note   it is assumed that the distance matrix is symmetric.
+     *         it is assumed that the diagnal entries of the distance 
+     *         matrix are all zeroes.
+     */
     bool calculateRMSOfTMinusD(const double* matrix, intptr_t rank, double& rms) {
         return clusters.calculateRMSOfTMinusD(matrix, rank, rms);
     }
 
 protected:
+    /**
+     * @brief find the pair of clusters, indicated by a Position<T>
+     *        that should be joined next.
+     * @param best - reference to a Position<T> into which the answer
+     *        is to be returned.
+     * @note  assumes that 0 <= best.col < best.row < row_count
+     */
     void getMinimumEntry(Position<T> &best) {
         getRowMinima();
         best.value = infiniteDistance;
         for (intptr_t r=0; r<row_count; ++r) {
-            Position<T> & here = rowMinima[r];
+            const Position<T> & here = rowMinima[r];
             if (here.value < best.value && here.row != here.column) {
                 best = here;
             }
         }
     }
-    virtual void getRowMinima() const
-    {
+
+    /**
+     * @brief  Determine, for each row, r, the cluster (in that row)
+     *         that would be best used, and write information about
+     *         that cluster into rowMinima[r].
+     * @note   rowMinima[r].value  is the adjusted distance for the cluster
+     *                             (lower is better)
+     *         rowMinima[r].column is the lower-numbered row 
+     *                             (should always be >=0 and less than r)
+     *         rowMinima[r].row    is the higher-numbered row 
+     *                             (should always be equal to r)
+     * @note   The search is parallelized over the rows of the matrix
+     *         (if _OPENMP is defined).
+     */
+    virtual void getRowMinima() const {
         rowMinima.resize(row_count);
         rowMinima[0].value = infiniteDistance;
         #ifdef _OPENMP
@@ -294,14 +480,18 @@ protected:
             rowMinima[row] = Position<T>(row, bestColumn, bestVrc, getImbalance(row, bestColumn));
         }
     }
-    virtual void finishClustering() {
-        //But:  The formula is probably wrong. Felsenstein [2004] chapter 11 only
-        //      covers UPGMA for rooted trees, and I don't know what
-        //      the right formula is for unrooted trees.
-        //
-        ASSERT( row_count == 2 || row_count == 3);
 
-        std::vector<T> weights;
+    /**
+     * @brief Link together the last two or three nodes to a "last" or "top"
+     *        node of the tree. 
+     * @note  The formula might be wrong in the two-node case.
+     *        Felsenstein [2004] chapter 11 only covers UPGMA 
+     *        for rooted trees, and I don't know what
+     *        the right formula is for unrooted trees.
+     */
+    virtual void finishClustering() {
+        ASSERT( row_count == 2 || row_count == 3);
+        std::vector<T> weights(row_count);
         T denominator = (T)0.0;
         for (intptr_t i=0; i<row_count; ++i) {
             weights[i]   = (T)clusters[rowToCluster[i]].countOfExteriorNodes;
@@ -324,6 +514,21 @@ protected:
         }
         row_count = 0;
     }
+
+    /**
+     * @brief Join two clusters (corresponding with column a and
+     *        row b in the matrix).
+     * @param a the column 
+     * @param b the row (a<b)
+     * @note  It is assumed throughout that 0<a<b<row_count.
+     * @note  UPGMA weights the clusters based on the number of leaf taxa
+     *        they contain.  In the language of BIONJ, lambda (the weight
+     *        to give, in the calculations, to the cluster that currently
+     *        corresponds to row a in the matrix, relative to the overall
+     *        weight of both the a and b clusters) is:
+     *
+     *        taxa(A) / (taxa(A) + taxa(B)).
+     */
     virtual void cluster(intptr_t a, intptr_t b) {
         T      aLength = rows[b][a] * (T)0.5;
         T      bLength = aLength;
@@ -349,6 +554,19 @@ protected:
         rowToCluster[b] = rowToCluster[row_count-1];
         removeRowAndColumn(b);
     }
+
+    /**
+     * @brief Identify taxa that are effectively identical 
+     *        (for the purposes of phylogenetic inference using a 
+     *        neighbour-joining algorithm), because their rows in
+     *        the distance matrix are identical.  For each "row 
+     *        content equivalence class", construct balanced 
+     *        subtrees, by joining them into clusters.
+     * @note  hashing is used to speed up comparisons.
+     * @note  calculateRowHashes() does most of the real work,
+     *        and HashRow<T>::identifyDuplicateClusters doesn't
+     *        really do very much.
+     */
     void clusterDuplicates() {
         #if (USE_PROGRESS_DISPLAY)
         std::string taskName = "Identifying identical (and nearly identical) taxa";
@@ -374,9 +592,21 @@ protected:
                       << " identical (or near-identical) taxa." << std::endl;
         }
     }
+
+    /**
+     * @brief Calculate hashes for all the rows in the distance matrix.
+     *        Construct a vector of HashRow<T> (which is hash + row pointer)
+     *        Sort it (first by hash, tie-breaking by comparing entry by
+     *        entry in the rows).
+     * @param hashed_rows   vector of HashRow<T> (output)
+     * @param show_progress used to display progress report
+     * @note  The hashing is parallelized over rows (if _OPENMP is defined
+     *        and is non-zero).
+     * @note  The sorting is NOT parallelize (the assumption is that it
+     *        won't take very long). But perhaps it should be parallelized.
+     */
     void calculateRowHashes(std::vector<HashRow<T>>& hashed_rows,
                             progress_display& show_progress) {
-        //1. Calculate row hashes
         hashed_rows.resize(row_count);
         #ifdef _OPENMP
         #pragma omp parallel for
@@ -395,6 +625,22 @@ protected:
         #endif
     }
     
+    /**
+     * @brief Join up clusters, that have been identified as
+     *        duplicates.
+     * @param vvc           a vector of vectors of int
+     *                      each item in vvc is a vector 
+     *                      of row numbers.
+     * @param show_progress used for displaying progress
+     * @return size_t - how many rows of the matrix were
+     *         gotten rid of by joining duplicate taxa,
+     *         or clusters of same.
+     * @note   it is assumed that, for any pair of duplicate clusters, a, b,
+     *         the distance between other cluster i and the cluster, c,
+     *         (the results of joining a and b) is the same as was the
+     *         distance between i and a). If (only if!) a and b are duplicates, 
+     *         this is true of NJ, UNJ, BIONJ, and UPGMA.
+     */
     size_t joinUpDuplicateClusters(DuplicateTaxa& vvc,
                                    progress_display& show_progress) {
         if (vvc.empty()) {
@@ -415,7 +661,6 @@ protected:
         }
         double work_per_dupe = (double)row_count / dupes;
         
-        //5. Join up any duplicate clusters
         double work_done = 0.0;
         size_t dupes_removed = 0;
         for (std::vector<intptr_t>& vc : vvc) {
@@ -440,7 +685,7 @@ protected:
                     cluster_to_row[cluster_x] = row_b;
                 }
                 vc.resize(second_half);
-                //Not first_half (rounded down), second_half (rounded up), 
+                //Not first_half (rounded down), but second_half (rounded up), 
                 //because, if there was an odd cluster, it must be kept
                 //in play.
             }
@@ -453,6 +698,17 @@ protected:
         show_progress += work_done;
         return dupes_removed;
     }
+
+    /**
+     * @brief  Determine the imbalance (the absolute value of the 
+     *         difference between the number of taxa in the cluster
+     *         associated with row A, and the number of taxa in the
+     *         cluster associated with row B) that will result if/when
+     *         those clsuters are joined.
+     * @param  rowA one row (0<=rowA<row_count)
+     * @param  rowB another (0<=rowB<row_count, and rowB!=rowA)
+     * @return size_t the imbalance.
+     */
     size_t getImbalance(size_t rowA, size_t rowB) const {
         size_t clusterA = rowToCluster[rowA];
         size_t clusterB = rowToCluster[rowB];
@@ -462,6 +718,10 @@ protected:
     }
 };
 
+/**
+ * @brief Vectorized version of UPGMA_Matrix
+ * @note  Overrides getRowMinima() with a vectorized implementation.
+ */
 #if USE_VECTORCLASS_LIBRARY
 template <class T=NJFloat, class V=FloatVector, class VB=FloatBoolVector>
 class VectorizedUPGMA_Matrix: public UPGMA_Matrix<T>
@@ -478,13 +738,16 @@ protected:
 public:
     VectorizedUPGMA_Matrix() : super(), blockSize(VB().size()) {
     }
+
     virtual std::string getAlgorithmName() const override {
         return "Vectorized-" + super::getAlgorithmName();
     }
+
     virtual void calculateRowTotals() const override {
         size_t fluff = MATRIX_ALIGNMENT / sizeof(T);
         scratchColumnNumbers.resize(row_count + fluff, 0.0);
     }
+    
     virtual void getRowMinima() const override {
         T* nums = matrixAlign ( scratchColumnNumbers.data() );
         rowMinima.resize(row_count);

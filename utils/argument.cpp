@@ -7,7 +7,6 @@
 //      +--SwitchArgument
 //
 //      ArgumentMap
-//      
 //
 //  Copyright (C) 2021, James Barbetti.
 //
@@ -45,7 +44,6 @@ void DoubleArgument::accept(const std::string& arg,
     }
     dbl_var = atof(nextArg.c_str());
 }
-    
 
 IntArgument::IntArgument(const char* arg_name, const char* desc, int& var) 
     : super(arg_name), description(desc), int_var(var) { }
@@ -83,16 +81,42 @@ void SwitchArgument::accept(const std::string& arg, const std::string& nextArg,
     switch_var = switch_setting;
 }
 
+/**
+ * @brief  Add an argument, indicated by a pointer, to
+ *         this argument, and hand over ownership of it.
+ * @param  arg - pointer to the argument
+ * @return ArgumentMap& a reference to *this.
+ * @note   If there is already an argument, x, in the map, with the same name as
+ *         arg, delete it, and replace it.
+ */
 ArgumentMap& ArgumentMap::operator << (Argument* arg) {
+    Argument* already_there = findByName(arg->name);
+    if (already_there!=nullptr) {
+        erase(find(arg->name)); //remove it from the map, and
+        delete already_there;   //delete it (this ArgumentMap owns it)
+    }
     insert(value_type(arg->name, arg));
     return *this;
 }
+
+/**
+ * @brief Destroy the ArgumentMap
+ * @note  Deletes all of the Argument instance that this ArgumentMap owns.
+ */
 ArgumentMap::~ArgumentMap() {
     for (auto it=begin(); it!=end(); ++it) {
         delete it->second;
     }
     clear();
 }
+
+/**
+ * @brief  Find an argument, owned by the ArgumentMap, with the specified
+ *         name, if there is one, and return a pointer to it.
+ * @param  name - the name to look for
+ * @return Argument* pointer to the argument, if this ArgumentMap 
+ *         owns one, with that name, or nullptr, if not.
+ */
 Argument* ArgumentMap::findByName(const std::string& name) {
     auto it = find(name);
     if (it == end()) {
@@ -100,4 +124,3 @@ Argument* ArgumentMap::findByName(const std::string& name) {
     }
     return it->second;
 }
-

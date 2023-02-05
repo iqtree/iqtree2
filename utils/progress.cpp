@@ -76,7 +76,13 @@ progress_display& progress_display::incrementBy(intptr_t increment) {
     return (*this) += increment;
 }
 
-
+/**
+ * @brief  Set the amount of progress made, carrying out the task
+ * @param  workDoneNow - what the amount of progress made should be, now
+ * @return progress_display& - reference to *this
+ * @note   Any attempt to retrospectively lower the amount of progress made
+ *         will be ignored.
+ */
 progress_display& progress_display::operator =  (double workDoneNow) {
     double increment;
     {
@@ -91,6 +97,15 @@ progress_display& progress_display::operator =  (double workDoneNow) {
     return *this;
 }
 
+/**
+ * @brief  Increment the amount of progress made on a task
+ * @param  incrementalWork  - how much additional progress has been made
+ * @return progress_display& - reference to *this
+ * @note   If the task has no name, the progress bar won't be updated.
+ * @note   The progress bar is only updated at most once per second.
+ * @note   If no progress has been made (if incrementalWork is zero),
+ *         the progress bar will not be updated.
+ */
 progress_display & progress_display::operator += (double incrementalWork) {
     if (incrementalWork==0.0) {
         return *this;
@@ -118,7 +133,17 @@ progress_display& progress_display::operator += (intptr_t incrementalWork) {
     return *this += (double)incrementalWork;
 }
 
-void progress_display::reportProgress(double time, double cpu, bool newline) {
+/**
+ * @brief Update progress bar and report progress
+ * @param time    - the current time (as returned by getRealTime())
+ * @param cpu     - the current accumulated count of CPU time used, by this
+ *                  process, as returned by getCPUTime().
+ * @param newline - true if a new line is to be appended to the report of
+ *                  progress (typically, when the task has completed, or
+ *                  has failed).)
+ */
+void progress_display::reportProgress
+    (double time, double cpu, bool newline) {
     double elapsedTime = time - startTime;
     std::ostringstream progress;
     bool verbed = false;
@@ -161,6 +186,11 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
     }
 }
 
+/**
+ * @brief Record that the task, for which progress is reported by this
+ *        instance, has failed outright (e.g. couldn't write file, I/O
+ *        error part way through writing it).
+ */
 void progress_display::markAsFailed() {
     bool already_failed = failed;
     failed = true;
@@ -171,6 +201,13 @@ void progress_display::markAsFailed() {
     }
 }
 
+/**
+ * @brief append a description of how much progress has been made to a 
+ *        stringstream (that is uspplied by reference).
+ * @param verbed   - reference to a boolean that will be set to true if
+ *                   the word "done" or the word "failed" has been added
+ * @param progress - reference to a stringstream to append
+ */
 void progress_display::appendHowMuchDone(bool &verbed, std::ostringstream& progress) {
     if (!taskDescription.empty()) {
         progress << taskDescription << ":";
@@ -206,6 +243,19 @@ void progress_display::appendHowMuchDone(bool &verbed, std::ostringstream& progr
     }
 }
 
+/**
+ * @brief Append a description of how much CPU time has been spent
+ *        (and an estimate of the percent CPU), and if the task isn't done
+ *        or failed, and estimate of how much more time it will take to
+ *        finish the task.
+ * @param verbed      - true if the string under construction (in progress)
+ *                      has been described as done (if so, don't want to say
+ *                      how much longer it is likely to take), or failed (ditto).
+ *                      otherwise, false.
+ * @param elapsedTime - elapsed time.
+ * @param cpu         - accumulated CPU time.
+ * @param progress    - reference to the stringstream to be appended.
+ */
 void progress_display::appendUsage(bool verbed, double elapsedTime, double cpu, 
                                    std::ostringstream& progress) {
     if (0<elapsedTime && lastReportedCPUTime < cpu) {
@@ -223,6 +273,11 @@ void progress_display::appendUsage(bool verbed, double elapsedTime, double cpu,
     }
 }
 
+/**
+ * @brief Given a reference to a message, reformat that message so that
+ *        it looks like a progress bar.
+ * @param message - reference to the message to be reformatted
+ */
 void progress_display::formatAsProgressBar(std::string& message) {
     size_t barLen = 80;
     if (message.length() < barLen ) {
@@ -239,6 +294,10 @@ void progress_display::formatAsProgressBar(std::string& message) {
 
 }
 
+/**
+ * @brief  Report that the task, whose progress is being reported, is done.
+ * @return progress_display& - reference to *this
+ */
 progress_display& progress_display::done() {
     #if _OPENMP
     #pragma omp critical (io)
@@ -258,6 +317,15 @@ progress_display::~progress_display() {
     termout.close();
 }
 
+/**
+ * @brief  Hide a progress display progress bar
+ * @return progress_display& - reference to *this
+ * @note   works by going back to the start of the line 
+ *         and clearing what follows.
+ * @note   progress_display tracks how many "times" it has been hidden, so
+ *         if it is has been hidden n times it must later be shown n times
+ *         before a progress bar will be displayed again.
+ */
 progress_display& progress_display::hide() {
     if (!isTerminal || termout.fail()) {
         return *this;
@@ -274,6 +342,12 @@ progress_display& progress_display::hide() {
     return *this;
 }
 
+/**
+ * @brief  Show a progress display progress bar
+ * @return progress_display& - reference to *this
+ * @note   Basically decrements a counter that tracks "how hidden" the progress
+ *         bar is, and if that goes to zero, redisplays a progress bar line.
+ */
 progress_display& progress_display::show() {
     if (!isTerminal) {
         return *this;
@@ -284,6 +358,13 @@ progress_display& progress_display::show() {
     return *this;
 }
 
+/**
+ * @brief Change the task description for a task that is in progress
+ * @param newDescription = The new description (if it differs from the
+ *        the previous one, and the progress_display isn't "hidden",
+ *        the progress bar will be recalculated and redisplayed with 
+ *        the new description).
+ */
 void progress_display::setTaskDescription(const  char* newDescription) {
     if (this->taskDescription == newDescription) {
         return;
@@ -293,10 +374,20 @@ void progress_display::setTaskDescription(const  char* newDescription) {
     }
 }
 
+/**
+ * @brief Change the task description for a task that is in progress
+ * @param newDescription - the new description 
+ */
 void progress_display::setTaskDescription(const  std::string& newDescription) {
     setTaskDescription(newDescription.c_str());
 }
 
+/**
+ * @brief Change the estimate of how much progress is as yet unmaed
+ *        (or, if you prefer, the estimate of how much work remains to be done)
+ * @param newEstimate - the new estimate (in units of work)
+ * @note  if newEstimate is less than zero it is ignored.
+ */
 void progress_display::setWorkRemaining(double newEstimate) {
     if (newEstimate < 0) {
         return; //Nonsense!
@@ -315,6 +406,14 @@ void progress_display::setWorkRemaining(double newEstimate) {
     }
 }
 
+/**
+ * @brief Indicates whether an estimate of what is left to do is
+ *        an upper bound on how much is left to do (how much progress
+ *        is to be made, or how long it is expected to take)
+ * @param isEstimateAnUpperBound - true if it's a lower bound
+ *        (if it is, progress bars will say " at most" ... whatever);
+ *        false if it is not (if it's not, progress bars won't say that).
+ */
 void progress_display::setIsEstimateABound(bool isEstimateAnUpperBound) {
     if (atMost == isEstimateAnUpperBound) {
         return;
@@ -325,11 +424,21 @@ void progress_display::setIsEstimateABound(bool isEstimateAnUpperBound) {
     }
 }
 
+/**
+ * @brief Set whether progress should be displayed (globally, for all tasks)
+ * @param displayIt - true if it should, false if it should not
+ */
 void progress_display::setProgressDisplay(bool displayIt) {
     displayingProgress = displayIt;
     isTerminal = displayIt && isStandardOutputATerminal();
 }
 
+/**
+ * @brief  Indicate whether progress bars are being displayed.
+ * @return true  - if progress bars are being displayed
+ * @return false - if they are not (e.g. program running with a -q for quiet
+ *                 command-line parameter, or something like that)
+ */
 bool progress_display::getProgressDisplay() {
     return displayingProgress;
 }

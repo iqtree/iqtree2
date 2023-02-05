@@ -1,7 +1,8 @@
 //
-//  stringfunctions.hpp
+//  stringfunctions.h
 //  Created by James Barbetti on 5/2/21.
 //  but, unless otherwise tagged, functions here came from tools.h
+//  (as was, in IQTree2)
 //
 
 #ifndef stringfunctions_h
@@ -102,7 +103,6 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator = ','
  * @return string represent hour, minute, second
  */
 std::string convert_time(const double sec);
-
 
 /**
         convert a string to to range lower:upper:step_size with error checking
