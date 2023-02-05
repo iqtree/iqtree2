@@ -54,15 +54,11 @@ progress_display::progress_display( double      workToDo, const char* doingWhat
 
 progress_display::progress_display(size_t workToDo, const char* doingWhat, 
                                    const char* verb, const char* unitName)
-    : progress_display(static_cast<double>(workToDo), doingWhat, verb, unitName) {}
+    : progress_display((double)workToDo, doingWhat, verb, unitName) {}
 
 progress_display::progress_display(intptr_t workToDo, const char* doingWhat,
     const char* verb, const char* unitName)
-    : progress_display(static_cast<double>(workToDo), doingWhat, verb, unitName) {}
-
-progress_display::progress_display(int workToDo, const char* doingWhat,
-    const char* verb, const char* unitName)
-    : progress_display(static_cast<double>(workToDo), doingWhat, verb, unitName) {}
+    : progress_display((double)workToDo, doingWhat, verb, unitName) {}
 
 progress_display & progress_display::operator ++ () {
     return (*this) += 1.0;
@@ -130,17 +126,12 @@ progress_display & progress_display::operator += (double incrementalWork) {
 }
 
 progress_display& progress_display::operator += (size_t incrementalWork) {
-    return *this += static_cast<double>(incrementalWork);
+    return *this += (double)incrementalWork;
 }
 
 progress_display& progress_display::operator += (intptr_t incrementalWork) {
-    return *this += static_cast<double>(incrementalWork);
+    return *this += (double)incrementalWork;
 }
-
-progress_display& progress_display::operator += (int incrementalWork) {
-    return *this += static_cast<double>(incrementalWork);
-}
-
 
 /**
  * @brief Update progress bar and report progress

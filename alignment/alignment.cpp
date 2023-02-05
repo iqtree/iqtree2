@@ -1861,7 +1861,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     pattern_index.clear();
     int num_error = 0;
     
-    progress_display progress(nsite, "Constructing alignment", "examined", "site");
+    progress_display progress((double)nsite, "Constructing alignment", "examined", "site");
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);

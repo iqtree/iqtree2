@@ -47,18 +47,21 @@ public:
     explicit Sequences(bool numbered_names);
 
 
-    bool checkLastTwoSequenceLengths() const;
-    size_t countOfProblematicSequences();
-    std::string getFormattedName(size_t i);
-    intptr_t getSize() const;
+    bool        checkLastTwoSequenceLengths() const;
+    size_t      countOfProblematicSequences();
+    std::string getFormattedName(size_t i) const;
+    std::string getFormattedName(size_t i, size_t pad_len) const;
+    intptr_t    getSize() const;
+    size_t      getLengthOfLongestFormattedName() const;
+
     const std::string& getSequenceName(size_t i) const;
     void setSequenceName(size_t i, const std::string& new_name);
     bool loadSequencesFromFasta   (const std::string& fastaFilePath,
                                    const std::string& alphabet,
-                                   bool unknown_char, bool report_progress);
+                                   char unknown_char, bool report_progress);
     bool loadSequencesFromPhylip  (const std::string& fastaFilePath,
                                    const std::string& alphabet,
-                                   bool unknown_char, bool report_progress);
+                                   char unknown_char, bool report_progress);
     bool processPhylipSequenceName(int line_num, int sequence_num, 
                                    std::string& line, size_t& name_length);
     bool validateInterleaving     (const std::string& phylipFilePath,

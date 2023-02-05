@@ -3359,7 +3359,9 @@ template <class L, class F> double computeDistanceMatrix
     //Compute the upper-triangle of the distance matrix
     //(and write the row maximum onto the firt cell in the row)
     
-    progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances"); //zork
+    double total_work = nseqs*(nseqs-1)/2;
+
+    progress_display progress(total_work, "Calculating observed distances"); //zork
 
     #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
@@ -3404,7 +3406,7 @@ template <class L, class F> double computeDistanceMatrix
             otherSequence += seqLen;
         }
         rowMaxDistance[seq1] = maxDistanceInRow;
-        progress += (nseqs - 1 - seq1);
+        progress += static_cast<double>(nseqs - 1 - seq1);
     }
     
     //

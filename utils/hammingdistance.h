@@ -226,7 +226,7 @@ inline uint64_t vectorHammingDistance(char unknown, const char* sequenceA,
  *        functions are NOT to be vectorized.
  */
 inline uint64_t countBitsSetInEither
-    (const uint64_t* a, const uint64_t* b, size_t count) {
+    (copst uint64_t* a, const uint64_t* b, size_t count) {
     return conventionalCountBitsSetInEither(a, b, count);
 }
 #else

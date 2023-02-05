@@ -44,10 +44,10 @@ int64_t convert_int64(const char *str);
 int convert_int(const char *str, int &end_pos);
 
 /**
--        convert comma-separated string to integer vector, with error checking
--        @param str original string with integers separated by comma
--        @param vec (OUT) integer vector
-- */
+        convert comma-separated string to integer vector, with error checking
+        @param str original string with integers separated by comma
+        @param vec (OUT) integer vector
+ */
 void convert_int_vec(const char *str, IntVector &vec);
 
 /**

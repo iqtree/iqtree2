@@ -281,7 +281,7 @@ size_t Sequences::countOfProblematicSequences() {
  * @param  i - the sequence number
  * @return std::string - the name of sequence (or "A[i+1]"
  */
-std::string Sequences::getFormattedName(size_t i) {
+std::string Sequences::getFormattedName(size_t i) const {
     if (numbered_names) {
         std::stringstream number_name;
         number_name << "A" << (i+1); //"A1", "A2", ...
@@ -290,6 +290,40 @@ std::string Sequences::getFormattedName(size_t i) {
         return at(i).getName();
     }
 }
+
+/**
+ * @brief  read a name (or perhaps a numbered name) from an alignment,
+ *         for a sequence (identified by sequence index), and pad it
+ *         (out to pad_length characters) if it is shorter than pad_length.
+ * @param  i - the sequence number
+ * @param  pad_length - the padding length
+ * @return std::string - the name of sequence (or "A[i+1]"
+ */
+std::string Sequences::getFormattedName(size_t i, size_t pad_length) const {
+    std::string result;
+    if (numbered_names) {
+        std::stringstream number_name;
+        number_name << "A" << (i+1); //"A1", "A2", ...
+        result = number_name.str();
+    } else {
+        result = at(i).getName();
+    }
+    if (pad_length<=result.size()) {
+        return result;
+    }
+    result += std::string(pad_length-result.size(),' ');
+    return result;    
+}
+
+size_t Sequences::getLengthOfLongestFormattedName() const {
+    size_t longest_length = 0;
+    for (int i=0; i<size(); ++i) {
+        std::string s = getFormattedName(i);
+        longest_length = std::max(longest_length, s.size());
+    }
+    return longest_length;
+}
+
 
 intptr_t Sequences::getSize() const {
     return size();
@@ -318,8 +352,8 @@ void Sequences::setSequenceName(size_t i, const std::string& new_name) {
  */
 bool Sequences::loadSequencesFromFasta(const std::string& fastaFilePath,
                                        const std::string& alphabet, 
-                                       bool unknown_char,
-                                       bool report_progress) {
+                                       char  unknown_char,
+                                       bool  report_progress) {
     #if USE_GZSTREAM
     pigzstream    in(report_progress ? "fasta" : "");
     #else
@@ -388,7 +422,7 @@ bool Sequences::loadSequencesFromFasta(const std::string& fastaFilePath,
  */
 bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
                                         const std::string& alphabet, 
-                                        bool unknown_char,
+                                        char  unknown_char,
                                         bool report_progress) {
     #if USE_GZSTREAM
     pigzstream    in(report_progress ? "phylip" : "");
@@ -445,8 +479,15 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
         if (!have_read_names) {
             processPhylipSequenceName(line_num, sequence_num, 
                                       line, name_length);
-        }        
-        sequence_num %= num_sequences;
+        }
+        else {
+            //The start of the line might be a repeat of the sequence name
+            std::string seq_prefix = getFormattedName(sequence_num) + " ";
+            if (startsWith(line, seq_prefix.c_str())) 
+            {
+                line = line.substr(seq_prefix.size(), line.size()-seq_prefix.size());
+            }
+        }
         std::string& seq_string = at(sequence_num).sequenceData();
         if (!processSequenceLine(in_alphabet, unknown_char,
                                  seq_string, line, line_num) ||
@@ -455,6 +496,7 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
             return false;
         }
         ++sequence_num;
+        sequence_num %= num_sequences;
     }
     in.close();
     return validateLoadFromPhylip(phylipFilePath, num_sequences, 
@@ -513,7 +555,7 @@ bool Sequences::validateLoadFromPhylip(const std::string& phylipFilePath,
         return false;
     }
     sequence_num = 1;
-    for (const Sequence& seq : *this) {
+    for (Sequence& seq : *this) {
         if (seq.sequenceLength() != sequence_length) {
             std::cerr << "In " << phylipFilePath << ", "
                       << " sequence " << sequence_num << " had length "

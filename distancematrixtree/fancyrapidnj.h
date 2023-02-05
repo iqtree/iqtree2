@@ -524,9 +524,15 @@ protected:
     virtual void setRank(size_t n) {
         original_rank       = n;
         next_cluster_number = n;
-        size_t q = n+n-2; //number of clusters that will be needed
+        size_t q = n+n-1; //number of clusters that will be needed
                           //in total, during the course of the tree
-                          //construction: n leaves, n-2 interiors.
+                          //construction: n leaves, and n-1 interiors
+                          //(at the very end of processing, for an 
+                          //unrooted tree, the last two clusters 
+                          //will be merged; so n-1 not n-2), see
+                          //the appendToLastCluster call, near the
+                          //end of mergeClusters().
+                          //
         cluster_in_play.resize       (q, 1);
         cluster_total.resize         (q, 0.0);
         cluster_total_scaled.resize  (q, 0.0);

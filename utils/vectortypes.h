@@ -138,8 +138,6 @@ public:
     explicit StrVector(size_t size);
     ~StrVector() = default;
 
-    StrVector& operator=(const StrVector& rhs) = default;
- 
     /**
      * @brief  Append string literals, from an array of const char*.
      * @tparam COUNT - the number of string literals in the array.

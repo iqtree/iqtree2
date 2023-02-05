@@ -27,13 +27,10 @@ public:
                               , const char* verb = "", const char* unitName = "");
     explicit progress_display ( intptr_t workToDo, const char* doingWhat = ""
                               , const char* verb = "", const char* unitName = "");
-    explicit progress_display ( int workToDo, const char* doingWhat = ""
-                              , const char* verb = "", const char* unitName = "");
     ~progress_display();
     progress_display& operator += (double   incrementalWork); //report progress
     progress_display& operator += (size_t   incrementalWork); //report progress
     progress_display& operator += (intptr_t incrementalWork); //report progress
-    progress_display& operator += (int      incrementalWork); //report progress
     progress_display& operator ++ ();                         //increment progress
     progress_display& operator =  (double   workDoneNow); //set total progress
     progress_display& incrementBy (double   increment);   //report progress

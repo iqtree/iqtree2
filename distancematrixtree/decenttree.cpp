@@ -69,18 +69,24 @@ namespace {
                                              // is always: 1).
     int    precision                = 8;     //(in distance matrix or tree output files)
     int    compression_level        = 9;     //(if outputting gzipped files)
-    std::string msaOutputPath; //write .msa formatted version of .fasta input here
+    std::string msaOutputPath;     //write .msa formatted version of .fasta (or other) input here
+    std::string phylipOutputPath;  //write .phylip formatted version of .fasta (or other) input here
     std::string alphabet;      //defaults to ACGT
     std::string unknown_chars; //defaults to .~_-?N
     std::string format              = "square.interleaved";
-    bool        interleaved_format  = true; //if true, when generating an MSA format
-                                        //file (an input for FASTME) 
-                                        //generate the interleaved format 
-                                        //(which is the only format FASTME accepts).
-                                        //(has no effect unless -msa-out option
-                                        //is requested).
-    size_t      interleaving_width = 60; //how many sites to output per line, if
-                                         //interleaved_format is true
+    bool        linewrap_format     = false; //if true, when generating a Phylip output file
+                                             //add line-feeds within long sequences
+                                             //rather than interleaving them,
+    bool        interleaved_format  = true;  //if true, when generating an MSA format
+                                             //file (an input for FASTME)
+                                             //generate the interleaved format 
+                                             //(which is the only format FASTME accepts).
+                                             //(has no effect unless -msa-out option
+                                             //is requested).
+                                             //Likewise, when generating a Phylip output file
+                                             //(unless linewrap_format is true).
+    size_t      interleaving_width = 60;     //how many sites to output per line, if
+                                             //interleaved_format is true
 
     std::string stripName;              //characters to strip from names
     std::string nameReplace("_");       //characters to replace stripepd chars with, in names
@@ -177,7 +183,7 @@ bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
  * @return true     if the sequences could be written to the file
  * @return false    if an error occurred
  */
-bool writeMSAOutputFile(Sequences& sequences, const std::string& msaPath)
+bool writeMSAOutputFile(const Sequences& sequences, const std::string& msaPath)
 {
     //This is writing a format that fastme likes for its inputs.
     std::ofstream out;
@@ -228,6 +234,119 @@ bool writeMSAOutputFile(Sequences& sequences, const std::string& msaPath)
     catch (...) {
         std::cerr << "Unexpected error trying to write"
             << " MSA format file: " << msaPath << std::endl;
+    }
+    out.close();
+    return success;
+}
+
+/**
+ * @brief Write interleaved sequences to a Phylip output file stream.
+ *        e.g.
+ * 
+ * Taxon1 CATGAGCAT
+ * Taxon2 CATCATCAT
+ * Taxon1 TACTACTAC
+ * Taxon2 ACTACTACT
+ * 
+ * @param sequences the sequences to write to the output file stream
+ * @param len       how long each sequence is (it is assumed all are 
+ *                  of the same length, but this is not checked).
+ * @param out       the output stream to append them to
+ */
+void writeInterleavedSequences(const Sequences& sequences, size_t len, 
+                            std::ofstream& out) {
+    size_t longest_name = sequences.getLengthOfLongestFormattedName();
+    for (size_t pos=0; pos<len; pos+=interleaving_width) {
+        for (size_t i=0; i<sequences.size(); ++i) {
+            const std::string& seq_data = sequences[i].sequenceData();
+            //Interleaved phylip always repeats sequence names  
+            out << sequences.getFormattedName(i, longest_name);
+            size_t posEnd = pos + interleaving_width;
+            if (len<posEnd) {
+                posEnd = len;
+            }
+            out << " " << seq_data.substr(pos, posEnd-pos) << "\n";
+        }
+        out << "\n";
+    }
+}
+
+/**
+ * @brief Write line-wrapped sequences to a Phylip output file stream
+ * 
+ * @param sequences the sequences to write to the output file stream
+ * @param len       how long each sequence is (it is assumed all are 
+ *                  of the same length, but this is not checked).
+ * @param out       the output stream to append them to
+ */
+void writeLineWrappedSequences(const Sequences& sequences, size_t len, 
+                               std::ofstream& out) {
+    size_t longest_name = sequences.getLengthOfLongestFormattedName();
+    for (size_t i=0; i<sequences.size(); ++i) {
+        const std::string& seq_data = sequences[i].sequenceData();
+        out << sequences.getFormattedName(i, longest_name);
+        for (size_t pos=0; pos<len; pos+=interleaving_width) {
+            size_t posEnd = pos + interleaving_width;
+            if (len<posEnd) {
+                posEnd = len;
+            }
+            out << " " << seq_data.substr(pos, posEnd-pos) << "\n";
+        }
+    }
+}
+
+/**
+ * @brief Write sequences as an Phylip output file
+ *
+ * if linewrap_format is true, the Phylip sequences will be line-wrapped.
+ * 
+ * otherwise, if interleaved_format is true, an interleaved Phylip output format 
+ * will be used.  The first interleaving_width sites for each sequence will
+ * be listed, followed by the next interleaving_width, and so on.
+ * 
+ * otherwise, if both linewrap_format and interleaved_format are false, 
+ * each sequence (no matter how long) will be written on a single line
+ * (one line per sequence).
+ * 
+ * @param sequences the sequences to write to the output file
+ * @param msaPath   the path to the file
+ * @return true     if the sequences could be written to the file
+ * @return false    if an error occurred
+ */
+bool writePhylipOutputFile(const Sequences& sequences, const std::string& outPath)
+{
+    //This is writing an interleaved Phylip file
+    std::ofstream out;
+    out.exceptions(std::ios::failbit | std::ios::badbit);
+    bool success = false;
+    try {
+        out.open(outPath.c_str());
+        size_t len = sequences.size()==0 ? 0 : sequences[0].sequenceLength();
+        out << sequences.size() << " " << len << "\n";
+        
+        //Todo: The following is for the interleaved sequence format
+        //      that fastme likes.
+        if (linewrap_format) {
+            writeLineWrappedSequences(sequences, len, out);
+        }
+        if (interleaved_format) {
+            writeInterleavedSequences(sequences, len, out);
+        } else {
+            //Flat
+            for (size_t i=0; i<sequences.size(); ++i) {
+                out << sequences.getFormattedName(i) << " "
+                    << sequences.at(i).sequenceData() << "\n";
+            }
+        }
+        success = true;
+    }
+    catch (std::ios::failure& f) {
+        std::cerr << "I/O error trying to write"
+            << " Phylip format file: " << outPath << std::endl;
+    }
+    catch (...) {
+        std::cerr << "Unexpected error trying to write"
+            << " Phylip format file: " << outPath << std::endl;
     }
     out.close();
     return success;
@@ -340,6 +459,10 @@ bool prepInput(const std::string& fastaFilePath,
         if (!msaOutputPath.empty()) {
             writeMSAOutputFile(sequences, msaOutputPath);
         }
+        if (!phylipOutputPath.empty()) {
+            writePhylipOutputFile(sequences, phylipOutputPath);
+        }
+
         if (!distanceOutputFilePath.empty()) {
             if (loadMatrix) {
                 useNumberedNamesIfAskedTo(numbered_names, m);
@@ -474,6 +597,7 @@ public:
         arg_map << new StringArgument("-out-format", "output format" 
                                     "(e.g. square, upper, or lower)", format);
         arg_map << new StringArgument("-msa-out",  "msa format file path", msaOutputPath);
+        arg_map << new StringArgument("-aln-out",  "phylip alignment file path", phylipOutputPath);
         arg_map << new StringArgument("-dist-out", "distance matrix file path", distanceOutputFilePath);
         arg_map << new SwitchArgument("-no-matrix", isMatrixToBeLoaded, false);
         arg_map << new StringArgument("-strip-name", "list of characters to strip from name",
