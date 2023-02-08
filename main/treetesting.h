@@ -41,6 +41,13 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
 		bool append = false, const char *linename = NULL);
 
 /**
+ * print HMM results to a fileExists
+ * @param filename output file name
+ * @param tree IQTreeMixHmm
+ */
+void printHMMResult(const char*filename, PhyloTree *tree);
+
+/**
  * print partition log likelihoods to a file
  * @param filename output file name
  * @param tree phylogenetic tree

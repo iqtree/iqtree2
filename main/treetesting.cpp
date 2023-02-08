@@ -16,6 +16,7 @@
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
 #include "tree/iqtreemix.h"
+#include "tree/iqtreemixhmm.h"
 #include "gsl/mygsl.h"
 #include "utils/timeutil.h"
 
@@ -61,6 +62,13 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     
     if (!tree->isTreeMix() && !ptn_lh)
         delete[] pattern_lh;
+}
+
+void printHMMResult(const char* filename, PhyloTree *tree) {
+    // For HMM model, to show the assignment of the categories along sites with max likelihood
+    IQTreeMixHmm* iqtreehmm = dynamic_cast<IQTreeMixHmm*>(tree);
+    iqtreehmm->printResults(filename);
+    cout << "HMM results printed to " << filename << endl;
 }
 
 void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,

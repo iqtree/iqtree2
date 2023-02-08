@@ -34,6 +34,7 @@
 #include "alignment/superalignmentunlinked.h"
 #include "tree/iqtree.h"
 #include "tree/iqtreemix.h"
+#include "tree/iqtreemixhmm.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
@@ -452,14 +453,16 @@ void reportModel(ostream &out, PhyloTree &tree) {
                 reportModel(out, *treemix->at(i));
             }
         }
-        // show the tree weights
-        out << "Tree weights: ";
-        for (i=0; i<treemix->size(); i++) {
-            if (i>0)
-                out << ", ";
-            out << treemix->weights[i];
+        if (!tree.isHMM()) {
+            // show the tree weights
+            out << "Tree weights: ";
+            for (i=0; i<treemix->size(); i++) {
+                if (i>0)
+                    out << ", ";
+                out << treemix->weights[i];
+            }
+            out << endl << endl;
         }
-        out << endl << endl;
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;
@@ -998,6 +1001,10 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     /*    if (params.model_name == "WHTEST")
      cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 
+    if (params.optimize_params_use_hmm) {
+        cout << "  HMM result file:               " << params.out_prefix << ".hmm" << endl;
+    }
+    
     cout << endl;
 
 }
@@ -2189,6 +2196,12 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         else
             printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
     }
+    
+    if (params.optimize_params_use_hmm){
+        string hmm_file = params.out_prefix;
+        hmm_file += ".hmm";
+        printHMMResult(hmm_file.c_str(), &iqtree);
+    }
 
     if (params.print_partition_lh && !iqtree.isSuperTree()) {
         outWarning("-wpl does not work with non-partition model");
@@ -2647,8 +2660,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     bool   finishedInitTree = false;
     double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
-    if (iqtree->isTreeMix())
-        initEpsilon = params.treemix_eps;
+    if (iqtree->isTreeMix()) {
+        if (iqtree->isHMM())
+            initEpsilon = params.treemixhmm_eps;
+        else
+            initEpsilon = params.treemix_eps;
+    }
     string initTree;
     
     //None of his will work until there is actually a tree
@@ -3856,7 +3873,10 @@ IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
     for (i=0; i<numTree; i++) {
         trees.push_back(newIQTree(params,alignment));
     }
-    return new IQTreeMix(params, alignment, trees);
+    if (params.optimize_params_use_hmm)
+        return new IQTreeMixHmm(params, alignment, trees);
+    else
+        return new IQTreeMix(params, alignment, trees);
 }
 
 /** get ID of bad or good symtest results */
@@ -4140,7 +4160,13 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     /*************** initialize tree ********************/
     bool isTreeMix = isTreeMixture(params);
     
+    if (params.optimize_params_use_hmm && !isTreeMix) {
+        outError("option '-hmmster' is only available for tree mixture model");
+    }
+    
     if (isTreeMix) {
+        if (params.optimize_params_use_hmm)
+            cout << "HMMSTER ";
         cout << "Tree-mixture model" << endl;
         // tree-mixture model
         if (params.user_file == NULL) {

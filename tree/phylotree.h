@@ -546,6 +546,11 @@ public:
     virtual bool isTreeMix() { return false; }
 
     /**
+        @return true if this is a HMM model
+     */
+    virtual bool isHMM() { return false; }
+
+    /**
         @return number of mixture branch lengths, default: 1
     */
     virtual int getMixlen() { return 1; }

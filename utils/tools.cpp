@@ -1178,6 +1178,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
+    params.optimize_params_use_hmm = false;
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1286,6 +1287,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.modelEps = 0.01;
     params.modelfinder_eps = 0.1;
     params.treemix_eps = 0.001;
+    params.treemixhmm_eps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -3404,6 +3406,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_from_given_params = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-hmmster") == 0) {
+                params.optimize_params_use_hmm = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-brent") == 0) {
 				params.optimize_by_newton = false;
 				continue;
@@ -4234,6 +4240,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_freerate = "1-BFGS";
                 params.opt_gammai = false;
                 params.treemix_eps = 0.01;
+                params.treemixhmm_eps = 0.05;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -4369,6 +4376,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.modelEps > 1.0)
 					throw "Model epsilon must not be larger than 1.0";
                 params.treemix_eps = params.modelEps;
+                params.treemixhmm_eps = params.modelEps;
 				continue;
 			}
 
