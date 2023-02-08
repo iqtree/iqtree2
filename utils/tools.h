@@ -751,6 +751,11 @@ public:
     double treemix_eps;
 
     /**
+     logl epsilon for HMM Tree Mixture
+     */
+    double treemixhmm_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
@@ -1707,7 +1712,9 @@ public:
 
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
-
+    
+    /** optimize the parameters according to the HMM model (HMMSTER) */
+    bool optimize_params_use_hmm;
 
     /**
             criterion to assess important quartet

@@ -49,7 +49,7 @@ public:
      */
     // void init(Alignment* aln, Params* params, Checkpoint* chkpt);
     
-    void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
     
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
@@ -142,7 +142,7 @@ public:
      */
     virtual void setCheckpoint(Checkpoint *checkpoint);
     
-    void startCheckpoint();
+    virtual void startCheckpoint();
     
     void saveCheckpoint();
     
@@ -227,7 +227,7 @@ public:
      */
     virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
     
-    int getNParameters();
+    virtual int getNParameters();
     
     virtual void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE, double zero_epsilon = 2e-6);
     
@@ -387,7 +387,7 @@ public:
      */
     bool isLinkSiteRate;
 
-private:
+protected:
     
     // to separate the submodel names and the site rate names from the full model name
     void separateModel(string modelName);

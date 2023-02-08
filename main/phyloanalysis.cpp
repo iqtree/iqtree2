@@ -34,6 +34,7 @@
 #include "alignment/superalignmentunlinked.h"
 #include "tree/iqtree.h"
 #include "tree/iqtreemix.h"
+#include "tree/iqtreemixhmm.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
@@ -459,14 +460,16 @@ void reportModel(ostream &out, PhyloTree &tree) {
                 reportModel(out, *treemix->at(i));
             }
         }
-        // show the tree weights
-        out << "Tree weights: ";
-        for (i=0; i<treemix->size(); i++) {
-            if (i>0)
-                out << ", ";
-            out << treemix->weights[i];
+        if (!tree.isHMM()) {
+            // show the tree weights
+            out << "Tree weights: ";
+            for (i=0; i<treemix->size(); i++) {
+                if (i>0)
+                    out << ", ";
+                out << treemix->weights[i];
+            }
+            out << endl << endl;
         }
-        out << endl << endl;
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;
@@ -1009,6 +1012,10 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
     /*    if (params.model_name == "WHTEST")
      cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
+
+    if (params.optimize_params_use_hmm) {
+        cout << "  HMM result file:               " << params.out_prefix << ".hmm" << endl;
+    }
 
     cout << endl;
 
@@ -1667,7 +1674,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         if(params.dating_method == "mcmctree"){
             exportMCMCTreeCMD(params, out);
         }
-        
+
         // export AliSim command if needed
         exportAliSimCMD(params, tree, out);
 
@@ -1724,7 +1731,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     out << "--------------" << endl;
     
     string more_info = "For more information on using AliSim, please visit: www.iqtree.org/doc/AliSim";
-    
+
     // skip unsupported models
     if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
     {
@@ -1734,7 +1741,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     }
     
     out << "To simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis, you can use the following command:" << endl << endl;
-    
+
     // init alisim command
     string alisim_cmd = "--alisim simulated_MSA";
     
@@ -1788,9 +1795,9 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     
     // output alisim cmd
     out << alisim_cmd << endl << endl;
-    
+
     out << "To mimic the alignment used to produce this analysis, i.e. simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis *and* copying the same gap positions as the original alignment, you can use the following command:" << endl << endl;
-    
+
     if (params.aln_file)
         out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA" << endl << endl;
     else
@@ -1803,7 +1810,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
         out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA --num-alignments 100" << endl << endl;
     else
         out << "iqtree -s <alignment.phy> --alisim mimicked_MSA --num-alignments 100" << endl << endl;
-    
+
     out << more_info << endl << endl;
 }
 
@@ -2241,6 +2248,12 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
         else
             printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
+    }
+
+    if (params.optimize_params_use_hmm){
+        string hmm_file = params.out_prefix;
+        hmm_file += ".hmm";
+        printHMMResult(hmm_file.c_str(), &iqtree);
     }
 
     if (params.print_partition_lh && !iqtree.isSuperTree()) {
@@ -2980,8 +2993,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     bool   finishedInitTree = false;
     double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
-    if (iqtree->isTreeMix())
-        initEpsilon = params.treemix_eps;
+    if (iqtree->isTreeMix()) {
+        if (iqtree->isHMM())
+            initEpsilon = params.treemixhmm_eps;
+        else
+            initEpsilon = params.treemix_eps;
+    }
     string initTree;
     
     //None of his will work until there is actually a tree
@@ -3249,7 +3266,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << "FunDi log-likelihood: " << score << endl;
         cout << "Time taken to optimize FunDi model: " << getRealTime() - start_time << " sec" << endl;
     }
-    
+
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
         string out_file = (string)params.out_prefix + ".roottest.trees";
@@ -4237,7 +4254,10 @@ IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
     for (i=0; i<numTree; i++) {
         trees.push_back(newIQTree(params,alignment));
     }
-    return new IQTreeMix(params, alignment, trees);
+    if (params.optimize_params_use_hmm)
+        return new IQTreeMixHmm(params, alignment, trees);
+    else
+        return new IQTreeMix(params, alignment, trees);
 }
 
 /** get ID of bad or good symtest results */
@@ -4521,11 +4541,17 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     /*************** initialize tree ********************/
     bool isTreeMix = isTreeMixture(params);
 
+    if (params.optimize_params_use_hmm && !isTreeMix) {
+        outError("option '-hmmster' is only available for tree mixture model");
+    }
+
     if (isTreeMix) {
         // TreeMix cannot be used for MCMCTree gradients and Hessian calculation
         if(params.dating_method=="mcmctree"){
             outError("Approximate likelihood techniques for MCMCTree cannot be used with tree mixture models.");
         }
+        if (params.optimize_params_use_hmm)
+            cout << "HMMSTER ";
         cout << "Tree-mixture model" << endl;
         // tree-mixture model
         if (params.user_file == NULL) {
@@ -4660,7 +4686,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         
         if (params.ancestral_site_concordance)
             tree->computeAllAncestralSiteConcordance();
-        
+
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);
         }
@@ -4950,7 +4976,7 @@ void assignBranchSupportNew(Params &params) {
     }
     
     outWarning("You probably want the --scfl option. The site concordance factor\n implemented with the --scf option is based on parsimony (described here:\n https://doi.org/10.1093/molbev/msaa106). It has since been superseded by a more\n accurate likelihood-based approach which is implemented in the --scfl option, and\n is described in the paper \"Updated site concordance factors minimize effects of\n homoplasy and taxon sampling\" by Yu et al.. Please see the tutorial here for more\n information: http://www.iqtree.org/doc/Concordance-Factor");
-    
+
     if (!params.site_concordance_partition)
         return;
     
