@@ -13,8 +13,6 @@
 #include "tree/phylohmm.h"
 #include "model/modelhmm.h"
 
-const double MAX_LEN = 1.0;
-
 class IQTreeMixHmm : public IQTreeMix, public PhyloHmm {
 public:
     
@@ -122,6 +120,8 @@ private:
     virtual void getVariables(double *variables);
     
     virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
+    virtual int getNDim();
     
     double optimizeBranchGroup(int branchgrp, double gradient_epsilon);
     

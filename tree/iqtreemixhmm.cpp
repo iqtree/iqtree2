@@ -109,56 +109,54 @@ double IQTreeMixHmm::optimizeBranchGroup(int branchgrp, double gradient_epsilon)
 
     optimTree = -1;
     optimBranchGrp = branchgrp;
-    if (branchgrp < branch_group.size()) {
-        ndim = branch_group[branchgrp].size();
-        if (ndim == 1) {
-            len = setSingleVariable();
-            double negative_lh;
-            double ferror,optx;
-            if (verbose_mode >= VB_MED) {
-                cout << "[IQTreeMixHmm::optimizeBranchGroup before] branchgrp = " << branchgrp << " single-variable = (" << setprecision(10) << len << ") ndim = 1" << endl;
-            }
-            optx = minimizeOneDimen(params->min_branch_length, len, MAX_LEN, gradient_epsilon, &negative_lh, &ferror);
-            getSingleVariable(optx);
-            if (verbose_mode >= VB_MED) {
-                cout << "[IQTreeMixHmm::optimizeBranchGroup after] branchgrp = " << branchgrp << " single-variable = (" << setprecision(10) << optx << ") ndim = 1" << endl;
-            }
-            score = computeLikelihood();
-        } else if (ndim > 1) {
-            double* variables = new double[ndim + 1];
-            double* upper_bound = new double[ndim + 1];
-            double* lower_bound = new double[ndim + 1];
-            bool* bound_check = new bool[ndim + 1];
-            setBounds(lower_bound, upper_bound, bound_check);
-            setVariables(variables);
-            if (verbose_mode >= VB_MED) {
-                cout << "[IQTreeMixHmm::optimizeBranchGroup before] branchgrp = " << branchgrp << " variables = (";
-                for (int k = 1; k <= ndim; k++) {
-                    if (k>1)
-                        cout << ",";
-                    cout << setprecision(10) << variables[k];
-                }
-                cout << ") ndim = " << ndim << endl;
-            }
-            score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, gradient_epsilon);
-            getVariables(variables);
-            if (verbose_mode >= VB_MED) {
-                cout << "[IQTreeMixHmm::optimizeBranchGroup after] branchgrp = " << branchgrp << " variables = (";
-                for (int k = 1; k <= ndim; k++) {
-                    if (k>1)
-                        cout << ",";
-                    cout << setprecision(10) << variables[k];
-                }
-                cout << ") ndim = " << ndim << endl;
-            }
-            delete[] variables;
-            delete[] upper_bound;
-            delete[] lower_bound;
-            delete[] bound_check;
-        } else {
-            optimBranchGrp = -1;
-            score = computeLikelihood();
+    ndim = getNDim();
+    if (ndim == 1) {
+        len = setSingleVariable();
+        double negative_lh;
+        double ferror,optx;
+        if (verbose_mode >= VB_MED) {
+            cout << "[IQTreeMixHmm::optimizeBranchGroup before] branchgrp = " << branchgrp << " single-variable = (" << setprecision(10) << len << ") ndim = 1" << endl;
         }
+        optx = minimizeOneDimen(params->min_branch_length, len, params->max_branch_length, gradient_epsilon, &negative_lh, &ferror);
+        getSingleVariable(optx);
+        if (verbose_mode >= VB_MED) {
+            cout << "[IQTreeMixHmm::optimizeBranchGroup after] branchgrp = " << branchgrp << " single-variable = (" << setprecision(10) << optx << ") ndim = 1" << endl;
+        }
+        score = computeLikelihood();
+    } else if (ndim > 1) {
+        double* variables = new double[ndim + 1];
+        double* upper_bound = new double[ndim + 1];
+        double* lower_bound = new double[ndim + 1];
+        bool* bound_check = new bool[ndim + 1];
+        setBounds(lower_bound, upper_bound, bound_check);
+        setVariables(variables);
+        if (verbose_mode >= VB_MED) {
+            cout << "[IQTreeMixHmm::optimizeBranchGroup before] branchgrp = " << branchgrp << " variables = (";
+            for (int k = 1; k <= ndim; k++) {
+                if (k>1)
+                    cout << ",";
+                cout << setprecision(10) << variables[k];
+            }
+            cout << ") ndim = " << ndim << endl;
+        }
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, gradient_epsilon);
+        getVariables(variables);
+        if (verbose_mode >= VB_MED) {
+            cout << "[IQTreeMixHmm::optimizeBranchGroup after] branchgrp = " << branchgrp << " variables = (";
+            for (int k = 1; k <= ndim; k++) {
+                if (k>1)
+                    cout << ",";
+                cout << setprecision(10) << variables[k];
+            }
+            cout << ") ndim = " << ndim << endl;
+        }
+        delete[] variables;
+        delete[] upper_bound;
+        delete[] lower_bound;
+        delete[] bound_check;
+    } else {
+        optimBranchGrp = -1;
+        score = computeLikelihood();
     }
     optimBranchGrp = -1;
     return score;
@@ -426,53 +424,43 @@ double IQTreeMixHmm::computeFunction(double x) {
 
 double IQTreeMixHmm::setSingleVariable() {
     // get the value from branch lengths
-    size_t i;
-    size_t ndim;
+    int ndim, i;
     int treeidx, branchidx;
     double x = 0.0;
-    if (optimBranchGrp >= 0) {
-        // collect the branch lengths of the tree
-        getAllBranchLengths();
-        ndim = branch_group[optimBranchGrp].size();
-        if (ndim > 0) {
-            treeidx = branch_group[optimBranchGrp].at(0) / nbranch;
-            branchidx = branch_group[optimBranchGrp].at(0) % nbranch;
-            if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
-                x = allbranchlens[treeidx].at(branchidx);
-            else
-                cout << "[IQTreeMixHmm::setSingleVariable] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
-        } else {
-            cout << "[IQTreeMixHmm::setSingleVariable] Error occurs! ndim = " << ndim << endl;
-        }
+    // collect the branch lengths of the tree
+    getAllBranchLengths();
+    ndim = getNDim();
+    if (ndim > 0) {
+        treeidx = branch_group[optimBranchGrp].at(0) / nbranch;
+        branchidx = branch_group[optimBranchGrp].at(0) % nbranch;
+        if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
+            x = allbranchlens[treeidx].at(branchidx);
+        else
+            cout << "[IQTreeMixHmm::setSingleVariable] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
     } else {
-        cout << "[IQTreeMixHmm::setSingleVariable] Error occurs! optimBranchGrp = " << optimBranchGrp << endl;
+        cout << "[IQTreeMixHmm::setSingleVariable] Error occurs! ndim = " << ndim << endl;
     }
     return x;
 }
 
 void IQTreeMixHmm::getSingleVariable(double x) {
     // save the values to branch lengths
-    size_t i;
-    size_t ndim;
+    int ndim, i;
     int treeidx, branchidx;
-    if (optimBranchGrp >= 0) {
-        // collect the branch lengths of the tree
-        getAllBranchLengths();
-        ndim = branch_group[optimBranchGrp].size();
-        if (ndim > 0) {
-            treeidx = branch_group[optimBranchGrp].at(0) / nbranch;
-            branchidx = branch_group[optimBranchGrp].at(0) % nbranch;
-            if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
-                allbranchlens[treeidx].at(branchidx) = x;
-            else
-                cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
-        } else {
-            cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! ndim = " << ndim << endl;
-        }
-        setAllBranchLengths();
+    // collect the branch lengths of the tree
+    getAllBranchLengths();
+    ndim = getNDim();
+    if (ndim > 0) {
+        treeidx = branch_group[optimBranchGrp].at(0) / nbranch;
+        branchidx = branch_group[optimBranchGrp].at(0) % nbranch;
+        if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
+            allbranchlens[treeidx].at(branchidx) = x;
+        else
+            cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
     } else {
-        cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! optimBranchGrp = " << optimBranchGrp << endl;
+        cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! ndim = " << ndim << endl;
     }
+    setAllBranchLengths();
 }
 
 // the following four functions are for dimension > 1
@@ -483,74 +471,68 @@ double IQTreeMixHmm::targetFunk(double x[]) {
 
 void IQTreeMixHmm::setVariables(double *variables) {
     // copy the values from branch lengths
-    size_t i;
-    size_t ndim;
+    int ndim, i;
     int treeidx, branchidx;
-    if (optimBranchGrp >= 0) {
-        // collect the branch lengths of the tree
-        getAllBranchLengths();
-        ndim = branch_group[optimBranchGrp].size();
-        for (i=0; i<ndim; i++) {
-            treeidx = branch_group[optimBranchGrp].at(i) / nbranch;
-            branchidx = branch_group[optimBranchGrp].at(i) % nbranch;
-            if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
-                variables[i+1] = allbranchlens[treeidx].at(branchidx);
-            else
-                cout << "[IQTreeMixHmm::setVariables] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
-        }
-        if (ndim == 0) {
-            cout << "[IQTreeMixHmm::setVariables] Error occurs! ndim = " << ndim << endl;
-        }
-    } else {
-        cout << "[IQTreeMixHmm::setVariables] Error occurs! optimBranchGrp = " << optimBranchGrp << endl;
+    // collect the branch lengths of the tree
+    getAllBranchLengths();
+    ndim = getNDim();
+    for (i=0; i<ndim; i++) {
+        treeidx = branch_group[optimBranchGrp].at(i) / nbranch;
+        branchidx = branch_group[optimBranchGrp].at(i) % nbranch;
+        if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
+            variables[i+1] = allbranchlens[treeidx].at(branchidx);
+        else
+            cout << "[IQTreeMixHmm::setVariables] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
+    }
+    if (ndim == 0) {
+        cout << "[IQTreeMixHmm::setVariables] Error occurs! ndim = " << ndim << endl;
     }
 }
 
 
 void IQTreeMixHmm::getVariables(double *variables) {
     // save the values to branch lengths
-    size_t i;
-    size_t ndim;
+    int ndim, i;
     int treeidx, branchidx;
-    if (optimBranchGrp >= 0) {
-        // collect the branch lengths of the tree
-        getAllBranchLengths();
-        ndim = branch_group[optimBranchGrp].size();
-        for (i=0; i<ndim; i++) {
-            treeidx = branch_group[optimBranchGrp].at(i) / nbranch;
-            branchidx = branch_group[optimBranchGrp].at(i) % nbranch;
-            if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
-                allbranchlens[treeidx].at(branchidx) = variables[i+1];
-            else
-                cout << "[IQTreeMixHmm::getVariables] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
-        }
-        if (ndim == 0) {
-            cout << "[IQTreeMixHmm::getVariables] Error occurs! ndim = " << ndim << endl;
-        }
-        setAllBranchLengths();
-    } else {
-        cout << "[IQTreeMixHmm::getVariables] Error occurs! optimBranchGrp = " << optimBranchGrp << endl;
+    // collect the branch lengths of the tree
+    getAllBranchLengths();
+    ndim = getNDim();
+    for (i=0; i<ndim; i++) {
+        treeidx = branch_group[optimBranchGrp].at(i) / nbranch;
+        branchidx = branch_group[optimBranchGrp].at(i) % nbranch;
+        if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
+            allbranchlens[treeidx].at(branchidx) = variables[i+1];
+        else
+            cout << "[IQTreeMixHmm::getVariables] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
     }
+    if (ndim == 0) {
+        cout << "[IQTreeMixHmm::getVariables] Error occurs! ndim = " << ndim << endl;
+    }
+    setAllBranchLengths();
 }
 
 void IQTreeMixHmm::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-    size_t i;
-    size_t ndim;
-    if (optimBranchGrp >= 0) {
-        ndim = branch_group[optimBranchGrp].size();
-        if (verbose_mode >= VB_MED) {
-            cout << "[IQTreeMixHmm::setBounds] optimBranchGrp = " << optimBranchGrp << ", ndim = " << ndim << endl;
-        }
-        for (i = 1; i <= ndim; i++) {
-            lower_bound[i] = params->min_branch_length;
-            upper_bound[i] = MAX_LEN;
-            bound_check[i] = false;
-        }
-        if (ndim == 0) {
-            cout << "[IQTreeMixHmm::setBounds] Error occurs! ndim = " << ndim << endl;
-        }
+    int ndim, i;
+    ndim = getNDim();
+    if (verbose_mode >= VB_MED) {
+        cout << "[IQTreeMixHmm::setBounds] optimBranchGrp = " << optimBranchGrp << ", ndim = " << ndim << endl;
+    }
+    for (i = 1; i <= ndim; i++) {
+        lower_bound[i] = params->min_branch_length;
+        upper_bound[i] = params->max_branch_length;
+        bound_check[i] = false;
+    }
+    if (ndim == 0) {
+        cout << "[IQTreeMixHmm::setBounds] Error occurs! ndim = " << ndim << endl;
+    }
+}
+
+
+int IQTreeMixHmm::getNDim() {
+    if (optimBranchGrp >= 0 && optimBranchGrp < branch_group.size()) {
+        return branch_group[optimBranchGrp].size();
     } else {
-        cout << "[IQTreeMixHmm::setBounds] Error occurs! optimBranchGrp = " << optimBranchGrp << endl;
+        return 0;
     }
 }
 
