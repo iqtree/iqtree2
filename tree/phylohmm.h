@@ -70,7 +70,7 @@ public:
     //     array site_like_cat has to be updated
 
     // compute backward log-likelihood
-    double computeBackLike();
+    double computeBackLike(bool showInterRst = false);
 
     // path with max log-likelihood
     double computeMaxPath();
@@ -123,6 +123,39 @@ protected:
     // working array for computation of the assignment of category with maximum likelihood value
     // for each cat on every site, the category for next site with the max likelihood value
     int* next_cat;
+    
+    // log-likelihood values for each cat on every site
+    // site_like_cat_fwd[i*ncat+j] = likelihood of site i for cat j
+    double* site_like_cat_fwd;
+
+    // backward array
+    double* bwd_array;
+    
+    // forward array
+    double* fwd_array;
+    
+    // marginal probabilities
+    double* marginal_prob;
+
+    // compute backward log-likelihood
+    // and all the intermediate results are saved in bwd_array array
+    double computeBackLikeArray();
+
+    // compute forward log-likelihood
+    // and all the intermediate results are saved in fwd_array array
+    double computeFwdLikeArray();
+
+    // show the array site_like_cat
+    void showSiteLikeCat();
+    
+    // show the array TransiteLog
+    void showTransiteLog();
+
+    // verify the backLikeArray and FwdLikeArray
+    void checkEachSiteBackFwdLikeArray();
+    
+    // compute the marginal probabilities for each site
+    void computeMarginalProb();
 
 private:
 
