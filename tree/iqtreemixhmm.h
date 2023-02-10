@@ -50,7 +50,7 @@ public:
      @param iterations number of iterations to loop through all branches
      @return the likelihood of the tree
      */
-    // virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
     
     double optimizeAllBranchLensByBFGS(double gradient_epsilon, double logl_epsilon, int maxsteps = 3);
     /**
@@ -77,6 +77,12 @@ public:
     // show the values of the parameters
     void showParameters(ostream& out);
     
+    // optimize all substitution models
+    double optimizeAllSubstModels(double gradient_epsilon);
+    
+    // optimize all RHAS models
+    double optimizeAllRHASModels(double gradient_epsilon);
+    
 private:
     
     // indicate which tree's unlinked parameters is under optimization
@@ -101,9 +107,9 @@ private:
     // set the branch lengths of all trees from the variable allbranchlens
     void setAllBranchLengths();
     
-    //--------------------------------------
-    // optimization of branch lengths
-    //--------------------------------------
+    //--------------------------------------------
+    // optimization of branch lengths using BFGS
+    //--------------------------------------------
 
     // the following three functions are for dimension = 1
     double computeFunction(double x);
@@ -132,6 +138,12 @@ private:
              set all the branches of the same group to their average
      */
     void setAvgLenEachBranchGrp();
+    
+    // update the ptn_freq array according to the marginal probabilities along each site for each tree
+    void computeFreqArray(bool need_computeLike = true, int update_which_tree = -1);
+    
+    // get marginal probabilities along each site for each tree
+    void getMarginalProb(bool need_computeLike = true, int update_which_tree = -1);
 };
 
 #endif /* iqtreemixhmm_h */

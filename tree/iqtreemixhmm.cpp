@@ -22,11 +22,11 @@ void IQTreeMixHmm::initializeModel(Params &params, string model_name, ModelsBloc
     
     // for all the unlinked substitution models,
     // set all trees to this tree
-    if (!isLinkModel) {
-        for (i=0; i<models.size(); i++) {
-            models[i]->setTree(this);
-        }
-    }
+    // if (!isLinkModel) {
+    //    for (i=0; i<models.size(); i++) {
+    //        models[i]->setTree(this);
+    //    }
+    // }
     
     // handle the linked or unlinked site rate(s)
     site_rates.clear();
@@ -39,17 +39,24 @@ void IQTreeMixHmm::initializeModel(Params &params, string model_name, ModelsBloc
                 at(i)->getModelFactory()->site_rate = site_rates[0];
                 at(i)->setRate(site_rates[0]);
             }
+            // for linked site rate model, set their trees to this tree
+            for (i=0; i<site_rates.size(); i++) {
+                site_rates[i]->setTree(this);
+            }
+            for (i=0; i<ntree; i++) {
+                site_rate_trees.push_back(this);
+            }
         } else {
             for (i=0; i<ntree; i++) {
                 site_rates.push_back(at(i)->getModelFactory()->site_rate);
             }
-        }
-        // set their trees to this tree
-        for (i=0; i<site_rates.size(); i++) {
-            site_rates[i]->setTree(this);
-        }
-        for (i=0; i<ntree; i++) {
-            site_rate_trees.push_back(this);
+            // for unlinked site rate models, set their trees to its own tree
+            for (i=0; i<site_rates.size(); i++) {
+                site_rates[i]->setTree(at(i));
+            }
+            for (i=0; i<ntree; i++) {
+                site_rate_trees.push_back(at(i));
+            }
         }
     }
     
@@ -163,7 +170,6 @@ double IQTreeMixHmm::optimizeBranchGroup(int branchgrp, double gradient_epsilon)
 }
 
 double IQTreeMixHmm::optimizeAllBranchLensByBFGS(double gradient_epsilon, double logl_epsilon, int maxsteps) {
-    size_t i,j;
     double score, pre_score, step;
     
     // collect the branch lengths of the tree
@@ -173,7 +179,7 @@ double IQTreeMixHmm::optimizeAllBranchLensByBFGS(double gradient_epsilon, double
     do {
         pre_score = score;
         step++;
-        for (i = 0; i < branch_group.size(); i++) {
+        for (int i = 0; i < branch_group.size(); i++) {
             score = optimizeBranchGroup(i, gradient_epsilon);
             cout << ".. Current HMM log-likelihood: " << score << endl;
         }
@@ -181,6 +187,57 @@ double IQTreeMixHmm::optimizeAllBranchLensByBFGS(double gradient_epsilon, double
     return score;
 }
 
+double IQTreeMixHmm::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
+    double score;
+    computeFreqArray();
+    for (int i = 0; i < ntree; i++) {
+        IQTreeMix::optimizeAllBranchesOneTree(i, my_iterations, tolerance, maxNRStep);
+    }
+    score = computeLikelihood();
+    if (verbose_mode >= VB_MED)
+        cout << "after optimizing branches, HMM likelihood = " << score << endl;
+    return score;
+}
+
+double IQTreeMixHmm::optimizeAllSubstModels(double gradient_epsilon) {
+    double score;
+    if (isLinkModel) {
+        // for linked subsitution model
+        // use BFGS method
+        models[0]->optimizeParameters(gradient_epsilon);
+    } else {
+        // for unlinked subsitution model
+        // use EM method
+        computeFreqArray();
+        for (int i = 0; i < ntree; i++) {
+            models[i]->optimizeParameters(gradient_epsilon);
+        }
+    }
+    score = computeLikelihood();
+    if (verbose_mode >= VB_MED)
+        cout << "after optimizing subsitution model, HMM likelihood = " << score << endl;
+    return score;
+}
+
+double IQTreeMixHmm::optimizeAllRHASModels(double gradient_epsilon) {
+    double score;
+    if (isLinkSiteRate) {
+        // for linked RHAS model
+        // use BFGS method
+        site_rates[0]->optimizeParameters(gradient_epsilon);
+    } else {
+        // for unlinked RHAS model
+        // use EM method
+        computeFreqArray();
+        for (int i = 0; i < ntree; i++) {
+            site_rates[i]->optimizeParameters(gradient_epsilon);
+        }
+    }
+    score = computeLikelihood();
+    if (verbose_mode >= VB_MED)
+        cout << "after optimizing RHAS model, HMM likelihood = " << score << endl;
+    return score;
+}
 
 void IQTreeMixHmm::startCheckpoint() {
     checkpoint->startStruct("IQTreeMixHmm" + convertIntToString(size()));
@@ -207,57 +264,21 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
     }
     
     score = computeLikelihood();
+    
     cout << "1. Initial HMM log-likelihood: " << score << endl;
-
+    
     prev_score = score;
 
     for (step = 0; step < optimize_steps; step++) {
         
         // optimize tree branches
-        score = optimizeAllBranchLensByBFGS(gradient_epsilon, logl_epsilon);
-        if (verbose_mode >= VB_MED) {
-            cout << "after optimizing branches, HMM likelihood = " << score << endl;
-        }
+        score = optimizeAllBranches();
 
-        // optimize the linked subsitution model
-        if (isLinkModel) {
-            models[0]->optimizeParameters(gradient_epsilon);
-            if (verbose_mode >= VB_MED) {
-                score = computeLikelihood();
-                cout << "after optimizing linked subsitution model, HMM likelihood = " << score << endl;
-            }
-        }
+        // optimize all subsitution models
+        score = optimizeAllSubstModels(gradient_epsilon);
 
-        // optimize the unlinked subsitution models one by one
-        if (!isLinkModel) {
-            for (i=0; i<ntree; i++) {
-                models[i]->optimizeParameters(gradient_epsilon);
-            }
-            if (verbose_mode >= VB_MED) {
-                score = computeLikelihood();
-                cout << "after optimizing unlinked subsitution model, HMM likelihood = " << score << endl;
-            }
-        }
-
-        // optimize the linked site rate model
-        if (anySiteRate && isLinkSiteRate) {
-            site_rates[0]->optimizeParameters(gradient_epsilon);
-            if (verbose_mode >= VB_MED) {
-                score = computeLikelihood();
-                cout << "after optimizing linked site rate model, HMM likelihood = " << score << endl;
-            }
-        }
-
-        // optimize the unlinked site rate model
-        if (anySiteRate && !isLinkSiteRate) {
-            for (i=0; i<ntree; i++) {
-                site_rates[i]->optimizeParameters(gradient_epsilon);
-            }
-            if (verbose_mode >= VB_MED) {
-                score = computeLikelihood();
-                cout << "after optimizing unlinked site-rate model, HMM likelihood = " << score << endl;
-            }
-        }
+        // optimize all site rate models
+        score = optimizeAllRHASModels(gradient_epsilon);
 
         // optimize transition matrix and prob array
         score = PhyloHmm::optimizeParameters(gradient_epsilon);
@@ -268,10 +289,10 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
             break;
         }
 
-        if (verbose_mode >= VB_MED) {
-            computeMaxPath();
-            showSiteCatMaxLike(cout);
-        }
+//        if (verbose_mode >= VB_MED) {
+//            computeMaxPath();
+//            showSiteCatMaxLike(cout);
+//        }
 
         prev_score = score;
     }
@@ -577,4 +598,33 @@ void IQTreeMixHmm::setAvgLenEachBranchGrp() {
     
     // save the updated branch lengths of the tree
     setAllBranchLengths();
+}
+
+// update the ptn_freq array according to the marginal probabilities along each site for each tree
+void IQTreeMixHmm::computeFreqArray(bool need_computeLike, int update_which_tree) {
+    double* mar_prob;
+    // get marginal probabilities along each site for each tree
+    getMarginalProb(need_computeLike, update_which_tree);
+    // #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1)
+    for (size_t i = 0; i < ntree; i++) {
+        PhyloTree* tree = at(i);
+        // reset the array ptn_freq
+        memset(tree->ptn_freq, 0, sizeof(double)*nptn);
+        mar_prob = marginal_prob + i;
+        for (size_t j = 0; j < nsite; j++) {
+            int ptn = aln->getPatternID(j);
+            tree->ptn_freq[ptn] += mar_prob[0];
+            mar_prob += ntree;
+        }
+    }
+}
+
+// get marginal probabilities along each site for each tree
+void IQTreeMixHmm::getMarginalProb(bool need_computeLike, int update_which_tree) {
+    if (need_computeLike) {
+        computeLogLikelihoodSiteTree(update_which_tree);
+    }
+    computeBackLikeArray();
+    computeFwdLikeArray();
+    computeMarginalProb();
 }
