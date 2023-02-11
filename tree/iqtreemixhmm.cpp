@@ -219,23 +219,24 @@ double IQTreeMixHmm::optimizeAllSubstModels(double gradient_epsilon) {
     return score;
 }
 
-double IQTreeMixHmm::optimizeAllRHASModels(double gradient_epsilon) {
-    double score;
-    if (isLinkSiteRate) {
-        // for linked RHAS model
-        // use BFGS method
-        site_rates[0]->optimizeParameters(gradient_epsilon);
-    } else {
-        // for unlinked RHAS model
-        // use EM method
-        computeFreqArray();
-        for (int i = 0; i < ntree; i++) {
-            site_rates[i]->optimizeParameters(gradient_epsilon);
+double IQTreeMixHmm::optimizeAllRHASModels(double gradient_epsilon, double score) {
+    if (anySiteRate) {
+        if (isLinkSiteRate) {
+            // for linked RHAS model
+            // use BFGS method
+            site_rates[0]->optimizeParameters(gradient_epsilon);
+        } else {
+            // for unlinked RHAS model
+            // use EM method
+            computeFreqArray();
+            for (int i = 0; i < ntree; i++) {
+                site_rates[i]->optimizeParameters(gradient_epsilon);
+            }
         }
+        score = computeLikelihood();
+        if (verbose_mode >= VB_MED)
+            cout << "after optimizing RHAS model, HMM likelihood = " << score << endl;
     }
-    score = computeLikelihood();
-    if (verbose_mode >= VB_MED)
-        cout << "after optimizing RHAS model, HMM likelihood = " << score << endl;
     return score;
 }
 
@@ -278,7 +279,7 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
         score = optimizeAllSubstModels(gradient_epsilon);
 
         // optimize all site rate models
-        score = optimizeAllRHASModels(gradient_epsilon);
+        score = optimizeAllRHASModels(gradient_epsilon, score);
 
         // optimize transition matrix and prob array
         score = PhyloHmm::optimizeParameters(gradient_epsilon);
@@ -433,6 +434,21 @@ void IQTreeMixHmm::setAllBranchLengths() {
         at(i)->restoreBranchLengths(allbranchlens[i]);
 }
 
+// show the branch lengths of all trees
+void IQTreeMixHmm::showAllBranchLengths() {
+    getAllBranchLengths();
+    for (size_t i=0; i<ntree; i++) {
+        cout << "The branch lengths of tree " << i+1 << endl;
+        for (size_t j=0; j<allbranchlens[i].size(); j++) {
+            if (j>0)
+                cout << ", ";
+            cout << allbranchlens[i].at(j);
+        }
+        cout << endl;
+    }
+
+}
+
 //--------------------------------------
 // optimization of branch lengths
 //--------------------------------------
@@ -562,8 +578,13 @@ void IQTreeMixHmm::showBranchGrp() {
     for (size_t i=0; i<branch_group.size(); i++) {
         cout << "  Grp " << i << endl;
         for (size_t j=0; j<branch_group[i].size(); j++) {
-            cout << "     " << branch_group[i].at(j) << endl;
+            if (j > 0)
+                cout << ", ";
+            else
+                cout << "    ";
+            cout << branch_group[i].at(j);
         }
+        cout << endl;
     }
 }
 
@@ -586,7 +607,10 @@ void IQTreeMixHmm::setAvgLenEachBranchGrp() {
         for (j = 0; j < dim; j++) {
             treeIdx = branch_group[i].at(j) / nbranch;
             branchIdx = branch_group[i].at(j) % nbranch;
-            grp_len += allbranchlens[treeIdx].at(branchIdx);
+            if (allbranchlens[treeIdx].at(branchIdx) < params->min_branch_length)
+                grp_len += params->min_branch_length;
+            else
+                grp_len += allbranchlens[treeIdx].at(branchIdx);
         }
         grp_len = grp_len / (double)dim;
         for (j = 0; j < dim; j++) {

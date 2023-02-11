@@ -81,7 +81,7 @@ public:
     double optimizeAllSubstModels(double gradient_epsilon);
     
     // optimize all RHAS models
-    double optimizeAllRHASModels(double gradient_epsilon);
+    double optimizeAllRHASModels(double gradient_epsilon, double score = 0.0);
     
 private:
     
@@ -106,6 +106,9 @@ private:
 
     // set the branch lengths of all trees from the variable allbranchlens
     void setAllBranchLengths();
+    
+    // show the branch lengths of all trees
+    void showAllBranchLengths();
     
     //--------------------------------------------
     // optimization of branch lengths using BFGS
