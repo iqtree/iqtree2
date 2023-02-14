@@ -36,7 +36,7 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
     abort();
 }
 
-inline void _my_assert(const std::string str_expression, const char *func, const char* file, int line) {
+inline void _my_assert(const std::string &str_expression, const char *func, const char* file, int line) {
     _my_assert(str_expression.c_str(), func, file, line);
 }
 

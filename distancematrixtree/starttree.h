@@ -180,8 +180,9 @@ namespace StartTree
         virtual bool setAppendFile(bool appendIt) = 0; //returns true if supported
 
         /**
-         * @brief 
-         * 
+         * @brief tell the distance matrix algorithm to avoid writing anything
+         *        to standard output (it may still write to standard error if 
+         *        something goes wrong).
          */
         virtual void beSilent() = 0;
 

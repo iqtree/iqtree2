@@ -281,7 +281,7 @@ public:
             //For each (non-leaf) cluster...
             //1. calculate distances to all the 
             //   leaves, for each contributing cluster.
-            Cluster<T>& node = at(h);
+            const Cluster<T>& node = at(h);
             std::vector<LeafDistanceVector> subtrees;
             for (const Link<T>& link : node.links ) {
                 LeafDistanceVector ldv;

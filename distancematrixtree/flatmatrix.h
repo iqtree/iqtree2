@@ -111,7 +111,9 @@ public:
                                            const std::string& file_name) const;
 
     /**
-     * @brief 
+     * @brief  write the sequence names, and the distance matrix,
+     *         in one of the Phylip distance matrix formats, to the 
+     *         file with the specified file stream.
      * 
      * @tparam S the stream type 
      * @tparam P the progress display class
@@ -119,6 +121,10 @@ public:
      * @param  precision the precision (number of digits to use after decimal point)
      * @param  out       the output stream
      * @param  progress  pointer to the class instance used to report progress
+     * 
+     * @note   S is a template parameter because this function is used to
+     *           write a standard file output stream, or to a zipped file stream
+     *           (to std::ofstream or to ogzstream).
      */
     template <class S /*stream type*/, class P /*progress display*/>
     void               writeDistancesToOpenFile(const std::string& format,

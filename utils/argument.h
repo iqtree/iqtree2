@@ -18,7 +18,10 @@ public:
     explicit Argument(const char* arg_name);
     virtual ~Argument() = default;
     /**
-     * @brief 
+     * @brief          Accept a recognized argument (found in the command-line)
+     *                 (if the argument takes a parameter - or parameters - 
+     *                 this entails doing something with it; parsing it, possibly
+     *                 validating it.  The details vary between subclasses).
      * @param arg      The argument that matched the name
      * @param nextArg  The next argument
      * @param argv     The command-line argument array

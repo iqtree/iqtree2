@@ -526,7 +526,9 @@ public:
 
 #if USE_VECTORCLASS_LIBRARY
 /**
- * @brief 
+ * @brief  Vectorizing shim for distance matrix algorithm classes
+ *         (Vectorized<X> yields a vectorized subclass of X, 
+ *         if X meets the requirements, listed below).
  * 
  * @tparam T the distance type
  * @tparam SUPER the superclass (in practice, NJMatrix<T>, 
@@ -540,6 +542,7 @@ public:
  *         using it with SUPER=UPGMAMatrix<T>!), because 
  *         that has a rather different getRowMinima().
  *         There's a separate class for vectorizing that.
+ *         Nor can it vectorize FancyNJMatrix.
  */
 template <class T=NJFloat, class SUPER=BIONJMatrix<T>, 
           class V=FloatVector, class VB=FloatBoolVector>

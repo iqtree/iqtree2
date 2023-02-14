@@ -180,7 +180,9 @@ protected:
     bool                 subtreeOnly;
 public:
     UPGMA_Matrix(): super(), silent(false)
-                  , isOutputToBeZipped(false), isRooted(false)
+                  , isOutputToBeZipped(false)
+                  , isOutputToBeAppended(false)
+                  , isRooted(false)
                   , subtreeOnly(false) {
     }
     /**

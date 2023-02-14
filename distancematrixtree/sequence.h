@@ -90,7 +90,7 @@ protected:
     bool                     report_progress;
     intptr_t   rank;
     size_t     rawSeqLen;
-    size_t     seqLen    = 0; //# of characters that actually vary between two sequences
+    size_t     seqLen;    //# of characters that actually vary between two sequences
 
     //Serialized data drawn from the sequences (N=rank, P=number of variable sites)
     size_t     unkLen        ; //Call this U
@@ -101,7 +101,7 @@ protected:
     double     num_states    ; //Number of states
 
     void setUpSerializedData();
-    void getNumberOfStates();
+    void getNumberOfStates(std::string& alphabet);
 
 public:
     SequenceLoader(char unknown, bool isDNA, 
@@ -114,8 +114,8 @@ public:
                    bool report_progress_while_loading);
     ~SequenceLoader();
     double getDistanceBetweenSequences(intptr_t row, intptr_t col) const;
-    bool   loadSequenceDistances      (FlatMatrix& m);
-    bool   writeDistanceMatrixToFile  (bool numbered_names, 
+    bool   loadSequenceDistances      (FlatMatrix& m, std::string& alphabet);
+    bool   writeDistanceMatrixToFile  (bool numbered_names, std::string& alphabet,
                                        const std::string& filePath);
 };
 

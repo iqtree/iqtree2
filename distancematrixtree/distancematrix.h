@@ -93,13 +93,16 @@ public:
     /**
      * @brief Release any allocated memory
      */
-    virtual void clear() {
+    void actual_clear() {
         delete [] data;
         delete [] rows;
         data         = nullptr;
         rows         = nullptr;
         row_count    = 0;
         column_count = 0;
+    }
+    virtual void clear() {
+        actual_clear();
     }
     /**
      * @brief  get a const reference to the pointer to the const
@@ -174,7 +177,7 @@ public:
      *        divisible by MATRIX_ALIGNMENT.
      */
     void setDimensions(size_t r, size_t c) {
-        clear();
+        actual_clear();
         if (0==c || 0==r) {
             return;
         }
@@ -443,12 +446,15 @@ public:
         assign(rhs);
     }
     virtual ~SquareMatrix() {
-        clear();
+        actual_clear();
+    }
+    void actual_clear() {
+        delete [] rowTotals;
+        rowTotals = nullptr;
     }
     virtual void clear() override {
         super::clear();
-        delete [] rowTotals;
-        rowTotals = nullptr;
+        actual_clear();
     }
     SquareMatrix& operator=(const SquareMatrix& rhs) {
         assign(rhs);
@@ -568,7 +574,10 @@ template <class F=std::stringstream, class M> intptr_t loadPartialRowFromLine
 }
 
 /**
- * @brief 
+ * @brief  if it hasn't been determined already, determine - from a single matrix
+ *         row that has just been read in, whether the matrix representation 
+ *         in the file being read is square, upper triangle, or lower triangle.
+ * 
  * @tparam M the matrix type
  * @tparam P the type used to report progress (expected to implement
  *           hide() and show() members).
