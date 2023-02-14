@@ -648,7 +648,5 @@ void IQTreeMixHmm::getMarginalProb(bool need_computeLike, int update_which_tree)
     if (need_computeLike) {
         computeLogLikelihoodSiteTree(update_which_tree);
     }
-    computeBackLikeArray();
-    computeFwdLikeArray();
     computeMarginalProb();
 }

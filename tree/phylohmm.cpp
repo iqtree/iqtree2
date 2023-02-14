@@ -18,6 +18,7 @@ PhyloHmm::PhyloHmm() {
     bwd_array = NULL;
     fwd_array = NULL;
     marginal_prob = NULL;
+    marginal_tran = NULL;
 }
 
 PhyloHmm::PhyloHmm(int n_site, int n_cat) {
@@ -28,6 +29,7 @@ PhyloHmm::PhyloHmm(int n_site, int n_cat) {
     // allocate memory for the arrays
     size_t prob_size = get_safe_upper_limit(ncat);
     size_t site_like_cat_size = get_safe_upper_limit(nsite) * ncat;
+    size_t site_transition_size = get_safe_upper_limit(nsite-1) * ncat * ncat;
     
     prob = aligned_alloc<double>(prob_size);
     prob_log = aligned_alloc<double>(prob_size);
@@ -41,8 +43,9 @@ PhyloHmm::PhyloHmm(int n_site, int n_cat) {
     bwd_array = aligned_alloc<double>(site_like_cat_size);
     fwd_array = aligned_alloc<double>(site_like_cat_size);
 
-    // allocate memory for the margainal probabilities
+    // allocate memory for the marginal probabilities
     marginal_prob = aligned_alloc<double>(site_like_cat_size);
+    marginal_tran = aligned_alloc<double>(site_transition_size);
 
     // the probabilities are initialized as equally distributed
     double init_prob_value = 1.0/((double)ncat);
@@ -247,6 +250,7 @@ double PhyloHmm::optimizeProbEM() {
 // optimize the parameters, including the transition matrix and the probability array
 double PhyloHmm::optimizeParameters(double gradient_epsilon) {
     // optimize the transition matrix
+    
     double score;
     score = modelHmm->optimizeParameters(gradient_epsilon);
     if (verbose_mode >= VB_MED) {
@@ -394,6 +398,10 @@ void PhyloHmm::computeMarginalProb() {
     double* f_array = fwd_array;
     double* b_array = bwd_array;
     double* mprob = marginal_prob;
+    
+    computeBackLikeArray();
+    computeFwdLikeArray();
+
     // cout << "Marginal probabilities:" << endl;
     for (int i=0; i<nsite; i++) {
         // cout << i+1;
@@ -407,6 +415,52 @@ void PhyloHmm::computeMarginalProb() {
         b_array += ncat;
         mprob += ncat;
     }
+}
+
+// compute the marginal probabilities for transitions between every pair of sites
+void PhyloHmm::computeMarginalTransitProb() {
+    double score, sum;
+    double* f_array = fwd_array;
+    double* b_array = bwd_array + ncat;
+    double* catlike_array = site_like_cat + ncat * (nsite - 1);
+    double* t_array;
+    double* mprob = marginal_tran;
+    double* t1 = new double[ncat * ncat];
+    double* t2 = new double[ncat * ncat];
+    int sq_ncat = ncat * ncat;
+    int k;
+    
+    computeBackLikeArray();
+    computeFwdLikeArray();
+
+    // cout << "Marginal transition probabilities:" << endl;
+    for (int i=0; i<nsite-1; i++) {
+        // cout << "(" << i+1 << "," << i+2 << ")";
+        t_array = modelHmm->getTransitLog();
+        k = 0;
+        for (int j1=0; j1<ncat; j1++) {
+            for (int j2=0; j2<ncat; j2++) {
+                t1[k] = f_array[j1] + catlike_array[j1];
+                t2[k] = b_array[j2] + t_array[k];
+                k++;
+            }
+        }
+        score = logDotProd(t1, t2, sq_ncat);
+        // cout << "[" << score << "]";
+        sum = 0.0;
+        for (k=0; k<sq_ncat; k++) {
+            mprob[k] = exp(t1[k] + t2[k] - score);
+            sum += mprob[k];
+            // cout << " " << mprob[k];
+        }
+        // cout << " {" << sum << "}" << endl;
+        f_array += ncat;
+        b_array += ncat;
+        catlike_array -= ncat;
+        mprob += ncat * ncat;
+    }
+    delete[] t1;
+    delete[] t2;
 }
 
 void PhyloHmm::showSiteLikeCat() {
@@ -434,3 +488,5 @@ void PhyloHmm::showTransiteLog() {
         cout << endl;
     }
 }
+
+

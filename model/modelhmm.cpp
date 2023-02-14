@@ -46,6 +46,11 @@ void ModelHmm::setPhyloHmm(PhyloHmm *phyloHmm) {
  @return log-likelihood value
  */
 double ModelHmm::optimizeParameters(double gradient_epsilon) {
+    
+    // changed to EM algorithm
+    return optimizeParametersByEM();
+    
+    // use BFGS algorithm
     double lower_bound = MIN_TRAN_PROB;
     double upper_bound = 1.0 - MIN_TRAN_PROB;
     
@@ -53,6 +58,34 @@ double ModelHmm::optimizeParameters(double gradient_epsilon) {
     double negative_lh;
     double ferror,optx;
     optx = minimizeOneDimen(lower_bound, tranSameCat, upper_bound, gradient_epsilon, &negative_lh, &ferror);
+    return -computeFunction(optx);
+}
+
+/**
+ Optimize the transition matrix by EM algorithm
+ @return log-likelihood value
+ */
+double ModelHmm::optimizeParametersByEM() {
+    // Optimize the transition matrix by EM algorithm
+    double* marginalTran;
+    int sq_ncat = ncat * ncat;
+    double optx;
+    int i,j,k;
+    
+    // compute the expected value of transition probability between the same categories
+    phylo_hmm->computeMarginalTransitProb();
+    marginalTran = phylo_hmm->marginal_tran;
+    optx = 0.0;
+    for (k=0; k<phylo_hmm->nsite-1; k++) {
+        // only consider the transition probs between the same categories
+        j = 0;
+        for (i=0; i<ncat; i++) {
+            optx += marginalTran[j];
+            j += (ncat + 1);
+        }
+        marginalTran += sq_ncat;
+    }
+    optx = optx / (double)(phylo_hmm->nsite-1);
     return -computeFunction(optx);
 }
 
