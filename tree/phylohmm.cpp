@@ -52,9 +52,6 @@ PhyloHmm::PhyloHmm(int n_site, int n_cat) {
     for (size_t i = 0; i < ncat; i++)
         prob[i] = init_prob_value;
     computeLogProb();
-    
-    // initialize the transition model
-    initializeTransitModel();
 }
 
 PhyloHmm::~PhyloHmm() {
@@ -71,16 +68,6 @@ PhyloHmm::~PhyloHmm() {
     aligned_free(marginal_prob);
     
     delete(modelHmm);
-}
-
-// initialize the transition model (override it for different transition model)
-// this function is invoked inside the constructor
-void PhyloHmm::initializeTransitModel() {
-    // by default, it uses the HMM simple transition matrix
-    // the transition probabilities between different categories are the same
-    modelHmm = new ModelHmm(ncat);
-    // set the associated PhyloHmm of modelHmm to this
-    modelHmm->setPhyloHmm(this);
 }
 
 // compute backward log-likelihood
@@ -255,17 +242,17 @@ double PhyloHmm::optimizeParameters(double gradient_epsilon) {
     score = modelHmm->optimizeParameters(gradient_epsilon);
     if (verbose_mode >= VB_MED) {
         cout << "after optimizing the transition matrix, HMM likelihood = " << score << endl;
-        cout << "modelHmm->tranSameCat : " << modelHmm->tranSameCat << endl;
+        // cout << "modelHmm->tranSameCat : " << modelHmm->tranSameCat << endl;
     }
     // optimize the probability array
     score = optimizeProbEM();
     if (verbose_mode >= VB_MED) {
         cout << "after optimizing the probability array, HMM likelihood = " << score << endl;
-        cout << "probability array :";
-        for (size_t i = 0; i < ncat; i++) {
-            cout << " " << prob[i];
-        }
-        cout << endl;
+//        cout << "probability array :";
+//        for (size_t i = 0; i < ncat; i++) {
+//            cout << " " << prob[i];
+//        }
+//        cout << endl;
     }
     return score;
 }

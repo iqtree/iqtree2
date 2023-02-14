@@ -8,12 +8,6 @@
 #ifndef modelhmmgm_h
 #define modelhmmgm_h
 
-#include <string>
-#include "utils/tools.h"
-#include "utils/optimization.h"
-#include "utils/checkpoint.h"
-#include "tree/phylohmm.h"
-#include "tree/phylotree.h"
 #include "modelhmm.h"
 
 #define MIN_VALUE 1e-5
@@ -21,7 +15,10 @@
 
 using namespace std;
 
-class ModelHmmGm: public ModelHmm {
+class PhyloHmm;
+
+class ModelHmmGm: public ModelHmm
+{
 public:
     /**
      constructor
@@ -44,6 +41,11 @@ public:
      */
     virtual string getName() { return "GM"; }
     
+    /**
+     * @return HMM model full name
+     */
+    virtual string getFullName() { return "General Model"; }
+
     // initialize parameters
     virtual void initialize_param();
     
@@ -74,18 +76,6 @@ protected:
     // set the bounds
     virtual void setBounds(double *lower_bound, double *upper_bound, bool* bound_check);
     
-    /**
-     the target function which needs to be optimized
-     @param x the input vector x
-     @return the function value at x
-     */
-    virtual double targetFunk(double x[]);
-    
-    // Parameter: log values of transition matrix
-    // dimension: ncat x ncat
-    // transitLog[i*ncat+j] : log of transition probability for a site with cat i to the next site with cat j
-    double* transitLog;
-    
 private:
     
     // Parameter: transition matrix
@@ -100,6 +90,12 @@ private:
 
     // compute the log values of transition matrix
     virtual void computeLogTransits();
+
+    /**
+     Optimize the transition matrix by EM algorithm
+     @return log-likelihood value
+     */
+    virtual double optimizeParametersByEM();
 
 };
 

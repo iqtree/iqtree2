@@ -69,6 +69,30 @@ void IQTreeMixHmm::initializeModel(Params &params, string model_name, ModelsBloc
     if (verbose_mode >= VB_MED) {
         showBranchGrp();
     }
+    
+    // initialize the transition model
+    initializeTransitModel(params);
+}
+
+// initialize the transition model (override it for different transition model)
+// this function is invoked inside the constructor
+void IQTreeMixHmm::initializeTransitModel(Params &params) {
+    // by default, it uses the HMM simple transition matrix
+    // the transition probabilities between different categories are the same
+    if (params.optimize_params_use_hmm_sm && params.optimize_params_use_hmm_gm) {
+        outError("Error! The options -hmmster{sm} and -hmmster{gm} cannot be used together.");
+    }
+    if (params.optimize_params_use_hmm_gm) {
+        modelHmm = new ModelHmmGm(ncat);
+    } else {
+        modelHmm = new ModelHmm(ncat);
+    }
+    
+    // show the transition model
+    cout << "HMM transition model: " << modelHmm->getFullName() << " (" << modelHmm->getName() << ")"<< endl;
+
+    // set the associated PhyloHmm of modelHmm to this
+    modelHmm->setPhyloHmm(this);
 }
 
 // obtain the log-likelihoods for every site and every tree

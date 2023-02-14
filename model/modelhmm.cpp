@@ -12,9 +12,7 @@ ModelHmm::ModelHmm(int numcat) {
     // memory allocation of the array
     size_t transit_size = get_safe_upper_limit(ncat * ncat);
     transitLog = aligned_alloc<double>(transit_size);
-    
-    if (getName() == "SM")
-        initialize_param();
+    initialize_param();
 }
 
 /**

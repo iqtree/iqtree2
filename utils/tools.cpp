@@ -1179,6 +1179,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
     params.optimize_params_use_hmm = false;
+    params.optimize_params_use_hmm_sm = false;
+    params.optimize_params_use_hmm_gm = false;
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -3408,6 +3410,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "-hmmster") == 0) {
                 params.optimize_params_use_hmm = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{sm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{gm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_gm = true;
                 continue;
             }
 			if (strcmp(argv[cnt], "-brent") == 0) {

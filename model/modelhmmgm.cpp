@@ -51,7 +51,11 @@ void ModelHmmGm::initialize_param() {
  @return log-likelihood value
  */
 double ModelHmmGm::optimizeParameters(double gradient_epsilon) {
-    // the array is only for optimization of transition matrix
+
+    // changed to EM algorithm
+    return optimizeParametersByEM();
+
+    // use BFGS algorithm
     int ndim = getNDim();
     double *variables = new double[ndim + 1];
     double *upper_bound = new double[ndim + 1];
@@ -74,6 +78,36 @@ double ModelHmmGm::optimizeParameters(double gradient_epsilon) {
 }
 
 /**
+ Optimize the transition matrix by EM algorithm
+ @return log-likelihood value
+ */
+double ModelHmmGm::optimizeParametersByEM() {
+    // Optimize the transition matrix by EM algorithm
+    double* marginalTran;
+    int sq_ncat = ncat * ncat;
+    int dim = phylo_hmm->nsite-1;
+    int i,j,k;
+    
+    // compute the expected value of transition probability between the same categories
+    phylo_hmm->computeMarginalTransitProb();
+    marginalTran = phylo_hmm->marginal_tran;
+    // reset the values of transit array
+    memset(transit, 0, sizeof(double) * sq_ncat);
+    for (k=0; k<dim; k++) {
+        for (i=0; i<sq_ncat; i++) {
+            transit[i] += marginalTran[i];
+        }
+        marginalTran += sq_ncat;
+    }
+    for (i=0; i<sq_ncat; i++) {
+        transit[i] = transit[i] / (double) dim;
+    }
+    computeNormalizedTransits();
+    computeLogTransits();
+    return -phylo_hmm->computeBackLike();
+}
+
+/**
  Show parameters
  */
 void ModelHmmGm::showParameters(ostream& out) {
@@ -84,7 +118,7 @@ void ModelHmmGm::showParameters(ostream& out) {
         for (j = 0; j < ncat; j++) {
             if (j > 0)
                 out << "\t";
-            out << setprecision(10) << transit_normalize[k];
+            out << fixed << setprecision(5) << transit_normalize[k];
             k++;
         }
         out << endl;

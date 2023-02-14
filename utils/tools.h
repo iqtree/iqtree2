@@ -1690,6 +1690,12 @@ public:
     /** optimize the parameters according to the HMM model (HMMSTER) */
     bool optimize_params_use_hmm;
 
+    /** optimize the parameters according to the HMM model (HMMSTER) using simple transition model*/
+    bool optimize_params_use_hmm_sm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
+    bool optimize_params_use_hmm_gm;
+
     /**
             criterion to assess important quartet
      */

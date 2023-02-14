@@ -12,6 +12,7 @@
 #include "iqtreemix.h"
 #include "tree/phylohmm.h"
 #include "model/modelhmm.h"
+#include "model/modelhmmgm.h"
 
 class IQTreeMixHmm : public IQTreeMix, public PhyloHmm {
 public:
@@ -25,6 +26,9 @@ public:
     
     // initialize the model
     void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
+
+    // initialize the transition model
+    void initializeTransitModel(Params &params);
     
     // initialize the parameters
     void initializeParams();
