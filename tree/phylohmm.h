@@ -48,6 +48,7 @@ inline double logDotProd(double* ln_x, double* ln_y, int n) {
 }
 
 class ModelHmm;
+class ModelHmmGm;
 
 /**
  HMM phylo model base class
@@ -61,10 +62,6 @@ public:
     
     //destructor
     ~PhyloHmm();
-    
-    // initialize the transition model (override it for different transition model)
-    // this function is invoked inside the constructor
-    virtual void initializeTransitModel();
     
     // prerequisite for the following three functions:
     //     array site_like_cat has to be updated

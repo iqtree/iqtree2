@@ -11,8 +11,8 @@
 #include <string>
 #include "utils/tools.h"
 #include "utils/optimization.h"
-#include "tree/phylohmm.h"
 #include "tree/phylotree.h"
+#include "tree/phylohmm.h"
 
 #define MIN_TRAN_PROB 1e-5
 #define INITIAL_PROB_SAME_CAT 0.95
@@ -48,6 +48,11 @@ public:
      * @return HMM model name
      */
     virtual string getName() { return "SM"; }
+
+    /**
+     * @return HMM model full name
+     */
+    virtual string getFullName() { return "Simple Model"; }
 
     // initialize parameters
     virtual void initialize_param();
@@ -103,10 +108,9 @@ private:
 
     /**
      Optimize the transition matrix by EM algorithm
-     Prerequisite: phylo_hmm->computeBackLikeArray() and phylo_hmm->computeFwdLikeArray() have been invoked
      @return log-likelihood value
      */
-    double optimizeParametersByEM();
+    virtual double optimizeParametersByEM();
 };
 
 #endif
