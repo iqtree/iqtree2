@@ -83,9 +83,7 @@ public:
 
     // show the assignment of the categories along sites with max likelihood
     void showSiteCatMaxLike(ostream& out);
-
-protected:
-
+    
     // number of sites
     int nsite;
     
@@ -136,6 +134,9 @@ protected:
     
     // marginal probabilities
     double* marginal_prob;
+    
+    // marginal transition probabilities
+    double* marginal_tran;
 
     // compute backward log-likelihood
     // and all the intermediate results are saved in bwd_array array
@@ -157,6 +158,9 @@ protected:
     // compute the marginal probabilities for each site
     void computeMarginalProb();
 
+    // compute the marginal probabilities for transitions between every pair of sites
+    void computeMarginalTransitProb();
+    
 private:
 
     // compute the log values of prob

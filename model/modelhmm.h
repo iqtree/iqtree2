@@ -101,6 +101,12 @@ private:
     // for optimization
     double computeFunction(double tran_same_cat);
 
+    /**
+     Optimize the transition matrix by EM algorithm
+     Prerequisite: phylo_hmm->computeBackLikeArray() and phylo_hmm->computeFwdLikeArray() have been invoked
+     @return log-likelihood value
+     */
+    double optimizeParametersByEM();
 };
 
 #endif
