@@ -191,6 +191,7 @@ string getSeqTypeName(SeqType seq_type) {
         case SEQ_UNKNOWN: return "unknown";
         case SEQ_MULTISTATE: return "MultiState";
     }
+    return "unknown";
 }
 
 string getUsualModelSubst(SeqType seq_type) {
@@ -268,6 +269,7 @@ double CandidateModel::getScore(ModelTestCriterion mtc) {
             ASSERT(0 && "Unhandled case");
             return 0.0;
     }
+    return 0.0;
 }
 
 double CandidateModel::getScore() {

@@ -598,6 +598,7 @@ int IQTreeMix::getNumLhCat(SiteLoglType wsl) {
     case WSL_TMIXTURE:
         return size();
     }
+    return ncat;
 }
 
 // compute the log-likelihood values for every site and tree

@@ -668,6 +668,7 @@ string getASCName(ASCType ASC_type) {
         case ASC_INFORMATIVE_MISSING:
             return "+ASC_INF_MIS";
     }
+    return "";
 }
 
 string PhyloTree::getSubstName() {
