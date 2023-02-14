@@ -838,6 +838,7 @@ protected:
         #endif
         {
             int step = getThreadCount();
+            double per_thread_best_dist = global_best_dist;
             for (int i = getThreadNumber(); i < n; i+=step ) {
                 int r = rows_by_dist[i].second;
                 int y = row_cluster[r];
@@ -845,9 +846,17 @@ protected:
                     continue;                    
                 }
                 findPartnerForOneCluster(r,y);
-                #pragma omp critical
-                if (row_best_dist[r] < global_best_dist) {
-                    global_best_dist = row_best_dist[r];
+                if (row_best_dist[r] < per_thread_best_dist) {
+                    per_thread_best_dist = row_best_dist[r];
+                    if (per_thread_best_dist < global_best_dist) {
+                        #pragma omp critical
+                        if (per_thread_best_dist < global_best_dist) {
+                            global_best_dist = per_thread_best_dist;
+                        }
+                        else {
+                            per_thread_best_dist = global_best_dist;
+                        }
+                    }
                 }
             }
         }

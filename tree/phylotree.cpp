@@ -4646,7 +4646,7 @@ void PhyloTree::computeBioNJ(Params &params) {
     bionj_file += ".bionj";
     this->decideDistanceFilePath(params);
     auto treeBuilder
-        = StartTree::Factory::getTreeBuilderByName
+        = StartTree::Registry::getTreeBuilderByName
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
     double timeToWriteDistanceFile = 0.0;

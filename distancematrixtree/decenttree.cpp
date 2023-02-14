@@ -153,18 +153,22 @@ void showUsage() {
  *                         vary.
  * @param report_progress  whether to display a progress bar
  * @param m                (output) the distance matrix
+ * @param alphabet         the alphabet to use (if blank will be determined by
+ *                         reading the sequences)
+ * 
  * @return true  (if the sequences could be loaded, their distances calculated)
  * @return false (if an error occurred)
  */
 
 bool loadSequenceDistancesIntoMatrix(Sequences& sequences,
-                                     const std::vector<char>&   is_site_variant,
-                                     bool report_progress, FlatMatrix& m) {
+                                     const std::vector<char>& is_site_variant,
+                                     bool report_progress, FlatMatrix& m,
+                                     std::string& alphabet) {
     SequenceLoader loader(unknown_char, is_DNA, max_distance,
                           sequences, correcting_distances,
                           precision, compression_level, format, 
                           is_site_variant, report_progress);
-    bool success = loader.loadSequenceDistances(m);
+    bool success = loader.loadSequenceDistances(m, alphabet);
     return success;
 }
 
@@ -227,7 +231,7 @@ bool writeMSAOutputFile(const Sequences& sequences, const std::string& msaPath)
         }
         success = true;
     }
-    catch (std::ios::failure& f) {
+    catch (const std::ios::failure& f) {
         std::cerr << "I/O error trying to write"
             << " MSA format file: " << msaPath << std::endl;
     }
@@ -449,7 +453,7 @@ bool prepInput(const std::string& fastaFilePath,
         if (loadMatrix) {
             if (!loadSequenceDistancesIntoMatrix
                             (sequences, is_site_variant,
-                            reportProgress, m)) {
+                            reportProgress, m, alphabet)) {
                 return false;
             }
         }
@@ -476,7 +480,7 @@ bool prepInput(const std::string& fastaFilePath,
                                       correcting_distances, precision, 
                                       compression_level, format,
                                       is_site_variant, reportProgress);
-                bool success = loader.writeDistanceMatrixToFile(numbered_names, 
+                bool success = loader.writeDistanceMatrixToFile(numbered_names, alphabet,
                                                                 distanceOutputFilePath);
                 return success;
             }
@@ -675,9 +679,13 @@ public:
             outputFilePath = "STDOUT";
         }
         isBannerSuppressed |= beSilent;
+        if (!alphabet.empty() && is_DNA) {
+            is_DNA = false;
+        }
         if (alphabet.empty() && is_DNA) {
             alphabet = "ACGT";
         }
+
         if (unknown_chars.empty()) {
             unknown_chars = ".~_-?N";
             unknown_char  = 'N';

@@ -239,7 +239,10 @@ inline uint64_t countBitsSetInEither
 
 //W is the number of bytes in a CV (or CBV)
 /**
- * @brief 
+ * @brief  Determine hamming distance between two sequences 
+ *         (using the specified vector types, supplied via 
+ *         the template parameters).
+ * 
  * @tparam DV  - distance vector type  (of W/8 uint64_t)
  * @tparam CV  - character vector type (of W characters)
  * @tparam CBV - boolean vector type   (same rank as CV)

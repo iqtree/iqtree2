@@ -860,8 +860,13 @@ public:
                       //enclosing parentheses and a trailing semi-colon
                       //is not supported.
     }
+
     /**
-     * @brief 
+     * @brief  Given the path of a (possibly compressed) file that contains a
+     *         distance matrix in phylip format (square, upper or lower triangle),
+     *         and the path of an output file to write it to, infer a phylogenetic 
+     *         tree, and write a representation of the tree (in Newick format) to 
+     *         the output file.  
      * 
      * @param  distanceMatrixFilePath - the path of the input phylip format file
      * @param  newickTreeFilePath - the path to which the output newick format

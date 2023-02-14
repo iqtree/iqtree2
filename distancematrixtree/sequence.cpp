@@ -162,7 +162,7 @@ double correctedDistance(double char_dist,  double chars_compared,
     if (max_distance<=d) {
         d = max_distance;
     }
-    return d;
+     return d;
 }
 
 /**
@@ -367,9 +367,11 @@ bool Sequences::loadSequencesFromFasta(const std::string& fastaFilePath,
     }
     size_t line_num = 1;
     std::vector<int> in_alphabet;
-    in_alphabet.resize(256, 0);
-    for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
-        in_alphabet[*alpha] = 1;
+    in_alphabet.resize(256, alphabet.empty() ? 1 : 0);
+    if (!alphabet.empty()) {
+        for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
+            in_alphabet[*alpha] = 1;
+        }
     }
     for (; !in.eof(); ++line_num) {
         std::string line;
@@ -406,6 +408,52 @@ bool Sequences::loadSequencesFromFasta(const std::string& fastaFilePath,
 }
 
 /**
+ * @brief  Read the first line of a Phylip Alignment file (which is the number of sequences,
+ *         white space, and the length of all the sequences)
+ * 
+ * @tparam S                the stream type
+ * @param  in               the stream itself
+ * @param  num_sequences    reference - will have the number of sequences
+ *                          in the alignment assigned to it (on success)
+ * @param  sequence_length  reference - will have the length of the sequences
+ *                          (every sequence must have the same length)
+ *                          assigned to it (on success)
+ * @return true             on success
+ * @return false            on failure (an error message will have been written
+ *                          to standard output).
+ * 
+ * @note   it is assumed that failbit is not already set on the stream when this 
+ *         function is called.
+ */
+template <class S> bool readFirstLineOfPhylipAlignmentFile(S& in, size_t& num_sequences, size_t& sequence_length) {
+    if (in.eof()) {
+        std::cerr << "Sequence file was empty.";
+        return false;
+    }
+    std::string line;
+    safeGetLine(in, line);
+    //Read the header line
+    std::stringstream linestream(line);
+    linestream >> num_sequences;
+    if (in.fail()) {
+        std::cerr << "Could not read number of sequences.";
+        return false;
+    }
+    linestream >> sequence_length;
+    if (in.fail()) {
+        std::cerr << "Could not read sequence length.";
+        return false;
+    }
+    if (num_sequences < 1 || sequence_length < 1 ) {
+        std::cerr << "Number of sequences " << num_sequences
+                    << " or Sequence length " << sequence_length
+                    << " was invalid.";
+        return false;
+    }
+    return true;
+}
+
+/**
  * @brief  Load a sequence alignment from a phylip format file
  * @param  phylipFilePath   - the path to the file
  * @param  alphabet        - the (nucleotide?) alphabet to use
@@ -437,12 +485,20 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
     }
     size_t line_num = 1;
     std::vector<int> in_alphabet;
-    in_alphabet.resize(256, 0);
-    for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
-        in_alphabet[*alpha] = 1;
+    in_alphabet.resize(256, alphabet.empty() ? 1 : 0);
+    if (!alphabet.empty()) {
+        for (auto alpha=alphabet.begin(); alpha!=alphabet.end(); ++alpha) {
+            in_alphabet[*alpha] = 1;
+        }
     }
     size_t num_sequences       = 0;
     size_t sequence_length     = 0;
+    if (!readFirstLineOfPhylipAlignmentFile(in, num_sequences, sequence_length))
+    {
+        in.close();
+        return false;
+    }
+
     bool   have_read_names     = 0;
     size_t name_length         = 0; //Number of characters to use for sequence name
     size_t sequence_num        = 0; //Ordinal sequence # to read next
@@ -450,20 +506,6 @@ bool Sequences::loadSequencesFromPhylip(const std::string& phylipFilePath,
     for (; !in.eof(); ++line_num) {
         std::string line;
         safeGetLine(in, line);
-        if (line_num == 1) {
-            //Read the header line
-            std::stringstream linestream(line);
-            linestream >> num_sequences;
-            linestream >> sequence_length;
-            if (num_sequences < 1 || sequence_length < 1 ) {
-                in.close();
-                std::cerr << "Number of sequences " << num_sequences
-                          << " or Sequence length " << sequence_length
-                          << " was invalid.";
-                return false;
-            }
-            continue;
-        }
         if (line == "") {
             if (sequence_num!=0 && sequence_num!=num_sequences) {
                 in.close();
@@ -774,28 +816,46 @@ void SequenceLoader::setUpSerializedData() {
 
 /**
  * @brief Determine the number of states (needed for correcting distances)
+ * @param alphabet - on entry the alphabet supplied by the user
+ *                 - on exit, the same (if one was supplied, minus 
+ *                   any duplicates), or the distinct characters found
+ *                   in the input, if is_DNA is false, and a blank
+ *                   alphabet was supplied.
  */
-void SequenceLoader::getNumberOfStates() {
+void SequenceLoader::getNumberOfStates(std::string& alphabet) {
     num_states = 0.0;
     if (is_DNA) {
         num_states = 4;
     }
-    else
-    {
+    else {
         std::vector<size_t> char_counts;
         char_counts.resize(256, 0);
         auto char_count_array = char_counts.data();
-        const unsigned char* start_buffer = reinterpret_cast<unsigned char*>(buffer);
-        const unsigned char* end_buffer   = start_buffer + rank * seqLen;
-        for (const unsigned char* scan=start_buffer; scan<end_buffer; ++scan) {
-            ++char_count_array[*scan];
+        if (!alphabet.empty()) {
+            //Determine what the distinct characters in the user-supplied
+            //alphabet were.
+            for (const unsigned char ch : alphabet) {
+                ++char_count_array[ch];
+            }
         }
+        else
+        {
+            //Determine what the distinct characters in the input were
+            //(if we were told, it wasn't DNA but we weren't supplied an alphabet)
+            const unsigned char* start_buffer = reinterpret_cast<unsigned char*>(buffer);
+            const unsigned char* end_buffer   = start_buffer + rank * seqLen;
+            std::cout << "scanning: " << rank << " sequences of length " << seqLen << std::endl;
+            for (const unsigned char* scan=start_buffer; scan<end_buffer; ++scan) {
+                ++char_count_array[*scan];
+            }
+        }        
+        alphabet.clear();
         for (int i=0; i<256; ++i) {
-            num_states += (char_counts[i]==0) ? 0 : 1;
-        }
-        if (0<char_counts[unknown_char]) {
-            --num_states;
-        }
+            if (i!=unknown_char && 0<char_counts[i]) {
+                alphabet.push_back(static_cast<char>(i));
+            }
+        }        
+        num_states = alphabet.length();        
     }
 }
 
@@ -817,7 +877,7 @@ SequenceLoader::SequenceLoader(char unknown, bool isDNA,
     , is_site_variant(site_variant)
     , report_progress(report_progress_while_loading), unkLen(0)
     , buffer(nullptr), sequence_data(nullptr)
-    , unk_buffer(nullptr), unknown_data(nullptr) {
+    , unk_buffer(nullptr), unknown_data(nullptr), num_states(4) {
     rank      = sequences.size();
     rawSeqLen = sequences.front().sequenceLength();
     seqLen    = 0;
@@ -899,6 +959,8 @@ double SequenceLoader::getDistanceBetweenSequences(intptr_t row, intptr_t col) c
  * @brief  Calculate pairwise distances, for every pair of sequences
  * @param  m - reference to the FlatMatrix into which distances are to be
  *             written.
+ * @param  alphabet - alphabet to use (if blank, will be determined 
+ *                    from the sites of the sequences)
  * @return true  - always 
  * @return false - in theory, could return this if it failed (but it won't)
  *         (though it might throw an out of memory exception, I suppose)
@@ -909,13 +971,14 @@ double SequenceLoader::getDistanceBetweenSequences(intptr_t row, intptr_t col) c
  *         (we may hope) "load balance better" (because the small bits of
  *         work that won't take so long, occur for the later rows).
  */
-bool SequenceLoader::loadSequenceDistances(FlatMatrix& m) {
+bool SequenceLoader::loadSequenceDistances(FlatMatrix& m, std::string& alphabet) {
     m.setSize(rank);
     for (intptr_t row=0; row<rank; ++row) {
         m.addCluster(sequences[row].getName());
     }
     setUpSerializedData();
-    getNumberOfStates();
+    getNumberOfStates(alphabet);
+
     #if USE_PROGRESS_DISPLAY
     const char* task = report_progress ? "Calculating distances": "";
     progress_display progress( rank*(rank-1)/2, task );
@@ -946,6 +1009,8 @@ bool SequenceLoader::loadSequenceDistances(FlatMatrix& m) {
  *         calculating a distance matrix on a memory-challenged machine).
  * @param  numbered_names - true if names are to be numbered,
  *                          false if the existing names are to be used
+ * @param  alphabet       - can be passed in (if blank, alphabet will be
+ *                          determined from the sequence character data)
  * @param  filePath       - the path of the (phylip format) output file
  * @return true  - on success
  * @return false - on failure (error messages will be written to std::cerr)
@@ -959,9 +1024,10 @@ bool SequenceLoader::loadSequenceDistances(FlatMatrix& m) {
  *         are parallelized over the columns to be outputted in that row
  */
 bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
+                                               std::string& alphabet,
                                                const std::string& filePath) {
     setUpSerializedData();
-    getNumberOfStates();
+    getNumberOfStates(alphabet);
 
     #if USE_PROGRESS_DISPLAY
     bool   isTriangle = contains(output_format,"lower") ||
@@ -982,6 +1048,7 @@ bool SequenceLoader::writeDistanceMatrixToFile(bool numbered_names,
         progress_display& show_progress;
     public:
         typedef FlatMatrix super;
+        FakeMatrix(const FakeMatrix& rhs) = delete;
         FakeMatrix(SequenceLoader& my_owner, progress_display& progress_bar)
             : super(), owner(my_owner), show_progress(progress_bar) {}
         virtual void setSize(intptr_t rows) { rowCount=rows;}

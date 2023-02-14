@@ -530,7 +530,7 @@ Params::Params() :
     start_real_time(0),       //Likewise (timing info).
     iteration_multiple(1), user_file(),
 	start_tree(START_TREE_TYPE::STT_PLL_PARSIMONY),
-    start_tree_subtype_name(StartTree::Factory::getNameOfDefaultTreeBuilder()),
+    start_tree_subtype_name(StartTree::Registry::getNameOfDefaultTreeBuilder()),
     divergence_graph_file_path(), modelfinder_ml_tree(true),
     final_model_opt(true), constraint_tree_file(nullptr), out_prefix(),
     aln_file(nullptr), phylip_sequential_format(false),
