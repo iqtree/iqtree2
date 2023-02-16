@@ -12,7 +12,11 @@ Notes for the merge from the decenttree project, 22-Jan-2023.
    (b) clustertree.h                 (tree representations)
    (c) flatmatrix.h + flatmatrix.cpp (distance matrices)
    (d) hashrow.h                     (hashing of matrix rows)
-   (e) sequence.cpp + sequence.h     (sequence-loading into 
+   (e) sequence.cpp + sequence.h     (sequence-loading)
+
+   Most of these files are linked into a decentmatrixtree
+   static library that is included into the link for iqtree2
+   (by CMakeLists.txt in the topmost iqtree directory).
 4. There are a number of additional files in the utils folder:
    (a) argument.cpp + argument.h (command-line argument parsing)
    (b) my_assert.h               (assertions, drawn out of tools.h)
@@ -31,11 +35,14 @@ Notes for the merge from the decenttree project, 22-Jan-2023.
    (e) operatingsystem.cpp + operatingsystem.h
        (Microsoft MSVC / Windows console file path is different!)
    (f) timeutil.h (Microsoft MSVC, use the Windows time structures)
-6. decentTree target is no longer built in utils folder
-   (it isn't built at all.  I'll probably address this in a later commit).
+6. decenttree is built in build/distancematrixtree, now, 
+   rather than in build/utils.
 7. Changes to files in the alignment folder are mostly needed because
    of functions moved out of utils/tools.cpp (see 4), especially
-   safeGetLine().
+   safeGetLine().  Also because StartTree::Factory became
+   StartTree::Registry (because it's a registry not a factory!).
+   I also changed the type of some member variables in Alignment
+   from std::vector<string> to StrVector.
 8. Changes to files in the main folder are mostly about switching
    over std::vector<string> to StrVector (in a few places where that
    is now needed).
@@ -44,3 +51,21 @@ Notes for the merge from the decenttree project, 22-Jan-2023.
 10.Likewise, I made AliSimulator's destructor virtual (it wasn't!).
 11.The top-most CMakeLists.txt, distancematrixtree (folder and lib) 
    are added, and USE_PROGRESS_DISPLAY is defined to 1.
+   decenttree uses a USE_VECTORCLASS_LIBRARY symbol (either 0 or 1)
+   to tell it whether it should use the vector class library 
+   (that's why it needs to be set to 1 in CMakeLists.txt; the 
+   default, if it's not set is to treat it as though it is 0).
+   (Needed this for header-only compile of bits of decenttree).
+   There are also references to the distancematrixtree static
+   library (see next point).
+
+Changes to existing (and new) distance matrix algorithm files:
+(a) bionj.cpp compiles with fewer warnings under Visual Studio
+    (this is the original BIONJ; the changes just turn off
+    some warnings)
+(b) fancyrapidnj.h provides ONJ-R and ONJ-R-V algorithms
+    (there is no ONJ, if there were an ONJ that didn't do 
+    branch and bound, it'd be pretty much the same thing
+    as NJ with a different matrix representation)
+
+
