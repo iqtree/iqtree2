@@ -87,8 +87,10 @@ void addBioNJ2020TreeBuilders(Registry& f) {
                                                 " (Simonsen, Mailund, Pedersen [2011])");
 
     #if USE_VECTORCLASS_LIBRARY
-    ADVERTISE(Vectorized_RapidNJ,    "NJ-R-V",  "Rapid Neighbour Joining (Vectorized)"
-                                                " (Simonsen, Mailund, Pedersen [2011])");
+    ADVERTISE(Vectorized_RapidNJ,    "NJ-R-V",     "Rapid Neighbour Joining (Vectorized)"
+                                                   " (Simonsen, Mailund, Pedersen [2011])");
+    ADVERTISE(Vectorized_RapidBIONJ, "BIONJ-R-V",  "BIONJ (Gascuel, Cong [2009]) (Vectorized)"
+                                                   " with branch and bound (Simonsen, Mailund, Pedersen [2011])");
     ADVERTISE(VectorizedFancyNJMatrix<NJFloat>, "ONJ-R-V",  "Rapid Neighbour Joining (a rival version)"
                                                 " (Simonsen, Mailund, Pedersen [2011]) (Vectorized)");
     #endif
