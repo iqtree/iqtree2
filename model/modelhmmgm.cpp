@@ -102,6 +102,11 @@ double ModelHmmGm::optimizeParametersByEM() {
     for (i=0; i<sq_ncat; i++) {
         transit[i] = transit[i] / (double) dim;
     }
+//    // verify whether the transition between the same category is too small
+//    for (i=0; i<sq_ncat; i+=(ncat+1)) {
+//        if (transit[i] < MIN_SAME_CAT_TRAN_PROB)
+//            transit[i] = MIN_SAME_CAT_TRAN_PROB;
+//    }
     computeNormalizedTransits();
     computeLogTransits();
     return -phylo_hmm->computeBackLike();
