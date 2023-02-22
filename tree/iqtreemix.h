@@ -404,7 +404,7 @@ protected:
      update the ptn_freq array according to the posterior probabilities along each site for each tree
      
      */
-    void computeFreqArray(double* pattern_mix_lh, bool need_computeLike, int update_which_tree = -1);
+    void computeFreqArray(double* pattern_mix_lh, bool need_computeLike = true, int update_which_tree = -1);
     
     /**
      optimize tree k separately

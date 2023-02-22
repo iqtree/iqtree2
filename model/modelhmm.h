@@ -14,8 +14,9 @@
 #include "tree/phylotree.h"
 #include "tree/phylohmm.h"
 
-#define MIN_TRAN_PROB 1e-5
-#define INITIAL_PROB_SAME_CAT 0.95
+#define MIN_TRAN_PROB 1e-6
+#define MIN_SAME_CAT_TRAN_PROB 0.99
+#define INITIAL_PROB_SAME_CAT 0.9999
 
 using namespace std;
 

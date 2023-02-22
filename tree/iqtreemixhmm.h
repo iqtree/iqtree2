@@ -24,6 +24,11 @@ public:
     
     IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees);
     
+    /**
+    default destructor
+     */
+    ~IQTreeMixHmm();
+    
     // initialize the model
     void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
 
@@ -33,6 +38,9 @@ public:
     // initialize the parameters
     void initializeParams();
     
+    // initialize the tree weights according to the marginal probabilities along the sites
+    void initializeTreeWeights();
+
     // compute the log of dotproduct of the logorithm arrays
     double logDotProd(double* ln_x, double* ln_y, int n);
     
@@ -54,7 +62,7 @@ public:
      @param iterations number of iterations to loop through all branches
      @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    double optimizeAllBranches(double* pattern_mix_lh = NULL, int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
     
     double optimizeAllBranchLensByBFGS(double gradient_epsilon, double logl_epsilon, int maxsteps = 3);
     /**
@@ -65,6 +73,9 @@ public:
     virtual void startCheckpoint();
     
     virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
+
+    // Optimize the MAST model starting from the current parameter values
+    string optimizeModelParamTreeMix(bool printInfo, double logl_epsilon);
     
     virtual void setNumThreads(int num_threads);
     
@@ -82,10 +93,10 @@ public:
     void showParameters(ostream& out);
     
     // optimize all substitution models
-    double optimizeAllSubstModels(double gradient_epsilon);
+    double optimizeAllSubstModels(double gradient_epsilon, double* pattern_mix_lh = NULL);
     
     // optimize all RHAS models
-    double optimizeAllRHASModels(double gradient_epsilon, double score = 0.0);
+    double optimizeAllRHASModels(double gradient_epsilon, double score = 0.0, double* pattern_mix_lh = NULL);
     
 private:
     
@@ -98,6 +109,13 @@ private:
     // -1  : no branch group is under optimization
     // >=0 : optimizing a specific branch group
     int optimBranchGrp;
+    
+    // which objective function (default: backLikelihood)
+    // 0: backLikelihood
+    // 1: MAST
+    int objFun;
+    
+    string* objAlgo;
     
     // branch lengths of all the trees
     vector<DoubleVector> allbranchlens;
@@ -147,7 +165,7 @@ private:
     void setAvgLenEachBranchGrp();
     
     // update the ptn_freq array according to the marginal probabilities along each site for each tree
-    void computeFreqArray(bool need_computeLike = true, int update_which_tree = -1);
+    void computeFreqArray(double* pattern_mix_lh = NULL, bool need_computeLike = true, int update_which_tree = -1);
     
     // get marginal probabilities along each site for each tree
     void getMarginalProb(bool need_computeLike = true, int update_which_tree = -1);

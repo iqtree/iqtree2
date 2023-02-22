@@ -453,7 +453,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
                 reportModel(out, *treemix->at(i));
             }
         }
-        if (!tree.isHMM()) {
+        // if (!tree.isHMM()) {
             // show the tree weights
             out << "Tree weights: ";
             for (i=0; i<treemix->size(); i++) {
@@ -462,7 +462,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
                 out << treemix->weights[i];
             }
             out << endl << endl;
-        }
+        // }
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;

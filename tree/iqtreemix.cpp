@@ -1573,8 +1573,8 @@ void IQTreeMix::setMinBranchLen(Params& params) {
         params.min_branch_length = MAST_MIN_BRANCH_LEN;
         if (size() > 0) {
             if (!at(0)->isSuperTree() && at(0)->getAlnNSite() >= 100000) {
-                // params.min_branch_length = MAST_MIN_BRANCH_LEN; // 0.1 / (at(0)->getAlnNSite());
-                params.min_branch_length = 0.1 / (at(0)->getAlnNSite());
+                params.min_branch_length = MAST_MIN_BRANCH_LEN; // 0.1 / (at(0)->getAlnNSite());
+                // params.min_branch_length = 0.1 / (at(0)->getAlnNSite());
                 num_prec = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
                 for (i=0; i<size(); i++)
                     at(i)->num_precision = num_prec;
@@ -1933,6 +1933,8 @@ void IQTreeMix::initializeTreeWeights() {
     
     // estimate the tree weights
     for (i=0; i<nptn; i++) {
+        if (!aln->at(i).isInformative())
+            continue;
         parsimony_scores = &(patn_parsimony[i * ntree]);
         min_par_score = parsimony_scores[0];
         if (min_par_score < 0) // not a parsimony informative site
@@ -1951,7 +1953,7 @@ void IQTreeMix::initializeTreeWeights() {
         // if (tree_with_min_pars.size() == 1) {
         if (tree_with_min_pars.size() < ntree) {
             for (j=0; j<tree_with_min_pars.size(); j++) {
-                weights[tree_with_min_pars[j]] += ptn_freq[i];
+                weights[tree_with_min_pars[j]] += ptn_freq[i] / (double) tree_with_min_pars.size();
             }
         }
     }
@@ -2025,6 +2027,8 @@ void IQTreeMix::initializeTreeWeights2() {
     tree_with_min_pars.clear();
     freqs.clear();
     for (i=0; i<nptn; i++) {
+        if (!aln->at(i).isInformative())
+            continue;
         parsimony_scores = &(patn_parsimony[i * ntree]);
         min_par_score = parsimony_scores[0];
         if (min_par_score < 0) // not a parsimony informative site
@@ -2047,6 +2051,37 @@ void IQTreeMix::initializeTreeWeights2() {
             freqs.push_back(ptn_freq[i]);
     }
     // cout << "--------------------" << endl;
+    // exit(1);
+    
+    // show the parsimony statistics
+    if (verbose_mode >= VB_MED) {
+        map<vector<int>,int> pars_freqs;
+        map<vector<int>,int>::iterator itr;
+        for (i=0; i<tree_with_min_pars.size(); i++) {
+            itr = pars_freqs.find(tree_with_min_pars[i]);
+            if (itr == pars_freqs.end()) {
+                // not found
+                pars_freqs.insert(pair<vector<int>,int>(tree_with_min_pars[i],freqs[i]));
+            } else {
+                itr->second += freqs[i];
+            }
+        }
+        // print out the summary
+        cout << endl;
+        cout << "Statistics on the sites with maximum parsimony score:" << endl;
+        cout << "-----------------------------------------------------" << endl;
+        cout << "Topologies; Number of parsimony informatic sites" << endl;
+        for (itr = pars_freqs.begin(); itr != pars_freqs.end(); itr++) {
+            vector<int> pars = itr->first;
+            for (i=0; i<pars.size(); i++) {
+                if (i>0)
+                    cout << ",";
+                cout << pars[i] + 1;
+            }
+            cout << "; " << itr->second << endl;
+        }
+        cout << endl;
+    }
 
     // initialize the tree weights
     double w = 1.0 / ntree;
@@ -2163,7 +2198,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     
     if (!isTreeWeightFixed) {
         // initialize the tree weights according to parsimony scores along the sites
-        initializeTreeWeights2();
+        initializeTreeWeights();
     }
     
     // initialize the parameters
