@@ -454,13 +454,8 @@ void IQTreeMix::separateModel(string modelName) {
         outError("The number of site rates specified in the mixture does not match with the tree number");
     }
 
-    // if it is a edge-length-restricted model, build the branch ID
-    if (isEdgeLenRestrict) {
-        // build the branch ID
-        computeBranchID();
-        // show trees
-        // showTree();
-    }
+    // build the branch ID
+    computeBranchID();
     
     // show summary
     cout << endl;
@@ -2206,13 +2201,8 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     prev_ptn_invar = ptn_invar;
     ptn_invar = at(0)->ptn_invar;
     
-    if (isEdgeLenRestrict) {
-        // it is a highly-restricted model in which the edges of different trees having the same partition have the same lengths
-
-        // If there are multiple branches belonging to the same group
-        // set all the branches of the same group to their average
-        checkBranchGrp();
-    }
+    // set all the branches of the same group to their weighted average for initialization of the branch lengths
+    checkBranchGrp();
     
     // show trees
     // cout << "Initial trees:" << endl;
