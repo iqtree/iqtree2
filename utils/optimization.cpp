@@ -720,12 +720,14 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 #undef TOLX
 
 
-const int MAX_ITER = 3;
+const int MAX_ITER = 3; 
 extern double random_double(int *rstream);
 
 bool Optimization::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
     int i;
     bool restart = false;
+	bool aa = (ndim > 100); //lazily check if we're optimizing GTR20, which should have >100 params 
+	if(aa) { ndim = 189; } //lazy fix -- ndim 192 -> 189 to prevent wrongful restarts
     if (iteration <= MAX_ITER) {
         for (i = 1; i <= ndim; i++) {
 	    if (bound_check[i]) {
@@ -739,10 +741,10 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
     if (restart) {
       // TODO: Dominik observed that this warning is printed even during model
       // testing. A quieter solution might be preferred.
-		cout << "Restart estimation at the boundary... " << std::endl;
+		cout << "Restart estimation at the boundary... ";
 		int nskipped = 0;
         for (i = 1; i <= ndim; i++) {
-			if(Params::getInstance().reset_method == "const"){
+			if(Params::getInstance().reset_method == "const" && aa){
 				double val = guess[i] * Params::getInstance().guess_multiplier;
 				if(val >= lower[i]) {
 					guess[i] = val;
@@ -751,10 +753,11 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
 				guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
 			}
 		}
-		if(nskipped > 0){
-			char warn[50]; sprintf(warn, "Skipped %d sites due to hitting the lower bound.",nskipped);
-			outWarning(warn);
+		if(nskipped > 0 && aa){
+			char warn[50]; sprintf(warn, "(GTR: hit lower bound on %d params)",nskipped);
+			cout << warn; //outWarning(warn);
 		}
+		cout << endl;
     }	
     return (restart);
 }

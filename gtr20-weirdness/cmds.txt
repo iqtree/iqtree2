@@ -1,0 +1,18 @@
+1. Not putting ./ in front of the command call can cause it to break
+   command: iqtree2 -s seqTest_Minh1.fa -te 10txtreelong2.txt -mdef C4AA.nex -m GTR20+ESmodel -mwopt -pre TEST -me 0.99 -redo -nt 15 --link-exchange-rates --rates-file
+   (this works sometimes though. can't reproduce...)
+
+2. Program crashes due to too many iterations
+   command: ./iqtree2 -s  seqTest_Minh1.fa -te 10txtreelong2.txt -mdef C4AA.nex -m GTR20+ESmodel -mwopt -pre TEST  -me 0.99  -redo -nt 15   --link-exchange-rates --rates-file
+
+3. Adding the -safe flag can fix the above crash sometimes, but it can also still crash. And when it doesn't the rate matrix can be all 1's.
+   command: ./iqtree2 -s  seqTest_Minh1.fa -te 10txtreelong2.txt -mdef C4AA.nex -m GTR20+ESmodel -mwopt -pre TEST  -me 0.99  -redo -nt 15   --link-exchange-rates --rates-file -safe
+
+4. This command works, and the program finishes with an optimized matrix
+   command: ./iqtree2 -s  seqTest_Minh1.fa -te 10txtreelong2.txt -mdef C4AA.nex -m GTR20+ESmodel -mwopt -pre TEST  -me 0.99  -redo -nt 15   --link-exchange-rates --rates-file -lk SSE
+
+5. This command causes a tqli crash with 10 cores, but finishes with 14. It optimizes the rate matrix properly in both cases.
+   command 1: iqtree2 -s  seqTest_Minh1.fa -te 10txtreelong2.txt -mdef C4AA.nex -m GTR20+ESmodel -mwopt -pre TEST  -me 0.99  -redo -nt 10   --link-exchange-rates --rates-file -safe -lk SSE
+   command 2: iqtree2 -s  seqTest_Minh1.fa -te 10txtreelong2.txt -mdef C4AA.nex -m GTR20+ESmodel -mwopt -pre TEST  -me 0.99  -redo -nt 14   --link-exchange-rates --rates-file -safe -lk SSE
+
+generally: processing with more than one core seems to be super volatile and unpredictable, and it randomly fails all the time.

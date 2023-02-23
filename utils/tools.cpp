@@ -1178,11 +1178,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
+
     params.optimize_linked_gtr = false;
     params.gtr20_model = "POISSON";
-    params.guess_multiplier = 1/70;
+    params.guess_multiplier = 0.5;
     params.rates_file = false;
     params.reset_method = "const";
+
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1595,14 +1597,14 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--gtr20-model") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -gtr20-model <POISSON/LG>";
+                    throw "Use --gtr20-model <POISSON/LG>";
                 params.gtr20_model = argv[cnt];
                 continue;
             }
             if (strcmp(argv[cnt], "--guess-multiplier") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -guess-multiplier <value>";
+                    throw "Use --guess-multiplier <value>";
                 params.guess_multiplier = convert_double(argv[cnt]);
                 continue;
             } 
