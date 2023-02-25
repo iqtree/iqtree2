@@ -1225,7 +1225,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
         scaleStateFreq(true);
         changed = true;
     }
-    if (changed) {
+    if (changed || score == -1.0e+30) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
