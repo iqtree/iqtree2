@@ -280,7 +280,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	            param_fixed[id] = true;
 	        }
 			try {
-				rate = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
+				rate = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, true, separator);
 			} catch (string str) {
 				outError(str);
 			}
@@ -303,21 +303,31 @@ void ModelDNA::readRates(string str) throw(const char*) {
 
 
 string ModelDNA::getNameParams(bool show_fixed_params) {
-	if (num_params == 0 && (!show_fixed_params || param_fixed.size() == 1)) return name;
+	if (name == "JC") return name;
 	ostringstream retname;
     retname << name;
-    if (!fixed_parameters) {
-        retname << '{';
+    if ((!fixed_parameters && num_params > 0)
+        || show_fixed_params) {
+        
+        bool only_default_rate = true;
+        
+        string tmp_retname = "{";
         int nrates = getNumRateEntries();
         int k = 0;
         for (int i = 0; i < nrates; i++) {
             if (param_spec[i] > k) {
-                if (k>0) retname << ',';
-                retname << rates[i];
+                if (k>0) tmp_retname += ",";
+                tmp_retname += convertDoubleToString(rates[i]);
                 k++;
+                only_default_rate = false;
             }
         }
-        retname << '}';
+        tmp_retname += "}";
+        
+        // add rate to output name if there is at least one rate different from the default rate
+        if (!only_default_rate)
+            retname << tmp_retname;
+            
     }
     getNameParamsFreq(retname);
 	return retname.str();

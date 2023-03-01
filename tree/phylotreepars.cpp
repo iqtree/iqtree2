@@ -886,6 +886,101 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNod
     return tree_pars;
 }
 
+/**
+ compute tree parsimony score along the patterns
+ @param ptn_scores (OUT) parsimony scores along the patterns
+ @return parsimony score of the tree
+ */
+UINT PhyloTree::computeParsimonyOutOfTreeSankoff(UINT* ptn_scores) {
+
+    PhyloNeighbor *dad_branch = (PhyloNeighbor*) root->neighbors[0];
+    PhyloNode *dad = (PhyloNode*) root;
+    int *branch_subst = NULL;
+
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
+    
+    memset(ptn_scores, 0, sizeof(UINT)*aln->ordered_pattern.size());
+
+    if (!central_partial_pars)
+        initializeAllPartialPars();
+    
+    // swap node and dad if dad is a leaf
+    if (node->isLeaf()) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+    }
+    
+    if ((dad_branch->partial_lh_computed & 2) == 0 && !node->isLeaf())
+        computePartialParsimonySankoff(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 2) == 0 && !dad->isLeaf())
+        computePartialParsimonySankoff(node_branch, node);
+    
+    // now combine likelihood at the branch
+    UINT tree_pars = 0;
+    int nstates = aln->num_states;
+    UINT i, j, ptn;
+    
+    if (dad->isLeaf()) {
+        // external node
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
+            int ptn_start_index = ptn * nstates;
+            UINT *node_branch_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][dad->id]*nstates];
+            UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
+            UINT min_ptn_pars = node_branch_ptr[0] + dad_branch_ptr[0];
+            UINT br_ptn_pars = node_branch_ptr[0];
+            for (i = 1; i < nstates; i++){
+                // min(j->i) from node_branch
+                UINT min_score = node_branch_ptr[i] + dad_branch_ptr[i];
+                if (min_score < min_ptn_pars) {
+                    min_ptn_pars = min_score;
+                    br_ptn_pars = node_branch_ptr[i];
+                }
+            }
+            ptn_scores[ptn] = min_ptn_pars;
+            tree_pars += min_ptn_pars * aln->ordered_pattern[ptn].frequency;
+        }
+    }  else {
+        // internal node
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
+            int ptn_start_index = ptn * nstates;
+            UINT *node_branch_ptr = &node_branch->partial_pars[ptn_start_index];
+            UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            UINT min_ptn_pars = UINT_MAX;
+            UINT br_ptn_pars = UINT_MAX;
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from node_branch
+                UINT min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
+                UINT branch_score = cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    UINT value = node_branch_ptr[j] + cost_matrix_ptr[j];
+                    if (value < min_score) {
+                        min_score = value;
+                        branch_score = cost_matrix_ptr[j];
+                    }
+                    
+                }
+                min_score = min_score + dad_branch_ptr[i];
+                if (min_score < min_ptn_pars) {
+                    min_ptn_pars = min_score;
+                    br_ptn_pars = branch_score;
+                }
+                cost_matrix_ptr += nstates;
+            }
+            ptn_scores[ptn] = min_ptn_pars;
+            tree_pars += min_ptn_pars * aln->ordered_pattern[ptn].frequency;
+        }
+    }
+    return tree_pars;
+}
+
+
 /****************************************************************************
  Stepwise addition (greedy) by maximum parsimony
  ****************************************************************************/

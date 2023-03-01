@@ -354,6 +354,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class ModelFactoryMixlen;
     friend class MemSlotVector;
     friend class ModelFactory;
+    friend class IQTreeMix;
 
 public:
     /**
@@ -376,6 +377,11 @@ public:
     PhyloTree(string& treeString, Alignment *aln, bool isRooted);
 
     void init();
+    
+    /**
+        init sequence instances for each nodes when using AliSim
+    */
+    virtual void initSequences(Node* node = NULL, Node* dad = NULL);
 
     /**
             destructor
@@ -498,7 +504,7 @@ public:
             get rate heterogeneity
             @return associated rate heterogeneity class
      */
-    RateHeterogeneity *getRate();
+    virtual RateHeterogeneity *getRate();
 
     void discardSaturatedSite(bool val);
 
@@ -518,11 +524,11 @@ public:
 	 */
 	virtual string getModelNameParams(bool show_fixed_params = false);
 
-    ModelSubst *getModel() {
+    virtual ModelSubst *getModel() {
         return model;
     }
 
-    ModelFactory *getModelFactory() {
+    virtual ModelFactory *getModelFactory() {
         return model_factory;
     }
 
@@ -538,6 +544,11 @@ public:
         @return true if this is a tree with mixture branch lengths, default: false
     */
     virtual bool isMixlen() { return false; }
+
+    /**
+        @return true if this is a mixture of trees, default: false
+    */
+    virtual bool isTreeMix() { return false; }
 
     /**
         @return number of mixture branch lengths, default: 1
@@ -683,7 +694,7 @@ public:
 
     template<class VectorClass>
     int computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
+    
 //    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
@@ -732,6 +743,13 @@ public:
      @return parsimony score of the tree
      */
     int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    /**
+     compute tree parsimony score along the patterns
+     @param ptn_scores (OUT) parsimony scores along the patterns
+     @return parsimony score of the tree
+     */
+    UINT computeParsimonyOutOfTreeSankoff(UINT* ptn_scores);
 
     /****************************************************************************
             likelihood function
@@ -840,9 +858,9 @@ public:
         precompute info for models
     */
     template<class VectorClass, const int nstates>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
     template<class VectorClass>
-    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer, double *echildren = NULL, double *partial_lh_leaves = NULL);
 
     /** 
         sort neighbor in descending order of subtree size (number of leaves within subree)
@@ -1056,8 +1074,18 @@ public:
         @param dad_branch branch leading to an internal node where to obtain ancestral sequence
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+        @param[out] ptn_ancestral_seq vector of state with highest probability
     */
     virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        compute ancestral sequence probability for an internal node by partial_lh of that subtree
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    virtual void computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
@@ -1419,6 +1447,14 @@ public:
 
     void moveRoot(Node *node1, Node *node2);
 
+    virtual double computeFundiLikelihood();
+
+    /**
+     optimize \rho and branch length of the central branch by FunDi model (Gaston, Susko, Roger 2011)
+     @return log-likelihood of FunDi model
+     */
+    virtual double optimizeFundiModel();
+    
     /**
         Optimize root position for rooted tree
         @param root_dist maximum distance to move root
@@ -1914,6 +1950,27 @@ public:
     virtual void computeSiteConcordance(Branch &branch, int nquartets, int *rstream);
 
     /**
+     allocate a new vector of ancestral probability, aware of partition models
+     */
+    double* newAncestralProb();
+    
+    /**
+     compute ancestral site concordance factor
+     @param branch target branch
+     @param nquartets number of quartets
+     @param[out] info concordance information
+     @param rstream random stream
+     */
+    virtual void computeAncestralSiteConcordance(Branch &branch, int nquartets, int *rstream,
+        double *marginal_ancestral_prob, int *marginal_ancestral_seq);
+
+    /**
+     compute ancestral sCF for all branches
+     */
+    void computeAllAncestralSiteConcordance();
+
+    
+    /**
      Compute gene concordance factor
      for each branch, assign how many times this branch appears in the input set of trees.
      Work fine also when the trees do not have the same taxon set.
@@ -2345,6 +2402,24 @@ protected:
             TRUE to discard saturated for Meyer & von Haeseler (2003) model
      */
     bool discard_saturated_site;
+    
+    /**
+     true to switch to fundi likelihood (Gaston, Susko, Roger 2011)
+     */
+    bool do_fundi = false;
+
+    /**
+        return the number of dimensions
+    */
+    virtual int getNDim();
+
+
+    /**
+        the target function which needs to be optimized
+        @param x the input vector x
+        @return the function value at x
+    */
+    virtual double targetFunk(double x[]);
 
     /**
      * Temporary partial likelihood array: used when swapping branch and recalculate the

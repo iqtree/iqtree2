@@ -9,6 +9,7 @@
 #define alisim_h
 
 #include "utils/tools.h"
+#include "utils/MPIHelper.h"
 #include "simulator/alisimulatorinvar.h"
 #include "simulator/alisimulatorheterogeneityinvar.h"
 #include "phyloanalysis.h"
@@ -46,7 +47,7 @@ void showParameters(Params params, bool is_partition_model);
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
-vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator);
+void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, vector<short int> &sequence);
 
 /**
 *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
@@ -56,7 +57,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
 
 /**
 *  compute the total sequence length of all partitions
@@ -66,7 +67,7 @@ int computeTotalSequenceLengthAllPartitions(PhyloSuperTree *super_tree);
 /**
 *  copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad);
+void copySequencesToSuperTree(IntVector &site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad);
 
 /**
 *  write all sequences of a tree to an output file
@@ -76,12 +77,12 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad);
+void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, bool keep_seq_order, uint64_t start_pos, uint64_t output_line_length,ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad);
 
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator);
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, std::ios_base::openmode open_mode = std::ios_base::out);
 
 /**
 *  clear out all sequences in the super_tree
@@ -115,6 +116,6 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 /**
 *  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
 */
-void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name);
+void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name);
 
 #endif /* alisim_h */

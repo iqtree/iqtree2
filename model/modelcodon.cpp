@@ -427,7 +427,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             outError("Sorry! Omega is not existed or unable to be set in the model "+model_name_str);
         }
         size_t pos = model_params.find(delimiter);
-        omega = convert_double_with_distribution(model_params.substr(0, pos).c_str());
+        omega = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
         if (omega < 0)
             outError("Omega cannot be negative!");
         if (!Params::getInstance().optimize_from_given_params)
@@ -450,7 +450,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             }
             
             pos = model_params.find(delimiter);
-            kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str());
+            kappa = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
             if (kappa < 0)
                 outError("Kappa cannot be negative!");
             if (!Params::getInstance().optimize_from_given_params)
@@ -474,7 +474,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
             }
             
             pos = model_params.find(delimiter);
-            kappa2 = convert_double_with_distribution(model_params.substr(0, pos).c_str());
+            kappa2 = convert_double_with_distribution(model_params.substr(0, pos).c_str(), true);
             if (kappa2 < 0)
                 outError("Kappa2 cannot be negative!");
             if (kappa + kappa2 == 0)
@@ -711,7 +711,7 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
             in >> tmp_value;
             if (tmp_value.length() == 0)
                 throw "Error in reading codon model from file";
-            q[i*nscodons+j] = convert_double_with_distribution(tmp_value.c_str());
+            q[i*nscodons+j] = convert_double_with_distribution(tmp_value.c_str(), false);
             
 			//q[j*num_states+i] = q[i*num_states+j];
 			if (verbose_mode >= VB_MAX) cout << " " << q[i*nscodons+j];
@@ -724,7 +724,7 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
         in >> tmp_value;
         if (tmp_value.length() == 0)
             throw "Error in reading frequencies for codon models";
-        f[i] = convert_double_with_distribution(tmp_value.c_str());
+        f[i] = convert_double_with_distribution(tmp_value.c_str(), true);
     }
 	StrVector codons;
 	codons.resize(nscodons);

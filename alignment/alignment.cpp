@@ -2982,11 +2982,13 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
         auto patterns     = site_pattern.data();
         auto patternCount = site_pattern.size();
         for (int i=0; i<patternCount; ++i) {
-            auto state = at(patterns[i])[seq_id];
-            if (num_states<=state) {
-                str.append(convertStateBackStr(state));
-            } else {
-                str.append(stateStrings[state]);
+            if (kept_sites[i]) {
+                auto state = at(patterns[i])[seq_id];
+                if (num_states<=state) {
+                    str.append(convertStateBackStr(state));
+                } else {
+                    str.append(stateStrings[state]);
+                }
             }
         }
         str.append("\n");
@@ -4831,7 +4833,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     for (int i = 0; i < 4; i++)
                     {
                         size_t pos = freq_params.find(separator);
-                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str(), true);
                         if (ntfreq[i] < 0)
                             outError("State frequency cannot be negative!");
                         
@@ -4936,7 +4938,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     for (int i = 0; i < 12; i++)
                     {
                         size_t pos = freq_params.find(separator);
-                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str(), true);
                         if (ntfreq[i] < 0)
                             outError("State frequency cannot be negative!");
                         

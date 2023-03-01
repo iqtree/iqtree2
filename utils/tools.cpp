@@ -112,7 +112,7 @@ double randomLen(Params &params) {
     // randomly generate branch lengths based on
     // a user-specified distribution
     if (params.branch_distribution)
-        return random_number_from_distribution(params.branch_distribution);
+        return random_number_from_distribution(params.branch_distribution, true);
     // or an exponential distribution (by default)
     else
     {
@@ -384,7 +384,7 @@ double convert_double(const char *str, int &end_pos) {
 	return d;
 }
 
-double convert_double_with_distribution(const char *str, int &end_pos, char separator)
+double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator)
 {
     // convert normal double
     char *endptr;
@@ -399,7 +399,7 @@ double convert_double_with_distribution(const char *str, int &end_pos, char sepa
         else
             end_pos = tmp_str.length();
             
-        d = random_number_from_distribution(tmp_str.substr(0, end_pos));
+        d = random_number_from_distribution(tmp_str.substr(0, end_pos), non_negative);
     }
     else
         end_pos = endptr - str;
@@ -424,7 +424,7 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
     } while (*endptr != 0);
 }
 
-void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator)
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, bool non_negative, char separator)
 {
     string tmp_str(str);
     vec.clear();
@@ -436,7 +436,7 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
         string token = tmp_str.substr(0, pos);
         
         // convert/generate a double
-        double d = convert_double_with_distribution(token.c_str());
+        double d = convert_double_with_distribution(token.c_str(), non_negative);
         vec.push_back(d);
         
         // remove the current double/distribution name from tmp_str
@@ -447,7 +447,7 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
     }
 }
 
-void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, char separator)
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, bool non_negative, char separator)
 {
     // validate the number of items
     size_t num_separators = std::count(tmp_str.begin(), tmp_str.end(), separator);
@@ -461,7 +461,7 @@ void convert_double_array_with_distributions(string tmp_str, double* array, int 
         string token = tmp_str.substr(0, pos);
         
         // convert/generate a double
-        array[i] = convert_double_with_distribution(token.c_str());
+        array[i] = convert_double_with_distribution(token.c_str(), non_negative);
         
         // remove the current double/distribution name from tmp_str
         tmp_str.erase(0, pos + 1);
@@ -660,7 +660,7 @@ Exponential_Weibull 0.230347 0.308228 0.204545 0.331749 0.228132 0.220478 0.2738
         infile.close();
 }
 
-double random_number_from_distribution(string distribution_name)
+double random_number_from_distribution(string distribution_name, bool non_negative)
 {
     // randomly generate a number from a uniform distribution
     if (distribution_name.compare("uniform") == 0)
@@ -678,21 +678,33 @@ double random_number_from_distribution(string distribution_name)
             outError("Expecting a double or a distribution name, but found an empty string");
     }
     
-    // convert random_numbers_str to istringstream
-    istringstream iss_random_numbers(random_numbers_str);
-    
-    // draw a random number
-    int rand_index = random_int(distribution.pool_size) + 1;
-    
-    // extract the selected number from iss_random_numbers
+    // attempt up to 1000 times to pick a random (positive) number from the distribution
     double random_number;
-    for (int i = 0; i<rand_index; i++)
-        iss_random_numbers >> random_number;
+    for (int attempt = 0; attempt < 1000; ++attempt)
+    {
+        // convert random_numbers_str to istringstream
+        istringstream iss_random_numbers(random_numbers_str);
+        
+        // draw a random number
+        int rand_index = random_int(distribution.pool_size) + 1;
+        
+        // extract the selected number from iss_random_numbers
+        for (int i = 0; i<rand_index; i++)
+            iss_random_numbers >> random_number;
+        
+        // don't need to retry if the random number meets the output requirement
+        if (!non_negative || random_number >= 0)
+            break;
+    }
+    
+    // validate the output number
+    if (non_negative && random_number < 0)
+        outError("Sorry! We failed to generate a random non-negative number from the distribution " + distribution_name + " after 1,000 attempts!");
     
     return random_number;
 }
 
-double convert_double_with_distribution(const char *str)
+double convert_double_with_distribution(const char *str, bool non_negative)
 {
     string input(str);
     // convert the number from the input string if possible
@@ -700,10 +712,10 @@ double convert_double_with_distribution(const char *str)
         return convert_double(str);
     // if a distribution is specified -> randomly generate a number from that distribution
     else
-        return random_number_from_distribution(input);
+        return random_number_from_distribution(input, non_negative);
 }
 
-double convert_double_with_distribution_and_upperbound(string input, double upper_bound)
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound, bool non_negative)
 {
     double random_double = 0;
     if (is_number(input))
@@ -713,19 +725,19 @@ double convert_double_with_distribution_and_upperbound(string input, double uppe
             outError("The input number ("+input+") must be less than "+convertDoubleToString(upper_bound)+". Please check and try again!");
     }
     else
-        random_double = random_number_from_distribution_with_upperbound(input, upper_bound);
+        random_double = random_number_from_distribution_with_upperbound(input, upper_bound, non_negative);
     
     return random_double;
 }
 
-double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound)
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound, bool non_negative)
 {
     double random_double;
     
     // limit 1000 attempts to generate a random number from user-specified distribution
     for (int i = 0; i < 1000; i++)
     {
-        random_double = random_number_from_distribution(distribution_name);
+        random_double = random_number_from_distribution(distribution_name, non_negative);
         if (random_double < upper_bound && random_double >= 0)
             break;
     }
@@ -799,7 +811,7 @@ void random_frequencies_from_distributions(double *freqs, int num_states, string
         string distribution_name = list_distribution_names.substr(0, pos);
         list_distribution_names.erase(0, pos + 1);
         
-        freqs[i] = random_number_from_distribution(distribution_name);
+        freqs[i] = random_number_from_distribution(distribution_name, true);
         total_freq += freqs[i];
     }
     
@@ -1052,6 +1064,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.second_tree = NULL;
     params.support_tag = NULL;
     params.site_concordance = 0;
+    params.ancestral_site_concordance = 0;
     params.site_concordance_partition = false;
     params.print_cf_quartets = false;
     params.print_df1_trees = false;
@@ -1176,6 +1189,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_freerate = "2-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
+    params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
@@ -1447,10 +1461,15 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_branch_scale = 1.0;
     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
-    params.outputfile_runtime = "";
-    params.model_id = "";
+    params.alisim_single_output = false;
+    params.keep_seq_order = false;
+    params.mem_limit_factor = 0;
+    params.delete_output = false;
+    params.indel_rate_variation = false;
     params.tmp_data_filename = "tmp_data";
     params.rebuild_indel_history_param = 1.0/3;
+    params.alisim_openmp_alg = IM;
+    params.no_merge = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -1576,6 +1595,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -optalg_gammai <Brent|BFGS|EM>";
                 params.optimize_alg_gammai = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-optalg_treeweight") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -optalg_treeweight <BFGS|EM>";
+                params.optimize_alg_treeweight = argv[cnt];
                 continue;
             }
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
@@ -1946,6 +1972,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             
             if (strcmp(argv[cnt], "--gcf") == 0) {
+                if (params.ancestral_site_concordance != 0)
+                    throw "Do not specify both --gcf and --scfl";
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
                 cnt++;
                 if (cnt >= argc)
@@ -1954,6 +1982,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             if (strcmp(argv[cnt], "--scf") == 0) {
+                if (params.ancestral_site_concordance != 0)
+                    throw "Do not specify both --scf and --scfl";
                 params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
                 cnt++;
                 if (cnt >= argc)
@@ -1961,6 +1991,34 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --scf please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--ascf") == 0) {
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify both --scf and --ascf";
+                params.ancestral_site_concordance = 1;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --ascf NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --ascf please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--bscf") == 0 || strcmp(argv[cnt], "--scfl") == 0) {
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify --scf or --gcf with --scfl";
+                params.ancestral_site_concordance = 2;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --scfl NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --scfl please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--scf1") == 0) {
+                throw "--scf1 option does not exist. Do you mean --scfl?";
                 continue;
             }
             if (strcmp(argv[cnt], "--scf-part") == 0 || strcmp(argv[cnt], "--cf-verbose") == 0) {
@@ -2649,10 +2707,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use --fundi taxa_1,...,taxa_n,proportion";
                 
                 // parse proportion
-                params.alisim_fundi_proportion = convert_double(fundi_input.c_str());
-                
-                if (params.alisim_fundi_proportion > 1 || params.alisim_fundi_proportion <= 0)
-                    throw "Proportion in FunDi model must be positive and not greater than 1";
+                if (fundi_input == "estimate") {
+                    params.alisim_fundi_proportion = 0.0;
+                } else {
+                    params.alisim_fundi_proportion = convert_double(fundi_input.c_str());
+                    if (params.alisim_fundi_proportion > 1 || params.alisim_fundi_proportion < 0)
+                        throw "Proportion in FunDi model must be positive and not greater than 1";
+                }
                 
                 continue;
             }
@@ -2810,19 +2871,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use --branch-distribution <distribution_name> to specify a distribution, from which branch lengths will be randomly generated.";
                 params.branch_distribution = argv[cnt];
                 continue;
-            }
-            if (strcmp(argv[cnt], "--output-simulation-time") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "--output-simulation-time <file_name>,<model_id>";
-                string tmp = argv[cnt];
-                size_t pos = tmp.find(',');
-                if (pos != std::string::npos) {
-                    params.outputfile_runtime = tmp.substr(0, pos);
-                    params.model_id = tmp.substr(pos+1, tmp.length()-pos-1);
-                }
-                else
-                    outError("--output-simulation-time <file_name>,<model_id>");
             }
             if (strcmp(argv[cnt], "--simulation-thresh") == 0) {
                 cnt++;
@@ -5170,8 +5218,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
-                // force --redo(ing)
-                params.ignore_checkpoint = true;
                 
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
@@ -5204,6 +5250,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--single-output") == 0) {
+                params.alisim_single_output = true;
+                
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--length") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5221,6 +5273,55 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.rebuild_indel_history_param = convert_double(argv[cnt]);
                 if (params.rebuild_indel_history_param < 0 || params.rebuild_indel_history_param > 1)
                     throw "<proportion> must be between 0 and 1.";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--keep-seq-order") == 0) {
+                params.keep_seq_order = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--mem-limit") == 0) {
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "Use --mem-limit <FACTOR>";
+                
+                params.mem_limit_factor = convert_double(argv[cnt]);
+                if (params.mem_limit_factor <= 0 || params.mem_limit_factor > 1)
+                    throw "<FACTOR> must be in range (0,1]";
+
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--delete-output") == 0) {
+                params.delete_output = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--openmp-alg") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --openmp-alg <ALG>";
+                
+                string openmp_algorithm = argv[cnt];
+                transform(openmp_algorithm.begin(), openmp_algorithm.end(), openmp_algorithm.begin(), ::toupper);
+                
+                if (openmp_algorithm == "IM")
+                    params.alisim_openmp_alg = IM;
+                else if (openmp_algorithm == "EM")
+                    params.alisim_openmp_alg = EM;
+                else
+                    throw "AliSim-OpenMP algorithm should be IM or EM.";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--no-merge") == 0) {
+                params.no_merge = true;
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--indel-rate-variation") == 0) {
+                params.indel_rate_variation = true;
                 continue;
             }
             
@@ -5381,6 +5482,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
+    // terminate if using AliSim with -ft or -fs site-specific model (ModelSet)
+    // computeTransMatix has not yet implemented for ModelSet
+    if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
+        outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
     
     // set default filename for the random tree if AliSim is running in Random mode
     if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
@@ -5527,6 +5632,7 @@ void usage_alisim(){
     << "  --branch-distribution DIS Specify a distribution, from which branch lengths of the input trees" << endl
     << "                            are randomly generated and overridden." << endl
     << "  --branch-scale SCALE      Specify a value to scale all branch lengths" << endl
+    << "  --single-output           Output all alignments into a single file" << endl
     << "  --write-all               Enable outputting internal sequences" << endl
     << "  --seed NUM                Random seed number (default: CPU clock)" << endl
     << "                            Be careful to make the AliSim reproducible," << endl
@@ -5560,8 +5666,6 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -T NUM|AUTO          No. cores/threads or AUTO-detect (default: 1)" << endl
     << "  --threads-max NUM    Max number of threads for -T AUTO (default: all cores)" << endl
 #endif
-    << "  --export-alisim-cmd  Export a command-line from the inferred tree and model params" << endl
-    << "                       to simulate new MSAs with AliSim" << endl
     << endl << "CHECKPOINT:" << endl
     << "  --redo               Redo both ModelFinder and tree search" << endl
     << "  --redo-tree          Restore ModelFinder and only redo tree search" << endl
@@ -5692,6 +5796,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       10.34, 12.12 (optionally prefixed by RY, WS or MK)" << endl
     << "      Non-reversible:  STRSYM (strand symmetric model, equiv. WS6.6)," << endl
     << "                       NONREV, UNREST (unrestricted model, equiv. 12.12)" << endl
+    << "                       NQ.pfam, NQ.bird, NQ.mammal, NQ.insect, NQ.plant, NQ.yeast" << endl
     << "           Otherwise:  Name of file containing user-model parameters" << endl
     << endl << "STATE FREQUENCY:" << endl
     << "  -m ...+F             Empirically counted frequencies from alignment" << endl
@@ -5770,6 +5875,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --gcf FILE           Set of source trees for gene concordance factor (gCF)" << endl
     << "  --df-tree            Write discordant trees associated with gDF1" << endl
     << "  --scf NUM            Number of quartets for site concordance factor (sCF)" << endl
+    << "  --scfl NUM           Like --scf but using likelihood (recommended)" << endl
     << "  -s FILE              Sequence alignment for --scf" << endl
     << "  -p FILE|DIR          Partition file or directory for --scf" << endl
     << "  --cf-verbose         Write CF per tree/locus to cf.stat_tree/_loci" << endl
@@ -6250,11 +6356,11 @@ double random_double(int *rstream) {
  * returns a random double based on an exponential distribution
  * @param mean the mean of exponential distribution
  */
-double random_double_exponential_distribution(double mean)
+double random_double_exponential_distribution(double mean, int *rstream)
 {
     double ran;
     do
-        ran = random_double();
+        ran = random_double(rstream);
     while (ran == 0.0);
     return -mean * log(ran);
 }

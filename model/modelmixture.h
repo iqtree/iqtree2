@@ -90,20 +90,7 @@ public:
     /**
      * @return TRUE if this is a mixture model and all model components share the same rate matrix, FALSE otherwise
      */
-    virtual bool isMixtureSameQ() {
-        if (share_same_Q == -1)
-        {
-            share_same_Q = 1;
-            for (iterator it = begin() + 1; it != end(); it++)
-                if ((*it)->ModelSubst::getName() != at(0)->ModelSubst::getName())
-                {
-                    share_same_Q = 0;
-                    break;
-                }
-        }
-        
-        return share_same_Q == 1;
-    }
+    virtual bool isMixtureSameQ();
 
 
 	/**
@@ -225,6 +212,12 @@ public:
 		@return the best likelihood
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
+
+    /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
+     @param state character state
+     @param[out] state_lk state likehood vector of size num_states
+     */
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

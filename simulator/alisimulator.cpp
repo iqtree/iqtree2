@@ -14,6 +14,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
 {
     params = input_params;
     AliSimulator::initializeIQTreeFromTreeFile();
+    tree->initSequences();
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
@@ -24,9 +25,9 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     estimateLengthRatio();
     
     if (expected_number_sites == -1)
-        expected_num_sites = round(params->alisim_sequence_length/num_sites_per_state*length_ratio);
+        expected_num_sites = (num_sites_per_state == 1 ? round(params->alisim_sequence_length * length_ratio) : round(params->alisim_sequence_length / num_sites_per_state * length_ratio));
     else
-        expected_num_sites = round(expected_number_sites*length_ratio);
+        expected_num_sites = round(expected_number_sites * length_ratio);
     partition_rate = new_partition_rate;
     
     // check if base frequencies for DNA models are specified correctly
@@ -37,7 +38,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     
     // innialize set of selected sites for permutation in FunDi model
     if (params->alisim_fundi_taxon_set.size()>0)
-        fundi_items = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
+        selectAndPermuteSites(fundi_items, params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 /**
@@ -47,6 +48,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
 {
     params = input_params;
     tree = iq_tree;
+    tree->initSequences();
     num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
     STATE_UNKNOWN = tree->aln->STATE_UNKNOWN;
     max_num_states = tree->aln->getMaxNumStates();
@@ -57,9 +59,9 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     estimateLengthRatio();
     
     if (expected_number_sites == -1)
-        expected_num_sites = round(params->alisim_sequence_length/num_sites_per_state*length_ratio);
+        expected_num_sites = (num_sites_per_state == 1 ? round(params->alisim_sequence_length * length_ratio) : round(params->alisim_sequence_length / num_sites_per_state * length_ratio));
     else
-        expected_num_sites = round(expected_number_sites*length_ratio);
+        expected_num_sites = round(expected_number_sites * length_ratio);
     partition_rate = new_partition_rate;
     
     // extract max length of taxa names
@@ -67,7 +69,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     
     // innialize set of selected sites for permutation in FunDi model
     if (params->alisim_fundi_taxon_set.size()>0)
-        fundi_items = selectAndPermuteSites(params->alisim_fundi_proportion, round(expected_num_sites));
+        selectAndPermuteSites(fundi_items, params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
 AliSimulator::~AliSimulator()
@@ -121,7 +123,7 @@ void AliSimulator::initializeIQTreeFromTreeFile()
             tree->getTaxaName(super_taxa_names);
         
         // compute super_tree_length
-        double super_tree_length = ((PhyloSuperTree*) tree)->treeLength();
+        double inverse_super_tree_length = 1.0 / ((PhyloSuperTree*) tree)->treeLength();
         
         // sum of rate*n_sites and total sites (for rate normalization)
         double sum = 0;
@@ -189,12 +191,12 @@ void AliSimulator::initializeIQTreeFromTreeFile()
                 if (current_tree_length <= 0)
                     outError("Please specify tree length for each partition in the input NEXUS file.");
                 else
-                    ((PhyloSuperTree*) tree)->part_info[i].part_rate = current_tree_length/super_tree_length;
+                    ((PhyloSuperTree*) tree)->part_info[i].part_rate = current_tree_length * inverse_super_tree_length;
                 
                 // update sum of rate*n_sites and num_sites (for rate normalization)
                 sum += ((PhyloSuperTree*) tree)->part_info[i].part_rate * current_tree->aln->getNSite();
                 if (current_tree->aln->seq_type == SEQ_CODON && ((PhyloSuperTree*) tree)->rescale_codon_brlen)
-                    num_sites += 3*current_tree->aln->getNSite();
+                    num_sites += 3 * current_tree->aln->getNSite();
                 else
                     num_sites += current_tree->aln->getNSite();
             }
@@ -468,26 +470,23 @@ void AliSimulator::removeConstantSites(){
     // dummy variables
     int num_variant_states = -1;
     vector<short int> variant_state_mask;
+    int rounded_length = round(expected_num_sites * inverse_length_ratio);
     
     // create a variant state mask
-    createVariantStateMask(variant_state_mask, num_variant_states, round(expected_num_sites/length_ratio), tree->root, tree->root);
+    createVariantStateMask(variant_state_mask, num_variant_states, rounded_length, tree->root, tree->root);
     
     // return error if num_variant_states is less than the expected_num_variant_states
-    if (num_variant_states < round(expected_num_sites/length_ratio)){
+    if (num_variant_states < rounded_length){
         outError("Unfortunately, after removing constant sites, the number of variant sites is less than the expected sequence length. Please use --length-ratio <LENGTH_RATIO> to generate more abundant sites and try again. The current <LENGTH_RATIO> is "+ convertDoubleToString(length_ratio));
     }
     
     // if using Indels, update seq_length_indels
-    if (params->alisim_insertion_ratio > 0)
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
         seq_length_indels = num_variant_states;
 
     // recording start_time
     auto start = getRealTime();
     
-#ifdef _OPENMP
-#pragma omp parallel
-#pragma omp single
-#endif
     // get only variant sites for leaves
     getOnlyVariantSites(variant_state_mask, tree->root, tree->root);
     
@@ -499,38 +498,34 @@ void AliSimulator::removeConstantSites(){
 /**
     only get variant sites
 */
-void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad){
+void AliSimulator::getOnlyVariantSites(vector<short int> &variant_state_mask, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
-#ifdef _OPENMP
-#pragma omp task firstprivate(node)
-#endif
-        {
-            // dummy sequence
-            vector<short int> variant_sites(variant_state_mask.size(),0);
-            
-            // initialize the number of variant sites
-            int num_variant_states = 0;
-            
-            // browse sites one by one
-            for (int i = 0; i < node->sequence.size(); i++)
-                // only get variant sites
-                if (variant_state_mask[i] == -1)
-                {
-                    // get the variant site
-                    variant_sites[num_variant_states] = node->sequence[i];
-                    num_variant_states++;
-                    
-                    // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
-                    // keep checking if Indels is used
-                    if (num_variant_states >= round(expected_num_sites/length_ratio) && params->alisim_insertion_ratio == 0)
-                        break;
-                }
-            
-            // replace the sequence of the Leaf by variant sites
-            node->sequence.clear();
-            variant_sites.resize(num_variant_states);
-            node->sequence = variant_sites;
-        }
+        // dummy sequence
+        vector<short int> variant_sites(variant_state_mask.size(),0);
+        
+        // initialize the number of variant sites
+        int num_variant_states = 0;
+        int rounded_length = round(expected_num_sites * inverse_length_ratio);
+        
+        // browse sites one by one
+        for (int i = 0; i < node->sequence->sequence_chunks[0].size(); i++)
+            // only get variant sites
+            if (variant_state_mask[i] == -1)
+            {
+                // get the variant site
+                variant_sites[num_variant_states] = node->sequence->sequence_chunks[0][i];
+                num_variant_states++;
+                
+                // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
+                // keep checking if Indels is used
+                if (num_variant_states >= rounded_length && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
+                    break;
+            }
+        
+        // replace the sequence of the Leaf by variant sites
+        node->sequence->sequence_chunks[0].clear();
+        variant_sites.resize(num_variant_states);
+        node->sequence->sequence_chunks[0] = variant_sites;
     }
     
     // process its neighbors/children
@@ -544,24 +539,28 @@ void AliSimulator::getOnlyVariantSites(vector<short int> variant_state_mask, Nod
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
+void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
+    // reset number of chunks of the root sequence to 1
+    tree->MTree::root->sequence->sequence_chunks.resize(1);
+    
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
-        tree->MTree::root->sequence = generateRandomSequence(expected_num_sites);
+        generateRandomSequence(expected_num_sites, tree->MTree::root->sequence->sequence_chunks[0]);
     // otherwise, using the ancestral sequence + abundant sites
     else
     {
         // set the ancestral sequence to the root node
-        tree->MTree::root->sequence = ancestral_sequence;
+        tree->MTree::root->sequence->sequence_chunks[0] = ancestral_sequence;
         
         // add abundant_sites
         int num_abundant_sites = expected_num_sites - ancestral_sequence.size();
         if (num_abundant_sites > 0)
         {
-            vector<short int> abundant_sites = generateRandomSequence(num_abundant_sites);
+            vector<short int> abundant_sites;
+            generateRandomSequence(num_abundant_sites, abundant_sites);
             for (int site:abundant_sites)
-                tree->MTree::root->sequence.push_back(site);
+                tree->MTree::root->sequence->sequence_chunks[0].push_back(site);
         }
     }
     
@@ -569,7 +568,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
     validataSeqLengthCodon();
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSeqsForTree(input_msa, output_filepath);
+    simulateSeqsForTree(input_msa, output_filepath, open_mode);
 }
 
 /**
@@ -578,7 +577,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> ancestral_sequen
 void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask, int &num_variant_states, int expected_num_variant_states, Node *node, Node *dad){
     // no need to check the further sites if num_variant_states has exceeded the expected_num_variant_states
     // keep checking if Indels is used
-    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
+    if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
         return;
     
     if (node->isLeaf() && node->name!=ROOT_NAME) {
@@ -586,18 +585,18 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
         if (num_variant_states == -1)
         {
             num_variant_states = 0;
-            variant_state_mask = node->sequence;
+            variant_state_mask = node->sequence->sequence_chunks[0];
         }
         // otherwise, check state by state to update the mask
         else
         {
-            for (int i = 0; i < node->sequence.size(); i++)
+            for (int i = 0; i < node->sequence->sequence_chunks[0].size(); i++)
             {
-                if (variant_state_mask[i] != -1 && variant_state_mask[i] != node->sequence[i] && node->sequence[i] != STATE_UNKNOWN)
+                if (variant_state_mask[i] != -1 && variant_state_mask[i] != node->sequence->sequence_chunks[0][i] && node->sequence->sequence_chunks[0][i] != STATE_UNKNOWN)
                 {
                     // if variant_state_mask is a gap -> update it by the current site of the sequence
                     if (variant_state_mask[i] == STATE_UNKNOWN)
-                        variant_state_mask[i] = node->sequence[i];
+                        variant_state_mask[i] = node->sequence->sequence_chunks[0][i];
                     // otherwise, mask the variant_state_mask of the current site as variant
                     else
                     {
@@ -607,7 +606,7 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
                         
                         // stop checking further states if num_variant_states has exceeded the expected_num_variant_states
                         // keep checking if Indels is used
-                        if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio == 0)
+                        if (num_variant_states >= expected_num_variant_states && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
                             break;
                     }
                 }
@@ -627,15 +626,14 @@ void AliSimulator::createVariantStateMask(vector<short int> &variant_state_mask,
 *  randomly generate the ancestral sequence for the root node
 *  by default (initial_freqs = true) freqs could be randomly generated if they are not specified
 */
-vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool initial_freqs)
+void AliSimulator::generateRandomSequence(int sequence_length, vector<short int> &sequence, bool initial_freqs)
 {
-    // initialize sequence
-    vector<short int> sequence;
-    sequence.resize(sequence_length);
-    
     // if the Frequency Type is FREQ_EQUAL -> randomly generate each site in the sequence follows the normal distribution
     if (tree->getModel()->getFreqType() == FREQ_EQUAL)
     {
+        // initialize sequence
+        sequence.resize(sequence_length);
+        
         for (int i = 0; i < sequence_length; i++)
             sequence[i] =  random_int(max_num_states);
     }
@@ -657,13 +655,11 @@ vector<short int> AliSimulator::generateRandomSequence(int sequence_length, bool
                 max_prob_pos = i;
         
         // randomly generate the sequence based on the state frequencies
-        sequence = generateRandomSequenceFromStateFreqs(sequence_length, state_freq, max_prob_pos);
+        generateRandomSequenceFromStateFreqs(sequence_length, sequence, state_freq, max_prob_pos);
         
         // delete state_freq
         delete []  state_freq;
     }
-    
-    return sequence;
 }
 
 void AliSimulator::getStateFrequenciesFromModel(IQTree* tree, double *state_freqs){
@@ -710,131 +706,446 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
     }
     
     // normalize the frequencies so that sum of them is 1
+    sum = 1.0 / sum;
     for (int i = 0; i < max_num_states; i++)
-    base_frequencies[i] /= sum;
+        base_frequencies[i] *= sum;
 }
 
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath)
+void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
 {
     // get variables
     int sequence_length = expected_num_sites;
     ModelSubst *model = tree->getModel();
-    ostream *out = NULL;
     vector<string> state_mapping;
+    int default_segment_length;
+    int thread_id = 0;
+    bool write_sequences_to_tmp_data = false;
+    bool store_seq_at_cache = true;
+    int max_depth = 0;
     
-    // check to use Posterior Mean Rates
-    if (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED)
-        applyPosRateHeterogeneity = canApplyPosteriorRateHeterogeneity();
+    // init variables
+    initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache);
     
-    // init site to pattern id if the user supplies an input alignment
-    if (tree->params->alisim_inference_mode)
-        initSite2PatternID(sequence_length);
+    // execute one of the AliSim-OpenMP algorithms to simulate sequences
+    if (params->alisim_openmp_alg == IM)
+        executeIM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
+    else
+        executeEM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
     
-    // initialize variables (site_specific_rates; site_specific_rate_index; site_specific_model_index)
-    initVariables(sequence_length, true);
-        
-    // initialize trans_matrix
-    double *trans_matrix = new double[params->num_threads*max_num_states*max_num_states];
-    
-    // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
-    bool write_sequences_to_tmp_data = params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
-    
-    // write output to file (if output_filepath is specified)
-    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-    {
-        // init an output_filepath to temporarily output the sequences (when simulating Indels)
-        if (write_sequences_to_tmp_data)
-            output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename;
-        try {
-            // add ".phy" or ".fa" to the output_filepath
-            if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + ".phy";
-            else
-                output_filepath = output_filepath + ".fa";
-            if (params->do_compression)
-                out = new ogzstream(output_filepath.c_str());
-            else
-                out = new ofstream(output_filepath.c_str());
-            out->exceptions(ios::failbit | ios::badbit);
+    // process after simulating sequences
+    postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
+}
 
-            // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-            if (params->aln_output_format != IN_FASTA)
-            {
-                int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                *out <<num_leaves<<" "<< round(expected_num_sites/length_ratio)*num_sites_per_state<< endl;
-            }
-
-            // initialize state_mapping (mapping from state to characters)
-            initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, output_filepath);
-        }
-    }
-    
-    // rooting the tree if it's unrooted
-    if (!tree->rooted)
-        rootTree();
-    
-    // compute the switching param to switch between Rate matrix and Probability matrix
-    computeSwitchingParam(expected_num_sites);
-    
-    // initialize sub_rates, J_Matrix from Q_matrix
-    int num_mixture_models = model->getNMixtures();
-    sub_rates = new double[num_mixture_models*max_num_states];
-    Jmatrix = new double[num_mixture_models*max_num_states*max_num_states];
-    extractRatesJMatrix(model);
-    
-    // init genome_tree, and the initial empty insertion for root if using Indels
-    if (params->alisim_insertion_ratio > 0)
-    {
-        // init an empty insertion event
-        if (first_insertion)
-            delete first_insertion;
-        first_insertion = new Insertion();
-        latest_insertion = first_insertion;
-        
-        // init the insertion position for root if it is a leaf (a rooted tree)
-        if (tree->root->isLeaf())
-            tree->root->insertion_pos = latest_insertion;
-    }
-    
-    // count the number of gaps at root if Indels is used
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
-        tree->root->num_gaps = count(tree->root->sequence.begin(), tree->root->sequence.end(), STATE_UNKNOWN);
+void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
+{
+    ostream *single_output = NULL;
+    ostream *out = NULL;
+    int *rstream = NULL;
+    vector<vector<short int>> sequence_cache;
+    int actual_segment_length = sequence_length;
     
     // simulate Sequences
-    simulateSeqs(sequence_length, model, trans_matrix, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa);
-        
-    // close the file if neccessary
-    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+    #ifdef _OPENMP
+    #pragma omp parallel private(rstream, out, thread_id, sequence_cache, actual_segment_length)
     {
-        if (params->do_compression)
-            ((ogzstream*)out)->close();
-        else
-            ((ofstream*)out)->close();
-        delete out;
+        thread_id = omp_get_thread_num();
+        // init random generators
+        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
+        init_random(ran_seed, false, &rstream);
+
+        actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
+    #endif
+        // init sequence cache
+        if (store_seq_at_cache)
+        {
+            sequence_cache.resize(max_depth + 1);
+            for (int i = 1; i < max_depth + 1; i++)
+                sequence_cache[i].resize(actual_segment_length);
+
+            // cache sequence at root
+            sequence_cache[0] = tree->root->sequence->sequence_chunks[thread_id];
+        }
+        
+        // init the output stream
+        initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
+        
+        // initialize trans_matrix
+        double *trans_matrix = new double[max_num_states * max_num_states];
+        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+        
+        // delete trans_matrix array
+        delete[] trans_matrix;
+        
+        // close the output stream
+        if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+            closeOutputStream(out, num_threads > 1);
+        
+        // release sequence cache
+        if (store_seq_at_cache)
+            vector<vector<short int>>().swap(sequence_cache);
+        
+        // release mem for rstream
+        finish_random(rstream);
+        
+        // merge output files into a single file if using multithreading
+        #ifdef _OPENMP
+        #pragma omp barrier
+        #endif
+        mergeOutputFiles(single_output, thread_id, output_filepath, open_mode, write_sequences_to_tmp_data);
+            
+    #ifdef _OPENMP
+    }
+    #endif
+}
+
+/**
+    merge output files
+*/
+void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
+{
+    // skip merging if users want to do so
+    if (params->no_merge) return;
+    
+    if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
+    {
+        // merge output files into a single file
+        if (num_threads > 1)
+        {
+            // open single_output stream
+            #ifdef _OPENMP
+            #pragma omp single
+            #endif
+            {
+                string single_output_filepath;
+                if (params->aln_output_format != IN_FASTA)
+                    single_output_filepath = output_filepath + ".phy";
+                else
+                    single_output_filepath = output_filepath + ".fa";
+                openOutputStream(single_output, single_output_filepath, open_mode);
+                
+                // output the first line
+                string first_line = "";
+                if (params->aln_output_format != IN_FASTA)
+                {
+                    int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(num_sites_per_state == 1 ? round(expected_num_sites * inverse_length_ratio) : (round(expected_num_sites * inverse_length_ratio) * num_sites_per_state)) + "\n";
+                    *single_output << first_line;
+                }
+                if (!params->do_compression)
+                    starting_pos = single_output->tellp();
+                else
+                    starting_pos = first_line.length();
+            }
+            
+            // dummy variables
+            vector<ifstream> input_streams(num_threads);
+            uint64_t actual_num_lines_per_thread = 0;
+            uint64_t average_num_lines_per_thread = 0;
+            uint64_t line_num = 0;
+            string line;
+            uint64_t pos = 0;
+            double inverse_num_threads = 1.0 / num_threads;
+            
+            // open all files
+            for (int i = 0; i < input_streams.size(); i++)
+            {
+                // add ".phy" or ".fa" to the output_filepath
+                string tmp_output_filepath;
+                if (params->aln_output_format != IN_FASTA)
+                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".phy";
+                else
+                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".fa";
+                
+                // open an input file
+                input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
+                
+                // count num of lines, set start position
+                safeGetline(input_streams[i], line);
+                uint64_t line_length = line.length() + 1;
+                
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++line_length;
+                #endif
+                
+                // when using FunDi, the entire sequences are written into one of output files -> need to check average_num_lines_per_thread == 0
+                if (i == 0 || average_num_lines_per_thread == 0)
+                {
+                    input_streams[i].seekg(0, input_streams[i].end);
+                    uint64_t length = input_streams[i].tellg();
+                    uint64_t total_num_lines = length/line_length;
+                    average_num_lines_per_thread = total_num_lines * inverse_num_threads;
+                    
+                    // compute the starting line number
+                    pos = thread_id * average_num_lines_per_thread;
+                    
+                    // compute actual_num_lines_per_thread
+                    actual_num_lines_per_thread = thread_id < (num_threads - 1) ? average_num_lines_per_thread : total_num_lines - pos;
+                    
+                    
+                }
+                // set start position
+                input_streams[i].seekg(pos * line_length);
+            }
+            
+            // compute pos in the output file
+            pos = starting_pos + (pos - 1) * output_line_length;
+            
+            // merge chunks of each sequence and write to the single output file
+            for (line_num = 0; line_num < actual_num_lines_per_thread; line_num++)
+            {
+                string output = "";
+                for (int j = 0; j < input_streams.size(); j++)
+                {
+                    safeGetline(input_streams[j], line);
+                    output += line;
+                }
+                
+                if (output.length() > 0)
+                {
+                    // if using FASTA -> break sequence name into new line
+                    if (params->aln_output_format == IN_FASTA)
+                    {
+                        // insert '>' into sequence name
+                        output = ">" + output;
+                        
+                        // insert break line
+                        for (int i = 1; i < output.length(); i++)
+                            if (output[i-1] == ' ' && output[i] != ' ')
+                            {
+                                output[i-1] = '\n';
+                                break;
+                            }
+                    }
+                    
+                    // add the break line for the current output
+                    output += "\n";
+                    
+                    // update pos for the current output line
+                    pos += output_line_length;
+                
+                    // write the concatenated sequence into file
+                    #ifdef _OPENMP
+                    #pragma omp critical
+                    #endif
+                    {
+                        // jump to the correct position before writing if users want to keep the sequence order
+                        if (params->keep_seq_order)
+                            single_output->seekp(pos);
+                        (*single_output) << output;
+                    }
+                }
+            }
+            
+            // close all files
+            for (int i = 0; i < input_streams.size(); i++)
+                input_streams[i].close();
+            
+            // close single_output stream
+            #ifdef _OPENMP
+            #pragma omp barrier
+            #pragma omp single
+            #endif
+            closeOutputStream(single_output);
+            
+            // delete all intermidate files
+            // add ".phy" or ".fa" to the output_filepath
+            string tmp_output_filepath;
+            if (params->aln_output_format != IN_FASTA)
+                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".phy";
+            else
+                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".fa";
+            // delete file
+            remove(tmp_output_filepath.c_str());
+        }
         
         // show the output file name
-        if (!write_sequences_to_tmp_data)
-            cout << "An alignment has just been exported to "<<output_filepath<<endl;
+        #ifdef _OPENMP
+        #pragma omp single
+        #endif
+        {
+            string single_output_filepath;
+            if (params->aln_output_format != IN_FASTA)
+                single_output_filepath = output_filepath + ".phy";
+            else
+                single_output_filepath = output_filepath + ".fa";
+            cout << "An alignment has just been exported to " << single_output_filepath << endl;
+        }
     }
-        
-    // delete trans_matrix array
-    delete[] trans_matrix;
+}
+
+void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
+{
+    int actual_segment_length = sequence_length;
+    ostream *out = NULL;
+    int *rstream = NULL;
+    vector<vector<short int>> sequence_cache;
     
+    // init the output stream
+    initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
+    
+    // simulate Sequences
+    #ifdef _OPENMP
+    #pragma omp parallel private(rstream, thread_id, sequence_cache, actual_segment_length)
+    {
+        thread_id = omp_get_thread_num();
+        // init random generators
+        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
+        init_random(ran_seed, false, &rstream);
+            
+        actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
+    #endif
+        // init sequence cache
+        if (store_seq_at_cache)
+        {
+            // don't need to init sequence_cache for the writing thread
+            if (!(num_threads > 1 && thread_id == num_threads - 1))
+            {
+                sequence_cache.resize(max_depth + 1);
+                for (int i = 1; i < max_depth + 1; i++)
+                    sequence_cache[i].resize(actual_segment_length);
+                
+                // cache sequence at root
+                sequence_cache[0] = tree->root->sequence->sequence_chunks[thread_id];
+            }
+            
+            // init common cache of writing queue
+            #ifdef _OPENMP
+            #pragma omp single
+            #endif
+            {
+                if (num_threads > 1)
+                {
+                    // default cache_size_per_thread = num_simulating_threads * 2;
+                    cache_size_per_thread = tree->params->mem_limit_factor == 0 ? num_simulating_threads * 2 : ceil(tree->leafNum * tree->params->mem_limit_factor);
+                    seq_str_cache.resize(num_simulating_threads * cache_size_per_thread);
+                    cache_start_indexes.resize(num_simulating_threads);
+                    cache_start_indexes[0] = 0;
+                    for (int thread_id = 1; thread_id < num_simulating_threads; thread_id++)
+                        cache_start_indexes[thread_id] = cache_start_indexes[thread_id - 1] + cache_size_per_thread;
+                }
+            }
+        }
+        
+        // writing thread
+        if (num_threads > 1 && thread_id == num_threads - 1 && store_seq_at_cache)
+        {
+            while (num_thread_done < num_simulating_threads)
+            {
+                // check and write chunks in the cache to files
+                writeSeqChunkFromCache(out);
+            }
+            
+            // final round to check and write all chunks in the cache to files
+            #ifdef _OPENMP
+            #pragma omp flush
+            #endif
+            writeAllSeqChunkFromCache(out);
+            
+        }
+        // simulating thread
+        else
+        {
+            // initialize trans_matrix
+            double *trans_matrix = new double[max_num_states * max_num_states];
+            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+            
+            // delete trans_matrix array
+            delete[] trans_matrix;
+            
+            // report simulation done for the current thread
+            #ifdef _OPENMP
+            #pragma omp atomic
+            #endif
+            num_thread_done++;
+        }
+        
+        // release sequence cache
+        if (store_seq_at_cache)
+            vector<vector<short int>>().swap(sequence_cache);
+        
+        // release mem for rstream
+        finish_random(rstream);
+            
+    #ifdef _OPENMP
+    }
+    #endif
+    
+    // close the output stream
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+        closeOutputStream(out);
+}
+
+void AliSimulator::writeSeqChunkFromCache(ostream *&out)
+{
+    for (int thread_id = 0; thread_id < num_simulating_threads; thread_id++)
+    {
+        for (int i = cache_start_indexes[thread_id]; i < cache_start_indexes[thread_id] + cache_size_per_thread; i++)
+        {
+            if (seq_str_cache[i].chunk_status == OCCUPIED)
+            {
+                #ifdef _OPENMP
+                #pragma omp flush
+                #endif
+                out->seekp(seq_str_cache[i].pos);
+                (*out) << seq_str_cache[i].chunk_str;
+                
+                // update status of the selected slot
+                #ifdef _OPENMP
+                #pragma omp atomic write
+                #endif
+                seq_str_cache[i].chunk_status = EMPTY;
+                
+                // round robin -> move to slots of other threads
+                break;
+            }
+        }
+    }
+}
+
+void AliSimulator::writeAllSeqChunkFromCache(ostream *&out)
+{
+    for (int i = 0; i < seq_str_cache.size(); i++)
+    {
+        if (seq_str_cache[i].chunk_status == OCCUPIED)
+        {
+            #ifdef _OPENMP
+            #pragma omp flush
+            #endif
+            out->seekp(seq_str_cache[i].pos);
+            (*out) << seq_str_cache[i].chunk_str;
+            
+            // update status of the selected slot
+            #ifdef _OPENMP
+            #pragma omp atomic write
+            #endif
+            seq_str_cache[i].chunk_status = EMPTY;
+        }
+    }
+}
+
+/**
+    process after simulating sequences
+*/
+void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data)
+{
     // delete sub_rates, J_Matrix
     delete[] sub_rates;
     delete[] Jmatrix;
     
+    // merge chunks into a single sequence if using multiple threads and sequences have not been outputted
+    if (num_threads > 1 && (output_filepath.length() == 0 || write_sequences_to_tmp_data))
+        mergeChunksAllNodes();
+    
     // record the actual (final) seq_length due to Indels
-    if (params->alisim_insertion_ratio > 0)
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
         seq_length_indels = sequence_length;
     
     // process delayed Fundi if it is delayed due to Insertion events
-    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio > 0)
+    if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
         // update new genome at tips from original genome and the genome tree
         updateNewGenomeIndels(seq_length_indels);
@@ -847,7 +1158,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     {
         // if using Indels, update new genome at tips from original genome and the genome tree
         // skip updating if using Fundi as it must be already updated by Fundi
-        if (params->alisim_insertion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0)
             updateNewGenomeIndels(seq_length_indels);
         
         removeConstantSites();
@@ -855,67 +1166,283 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
 }
 
 /**
+    initialize variables
+*/
+void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache)
+{
+    // check if we can store sequences at a fixed cache instead of at nodes
+    store_seq_at_cache = params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && (output_filepath.length() > 0 || write_sequences_to_tmp_data) && params->alisim_fundi_taxon_set.size() == 0;
+    
+    // get the number of threads
+    #ifdef _OPENMP
+    #pragma omp parallel
+    #pragma omp single
+    {
+        num_threads = omp_get_num_threads();
+        num_simulating_threads = num_threads;
+        if (params->alisim_openmp_alg == IM && num_threads > 1 && store_seq_at_cache)
+            num_simulating_threads = num_threads - 1;
+    }
+    #endif
+    
+    default_segment_length = sequence_length / num_simulating_threads;
+    
+    // for Windows only, the line break is \r\n instead of only \n
+    #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+    seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 2 : 0);
+    #else
+    seq_name_length = max_length_taxa_name + (params->aln_output_format == IN_FASTA ? 1 : 0);
+    #endif
+    
+    output_line_length = round(expected_num_sites * inverse_length_ratio);
+    output_line_length = num_sites_per_state == 1 ? (output_line_length + 1 + seq_name_length) : (output_line_length * num_sites_per_state + 1 + seq_name_length);
+    
+    // for Windows only, the line break is \r\n instead of only \n
+    #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+    ++output_line_length;
+    #endif
+    
+    // reset num_thread_done
+    num_thread_done = 0;
+    
+    // check to use Posterior Mean Rates
+    if (tree->params->alisim_rate_heterogeneity!=UNSPECIFIED)
+        applyPosRateHeterogeneity = canApplyPosteriorRateHeterogeneity();
+    
+    // init site to pattern id if the user supplies an input alignment
+    if (tree->params->alisim_inference_mode)
+        initSite2PatternID(sequence_length);
+    
+    // initialize variables (site_specific_rates; site_specific_rate_index; site_specific_model_index)
+    initVariablesRateHeterogeneity(sequence_length, true);
+    
+    // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
+    write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
+    
+    // initialize state_mapping (mapping from state to characters)
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+        initializeStateMapping(num_sites_per_state, tree->aln, state_mapping);
+    
+    // rooting the tree if it's unrooted
+    if (!tree->rooted)
+        rootTree();
+    
+    // compute the switching param to switch between Rate matrix and Probability matrix
+    computeSwitchingParam(expected_num_sites);
+    
+    // initialize sub_rates, J_Matrix from Q_matrix
+    int num_mixture_models = model->getNMixtures();
+    int num_mixtures_times_num_states = num_mixture_models * max_num_states;
+    sub_rates = new double[num_mixtures_times_num_states];
+    Jmatrix = new double[num_mixtures_times_num_states * max_num_states];
+    extractRatesJMatrix(model);
+    
+    // init genome_tree, and the initial empty insertion for root if using Indels
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+    {
+        // init an empty insertion event
+        if (first_insertion)
+            delete first_insertion;
+        first_insertion = new Insertion();
+        latest_insertion = first_insertion;
+        
+        // init the insertion position for root if it is a leaf (a rooted tree)
+        if (tree->root->isLeaf())
+            tree->root->sequence->insertion_pos = latest_insertion;
+    }
+    
+    // count the number of gaps at root if Indels is used
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+        tree->root->sequence->num_gaps = count(tree->root->sequence->sequence_chunks[0].begin(), tree->root->sequence->sequence_chunks[0].end(), STATE_UNKNOWN);
+    
+    // reset variables at nodes (essential when simulating multiple alignments)
+    resetTree(max_depth, store_seq_at_cache);
+    
+    // if using AliSim-OpenMP-EM algorithm, update whether we need to output temporary files in PHYLIP format
+    force_output_PHYLIP = params->alisim_openmp_alg == EM && num_threads > 1 && !params->no_merge;
+}
+
+/**
+    init the output file
+*/
+void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segment_length, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
+{
+    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+    {
+        // init an output_filepath to temporarily output the sequences (when simulating Indels)
+        if (write_sequences_to_tmp_data)
+        {
+            output_filepath = params->alisim_output_filename + "_" + params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID());
+            
+            // open the output stream (create new file)
+            openOutputStream(out, output_filepath, std::ios_base::out);
+        }
+        // otherwise, just add ".phy" or ".fa" to the output_filepath
+        else
+        {
+            // only add thread_id to filename if using multiple threads with AliSim-OpenMP-EM
+            string thread_id_str = "";
+            if (params->alisim_openmp_alg == EM && num_threads > 1)
+                thread_id_str = "_" + convertIntToString(thread_id + 1);
+            
+            // add ".phy" or ".fa" to the output_filepath
+            if (params->aln_output_format != IN_FASTA)
+                output_filepath = output_filepath + thread_id_str + ".phy";
+            else
+                output_filepath = output_filepath + thread_id_str + ".fa";
+            
+            // open the output stream (create new or append an existing file)
+            if (params->alisim_openmp_alg == EM && num_threads > 1)
+                openOutputStream(out, output_filepath, std::ios_base::out, true);
+            else
+                openOutputStream(out, output_filepath, open_mode);
+        }
+        
+        // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
+        string first_line = "";
+        if (params->aln_output_format == IN_PHYLIP)
+        {
+            int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+            
+            // if using AliSim-OpenMP-EM algorithm
+            if (params->alisim_openmp_alg == EM)
+            {
+                // only output the first line in the singlethreading mode;
+                // in multithreading mode:
+                // -> without merging intermediate output files -> also output the first line
+                // -> with merging step -> the first line will be output later when merging output files
+                if (num_threads == 1
+                    || (num_threads > 1 && params->no_merge))
+                    *out << num_leaves << " " << round(actual_segment_length * inverse_length_ratio) * num_sites_per_state << endl;
+            }
+            // if using AliSim-OpenMP-IM algorithm
+            else
+            {
+                first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites * inverse_length_ratio) * num_sites_per_state) + "\n";
+                *out << first_line;
+            }
+        }
+        
+        // get the starting position for writing
+        if (params->alisim_openmp_alg == IM)
+        {
+            if (!params->do_compression)
+                starting_pos = out->tellp();
+            else
+                starting_pos = first_line.length();
+        }
+    }
+}
+
+/**
+    open an output stream
+*/
+void AliSimulator::openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool force_uncompression)
+{
+    try {
+        if (params->do_compression && !force_uncompression)
+            out = new ogzstream(output_filepath.c_str(), open_mode);
+        else
+            out = new ofstream(output_filepath.c_str(), open_mode);
+        out->exceptions(ios::failbit | ios::badbit);
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, output_filepath);
+    }
+}
+
+/**
+    close an output stream
+*/
+void AliSimulator::closeOutputStream(ostream *&out, bool force_uncompression)
+{
+    if (params->do_compression && !force_uncompression)
+        ((ogzstream*)out)->close();
+    else
+        ((ofstream*)out)->close();
+    delete out;
+}
+
+/**
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string,string> input_msa)
+void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, int* rstream)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        // update parent node of the current node
-        (*it)->node->parent = node;
-        (*it)->node->num_gaps = node->num_gaps;
+        //  clone the number of gaps from the ancestral sequence if using Indels
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+            (*it)->node->sequence->num_gaps = node->sequence->num_gaps;
         
-        // reset the num_children_done_simulation
-        if (node->num_children_done_simulation >= (node->neighbors.size() - 1))
-            node->num_children_done_simulation = 0;
+        // get dad_seq_chunk and node_seq_chunk
+        vector<short int> *dad_seq_chunk, *node_seq_chunk;
+        if (store_seq_at_cache)
+        {
+            int dad_depth = node->sequence->depth;
+            dad_seq_chunk = &sequence_cache[dad_depth];
+            node_seq_chunk = &sequence_cache[dad_depth + 1];
+        }
+        else
+        {
+            dad_seq_chunk = &node->sequence->sequence_chunks[thread_id];
+            node_seq_chunk = &(*it)->node->sequence->sequence_chunks[thread_id];
+        }
         
         // select the appropriate simulation method
         SIMULATION_METHOD simulation_method = RATE_MATRIX;
         if (((*it)->length * params->alisim_branch_scale > params->alisim_simulation_thresh && !(model->isMixture() && params->alisim_mixture_at_sub_level))
             || tree->getRate()->isHeterotachy()
-            || (*it)->attributes["model"].length()>0)
+            || (*it)->attributes.find("model") != (*it)->attributes.end())
             simulation_method = TRANS_PROB_MATRIX;
         
         // if branch_length is too short (less than 1 substitution is expected to occur) -> clone the sequence from the parent's node
         if ((*it)->length == 0)
-            (*it)->node->sequence = node->sequence;
+        {
+            // clone the sequence chunk from the parent node
+            (*node_seq_chunk) = (*dad_seq_chunk);
+        }
         else
         {
             // only simulate new sequence if the simulation type is Transition Probability Matrix approach
             if (simulation_method == TRANS_PROB_MATRIX)
             {
+                // resize the sequence chunk
+                if (!store_seq_at_cache)
+                    (*node_seq_chunk).resize(segment_length);
+                
                 // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
-                if ((*it)->attributes["model"].length()>0)
-                    branchSpecificEvolution(sequence_length, trans_matrix, node, it);
+                if ((*it)->attributes.find("model") != (*it)->attributes.end())
+                {
+                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it);
+                }
                 // otherwise, simulate the sequence based on the common model
                 else
-                    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, trans_matrix, node, it);
+                {
+                    // simulate the sequence chunk
+                    simulateASequenceFromBranchAfterInitVariables(segment_start, model, trans_matrix, *dad_seq_chunk, *node_seq_chunk , node, it, rstream);
+                }
+                
+                // handle indels
+                if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream);
             }
-            // otherwise (Rate_matrix is used as the simulation method) -> clone the sequence from the parent node.
+            // otherwise (Rate_matrix is used as the simulation method) + also handle Indels (if any).
             else
-                (*it)->node->sequence = node->sequence;
-            
-            // handle indels
-            if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 || simulation_method == RATE_MATRIX)
-                handleIndels(model, sequence_length, it, simulation_method);
+            {
+                // clone the sequence chunk from the parent node
+                (*node_seq_chunk) = (*dad_seq_chunk);
+                
+                // Each thread simulate a chunk of sequence using the Gillespie algorithm
+                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream);
+            }
         }
         
-        // set insetion position for of this node in the list of insertions if using Indels
-        if (params->alisim_insertion_ratio > 0 && (*it)->node->isLeaf())
+        // set insertion position for of this node in the list of insertions if using Indels
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && (*it)->node->isLeaf())
         {
-            (*it)->node->insertion_pos = latest_insertion;
+            (*it)->node->sequence->insertion_pos = latest_insertion;
             latest_insertion->phylo_nodes.push_back((*it)->node);
-        }
-        
-        // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
-        if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio == 0)
-        {
-            if (node->isLeaf())
-                permuteSelectedSites(fundi_items, node);
-            if ((*it)->node->isLeaf())
-                permuteSelectedSites(fundi_items, (*it)->node);
         }
         
         // handle dna error model
@@ -928,19 +1455,101 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
                 if (model->isMixture())
                 {
                     for (int i = 0; i < model->getNMixtures(); i++)
-                    handleDNAerr(model->getDNAErrProb(i), (*it)->node->sequence, i);
+                    handleDNAerr(segment_start, model->getDNAErrProb(i), *node_seq_chunk, rstream, i);
                 }
                 // otherwise, handle the DNA model
                 else
-                    handleDNAerr(model->getDNAErrProb(), (*it)->node->sequence);
+                    handleDNAerr(segment_start, model->getDNAErrProb(), *node_seq_chunk, rstream);
             }
         }
         
-        // writing and deleting simulated sequence immediately if possible
-        writeAndDeleteSequenceImmediatelyIfPossible(out, state_mapping, input_msa, it, node);
+        // write and delete the current chunk of sequence if possible
+        writeAndDeleteSequenceChunkIfPossible(thread_id, segment_start, segment_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, out, state_mapping, input_msa, it, node);
+        
+        // merge and write sequence in simulations with Indels or FunDi model
+        mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(sequence_length, model, trans_matrix, (*it)->node, node, out, state_mapping, input_msa);
+        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, rstream);
+    }
+}
+
+/**
+    branch-specific evolution by multi threads
+*/
+void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it)
+{
+    unsigned short int num_threads_reach_barrier = 0;
+    
+    // clone sequence chunks from cache
+    if (store_seq_at_cache)
+    {
+        #ifdef _OPENMP
+        #pragma omp single nowait
+        #endif
+        {
+            node->sequence->sequence_chunks.resize(num_simulating_threads);
+            (*it)->node->sequence->sequence_chunks.resize(num_simulating_threads);
+        }
+        
+        // manual implementation of barrier
+        waitAtBarrier(1, (*it)->node);
+        
+        // clone sequence chunk from cache
+        node->sequence->sequence_chunks[thread_id] = dad_seq_chunk;
+        (*it)->node->sequence->sequence_chunks[thread_id].resize(dad_seq_chunk.size());
+    }
+    
+    // manual implementation of barrier
+    waitAtBarrier(2, (*it)->node);
+            
+    // only the first thread simulate the sequence
+    if (thread_id == 0)
+        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it);
+    
+    // manual implementation of barrier
+    waitAtBarrier(3, (*it)->node);
+    
+    // cache sequence chunks from node
+    if (store_seq_at_cache)
+    {
+        // cache sequence chunk from node
+        node_seq_chunk = (*it)->node->sequence->sequence_chunks[thread_id];
+        
+        // release memory allocated to node and dad node
+        vector<short int>().swap((*it)->node->sequence->sequence_chunks[thread_id]);
+        vector<short int>().swap(node->sequence->sequence_chunks[thread_id]);
+        
+        // manual implementation of barrier
+        waitAtBarrier(4, (*it)->node);
+        
+        // wait to release memory allocated to the dad node
+        #ifdef _OPENMP
+        #pragma omp single nowait
+        #endif
+        {
+            // release memory allocated to the node
+            vector<vector<short int>>().swap((*it)->node->sequence->sequence_chunks);
+            vector<vector<short int>>().swap(node->sequence->sequence_chunks);
+        }
+    }
+}
+
+void AliSimulator::waitAtBarrier(const unsigned short int barrier_count, Node* node)
+{
+    // manual implementation of barrier
+    #ifdef _OPENMP
+    #pragma omp atomic update
+    #endif
+    node->sequence->num_threads_reach_barrier++;
+    // wait for all threads to reach this step
+    unsigned short int num_threads_reach_barrier = node->sequence->num_threads_reach_barrier;
+    while (num_threads_reach_barrier < barrier_count * num_simulating_threads)
+    {
+        #ifdef _OPENMP
+        #pragma omp atomic read
+        #endif
+        num_threads_reach_barrier = node->sequence->num_threads_reach_barrier;
     }
 }
 
@@ -949,103 +1558,287 @@ void AliSimulator::simulateSeqs(int &sequence_length, ModelSubst *model, double 
 */
 void AliSimulator::writeInternalStatesIndels(Node* node, ostream &out)
 {
-    out << node->name<<"@"<<node->sequence.size()<<"@";
-    for (int i = 0; i < node->sequence.size(); i++)
-        out << node->sequence[i]<<" ";
+    out << node->name<<"@"<<node->sequence->sequence_chunks[0].size()<<"@";
+    for (int i = 0; i < node->sequence->sequence_chunks[0].size(); i++)
+        out << node->sequence->sequence_chunks[0][i]<<" ";
     out<<endl;
+    
+    // release the memory
+    vector<short int>().swap(node->sequence->sequence_chunks[0]);
     
     map_seqname_node[node->name] = node;
 }
 
 /**
-    writing and deleting simulated sequence immediately if possible
+    merge and write sequence in simulations with Indels or FunDi model
 */
-void AliSimulator::writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
-    // write sequence of leaf nodes to file if possible
-    if (state_mapping.size() > 0)
+    // only handle simulations with Indel or Fundi model in this function
+    if (params->alisim_fundi_taxon_set.size() > 0 || params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
-        if ((*it)->node->isLeaf())
+        // increase num_threads_done_simulation
+        bool this_thread_write_output = false;
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
         {
-            if (params->outputfile_runtime.length() == 0)
-            {
-                // if using Indels -> temporarily write out internal states
-                if (params->alisim_insertion_ratio > 0)
-                    writeInternalStatesIndels((*it)->node, out);
-                else
-                {
-                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                    string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name);
-
-                    // convert numerical states into readable characters and write output to file
-                    string input_sequence = input_msa[(*it)->node->name];
-                    if (input_sequence.length()>0)
-                        // write and copying gaps from the input sequences to the output.
-                        out << pre_output << exportSequenceWithGaps((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
-                    else
-                        // write without copying gaps from the input sequences to the output.
-                        out << pre_output << convertNumericalStatesIntoReadableCharacters((*it)->node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
-                }
-            }
+            (*it)->node->sequence->num_threads_done_simulation++;
             
-            // remove the sequence to release the memory after extracting the sequence
-            vector<short int>().swap((*it)->node->sequence);
+            // make sure only one thread is selected to write the output
+            if ((*it)->node->sequence->num_threads_done_simulation == omp_get_num_threads())
+                this_thread_write_output = true;
         }
         
-        if (node->isLeaf())
+        // only one thread is selected to write the output
+        if (this_thread_write_output)
         {
-            // avoid writing sequence of __root__
-            if (node->name!=ROOT_NAME && params->outputfile_runtime.length() == 0)
+            // permuting selected sites for FunDi model. Notes: Delay permuting selected sites if Insertion (in Indels) is used
+            if (params->alisim_fundi_taxon_set.size()>0 && params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0)
             {
-                // if using Indels -> temporarily write out internal states
-                if (params->alisim_insertion_ratio > 0)
-                    writeInternalStatesIndels(node, out);
-                else
-                {
-                    // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-                    string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
-                    
-                    string input_sequence = input_msa[node->name];
-                    // convert numerical states into readable characters and write output to file
-                    if (input_sequence.length()>0)
-                        // write and copying gaps from the input sequences to the output.
-                        out << pre_output << exportSequenceWithGaps(node, round(expected_num_sites/length_ratio), num_sites_per_state, input_sequence, state_mapping);
-                    else
-                        // write without copying gaps from the input sequences to the output.
-                        out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
-                }
+                if (node->isLeaf())
+                    permuteSelectedSites(fundi_items, node);
+                if ((*it)->node->isLeaf())
+                    permuteSelectedSites(fundi_items, (*it)->node);
             }
             
-            // remove the sequence to release the memory after extracting the sequence
-            vector<short int>().swap(node->sequence);
+            // write sequence of leaf nodes to file if possible
+            if (state_mapping.size() > 0)
+            {
+                if ((*it)->node->isLeaf())
+                {
+                    // if using Indels -> temporarily write out internal states
+                    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+                        writeInternalStatesIndels((*it)->node, out);
+                    else
+                    {
+                        // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                        string pre_output = exportPreOutputString((*it)->node, params->aln_output_format, max_length_taxa_name, force_output_PHYLIP);
+                        string output(num_sites_per_state == 1 ? sequence_length : (sequence_length * num_sites_per_state), '-');
+                        
+                        // convert numerical states into readable characters
+                        string input_sequence = input_msa[(*it)->node->name];
+                        if (input_sequence.length()>0)
+                            // extract sequence and copying gaps from the input sequences to the output.
+                            exportSequenceWithGaps((*it)->node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, input_sequence, state_mapping);
+                        else
+                            // extract sequence without copying gaps from the input sequences to the output.
+                            convertNumericalStatesIntoReadableCharacters((*it)->node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, state_mapping);
+                        
+                        // release memory allocated to the sequence chunk
+                        vector<short int>().swap((*it)->node->sequence->sequence_chunks[0]);
+                        
+                        // write output to file
+                        #ifdef _OPENMP
+                        #pragma omp critical
+                        #endif
+                            out << pre_output << output << "\n";
+                    }
+                }
+                
+                // avoid writing sequence of __root__
+                if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
+                {
+                    // if using Indels -> temporarily write out internal states
+                    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
+                        writeInternalStatesIndels(node, out);
+                    else
+                    {
+                        // export pre_output string (containing taxon name and ">" or "space" based on the output format)
+                        string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, force_output_PHYLIP);
+                        string output(num_sites_per_state == 1 ? sequence_length : (sequence_length * num_sites_per_state), '-');
+                        
+                        // convert numerical states into readable characters
+                        string input_sequence = input_msa[node->name];
+                        if (input_sequence.length()>0)
+                            // extract sequence and copying gaps from the input sequences to the output.
+                            exportSequenceWithGaps(node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, input_sequence, state_mapping);
+                        else
+                            // extract sequence without copying gaps from the input sequences to the output.
+                            convertNumericalStatesIntoReadableCharacters(node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, state_mapping);
+                        
+                        // release memory allocated to the sequence chunk
+                        vector<short int>().swap(node->sequence->sequence_chunks[0]);
+                        
+                        // write output to file
+                        #ifdef _OPENMP
+                        #pragma omp critical
+                        #endif
+                            out << pre_output << output << "\n";
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+    write and delete the current chunk of sequence if possible
+*/
+void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
+{
+    // we can only write and delete sequence chunk in normal simulations: without Indels, FunDi, ASC, etc
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0)
+    {
+        if (params->alisim_fundi_taxon_set.size() == 0)
+        {
+            // convert the sequence at leaf
+            if ((*it)->node->isLeaf())
+            {
+                // init a default sequence str
+                int sequence_length = round(expected_num_sites * inverse_length_ratio);
+                string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
+                
+                // convert numerical states into readable characters
+                string input_sequence = input_msa[(*it)->node->name];
+                if (input_sequence.length()>0)
+                    // extract sequence and copying gaps from the input sequences to the output.
+                    exportSequenceWithGaps(node_seq_chunk, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
+                else
+                    // extract sequence without copying gaps from the input sequences to the output.
+                    convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+                
+                // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+                outputOneSequence((*it)->node, output, thread_id, segment_start, out);
+            }
+                
+            // avoid writing sequence of __root__
+            if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
+            {
+                // init a default sequence str
+                int sequence_length = round(expected_num_sites * inverse_length_ratio);
+                string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
+                
+                // convert numerical states into readable characters
+                string input_sequence = input_msa[node->name];
+                if (input_sequence.length()>0)
+                    // extract sequence and copying gaps from the input sequences to the output.
+                    exportSequenceWithGaps(dad_seq_chunk, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
+                else
+                    // extract sequence without copying gaps from the input sequences to the output.
+                    convertNumericalStatesIntoReadableCharacters(dad_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+                
+                // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+                outputOneSequence(node, output, thread_id, segment_start, out);
+            }
+        }
+        
+        // convert internal sequence if it's an internal node and the user want to output internal sequences
+        if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
+        {
+            // init a default sequence str
+            int sequence_length = round(expected_num_sites * inverse_length_ratio);
+            string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
+            
+            // convert numerical states into readable characters
+            convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+            
+            // the memory allocated to the current sequence chunk of INTERNAL nodes will be release later
+            
+            // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+            outputOneSequence((*it)->node, output, thread_id, segment_start, out);
         }
     }
     
-    // update the num_children_done_simulation
-    node->num_children_done_simulation++;
-    // remove the sequence of the current node to release the memory if it's an internal node && all of its children have done their simulation && the user does't (use indel && want to output the internal sequences)
-    if (!node->isLeaf() && node->num_children_done_simulation >= (node->neighbors.size() - 1)
-        && !(params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0 && params->alisim_write_internal_sequences))
+    if (!store_seq_at_cache)
     {
-        // convert numerical states into readable characters and write internal sequences to file if the user want to do so
-        if (params->alisim_write_internal_sequences && state_mapping.size() > 0)
-        {
-            // export pre_output string (containing taxon name and ">" or "space" based on the output format)
-            string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
-            
-            out << pre_output << convertNumericalStatesIntoReadableCharacters(node, round(expected_num_sites/length_ratio), num_sites_per_state, state_mapping);
-        }
+        // update the num_children_done_simulation
+        node->sequence->nums_children_done_simulation[thread_id]++;
         
-        // release the memory
-        vector<short int>().swap(node->sequence);
+        // delete sequence at internal node if all sequences of its children are simulated
+        if (!node->isLeaf() && node->sequence->nums_children_done_simulation[thread_id] >= (node->neighbors.size() - 1) && !(params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_write_internal_sequences))
+            vector<short int>().swap(dad_seq_chunk);
     }
+}
+
+void AliSimulator::outputOneSequence(Node* node, string &output, int thread_id, int segment_start, ostream &out)
+{
+    // output a sequence with AliSim-OpenMP-EM
+    if (params->alisim_openmp_alg == EM)
+    {
+        // only write sequence name in the first thread
+        if (thread_id == 0)
+        {
+            string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name, force_output_PHYLIP);
+            out << pre_output << output << "\n";
+        }
+        // write sequence chunk in other threads
+        else
+        {
+            // if users skip concatenating sequence chunks from intermediate files -> write sequence name
+            if (params->no_merge)
+            {
+                string pre_output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name);
+                out << pre_output << output << "\n";
+            }
+            // don't write the sequence name in intermediate files
+            else
+                out << output << "\n";
+        }
+    }
+    // output a sequence with AliSim-OpenMP-IM
+    else
+    {
+        // only write sequence name in the first thread
+        if (thread_id == 0)
+            output = exportPreOutputString(node, params->aln_output_format, max_length_taxa_name) + output;
+        
+        // add break-line in the last simulating thread
+        if (thread_id == num_simulating_threads - 1)
+            output = output + "\n";
+        
+        //  cache output into the writing queue
+        if (num_threads > 1)
+        {
+            int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
+            pos += starting_pos + (num_sites_per_state == 1 ? segment_start : (segment_start * num_sites_per_state)) + (thread_id == 0 ? 0 : seq_name_length);
+            cacheSeqChunkStr(pos, output, thread_id);
+        }
+        // write output to file
+        else
+            out << output;
+    }
+}
+
+void AliSimulator::cacheSeqChunkStr(int64_t pos, string seq_chunk_str, int thread_id)
+{
+    // seek an empty slot in the cache
+    int slot_id = -1;
+    int start_slot = cache_start_indexes[thread_id];
+    int end_slot = start_slot + cache_size_per_thread;
+    int i = start_slot;
+    while (slot_id == -1)
+    {
+        // try to find an empty slot
+        if (seq_str_cache[i].chunk_status == EMPTY)
+            slot_id = i;
+        // otherwise, move to next slot
+        else
+            i >= end_slot - 1 ? i = start_slot : ++i;
+    }
+    
+    #ifdef _OPENMP
+    #pragma omp flush
+    #endif
+    // store the current chunk to the selected slot
+    seq_str_cache[slot_id].chunk_str = seq_chunk_str;
+    seq_str_cache[slot_id].pos = pos;
+    #ifdef _OPENMP
+    #pragma omp flush
+    #endif
+    
+    // update the status of the selected slot
+    #ifdef _OPENMP
+    #pragma omp atomic write
+    #endif
+    seq_str_cache[slot_id].chunk_status = OCCUPIED;
 }
 
 /**
 *  export pre_output string (contains taxon name and ">" or "space" based on the output format
 *
 */
-string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name)
+string AliSimulator::exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP)
 {
     string pre_output = "";
     
@@ -1053,12 +1846,14 @@ string AliSimulator::exportPreOutputString(Node *node, InputType output_format, 
     pre_output = node->name;
     // write node's id if node's name is empty
     if (pre_output.length() == 0) pre_output = convertIntToString(node->id);
-    // in PHYLIP format
-    if (output_format != IN_FASTA)
-        pre_output.resize(max_length_taxa_name, ' ');
+    pre_output.resize(max_length_taxa_name, ' ');
+    
     // in FASTA format
-    else
-        pre_output = ">" + pre_output + "\n";
+    if (output_format == IN_FASTA && !force_PHYLIP)
+    {
+        pre_output = ">" + pre_output;
+        pre_output[pre_output.length() - 1] = '\n';
+    }
     
     return pre_output;
 }
@@ -1066,10 +1861,10 @@ string AliSimulator::exportPreOutputString(Node *node, InputType output_format, 
 /**
 *  get a random item from a set of items with a probability array
 */
-int AliSimulator::getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items)
+int AliSimulator::getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items, int* rstream)
 {
     // generate a random number
-    double random_number = random_double();
+    double random_number = random_double(rstream);
     
     // select the current state, considering the random_number, and the probability_matrix
     double accummulated_probability = 0;
@@ -1088,22 +1883,38 @@ int AliSimulator::getRandomItemWithProbabilityMatrix(double *probability_maxtrix
 /**
 *  convert an probability matrix into an accumulated probability matrix
 */
-void AliSimulator::convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns)
+void AliSimulator::convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns, bool force_round_1)
 {
-    for (int r = 0; r < num_rows; r++)
+    double* probability_maxtrix_pointer = probability_maxtrix;
+    // force rounding the last entry of each row to one to avoid potential bug due to numerical precision, e.g, 0.99999999 < 1
+    if (force_round_1)
     {
-        for (int c = 1; c < num_columns; c++)
-        probability_maxtrix[r*num_columns+c] = probability_maxtrix[r*num_columns+c] + probability_maxtrix[r*num_columns+c-1];
-    }
+        int num_colmns_minus_one = num_columns - 1;
+        for (int r = 0; r < num_rows; r++, probability_maxtrix_pointer += num_columns)
+        {
+            for (int c = 1; c < num_colmns_minus_one; c++)
+                probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c - 1];
             
+            // force rounding the last item in each row to one
+            probability_maxtrix_pointer[num_colmns_minus_one] = 1.0;
+        }
+    }
+    else
+    {
+        for (int r = 0; r < num_rows; r++, probability_maxtrix_pointer += num_columns)
+        {
+            for (int c = 1; c < num_columns; c++)
+                probability_maxtrix_pointer[c] += probability_maxtrix_pointer[c - 1];
+        }
+    }
 }
 
 /**
 *  get a random item from a set of items with an accumulated probability array by binary search starting at the max probability
 */
-int AliSimulator::getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *accumulated_probability_maxtrix, int starting_index, int num_columns, int max_prob_position){
+int AliSimulator::getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *accumulated_probability_maxtrix, int starting_index, int num_columns, int max_prob_position, int* rstream){
     // generate a random number
-    double random_number = random_double();
+    double random_number = random_double(rstream);
     
     // starting at the probability of unchange first
     if (random_number >= (max_prob_position==0?0:accumulated_probability_maxtrix[starting_index+max_prob_position-1]))
@@ -1129,7 +1940,7 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accum
         return -1; // return -1 ~ not found
     
     // compute the center index
-    int center = (start + end)/2;
+    int center = (start + end) * 0.5;
     
     // if item is found at the center index -> return result
     if ((random_number <= accumulated_probability_maxtrix[center])
@@ -1147,14 +1958,14 @@ int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(double *accum
 /**
 *  binary search an item from a set with accumulated probability array
 */
-int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> accumulated_probability_maxtrix, double random_number, int start, int end, int first)
+int AliSimulator::binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> &accumulated_probability_maxtrix, double random_number, int start, int end, int first)
 {
     // check search range
     if (start > end)
         return -1; // return -1 ~ not found
     
     // compute the center index
-    int center = (start + end)/2;
+    int center = (start + end) * 0.5;
     
     // if item is found at the center index -> return result
     if ((random_number <= accumulated_probability_maxtrix[center])
@@ -1188,7 +1999,7 @@ void AliSimulator::validataSeqLengthCodon()
 *  update the expected_num_sites due to the change of the sequence_length
 */
 void AliSimulator::refreshExpectedNumSites(){
-    expected_num_sites = params->alisim_sequence_length/num_sites_per_state*length_ratio;
+    expected_num_sites = round(params->alisim_sequence_length / num_sites_per_state * length_ratio);
 }
 
 /**
@@ -1198,6 +2009,7 @@ void AliSimulator::estimateLengthRatio()
 {
     // By default (without +ASC), length_ratio is set at 1
     length_ratio = 1;
+    inverse_length_ratio = 1;
         
     // Handle the case with +ASC
     if (tree->getModel() && tree->getSubstName().find("+ASC") != std::string::npos)
@@ -1214,12 +2026,15 @@ void AliSimulator::estimateLengthRatio()
             
             // initialize a string concatenating all characters of all states (eg, ACGT for DNA)
             string all_characters;
-            all_characters.resize(max_num_states*num_sites_per_state);
-            for (int i = 0; i < max_num_states; i++)
+            all_characters.resize(max_num_states * num_sites_per_state);
+            int index = 0;
+            for (int i = 0; i < max_num_states; i++, index += num_sites_per_state)
             {
                 string characters_from_state = tree->aln->convertStateBackStr(i);
+                // NHANLT: potential improvement
+                // change to use pointer to avoid accessing []
                 for (int j = 0; j < num_sites_per_state; j++)
-                    all_characters[i*num_sites_per_state+j] = characters_from_state[j];
+                    all_characters[index + j] = characters_from_state[j];
             }
             
             // convert tree to unrooted tree if it's now rooted
@@ -1238,7 +2053,7 @@ void AliSimulator::estimateLengthRatio()
             
             // build all constant site patterns
             char *sequence_type = strcpy(new char[tree->aln->sequence_type.length() + 1], tree->aln->sequence_type.c_str());
-            tree->aln->buildPattern(sequences, sequence_type, nseq, nsite*num_sites_per_state);
+            tree->aln->buildPattern(sequences, sequence_type, nseq, nsite * num_sites_per_state);
             
             // compute the likelihood scores of all patterns
             double *patterns_llh = new double[tree->aln->getNPattern()];
@@ -1265,8 +2080,11 @@ void AliSimulator::estimateLengthRatio()
                 estimated_length_ratio = 0.5;
             
             // update the length_ratio with a 10% (0.1) additional length_ratio (for backup purpose)
-            length_ratio = 1/(1-estimated_length_ratio) + 0.1;
+            length_ratio = 1.0 / (1 - estimated_length_ratio) + 0.1;
         }
+        
+        // compute inverse_length_ratio
+        inverse_length_ratio = 1.0 / length_ratio;
     }
 }
 
@@ -1293,29 +2111,29 @@ void AliSimulator::initializeStateMapping(int num_sites_per_state, Alignment *al
 *  convert numerical states into readable characters
 *
 */
-string AliSimulator::convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping)
+void AliSimulator::convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> &state_mapping, int segment_length)
 {
-    ASSERT(sequence_length <= node->sequence.size());
-    
-    // dummy variables
-    std::string output (sequence_length * num_sites_per_state+1, ' ');
-    output[output.length()-1] = '\n';
+    segment_length = segment_length == -1 ? sequence_length : segment_length;
+    ASSERT(segment_length <= sequence_chunk.size());
     
     // convert normal data
     if (num_sites_per_state == 1)
-        for (int i = 0; i < sequence_length; i++)
-            output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+    {
+        for (int i = 0; i < segment_length; i++)
+            output[i] = state_mapping[sequence_chunk[i]][0];
+    }
     // convert CODON
     else
-        for (int i = 0; i < sequence_length; i++)
+    {
+        int index = 0;
+        for (int i = 0; i < segment_length; i++, index += num_sites_per_state)
         {
-            output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-            output[i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
-            output[i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
+            string codon_str = state_mapping[sequence_chunk[i]];
+            output[index] = codon_str[0];
+            output[index + 1] = codon_str[1];
+            output[index + 2] = codon_str[2];
         }
-    
-    // return output
-    return output;
+    }
 }
 
 /**
@@ -1359,8 +2177,8 @@ void AliSimulator::extractMaxTaxaNameLength()
                 IQTree *current_tree = (IQTree *) ((PhyloSuperTree*) tree)->at(i);
                 vector<string> seq_names = current_tree->aln->getSeqNames();
                 for (int i = 0; i < seq_names.size(); i++)
-                    if (seq_names[i].length()>max_length_taxa_name)
-                        max_length_taxa_name = seq_names[i].length();
+                    if (seq_names[i].length() >= max_length_taxa_name)
+                        max_length_taxa_name = seq_names[i].length() + 1;
             }
         }
         // otherwise, just check the current tree
@@ -1368,8 +2186,8 @@ void AliSimulator::extractMaxTaxaNameLength()
         {
             vector<string> seq_names = tree->aln->getSeqNames();
             for (int i = 0; i < seq_names.size(); i++)
-                if (seq_names[i].length()>max_length_taxa_name)
-                    max_length_taxa_name = seq_names[i].length();
+                if (seq_names[i].length() >= max_length_taxa_name)
+                    max_length_taxa_name = seq_names[i].length() + 1;
         }
     }
 }
@@ -1377,13 +2195,12 @@ void AliSimulator::extractMaxTaxaNameLength()
 /**
     selecting & permuting sites (FunDi models)
 */
-vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int num_sites){
+void AliSimulator::selectAndPermuteSites(vector<FunDi_Item> &fundi_items, double proportion, int num_sites){
     ASSERT(proportion<1);
     
     // dummy variables
-    vector<FunDi_Item> fundi_items;
     IntVector tmp_selected_sites;
-    int num_selected_sites = round(proportion*num_sites);
+    int num_selected_sites = round(proportion * num_sites);
     
     // select random unique sites one by one
     for (int i = 0; i < num_selected_sites; i++)
@@ -1450,25 +2267,27 @@ vector<FunDi_Item> AliSimulator::selectAndPermuteSites(double proportion, int nu
         fundi_items.push_back(tmp_fundi_item);
         fundi_items[0].new_position = position_pool[0];
     }
-    
-    return fundi_items;
 }
 
 /**
     permuting selected sites (FunDi models)
 */
-void AliSimulator::permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node)
+void AliSimulator::permuteSelectedSites(vector<FunDi_Item> &fundi_items, Node* node)
 {
-    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end()) {
-            // caching the current states of all selected sites
-            map<int, short int> caching_sites;
-            for (int i = 0; i < fundi_items.size(); i++)
-                caching_sites[fundi_items[i].selected_site] = node->sequence[fundi_items[i].selected_site];
-            
-            // permuting sites in FunDi model
-            for (int i = 0; i < fundi_items.size(); i++)
-                node->sequence[fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
-        }
+    mergeChunks(node);
+    
+    if (std::find(params->alisim_fundi_taxon_set.begin(), params->alisim_fundi_taxon_set.end(), node->name) != params->alisim_fundi_taxon_set.end())
+    {
+        // permute selected sites in the sequence
+        // caching the current states of all selected sites
+        map<int, short int> caching_sites;
+        for (int i = 0; i < fundi_items.size(); i++)
+            caching_sites[fundi_items[i].selected_site] = node->sequence->sequence_chunks[0][fundi_items[i].selected_site];
+        
+        // permuting sites in FunDi model
+        for (int i = 0; i < fundi_items.size(); i++)
+            node->sequence->sequence_chunks[0][fundi_items[i].new_position] = caching_sites[fundi_items[i].selected_site];
+    }
 }
 
 /**
@@ -1522,9 +2341,9 @@ void AliSimulator::intializeStateFreqsMixtureModel(IQTree* tree)
 }
 
 /**
-    branch-specific evolution
+    branch-specific evolution by the master thread
 */
-void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it)
+void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it)
 {
     // initialize a dummy model for this branch
     string model_full_name = (*it)->attributes["model"];
@@ -1554,6 +2373,7 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
     
     // initialize a new dummy alisimulator
     AliSimulator* tmp_alisimulator = new AliSimulator(params, tmp_tree, expected_num_sites, partition_rate);
+    tmp_alisimulator->num_threads = num_threads;
     
     // convert alisimulator to the correct type of simulator
     // get variables
@@ -1601,20 +2421,25 @@ void AliSimulator::branchSpecificEvolution(int sequence_length, double *trans_ma
 void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
 {
     // initialize the site-specific rates
-    initVariables(sequence_length);
+    initVariablesRateHeterogeneity(sequence_length);
     
     // check to regenerate the root sequence if the user has specified specific frequencies for root
     if (tree->root->id == node->id && ((*it)->attributes["freqs"]).length() > 0)
         regenerateRootSequenceBranchSpecificModel((*it)->attributes["freqs"], sequence_length, node);
     
-    // simulate a sequence for a node from a specific branch after all variables has been initializing
-    simulateASequenceFromBranchAfterInitVariables(model, sequence_length, trans_matrix, node, it, lengths);
+    // simulate chunks of sequence one by one
+    int segment_start = 0;
+    for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
+    {
+        simulateASequenceFromBranchAfterInitVariables(segment_start, model, trans_matrix, node->sequence->sequence_chunks[i], (*it)->node->sequence->sequence_chunks[i], node, it, NULL, lengths);
+        segment_start += node->sequence->sequence_chunks[i].size();
+    }
 }
 
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulator::simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
 {
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate * params->alisim_branch_scale * (*it)->length, trans_matrix);
@@ -1623,17 +2448,16 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *mod
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
     
     // estimate the sequence for the current neighbor
-    (*it)->node->sequence.resize(sequence_length);
-    for (int i = 0; i < sequence_length; i++)
+    for (int i = 0; i < node_seq_chunk.size(); i++)
     {
         // if the parent's state is a gap -> the children's state should also be a gap
-        if (node->sequence[i] == STATE_UNKNOWN)
-            (*it)->node->sequence[i] = STATE_UNKNOWN;
+        if (dad_seq_chunk[i] == STATE_UNKNOWN)
+            node_seq_chunk[i] = STATE_UNKNOWN;
         else
         {
             // iteratively select the state for each site of the child node, considering it's dad states, and the transition_probability_matrix
-            int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+            int parent_state = dad_seq_chunk[i];
+            node_seq_chunk[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, parent_state * max_num_states, max_num_states, parent_state, rstream);
         }
     }
 }
@@ -1641,7 +2465,7 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(ModelSubst *mod
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulator::initVariables(int sequence_length, bool regenerate_root_sequence)
+void AliSimulator::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
 {
     // Do nothing, this method will be overrided in AliSimulatorHeterogeneity and AliSimulatorInvar
 }
@@ -1662,7 +2486,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
         size_t pos = freqs.find('/');
         
         // convert frequency from string to double
-        state_freqs[i] = convert_double_with_distribution(freqs.substr(0, pos).c_str());
+        state_freqs[i] = convert_double_with_distribution(freqs.substr(0, pos).c_str(), true);
         total_freq += state_freqs[i];
         
         // update the position with the highest frequency
@@ -1690,7 +2514,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
     }
     
     // re-generate a new sequence for the root from the state frequencies
-    root->sequence = generateRandomSequenceFromStateFreqs(sequence_length, state_freqs, max_prob_pos);
+    generateRandomSequenceFromStateFreqs(sequence_length, root->sequence->sequence_chunks[0], state_freqs, max_prob_pos);
     
     // release the memory of state_freqs
     delete[] state_freqs;
@@ -1699,9 +2523,8 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
 /**
     generate a random sequence by state frequencies
 */
-vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int sequence_length, double* state_freqs, int max_prob_pos)
+void AliSimulator::generateRandomSequenceFromStateFreqs(int sequence_length, vector<short int> &sequence, double* state_freqs, int max_prob_pos)
 {
-    vector<short int> sequence;
     sequence.resize(sequence_length);
     
     // convert the probability matrix into an accumulated probability matrix
@@ -1709,63 +2532,62 @@ vector<short int> AliSimulator::generateRandomSequenceFromStateFreqs(int sequenc
     
     // randomly generate each site in the sequence follows the base frequencies defined by the user
     for (int i = 0; i < sequence_length; i++)
-        sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freqs, 0, max_num_states, max_prob_pos);
-    
-    return sequence;
+        sequence[i] =  getRandomItemWithAccumulatedProbMatrixMaxProbFirst(state_freqs, 0, max_num_states, max_prob_pos, NULL);
 }
 
 /**
 *  export a sequence with gaps copied from the input sequence
 */
-string AliSimulator::exportSequenceWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping)
+void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> &state_mapping, int segment_start, int segment_length)
 {
-    // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
-    string output (sequence_length * num_sites_per_state+1, '-');
-    output[output.length()-1] = '\n';
+    segment_length = segment_length == -1 ? sequence_length : segment_length;
     
     // convert non-empty sequence
-    if (node->sequence.size() >= sequence_length)
+    if (sequence_chunk.size() >= segment_length)
     {
         // convert normal data
         if (num_sites_per_state == 1)
         {
-            for (int i = 0; i < sequence_length; i++){
+            for (int i = 0; i < segment_length; i++){
                 // handle gaps
-                if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
-                    && input_sequence[i] == '-')
+                if (segment_start + (i + 1) - 1 < input_sequence.length()
+                    && input_sequence[segment_start + i] == '-')
                 {
                     // insert gaps
-                    output[i*num_sites_per_state] = '-';
+                    output[i] = '-';
                 }
                 // if it's not a gap
                 else
-                    output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
+                    output[i] = state_mapping[sequence_chunk[i]][0];
             }
         }
         // convert CODON
-        else {
-            for (int i = 0; i < sequence_length; i++){
+        else
+        {
+            int index = 0;
+            int segment_start_plus_index = segment_start;
+            for (int i = 0; i < segment_length; i++, index += num_sites_per_state, segment_start_plus_index += num_sites_per_state)
+            {
                 // handle gaps
-                if ((i+1)*num_sites_per_state - 1 < input_sequence.length()
-                    && (input_sequence[i*num_sites_per_state] == '-'
-                            || input_sequence[i*num_sites_per_state+1] == '-'
-                            || input_sequence[i*num_sites_per_state+2] == '-')){
+                if (segment_start_plus_index + 2 < input_sequence.length()
+                    && (input_sequence[segment_start_plus_index] == '-'
+                            || input_sequence[segment_start_plus_index + 1] == '-'
+                            || input_sequence[segment_start_plus_index + 2] == '-')){
                     // insert gaps
-                    output[i*num_sites_per_state] =  input_sequence[i*num_sites_per_state];
-                    output[i*num_sites_per_state + 1] =  input_sequence[i*num_sites_per_state+1];
-                    output[i*num_sites_per_state + 2] =  input_sequence[i*num_sites_per_state+2];
+                    output[index] =  input_sequence[segment_start_plus_index];
+                    output[index + 1] =  input_sequence[segment_start_plus_index + 1];
+                    output[index + 2] =  input_sequence[segment_start_plus_index + 2];
                 }
                 else
                 {
-                        output[i*num_sites_per_state] = state_mapping[node->sequence[i]][0];
-                        output[i*num_sites_per_state + 1] = state_mapping[node->sequence[i]][1];
-                        output[i*num_sites_per_state + 2] = state_mapping[node->sequence[i]][2];
+                    string codon_str = state_mapping[sequence_chunk[i]];
+                    output[index] = codon_str[0];
+                    output[index + 1] = codon_str[1];
+                    output[index + 2] = codon_str[2];
                 }
             }
         }
     }
-    
-    return output;
 }
 
 /**
@@ -1775,27 +2597,35 @@ void AliSimulator::extractRatesJMatrix(ModelSubst *model)
 {
     // get num_mixture_models
     int num_mixture_models = model->getNMixtures();
-    double* tmp_Q_matrix = new double[max_num_states*max_num_states];
+    int max_num_states_square = max_num_states * max_num_states;
+    double* tmp_Q_matrix = new double[max_num_states_square];
+    int starting_index_sub_rates = 0;
+    int starting_index_J = 0;
+    int max_num_states_plus_one = max_num_states + 1;
     
-    for (int mixture = 0; mixture <num_mixture_models; mixture++)
+    for (int mixture = 0; mixture <num_mixture_models; mixture++, starting_index_sub_rates += max_num_states, starting_index_J += max_num_states_square)
     {
         // get the Rate (Q) Matrix
         model->getQMatrix(tmp_Q_matrix, mixture);
         
         // extract sub rate for each state from q_matrix
-        int starting_index_sub_rates = mixture * max_num_states;
-        for (int i = 0; i < max_num_states; i++)
-            sub_rates[starting_index_sub_rates + i] = - tmp_Q_matrix[i * (max_num_states + 1)];
+        int tmp_Q_matrix_index = 0;
+        for (int i = 0; i < max_num_states; i++, tmp_Q_matrix_index += max_num_states_plus_one)
+            sub_rates[starting_index_sub_rates + i] = - tmp_Q_matrix[tmp_Q_matrix_index];
         
         // convert Q_Matrix to J_Matrix;
-        int starting_index_J = starting_index_sub_rates * max_num_states;
-        for (int i = 0; i < max_num_states; i++)
-        for (int j = 0; j < max_num_states; j++)
+        int i_times_max_num_states = 0;
+        for (int i = 0; i < max_num_states; i++, i_times_max_num_states += max_num_states)
         {
-            if (i == j)
-                Jmatrix[starting_index_J+i*max_num_states+j] = 0;
-            else
-                Jmatrix[starting_index_J+i*max_num_states+j] = tmp_Q_matrix[i*max_num_states+j]/sub_rates[starting_index_sub_rates + i];
+            double denominator = 1.0 / sub_rates[starting_index_sub_rates + i];
+            int tmp_index = starting_index_J + i_times_max_num_states;
+            for (int j = 0; j < max_num_states; j++)
+            {
+                if (i == j)
+                    Jmatrix[tmp_index + j] = 0;
+                else
+                    Jmatrix[tmp_index + j] = tmp_Q_matrix[i_times_max_num_states + j] * denominator;
+            }
         }
     }
     
@@ -1803,26 +2633,25 @@ void AliSimulator::extractRatesJMatrix(ModelSubst *model)
     delete[] tmp_Q_matrix;
     
     // convert Jmatrix to accumulated Jmatrix
-    convertProMatrixIntoAccumulatedProMatrix(Jmatrix, num_mixture_models*max_num_states, max_num_states);
+    convertProMatrixIntoAccumulatedProMatrix(Jmatrix, num_mixture_models * max_num_states, max_num_states);
 }
 
 /**
     initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
 */
-void AliSimulator::initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence)
+void AliSimulator::initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> &sequence)
 {
     // initialize variables
-    int sequence_length = sequence.size();
     total_sub_rate = 0;
     num_gaps = 0;
-    sub_rate_by_site.resize(sequence_length, 0);
+    sub_rate_by_site.resize(sequence.size(), 0);
     
     vector<int> sub_rate_count(max_num_states, 0);
     // compute sub_rate_by_site
-    for (int i = 0; i < sequence_length; i++)
+    for (int i = 0; i < sequence.size(); i++)
     {
         // not compute the substitution rate for gaps/deleted sites
-        if (sequence[i] != STATE_UNKNOWN && (site_specific_rates.size() == 0 || site_specific_rates[i] != 0))
+        if (sequence[i] != STATE_UNKNOWN && (site_specific_rates.size() == 0 || site_specific_rates[segment_start + i] != 0))
         {
             int index = sequence[i];
             sub_rate_count[index]++;
@@ -1839,47 +2668,64 @@ void AliSimulator::initVariables4RateMatrix(double &total_sub_rate, int &num_gap
     
     // update total_sub_rate
     for (int i = 0; i < max_num_states; i++)
-        total_sub_rate += sub_rate_count[i]*sub_rates[i];
+        total_sub_rate += sub_rate_count[i] * sub_rates[i];
 }
 
 /**
     handle indels
 */
-void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method)
+void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream)
 {
     int num_gaps = 0;
     double total_sub_rate = 0;
     vector<double> sub_rate_by_site;
     // If AliSim is using RATE_MATRIX approach -> initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
-    if (simulation_method == RATE_MATRIX)
+    if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
     {
-        initVariables4RateMatrix(total_sub_rate, num_gaps, sub_rate_by_site, (*it)->node->sequence);
+        initVariables4RateMatrix(segment_start, total_sub_rate, num_gaps, sub_rate_by_site, node_seq_chunk);
         
         // handle cases when total_sub_rate == NaN due to extreme freqs
         if (total_sub_rate != total_sub_rate)
             total_sub_rate = 0;
     }
     else // otherwise, TRANS_PROB_MATRIX approach is used -> only count the number of gaps
-        num_gaps = (*it)->node->num_gaps;
+        num_gaps = (*it)->node->sequence->num_gaps;
     
     double total_ins_rate = 0;
     double total_del_rate = 0;
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio != 0)
+    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
     {
-        total_ins_rate = params->alisim_insertion_ratio*(sequence_length + 1 - num_gaps);
-        total_del_rate = params->alisim_deletion_ratio*(sequence_length - 1 - num_gaps + computeMeanDelSize(sequence_length));
+        // compute total_ins_rate and total_del_rate
+        // constant indel-rates
+        if (!params->indel_rate_variation)
+        {
+            int tmp_num = sequence_length - num_gaps;
+            total_ins_rate = params->alisim_insertion_ratio * (tmp_num + 1);
+            total_del_rate = params->alisim_deletion_ratio * (tmp_num - 1 + computeMeanDelSize(sequence_length));
+        }
+        // indel-rate variation
+        else
+        {
+            total_ins_rate = params->alisim_insertion_ratio * total_sub_rate;
+            total_del_rate = params->alisim_deletion_ratio * total_sub_rate;
+        }
     }
-    double total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
+    
+    // compute total_event_rate
+    double total_event_rate = total_ins_rate + total_del_rate;
+    // only take into account the substitution rate if using Rate matrix simulation approach
+    if (simulation_method == RATE_MATRIX)
+        total_event_rate += total_sub_rate;
     
     // dummy variables
-    int ori_seq_length = (*it)->node->sequence.size();
+    int ori_seq_length = node_seq_chunk.size();
     Insertion* insertion_before_simulation = latest_insertion;
     
     double branch_length = (*it)->length * params->alisim_branch_scale;
     while (branch_length > 0)
     {
         // generate a waiting time s1 by sampling from the exponential distribution with mean 1/total_event_rate
-        double waiting_time = random_double_exponential_distribution(1/total_event_rate);
+        double waiting_time = random_double_exponential_distribution(1.0 / total_event_rate, rstream);
         
         if (waiting_time > branch_length)
             break;
@@ -1905,21 +2751,22 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
             {
                 case INSERTION:
                 {
-                    length_change = handleInsertion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    length_change = handleInsertion(sequence_length, node_seq_chunk, total_sub_rate, sub_rate_by_site, simulation_method);
+                    segment_length = sequence_length;
                     break;
                 }
                 case DELETION:
                 {
-                    int deletion_length = handleDeletion(sequence_length, (*it)->node->sequence, total_sub_rate, sub_rate_by_site, simulation_method);
+                    int deletion_length = handleDeletion(sequence_length, node_seq_chunk, total_sub_rate, sub_rate_by_site, simulation_method);
                     length_change = -deletion_length;
-                    (*it)->node->num_gaps += deletion_length;
+                    (*it)->node->sequence->num_gaps += deletion_length;
                     break;
                 }
                 case SUBSTITUTION:
                 {
                     if (simulation_method == RATE_MATRIX)
                     {
-                        handleSubs(sequence_length, total_sub_rate, sub_rate_by_site, (*it)->node->sequence, model->getNMixtures());
+                        handleSubs(segment_start, total_sub_rate, sub_rate_by_site, node_seq_chunk, model->getNMixtures(), rstream);
                     }
                     break;
                 }
@@ -1930,10 +2777,25 @@ void AliSimulator::handleIndels(ModelSubst *model, int &sequence_length, Neighbo
             // update total_event_rate
             if (length_change != 0)
             {
-                total_ins_rate += params->alisim_insertion_ratio * length_change;
-                total_del_rate += params->alisim_deletion_ratio * length_change;
+                // constant indel-rate
+                if (!params->indel_rate_variation)
+                {
+                    total_ins_rate += params->alisim_insertion_ratio * length_change;
+                    total_del_rate += params->alisim_deletion_ratio * length_change;
+                }
+                // indel-rate variation
+                else
+                {
+                    total_ins_rate = params->alisim_insertion_ratio * total_sub_rate;
+                    total_del_rate = params->alisim_deletion_ratio * total_sub_rate;
+                }
             }
-            total_event_rate = total_sub_rate + total_ins_rate + total_del_rate;
+            
+            // re-compute total_event_rate
+            total_event_rate = total_ins_rate + total_del_rate;
+            // only take into account the substitution rate if using Rate matrix simulation approach
+            if (simulation_method == RATE_MATRIX)
+                total_event_rate += total_sub_rate;
         }
 
     }
@@ -1993,10 +2855,10 @@ void AliSimulator::updateInternalSeqsFromRootToNode(GenomeTree* genome_tree, int
         return;
     
     // if it is a non-empty internal node -> update the current genome by the genome_tree
-    if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence.size() > 0)
+    if ((!node->isLeaf() || node->name == ROOT_NAME) && node->sequence->sequence_chunks[0].size() > 0)
     {
-        node->num_gaps += seq_length - node->sequence.size();
-        node->sequence = genome_tree->exportNewGenome(node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+        node->sequence->num_gaps += seq_length - node->sequence->sequence_chunks[0].size();
+        node->sequence->sequence_chunks[0] = genome_tree->exportNewGenome(node->sequence->sequence_chunks[0], seq_length, tree->aln->STATE_UNKNOWN);
     }
     
     // process its neighbors/children
@@ -2021,19 +2883,19 @@ void AliSimulator::updateInternalSeqsFromRootToNode(GenomeTree* genome_tree, int
 void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int seq_length, Node *node)
 {
     // get parent node
-    Node* internal_node = node->parent;
+    Node* internal_node = node->sequence->parent;
     
     for (; internal_node;)
     {
         // only update new genome at non-empty internal nodes
-        if (!(internal_node->isLeaf()) && internal_node->sequence.size() > 0)
+        if (!(internal_node->isLeaf()) && internal_node->sequence->sequence_chunks[0].size() > 0)
         {
-            internal_node->num_gaps += seq_length - internal_node->sequence.size();
-            internal_node->sequence = genome_tree->exportNewGenome(internal_node->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+            internal_node->sequence->num_gaps += seq_length - internal_node->sequence->sequence_chunks[0].size();
+            internal_node->sequence->sequence_chunks[0] = genome_tree->exportNewGenome(internal_node->sequence->sequence_chunks[0], seq_length, tree->aln->STATE_UNKNOWN);
         }
         
         // move to the next parent
-        internal_node = internal_node->parent;
+        internal_node = internal_node->sequence->parent;
     }
 }
 
@@ -2042,8 +2904,17 @@ void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int
 */
 int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
 {
-    // Randomly select the position/site (from the set of all sites) where the insertion event occurs based on a uniform distribution between 0 and the current length of the sequence
-    int position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
+    // Randomly select the position/site (from the set of all sites) where the insertion event occurs
+    int position;
+    // with constant indel-rate -> based on a uniform distribution between 0 and the current length of the sequence
+    if (!params->indel_rate_variation)
+        position = selectValidPositionForIndels(sequence_length + 1, indel_sequence);
+    // with indel-rate variation -> based on the sub_rate_by_site
+    else
+    {
+        discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
+        position = random_discrete_dis(params->generator);
+    }
     
     // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
     int length = -1;
@@ -2060,20 +2931,22 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
         outError("Sorry! Could not generate a positive length (for insertion events) based on the insertion-distribution within 1000 attempts.");
     
     // insert new_sequence into the current sequence
-    vector<short int> new_sequence = generateRandomSequence(length, false);
+    vector<short int> new_sequence;
+    generateRandomSequence(length, new_sequence, false);
     insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
     
     // if RATE_MATRIX approach is used -> update total_sub_rate and sub_rate_by_site
-    if (simulation_method == RATE_MATRIX)
+    if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
     {
         // update sub_rate_by_site of the inserted sites
         double sub_rate_change = 0;
         sub_rate_by_site.insert(sub_rate_by_site.begin()+position, length, 0);
         for (int i = position; i < position + length; i++)
         {
-            int mixture_index = site_specific_model_index.size() == 0? 0:site_specific_model_index[i];
-            double site_rate = site_specific_rates.size() > 0?site_specific_rates[i]:1;
-            sub_rate_by_site[i] = site_rate*sub_rates[mixture_index*max_num_states + indel_sequence[i]];
+            // NHANLT: potential improvement
+            // cache site_specific_model_index[i] * max_num_states
+            double sub_rate_from_model = site_specific_model_index.size() == 0 ? sub_rates[indel_sequence[i]] : sub_rates[site_specific_model_index[i] * max_num_states + indel_sequence[i]];
+            sub_rate_by_site[i] = site_specific_rates.size() > 0 ? (site_specific_rates[i] * sub_rate_from_model) : sub_rate_from_model;
             sub_rate_change += sub_rate_by_site[i];
         }
         
@@ -2112,11 +2985,21 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     if (length <= 0)
         outError("Sorry! Could not generate a positive length (for deletion events) based on the deletion-distribution within 1000 attempts.");
     
-    // Randomly select the position/site (from the set of all sites) where the deletion event occurs based on a uniform distribution between 0 and the current length of the sequence
+    // Randomly select the position/site (from the set of all sites) where the deletion event occurs
     int position = 0;
-    int upper_bound = sequence_length - length;
-    if (upper_bound > 0)
-        position = selectValidPositionForIndels(upper_bound, indel_sequence);
+    // with constant indel-rate -> based on a uniform distribution between 0 and the current length of the sequence
+    if (!params->indel_rate_variation)
+    {
+        int upper_bound = sequence_length - length;
+        if (upper_bound > 0)
+            position = selectValidPositionForIndels(upper_bound, indel_sequence);
+    }
+    // with indel-rate variation -> based on the sub_rate_by_site
+    else
+    {
+        discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
+        position = random_discrete_dis(params->generator);
+    }
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
     int real_deleted_length = 0;
@@ -2137,7 +3020,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
         }
         
         // if RATE_MATRIX approach is used -> update sub_rate_by_site
-        if (simulation_method == RATE_MATRIX)
+        if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
         {
             sub_rate_change -= sub_rate_by_site[position + i];
             sub_rate_by_site[position + i] = 0;
@@ -2145,7 +3028,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     }
     
     // if RATE_MATRIX approach is used -> update total_sub_rate
-    if (simulation_method == RATE_MATRIX)
+    if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
         total_sub_rate += sub_rate_change;
     
     // return deletion-size
@@ -2155,7 +3038,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
 /**
     handle substitution events
 */
-void AliSimulator::handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models)
+void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream)
 {
     // select a position where the substitution event occurs
     discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
@@ -2167,20 +3050,21 @@ void AliSimulator::handleSubs(int sequence_length, double &total_sub_rate, vecto
     // estimate the new state
     int mixture_index = 0;
     // randomly select a model component if mixture model at substitution level is used
-    if (site_specific_model_index.size() > pos)
+    if (site_specific_model_index.size() > segment_start + pos)
     {
         if (params->alisim_mixture_at_sub_level)
-            mixture_index = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_mixture_models, mixture_max_weight_pos);
+            mixture_index = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(mixture_accumulated_weight, 0, num_mixture_models, mixture_max_weight_pos, rstream);
         else
-            mixture_index = site_specific_model_index[pos];
+            mixture_index = site_specific_model_index[segment_start + pos];
     }
     
-    int starting_index = mixture_index*max_num_states*max_num_states + max_num_states*current_state;
-    indel_sequence[pos] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(Jmatrix, starting_index, max_num_states, max_num_states/2);
+    int mixture_index_times_num_states = (mixture_index == 0 ? 0 : (mixture_index * max_num_states));
+    int starting_index = (mixture_index_times_num_states + current_state) * max_num_states;
+    indel_sequence[pos] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(Jmatrix, starting_index, max_num_states, max_num_states * 0.5, rstream);
     
     // update total_sub_rate
-    double current_site_rate = site_specific_rates.size() == 0 ? 1 : site_specific_rates[pos];
-    double sub_rate_change = current_site_rate*(sub_rates[mixture_index*max_num_states + indel_sequence[pos]] - sub_rates[mixture_index*max_num_states + current_state]);
+    double sub_rate_change = sub_rates[mixture_index_times_num_states + indel_sequence[pos]] - sub_rates[mixture_index_times_num_states + current_state];
+    sub_rate_change = (site_specific_rates.size() == 0 ? sub_rate_change : (sub_rate_change * site_specific_rates[segment_start + pos]));
     total_sub_rate += sub_rate_change;
     
     // update sub_rate_by_site
@@ -2191,7 +3075,7 @@ void AliSimulator::handleSubs(int sequence_length, double &total_sub_rate, vecto
 *  randomly select a valid position (not a deleted-site) for insertion/deletion event
 *
 */
-int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> sequence)
+int AliSimulator::selectValidPositionForIndels(int upper_bound, vector<short int> &sequence)
 {
     int position = -1;
     for (int i = 0; i < upper_bound; i++)
@@ -2235,7 +3119,7 @@ int AliSimulator::generateIndelSize(IndelDistribution indel_dis)
             random_size = random_int_geometric(indel_dis.param_1);
             break;
         default:
-            random_size = random_number_from_distribution(indel_dis.user_defined_dis);
+            random_size = random_number_from_distribution(indel_dis.user_defined_dis, true);
             break;
     }
     return random_size;
@@ -2294,10 +3178,11 @@ void AliSimulator::rootTree()
         new_root->name = ROOT_NAME;
         new_root->id = tree->leafNum;
         new_root->sequence = tree->root->sequence;
+        tree->root->sequence = new Sequence();
         
         // change the id of the intermediate node if it's equal to the root's id
         if (second_internal_node->id == new_root->id)
-            second_internal_node->id = (new_root->id * 10);
+            second_internal_node->id = (tree->nodeNum);
         
         // link new_root node with the intermediate node
         new_root->addNeighbor(second_internal_node, 0);
@@ -2307,6 +3192,7 @@ void AliSimulator::rootTree()
         tree->root = new_root;
         tree->rooted = true;
         tree->leafNum++;
+        tree->nodeNum++;
     }
 }
 
@@ -2344,14 +3230,14 @@ void AliSimulator::computeSwitchingParam(int seq_length)
         }
         
         // compute the switching param
-        params->alisim_simulation_thresh = a/seq_length;
+        params->alisim_simulation_thresh = a / seq_length;
     }
 }
 
 /**
     change state of sites due to Error model
 */
-void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop)
+void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &sequence_chunk, double error_prop, int* rstream)
 {
     // estimate the total of sites need to change
     int num_changes = round(error_prop*sites.size());
@@ -2364,27 +3250,27 @@ void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &s
             outError("Cannot select a site for changing state (to simulate Sequencing Error Model). The proportion of error seems to be too high. You should try again with a smaller proportion of error!");
         
         // randomly select a site
-        int selected_index = random_int(sites.size());
+        int selected_index = random_int(sites.size(), rstream);
         int selected_site = sites[selected_index];
         
         // remove the selected_site from the set of available sites
         sites.erase(sites.begin()+selected_index);
         
         // if the selected_site is a gap -> ignore and retry
-        if (sequence[selected_site] == STATE_UNKNOWN)
+        if (sequence_chunk[selected_site] == STATE_UNKNOWN)
             i--;
         // otherwise, randomly select a new state
         else
         {
             // select a new state
-            short int new_state = random_int(max_num_states);
-            while (new_state == sequence[selected_site] && max_num_states > 1)
+            short int new_state = random_int(max_num_states, rstream);
+            while (new_state == sequence_chunk[selected_site] && max_num_states > 1)
             {
-                new_state = random_int(max_num_states);
+                new_state = random_int(max_num_states, rstream);
             }
             
             // update the selected site
-            sequence[selected_site] = new_state;
+            sequence_chunk[selected_site] = new_state;
         }
     }
 }
@@ -2392,7 +3278,7 @@ void AliSimulator::changeSitesErrorModel(vector<int> sites, vector<short int> &s
 /**
     handle DNA error
 */
-void AliSimulator::handleDNAerr(double error_prop, vector<short int> &sequence, int model_index)
+void AliSimulator::handleDNAerr(int segment_start, double error_prop, vector<short int> &sequence_chunk, int* rstream, int model_index)
 {
     // dummy variables
     vector<int> sites;
@@ -2401,19 +3287,19 @@ void AliSimulator::handleDNAerr(double error_prop, vector<short int> &sequence, 
     // extract available sites from site_specific_model if a mixture model is used
     if (model_index >= 0 && site_specific_model_index.size()>0)
     {
-        for (int i = 0; i < site_specific_model_index.size(); i++)
-        if (site_specific_model_index[i] == model_index)
+        for (int i = 0; i < sequence_chunk.size(); i++)
+        if (site_specific_model_index[segment_start + i] == model_index)
             sites.push_back(i);
     }
     // otherwise get all sites
     else
     {
-        sites.resize(sequence.size());
-        std::iota(sites.begin(),sites.end(),0);
+        sites.resize(sequence_chunk.size());
+        std::iota(sites.begin(),sites.end(), 0);
     }
     
     // change state of sites due to Error model
-    changeSitesErrorModel(sites, sequence, error_prop);
+    changeSitesErrorModel(sites, sequence_chunk, error_prop, rstream);
 }
 
 /**
@@ -2501,17 +3387,17 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
     
     // build a genome tree from the list of insertions
     GenomeTree* genome_tree = new GenomeTree();
-    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence.size(), true);
+    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence->sequence_chunks[0].size(), true);
     
     // export new sequence for the first tip
     for (int i = 0; i < insertion->phylo_nodes.size(); i++)
     {
         tips_count++;
         
-        insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+        insertion->phylo_nodes[i]->sequence->sequence_chunks[0] = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence->sequence_chunks[0], seq_length, tree->aln->STATE_UNKNOWN);
     
         // delete the insertion_pos of this node as we updated its sequence.
-        insertion->phylo_nodes[i]->insertion_pos = NULL;
+        insertion->phylo_nodes[i]->sequence->insertion_pos = NULL;
     }
     
     // keep track of previous insertion
@@ -2545,7 +3431,7 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
                     // delete and rebuild genome tree
                     delete genome_tree;
                     genome_tree = new GenomeTree();
-                    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence.size(), true);
+                    genome_tree->buildGenomeTree(insertion, insertion->phylo_nodes[0]->sequence->sequence_chunks[0].size(), true);
                     
                     // update the next threshold to rebuild the indel his
                     rebuild_indel_his_thresh += rebuild_indel_his_step;
@@ -2569,10 +3455,10 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
             {
                 tips_count++;
                 
-                insertion->phylo_nodes[i]->sequence = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence, seq_length, tree->aln->STATE_UNKNOWN);
+                insertion->phylo_nodes[i]->sequence->sequence_chunks[0] = genome_tree->exportNewGenome(insertion->phylo_nodes[i]->sequence->sequence_chunks[0], seq_length, tree->aln->STATE_UNKNOWN);
             
                 // delete the insertion_pos of this node as we updated its sequence.
-                insertion->phylo_nodes[i]->insertion_pos = NULL;
+                insertion->phylo_nodes[i]->sequence->insertion_pos = NULL;
             }
         }
         
@@ -2582,4 +3468,123 @@ void AliSimulator::updateNewGenomeIndels(int seq_length)
     
     // delete genome_tree
     delete genome_tree;
+}
+
+/**
+*  reset tree (by setting the parents of all node to NULL) -> only using when simulating MSAs with openMP
+*
+*/
+void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node, Node *dad)
+{
+    // set starting node
+    if (!node && !dad)
+    {
+        node = tree->root;
+        dad = tree->root;
+        
+        // init depth at root
+        node->sequence->depth = 0;
+        max_depth = 0;
+        
+        // separate root sequence into chunks
+        separateSeqIntoChunks(node);
+    }
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // update parent node of the current node
+        (*it)->node->sequence->parent = node;
+        (*it)->node->sequence->depth = node->sequence->depth + 1;
+        if ((*it)->node->sequence->depth > max_depth)
+            max_depth = (*it)->node->sequence->depth;
+        (*it)->node->sequence->num_threads_done_simulation = 0;
+        (*it)->node->sequence->num_threads_reach_barrier = 0;
+        if (!store_seq_at_cache)
+            (*it)->node->sequence->sequence_chunks.resize(num_threads);
+        node->sequence->nums_children_done_simulation.resize(num_threads);
+        for (int i = 0; i < num_threads; i++)
+            node->sequence->nums_children_done_simulation[i] = 0;
+        
+        // browse 1-step deeper to the neighbor node
+        resetTree(max_depth, store_seq_at_cache, (*it)->node, node);
+    }
+}
+
+/**
+    separate root sequence into chunks
+*/
+void AliSimulator::separateSeqIntoChunks(Node* node)
+{
+    if (node->sequence->sequence_chunks.size() != num_simulating_threads)
+    {
+        vector<short int> root_seq = node->sequence->sequence_chunks[0];
+        assert(root_seq.size() == expected_num_sites);
+        node->sequence->sequence_chunks.resize(num_simulating_threads);
+        int default_segment_length = expected_num_sites / num_simulating_threads;
+        
+        // resize the first chunk from the root sequence
+        node->sequence->sequence_chunks[0].resize(default_segment_length);
+        
+        // clone other chunks
+        int starting_index = default_segment_length;
+        for (int i = 1; i < num_simulating_threads; i++, starting_index += default_segment_length)
+        {
+            int actual_segment_length = i < num_simulating_threads - 1 ? default_segment_length : expected_num_sites - (num_simulating_threads - 1) * default_segment_length;
+            node->sequence->sequence_chunks[i].resize(actual_segment_length);
+            
+            for (int j = 0; j < actual_segment_length; j++)
+                node->sequence->sequence_chunks[i][j] = root_seq[starting_index + j];
+        }
+    }
+}
+
+void AliSimulator::mergeChunks(Node* node)
+{
+    // ignore merging if it was already merged
+    if (node->sequence->sequence_chunks.size() == 1) return;
+    
+    // count num of sites of all chunks
+    int total_sites = 0;
+    for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
+        total_sites += node->sequence->sequence_chunks[i].size();
+    
+    // merge other chunks into the first chunk
+    int site_pos = node->sequence->sequence_chunks[0].size();
+    node->sequence->sequence_chunks[0].resize(total_sites);
+    for (int i = 1; i < node->sequence->sequence_chunks.size(); i++)
+    {
+        for (int j = 0; j < node->sequence->sequence_chunks[i].size(); j++)
+        {
+            node->sequence->sequence_chunks[0][site_pos] = node->sequence->sequence_chunks[i][j];
+            site_pos++;
+        }
+    }
+    
+    // resize the sequence_chunks
+    node->sequence->sequence_chunks.resize(1);
+}
+
+/**
+    merge chunks into a single sequence for all nodes in tree
+*/
+void AliSimulator::mergeChunksAllNodes(Node* node, Node* dad)
+{
+    // set the starting node
+    if (!node && !dad)
+    {
+        node = tree->root;
+        dad = tree->root;
+    }
+    
+    // merge chunks into a single sequence for the current node
+    if (node->isLeaf() || params->alisim_write_internal_sequences)
+        mergeChunks(node);
+    
+    // traverse the tree to all other nodes
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        
+        // browse 1-step deeper to the neighbor node
+        mergeChunksAllNodes((*it)->node, node);
+    }
 }

@@ -27,6 +27,8 @@
 #ifdef _OPENMP
     #include <omp.h>
 #endif
+#include "utils/MPIHelper.h"
+#include "alignment/sequencechunkstr.h"
 
 struct FunDi_Item {
   int selected_site;
@@ -74,7 +76,7 @@ protected:
     *  randomly generate the ancestral sequence for the root node
     *  by default (initial_freqs = true) freqs could be randomly generated if they are not specified
     */
-    vector<short int> generateRandomSequence(int sequence_length, bool initial_freqs = true);
+    void generateRandomSequence(int sequence_length, vector<short int> &sequence, bool initial_freqs = true);
     
     /**
     *  randomly generate the base frequencies
@@ -84,17 +86,17 @@ protected:
     /**
     *  get a random item from a set of items with a probability array
     */
-    int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items);
+    int getRandomItemWithProbabilityMatrix(double *probability_maxtrix, int starting_index, int num_items, int* rstream);
     
     /**
     *  get a random item from a set of items with an accumulated probability array by binary search starting at the max probability
     */
-    int getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *accumulated_probability_maxtrix, int starting_index, int num_columns, int max_prob_position);
+    int getRandomItemWithAccumulatedProbMatrixMaxProbFirst(double *accumulated_probability_maxtrix, int starting_index, int num_columns, int max_prob_position, int* rstream);
 
     /**
     *  convert an probability matrix into an accumulated probability matrix
     */
-    void convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns);
+    void convertProMatrixIntoAccumulatedProMatrix(double *probability_maxtrix, int num_rows, int num_columns, bool force_round_1 = true);
 
     /**
     *  binary search an item from a set with accumulated probability array
@@ -104,13 +106,19 @@ protected:
     /**
     *  binary search an item from a set with accumulated probability array
     */
-    int binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> accumulated_probability_maxtrix, double random_number, int start, int end, int first);
+    int binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> &accumulated_probability_maxtrix, double random_number, int start, int end, int first);
     
     /**
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    virtual void simulateSeqs(int &sequence_length, ModelSubst *model, double *trans_matrix, Node *node, Node *dad, ostream &out, vector<string> state_mapping, map<string, string> input_msa);
+    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, int* rstream);
+    
+    /**
+    *  reset tree (by reset some variables of nodes)
+    *
+    */
+    void resetTree(int &max_depth, bool store_seq_at_cache, Node *node = NULL, Node *dad = NULL);
     
     /**
     *  validate sequence length of codon
@@ -136,7 +144,7 @@ protected:
     /**
         only get variant sites
     */
-    void getOnlyVariantSites(vector<short int> variant_state_mask, Node *node, Node *dad);
+    void getOnlyVariantSites(vector<short int> &variant_state_mask, Node *node, Node *dad);
     
     /**
         estimate length_ratio (for models with +ASC)
@@ -156,12 +164,12 @@ protected:
     /**
         selecting & permuting sites (FunDi models)
     */
-    vector<FunDi_Item> selectAndPermuteSites(double proportion, int num_sites);
+    void selectAndPermuteSites(vector<FunDi_Item> &fundi_items, double proportion, int num_sites);
     
     /**
         permuting selected sites (FunDi models)
     */
-    void permuteSelectedSites(vector<FunDi_Item> fundi_items, Node* node);
+    void permuteSelectedSites(vector<FunDi_Item> &fundi_items, Node* node);
     
     /**
         process delayed Fundi if it is delayed due to Insertion events
@@ -169,14 +177,25 @@ protected:
     void processDelayedFundi(Node *node, Node *dad);
     
     /**
-        writing and deleting simulated sequence immediately if possible
+        merge and write sequence in simulations with Indels or FunDi model
     */
-    void writeAndDeleteSequenceImmediatelyIfPossible(ostream &out, vector<string> state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
+    void mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int sequence_length, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node);
     
     /**
-        branch-specific evolution
+        write and delete the current chunk of sequence if possible
     */
-    void branchSpecificEvolution(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it);
+    void writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, NeighborVec::iterator it, Node* node);
+    
+    /**
+        branch-specific evolution by multi threads
+    */
+    void branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it);
+    
+    
+    /**
+        branch-specific evolution by the master thread
+    */
+    void branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it);
     
     /**
         simulate a sequence for a node from a specific branch
@@ -186,12 +205,22 @@ protected:
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
     */
-    virtual void simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths = "");
+    virtual void simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
+    
+    /**
+        initialize variables
+    */
+    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache);
+    
+    /**
+        process after simulating sequences
+    */
+    void postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data);
     
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariables(int sequence_length, bool regenerate_root_sequence = false);
+    virtual void initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence = false);
     
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
@@ -201,22 +230,22 @@ protected:
     /**
         generate a random sequence by state frequencies
     */
-    vector<short int> generateRandomSequenceFromStateFreqs(int sequence_length, double* state_freqs, int max_prob_pos);
+    void generateRandomSequenceFromStateFreqs(int sequence_length, vector<short int> &sequence, double* state_freqs, int max_prob_pos);
     
     /**
     *  export a sequence with gaps copied from the input sequence
     */
-    string exportSequenceWithGaps(Node *node, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> state_mapping);
+    void exportSequenceWithGaps(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, string input_sequence, vector<string> &state_mapping, int segment_start = 0, int segment_length = -1);
     
     /**
         handle indels
     */
-    void handleIndels(ModelSubst *model, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method);
+    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
     
     /**
         handle substitution events
     */
-    void handleSubs(int sequence_length, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models);
+    void handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream);
     
     /**
         handle insertion events, return the insertion-size
@@ -236,7 +265,7 @@ protected:
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
     */
-    virtual void initVariables4RateMatrix(double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> sequence);
+    virtual void initVariables4RateMatrix(int segment_start, double &total_sub_rate, int &num_gaps, vector<double> &sub_rate_by_site, vector<short int> &sequence);
     
     /**
     *  insert a new sequence into the current sequence
@@ -266,7 +295,7 @@ protected:
     *  randomly select a valid position (not a deleted-site) for insertion/deletion event
     *
     */
-    int selectValidPositionForIndels(int upper_bound, vector<short int> sequence);
+    int selectValidPositionForIndels(int upper_bound, vector<short int> &sequence);
     
     /**
         generate indel-size from its distribution
@@ -291,12 +320,12 @@ protected:
     /**
         change state of sites due to Error model
     */
-    void changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop);
+    void changeSitesErrorModel(vector<int> sites, vector<short int> &sequence, double error_prop, int* rstream);
     
     /**
         handle DNA error
     */
-    void handleDNAerr(double error_prop, vector<short int> &sequence, int model_index = -1);
+    void handleDNAerr(int segment_start, double error_prop, vector<short int> &sequence, int* rstream, int model_index = -1);
     
     /**
         TRUE if posterior mean rate can be used
@@ -313,6 +342,76 @@ protected:
     */
     void writeInternalStatesIndels(Node* node, ostream &out);
     
+    /**
+        separate root sequence into chunks
+    */
+    void separateSeqIntoChunks(Node* node);
+    
+    /**
+        merge chunks into a single sequence
+    */
+    void mergeChunks(Node* node);
+    
+    /**
+        merge chunks into a single sequence for all nodes in tree
+    */
+    void mergeChunksAllNodes(Node* node = NULL, Node* dad = NULL);
+    
+    /**
+        init the output file
+    */
+    void initOutputFile(ostream *&out, int thread_id, int actual_segment_length, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    
+    /**
+        open an output stream
+    */
+    void openOutputStream(ostream *&out, string output_filepath, std::ios_base::openmode open_mode, bool force_uncompression = false);
+    
+    /**
+        close an output stream
+    */
+    void closeOutputStream(ostream *&out, bool force_uncompression = false);
+    
+    /**
+        visit cache of each thread in round robin then write sequence chunks one by one
+    */
+    void writeSeqChunkFromCache(ostream *&output);
+    
+    /**
+        write all remaining chunks from cache
+    */
+    void writeAllSeqChunkFromCache(ostream *&output);
+    
+    /**
+        cache a sequence chunk (in readable string) into the cache (writing queue)
+    */
+    void cacheSeqChunkStr(int64_t pos, string seq_chunk_str, int thread_id);
+    
+    /**
+        wait for all threads to reach the manually-implemented-barrier
+    */
+    void waitAtBarrier(const unsigned short int barrier_count, Node* node);
+    
+    /**
+    *  simulate sequences with AliSim-OpenMP-IM algorithm
+    */
+    void executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping);
+    
+    /**
+    *  simulate sequences with AliSim-OpenMP-EM algorithm
+    */
+    void executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping);
+    
+    /**
+        merge output files when using multiple threads
+    */
+    void mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
+    
+    /**
+        output a sequence to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+    */
+    void outputOneSequence(Node* node, string &output, int thread_id, int segment_start, ostream &out);
+    
 public:
     
     IQTree *tree;
@@ -322,6 +421,7 @@ public:
     int expected_num_sites;
     double partition_rate;
     double length_ratio = 1;
+    double inverse_length_ratio = 1;
     short int max_length_taxa_name = 10;
     vector<FunDi_Item> fundi_items;
     short int STATE_UNKNOWN;
@@ -339,6 +439,17 @@ public:
     Insertion* latest_insertion = NULL;
     Insertion* first_insertion = NULL;
     
+    // variables to output sequences with multiple threads
+    uint64_t starting_pos = 0;
+    uint64_t output_line_length = 0;
+    uint64_t seq_name_length = 0;
+    int num_threads = 1;
+    int num_simulating_threads = 1;
+    int num_thread_done = 0;
+    vector<SequenceChunkStr> seq_str_cache;
+    vector<int> cache_start_indexes;
+    int cache_size_per_thread;
+    bool force_output_PHYLIP = false;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
@@ -372,12 +483,12 @@ public:
     /**
     *  simulate sequences for all nodes in the tree
     */
-    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "");
+    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath = "");
+    void generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length
@@ -394,14 +505,14 @@ public:
     *  convert numerical states into readable characters
     *
     */
-    static string convertNumericalStatesIntoReadableCharacters(Node *node, int sequence_length, int num_sites_per_state, vector<string> state_mapping);
+    static void convertNumericalStatesIntoReadableCharacters(vector<short int> &sequence_chunk, string &output, int sequence_length, int num_sites_per_state, vector<string> &state_mapping, int segment_length = -1);
     
     /**
     *  export pre_output string (containing taxon name and ">" or "space" based on the output format)
     *
     */
-    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name);
-    
+    static string exportPreOutputString(Node *node, InputType output_format, int max_length_taxa_name, bool force_PHYLIP = false);
+
     /**
     *  update new genome from original genome and the genome tree for each tips (due to Indels)
     */

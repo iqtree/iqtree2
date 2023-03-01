@@ -82,7 +82,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH ".0")
+set (iqtree_VERSION_PATCH ".2.3")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -129,7 +129,7 @@ endif()
 ##################################################################
 # Include the LSD2 library
 ##################################################################
-option(USE_LSD2 "Use least square dating (lsd2)" OFF)
+option(USE_LSD2 "Use least square dating (lsd2)" ON)
 
 if (USE_LSD2)
     add_definitions(-DUSE_LSD2)

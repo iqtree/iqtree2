@@ -66,12 +66,12 @@ public:
     /**
         export new genome from original genome and genome tree
      */
-    vector<short int> exportNewGenome(vector<short int> ori_seq, int seq_length, int UNKOWN_STATE);
+    vector<short int> exportNewGenome(vector<short int> &ori_seq, int seq_length, int UNKOWN_STATE);
     
     /**
      export readable characters (for writing to file) from original genome and genome tree
      */
-    void exportReadableCharacters(vector<short int> ori_seq, int num_sites_per_state, vector<string> state_mapping, string &output);
+    void exportReadableCharacters(vector<short int> &ori_seq, int num_sites_per_state, vector<string> &state_mapping, string &output);
 
 };
 #endif

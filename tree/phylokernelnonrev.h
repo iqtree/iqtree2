@@ -78,14 +78,14 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     double *partial_lh_leaves = info.partial_lh_leaves;
     
     if (Params::getInstance().buffer_mem_save) {
-        info.echildren = echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
+        echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
         if (num_leaves > 0)
-            info.partial_lh_leaves = partial_lh_leaves = aligned_alloc<double>(get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves));
+            partial_lh_leaves = aligned_alloc<double>(get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves));
         double *buffer_tmp = aligned_alloc<double>(nstates);
 #ifdef KERNEL_FIX_STATES
-        computePartialInfo<VectorClass, nstates>(info, (VectorClass*)buffer_tmp);
+        computePartialInfo<VectorClass, nstates>(info, (VectorClass*)buffer_tmp, echildren, partial_lh_leaves);
 #else
-        computePartialInfo<VectorClass>(info, (VectorClass*)buffer_tmp);
+        computePartialInfo<VectorClass>(info, (VectorClass*)buffer_tmp, echildren, partial_lh_leaves);
 #endif
         aligned_free(buffer_tmp);
     }
@@ -575,7 +575,6 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     if (Params::getInstance().buffer_mem_save) {
         aligned_free(partial_lh_leaves);
         aligned_free(echildren);
-        info.echildren = info.partial_lh_leaves = NULL;
     }
 }
 
@@ -1093,6 +1092,11 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
     double *trans_mat = buffer_partial_lh;
     double *buffer_partial_lh_ptr = buffer_partial_lh + block*nstates;
+    double *state_freq_fundi = nullptr;
+    if (do_fundi) {
+        state_freq_fundi = aligned_alloc<double>(block);
+    }
+    
 	for (size_t c = 0; c < ncat_mix; c++) {
         size_t mycat = c%ncat;
         size_t m = c/denom;
@@ -1113,7 +1117,15 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 this_trans_mat += nstates;
             }
         }
-	}
+
+        if (do_fundi) {
+            double *this_state_freq = &state_freq_fundi[c*nstates];
+            model->getStateFrequency(this_state_freq, m);
+            for (size_t j = 0; j < nstates; j++) {
+                this_state_freq[j] *= prop;
+            }
+        }
+    }
 
     double all_tree_lh(0.0);
     double all_prob_const(0.0);
@@ -1362,6 +1374,33 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                         partial_lh_dad += nstates;
                     }
                 }
+                
+                if (do_fundi) {
+                    // FunDi likelihood (Gaston, Susko, Roger 2011)
+                    VectorClass total_dad(0.0);
+                    VectorClass total_node(0.0);
+                    partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                    partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+                    double *state_freq = state_freq_fundi;
+                    for (size_t c = 0; c < ncat_mix; c++) {
+                        VectorClass lh_state_node;
+                        VectorClass lh_state_dad;
+    #ifdef KERNEL_FIX_STATES
+                        dotProductVec<VectorClass, double, nstates, FMA>(state_freq, partial_lh_node, lh_state_node);
+                        dotProductVec<VectorClass, double, nstates, FMA>(state_freq, partial_lh_dad, lh_state_dad);
+    #else
+                        dotProductVec<VectorClass, double, FMA>(state_freq, partial_lh_node, lh_state_node, nstates);
+                        dotProductVec<VectorClass, double, FMA>(state_freq, partial_lh_dad, lh_state_dad, nstates);
+    #endif
+                        total_node += lh_state_node;
+                        total_dad += lh_state_dad;
+                        state_freq += nstates;
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                    }
+                    double rho = params->alisim_fundi_proportion;
+                    lh_ptn = (1.0-rho)*lh_ptn + (rho)*total_node*total_dad;
+                }
                 VectorClass vc_min_scale(0.0);
                 double* vc_min_scale_ptr = (double*)&vc_min_scale;
                 if (SAFE_NUMERIC) {
@@ -1467,6 +1506,10 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
         ASSERT(std::isfinite(tree_lh));
     }
 
+    if (do_fundi) {
+        aligned_free(state_freq_fundi);
+    }
+    
     return tree_lh;
 }
 

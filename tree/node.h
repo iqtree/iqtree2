@@ -38,7 +38,7 @@
 #include "utils/tools.h"
 #include "pda/split.h"
 #include "model/modelsubst.h"
-#include "genometree.h"
+#include "alignment/sequence.h"
 
 using namespace std;
 
@@ -272,27 +272,7 @@ public:
     /**
         sequence
      */
-    vector<short int> sequence;
-    
-    /**
-        number of children which have completed simulating the sequence (for AliSim)
-     */
-    short int num_children_done_simulation = 0;
-    
-    /**
-        pointer to the position of the insertion event that occurs after simulating sequence at this node
-     */
-    Insertion* insertion_pos = NULL;
-    
-    /**
-        parent node of the current node (only use when simulating Indels with AliSim)
-     */
-    Node* parent = NULL;
-    
-    /**
-        number of gaps in the sequence
-     */
-    int num_gaps = 0;
+    Sequence* sequence = NULL;
 
     /**
         list of neighbors
@@ -321,6 +301,7 @@ public:
     Node() {
         id = -1;
         height = -1;
+        sequence = NULL;
     };
 
 

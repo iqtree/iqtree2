@@ -177,6 +177,24 @@ enum SIMULATION_METHOD {
     RATE_MATRIX
 };
 
+/**
+ *  Specify 2 AliSim-OpenMP algorithms.
+ */
+enum ALI_OPENMP_ALG {
+    IM,
+    EM
+};
+
+/**
+ *  Specify 2 simulation approaches.
+ */
+enum SEQ_CHUNK_STATUS {
+    EMPTY,
+    OCCUPIED,
+    WRITING,
+    READING
+};
+
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
     double param_1 = -1, param_2 = -1;
@@ -1365,6 +1383,13 @@ public:
         number of quartets for site concordance factor
      */
     int site_concordance;
+    
+    /**
+        0 (default): do the published sCF (Minh, Matt, Rob 2020)
+        1 to compute site concordance using ancestral states at four surrounding nodes
+        2 to use ancestral state based on separate subtrees
+    */
+    int ancestral_site_concordance;
 
     /**
      TRUE to print concordant sites per partition
@@ -1650,6 +1675,11 @@ public:
      *  Optimization algorithm for +I+G
      */
     string optimize_alg_gammai;
+    
+    /**
+     *  Optimization algorithm for tree weights in tree-mixture model
+     */
+    string optimize_alg_treeweight;
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
@@ -2507,6 +2537,11 @@ public:
     double alisim_branch_scale;
     
     /**
+    *  TRUE to output all replicate alignments into a single file
+    */
+    bool alisim_single_output;
+    
+    /**
     *  Type to assign rate heterogeneity to sites (default: posterior mean)
     */
     ASSIGNMENT_TYPE alisim_rate_heterogeneity;
@@ -2517,24 +2552,45 @@ public:
     ASSIGNMENT_TYPE alisim_stationarity_heterogeneity;
     
     /**
-    *  path to output the simulation time
-    */
-    string outputfile_runtime;
-    
-    /**
     *  path to the tmp_data file to temporarily output sequences at tips when using Indels
     */
     string tmp_data_filename;
     
     /**
-    *  model id
+    *  TRUE to keep the order of output sequences
     */
-    string model_id;
+    bool keep_seq_order;
+    
+    /**
+    *  TRUE to delete output file (for testing only)
+    */
+    bool delete_output;
     
     /**
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;
+    
+    /**
+    *  factor to limit memory usage
+    */
+    double mem_limit_factor;
+    
+    /**
+    *  TRUE to allow indel-rate variation
+    */
+    bool indel_rate_variation;
+    
+    /**
+    *  AliSim-OpenMP algorithm
+    */
+    ALI_OPENMP_ALG alisim_openmp_alg;
+    
+    /**
+    *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
+    */
+    bool no_merge;
+
 };
 
 /**
@@ -2821,9 +2877,10 @@ double convert_double(const char *str, int &end_pos);
         @param str original string
         @param end_pos end position
         @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
         @return the double
  */
-double convert_double_with_distribution(const char *str, int &end_pos, char separator = ',');
+double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator = ',');
 
 /**
         convert comma-separated string to integer vector, with error checking
@@ -2838,8 +2895,9 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator = ','
         @param str original string with doubles separated by comma
         @param vec (OUT) double vector
         @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
  */
-void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator = ',');
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, bool non_negative, char separator = ',');
 
 /**
         convert separated string to an array of double number (double*) or generate them from distributions
@@ -2847,8 +2905,9 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
         @param array an array of double number (double*)
         @param num_items the number of items in the array
         @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
  */
-void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, char separator);
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, bool non_negative, char separator);
 
 /**
         normalize state frequencies so that sum of them is equal to 1
@@ -2903,28 +2962,32 @@ void read_distributions(char* filepath = NULL);
 /**
         randomly select a number from the pool of random numbers of a distribution
         @param distribution_name storing name of distribution
+        @param non_negative TRUE to only return non-negative number
  */
-double random_number_from_distribution(string distribution_name);
+double random_number_from_distribution(string distribution_name, bool non_negative);
 
 /**
         initialize a number by converting string to double (if the user supplies a number) or randomly generating it from a distribution (if the user supplies a distribution name)
         @param input storing a number or a distribution name
+        @param non_negative TRUE to only return non-negative number
  */
-double convert_double_with_distribution(const char *str);
+double convert_double_with_distribution(const char *str, bool non_negative);
 
 /**
         initialize a number (with an upper bound constraint) by converting string to double (if the user supplies a number) or randomly generating it (with up to 1000 attempts) from a distribution (if the user supplies a distribution name)
         @param input storing a number or a distribution name
         @param upper_bound storing the upper bound value
+        @param non_negative TRUE to only return non-negative number
  */
-double convert_double_with_distribution_and_upperbound(string input, double upper_bound);
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound, bool non_negative);
 
 /**
         randomly generating a double (with up to 1000 attempts) from a distribution with an upper bound constraint
         @param input storing a distribution name
         @param upper_bound storing the upper bound value, lower_bound is 0 (implicitly)
+        @param non_negative TRUE to only return non-negative number
  */
-double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound);
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound, bool non_negative);
 
 /**
        check whether a string is a number
@@ -3133,7 +3196,7 @@ double random_double(int *rstream = NULL);
  * returns a random double based on an exponential distribution
  * @param mean the mean of exponential distribution
  */
-double random_double_exponential_distribution(double mean);
+double random_double_exponential_distribution(double mean, int *rstream = NULL);
 
 /**
  * geometric random number generation
