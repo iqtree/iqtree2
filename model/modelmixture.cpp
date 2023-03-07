@@ -1559,6 +1559,17 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
 int ModelMixture::getNDim() {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;
+    
+    if (optimizing_gtr) {
+        // report the number of variables during optimizing the linked substitution model
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type = FREQ_USER_DEFINED;
+        dim = (*it)->getNDim();
+        (*it)->freq_type = freq;
+        return dim;
+    }
+
     if (!optimizing_submodels && !fix_prop) {
         dim = size() - 1;
     }
@@ -2084,12 +2095,16 @@ void ModelMixture::decomposeRateMatrix() {
 void ModelMixture::setVariables(double *variables) {
 	int dim = 0;
     if (optimizing_gtr) {       
-        for (iterator it = begin(); it != end(); it++) {
+        // only need to get the variable from the first class
+        // because all classes are sharing the same substitution matrix
+        // for (iterator it = begin(); it != end(); it++) {
+        iterator it = begin();
+        // for (iterator it = begin(); it != end(); it++) {
             auto freq = (*it)->freq_type;
              (*it)->freq_type = FREQ_USER_DEFINED;
 		    (*it)->setVariables(&variables[dim]);
              (*it)->freq_type = freq;
-        }
+        // }
     } else
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->setVariables(&variables[dim]);
@@ -2173,21 +2188,23 @@ bool ModelMixture::getVariables(double *variables) {
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int dim = 0;
     if(optimizing_gtr) {
-        for (iterator it = begin(); it != end(); it++) {
+        // only consider the first class as this is a unlinked substitution matrix
+        iterator it = begin();
+        // for (iterator it = begin(); it != end(); it++) {
             auto freq = (*it)->freq_type;
             int ndim = (*it)->getNDim();
             (*it)->freq_type=FREQ_USER_DEFINED;
             (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
             (*it)->freq_type=freq;
             //debug (justin)
-            if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
-                for(int i=1; i<=ndim; i++){
-                    bound_check[i] = true; 
-                    if(i <= 189) {upper_bound[i] = 100;} else {upper_bound[i] = 1;} 
-                }
-            }
+//            if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
+//                for(int i=1; i<=ndim; i++){
+//                    bound_check[i] = true;
+//                    if(i <= 189) {upper_bound[i] = 100;} else {upper_bound[i] = 1;}
+//                }
+//            }
             //end debug
-        }
+        // }
     } else {
         for (iterator it = begin(); it != end(); it++) {
             (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
