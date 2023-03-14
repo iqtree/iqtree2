@@ -1658,24 +1658,17 @@ public:
      */
     string optimize_alg_gammai;
 
+    //new params added -JD
     /** TRUE if you want to exchange the rate matrix for an optimized GTR matrix */
     bool optimize_linked_gtr;
-
-//BEGIN JUSTIN DEBUG PARAMS
-
     /** Starting matrix to be used for GTR20 optimization */
     string gtr20_model;
-
     /** Matrix multiplier factor */
     double guess_multiplier;
-
     /** TRUE if you want to print out a .ratemat file during GTR optimization */
     bool rates_file;
-
     /** How the program should reset the values during Optimization::resetParameters */
     string reset_method;
-
-//END JUSTIN DEBUG PARAMS
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})

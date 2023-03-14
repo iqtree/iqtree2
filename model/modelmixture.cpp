@@ -1556,12 +1556,13 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
+// added case for gtr optimization -JD
 int ModelMixture::getNDim() {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;
     
-    if (optimizing_gtr) {
-        // report the number of variables during optimizing the linked substitution model
+    if (optimizing_gtr) { 
+        // report the number of variables while optimizing the linked substitution model
         iterator it = begin();
         auto freq = (*it)->freq_type;
         (*it)->freq_type = FREQ_USER_DEFINED;
@@ -1573,7 +1574,7 @@ int ModelMixture::getNDim() {
     if (!optimizing_submodels && !fix_prop) {
         dim = size() - 1;
     }
-    // should check this variable instead of optimizing_gtr
+    /* old code for getting ndim while optimizing gtr matrix, Thomas provided better code above -JD
     if (Params::getInstance().optimize_linked_gtr) {
         for (iterator it = begin(); it != end(); it++) {
             auto params = (*it)->num_params;
@@ -1582,11 +1583,11 @@ int ModelMixture::getNDim() {
             dim += (*it)->getNDim();
             (*it)->num_params = params;
         }
-    } else {
+    } else { */
     for (iterator it = begin(); it != end(); it++) {
         dim += (*it)->getNDim();
     }
-    }
+    //}
 	return dim;
 }
 
@@ -1621,6 +1622,7 @@ int ModelMixture::getNDimFreq() {
 	return dim;
 }
 
+// changed to work for GTR optimization -JD
 double ModelMixture::targetFunk(double x[]) {
     if (verbose_mode >= VB_DEBUG) {
         cout << "targetFunk called: ";
@@ -1893,7 +1895,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         
         // set num_params to 0 when linking exchange rates
         IntVector params;
-        if (Params::getInstance().optimize_linked_gtr) {
+        if (Params::getInstance().optimize_linked_gtr) { // added routine for GTR optimization -JD
             for (iterator it = begin(); it != end(); it++) {
                 params.push_back((*it)->num_params);
                 (*it)->num_params = 0;
@@ -1910,7 +1912,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
                 (*it)->setRateMatrix(matrix);
             }
             
-            //if(Params::getInstance().rates_file) {
+            /*if(Params::getInstance().rates_file) {
                 //write initial matrix contents to file 
                 string fname = Params::getInstance().out_prefix;
                 fname += ".ratemat_init";
@@ -1925,7 +1927,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
                     writer.close();
                 }
                 f.close();
-            //}
+            }*/
         }
         score = optimizeWithEM(gradient_epsilon);
         // restore num_params
@@ -1941,7 +1943,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     }
     optimizing_submodels = false;
     
-//  optimize a gtr matrix if specified
+//  optimize a gtr matrix if specified (enters main routine) -JD
     if (Params::getInstance().optimize_linked_gtr) {
         score = optimizeLinkedSubst(gradient_epsilon);
     }
@@ -1967,6 +1969,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	return score;
 }
 
+// new method added for optimizing GTR matrix -JD
 double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 
     if (fixed_parameters) {
@@ -1977,13 +1980,8 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
 
-    // For Justin, setting true should be moved here, otherwise returns
-    // above will not reset it to false
+    // flag that tells other methods (notably getNDim) that we're in the middle of optimizing GTR
     optimizing_gtr = true;
-
-    if (verbose_mode >= VB_MAX) {
-        cout << "Optimizing " << name << " linked GTR matrix..." << endl;
-    }
 
 	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
 	double *upper_bound = new double[ndim+1];
@@ -2002,26 +2000,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
-    
-    //testing: change variables to repeat the first class
-    /*
-    for(int i=1; i<getNMixtures(); i++){
-        memcpy(variables+1+(i*nval), variables+1, nval*sizeof(double));
-    }
-    */
-    
-    if (verbose_mode >= VB_DEBUG) {
-    cout << endl;
 
-    cout << "calling minimizeMultiDimen with the following parameters:\n";
-    cout << "variables = "; for(int i=1; i<=ndim; i++) { cout << variables[i] << "; "; } cout << "\n";
-    cout << "ndim = " << ndim << "\n";
-    cout << "lower_bound = "; for(int i=1; i<=ndim; i++) { cout << lower_bound[i] << "; "; } cout << "\n";
-    cout << "upper_bound = "; for(int i=1; i<=ndim; i++) { cout << upper_bound[i] << "; "; } cout << "\n";
-    cout << "bound_check = "; for(int i=1; i<=ndim; i++) { cout << bound_check[i] << "; "; } cout << "\n";
-    cout << "gradient_epsilon = " << gradient_epsilon << "\n";
-    }
-    
     score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 
     bool changed = getVariables(variables);
@@ -2042,35 +2021,20 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 	delete [] variables;
 
     optimizing_gtr = false;
-
-    //TEST OUTPUT
-    if (verbose_mode >= VB_DEBUG) {
-    cout << endl << "optlgtr finished" << endl;
-    cout << "weights = "; for(int i=0; i<getNMixtures(); i++) { cout << prop[i] << "; "; } cout << endl;
-    for(int i=0; i<getNMixtures(); i++){
-        at(i)->writeInfo(cout);
-    }
-    cout << endl;
     
-    double sf[num_states]; getStateFrequency(sf);
-    cout << "state_freq = "; for(int i=0; i<num_states; i++) { cout << sf[i] << "; "; } cout << endl;
+    //write matrix contents to file (later parsed and outputted into console log)
+    string fname = Params::getInstance().out_prefix;
+    fname += ".ratemat";
+    ofstream writer(fname);
+    int nrate = getNumRateEntries();
+    double *matrix = new double[nrate];
+    at(0)->getRateMatrix(matrix);
+    writer << matrix[0];
+    for(int i=1; i<nrate; i++){
+        writer << " " << matrix[i];
     }
-    
-    //write matrix contents to file 
-    //if (Params::getInstance().rates_file) {
-        string fname = Params::getInstance().out_prefix;
-        fname += ".ratemat";
-        ofstream writer(fname);
-        int nrate = getNumRateEntries();
-        double *matrix = new double[nrate];
-        at(0)->getRateMatrix(matrix);
-        writer << matrix[0];
-        for(int i=1; i<nrate; i++){
-            writer << " " << matrix[i];
-        }
-        writer << endl;
-        writer.close();
-    //}
+    writer << endl;
+    writer.close();
 
 	return score;
 }
@@ -2092,19 +2056,17 @@ void ModelMixture::decomposeRateMatrix() {
 		(*it)->decomposeRateMatrix();
 }
 
+// added case for gtr optimization -JD
 void ModelMixture::setVariables(double *variables) {
 	int dim = 0;
     if (optimizing_gtr) {       
         // only need to get the variable from the first class
         // because all classes are sharing the same substitution matrix
-        // for (iterator it = begin(); it != end(); it++) {
         iterator it = begin();
-        // for (iterator it = begin(); it != end(); it++) {
-            auto freq = (*it)->freq_type;
-             (*it)->freq_type = FREQ_USER_DEFINED;
-		    (*it)->setVariables(&variables[dim]);
-             (*it)->freq_type = freq;
-        // }
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type = FREQ_USER_DEFINED;
+		(*it)->setVariables(&variables[dim]);
+        (*it)->freq_type = freq;
     } else
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->setVariables(&variables[dim]);
@@ -2131,6 +2093,7 @@ void ModelMixture::setVariables(double *variables) {
 
 }
 
+//added case for gtr optimization -JD
 bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
     bool changed = false;
@@ -2185,26 +2148,24 @@ bool ModelMixture::getVariables(double *variables) {
     return changed;
 }
 
+//added case for gtr optimization -JD
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int dim = 0;
     if(optimizing_gtr) {
         // only consider the first class as this is a unlinked substitution matrix
         iterator it = begin();
-        // for (iterator it = begin(); it != end(); it++) {
-            auto freq = (*it)->freq_type;
-            int ndim = (*it)->getNDim();
-            (*it)->freq_type=FREQ_USER_DEFINED;
-            (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
-            (*it)->freq_type=freq;
-            //debug (justin)
-//            if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
-//                for(int i=1; i<=ndim; i++){
-//                    bound_check[i] = true;
-//                    if(i <= 189) {upper_bound[i] = 100;} else {upper_bound[i] = 1;}
-//                }
-//            }
-            //end debug
-        // }
+        auto freq = (*it)->freq_type;
+        int ndim = (*it)->getNDim();
+        (*it)->freq_type=FREQ_USER_DEFINED;
+        (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+        (*it)->freq_type=freq;
+        //manually set these params for the restartParameters method; TODO: properly fix this -JD
+        if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
+            for(int i=1; i<=ndim; i++){
+                bound_check[i] = true;
+                upper_bound[i] = 100;
+            }
+        }
     } else {
         for (iterator it = begin(); it != end(); it++) {
             (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);

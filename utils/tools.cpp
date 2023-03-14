@@ -1179,6 +1179,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
 
+    // defaults for new options -JD
     params.optimize_linked_gtr = false;
     params.gtr20_model = "POISSON";
     params.guess_multiplier = 0.5;
@@ -1588,12 +1589,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_gammai = argv[cnt];
                 continue;
             }
+
+            //new options added -JD
             if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
                 params.optimize_linked_gtr = true;
                 continue;
             }
-
-            //begin justin debug flags
             if (strcmp(argv[cnt], "--gtr20-model") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1621,7 +1622,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.reset_method = argv[cnt];
                 continue;
             }
-            //end justin debug flags
 
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
 				params.is_rooted = true;

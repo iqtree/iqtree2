@@ -544,7 +544,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 " of the portion of the Gamma distribution falling in the category." << endl;
         }
     }
-    //output ratemat to iqtree file (added by Justin)
+    //output ratemat to iqtree file -JD
     if(Params::getInstance().optimize_linked_gtr) { 
         string fname = Params::getInstance().out_prefix;
         fname += ".ratemat";
