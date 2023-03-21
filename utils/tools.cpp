@@ -5421,6 +5421,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
         outError("-b bootstrap option does not work with -S yet.");
 
+    //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos) 
+        outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
+
     if (params.dating_method != "") {
     #ifndef USE_LSD2
         outError("IQ-TREE was not compiled with LSD2 library, rerun cmake with -DUSE_LSD2=ON option");
