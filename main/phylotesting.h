@@ -220,12 +220,16 @@ public:
      @param in_model_name a specific model name if testing one model
      @param adjust model adjustment for modelomatic
      @param merge_phase true to consider models for merging phase
+     @param generate_candidates true to generate candidates in the beginning
+     @param skip_all_when_drop true to skip the testing of all the subsequent models when the current model becomes less favorable
      @return name of best-fit-model
      */
     CandidateModel test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
                 ModelsBlock *models_block, int num_threads, int brlen_type,
                 string set_name = "", string in_model_name = "",
-                bool merge_phase = false);
+                bool merge_phase = false,
+                bool generate_candidates = true,
+                bool skip_all_when_drop = false);
 
     /**
      for a rate model XXX+R[k], return XXX+R[k-j] that finished
@@ -347,6 +351,14 @@ string criterionName(ModelTestCriterion mtc);
  @param model_info (IN/OUT) information for all models considered
  */
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
+
+/**
+ optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
+ @param params program parameters
+ @param iqtree phylogenetic tree
+ @param model_info (IN/OUT) information for all models considered
+ */
+void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info);
 
 /**
  testing the best-fit model

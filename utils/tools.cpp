@@ -1180,6 +1180,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
+    params.min_mix_cats = 1;
+    params.max_mix_cats = 10;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -3400,6 +3402,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
+            if (strcmp(argv[cnt], "-cmixmin") == 0 || strcmp(argv[cnt], "--cmixmin") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -cmixmin <#min_mix_classes>";
+                params.min_mix_cats = convert_int(argv[cnt]);
+                if (params.min_mix_cats < 1)
+                    throw "Wrong number of classes in mixture for -cmixmin";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-cmixmax") == 0 || strcmp(argv[cnt], "--cmixmax") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -cmixmax <#max_mix_classes>";
+                params.max_mix_cats = convert_int(argv[cnt]);
+                if (params.max_mix_cats < 2)
+                    throw "Wrong number of classes in mixture for -cmixmax";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-a") == 0) {
 				cnt++;
 				if (cnt >= argc)

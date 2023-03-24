@@ -1628,7 +1628,7 @@ public:
     int num_rate_cats;
 
     /**
-            maximum number of rate categories
+            minimum number of rate categories
      */
     int min_rate_cats;
 
@@ -1636,6 +1636,16 @@ public:
             maximum number of rate categories
      */
     int max_rate_cats;
+
+    /**
+            minimum number of classes in mixture model
+     */
+    int min_mix_cats;
+
+    /**
+            maximum number of classes in mixture model
+     */
+    int max_mix_cats;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates

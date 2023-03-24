@@ -2460,6 +2460,8 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
 //    iqtree.initSettings(params);
 
     runModelFinder(params, *iqtree, model_info);
+    
+    optimiseQMixModel(params, iqtree, model_info);
 }
         
 /**
