@@ -753,7 +753,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
     {
         thread_id = omp_get_thread_num();
         // init random generators
-        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
+        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
         init_random(ran_seed, false, &rstream);
 
         actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
@@ -993,7 +993,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     {
         thread_id = omp_get_thread_num();
         // init random generators
-        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id;
+        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + thread_id + params->alignment_id;
         init_random(ran_seed, false, &rstream);
             
         actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;

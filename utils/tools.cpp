@@ -1470,6 +1470,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.rebuild_indel_history_param = 1.0/3;
     params.alisim_openmp_alg = IM;
     params.no_merge = false;
+    params.alignment_id = 0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {

@@ -583,7 +583,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // parallelize over MPI ranks statically
         int proc_ID = MPIHelper::getInstance().getProcessID();
         int nprocs  = MPIHelper::getInstance().getNumProcesses();
-        if (i%nprocs != proc_ID) continue; 
+        if (i%nprocs != proc_ID) continue;
+        
+        // record the alignment_id to generate different random seed when simulating different alignment
+        super_alisimulator->params->alignment_id = i;
         
         // output the simulated aln at the current execution localtion
         string output_filepath = super_alisimulator->params->alisim_output_filename;
@@ -614,6 +617,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             
             for (int partition_index = 0; partition_index < super_tree->size(); partition_index++)
             {
+                // update the alignment_id, taking into account the partition index, so that we use different random seed for each partition in each alignment
+                super_alisimulator->params->alignment_id = (i + 1) * 1000000 + partition_index;
                 // get variables
                 IQTree *current_tree = (IQTree*) super_tree->at(partition_index);
                 int expected_num_states_current_tree = current_tree->aln->getNSite();

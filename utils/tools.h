@@ -2590,7 +2590,11 @@ public:
     *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
     */
     bool no_merge;
-
+    
+    /**
+    *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
+    */
+    int alignment_id;
 };
 
 /**
