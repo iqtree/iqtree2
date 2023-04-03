@@ -2726,6 +2726,11 @@ std::istream& safeGetline(std::istream& is, std::string& t);
 double randomLen(Params &params);
 
 /**
+    Try to generate a branch length but it could be out of the range (params.min_len, params.max_len)
+ */
+double tryGeneratingBlength(Params &params);
+
+/**
         Compute the logarithm of the factorial of an integer number
         @param num: the number
         @return logarithm of (num! = 1*2*...*num)

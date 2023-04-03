@@ -108,7 +108,7 @@ void outWarning(string warn) {
     outWarning(warn.c_str());
 }
 
-double randomLen(Params &params) {
+double tryGeneratingBlength(Params &params) {
     // randomly generate branch lengths based on
     // a user-specified distribution
     if (params.branch_distribution)
@@ -131,6 +131,20 @@ double randomLen(Params &params) {
         }
         return len;
     }
+}
+
+double randomLen(Params &params) {
+    // bug fixed: avoid negative branch lengths
+    double len = -1;
+    int attemp = 0;
+    while ((len < params.min_len || len > params.max_len) && attemp < 1000)
+    {
+        len = tryGeneratingBlength(params);
+        ++attemp;
+    }
+    if (len < params.min_len || len > params.max_len)
+        outError("Failed to generate a branch length (in the range(" + convertDoubleToString(params.min_len) + ", " + convertDoubleToString(params.max_len) + ")) after 1000 attempts. Please check the input and try again!");
+    return len;
 }
 
 std::istream& safeGetline(std::istream& is, std::string& t)
