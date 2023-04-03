@@ -8,6 +8,8 @@
 #ifndef phylohmm_h
 #define phylohmm_h
 
+#define MIN_PROB 1e-10
+
 #include "model/modelhmm.h"
 #include "utils/optimization.h"
 

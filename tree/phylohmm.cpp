@@ -229,6 +229,26 @@ double PhyloHmm::optimizeProbEM() {
     for (j = 0; j < ncat; j++) {
         prob[j] = work[j] * sum_like;
     }
+    // the minimum value of prob cannot be lower than MIN_PROB
+    bool exist_too_low_prob = false;
+    for (j = 0; j < ncat; j++) {
+        if (prob[j] < MIN_PROB) {
+            prob[j] = MIN_PROB;
+            exist_too_low_prob = true;
+        }
+    }
+    if (exist_too_low_prob) {
+        // compute the sum of them
+        sum_like = 0.0;
+        for (j = 0; j < ncat; j++) {
+            sum_like += prob[j];
+        }
+        // set the new value of prob[i] = pre_work[i] / sum_like
+        sum_like = 1.0 / sum_like;
+        for (j = 0; j < ncat; j++) {
+            prob[j] = prob[j] * sum_like;
+        }
+    }
     computeLogProb();
     
     return logDotProd(prob_log, pre_work, ncat);
