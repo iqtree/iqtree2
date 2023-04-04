@@ -4167,8 +4167,16 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     if (isTreeMix) {
         if (params.optimize_params_use_hmm)
             cout << "HMMSTER ";
-        cout << "Tree-mixture model" << endl;
         // tree-mixture model
+        cout << "Tree-mixture model" << endl;
+
+        // the minimum gamma shape should be greater than 0.03 for tree mixture model
+        if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
+            if (params.min_gamma_shape != MIN_GAMMA_SHAPE)
+                cout << "The minimum value for Gamma shape is changed to " << MIN_GAMMA_SHAPE_TREEMIX << endl;
+            params.min_gamma_shape = MIN_GAMMA_SHAPE_TREEMIX;
+        }
+
         if (params.user_file == NULL) {
             // get the number after "+T" for tree-mixture model
             int treeNum = getTreeMixNum(params);
