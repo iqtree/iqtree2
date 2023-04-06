@@ -375,6 +375,25 @@ void executeSimulation(Params params, IQTree *&tree)
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
+    // export tree with new blengths if users want to do so
+    if (params.branch_distribution && params.user_file && !params.alisim_inference_mode)
+    {
+        string tree_path(params.user_file);
+        tree_path += ".new_blength";
+        std::cout << "Tree with randomly generated branch lengths is outputted at " << tree_path << std::endl;
+        ofstream out = ofstream(tree_path.c_str());
+        alisimulator->tree->printTree(out);
+        if (alisimulator->tree->isSuperTree() && params.partition_type == BRLEN_OPTIMIZE)
+        {
+            for (int i = 1; i < ((PhyloSuperTree*) alisimulator->tree)->size(); i++)
+            {
+                out << std::endl;
+                ((PhyloSuperTree*) alisimulator->tree)->at(i)->printTree(out);
+            }
+        }
+        out.close();
+    }
+    
     // load input MSA if any
     map<string,string> input_msa = loadInputMSA(alisimulator);
     
