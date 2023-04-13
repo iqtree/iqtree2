@@ -1359,7 +1359,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     model_freq = FREQ_EMPIRICAL;
                 }
                 this_name = this_name.substr(0, fpos);
-            } else {
+            } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
                 switch(model_freq) {
                     case FREQ_USER_DEFINED:
                         if (freq_params.length() > 0) {
