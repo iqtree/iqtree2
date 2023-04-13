@@ -562,6 +562,15 @@ void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_seque
             for (int site:abundant_sites)
                 tree->MTree::root->sequence->sequence_chunks[0].push_back(site);
         }
+        // otherwise, still generate random state freqs if neccessary
+        else
+        {
+            double *state_freq = new double[max_num_states];
+            // initialize state frequencies if they're not specified
+            getStateFrequenciesFromModel(tree, state_freq);
+            delete[] state_freq;
+        }
+        
     }
     
     // validate the sequence length (in case of codon)
@@ -673,6 +682,7 @@ void AliSimulator::getStateFrequenciesFromModel(IQTree* tree, double *state_freq
     }
     // get user-defined base frequencies (if any)
     else if ((tree->getModel()->getFreqType() == FREQ_USER_DEFINED)
+             || (tree->getModel()->getFreqType() == FREQ_EQUAL)
         || (ModelLieMarkov::validModelName(tree->getModel()->getName()))
              || tree->aln->seq_type == SEQ_CODON
              || (tree->getModel()->getFreqType() == FREQ_EMPIRICAL && params->alisim_inference_mode))
@@ -1414,7 +1424,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
                 if ((*it)->attributes.find("model") != (*it)->attributes.end())
                 {
-                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it);
+                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it, rstream);
                 }
                 // otherwise, simulate the sequence based on the common model
                 else
@@ -1477,7 +1487,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
 /**
     branch-specific evolution by multi threads
 */
-void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it)
+void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream)
 {
     unsigned short int num_threads_reach_barrier = 0;
     
@@ -1505,7 +1515,7 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
             
     // only the first thread simulate the sequence
     if (thread_id == 0)
-        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it);
+        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it, rstream);
     
     // manual implementation of barrier
     waitAtBarrier(3, (*it)->node);
@@ -2343,7 +2353,7 @@ void AliSimulator::intializeStateFreqsMixtureModel(IQTree* tree)
 /**
     branch-specific evolution by the master thread
 */
-void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it)
+void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream)
 {
     // initialize a dummy model for this branch
     string model_full_name = (*it)->attributes["model"];
@@ -2409,7 +2419,7 @@ void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, doub
     tmp_tree->getModel()->writeInfo(cout);
     
     // simulate the sequence for the current node based on the branch-specific model
-    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, node, it, lengths);
+    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, node, it, rstream, lengths);
     
     // delete the dummy alisimulator
     delete tmp_alisimulator;
@@ -2418,7 +2428,7 @@ void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, doub
 /**
     simulate a sequence for a node from a specific branch
 */
-void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
 {
     // initialize the site-specific rates
     initVariablesRateHeterogeneity(sequence_length);
@@ -2431,7 +2441,7 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
     int segment_start = 0;
     for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
     {
-        simulateASequenceFromBranchAfterInitVariables(segment_start, model, trans_matrix, node->sequence->sequence_chunks[i], (*it)->node->sequence->sequence_chunks[i], node, it, NULL, lengths);
+        simulateASequenceFromBranchAfterInitVariables(segment_start, model, trans_matrix, node->sequence->sequence_chunks[i], (*it)->node->sequence->sequence_chunks[i], node, it, rstream, lengths);
         segment_start += node->sequence->sequence_chunks[i].size();
     }
 }
