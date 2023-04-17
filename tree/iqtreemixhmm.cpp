@@ -410,9 +410,11 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
     stop_rule.setCurIt(step);
     computeMaxPath();
     
-    // proceed to optimization of parameters according to MAST model
-    cout << endl << "Proceed to optimization of parameters according to MAST model" << endl;
-    optimizeModelParamTreeMix(printInfo, logl_epsilon);
+    if (params->proceed_MAST_after_HMMSTER) {
+        // proceed to optimization of parameters according to MAST model
+        cout << endl << "Proceed to optimization of parameters according to MAST model" << endl;
+        optimizeModelParamTreeMix(printInfo, logl_epsilon);
+    }
 
     return getTreeString();
 }
@@ -459,7 +461,7 @@ string IQTreeMixHmm::optimizeModelParamTreeMix(bool printInfo, double logl_epsil
         // optimize tree weights
         IQTreeMix::optimizeTreeWeightsByEM(pattern_mix_lh, logl_epsilon, max_steps_tree_weight, tree_weight_converge);
 
-        cout << step+2 << ". Current HMM log-likelihood: " << score << endl;
+        cout << step+2 << ". Current MAST log-likelihood: " << score << endl;
 
         if (score < prev_score + logl_epsilon)
             // converged

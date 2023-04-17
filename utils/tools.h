@@ -561,8 +561,8 @@ const double MIN_GAMMA_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
-// change to 0.03 for tree mixture model as 0.02 causes numerical problems
-const double MIN_GAMMA_SHAPE_TREEMIX = 0.03;
+// change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
 
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -1697,6 +1697,9 @@ public:
 
     /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
     bool optimize_params_use_hmm_gm;
+    
+    /** proceed to MAST model after HMMSTER , default true */
+    bool proceed_MAST_after_HMMSTER;
 
     /**
             criterion to assess important quartet

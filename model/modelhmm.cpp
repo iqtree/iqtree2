@@ -84,8 +84,10 @@ double ModelHmm::optimizeParametersByEM() {
         marginalTran += sq_ncat;
     }
     optx = optx / (double)(phylo_hmm->nsite-1);
-//    if (optx < MIN_SAME_CAT_TRAN_PROB)
-//        optx = MIN_SAME_CAT_TRAN_PROB;
+    if (optx < MIN_TRAN_PROB)
+        optx = MIN_TRAN_PROB;
+    if (optx > 1.0 - MIN_TRAN_PROB)
+        optx = 1.0 - MIN_TRAN_PROB;
     return -computeFunction(optx);
 }
 

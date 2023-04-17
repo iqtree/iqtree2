@@ -4170,7 +4170,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         // tree-mixture model
         cout << "Tree-mixture model" << endl;
 
-        // the minimum gamma shape should be greater than 0.03 for tree mixture model
+        // the minimum gamma shape should be greater than MIN_GAMMA_SHAPE_TREEMIX for tree mixture model
         if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
             if (params.min_gamma_shape != MIN_GAMMA_SHAPE)
                 cout << "The minimum value for Gamma shape is changed to " << MIN_GAMMA_SHAPE_TREEMIX << endl;
