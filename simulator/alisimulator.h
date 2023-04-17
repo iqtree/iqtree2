@@ -225,7 +225,7 @@ protected:
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
     */
-    void regenerateRootSequenceBranchSpecificModel(string freqs, int sequence_length, Node* root);
+    void regenerateRootSequenceBranchSpecificModel(string freqs, int sequence_length, vector<short int> &sequence);
     
     /**
         generate a random sequence by state frequencies

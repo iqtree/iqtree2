@@ -546,7 +546,18 @@ void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_seque
     
     // if the ancestral sequence is not specified, randomly generate the sequence
     if (ancestral_sequence.size() == 0)
+    {
         generateRandomSequence(expected_num_sites, tree->MTree::root->sequence->sequence_chunks[0]);
+        
+        // check to regenerate the root sequence if the user has specified specific frequencies for root
+        NeighborVec::iterator it;
+        Node* node = tree->root;
+        Node* dad = tree->root;
+        FOR_NEIGHBOR(node, dad, it) {
+            if ((*it)->attributes.find("freqs") != (*it)->attributes.end())
+                regenerateRootSequenceBranchSpecificModel((*it)->attributes["freqs"], expected_num_sites, tree->MTree::root->sequence->sequence_chunks[0]);
+        }
+    }
     // otherwise, using the ancestral sequence + abundant sites
     else
     {
@@ -2433,10 +2444,6 @@ void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_l
     // initialize the site-specific rates
     initVariablesRateHeterogeneity(sequence_length);
     
-    // check to regenerate the root sequence if the user has specified specific frequencies for root
-    if (tree->root->id == node->id && ((*it)->attributes["freqs"]).length() > 0)
-        regenerateRootSequenceBranchSpecificModel((*it)->attributes["freqs"], sequence_length, node);
-    
     // simulate chunks of sequence one by one
     int segment_start = 0;
     for (int i = 0; i < node->sequence->sequence_chunks.size(); i++)
@@ -2483,7 +2490,7 @@ void AliSimulator::initVariablesRateHeterogeneity(int sequence_length, bool rege
 /**
     regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
 */
-void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int sequence_length, Node* root){
+void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int sequence_length, vector<short int> &sequence){
     // initizlize state_freqs
     double* state_freqs = new double[max_num_states];
     
@@ -2524,7 +2531,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
     }
     
     // re-generate a new sequence for the root from the state frequencies
-    generateRandomSequenceFromStateFreqs(sequence_length, root->sequence->sequence_chunks[0], state_freqs, max_prob_pos);
+    generateRandomSequenceFromStateFreqs(sequence_length, sequence, state_freqs, max_prob_pos);
     
     // release the memory of state_freqs
     delete[] state_freqs;
