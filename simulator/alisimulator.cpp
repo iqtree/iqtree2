@@ -2491,6 +2491,8 @@ void AliSimulator::initVariablesRateHeterogeneity(int sequence_length, bool rege
     regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
 */
 void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int sequence_length, vector<short int> &sequence){
+    std::cout << "Regenerate the root sequence according to user-defined state frequencies." << std::endl;
+    
     // initizlize state_freqs
     double* state_freqs = new double[max_num_states];
     
