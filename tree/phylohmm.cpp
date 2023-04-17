@@ -262,17 +262,18 @@ double PhyloHmm::optimizeParameters(double gradient_epsilon) {
     score = modelHmm->optimizeParameters(gradient_epsilon);
     if (verbose_mode >= VB_MED) {
         cout << "after optimizing the transition matrix, HMM likelihood = " << score << endl;
-        // cout << "modelHmm->tranSameCat : " << modelHmm->tranSameCat << endl;
+        cout << "   modelHmm->tranSameCat : " << scientific << modelHmm->tranSameCat << endl;
+        cout << "   1 - modelHmm->tranSameCat : " << scientific << 1.0 - modelHmm->tranSameCat << endl;
     }
     // optimize the probability array
     score = optimizeProbEM();
     if (verbose_mode >= VB_MED) {
         cout << "after optimizing the probability array, HMM likelihood = " << score << endl;
-//        cout << "probability array :";
-//        for (size_t i = 0; i < ncat; i++) {
-//            cout << " " << prob[i];
-//        }
-//        cout << endl;
+        cout << "   probability array :";
+        for (size_t i = 0; i < ncat; i++) {
+            cout << " " << scientific << prob[i];
+        }
+        cout << endl;
     }
     return score;
 }
