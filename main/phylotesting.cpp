@@ -3241,6 +3241,14 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     action = 2; // estimating the number of classes in a mixture model
     do_init_tree = false;
     runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+
+    if (params.opt_rhas_again) {
+        // Step 4: estimate the RHAS model again
+        action = 1; // estimating the RHAS model
+        do_init_tree = false;
+        model_str = best_subst_name;
+        runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+    }
     
     // create a new IQTree object for this mixture model
     model_str = best_subst_name+best_rate_name;

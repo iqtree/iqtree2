@@ -1646,6 +1646,11 @@ public:
             maximum number of classes in mixture model
      */
     int max_mix_cats;
+    
+    /**
+            whether to optimize the RHAS again after the number of classes is estimated for the mixture model
+     */
+    bool opt_rhas_again;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates

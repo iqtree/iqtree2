@@ -1182,6 +1182,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.max_rate_cats = 10;
     params.min_mix_cats = 1;
     params.max_mix_cats = 10;
+    params.opt_rhas_again = true;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -3418,6 +3419,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.max_mix_cats = convert_int(argv[cnt]);
                 if (params.max_mix_cats < 2)
                     throw "Wrong number of classes in mixture for -cmixmax";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-opt-rhas-once") == 0 || strcmp(argv[cnt], "--opt-rhas-once") == 0) {
+                params.opt_rhas_again = false;
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
