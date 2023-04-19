@@ -3087,7 +3087,9 @@ void runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_in
     bool merge_phase = false;
     bool generate_candidates;
     bool skip_all_when_drop;
-    int i;
+    string orig_ratehet_set;
+    vector<string> ratehet;
+    int i,j;
     
     // timing
     cpu_time = getCPUTime();
@@ -3142,17 +3144,39 @@ void runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_in
     
     // generate candidate models
     // setting the params
+    orig_ratehet_set = params.ratehet_set;
     params.model_set = model_str;
     params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
     generate_candidates = false;
+
     if (action == 1) {
-        params.ratehet_set = "AUTO";
-        candidate_models.push_back(CandidateModel(model_str, "", iqtree.aln, 0));
-        candidate_models.push_back(CandidateModel(model_str, "+I", iqtree.aln, 0));
-        candidate_models.push_back(CandidateModel(model_str, "+G", iqtree.aln, 0));
-        candidate_models.push_back(CandidateModel(model_str, "+I+G", iqtree.aln, 0));
+        getRateHet(iqtree.aln->seq_type, params.model_name, iqtree.aln->frac_invariant_sites, params.ratehet_set, ratehet);
+
+        // add number of rate cateogories for special rate models
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+
+        size_t pos;
+
+        for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
+        for (j = 0; j < ratehet.size(); j++)
+            if ((pos = ratehet[j].find(rates[i])) != string::npos &&
+                (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
+            {
+                string str = ratehet[j];
+                ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
+                max_cats = max(max_cats, params.max_rate_cats);
+                for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
+                    int ins_pos = j+k-params.min_rate_cats;
+                    ratehet.insert(ratehet.begin() + ins_pos, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+                }
+            }
+        
+        for (i=0; i<ratehet.size(); i++) {
+            candidate_models.push_back(CandidateModel(model_str, ratehet[i], iqtree.aln, 0));
+        }
+
         skip_all_when_drop = false;
     } else {
         params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
@@ -3200,6 +3224,7 @@ void runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_in
     transferModelFinderParameters(&iqtree, orig_checkpoint);
     iqtree.setCheckpoint(orig_checkpoint);
 
+    params.ratehet_set = orig_ratehet_set;
     params.startCPUTime = cpu_time;
     params.start_real_time = real_time;
     cpu_time = getCPUTime() - cpu_time;
