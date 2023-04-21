@@ -63,6 +63,23 @@ set(GCC_MIN_VERSION "4.8")
 project(iqtree)
 add_definitions(-DIQ_TREE)
 
+# Find Protobuf REQUIRED
+find_package(Protobuf REQUIRED)
+# Print version messages
+if(Protobuf_FOUND)
+    message(STATUS "Using Protocol Buffers ${Protobuf_VERSION}")
+endif()
+include_directories(${Protobuf_INCLUDE_DIRS})
+
+protobuf_generate_cpp(
+        PROTO_SRCS PROTO_HDRS
+        proto/parsimony.proto)
+
+add_library(proto
+        ${PROTO_SRCS}
+        ${PROTO_HDRS}
+        )
+
 # Find Eigen3 library
 if (NOT EIGEN3_INCLUDE_DIR)
     find_package(Eigen3)
@@ -211,7 +228,7 @@ elseif (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
     #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
     include_directories("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\Llvm\\lib\\clang\\10.0.0\\include")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -250,7 +267,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (APPLE)
         SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
     endif()
 
     #remove -rdynamic for Clang under Linux
@@ -730,7 +747,7 @@ endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree proto simulator yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         if (USE_TERRAPHAST)
             set_target_properties(terracetphast terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
@@ -793,7 +810,7 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree proto simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB} ${Protobuf_LIBRARIES})
 	
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)

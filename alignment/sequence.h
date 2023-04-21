@@ -3,6 +3,7 @@
 
 #include "utils/tools.h"
 #include "tree/genometree.h"
+#include "proto/parsimony.pb.h"
 
 using namespace std;
 
@@ -49,6 +50,11 @@ public:
         depth of the current node
      */
     int depth;
+    
+    /**
+        list of mutations
+     */
+    vector<Parsimony::mutation_list> node_mutations_vec;
 
     /**
         constructor

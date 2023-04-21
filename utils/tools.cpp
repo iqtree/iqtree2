@@ -2998,6 +2998,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.aln_output_format = IN_FASTA;
                 else if (strcmp(format.c_str(), "NEXUS") == 0)
                     params.aln_output_format = IN_NEXUS;
+                else if (strcmp(format.c_str(), "MAT") == 0)
+                    params.aln_output_format = IN_MAT;
 				else
 					throw "Unknown output format";
 				continue;

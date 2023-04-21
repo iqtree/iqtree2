@@ -10,6 +10,115 @@
 #include "alisimulatorheterogeneityinvar.h"
 #include "alisimulatorinvar.h"
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include "proto/parsimony.pb.h"
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+
+/**
+*  iteratively data at each node to MAT
+*/
+void addNodeData2MAT(Parsimony::data& data, Node *node, Node *dad)
+{
+    // add an empty metadata
+    auto meta = data.add_metadata();
+    
+    (*data.add_node_mutations()) = std::move(node->sequence->node_mutations_vec[0]);
+
+    // Add condensed nodes
+    /*for (auto cn: tree.condensed_nodes) {
+        auto cn_ptr = data.add_condensed_nodes();
+        cn_ptr->set_node_name(cn.first);
+        for (auto lid: cn.second) {
+            cn_ptr->add_condensed_leaves(lid);
+        }
+    }*/
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        addNodeData2MAT(data, (*it)->node, node);
+    }
+}
+
+void saveMAT(IQTree* tree, std::string filename) {
+    Parsimony::data data;
+    
+    // set newick tree string
+    stringstream nwk;
+    tree->printTree(nwk);
+    data.set_newick(nwk.str());
+    
+    std::cout << data.newick() << std::endl;
+    addNodeData2MAT(data, tree->root, tree->root);
+
+    /*auto dfs = tree.depth_first_expansion();
+    
+    std::cout << data.newick() << std::endl;
+    std::cout << "metadata_size: " << data.metadata_size() << std::endl;
+    for (auto metadata:data.metadata())
+        std::cout << metadata.clade_annotations_size() << std::endl;
+    std::cout << "condensed_nodes_size: " << data.condensed_nodes_size() << std::endl;
+    for (auto condensed_node:data.condensed_nodes())
+    {
+        std::cout << condensed_node.node_name() << std::endl;
+    }
+    std::cout << "node_mutations_size: " << data.node_mutations_size() << std::endl;
+    for (auto mutations:data.node_mutations())
+    {
+        std::cout << "----" << std::endl;
+        for (auto mutation:mutations.mutation())
+        {
+            std::string mut_nuc = "";
+            for (auto nuc:mutation.mut_nuc())
+                mut_nuc += std::to_string(nuc) + " ";
+
+            std::cout << mutation.position() << " " << mutation.ref_nuc()<< " " << mutation.par_nuc()<< " " << mut_nuc << mutation.chromosome() << std::endl;
+        }
+    }*/
+
+    // write data to file
+    std::ofstream outfile(filename, std::ios::out | std::ios::binary);
+    data.SerializeToOstream(&outfile);
+    outfile.close();
+}
+
+void readMAT(std::string filename)
+{
+    Parsimony::data data;
+    
+    // read from file
+    std::ifstream instream(filename, std::ios::in | std::ios::binary);
+    google::protobuf::io::IstreamInputStream stream(&instream);
+    google::protobuf::io::CodedInputStream input(&stream);
+    //input.SetTotalBytesLimit(BIG_SIZE, BIG_SIZE);
+    data.ParseFromCodedStream(&input);
+    
+    std::cout << data.newick() << std::endl;
+    std::cout << "metadata_size: " << data.metadata_size() << std::endl;
+    for (auto metadata:data.metadata())
+        std::cout << metadata.clade_annotations_size() << std::endl;
+    std::cout << "condensed_nodes_size: " << data.condensed_nodes_size() << std::endl;
+    for (auto condensed_node:data.condensed_nodes())
+    {
+        std::cout << condensed_node.node_name() << std::endl;
+    }
+    std::cout << "node_mutations_size: " << data.node_mutations_size() << std::endl;
+    for (auto mutations:data.node_mutations())
+    {
+        std::cout << "----" << std::endl;
+        for (auto mutation:mutations.mutation())
+        {
+            std::string mut_nuc = "";
+            for (auto nuc:mutation.mut_nuc())
+                mut_nuc += std::to_string(nuc) + " ";
+
+            std::cout << mutation.position() << " " << mutation.ref_nuc()<< " " << mutation.par_nuc()<< " " << mut_nuc << mutation.chromosome() << std::endl;
+        }
+    }
+}
+
 AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, double new_partition_rate)
 {
     params = input_params;
@@ -1184,6 +1293,10 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
         
         removeConstantSites();
     }
+    
+    // write Mutation Annotated Tree file
+    saveMAT(tree, "mat.pd");
+    readMAT("mat.pd");
 }
 
 /**
@@ -1489,6 +1602,23 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         
         // merge and write sequence in simulations with Indels or FunDi model
         mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
+        
+        // record mutations for MAT (mutation annotated tree)
+        if (params->aln_output_format == IN_MAT)
+        {
+            Parsimony::mutation_list& node_mutations = (*it)->node->sequence->node_mutations_vec[thread_id];
+            
+            for (int i = 0; i < segment_length; ++i)
+            {
+                if ((*dad_seq_chunk)[i] != (*node_seq_chunk)[i])
+                {
+                    Parsimony::mut* mutation = node_mutations.add_mutation();
+                    mutation->set_position(segment_start + i);
+                    mutation->set_par_nuc((*dad_seq_chunk)[i]);
+                    mutation->add_mut_nuc((*node_seq_chunk)[i]);
+                }
+            }
+        }
         
         // browse 1-step deeper to the neighbor node
         simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, rstream);
@@ -3504,6 +3634,8 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
         // init depth at root
         node->sequence->depth = 0;
         max_depth = 0;
+        if (params->aln_output_format == IN_MAT)
+            node->sequence->node_mutations_vec.resize(num_threads);
         
         // separate root sequence into chunks
         separateSeqIntoChunks(node);
@@ -3523,6 +3655,9 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
         node->sequence->nums_children_done_simulation.resize(num_threads);
         for (int i = 0; i < num_threads; i++)
             node->sequence->nums_children_done_simulation[i] = 0;
+        
+        if (params->aln_output_format == IN_MAT)
+            (*it)->node->sequence->node_mutations_vec.resize(num_threads);
         
         // browse 1-step deeper to the neighbor node
         resetTree(max_depth, store_seq_at_cache, (*it)->node, node);
