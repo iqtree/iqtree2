@@ -3537,5 +3537,9 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // concatenated) and linearly scaled by SCALE.
 double frob_norm (double m[], int n, double scale=1.0);
 
+/**
+    concatenate the output file name with corresponding extension (for AliSim)
+*/
+string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
 #endif

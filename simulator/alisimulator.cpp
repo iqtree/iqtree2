@@ -10,115 +10,6 @@
 #include "alisimulatorheterogeneityinvar.h"
 #include "alisimulatorinvar.h"
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "proto/parsimony.pb.h"
-#include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-
-/**
-*  iteratively data at each node to MAT
-*/
-void addNodeData2MAT(Parsimony::data& data, Node *node, Node *dad)
-{
-    // add an empty metadata
-    auto meta = data.add_metadata();
-    
-    (*data.add_node_mutations()) = std::move(node->sequence->node_mutations_vec[0]);
-
-    // Add condensed nodes
-    /*for (auto cn: tree.condensed_nodes) {
-        auto cn_ptr = data.add_condensed_nodes();
-        cn_ptr->set_node_name(cn.first);
-        for (auto lid: cn.second) {
-            cn_ptr->add_condensed_leaves(lid);
-        }
-    }*/
-    
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        addNodeData2MAT(data, (*it)->node, node);
-    }
-}
-
-void saveMAT(IQTree* tree, std::string filename) {
-    Parsimony::data data;
-    
-    // set newick tree string
-    stringstream nwk;
-    tree->printTree(nwk);
-    data.set_newick(nwk.str());
-    
-    std::cout << data.newick() << std::endl;
-    addNodeData2MAT(data, tree->root, tree->root);
-
-    /*auto dfs = tree.depth_first_expansion();
-    
-    std::cout << data.newick() << std::endl;
-    std::cout << "metadata_size: " << data.metadata_size() << std::endl;
-    for (auto metadata:data.metadata())
-        std::cout << metadata.clade_annotations_size() << std::endl;
-    std::cout << "condensed_nodes_size: " << data.condensed_nodes_size() << std::endl;
-    for (auto condensed_node:data.condensed_nodes())
-    {
-        std::cout << condensed_node.node_name() << std::endl;
-    }
-    std::cout << "node_mutations_size: " << data.node_mutations_size() << std::endl;
-    for (auto mutations:data.node_mutations())
-    {
-        std::cout << "----" << std::endl;
-        for (auto mutation:mutations.mutation())
-        {
-            std::string mut_nuc = "";
-            for (auto nuc:mutation.mut_nuc())
-                mut_nuc += std::to_string(nuc) + " ";
-
-            std::cout << mutation.position() << " " << mutation.ref_nuc()<< " " << mutation.par_nuc()<< " " << mut_nuc << mutation.chromosome() << std::endl;
-        }
-    }*/
-
-    // write data to file
-    std::ofstream outfile(filename, std::ios::out | std::ios::binary);
-    data.SerializeToOstream(&outfile);
-    outfile.close();
-}
-
-void readMAT(std::string filename)
-{
-    Parsimony::data data;
-    
-    // read from file
-    std::ifstream instream(filename, std::ios::in | std::ios::binary);
-    google::protobuf::io::IstreamInputStream stream(&instream);
-    google::protobuf::io::CodedInputStream input(&stream);
-    //input.SetTotalBytesLimit(BIG_SIZE, BIG_SIZE);
-    data.ParseFromCodedStream(&input);
-    
-    std::cout << data.newick() << std::endl;
-    std::cout << "metadata_size: " << data.metadata_size() << std::endl;
-    for (auto metadata:data.metadata())
-        std::cout << metadata.clade_annotations_size() << std::endl;
-    std::cout << "condensed_nodes_size: " << data.condensed_nodes_size() << std::endl;
-    for (auto condensed_node:data.condensed_nodes())
-    {
-        std::cout << condensed_node.node_name() << std::endl;
-    }
-    std::cout << "node_mutations_size: " << data.node_mutations_size() << std::endl;
-    for (auto mutations:data.node_mutations())
-    {
-        std::cout << "----" << std::endl;
-        for (auto mutation:mutations.mutation())
-        {
-            std::string mut_nuc = "";
-            for (auto nuc:mutation.mut_nuc())
-                mut_nuc += std::to_string(nuc) + " ";
-
-            std::cout << mutation.position() << " " << mutation.ref_nuc()<< " " << mutation.par_nuc()<< " " << mut_nuc << mutation.chromosome() << std::endl;
-        }
-    }
-}
-
 AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, double new_partition_rate)
 {
     params = input_params;
@@ -129,6 +20,7 @@ AliSimulator::AliSimulator(Params *input_params, int expected_number_sites, doub
     max_num_states = tree->aln->getMaxNumStates();
     latest_insertion = NULL;
     first_insertion = NULL;
+    mat = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -163,6 +55,7 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
     max_num_states = tree->aln->getMaxNumStates();
     latest_insertion = NULL;
     first_insertion = NULL;
+    mat = NULL;
     
     // estimating the appropriate length_ratio in cases models with +ASC
     estimateLengthRatio();
@@ -188,6 +81,13 @@ AliSimulator::~AliSimulator()
     {
         delete first_insertion;
         first_insertion = NULL;
+    }
+    
+    // delete mat
+    if (mat)
+    {
+        delete mat;
+        mat = NULL;
     }
     
     if (!tree) return;
@@ -866,7 +766,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
         executeEM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
     
     // process after simulating sequences
-    postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
+    postSimulateSeqs(sequence_length, output_filepath, state_mapping, write_sequences_to_tmp_data);
 }
 
 void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
@@ -903,8 +803,20 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
         
         // initialize trans_matrix
+        int segment_start = thread_id * default_segment_length;
         double *trans_matrix = new double[max_num_states * max_num_states];
-        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+        simulateSeqs(thread_id, segment_start, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+        
+        // update mat
+        if (params->aln_output_format == IN_MAT)
+        {
+            // update the mutations at root wrt the ref seq
+            recordMutations(tree->root->sequence->node_mutations_vec[thread_id], mat->getRefSeqChunks()[thread_id], mat->getRootSeqChunks()[thread_id], segment_start, actual_segment_length);
+            
+            // update the ref state for all mutations
+            // note: we need to use segment_start + 1 instead of segment_start to match the position in Usher
+            mat->updateRefState(thread_id, segment_start + 1, tree->root, tree->root);
+        }
         
         // delete trans_matrix array
         delete[] trans_matrix;
@@ -949,11 +861,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             #pragma omp single
             #endif
             {
-                string single_output_filepath;
-                if (params->aln_output_format != IN_FASTA)
-                    single_output_filepath = output_filepath + ".phy";
-                else
-                    single_output_filepath = output_filepath + ".fa";
+                string single_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath);
                 openOutputStream(single_output, single_output_filepath, open_mode);
                 
                 // output the first line
@@ -983,11 +891,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             for (int i = 0; i < input_streams.size(); i++)
             {
                 // add ".phy" or ".fa" to the output_filepath
-                string tmp_output_filepath;
-                if (params->aln_output_format != IN_FASTA)
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".phy";
-                else
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".fa";
+                string tmp_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + "_" + convertIntToString(i + 1));
                 
                 // open an input file
                 input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
@@ -1083,11 +987,8 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             
             // delete all intermidate files
             // add ".phy" or ".fa" to the output_filepath
-            string tmp_output_filepath;
-            if (params->aln_output_format != IN_FASTA)
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".phy";
-            else
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".fa";
+            string tmp_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + "_" + convertIntToString(thread_id + 1));
+            
             // delete file
             remove(tmp_output_filepath.c_str());
         }
@@ -1097,12 +998,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
         #pragma omp single
         #endif
         {
-            string single_output_filepath;
-            if (params->aln_output_format != IN_FASTA)
-                single_output_filepath = output_filepath + ".phy";
-            else
-                single_output_filepath = output_filepath + ".fa";
-            cout << "An alignment has just been exported to " << single_output_filepath << endl;
+            cout << "An alignment has just been exported to " << getOutputNameWithExt(params->aln_output_format, output_filepath) << endl;
         }
     }
 }
@@ -1180,11 +1076,23 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         else
         {
             // initialize trans_matrix
+            int segment_start = thread_id * default_segment_length;
             double *trans_matrix = new double[max_num_states * max_num_states];
-            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+            simulateSeqs(thread_id, segment_start, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
             
             // delete trans_matrix array
             delete[] trans_matrix;
+            
+            // update mat
+            if (params->aln_output_format == IN_MAT)
+            {
+                // update the mutations at root wrt the ref seq
+                recordMutations(tree->root->sequence->node_mutations_vec[thread_id], mat->getRefSeqChunks()[thread_id], mat->getRootSeqChunks()[thread_id], segment_start, actual_segment_length);
+                
+                // update the ref state for all mutations
+                // note: we need to use segment_start + 1 instead of segment_start to match the position in Usher
+                mat->updateRefState(thread_id, segment_start + 1, tree->root, tree->root);
+            }
             
             // report simulation done for the current thread
             #ifdef _OPENMP
@@ -1206,7 +1114,13 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     
     // close the output stream
     if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+    {
         closeOutputStream(out);
+        
+        // show the output file name
+        if (!write_sequences_to_tmp_data)
+            cout << "An alignment has just been exported to " << getOutputNameWithExt(params->aln_output_format, output_filepath) << endl;
+    }
 }
 
 void AliSimulator::writeSeqChunkFromCache(ostream *&out)
@@ -1260,7 +1174,7 @@ void AliSimulator::writeAllSeqChunkFromCache(ostream *&out)
 /**
     process after simulating sequences
 */
-void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data)
+void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath, vector<string> &state_mapping, bool write_sequences_to_tmp_data)
 {
     // delete sub_rates, J_Matrix
     delete[] sub_rates;
@@ -1295,8 +1209,23 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
     }
     
     // write Mutation Annotated Tree file
-    saveMAT(tree, "mat.pd");
-    readMAT("mat.pd");
+    if (params->aln_output_format == IN_MAT)
+    {
+        // convert the ref_seq into readable character
+        string ref_seq = "";
+        for (auto i = 0; i < mat->getRefSeqChunks().size(); ++i)
+        {
+            vector<short int>& seq_chunk = mat->getRefSeqChunks()[i];
+            const auto segment_length = seq_chunk.size();
+            string tmp_output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
+            convertNumericalStatesIntoReadableCharacters(seq_chunk, tmp_output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+            ref_seq += tmp_output;
+        }
+        mat->saveMAT(tree, ref_seq, output_filepath);
+        
+        // debug: MAT
+        // mat->readMAT(output_filepath + ".pd");
+    }
 }
 
 /**
@@ -1394,6 +1323,10 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     
     // if using AliSim-OpenMP-EM algorithm, update whether we need to output temporary files in PHYLIP format
     force_output_PHYLIP = params->alisim_openmp_alg == EM && num_threads > 1 && !params->no_merge;
+    
+    // init mutation annotated tree
+    if (params->aln_output_format == IN_MAT)
+        initMAT();
 }
 
 /**
@@ -1420,10 +1353,7 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 thread_id_str = "_" + convertIntToString(thread_id + 1);
             
             // add ".phy" or ".fa" to the output_filepath
-            if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + thread_id_str + ".phy";
-            else
-                output_filepath = output_filepath + thread_id_str + ".fa";
+            output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + thread_id_str);
             
             // open the output stream (create new or append an existing file)
             if (params->alisim_openmp_alg == EM && num_threads > 1)
@@ -1572,6 +1502,10 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
             }
         }
         
+        // record mutations for MAT (mutation annotated tree)
+        if (params->aln_output_format == IN_MAT)
+            recordMutations((*it)->node->sequence->node_mutations_vec[thread_id], *dad_seq_chunk, *node_seq_chunk, segment_start, segment_length);
+        
         // set insertion position for of this node in the list of insertions if using Indels
         if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && (*it)->node->isLeaf())
         {
@@ -1602,23 +1536,6 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         
         // merge and write sequence in simulations with Indels or FunDi model
         mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
-        
-        // record mutations for MAT (mutation annotated tree)
-        if (params->aln_output_format == IN_MAT)
-        {
-            Parsimony::mutation_list& node_mutations = (*it)->node->sequence->node_mutations_vec[thread_id];
-            
-            for (int i = 0; i < segment_length; ++i)
-            {
-                if ((*dad_seq_chunk)[i] != (*node_seq_chunk)[i])
-                {
-                    Parsimony::mut* mutation = node_mutations.add_mutation();
-                    mutation->set_position(segment_start + i);
-                    mutation->set_par_nuc((*dad_seq_chunk)[i]);
-                    mutation->add_mut_nuc((*node_seq_chunk)[i]);
-                }
-            }
-        }
         
         // browse 1-step deeper to the neighbor node
         simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, rstream);
@@ -1828,66 +1745,76 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
 */
 void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segment_start, int segment_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, NeighborVec::iterator it, Node* node)
 {
-    // we can only write and delete sequence chunk in normal simulations: without Indels, FunDi, ASC, etc
-    if (params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0)
+    // copy the ref sequence for MAT (mutation annotated tree)
+    if (params->aln_output_format == IN_MAT)
     {
-        if (params->alisim_fundi_taxon_set.size() == 0)
+        // record the ref sequence
+        if ((*it)->node->isLeaf() && (*it)->node->id == mat->getRefNodeID())
+            mat->getRefSeqChunks()[thread_id] = node_seq_chunk;
+    }
+    else
+    {
+        // we can only write and delete sequence chunk in normal simulations: without Indels, FunDi, ASC, etc
+        if (params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && state_mapping.size() > 0)
         {
-            // convert the sequence at leaf
-            if ((*it)->node->isLeaf())
+            if (params->alisim_fundi_taxon_set.size() == 0)
+            {
+                // convert the sequence at leaf
+                if ((*it)->node->isLeaf())
+                {
+                    // init a default sequence str
+                    int sequence_length = round(expected_num_sites * inverse_length_ratio);
+                    string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
+                    
+                    // convert numerical states into readable characters
+                    string input_sequence = input_msa[(*it)->node->name];
+                    if (input_sequence.length()>0)
+                        // extract sequence and copying gaps from the input sequences to the output.
+                        exportSequenceWithGaps(node_seq_chunk, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
+                    else
+                        // extract sequence without copying gaps from the input sequences to the output.
+                        convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+                    
+                    // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+                    outputOneSequence((*it)->node, output, thread_id, segment_start, out);
+                }
+                
+                // avoid writing sequence of __root__
+                if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
+                {
+                    // init a default sequence str
+                    int sequence_length = round(expected_num_sites * inverse_length_ratio);
+                    string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
+                    
+                    // convert numerical states into readable characters
+                    string input_sequence = input_msa[node->name];
+                    if (input_sequence.length()>0)
+                        // extract sequence and copying gaps from the input sequences to the output.
+                        exportSequenceWithGaps(dad_seq_chunk, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
+                    else
+                        // extract sequence without copying gaps from the input sequences to the output.
+                        convertNumericalStatesIntoReadableCharacters(dad_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+                    
+                    // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
+                    outputOneSequence(node, output, thread_id, segment_start, out);
+                }
+            }
+            
+            // convert internal sequence if it's an internal node and the user want to output internal sequences
+            if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
             {
                 // init a default sequence str
                 int sequence_length = round(expected_num_sites * inverse_length_ratio);
                 string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
                 
                 // convert numerical states into readable characters
-                string input_sequence = input_msa[(*it)->node->name];
-                if (input_sequence.length()>0)
-                    // extract sequence and copying gaps from the input sequences to the output.
-                    exportSequenceWithGaps(node_seq_chunk, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
-                else
-                    // extract sequence without copying gaps from the input sequences to the output.
-                    convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+                convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
+                
+                // the memory allocated to the current sequence chunk of INTERNAL nodes will be release later
                 
                 // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
                 outputOneSequence((*it)->node, output, thread_id, segment_start, out);
             }
-                
-            // avoid writing sequence of __root__
-            if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
-            {
-                // init a default sequence str
-                int sequence_length = round(expected_num_sites * inverse_length_ratio);
-                string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
-                
-                // convert numerical states into readable characters
-                string input_sequence = input_msa[node->name];
-                if (input_sequence.length()>0)
-                    // extract sequence and copying gaps from the input sequences to the output.
-                    exportSequenceWithGaps(dad_seq_chunk, output, sequence_length, num_sites_per_state, input_sequence, state_mapping, segment_start, segment_length);
-                else
-                    // extract sequence without copying gaps from the input sequences to the output.
-                    convertNumericalStatesIntoReadableCharacters(dad_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
-                
-                // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
-                outputOneSequence(node, output, thread_id, segment_start, out);
-            }
-        }
-        
-        // convert internal sequence if it's an internal node and the user want to output internal sequences
-        if (!(*it)->node->isLeaf() && params->alisim_write_internal_sequences)
-        {
-            // init a default sequence str
-            int sequence_length = round(expected_num_sites * inverse_length_ratio);
-            string output(num_sites_per_state == 1 ? segment_length : (segment_length * num_sites_per_state), '-');
-            
-            // convert numerical states into readable characters
-            convertNumericalStatesIntoReadableCharacters(node_seq_chunk, output, sequence_length, num_sites_per_state, state_mapping, segment_length);
-            
-            // the memory allocated to the current sequence chunk of INTERNAL nodes will be release later
-            
-            // output a sequence (chunk) to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
-            outputOneSequence((*it)->node, output, thread_id, segment_start, out);
         }
     }
     
@@ -3635,8 +3562,8 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
         node->sequence->depth = 0;
         max_depth = 0;
         if (params->aln_output_format == IN_MAT)
-            node->sequence->node_mutations_vec.resize(num_threads);
-        
+            node->sequence->node_mutations_vec.resize(num_simulating_threads);
+            
         // separate root sequence into chunks
         separateSeqIntoChunks(node);
     }
@@ -3657,7 +3584,7 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
             node->sequence->nums_children_done_simulation[i] = 0;
         
         if (params->aln_output_format == IN_MAT)
-            (*it)->node->sequence->node_mutations_vec.resize(num_threads);
+            (*it)->node->sequence->node_mutations_vec.resize(num_simulating_threads);
         
         // browse 1-step deeper to the neighbor node
         resetTree(max_depth, store_seq_at_cache, (*it)->node, node);
@@ -3740,5 +3667,32 @@ void AliSimulator::mergeChunksAllNodes(Node* node, Node* dad)
         
         // browse 1-step deeper to the neighbor node
         mergeChunksAllNodes((*it)->node, node);
+    }
+}
+
+void AliSimulator::initMAT()
+{
+    // init mat
+    if (!mat)
+        mat = new MutAnnotatedTree();
+    
+    // init mat
+    mat->initMAT(tree->root, num_simulating_threads);
+}
+
+void AliSimulator::recordMutations(Parsimony::mutation_list& node_mutations, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, int segment_start, int segment_length)
+{
+    // increase the position by one to match with Usher
+    ++segment_start;
+    
+    for (int i = 0; i < segment_length; ++i)
+    {
+        if (dad_seq_chunk[i] != node_seq_chunk[i])
+        {
+            Parsimony::mut* mutation = node_mutations.add_mutation();
+            mutation->set_position(segment_start + i);
+            mutation->set_par_nuc(dad_seq_chunk[i]);
+            mutation->add_mut_nuc(node_seq_chunk[i]);
+        }
     }
 }

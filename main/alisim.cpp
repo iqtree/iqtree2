@@ -79,6 +79,9 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     MPIHelper::getInstance().barrier();
     auto end = getRealTime();
     cout << "Simulation time: " << fixed << end-start << "s" << endl;
+    
+    // Optional:  Delete all global objects allocated by libprotobuf.
+    google::protobuf::ShutdownProtobufLibrary();
 }
 
 /**
@@ -853,10 +856,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             }
         
             // add ".phy" or ".fa" to the output_filepath
-            if (alisimulator->params->aln_output_format != IN_FASTA)
-                file_path = file_path + ".phy";
-            else
-                file_path = file_path + ".fa";
+            file_path = getOutputNameWithExt(alisimulator->params->aln_output_format, file_path);
             ostream *out;
             if (alisimulator->params->do_compression)
                 out = new ogzstream(file_path.c_str(), open_mode);

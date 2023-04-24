@@ -7574,3 +7574,16 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
    }
    return sqrt(sum);
  }
+
+string getOutputNameWithExt(const InputType& format, const string& output_filepath)
+{
+    switch (format)
+    {
+        case IN_MAT:
+            return output_filepath + ".pd";
+        case IN_FASTA:
+            return output_filepath + ".fa";
+        default:
+            return output_filepath + ".phy";
+    }
+}

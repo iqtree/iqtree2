@@ -17,6 +17,7 @@
 #include "tree/phylosupertree.h"
 #include "tree/phylosupertreeplen.h"
 #include "tree/phylosupertreeunlinked.h"
+#include "tree/mutannotatedtree.h"
 #include "model/modelmarkov.h"
 #include "model/modelliemarkov.h"
 #include "model/ratecontinuousgammainvar.h"
@@ -215,7 +216,7 @@ protected:
     /**
         process after simulating sequences
     */
-    void postSimulateSeqs(int sequence_length, string output_filepath, bool write_sequences_to_tmp_data);
+    void postSimulateSeqs(int sequence_length, string output_filepath, vector<string> &state_mapping, bool write_sequences_to_tmp_data);
     
     /**
         initialize variables (e.g., site-specific rate)
@@ -412,6 +413,16 @@ protected:
     */
     void outputOneSequence(Node* node, string &output, int thread_id, int segment_start, ostream &out);
     
+    /**
+        init mutation annotated tree (MAT)
+    */
+    void initMAT();
+    
+    /**
+        record mutations at a node
+    */
+    void recordMutations(Parsimony::mutation_list& node_mutations, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, int segment_start, int segment_length);
+    
 public:
     
     IQTree *tree;
@@ -459,6 +470,9 @@ public:
     double* ptn_accumulated_rate_dis = NULL;
     DoubleVector pattern_rates;
     IntVector site_to_patternID;
+    
+    // mutation annotated tree
+    MutAnnotatedTree* mat = NULL;
     
     /**
         constructor

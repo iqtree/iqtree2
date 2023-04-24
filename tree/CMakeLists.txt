@@ -50,6 +50,8 @@ tinatree.h
 parstree.cpp
 parstree.h
 discordance.cpp
+mutannotatedtree.h
+mutannotatedtree.cpp
 )
 
 target_link_libraries(tree pll model alignment)
