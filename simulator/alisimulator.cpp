@@ -1224,7 +1224,7 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
         mat->saveMAT(tree, ref_seq, output_filepath);
         
         // debug: MAT
-        // mat->readMAT(output_filepath + ".pd");
+        mat->readMAT(output_filepath + ".pd");
     }
 }
 
@@ -3562,7 +3562,16 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
         node->sequence->depth = 0;
         max_depth = 0;
         if (params->aln_output_format == IN_MAT)
+        {
             node->sequence->node_mutations_vec.resize(num_simulating_threads);
+            // reset name of internal node
+            if (!node->isLeaf() && node->name.find(MutAnnotatedTree::CONDENSED_NAME) != std::string::npos)
+            {
+                // split node_name into token regarding SEPARATOR
+                std::vector<std::string> tokens = splitString(node->name, MutAnnotatedTree::SEPARATOR);
+                node->name = tokens[1];
+            }
+        }
             
         // separate root sequence into chunks
         separateSeqIntoChunks(node);
@@ -3584,7 +3593,16 @@ void AliSimulator::resetTree(int &max_depth, bool store_seq_at_cache, Node *node
             node->sequence->nums_children_done_simulation[i] = 0;
         
         if (params->aln_output_format == IN_MAT)
+        {
             (*it)->node->sequence->node_mutations_vec.resize(num_simulating_threads);
+            // reset name of internal node
+            if (!(*it)->node->isLeaf() && (*it)->node->name.find(MutAnnotatedTree::CONDENSED_NAME) != std::string::npos)
+            {
+                // split node_name into token regarding SEPARATOR
+                std::vector<std::string> tokens = splitString((*it)->node->name, MutAnnotatedTree::SEPARATOR);
+                (*it)->node->name = tokens[1];
+            }
+        }
         
         // browse 1-step deeper to the neighbor node
         resetTree(max_depth, store_seq_at_cache, (*it)->node, node);

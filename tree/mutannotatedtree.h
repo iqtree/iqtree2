@@ -44,8 +44,33 @@ class MutAnnotatedTree{
         get the reference node (the first leaf in a pre-order traversal)
     */
     Node* getRefNode(Node* node, Node* dad = NULL);
+    
+    /**
+        condense leave (with identical sequences)
+    */
+    void condenseIdentLeave(IQTree* tree, Parsimony::data& data);
+    
+    /**
+     condense leave at an internal node
+    */
+    void condenseIdentLeaveAtInternal(Parsimony::data& data, int& condense_count, Node* node, Node* dad = NULL);
+    
+    /**
+     collapse identical leave
+    */
+    void collapseIdentLeave(Node* node, Node* dad = NULL);
 
 public:
+    /**
+     *  constant string to detect condensed node
+     */
+    static const string CONDENSED_NAME;
+    
+    /**
+     *  constant string to separate identical leaves
+     */
+    static const string SEPARATOR;
+    
     /**
      *  init mat
      */

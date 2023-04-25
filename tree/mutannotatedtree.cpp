@@ -1,5 +1,8 @@
 #include "mutannotatedtree.h"
 
+const string MutAnnotatedTree::CONDENSED_NAME = "MAT_condensed";
+const string MutAnnotatedTree::SEPARATOR = "@@@";
+
 void MutAnnotatedTree::initMAT(Node* root, const int num_threads)
 {
     // seek the ref node
@@ -35,6 +38,17 @@ vector<vector<short int>>& MutAnnotatedTree::getRootSeqChunks()
 
 void MutAnnotatedTree::addNodeData2MAT(Parsimony::data& data, Node *node, Node *dad)
 {
+    // ignore condensed leave (except the first one)
+    if (node->isLeaf() && dad->name.find(CONDENSED_NAME) != std::string::npos)
+    {
+        // split node_name into token regarding SEPARATOR
+        std::vector<std::string> tokens = splitString(dad->name, SEPARATOR);
+        
+        // CONDENSED_NAME@@@<internal_real_name>@@@<condense_count>@@@<first_ident_leaf>@@@<other_ident_leave>
+        if (std::find(tokens.begin() + 4, tokens.end(), node->name) != tokens.end())
+            return;
+    }
+        
     // add an empty metadata
     auto meta = data.add_metadata();
     
@@ -89,10 +103,8 @@ void MutAnnotatedTree::saveMAT(IQTree* tree, const std::string& ref_seq, const s
     
     Parsimony::data data;
     
-    // set newick tree string
-    stringstream nwk;
-    tree->printTree(nwk);
-    data.set_newick(nwk.str());
+    // condense identical leave and set the newick string
+    condenseIdentLeave(tree, data);
     
     Node* start_node = tree->root;
     // handle the special case when we root an unrooted tree
@@ -159,7 +171,9 @@ void MutAnnotatedTree::readMAT(const std::string& filename)
     std::cout << "condensed_nodes_size: " << data.condensed_nodes_size() << std::endl;
     for (auto condensed_node:data.condensed_nodes())
     {
-        std::cout << condensed_node.node_name() << std::endl;
+        std::cout << "- " << condensed_node.node_name() << std::endl;
+        for (auto condensed_leave:condensed_node.condensed_leaves())
+            std::cout << condensed_leave << std::endl;
     }
     std::cout << "node_mutations_size: " << data.node_mutations_size() << std::endl;
     for (auto mutations:data.node_mutations())
@@ -209,5 +223,128 @@ Node* MutAnnotatedTree::getRefNode(Node* node, Node* dad)
         
         // browse 1-step deeper to the neighbor node
         return getRefNode((*it)->node, node);
+    }
+}
+
+void MutAnnotatedTree::condenseIdentLeave(IQTree* tree, Parsimony::data& data)
+{
+    // traverse the tree to condense identical leave
+    int condense_count = 0;
+    condenseIdentLeaveAtInternal(data, condense_count, tree->root);
+    
+    // set the newick string
+    stringstream nwk;
+    // if condense_count > 0 -> clone the current tree, change and output the newick string
+    if (condense_count > 0)
+    {
+        // clone the tree
+        IQTree new_tree;
+        new_tree.copyTree(tree);
+        
+        // update the tree -> collapse identical leave
+        collapseIdentLeave(new_tree.root);
+        
+        // output the newick string
+        new_tree.printTree(nwk);
+    }
+    // otherwise, output the newick string from the current tree
+    else
+    {
+        tree->printTree(nwk);
+    }
+    data.set_newick(nwk.str());
+}
+
+void MutAnnotatedTree::condenseIdentLeaveAtInternal(Parsimony::data& data, int& condense_count, Node* node, Node* dad)
+{
+    std::vector<std::string> condensed_leaves;
+    
+    // browse all children of this node
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // child is a leaf -> check if no mutation occurs
+        if ((*it)->node->isLeaf())
+        {
+            bool no_mutation = true;
+            std::vector<Parsimony::mutation_list>& node_mutations_vec = (*it)->node->sequence->node_mutations_vec;
+            // browse all chunks to check whether there is any mutations occurs at any chunk
+            for (auto i = 0; i < node_mutations_vec.size(); ++i)
+            {
+                // stop checking if mutations occurs at any chunk
+                if (node_mutations_vec[i].mutation_size() > 0)
+                {
+                    no_mutation = false;
+                    break;
+                }
+            }
+            
+            // if no mutation occurs -> record this leave
+            if (no_mutation)
+                condensed_leaves.push_back((*it)->node->name);
+        }
+        // child is an internal node -> // browse 1-step deeper to the neighbor node
+        else
+            condenseIdentLeaveAtInternal(data, condense_count, (*it)->node, node);
+    }
+    
+    // there are at least two leave in the list 'condensed_leaves' -> condense these leave
+    if (condensed_leaves.size() > 1)
+    {
+        // add a new condense node
+        Parsimony::condensed_node* condensed_node = data.add_condensed_nodes();
+        ++condense_count;
+        string condense_count_str = convertIntToString(condense_count);
+        condensed_node->set_node_name("node_" + condense_count_str + "_condensed_" + convertIntToString(condensed_leaves.size()) + "_leaves");
+        // CONDENSED_NAME@@@<internal_real_name>@@@<condense_count>@@@<first_ident_leaf>@@@<other_ident_leave>
+        string tmp_name = CONDENSED_NAME + SEPARATOR + node->name + SEPARATOR + condense_count_str;
+        for (auto i = 0; i < condensed_leaves.size(); ++i)
+        {
+            tmp_name += SEPARATOR + condensed_leaves[i];
+            condensed_node-> add_condensed_leaves(std::move(condensed_leaves[i]));
+        }
+        // temporarily change the name of the internal node
+        node->name = tmp_name;
+    }
+}
+
+void MutAnnotatedTree::collapseIdentLeave(Node* node, Node* dad)
+{
+    // if node is an iternal node and contains idential leaves -> collapse them
+    if (!node->isLeaf() && node->name.find(CONDENSED_NAME) != std::string::npos)
+    {
+        // split node_name into token regarding SEPARATOR
+        string node_name = node->name;
+        std::vector<std::string> tokens = splitString(node_name, SEPARATOR);
+        
+        int num_condensed_leave = tokens.size() - 3; // not count CONDENSED_NAME, <real_internal_node_name>, and condense_count
+        ASSERT(num_condensed_leave <= node->neighbors.size() - 1);
+        // recover the real name of the internal node
+        node->name = tokens[1];
+        // collapse some of children of this internal node
+        node_name = "node_" + tokens[2] + "_condensed_" + convertIntToString(num_condensed_leave) + "_leaves";
+        // delete some of identical children (except the first one)
+        NeighborVec::iterator it;
+        FOR_NEIGHBOR(node, dad, it) {
+            // re-use the first identical child as the condensed node
+            if ((*it)->node->name == tokens[3])
+                (*it)->node->name = node_name;
+            else
+            {
+                // delete other identical children
+                if (std::find(tokens.begin() + 4, tokens.end(), (*it)->node->name) != tokens.end())
+                {
+                    delete (*it)->node;
+                    node->neighbors.erase(it);
+                    --it;
+                }
+            }
+        }
+    }
+    
+    // traverse the tree
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        collapseIdentLeave((*it)->node, node);
     }
 }

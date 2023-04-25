@@ -3542,4 +3542,9 @@ double frob_norm (double m[], int n, double scale=1.0);
 */
 string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
+/**
+    split string into tokens regaring SEPARATOR
+*/
+std::vector<std::string> splitString(string input, const string& SEPARATOR);
+
 #endif

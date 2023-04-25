@@ -7587,3 +7587,20 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
             return output_filepath + ".phy";
     }
 }
+
+/**
+    split string into tokens regaring SEPARATOR
+*/
+std::vector<std::string> splitString(string input, const string& SEPARATOR)
+{
+    size_t pos = 0;
+    std::vector<std::string> tokens;
+    while ((pos = input.find(SEPARATOR)) != std::string::npos) {
+        tokens.push_back(input.substr(0, pos));
+        input.erase(0, pos + SEPARATOR.length());
+    }
+    if (input.length() > 0)
+        tokens.push_back(input);
+    
+    return tokens;
+}
