@@ -767,10 +767,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                     output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
                 
                 // add file extension
-                if (super_alisimulator->params->aln_output_format == IN_PHYLIP)
-                    output_filename += ".phy";
-                else
-                    output_filename += ".fa";
+                output_filename = getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename);
                 
                 // delete the output file
                 remove((output_filename).c_str());
@@ -898,7 +895,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             int seq_length_times_num_sites_per_state = (aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length);
             string first_line = "";
             uint64_t start_pos = 0;
-            if (alisimulator->params->aln_output_format != IN_FASTA)
+            if (alisimulator->params->aln_output_format == IN_PHYLIP)
             {
                 first_line = convertIntToString(num_leaves) + " " + convertIntToString(seq_length_times_num_sites_per_state) + "\n";
                 *out << first_line;

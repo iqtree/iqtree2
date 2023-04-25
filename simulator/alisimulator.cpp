@@ -866,7 +866,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 
                 // output the first line
                 string first_line = "";
-                if (params->aln_output_format != IN_FASTA)
+                if (params->aln_output_format == IN_PHYLIP)
                 {
                     int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
                     first_line = convertIntToString(num_leaves) + " " + convertIntToString(num_sites_per_state == 1 ? round(expected_num_sites * inverse_length_ratio) : (round(expected_num_sites * inverse_length_ratio) * num_sites_per_state)) + "\n";
