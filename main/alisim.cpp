@@ -534,6 +534,36 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
         retrieveAncestralSequenceFromInputFile(super_alisimulator, ancestral_sequence);
     
+    // terminate if using MAT (mutation-annotated tree) in unsupported simulations: Indels, Partitions, FUNDI, ASC
+    if (super_alisimulator->params->aln_output_format == IN_MAT &&
+        (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0
+         || super_alisimulator->tree->isSuperTree()
+         || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0
+         || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+         || super_alisimulator->tree->getRate()->isHeterotachy()))
+        outError("Sorry! MAT (Mutation-Annotated Tree) has not yet been supported in simulations with Indels, Partitions, FunDi, +ASC, GHOST models. Please choose other output format (e.g., PHYLIP, FASTA).");
+    
+    // Ignore some options which are not supported when outputting MAT
+    if (super_alisimulator->params->aln_output_format == IN_MAT)
+    {
+        // compression
+        if (Params::getInstance().do_compression)
+        {
+            outWarning("Compression is not supported when outputting MAT (Mutation-Annotated Tree). AliSim will output MAT without compression.");
+            
+            Params::getInstance().do_compression = false;
+            super_alisimulator->params->do_compression = false;
+        }
+        
+        // --single-output
+        if (super_alisimulator->params->alisim_single_output)
+        {
+            outWarning("Ignore --single-output option since it is not supported if using MAT (Mutation-Annotated Tree).");
+            super_alisimulator->params->alisim_single_output = false;
+            Params::getInstance().alisim_single_output = false;
+        }
+    }
+    
     // terminate if users employ more MPI processes than the number of alignments
     if (MPIHelper::getInstance().getNumProcesses() > super_alisimulator->params->alisim_dataset_num)
         outError("You are employing more MPI processes (" + convertIntToString(MPIHelper::getInstance().getNumProcesses()) + ") than the number of alignments (" + convertIntToString(super_alisimulator->params->alisim_dataset_num) + "). Please reduce the number of MPI processes to save the computational resources and try again!");
