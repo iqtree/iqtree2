@@ -118,4 +118,14 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 */
 void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name);
 
+/**
+*  output a treefile with internal node names when outputting internal sequences
+*/
+void outputTreeWithInternalNames(AliSimulator* alisimulator);
+
+/**
+*  set internal node name as the node's id
+*/
+void updateInternalNodeName(Node *node, Node *dad = NULL);
+
 #endif /* alisim_h */

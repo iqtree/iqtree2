@@ -563,6 +563,14 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             Params::getInstance().alisim_single_output = false;
         }
         
+        // ignore --write-all
+        if (super_alisimulator->params->alisim_write_internal_sequences)
+        {
+            outWarning("Ignore --write-all option since it is not supported if using MAT (Mutation-Annotated Tree).");
+            super_alisimulator->params->alisim_write_internal_sequences = false;
+            Params::getInstance().alisim_write_internal_sequences = false;
+        }
+        
         // use AliSim-OpenMP-EM instead of IM
         super_alisimulator->params->alisim_openmp_alg = EM;
         Params::getInstance().alisim_openmp_alg = EM;
@@ -784,6 +792,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             }
         }
     }
+    
+    // output full tree (with internal node names) if outputting internal sequences
+    if (super_alisimulator->params->alisim_write_internal_sequences)
+        outputTreeWithInternalNames(super_alisimulator);
 }
 
 /**
@@ -1455,4 +1467,33 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     
     // close the tmp_data file
     in.close();
+}
+
+void outputTreeWithInternalNames(AliSimulator* alisimulator)
+{
+    // don't need to handle supertree here (at current stage) as AliSim doesn't support outputting internal sequences in simulations with partitions
+    // set names for internal nodes
+    updateInternalNodeName(alisimulator->tree->root);
+    
+    // output the treefile
+    string output_filepath = alisimulator->params->alisim_output_filename + ".full.treefile";
+    std::ofstream treefile(output_filepath, std::ios::out);
+    alisimulator->tree->printTree(treefile);
+    treefile.close();
+    
+    // show message
+    std::cout << "A tree (with internal node names) has been outputted to " << output_filepath << std::endl;
+}
+
+void updateInternalNodeName(Node *node, Node *dad)
+{
+    // if node is an internal and has an empty name -> set its name as its id
+    if (!node->isLeaf() && node->name == "")
+        node->name = convertIntToString(node->id);
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        updateInternalNodeName((*it)->node, node);
+    }
 }
