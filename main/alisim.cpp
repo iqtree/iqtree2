@@ -543,10 +543,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
          || super_alisimulator->tree->getRate()->isHeterotachy()))
         outError("Sorry! MAT (Mutation-Annotated Tree) has not yet been supported in simulations with Indels, Partitions, FunDi, +ASC, GHOST models. Please choose other output format (e.g., PHYLIP, FASTA).");
     
-    // Ignore some options which are not supported when outputting MAT
+    // If outputting MAT
     if (super_alisimulator->params->aln_output_format == IN_MAT)
     {
-        // compression
+        // ignore compression option
         if (Params::getInstance().do_compression)
         {
             outWarning("Compression is not supported when outputting MAT (Mutation-Annotated Tree). AliSim will output MAT without compression.");
@@ -555,13 +555,19 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             super_alisimulator->params->do_compression = false;
         }
         
-        // --single-output
+        // ignore --single-output
         if (super_alisimulator->params->alisim_single_output)
         {
             outWarning("Ignore --single-output option since it is not supported if using MAT (Mutation-Annotated Tree).");
             super_alisimulator->params->alisim_single_output = false;
             Params::getInstance().alisim_single_output = false;
         }
+        
+        // use AliSim-OpenMP-EM instead of IM
+        super_alisimulator->params->alisim_openmp_alg = EM;
+        Params::getInstance().alisim_openmp_alg = EM;
+        if (super_alisimulator->params->num_threads > 1)
+            outWarning("Use OpenMP-EM algorithm to simulate sequences.");
     }
     
     // terminate if users employ more MPI processes than the number of alignments

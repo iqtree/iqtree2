@@ -755,9 +755,12 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     bool write_sequences_to_tmp_data = false;
     bool store_seq_at_cache = true;
     int max_depth = 0;
+    // default_random_engine for generating a random number from a discrete distribution
+    default_random_engine generator;
+    generator.seed(params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + params->alignment_id);
     
     // init variables
-    initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache);
+    initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache, generator);
     
     // execute one of the AliSim-OpenMP algorithms to simulate sequences
     if (params->alisim_openmp_alg == IM)
@@ -776,15 +779,19 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
     int *rstream = NULL;
     vector<vector<short int>> sequence_cache;
     int actual_segment_length = sequence_length;
+    // default_random_engine for generating a random number from a discrete distribution
+    default_random_engine generator;
+    generator.seed(params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + params->alignment_id);
     
     // simulate Sequences
     #ifdef _OPENMP
-    #pragma omp parallel private(rstream, out, thread_id, sequence_cache, actual_segment_length)
+    #pragma omp parallel private(rstream, out, thread_id, sequence_cache, actual_segment_length) firstprivate(generator)
     {
         thread_id = omp_get_thread_num();
         // init random generators
         int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
         init_random(ran_seed, false, &rstream);
+        generator.seed(ran_seed);
 
         actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
     #endif
@@ -805,9 +812,12 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         // initialize trans_matrix
         int segment_start = thread_id * default_segment_length;
         double *trans_matrix = new double[max_num_states * max_num_states];
-        simulateSeqs(thread_id, segment_start, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+        simulateSeqs(thread_id, segment_start, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream, generator);
         
-        // update mat
+        // delete trans_matrix array
+        delete[] trans_matrix;
+        
+        // if output MAT -> update MAT data
         if (params->aln_output_format == IN_MAT)
         {
             // update the mutations at root wrt the ref seq
@@ -817,12 +827,8 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
             // note: we need to use segment_start + 1 instead of segment_start to match the position in Usher
             mat->updateRefState(thread_id, segment_start + 1, tree->root, tree->root);
         }
-        
-        // delete trans_matrix array
-        delete[] trans_matrix;
-        
-        // close the output stream
-        if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+        // otherwise, output PHYLIP/FASTA... -> close the output stream
+        else if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
             closeOutputStream(out, num_threads > 1);
         
         // release sequence cache
@@ -849,7 +855,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
 void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
 {
     // skip merging if users want to do so
-    if (params->no_merge) return;
+    if (params->no_merge || params->aln_output_format == IN_MAT) return;
     
     if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
     {
@@ -1009,18 +1015,22 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     ostream *out = NULL;
     int *rstream = NULL;
     vector<vector<short int>> sequence_cache;
+    // default_random_engine for generating a random number from a discrete distribution
+    default_random_engine generator;
+    generator.seed(params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + params->alignment_id);
     
     // init the output stream
     initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
     
     // simulate Sequences
     #ifdef _OPENMP
-    #pragma omp parallel private(rstream, thread_id, sequence_cache, actual_segment_length)
+    #pragma omp parallel private(rstream, thread_id, sequence_cache, actual_segment_length) firstprivate(generator)
     {
         thread_id = omp_get_thread_num();
         // init random generators
-        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + thread_id + params->alignment_id;
+        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
         init_random(ran_seed, false, &rstream);
+        generator.seed(ran_seed);
             
         actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
     #endif
@@ -1078,7 +1088,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
             // initialize trans_matrix
             int segment_start = thread_id * default_segment_length;
             double *trans_matrix = new double[max_num_states * max_num_states];
-            simulateSeqs(thread_id, segment_start, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream);
+            simulateSeqs(thread_id, segment_start, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream, generator);
             
             // delete trans_matrix array
             delete[] trans_matrix;
@@ -1224,14 +1234,14 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
         mat->saveMAT(tree, ref_seq, output_filepath);
         
         // debug: MAT
-        mat->readMAT(output_filepath + ".pd");
+    mat->readMAT(output_filepath + ".pd");
     }
 }
 
 /**
     initialize variables
 */
-void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache)
+void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, default_random_engine& generator)
 {
     // check if we can store sequences at a fixed cache instead of at nodes
     store_seq_at_cache = params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && (output_filepath.length() > 0 || write_sequences_to_tmp_data) && params->alisim_fundi_taxon_set.size() == 0;
@@ -1277,7 +1287,7 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
         initSite2PatternID(sequence_length);
     
     // initialize variables (site_specific_rates; site_specific_rate_index; site_specific_model_index)
-    initVariablesRateHeterogeneity(sequence_length, true);
+    initVariablesRateHeterogeneity(sequence_length, generator, true);
     
     // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
     write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
@@ -1334,7 +1344,7 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
 */
 void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segment_length, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data)
 {
-    if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
+    if (params->aln_output_format != IN_MAT && (output_filepath.length() > 0 || write_sequences_to_tmp_data))
     {
         // init an output_filepath to temporarily output the sequences (when simulating Indels)
         if (write_sequences_to_tmp_data)
@@ -1430,7 +1440,7 @@ void AliSimulator::closeOutputStream(ostream *&out, bool force_uncompression)
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, int* rstream)
+void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, int* rstream, default_random_engine& generator)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -1478,7 +1488,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
                 if ((*it)->attributes.find("model") != (*it)->attributes.end())
                 {
-                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it, rstream);
+                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it, rstream, generator);
                 }
                 // otherwise, simulate the sequence based on the common model
                 else
@@ -1489,7 +1499,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 
                 // handle indels
                 if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
-                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream);
+                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream, generator);
             }
             // otherwise (Rate_matrix is used as the simulation method) + also handle Indels (if any).
             else
@@ -1498,13 +1508,9 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 (*node_seq_chunk) = (*dad_seq_chunk);
                 
                 // Each thread simulate a chunk of sequence using the Gillespie algorithm
-                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream);
+                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream, generator);
             }
         }
-        
-        // record mutations for MAT (mutation annotated tree)
-        if (params->aln_output_format == IN_MAT)
-            recordMutations((*it)->node->sequence->node_mutations_vec[thread_id], *dad_seq_chunk, *node_seq_chunk, segment_start, segment_length);
         
         // set insertion position for of this node in the list of insertions if using Indels
         if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && (*it)->node->isLeaf())
@@ -1531,6 +1537,10 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
             }
         }
         
+        // record mutations for MAT (mutation annotated tree)
+        if (params->aln_output_format == IN_MAT)
+            recordMutations((*it)->node->sequence->node_mutations_vec[thread_id], *dad_seq_chunk, *node_seq_chunk, segment_start, segment_length);
+        
         // write and delete the current chunk of sequence if possible
         writeAndDeleteSequenceChunkIfPossible(thread_id, segment_start, segment_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, out, state_mapping, input_msa, it, node);
         
@@ -1538,14 +1548,14 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, rstream);
+        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, rstream, generator);
     }
 }
 
 /**
     branch-specific evolution by multi threads
 */
-void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream)
+void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator)
 {
     unsigned short int num_threads_reach_barrier = 0;
     
@@ -1573,7 +1583,7 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
             
     // only the first thread simulate the sequence
     if (thread_id == 0)
-        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it, rstream);
+        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it, rstream, generator);
     
     // manual implementation of barrier
     waitAtBarrier(3, (*it)->node);
@@ -2421,7 +2431,7 @@ void AliSimulator::intializeStateFreqsMixtureModel(IQTree* tree)
 /**
     branch-specific evolution by the master thread
 */
-void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream)
+void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator)
 {
     // initialize a dummy model for this branch
     string model_full_name = (*it)->attributes["model"];
@@ -2487,7 +2497,7 @@ void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, doub
     tmp_tree->getModel()->writeInfo(cout);
     
     // simulate the sequence for the current node based on the branch-specific model
-    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, node, it, rstream, lengths);
+    tmp_alisimulator->simulateASequenceFromBranch(tmp_tree->getModel(), sequence_length, trans_matrix, node, it, rstream, generator, lengths);
     
     // delete the dummy alisimulator
     delete tmp_alisimulator;
@@ -2496,10 +2506,10 @@ void AliSimulator::branchSpecificEvolutionMasterThread(int sequence_length, doub
 /**
     simulate a sequence for a node from a specific branch
 */
-void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
+void AliSimulator::simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator, string lengths)
 {
     // initialize the site-specific rates
-    initVariablesRateHeterogeneity(sequence_length);
+    initVariablesRateHeterogeneity(sequence_length, generator);
     
     // simulate chunks of sequence one by one
     int segment_start = 0;
@@ -2539,7 +2549,7 @@ void AliSimulator::simulateASequenceFromBranchAfterInitVariables(int segment_sta
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulator::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
+void AliSimulator::initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence)
 {
     // Do nothing, this method will be overrided in AliSimulatorHeterogeneity and AliSimulatorInvar
 }
@@ -2750,7 +2760,7 @@ void AliSimulator::initVariables4RateMatrix(int segment_start, double &total_sub
 /**
     handle indels
 */
-void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream)
+void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream, default_random_engine& generator)
 {
     int num_gaps = 0;
     double total_sub_rate = 0;
@@ -2814,7 +2824,7 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
             EVENT_TYPE event_type = SUBSTITUTION;
             if (total_ins_rate > 0 || total_del_rate > 0)
             {
-                double random_num = random_double()*total_event_rate;
+                double random_num = random_double(rstream)*total_event_rate;
                 if (random_num < total_ins_rate)
                     event_type = INSERTION;
                 else if (random_num < total_ins_rate+total_del_rate)
@@ -2827,13 +2837,13 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
             {
                 case INSERTION:
                 {
-                    length_change = handleInsertion(sequence_length, node_seq_chunk, total_sub_rate, sub_rate_by_site, simulation_method);
+                    length_change = handleInsertion(sequence_length, node_seq_chunk, total_sub_rate, sub_rate_by_site, simulation_method, generator);
                     segment_length = sequence_length;
                     break;
                 }
                 case DELETION:
                 {
-                    int deletion_length = handleDeletion(sequence_length, node_seq_chunk, total_sub_rate, sub_rate_by_site, simulation_method);
+                    int deletion_length = handleDeletion(sequence_length, node_seq_chunk, total_sub_rate, sub_rate_by_site, simulation_method, generator);
                     length_change = -deletion_length;
                     (*it)->node->sequence->num_gaps += deletion_length;
                     break;
@@ -2842,7 +2852,7 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
                 {
                     if (simulation_method == RATE_MATRIX)
                     {
-                        handleSubs(segment_start, total_sub_rate, sub_rate_by_site, node_seq_chunk, model->getNMixtures(), rstream);
+                        handleSubs(segment_start, total_sub_rate, sub_rate_by_site, node_seq_chunk, model->getNMixtures(), rstream, generator);
                     }
                     break;
                 }
@@ -2898,7 +2908,7 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulator::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
+void AliSimulator::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator)
 {
     indel_sequence.insert(indel_sequence.begin()+position, new_sequence.begin(), new_sequence.end());
 }
@@ -2978,7 +2988,7 @@ void AliSimulator::updateInternalSeqsFromNodeToRoot(GenomeTree* genome_tree, int
 /**
     handle insertion events
 */
-int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
+int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method, default_random_engine& generator)
 {
     // Randomly select the position/site (from the set of all sites) where the insertion event occurs
     int position;
@@ -2989,7 +2999,7 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
     else
     {
         discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
-        position = random_discrete_dis(params->generator);
+        position = random_discrete_dis(generator);
     }
     
     // Randomly generate the length (length_I) of inserted sites from the indel-length distribution (​​geometric distribution (by default) or user-defined distributions).
@@ -3009,7 +3019,7 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
     // insert new_sequence into the current sequence
     vector<short int> new_sequence;
     generateRandomSequence(length, new_sequence, false);
-    insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
+    insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, generator);
     
     // if RATE_MATRIX approach is used -> update total_sub_rate and sub_rate_by_site
     if (simulation_method == RATE_MATRIX || params->indel_rate_variation)
@@ -3045,7 +3055,7 @@ int AliSimulator::handleInsertion(int &sequence_length, vector<short int> &indel
 /**
     handle deletion events
 */
-int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method)
+int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method, default_random_engine& generator)
 {
     // Randomly generate the length (length_D) of sites (which will be deleted) from the indel-length distribution.
     int length = -1;
@@ -3074,7 +3084,7 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
     else
     {
         discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
-        position = random_discrete_dis(params->generator);
+        position = random_discrete_dis(generator);
     }
     
     // Replace up to length_D sites by gaps from the sequence starting at the selected location
@@ -3114,11 +3124,11 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
 /**
     handle substitution events
 */
-void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream)
+void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream, default_random_engine& generator)
 {
     // select a position where the substitution event occurs
     discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
-    int pos = random_discrete_dis(params->generator);
+    int pos = random_discrete_dis(generator);
     
     // extract the current state
     short int current_state = indel_sequence[pos];

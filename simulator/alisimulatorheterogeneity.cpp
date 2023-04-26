@@ -375,11 +375,11 @@ int AliSimulatorHeterogeneity::estimateStateFromOriginalTransMatrix(ModelSubst *
 /**
     get site-specific rates based on Continuous Gamma Distribution
 */
-void AliSimulatorHeterogeneity::getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length)
+void AliSimulatorHeterogeneity::getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length, default_random_engine& generator)
 {
     RateContinuousGamma *rate_continuous_gamma = new RateContinuousGamma(rate_heterogeneity->getGammaShape());
     
-    rate_continuous_gamma->getSiteSpecificRates(site_specific_rates, sequence_length);
+    rate_continuous_gamma->getSiteSpecificRates(site_specific_rates, sequence_length, generator);
     
     // delete rate_continuous_gamma
     delete rate_continuous_gamma;
@@ -539,7 +539,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector
 /**
     get site-specific rates
 */
-void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> &new_site_specific_model_index, int sequence_length, IntVector &site_to_patternID)
+void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &site_specific_rates, vector<short int> &new_site_specific_model_index, int sequence_length, IntVector &site_to_patternID, default_random_engine& generator)
 {
     new_site_specific_rate_index.resize(sequence_length);
     site_specific_rates.resize(sequence_length, 1);
@@ -586,7 +586,7 @@ void AliSimulatorHeterogeneity::getSiteSpecificRates(vector<short int> &new_site
         // initalize rates based on continuous gamma distribution
         if ((rate_name.find("+G") != std::string::npos) && tree->getModelFactory()->is_continuous_gamma)
         {
-            getSiteSpecificRatesContinuousGamma(site_specific_rates, sequence_length);
+            getSiteSpecificRatesContinuousGamma(site_specific_rates, sequence_length, generator);
         }
         // initalize rates based on discrete distribution (gamma/freerate)
         else
@@ -671,7 +671,7 @@ void AliSimulatorHeterogeneity::simulateASequenceFromBranchAfterInitVariables(in
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorHeterogeneity::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
+void AliSimulatorHeterogeneity::initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence)
 {    
     // initialize site specific model index based on its weights (in the mixture model)
     intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index, site_to_patternID);
@@ -692,14 +692,14 @@ void AliSimulatorHeterogeneity::initVariablesRateHeterogeneity(int sequence_leng
 
     
     // initialize site-specific rates
-    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length, site_to_patternID);
+    getSiteSpecificRates(site_specific_rate_index, site_specific_rates, site_specific_model_index, sequence_length, site_to_patternID, generator);
 }
 
 /**
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
+void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator)
 {
     // init new_site_to_patternID
     IntVector new_site_to_patternID;
@@ -729,7 +729,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     // initialize new_site_specific_rates, and new_site_specific_rate_index for new sequence
     vector<double> new_site_specific_rates;
     vector<short int> new_site_specific_rate_index;
-    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_site_specific_model_index, new_sequence.size(), new_site_to_patternID);
+    getSiteSpecificRates(new_site_specific_rate_index, new_site_specific_rates, new_site_specific_model_index, new_sequence.size(), new_site_to_patternID, generator);
     
     // insert new_site_specific_rates into site_specific_rates
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
@@ -749,7 +749,7 @@ void AliSimulatorHeterogeneity::insertNewSequenceForInsertionEvent(vector<short 
     }
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, generator);
 }
 
 /**

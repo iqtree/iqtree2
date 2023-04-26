@@ -6306,8 +6306,6 @@ int init_random(int seed, bool write_info, int** rstream) {
         }
     }
 #endif /* PARALLEL */
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 

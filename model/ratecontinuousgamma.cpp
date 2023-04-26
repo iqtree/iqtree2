@@ -39,11 +39,10 @@ void RateContinuousGamma::setGammaShape(double gs) {
     gamma_shape = gs;
 }
 
-void RateContinuousGamma::getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length)
+void RateContinuousGamma::getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length, default_random_engine& generator)
 {
     // initialize gamma distribution
     gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);
-    default_random_engine generator = Params::getInstance().generator;
     
     for (int i = 0; i < sequence_length; i++)
     {
