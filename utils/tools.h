@@ -2590,6 +2590,11 @@ public:
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
     */
     int alignment_id;
+    
+    /**
+    *  TRUE to show MAT (Mutation-Annotated Tree) data
+    */
+    bool show_MAT;
 };
 
 /**

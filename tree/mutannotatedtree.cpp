@@ -164,28 +164,30 @@ void MutAnnotatedTree::readMAT(const std::string& filename)
     //input.SetTotalBytesLimit(BIG_SIZE, BIG_SIZE);
     data.ParseFromCodedStream(&input);
     
-    std::cout << data.newick() << std::endl;
-    std::cout << "metadata_size: " << data.metadata_size() << std::endl;
+    std::cout << "- NEWICK TREE:" << std::endl;
+    std::cout << "  " <<  data.newick() << std::endl;
+    std::cout << "- METADATA: " << data.metadata_size() << " element(s)" << std::endl;
     for (auto metadata:data.metadata())
-        std::cout << metadata.clade_annotations_size() << std::endl;
-    std::cout << "condensed_nodes_size: " << data.condensed_nodes_size() << std::endl;
+        std::cout << "  " << metadata.clade_annotations_size() << std::endl;
+    std::cout << "- CONDENSED NODES: " << data.condensed_nodes_size() << " element(s)" << std::endl;
     for (auto condensed_node:data.condensed_nodes())
     {
-        std::cout << "- " << condensed_node.node_name() << std::endl;
+        std::cout << "  + " << condensed_node.node_name() << std::endl;
         for (auto condensed_leave:condensed_node.condensed_leaves())
-            std::cout << condensed_leave << std::endl;
+            std::cout << "    ++ "<< condensed_leave << std::endl;
     }
-    std::cout << "node_mutations_size: " << data.node_mutations_size() << std::endl;
+    std::cout << "- NODE MUTATIONS: " << data.node_mutations_size() << " element(s)" << std::endl;
+    std::cout << "  <position> <ref_nuc> <par_nuc> <mut_nuc> <chromosome>" << std::endl;
     for (auto mutations:data.node_mutations())
     {
-        std::cout << "----" << std::endl;
+        std::cout << "  ----------------" << std::endl;
         for (auto mutation:mutations.mutation())
         {
             std::string mut_nuc = "";
             for (auto nuc:mutation.mut_nuc())
                 mut_nuc += std::to_string(nuc) + " ";
 
-            std::cout << mutation.position() << " " << mutation.ref_nuc()<< " " << mutation.par_nuc()<< " " << mut_nuc << mutation.chromosome() << std::endl;
+            std::cout << "  " << mutation.position() << " " << mutation.ref_nuc()<< " " << mutation.par_nuc()<< " " << mut_nuc << mutation.chromosome() << std::endl;
         }
     }
 }

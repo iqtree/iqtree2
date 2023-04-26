@@ -1239,7 +1239,8 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
         mat->saveMAT(tree, ref_seq, output_filepath);
         
         // debug: MAT
-        // mat->readMAT(output_filepath + ".pd");
+        if (params->show_MAT)
+            mat->readMAT(output_filepath + ".pd");
     }
 }
 
