@@ -1073,11 +1073,15 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 }
                 
                 
-                //  get the num_leaves
-                int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
+                //  get the num_nodes
+                int num_nodes = super_tree->leafNum;
+                if (alisimulator->params->alisim_write_internal_sequences)
+                    num_nodes = super_tree->nodeNum;
+                // don't count the fake root
+                num_nodes -= ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
-                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator, open_mode);
+                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_nodes, alisimulator, open_mode);
             }
         }
     }
@@ -1090,9 +1094,14 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
         if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
             sequence_length = alisimulator->seq_length_indels;
         
-        //  get the num_leaves
-        int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
-        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator, open_mode);
+        //  get the num_nodes
+        int num_nodes = alisimulator->tree->leafNum;
+        if (alisimulator->params->alisim_write_internal_sequences)
+            num_nodes = alisimulator->tree->nodeNum;
+        // don't count the fake root
+        num_nodes -= ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
+        
+        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_nodes, alisimulator, open_mode);
     }
 }
 

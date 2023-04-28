@@ -861,8 +861,13 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                 string first_line = "";
                 if (params->aln_output_format != IN_FASTA)
                 {
-                    int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
-                    first_line = convertIntToString(num_leaves) + " " + convertIntToString(num_sites_per_state == 1 ? round(expected_num_sites * inverse_length_ratio) : (round(expected_num_sites * inverse_length_ratio) * num_sites_per_state)) + "\n";
+                    int num_nodes = tree->leafNum;
+                    if (params->alisim_write_internal_sequences)
+                        num_nodes = tree->nodeNum;
+                    // don't count the fake root
+                    num_nodes -= ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+                    
+                    first_line = convertIntToString(num_nodes) + " " + convertIntToString(num_sites_per_state == 1 ? round(expected_num_sites * inverse_length_ratio) : (round(expected_num_sites * inverse_length_ratio) * num_sites_per_state)) + "\n";
                     *single_output << first_line;
                 }
                 if (!params->do_compression)
@@ -1337,7 +1342,11 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
         string first_line = "";
         if (params->aln_output_format == IN_PHYLIP)
         {
-            int num_leaves = tree->leafNum - ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
+            int num_nodes = tree->leafNum;
+            if (params->alisim_write_internal_sequences)
+                num_nodes = tree->nodeNum;
+            // don't count the fake root
+            num_nodes -= ((tree->root->isLeaf() && tree->root->name == ROOT_NAME)?1:0);
             
             // if using AliSim-OpenMP-EM algorithm
             if (params->alisim_openmp_alg == EM)
@@ -1348,12 +1357,12 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 // -> with merging step -> the first line will be output later when merging output files
                 if (num_threads == 1
                     || (num_threads > 1 && params->no_merge))
-                    *out << num_leaves << " " << round(actual_segment_length * inverse_length_ratio) * num_sites_per_state << endl;
+                    *out << num_nodes << " " << round(actual_segment_length * inverse_length_ratio) * num_sites_per_state << endl;
             }
             // if using AliSim-OpenMP-IM algorithm
             else
             {
-                first_line = convertIntToString(num_leaves) + " " + convertIntToString(round(expected_num_sites * inverse_length_ratio) * num_sites_per_state) + "\n";
+                first_line = convertIntToString(num_nodes) + " " + convertIntToString(round(expected_num_sites * inverse_length_ratio) * num_sites_per_state) + "\n";
                 *out << first_line;
             }
         }
@@ -1672,7 +1681,7 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
                 }
                 
                 // avoid writing sequence of __root__
-                if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
+                if (node->isLeaf() && node->name!=ROOT_NAME)
                 {
                     // if using Indels -> temporarily write out internal states
                     if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
@@ -1738,7 +1747,7 @@ void AliSimulator::writeAndDeleteSequenceChunkIfPossible(int thread_id, int segm
             }
                 
             // avoid writing sequence of __root__
-            if (node->isLeaf() && (node->name!=ROOT_NAME || params->alisim_write_internal_sequences))
+            if (node->isLeaf() && node->name!=ROOT_NAME)
             {
                 // init a default sequence str
                 int sequence_length = round(expected_num_sites * inverse_length_ratio);
