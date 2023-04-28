@@ -3,7 +3,7 @@
 
 #include "utils/tools.h"
 #include "tree/genometree.h"
-#include "proto/parsimony.pb.h"
+#include "parsimony.pb.h"
 
 using namespace std;
 

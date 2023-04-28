@@ -2,7 +2,7 @@
 #define MUTANNOTATEDTREE_H
 
 #include "iqtree.h"
-#include "proto/parsimony.pb.h"
+#include "parsimony.pb.h"
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
