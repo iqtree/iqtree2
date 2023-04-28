@@ -23,13 +23,14 @@ protected:
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence = false);
+    virtual void initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence = false);
     
     /**
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator);
+
     
     /**
       initialize site_specific_rates

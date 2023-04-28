@@ -2512,11 +2512,6 @@ public:
     double alisim_simulation_thresh;
     
     /**
-    *  random generator
-    */
-    default_random_engine generator;
-    
-    /**
     *  messages which are delayed to show
     */
     string delay_msgs;

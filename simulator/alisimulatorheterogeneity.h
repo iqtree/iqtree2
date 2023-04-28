@@ -16,7 +16,7 @@ protected:
     /**
         get site-specific rates based on Continuous Gamma Distribution
     */
-    virtual void getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length);
+    virtual void getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length, default_random_engine& generator);
     
     /**
         get site-specific rates based on Discrete Distribution (Gamma/FreeRate)
@@ -71,13 +71,13 @@ protected:
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence = false);
+    virtual void initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence = false);
     
     /**
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator);
     
     /**
         initialize variables for Rate_matrix approach: total_sub_rate, accumulated_rates, num_gaps
@@ -106,7 +106,7 @@ public:
     /**
         get site-specific rates
     */
-    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &new_site_specific_rates, vector<short int> &new_site_specific_model_index, int sequence_length, IntVector &site_to_patternID);
+    void getSiteSpecificRates(vector<short int> &new_site_specific_rate_index, vector<double> &new_site_specific_rates, vector<short int> &new_site_specific_model_index, int sequence_length, IntVector &site_to_patternID, default_random_engine& generator);
 };
 
 #endif /* alisimulatorheterogeneity_h */

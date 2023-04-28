@@ -49,8 +49,7 @@ public:
     /**
         @return site-specific rates
     */
-
-    virtual void getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length);
+    virtual void getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length, default_random_engine& generator);
 
     /**
         write information
