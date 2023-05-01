@@ -72,21 +72,6 @@ AliSimulator::AliSimulator(Params *input_params, IQTree *iq_tree, int expected_n
         selectAndPermuteSites(fundi_items, params->alisim_fundi_proportion, round(expected_num_sites));
 }
 
-AliSimulator::~AliSimulator()
-{
-    // delete first_insertion
-    if (first_insertion)
-    {
-        delete first_insertion;
-        first_insertion = NULL;
-    }
-    
-    if (!tree) return;
-    
-    // delete tree
-    delete tree;
-}
-
 /**
 *  initialize an IQTree instance from input file
 */
@@ -1175,6 +1160,22 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
     // delete sub_rates, J_Matrix
     delete[] sub_rates;
     delete[] Jmatrix;
+    
+    // delete mixture_accumulated_weight
+    if (mixture_accumulated_weight)
+        delete[] mixture_accumulated_weight;
+    
+    // delete ptn_state_freq, ptn_accumulated_state_freq
+    if (ptn_state_freq)
+        delete[] ptn_state_freq;
+    if (ptn_accumulated_state_freq)
+        delete[] ptn_accumulated_state_freq;
+    
+    // delete ptn_model_dis, ptn_accumulated_rate_dis
+    if (ptn_model_dis)
+        delete[] ptn_model_dis;
+    if (ptn_accumulated_rate_dis)
+        delete[] ptn_accumulated_rate_dis;
     
     // merge chunks into a single sequence if using multiple threads and sequences have not been outputted
     if (num_threads > 1 && (output_filepath.length() == 0 || write_sequences_to_tmp_data))

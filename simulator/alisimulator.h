@@ -476,11 +476,6 @@ public:
     AliSimulator(Params *params, IQTree *tree, int expected_number_sites = -1, double new_partition_rate = 1);
     
     /**
-        deconstructor
-    */
-    ~AliSimulator();
-    
-    /**
     *  simulate sequences for all nodes in the tree
     */
     virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);

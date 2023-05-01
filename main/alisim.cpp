@@ -401,6 +401,8 @@ void executeSimulation(Params params, IQTree *&tree)
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
     
     // delete alisimulator
+    if (alisimulator->tree) delete alisimulator->tree;
+    if (alisimulator->first_insertion) delete alisimulator->first_insertion;
     delete alisimulator;
     
     cout << "[Alignment Simulator] Done"<<"\n";
@@ -691,6 +693,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // skip updating if using +ASC or Fundi model as they must be already updated
                 if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
                     partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels);
+                
+                // delete partition_simulator
+                if (partition_simulator->first_insertion) delete partition_simulator->first_insertion;
+                delete partition_simulator;
             }
         }
         else
@@ -804,37 +810,57 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     bool is_mixture_model = alisimulator->tree->getModel()->isMixture();
     
     // case 1: without rate heterogeneity or mixture model -> using the current alisimulator (don't need to re-initialize it)
+    AliSimulator *tmp_alisimulator = alisimulator;
     
     // case 2: with rate heterogeneity or mixture model
     if ((!rate_name.empty()) || is_mixture_model)
     {
         // if user specifies +I without invariant_rate -> set it to 0
         if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)) {
-            alisimulator->tree->getRate()->setPInvar(0);
+            tmp_alisimulator->tree->getRate()->setPInvar(0);
             outWarning("Invariant rate is now set to Zero since it has not been specified");
         }
         
         // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
         if (!rate_name.compare("+I") && !is_mixture_model)
         {
-            alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
+            tmp_alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
         }
         else
         {
             // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
             if (invariant_proportion > 0)
             {
-                alisimulator = new AliSimulatorHeterogeneityInvar(alisimulator, invariant_proportion);
+                tmp_alisimulator = new AliSimulatorHeterogeneityInvar(alisimulator, invariant_proportion);
             }
             // case 2.2: with rate heterogeneity (gamma/freerate model without invariant sites)
             else
             {
-                alisimulator = new AliSimulatorHeterogeneity(alisimulator);
+                tmp_alisimulator = new AliSimulatorHeterogeneity(alisimulator);
             }
         }
     }
     
-    alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath, open_mode);
+    tmp_alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath, open_mode);
+    
+    // clone indel data before deleting tmp_alisimulator
+    if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+    {
+        alisimulator->seq_length_indels = tmp_alisimulator->seq_length_indels;
+        alisimulator->map_seqname_node = std::move(tmp_alisimulator->map_seqname_node);
+        
+        // tmp_alisimulator != alisimulator
+        if ((!rate_name.empty()) || is_mixture_model)
+        {
+            if (alisimulator->first_insertion) delete alisimulator->first_insertion;
+            alisimulator->first_insertion = tmp_alisimulator->first_insertion;
+        }
+    }
+    
+    // delete tmp_alisimulator
+    if ((!rate_name.empty()) || is_mixture_model)
+        delete tmp_alisimulator;
+    
 }
 
 /**
