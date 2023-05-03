@@ -404,7 +404,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_DIFF, IN_OTHER
 };
 
   // TODO DS: SAMPLING_SAMPLED is DEPRECATED and it is not possible to run PoMo with SAMPLING_SAMPLED.
@@ -3531,6 +3531,11 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // Calculate the Frobenius norm of an N x N matrix M (flattened, rows
 // concatenated) and linearly scaled by SCALE.
 double frob_norm (double m[], int n, double scale=1.0);
+
+/**
+    concatenate the output file name with corresponding extension (for AliSim)
+*/
+string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
 
 #endif

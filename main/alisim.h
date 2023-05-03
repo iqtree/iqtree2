@@ -82,7 +82,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, 
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, std::ios_base::openmode open_mode = std::ios_base::out);
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, vector<SeqType>& seqtypes, vector<std::string>& aln_names, std::ios_base::openmode open_mode = std::ios_base::out);
 
 /**
 *  clear out all sequences in the super_tree

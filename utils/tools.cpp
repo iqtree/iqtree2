@@ -2998,6 +2998,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.aln_output_format = IN_FASTA;
                 else if (strcmp(format.c_str(), "NEXUS") == 0)
                     params.aln_output_format = IN_NEXUS;
+                else if (strcmp(format.c_str(), "DIFF") == 0)
+                    params.aln_output_format = IN_DIFF;
 				else
 					throw "Unknown output format";
 				continue;
@@ -7566,3 +7568,18 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
    }
    return sqrt(sum);
  }
+
+string getOutputNameWithExt(const InputType& format, const string& output_filepath)
+{
+    switch (format)
+    {
+        case IN_DIFF:
+            return output_filepath + ".diff";
+        case IN_FASTA:
+            return output_filepath + ".fa";
+        case IN_PHYLIP:
+            return output_filepath + ".phy";
+        default:
+            return output_filepath + ".phy";
+    }
+}

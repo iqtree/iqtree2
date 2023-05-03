@@ -835,16 +835,12 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             #pragma omp single
             #endif
             {
-                string single_output_filepath;
-                if (params->aln_output_format != IN_FASTA)
-                    single_output_filepath = output_filepath + ".phy";
-                else
-                    single_output_filepath = output_filepath + ".fa";
+                string single_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath);
                 openOutputStream(single_output, single_output_filepath, open_mode);
                 
                 // output the first line
                 string first_line = "";
-                if (params->aln_output_format != IN_FASTA)
+                if (params->aln_output_format == IN_PHYLIP)
                 {
                     int num_nodes = tree->leafNum;
                     if (params->alisim_write_internal_sequences)
@@ -874,11 +870,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             for (int i = 0; i < input_streams.size(); i++)
             {
                 // add ".phy" or ".fa" to the output_filepath
-                string tmp_output_filepath;
-                if (params->aln_output_format != IN_FASTA)
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".phy";
-                else
-                    tmp_output_filepath = output_filepath + "_" + convertIntToString(i + 1) + ".fa";
+                string tmp_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + "_" + convertIntToString(i + 1));
                 
                 // open an input file
                 input_streams[i].open(tmp_output_filepath.c_str(), std::ifstream::binary);
@@ -974,11 +966,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             
             // delete all intermidate files
             // add ".phy" or ".fa" to the output_filepath
-            string tmp_output_filepath;
-            if (params->aln_output_format != IN_FASTA)
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".phy";
-            else
-                tmp_output_filepath = output_filepath + "_" + convertIntToString(thread_id + 1) + ".fa";
+            string tmp_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + "_" + convertIntToString(thread_id + 1));
             // delete file
             remove(tmp_output_filepath.c_str());
         }
@@ -988,11 +976,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
         #pragma omp single
         #endif
         {
-            string single_output_filepath;
-            if (params->aln_output_format != IN_FASTA)
-                single_output_filepath = output_filepath + ".phy";
-            else
-                single_output_filepath = output_filepath + ".fa";
+            string single_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath);
             cout << "An alignment has just been exported to " << single_output_filepath << endl;
         }
     }
@@ -1327,10 +1311,7 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 thread_id_str = "_" + convertIntToString(thread_id + 1);
             
             // add ".phy" or ".fa" to the output_filepath
-            if (params->aln_output_format != IN_FASTA)
-                output_filepath = output_filepath + thread_id_str + ".phy";
-            else
-                output_filepath = output_filepath + thread_id_str + ".fa";
+            output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + thread_id_str);
             
             // open the output stream (create new or append an existing file)
             if (params->alisim_openmp_alg == EM && num_threads > 1)

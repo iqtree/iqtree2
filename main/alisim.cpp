@@ -598,6 +598,17 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     }
 #endif
     
+    // the output format of the simulated alignment
+    InputType actual_output_format = super_alisimulator->params->aln_output_format;
+    vector<SeqType> seqtypes;
+    vector<std::string> aln_names;
+    // If users want to output Diff format -> temporarily output PHYLIP first
+    if (actual_output_format == IN_DIFF)
+    {
+        super_alisimulator->params->aln_output_format = IN_PHYLIP;
+        Params::getInstance().aln_output_format = IN_PHYLIP;
+    }
+    
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
@@ -605,6 +616,13 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         int proc_ID = MPIHelper::getInstance().getProcessID();
         int nprocs  = MPIHelper::getInstance().getNumProcesses();
         if (i%nprocs != proc_ID) continue;
+        
+        // If users want to output Diff format -> clear seqtypes and aln_names
+        if (actual_output_format == IN_DIFF)
+        {
+            seqtypes.clear();
+            aln_names.clear();
+        }
         
         // record the alignment_id to generate different random seed when simulating different alignment
         super_alisimulator->params->alignment_id = i;
@@ -701,6 +719,13 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         }
         else
         {
+            // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Diff format
+            if (actual_output_format == IN_DIFF)
+            {
+                seqtypes.push_back(super_alisimulator->tree->aln->seq_type);
+                aln_names.push_back(output_filepath);
+            }
+            
             // check whether we could write the output to file immediately after simulating it
             if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio == 0)
                 generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath, open_mode);
@@ -713,7 +738,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
-            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, open_mode);
+            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, seqtypes, aln_names, open_mode);
         
         // only report model params when simulating the first MSA
         if (i == 0)
@@ -729,6 +754,27 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
         
+        // if users want to output Diff format -> convert PHY into DIFF and delete PHY
+        if (actual_output_format == IN_DIFF)
+        {
+            for (auto aln_id = 0 ; aln_id < aln_names.size(); ++ aln_id)
+            {
+                // initialize a dummy alignment to make sure we'll not change the main alignment when converting the simulated alignment files into Diff format
+                Alignment aln;
+                aln.seq_type = seqtypes[aln_id];
+                
+                // convert the simulated alignment files into Diff format
+                aln.extractDiffFile(aln_names[aln_id], IN_PHYLIP);
+                
+                // remove the simulated alignment files (in PHYLIP format)
+                remove(getOutputNameWithExt(IN_PHYLIP, aln_names[aln_id]).c_str());
+                
+                // show the output file name
+                if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
+                    cout << "The simulated alignment has been converted into Diff format: "<< getOutputNameWithExt(IN_DIFF, aln_names[aln_id]) <<endl;
+            }
+        }
+        
         // delete output alignments (for testing only)
         if (super_alisimulator->params->delete_output)
         {
@@ -740,10 +786,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                     output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
                 
                 // add file extension
-                if (super_alisimulator->params->aln_output_format == IN_PHYLIP)
-                    output_filename += ".phy";
-                else
-                    output_filename += ".fa";
+                output_filename = getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename);
                 
                 // delete the output file
                 remove((output_filename).c_str());
@@ -883,10 +926,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             }
         
             // add ".phy" or ".fa" to the output_filepath
-            if (alisimulator->params->aln_output_format != IN_FASTA)
-                file_path = file_path + ".phy";
-            else
-                file_path = file_path + ".fa";
+            file_path = getOutputNameWithExt(alisimulator->params->aln_output_format, file_path);
             ostream *out;
             if (alisimulator->params->do_compression)
                 out = new ogzstream(file_path.c_str(), open_mode);
@@ -898,7 +938,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             int seq_length_times_num_sites_per_state = (aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length);
             string first_line = "";
             uint64_t start_pos = 0;
-            if (alisimulator->params->aln_output_format != IN_FASTA)
+            if (alisimulator->params->aln_output_format == IN_PHYLIP)
             {
                 first_line = convertIntToString(num_leaves) + " " + convertIntToString(seq_length_times_num_sites_per_state) + "\n";
                 *out << first_line;
@@ -976,7 +1016,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, std::ios_base::openmode open_mode){
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, vector<SeqType>& seqtypes, vector<std::string>& aln_names, std::ios_base::openmode open_mode){
     // in case with partitions -> merge & write sequences to a single/multiple files
     if (alisimulator->tree->isSuperTree())
     {
@@ -1105,6 +1145,10 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                     num_nodes = super_tree->nodeNum;
                 // don't count the fake root
                 num_nodes -= ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
+                
+                // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Diff format
+                seqtypes.push_back(super_tree->at(i)->aln->seq_type);
+                aln_names.push_back(file_path + partition_list);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
                 writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_nodes, alisimulator, open_mode);
