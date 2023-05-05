@@ -1578,9 +1578,47 @@ void SuperAlignment::printAlignment(InputType format, ostream &out, const char* 
     Alignment *concat = concatenateAlignments();
     if (!concat->isSuperAlignment())
         concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
+    else
+        ((SuperAlignment*)concat)->printCombinedAlignment(out);
     delete concat;
     if (format == IN_NEXUS)
         printPartition(out, NULL, true);
+}
+
+void SuperAlignment::printCombinedAlignment(ostream &out, bool print_taxid) {
+    vector<Alignment*>::iterator pit;
+    int final_length = 0;
+    for (pit = partitions.begin(); pit != partitions.end(); pit++)
+        if ((*pit)->seq_type == SEQ_CODON)
+            final_length += 3*(*pit)->getNSite();
+        else
+            final_length += (*pit)->getNSite();
+
+    out << getNSeq() << " " << final_length << endl;
+    int max_len = getMaxSeqNameLength();
+    if (print_taxid) max_len = 10;
+    if (max_len < 10) max_len = 10;
+    int seq_id;
+    for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
+        out.width(max_len);
+        if (print_taxid)
+            out << left << seq_id << " ";
+        else
+            out << left << seq_names[seq_id] << " ";
+        int part = 0;
+        for (pit = partitions.begin(); pit != partitions.end(); pit++, part++) {
+            int part_seq_id = taxa_index[seq_id][part];
+            int nsite = (*pit)->getNSite();
+            if (part_seq_id >= 0) {
+                for (int i = 0; i < nsite; i++)
+                    out << (*pit)->convertStateBackStr((*pit)->getPattern(i) [part_seq_id]);
+            } else {
+                string str(nsite, '?');
+                out << str;
+            }
+        }
+        out << endl;
+    }
 }
 
 void SuperAlignment::printSubAlignments(Params &params) {
