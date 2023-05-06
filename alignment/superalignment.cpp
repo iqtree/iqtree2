@@ -1571,6 +1571,7 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
+// TODO: This function is not completed for partitions with multiple data types and format != IN_PHYLIP
 void SuperAlignment::printAlignment(InputType format, ostream &out, const char* file_name
                                     , bool append, const char *aln_site_list
                                     , int exclude_sites, const char *ref_seq_name)
@@ -1578,13 +1579,14 @@ void SuperAlignment::printAlignment(InputType format, ostream &out, const char* 
     Alignment *concat = concatenateAlignments();
     if (!concat->isSuperAlignment())
         concat->printAlignment(format, out, file_name, append, aln_site_list, exclude_sites, ref_seq_name);
-    else
-        ((SuperAlignment*)concat)->printCombinedAlignment(out);
+    else if (format == IN_PHYLIP)
+        printCombinedAlignment(out);
     delete concat;
     if (format == IN_NEXUS)
         printPartition(out, NULL, true);
 }
 
+// this function was removed but now copied back from version 1.6
 void SuperAlignment::printCombinedAlignment(ostream &out, bool print_taxid) {
     vector<Alignment*>::iterator pit;
     int final_length = 0;
