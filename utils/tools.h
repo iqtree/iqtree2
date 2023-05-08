@@ -1653,6 +1653,11 @@ public:
     bool opt_rhas_again;
 
     /**
+            whether to compute the optmal combination of subtitution matrix for the mixture model
+     */
+    bool check_combin_q_mat;
+
+    /**
             shape parameter (alpha) of the Gamma distribution for site rates
      */
     double gamma_shape;

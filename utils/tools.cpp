@@ -1183,6 +1183,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_mix_cats = 1;
     params.max_mix_cats = 10;
     params.opt_rhas_again = true;
+    params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -3423,6 +3424,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "-opt-rhas-once") == 0 || strcmp(argv[cnt], "--opt-rhas-once") == 0) {
                 params.opt_rhas_again = false;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-skip-opt-combin-subst") == 0 || strcmp(argv[cnt], "--skip-opt-combin-subst") == 0) {
+                params.check_combin_q_mat = false;
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
