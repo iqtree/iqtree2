@@ -1648,6 +1648,11 @@ public:
     int max_mix_cats;
     
     /**
+            the starting model (i.e. substitution model + freq) for each class of Q-mixture model
+     */
+    string start_subst;
+
+    /**
             whether to optimize the RHAS again after the number of classes is estimated for the mixture model
      */
     bool opt_rhas_again;

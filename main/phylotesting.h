@@ -12,6 +12,7 @@
 #include "utils/checkpoint.h"
 #include "nclextra/modelsblock.h"
 #include "alignment/superalignment.h"
+#include <set>
 
 class PhyloTree;
 class IQTree;

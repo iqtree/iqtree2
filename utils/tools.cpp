@@ -1182,6 +1182,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.max_rate_cats = 10;
     params.min_mix_cats = 1;
     params.max_mix_cats = 10;
+    params.start_subst = "GTR+FO";
     params.opt_rhas_again = true;
     params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
@@ -3420,6 +3421,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.max_mix_cats = convert_int(argv[cnt]);
                 if (params.max_mix_cats < 2)
                     throw "Wrong number of classes in mixture for -cmixmax";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-start_subst") == 0 || strcmp(argv[cnt], "--start_subst") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -start_subst <substitution matrix + freq>";
+                params.start_subst = argv[cnt];
                 continue;
             }
             if (strcmp(argv[cnt], "-opt-rhas-once") == 0 || strcmp(argv[cnt], "--opt-rhas-once") == 0) {
