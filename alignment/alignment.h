@@ -1006,9 +1006,9 @@ public:
     void setExpectedNumSites(int new_expected_num_sites);
     
     /**
-        Extract Diff file from an alignment file
+        Extract Maple file from an alignment file
      */
-    void extractDiffFile(const std::string& aln_name, const InputType& format);
+    void extractMapleFile(const std::string& aln_name, const InputType& format);
 
 protected:
 
@@ -1048,12 +1048,12 @@ private:
 
     /**
         Extract Mutation from sequences regarding the reference sequence
-        @param sequences, seq_names: the input sequences,  ref_sequence; ref_sequence, out: output stream to write the Diff file; only_extract_diff: TRUE to only extract Diff file without running inference
+        @param sequences, seq_names: the input sequences,  ref_sequence; ref_sequence, out: output stream to write the Maple file
      */
     void extractMutations(StrVector &sequences, StrVector &seq_names, std::string& ref_sequence, std::ofstream &out);
     
     /**
-        Output a mutation into Diff file
+        Output a mutation into Maple file
      */
     void outputMutation(std::ofstream &out, char state_char, int32_t pos, int32_t length = -1);
 };

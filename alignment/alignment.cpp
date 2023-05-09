@@ -5718,7 +5718,7 @@ void Alignment::setExpectedNumSites(int new_expected_num_sites){
     expected_num_sites = new_expected_num_sites;
 }
 
-void Alignment::extractDiffFile(const std::string& aln_name, const InputType& format)
+void Alignment::extractMapleFile(const std::string& aln_name, const InputType& format)
 {
     // ------ read input sequences ----------
     std::string aln_file = getOutputNameWithExt(format, aln_name);
@@ -5753,7 +5753,7 @@ void Alignment::extractDiffFile(const std::string& aln_name, const InputType& fo
     string ref_sequence = generateRef(sequences);
     
     // open the output file
-    ofstream out = ofstream(getOutputNameWithExt(IN_DIFF, aln_name));
+    ofstream out = ofstream(getOutputNameWithExt(IN_MAPLE, aln_name));
     
     // write reference sequence to the output file
     out << ">REF" << endl;

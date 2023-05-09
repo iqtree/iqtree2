@@ -602,8 +602,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     InputType actual_output_format = super_alisimulator->params->aln_output_format;
     vector<SeqType> seqtypes;
     vector<std::string> aln_names;
-    // If users want to output Diff format -> temporarily output PHYLIP first
-    if (actual_output_format == IN_DIFF)
+    // If users want to output Maple format -> temporarily output PHYLIP first
+    if (actual_output_format == IN_MAPLE)
     {
         super_alisimulator->params->aln_output_format = IN_PHYLIP;
         Params::getInstance().aln_output_format = IN_PHYLIP;
@@ -617,8 +617,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         int nprocs  = MPIHelper::getInstance().getNumProcesses();
         if (i%nprocs != proc_ID) continue;
         
-        // If users want to output Diff format -> clear seqtypes and aln_names
-        if (actual_output_format == IN_DIFF)
+        // If users want to output Maple format -> clear seqtypes and aln_names
+        if (actual_output_format == IN_MAPLE)
         {
             seqtypes.clear();
             aln_names.clear();
@@ -719,8 +719,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         }
         else
         {
-            // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Diff format
-            if (actual_output_format == IN_DIFF)
+            // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Maple format
+            if (actual_output_format == IN_MAPLE)
             {
                 seqtypes.push_back(super_alisimulator->tree->aln->seq_type);
                 aln_names.push_back(output_filepath);
@@ -754,24 +754,24 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
         
-        // if users want to output Diff format -> convert PHY into DIFF and delete PHY
-        if (actual_output_format == IN_DIFF)
+        // if users want to output Maple format -> convert PHY into MAPLE and delete PHY
+        if (actual_output_format == IN_MAPLE)
         {
             for (auto aln_id = 0 ; aln_id < aln_names.size(); ++ aln_id)
             {
-                // initialize a dummy alignment to make sure we'll not change the main alignment when converting the simulated alignment files into Diff format
+                // initialize a dummy alignment to make sure we'll not change the main alignment when converting the simulated alignment files into Maple format
                 Alignment aln;
                 aln.seq_type = seqtypes[aln_id];
                 
-                // convert the simulated alignment files into Diff format
-                aln.extractDiffFile(aln_names[aln_id], IN_PHYLIP);
+                // convert the simulated alignment files into Maple format
+                aln.extractMapleFile(aln_names[aln_id], IN_PHYLIP);
                 
                 // remove the simulated alignment files (in PHYLIP format)
                 remove(getOutputNameWithExt(IN_PHYLIP, aln_names[aln_id]).c_str());
                 
                 // show the output file name
                 if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
-                    cout << "The simulated alignment has been converted into Diff format: "<< getOutputNameWithExt(IN_DIFF, aln_names[aln_id]) <<endl;
+                    cout << "The simulated alignment has been converted into Maple format: "<< getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) <<endl;
             }
         }
         
@@ -1146,7 +1146,7 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 // don't count the fake root
                 num_nodes -= ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
                 
-                // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Diff format
+                // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Maple format
                 seqtypes.push_back(super_tree->at(i)->aln->seq_type);
                 aln_names.push_back(file_path + partition_list);
                 
