@@ -350,8 +350,10 @@ string criterionName(ModelTestCriterion mtc);
  @param params program parameters
  @param iqtree phylogenetic tree
  @param model_info (IN/OUT) information for all models considered
+ @param best_subst_name (OUT) information for all models considered
+ @param best_rate_name (OUT) information for all models considered
  */
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name);
 
 /**
  optimisation of Q-Mixture model, including estimation of best number of classes in the mixture

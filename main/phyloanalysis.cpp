@@ -2458,8 +2458,8 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
 
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
-
-    runModelFinder(params, *iqtree, model_info);
+    string best_subst_name, best_rate_name;
+    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
     
     optimiseQMixModel(params, iqtree, model_info);
 }

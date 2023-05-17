@@ -1658,6 +1658,31 @@ public:
     bool opt_rhas_again;
 
     /**
+            The method to optimize (and estimating the number of classes in) the Q-mixture model
+            Method 1 : Old method
+                a. Estimate the RHAS model with the GTR+FO model.
+                b. Do a tree search for this single-class model.
+                c. Estimate the optimal number of classes inside the model mixture.
+                d. Estimate the RHAS model again with the optimal number of classes.
+                e. Estimate the optimal combination of substitution matrices in Q-Mixture model
+                f. Do a final tree search for this Q-mixture model with the optimal combination.
+            Method 2: New method
+                a. Use modelfinder (for single class) to find the best Q1 + RHAS + Tree. Set k = 1
+                b. Fixing RHAS, Tree and the models Q1, Q2, ..., Qk, then find the best Qk+1 to add
+                c. If the mixture with k+1 classes pass the likelihood ratio test,
+                  then k=k+1 and repeat the step c. Otherwise the mixture with k classes is the best model.
+                d. Re-estimate the RHAS model again for the k-class Q-mixture model .
+                e. Do a final tree search.
+            Method 3: Same as method 2, except using IC values instead of likelihood ratio test in step c.
+     */
+    int opt_qmix_method;
+    
+    /**
+        The p-value threshold used to optimize the Q-Mixture model when Method 2 is selected. Default = 0.05
+     */
+    double opt_qmix_pthres;
+
+    /**
             whether to compute the optmal combination of subtitution matrix for the mixture model
      */
     bool check_combin_q_mat;
