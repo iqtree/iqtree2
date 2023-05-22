@@ -1359,6 +1359,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     model_freq = FREQ_EMPIRICAL;
                 }
                 this_name = this_name.substr(0, fpos);
+            /*
             } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
                 switch(model_freq) {
                     case FREQ_USER_DEFINED:
@@ -1383,7 +1384,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     default:
                         cout << "Model " << this_name << endl;
                         break;
-                }
+                }*/
             }
             
 			model = (ModelMarkov*)createModel(this_name, models_block, model_freq, freq_params, tree);
