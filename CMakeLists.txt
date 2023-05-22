@@ -637,6 +637,10 @@ configure_file (
 # so that we will find iqtree_config.h
 include_directories("${PROJECT_BINARY_DIR}")
 
+# add the binary tree to the search path for include files
+# so that we will find cmaple/cmaple_config.h
+include_directories("${PROJECT_BINARY_DIR}/cmaple")
+
 #zlib will be detected for appearance
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
@@ -664,7 +668,6 @@ if (USE_BOOSTER)
     add_definitions(-DUSE_BOOSTER)
 endif()
 
-add_subdirectory(main)
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
@@ -682,6 +685,8 @@ add_subdirectory(alignment)
 add_subdirectory(tree)
 add_subdirectory(terrace)
 add_subdirectory(simulator)
+add_subdirectory(cmaple)
+add_subdirectory(main)
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -793,7 +798,7 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 	
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)

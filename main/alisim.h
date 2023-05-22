@@ -18,6 +18,7 @@
 #include <regex>
 #include <string.h>
 #include "phyloanalysis.h"
+#include "cmaple/maple/cmaple_api.h"
 
 /**
 *  execute Alignment Simulator (AliSim)
