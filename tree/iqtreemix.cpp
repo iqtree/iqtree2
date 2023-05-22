@@ -601,12 +601,13 @@ int IQTreeMix::getNumLhCat(SiteLoglType wsl) {
 // update_which_tree: only that tree has been updated
 void IQTreeMix::computeSiteTreeLogLike(int update_which_tree) {
     // cout << "enter IQTreeMix::computeSiteTreeLogLike" << endl;
+    // cout << "update_which_tree = " << update_which_tree << endl;
     PhyloTree* ptree;
     int k,t;
 
     t = update_which_tree;
     if (t == -1) {
-        computeLikelihood();
+        IQTreeMix::computeLikelihood();
         return;
     }
     if (isLinkSiteRate && t > 0) {
@@ -682,7 +683,6 @@ void IQTreeMix::computeSiteTreeLogLike(int update_which_tree) {
 }
 
 double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
-    // cout << "enter IQTreeMix::computeLikelihood" << endl;
     // size_t i,j;
     double logLike = 0.0;
     double subLike;
@@ -2254,7 +2254,9 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 // optimize the unlinked subsitution models one by one
                 if (!isLinkModel) {
                     if (!is_ptnfrq_posterior) {
+                        // cout << "before calling computeFreqArray()" << endl;
                         computeFreqArray(pattern_mix_lh, true);
+                        // cout << "after calling computeFreqArray()" << endl;
                         is_ptnfrq_posterior = true;
                     }
                     if (substep2 == 0) {
@@ -2344,13 +2346,13 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                     computeFreqArray(pattern_mix_lh, true);
                     is_ptnfrq_posterior = true;
                 }
-                if (substep1 == 0) {
+                // if (substep1 == 0) {
                     // call computeFreqArray() after each optimizeParameters()
                     for (i=0; i<ntree; i++) {
                         site_rates[i]->optimizeParameters(gradient_epsilon);
                         computeFreqArray(pattern_mix_lh, true, i);
                     }
-                } else {
+                /* } else {
                     // call computeFreqArray() once after all optimizeParameters()
                     if (isNestedOpenmp)
                         omp_set_nested(1);
@@ -2366,7 +2368,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         omp_set_num_threads(num_threads);
                     }
                     computeFreqArray(pattern_mix_lh, true);
-                }
+                }*/
                 // score = computeLikelihood();
                 // cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
             }
@@ -2684,8 +2686,37 @@ void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike, int u
     if (need_computeLike) {
         computeSiteTreeLogLike(update_which_tree);
     }
-
+    /*
+    cout << "ptn_like_cat:";
+    for (size_t i = 0; i < nptn*ntree; i++) {
+        cout << " " << ptn_like_cat[i];
+    }
+    cout << endl;
+    cout << "end of ptn_like_cat" << endl;
+    */
     memcpy(pattern_mix_lh, ptn_like_cat, nptn*ntree*sizeof(double));
+
+    /*
+    cout << "2" << endl;
+    cout << "ntree = " << ntree << endl;
+    cout << "nptn = " << nptn << endl;
+    cout << "weights:";
+    for (size_t c = 0; c < ntree; c++) {
+        cout << " " << weights[c];
+    }
+    cout << endl;
+    cout << "ptn_freq:";
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        cout << " " << ptn_freq[ptn];
+    }
+    cout << endl;
+    cout << "pattern_mix_lh:";
+    for (size_t i = 0; i < nptn*ntree; i++) {
+        cout << " " << pattern_mix_lh[i];
+    }
+    cout << endl;
+    cout << "here 0" << endl << flush;
+    */
 
     // multiply pattern_mix_lh by tree weights
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
@@ -2696,6 +2727,8 @@ void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike, int u
             i++;
         }
     }
+
+    // cout << "here 1" << endl << flush;
 
     if (need_multiplyFreq) {
         #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
@@ -2730,6 +2763,7 @@ void IQTreeMix::getPostProb(double* pattern_mix_lh, bool need_computeLike, int u
             }
         }
     }
+    // cout << "here 2" << endl << flush;
 }
 
 // update the ptn_freq array according to the posterior probabilities along each site for each tree
