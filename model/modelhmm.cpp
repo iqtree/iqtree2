@@ -49,7 +49,12 @@ double ModelHmm::optimizeParameters(double gradient_epsilon) {
     return optimizeParametersByEM();
     
     // use BFGS algorithm
-    double lower_bound = MIN_TRAN_PROB;
+    double lower_bound;
+    if (Params::getInstance().HMM_min_stran > MIN_TRAN_PROB) {
+        lower_bound = Params::getInstance().HMM_min_stran;
+    } else {
+        lower_bound = MIN_TRAN_PROB;
+    }
     double upper_bound = 1.0 - MIN_TRAN_PROB;
     
     // optimization of transition matrix
@@ -86,6 +91,8 @@ double ModelHmm::optimizeParametersByEM() {
     optx = optx / (double)(phylo_hmm->nsite-1);
     if (optx < MIN_TRAN_PROB)
         optx = MIN_TRAN_PROB;
+    if (optx < Params::getInstance().HMM_min_stran)
+        optx = Params::getInstance().HMM_min_stran;
     if (optx > 1.0 - MIN_TRAN_PROB)
         optx = 1.0 - MIN_TRAN_PROB;
     return -computeFunction(optx);

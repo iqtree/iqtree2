@@ -1181,7 +1181,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_params_use_hmm = false;
     params.optimize_params_use_hmm_sm = false;
     params.optimize_params_use_hmm_gm = false;
-    params.proceed_MAST_after_HMMSTER = true;
+    params.HMM_no_avg_brlen = false;
+    params.HMM_min_stran = 0.0;
+    params.treemix_optimize_methods = "hmm";
+
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -3423,8 +3426,30 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_params_use_hmm_gm = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "-hmmonly") == 0) {
-                params.proceed_MAST_after_HMMSTER = false;
+//            if (strcmp(argv[cnt], "-hmmonly") == 0) {
+//                params.proceed_MAST_after_HMMSTER = false;
+//                continue;
+//            }
+            if (strcmp(argv[cnt], "-hmm_min_stran") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -hmm_min_stran <minimum HMM same-category transition probability>";
+                params.HMM_min_stran = convert_double(argv[cnt]);
+                if (params.HMM_min_stran >= 1.0 || params.HMM_min_stran < 0.0)
+                    throw "Wrong probability for -hmm_min_stran";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmm_no_avg_brlen") == 0) {
+                params.HMM_no_avg_brlen = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-tmix_opt_method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -tmix_opt_method <hmm/hmm2mast/mast2hmm/mast>";
+                params.treemix_optimize_methods = argv[cnt];
+                if (strcmp(argv[cnt], "hmm") != 0 && strcmp(argv[cnt], "hmm2mast") != 0 & strcmp(argv[cnt], "mast") != 0 && strcmp(argv[cnt], "mast2hmm") != 0)
+                    throw "Wrong value for -tmix_opt_method";
                 continue;
             }
 			if (strcmp(argv[cnt], "-brent") == 0) {
@@ -5344,6 +5369,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
         usage(argv, false);
 #endif
+    }
+    
+    if (params.treemix_optimize_methods.find("hmm")!=string::npos) {
+        params.optimize_params_use_hmm = true;
+    } else {
+        params.optimize_params_use_hmm = false;
     }
 
 //    if (params.do_au_test)

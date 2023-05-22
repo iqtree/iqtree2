@@ -110,8 +110,8 @@ void IQTreeMixHmm::initializeTransitModel(Params &params) {
     modelHmm->setPhyloHmm(this);
 }
 
-// initialize the tree weights according to the marginal probabilities along the sites
-void IQTreeMixHmm::initializeTreeWeights() {
+// set the tree weights according to the marginal probabilities along the sites
+void IQTreeMixHmm::setWeightToMarginalProb() {
     bool need_computeLike = true;
     int update_which_tree = -1; // recompute all trees' likelihoods
     double* mar_prob;
@@ -290,6 +290,7 @@ double IQTreeMixHmm::optimizeAllBranchLensByBFGS(double gradient_epsilon, double
 
 double IQTreeMixHmm::optimizeAllBranches(double* pattern_mix_lh, int my_iterations, double tolerance, int maxNRStep) {
     double score;
+    // update the ptn_freq array according to the marginal probabilities along each site for each tree
     computeFreqArray(pattern_mix_lh);
     for (int i = 0; i < ntree; i++) {
         IQTreeMix::optimizeAllBranchesOneTree(i, my_iterations, tolerance, maxNRStep);
@@ -349,12 +350,40 @@ void IQTreeMixHmm::startCheckpoint() {
 // ------------------------------------------------------------------
 
 string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+
+    if (params->treemix_optimize_methods == "hmm")
+        return optimizeModelParamHMM(printInfo, logl_epsilon);
+    
+    if (params->treemix_optimize_methods == "hmm2mast") {
+        optimizeModelParamHMM(printInfo, logl_epsilon);
+        return optimizeModelParamMAST(printInfo, logl_epsilon);
+    }
+    
+    /* // TODO
+    if (params->treemix_optimize_methods == "mast") {
+        return iqTreeMix::optimizeModelParameters(printInfo, params->treemix_eps);
+    }
+
+    if (params->treemix_optimize_methods == "mast2hmm") {
+        iqTreeMix::optimizeModelParameters(printInfo, params->treemix_eps);
+        params->HMM_no_avg_brlen = true;
+        return optimizeModelParamHMM(printInfo, logl_epsilon);
+    }
+    */
+}
+
+
+string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) {
     int step;
     double prev_score, score;
     double gradient_epsilon = 0.0001;
     
     // the edges with the same partition among the trees are initialized as the same length
-    setAvgLenEachBranchGrp();
+    if (params->fixed_branch_length != BRLEN_FIX && !params->HMM_no_avg_brlen) {
+        setAvgLenEachBranchGrp();
+    } else if (verbose_mode >= VB_MED) {
+        cout << "No averaging the branch lengths during initialisation" << endl;
+    }
 
     // change the objective function to backlikelihood
     objFun = 0;
@@ -365,7 +394,12 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
     if (verbose_mode >= VB_MED) {
         cout << "Minimum value of edge length is set to: " << setprecision(10) << params->min_branch_length << endl;
     }
-    
+
+    // minimum value of HMM same-category transition probability
+    if (Params::getInstance().HMM_min_stran > 1e-10) {
+        cout << "Minimum value of HMM same-category transition probability is set to: " << Params::getInstance().HMM_min_stran << endl;
+    }
+
     score = computeLikelihood();
     
     cout << "1. Initial HMM log-likelihood: " << score << endl;
@@ -378,18 +412,31 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
     prev_score = score;
 
     for (step = 0; step < optimize_steps; step++) {
-        
+
         // optimize tree branches
-        score = optimizeAllBranches();
+        // if params->HMM_no_avg_brlen, then no optimization of branch lengths at the first iteration
+        // if (params->fixed_branch_length != BRLEN_FIX &&
+        //    !(step==0 && params->HMM_no_avg_brlen)) {
+        if (params->fixed_branch_length != BRLEN_FIX) {
+            score = optimizeAllBranches();
+            if (verbose_mode >= VB_MED)
+                cout << "after optimizing branch lengths, HMM likelihood = " << score << endl;
+        }
 
         // optimize all subsitution models
         score = optimizeAllSubstModels(gradient_epsilon);
+        if (verbose_mode >= VB_MED)
+            cout << "after optimizing substution models, HMM likelihood = " << score << endl;
 
         // optimize all site rate models
         score = optimizeAllRHASModels(gradient_epsilon, score);
+        if (verbose_mode >= VB_MED)
+            cout << "after optimizing RHAS models, HMM likelihood = " << score << endl;
 
         // optimize transition matrix and prob array
         score = PhyloHmm::optimizeParameters(gradient_epsilon);
+        if (verbose_mode >= VB_MED)
+            cout << "after optimizing transition matrix and prob array, HMM likelihood = " << score << endl;
 
         cout << step+2 << ". Current HMM log-likelihood: " << score << endl;
 
@@ -409,18 +456,25 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
     setCurScore(score);
     stop_rule.setCurIt(step);
     computeMaxPath();
+
+    // set the tree weights according to the marginal probabilities
+    if (!isTreeWeightFixed) {
+        setWeightToMarginalProb();
+    }
     
+    /*
     if (params->proceed_MAST_after_HMMSTER) {
         // proceed to optimization of parameters according to MAST model
         cout << endl << "Proceed to optimization of parameters according to MAST model" << endl;
         optimizeModelParamTreeMix(printInfo, logl_epsilon);
     }
+    */
 
     return getTreeString();
 }
 
 // Optimize the MAST model starting from the current parameter values
-string IQTreeMixHmm::optimizeModelParamTreeMix(bool printInfo, double logl_epsilon) {
+string IQTreeMixHmm::optimizeModelParamMAST(bool printInfo, double logl_epsilon) {
     int step;
     double prev_score, score;
     double gradient_epsilon = 0.0001;
@@ -436,11 +490,6 @@ string IQTreeMixHmm::optimizeModelParamTreeMix(bool printInfo, double logl_epsil
 
     cout << setprecision(5) << "Estimate MAST model parameters (epsilon = " << logl_epsilon << ")" << endl;
 
-    // first initialize the tree weights according to the marginal probabilities
-    if (!isTreeWeightFixed) {
-        initializeTreeWeights();
-    }
-    
     score = computeLikelihood();
     
     cout << "1. Initial MAST log-likelihood: " << score << endl;
@@ -449,6 +498,8 @@ string IQTreeMixHmm::optimizeModelParamTreeMix(bool printInfo, double logl_epsil
 
     for (step = 0; step < optimize_steps; step++) {
         
+        // update the ptn_freq array according to the marginal probabilities along each site for each tree
+
         // optimize tree branches
         score = optimizeAllBranches(pattern_mix_lh);
 

@@ -1699,7 +1699,16 @@ public:
     bool optimize_params_use_hmm_gm;
     
     /** proceed to MAST model after HMMSTER , default true */
-    bool proceed_MAST_after_HMMSTER;
+    // bool proceed_MAST_after_HMMSTER;
+
+    /** no averaging the branch length during the initialization of the HMM model */
+    bool HMM_no_avg_brlen;
+
+    /** minimum value allowed for HMM transition probability between the same tree (category) */
+    double HMM_min_stran;
+    
+    /** optimization methods: hmm / hmm2mast / mast2hmm / mast */
+    string treemix_optimize_methods;
 
     /**
             criterion to assess important quartet

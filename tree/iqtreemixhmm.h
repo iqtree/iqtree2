@@ -38,8 +38,8 @@ public:
     // initialize the parameters
     void initializeParams();
     
-    // initialize the tree weights according to the marginal probabilities along the sites
-    void initializeTreeWeights();
+    // set the tree weights according to the marginal probabilities along the sites
+    void setWeightToMarginalProb();
 
     // compute the log of dotproduct of the logorithm arrays
     double logDotProd(double* ln_x, double* ln_y, int n);
@@ -74,9 +74,12 @@ public:
     
     virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
 
-    // Optimize the MAST model starting from the current parameter values
-    string optimizeModelParamTreeMix(bool printInfo, double logl_epsilon);
-    
+    // Optimize parameters according to the MAST model
+    string optimizeModelParamMAST(bool printInfo, double logl_epsilon);
+
+    // Optimize parameters according to the HMM model
+    string optimizeModelParamHMM(bool printInfo, double logl_epsilon);
+
     virtual void setNumThreads(int num_threads);
     
     /**
