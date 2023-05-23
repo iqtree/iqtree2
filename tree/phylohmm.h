@@ -81,7 +81,7 @@ public:
     double optimizeParameters(double gradient_epsilon);
 
     // show the assignment of the categories along sites with max likelihood
-    void showSiteCatMaxLike(ostream& out);
+    void showSiteCatMaxLike(ostream& out, bool show_assignment = true);
     
     // number of sites
     int nsite;

@@ -1603,6 +1603,7 @@ void IQTreeMix::setParams(Params* params) {
  * Branches of different trees with the same partition share the same ID
  */
 void IQTreeMix::computeBranchID() {
+    cout << "Enter IQTreeMix::computeBranchID" << endl << flush;
 
     StrVector taxname;
     NodeVector nodes1, nodes2;
@@ -1627,7 +1628,7 @@ void IQTreeMix::computeBranchID() {
                 cout << "Convert tree " << i+1 << " into an unrooted tree" << endl;
         }
     }
-
+    
     for (j=0; j<size(); j++) {
         
         nodes1.clear();
@@ -1677,6 +1678,7 @@ void IQTreeMix::computeBranchID() {
                 branch_group[curr_id].push_back(branch_idx);
             }
             branch_id[branch_idx] = curr_id;
+            // cout << "branch_idx:" << branch_idx << " -> " << curr_id << endl;
         }
     }
     

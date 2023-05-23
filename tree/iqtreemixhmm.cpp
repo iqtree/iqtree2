@@ -14,6 +14,7 @@ IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
     objAlgo = new string[2];
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
+    isTMixOptimEngine = false;
 }
 
 IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTreeMix(params, aln, trees), PhyloHmm(getAlnNSite(), trees.size()) {
@@ -23,6 +24,7 @@ IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &tree
     objAlgo = new string[2];
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
+    isTMixOptimEngine = false;
 }
 
 IQTreeMixHmm::~IQTreeMixHmm() {
@@ -75,16 +77,14 @@ void IQTreeMixHmm::initializeModel(Params &params, string model_name, ModelsBloc
         }
     }*/
     
-    // edge-length-restricted model is not appropriate for this HMM model
-    if (isEdgeLenRestrict)
-        outError("Edge-length-restricted model is inappropriate for HMM model. Use +T instead of +TR.");
-    
     // build the branch ID
-    computeBranchID();
+    if (branch_group.size() == 0) {
+        computeBranchID();
+    }
     if (verbose_mode >= VB_MED) {
         showBranchGrp();
     }
-    
+
     // initialize the transition model
     initializeTransitModel(params);
 }
@@ -218,17 +218,18 @@ double IQTreeMixHmm::optimizeBranchGroup(int branchgrp, double gradient_epsilon)
     optimTree = -1;
     optimBranchGrp = branchgrp;
     ndim = getNDim();
-    if (ndim == 1) {
+    if (ndim == 1 || isEdgeLenRestrict) {
         len = setSingleVariable();
         double negative_lh;
         double ferror,optx;
+        double bvalue;
         if (verbose_mode >= VB_MED) {
-            cout << "[IQTreeMixHmm::optimizeBranchGroup before] branchgrp = " << branchgrp << " single-variable = (" << setprecision(10) << len << ") ndim = 1" << endl;
+            bvalue = len;
         }
         optx = minimizeOneDimen(params->min_branch_length, len, params->max_branch_length, gradient_epsilon, &negative_lh, &ferror);
         getSingleVariable(optx);
         if (verbose_mode >= VB_MED) {
-            cout << "[IQTreeMixHmm::optimizeBranchGroup after] branchgrp = " << branchgrp << " single-variable = (" << setprecision(10) << optx << ") ndim = 1" << endl;
+            cout << "branchgrp:" << branchgrp << "; len:" << setprecision(10)<< bvalue << "->" << optx << "; ndim:" << ndim << endl;
         }
         score = computeLikelihood();
     } else if (ndim > 1) {
@@ -290,14 +291,13 @@ double IQTreeMixHmm::optimizeAllBranchLensByBFGS(double gradient_epsilon, double
 
 double IQTreeMixHmm::optimizeAllBranches(double* pattern_mix_lh, int my_iterations, double tolerance, int maxNRStep) {
     double score;
+    
     // update the ptn_freq array according to the marginal probabilities along each site for each tree
     computeFreqArray(pattern_mix_lh);
     for (int i = 0; i < ntree; i++) {
         IQTreeMix::optimizeAllBranchesOneTree(i, my_iterations, tolerance, maxNRStep);
     }
     score = computeLikelihood();
-    if (verbose_mode >= VB_MED)
-        cout << "after optimizing branches, " << objAlgo[objFun] << " likelihood = " << score << endl;
     return score;
 }
 
@@ -306,6 +306,7 @@ double IQTreeMixHmm::optimizeAllSubstModels(double gradient_epsilon, double* pat
     if (isLinkModel) {
         // for linked subsitution model
         // use BFGS method
+        resetPtnOrigFreq();
         models[0]->optimizeParameters(gradient_epsilon);
     } else {
         // for unlinked subsitution model
@@ -316,9 +317,6 @@ double IQTreeMixHmm::optimizeAllSubstModels(double gradient_epsilon, double* pat
         }
     }
     score = computeLikelihood();
-    if (verbose_mode >= VB_MED) {
-        cout << "after optimizing subsitution model, " << objAlgo[objFun] << " likelihood = " << score << endl;
-    }
     return score;
 }
 
@@ -327,6 +325,7 @@ double IQTreeMixHmm::optimizeAllRHASModels(double gradient_epsilon, double score
         if (isLinkSiteRate) {
             // for linked RHAS model
             // use BFGS method
+            resetPtnOrigFreq();
             site_rates[0]->optimizeParameters(gradient_epsilon);
         } else {
             // for unlinked RHAS model
@@ -337,8 +336,6 @@ double IQTreeMixHmm::optimizeAllRHASModels(double gradient_epsilon, double score
             }
         }
         score = computeLikelihood();
-        if (verbose_mode >= VB_MED)
-            cout << "after optimizing RHAS model, " << objAlgo[objFun] << " likelihood = " << score << endl;
     }
     return score;
 }
@@ -418,7 +415,13 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
         // if (params->fixed_branch_length != BRLEN_FIX &&
         //    !(step==0 && params->HMM_no_avg_brlen)) {
         if (params->fixed_branch_length != BRLEN_FIX) {
-            score = optimizeAllBranches();
+            if (isEdgeLenRestrict) {
+                // +TR model : branches with the same partition information across the trees are restricted the same
+                // use BFGS method
+                score = optimizeAllBranchLensByBFGS(gradient_epsilon, logl_epsilon, 1);
+            } else {
+                score = optimizeAllBranches();
+            }
             if (verbose_mode >= VB_MED)
                 cout << "after optimizing branch lengths, HMM likelihood = " << score << endl;
         }
@@ -446,7 +449,7 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
 
         if (verbose_mode >= VB_MED) {
             computeMaxPath();
-            showSiteCatMaxLike(cout);
+            showSiteCatMaxLike(cout, false);
         }
 
         prev_score = score;
@@ -498,10 +501,13 @@ string IQTreeMixHmm::optimizeModelParamMAST(bool printInfo, double logl_epsilon)
 
     for (step = 0; step < optimize_steps; step++) {
         
-        // update the ptn_freq array according to the marginal probabilities along each site for each tree
-
         // optimize tree branches
-        score = optimizeAllBranches(pattern_mix_lh);
+        if (isEdgeLenRestrict) {
+            // +TR model : branches with the same partition information across the trees are restricted the same
+            score = optimizeAllBranchLensByBFGS(gradient_epsilon, logl_epsilon);
+        } else {
+            score = optimizeAllBranches(pattern_mix_lh);
+        }
 
         // optimize all subsitution models
         score = optimizeAllSubstModels(gradient_epsilon, pattern_mix_lh);
@@ -689,6 +695,7 @@ void IQTreeMixHmm::showAllBranchLengths() {
 
 // the following three functions are for dimension = 1
 double IQTreeMixHmm::computeFunction(double x) {
+    
     getSingleVariable(x);
     return -computeLikelihood();
 }
@@ -721,6 +728,17 @@ void IQTreeMixHmm::getSingleVariable(double x) {
     // collect the branch lengths of the tree
     getAllBranchLengths();
     ndim = getNDim();
+    if (ndim == 0)
+        cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! ndim = " << ndim << endl;
+    for (i = 0; i < ndim; i++) {
+        treeidx = branch_group[optimBranchGrp].at(i) / nbranch;
+        branchidx = branch_group[optimBranchGrp].at(i) % nbranch;
+        if (treeidx < ntree && branchidx < allbranchlens[treeidx].size())
+            allbranchlens[treeidx].at(branchidx) = x;
+        else
+            cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
+    }
+    /*
     if (ndim > 0) {
         treeidx = branch_group[optimBranchGrp].at(0) / nbranch;
         branchidx = branch_group[optimBranchGrp].at(0) % nbranch;
@@ -730,12 +748,13 @@ void IQTreeMixHmm::getSingleVariable(double x) {
             cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! treeidx = " << treeidx << ", branchidx = " << branchidx << endl;
     } else {
         cout << "[IQTreeMixHmm::getSingleVariable] Error occurs! ndim = " << ndim << endl;
-    }
+    }*/
     setAllBranchLengths();
 }
 
 // the following four functions are for dimension > 1
 double IQTreeMixHmm::targetFunk(double x[]) {
+
     getVariables(x);
     return -computeLikelihood();
 }
@@ -744,6 +763,10 @@ void IQTreeMixHmm::setVariables(double *variables) {
     // copy the values from branch lengths
     int ndim, i;
     int treeidx, branchidx;
+    
+    if (isTMixOptimEngine)
+        return IQTreeMix::setVariables(variables);
+
     // collect the branch lengths of the tree
     getAllBranchLengths();
     ndim = getNDim();
@@ -765,6 +788,10 @@ void IQTreeMixHmm::getVariables(double *variables) {
     // save the values to branch lengths
     int ndim, i;
     int treeidx, branchidx;
+
+    if (isTMixOptimEngine)
+        return IQTreeMix::getVariables(variables);
+
     // collect the branch lengths of the tree
     getAllBranchLengths();
     ndim = getNDim();
@@ -784,6 +811,10 @@ void IQTreeMixHmm::getVariables(double *variables) {
 
 void IQTreeMixHmm::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     int ndim, i;
+
+    if (isTMixOptimEngine)
+        return IQTreeMix::setBounds(lower_bound, upper_bound, bound_check);
+
     ndim = getNDim();
     if (verbose_mode >= VB_MED) {
         cout << "[IQTreeMixHmm::setBounds] optimBranchGrp = " << optimBranchGrp << ", ndim = " << ndim << endl;
@@ -800,6 +831,9 @@ void IQTreeMixHmm::setBounds(double *lower_bound, double *upper_bound, bool *bou
 
 
 int IQTreeMixHmm::getNDim() {
+    if (isTMixOptimEngine)
+        return IQTreeMix::getNDim();
+    
     if (optimBranchGrp >= 0 && optimBranchGrp < branch_group.size()) {
         return branch_group[optimBranchGrp].size();
     } else {
@@ -861,7 +895,7 @@ void IQTreeMixHmm::setAvgLenEachBranchGrp() {
 // update the ptn_freq array according to the marginal probabilities along each site for each tree
 void IQTreeMixHmm::computeFreqArray(double* pattern_mix_lh, bool need_computeLike, int update_which_tree) {
     
-    if (objFun == 1) // MAST
+    if (objFun == 1 || isTMixOptimEngine) // MAST
         return IQTreeMix::computeFreqArray(pattern_mix_lh, need_computeLike, update_which_tree);
     
     double* mar_prob;
