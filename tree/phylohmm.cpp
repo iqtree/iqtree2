@@ -279,23 +279,25 @@ double PhyloHmm::optimizeParameters(double gradient_epsilon) {
 }
 
 // show the assignment of the categories along sites with max likelihood
-void PhyloHmm::showSiteCatMaxLike(ostream& out) {
+void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment) {
     size_t i;
     int* numSites; // number of sites for each category
     double* rateSites; // ratio of sites for each category
     
-    out << "The assignment of categories along sites with maximum likelihood" << endl;
-    out << "Sites\tCategory" << endl;
-    int pre_max_cat = site_categories[0];
-    int pre_site = 0;
-    for (i=1; i<nsite; i++) {
-        if (site_categories[i] != pre_max_cat) {
-            out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
-            pre_max_cat = site_categories[i];
-            pre_site = (int) i;
+    if (show_assignment) {
+        out << "The assignment of categories along sites with maximum likelihood" << endl;
+        out << "Sites\tCategory" << endl;
+        int pre_max_cat = site_categories[0];
+        int pre_site = 0;
+        for (i=1; i<nsite; i++) {
+            if (site_categories[i] != pre_max_cat) {
+                out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
+                pre_max_cat = site_categories[i];
+                pre_site = (int) i;
+            }
         }
+        out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
     }
-    out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
     
     numSites = new int[nsite];
     memset(numSites, 0, sizeof(int) * nsite);

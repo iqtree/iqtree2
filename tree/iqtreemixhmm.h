@@ -118,6 +118,9 @@ private:
     // 1: MAST
     int objFun;
     
+    // whether using the optimization engine in IQTreeMix
+    bool isTMixOptimEngine;
+    
     string* objAlgo;
     
     // branch lengths of all the trees
