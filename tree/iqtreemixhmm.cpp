@@ -347,26 +347,38 @@ void IQTreeMixHmm::startCheckpoint() {
 // ------------------------------------------------------------------
 
 string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+    string ans;
 
     if (params->treemix_optimize_methods == "hmm")
-        return optimizeModelParamHMM(printInfo, logl_epsilon);
+        ans = optimizeModelParamHMM(printInfo, logl_epsilon);
     
-    if (params->treemix_optimize_methods == "hmm2mast") {
+    else if (params->treemix_optimize_methods == "hmm2mast") {
         optimizeModelParamHMM(printInfo, logl_epsilon);
-        return optimizeModelParamMAST(printInfo, logl_epsilon);
+        ans = optimizeModelParamMAST(printInfo, logl_epsilon);
     }
     
-    /* // TODO
-    if (params->treemix_optimize_methods == "mast") {
-        return iqTreeMix::optimizeModelParameters(printInfo, params->treemix_eps);
+    else if (params->treemix_optimize_methods == "mast") {
+        isTMixOptimEngine = true;
+        objFun = 1;
+        ans = IQTreeMix::optimizeModelParameters(printInfo, params->treemix_eps);
+        isTMixOptimEngine = false;
     }
 
-    if (params->treemix_optimize_methods == "mast2hmm") {
-        iqTreeMix::optimizeModelParameters(printInfo, params->treemix_eps);
+    else if (params->treemix_optimize_methods == "mast2hmm") {
+        isTMixOptimEngine = true;
+        objFun = 1;
+        IQTreeMix::optimizeModelParameters(printInfo, params->treemix_eps);
+        isTMixOptimEngine = false; 
+        objFun = 0;
         params->HMM_no_avg_brlen = true;
-        return optimizeModelParamHMM(printInfo, logl_epsilon);
+        ans = optimizeModelParamHMM(printInfo, logl_epsilon);
     }
-    */
+    
+    else {
+        outError("Error! Unknown option: " + params->treemix_optimize_methods);
+    }
+    
+    return ans;
 }
 
 
