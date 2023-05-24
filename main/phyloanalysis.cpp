@@ -3873,10 +3873,10 @@ IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
     for (i=0; i<numTree; i++) {
         trees.push_back(newIQTree(params,alignment));
     }
-    if (params.optimize_params_use_hmm)
+    // if (params.optimize_params_use_hmm)
         return new IQTreeMixHmm(params, alignment, trees);
-    else
-        return new IQTreeMix(params, alignment, trees);
+    // else
+    //    return new IQTreeMix(params, alignment, trees);
 }
 
 /** get ID of bad or good symtest results */
