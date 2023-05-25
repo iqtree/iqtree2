@@ -155,7 +155,7 @@ public:
     void checkEachSiteBackFwdLikeArray();
     
     // compute the marginal probabilities for each site
-    void computeMarginalProb();
+    void computeMarginalProb(ostream* out = NULL);
 
     // compute the marginal probabilities for transitions between every pair of sites
     void computeMarginalTransitProb();

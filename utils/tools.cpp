@@ -1217,6 +1217,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.kernel_nonrev = false;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
+    params.print_marginal_prob = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = 0;
@@ -3448,7 +3449,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -tmix_opt_method <hmm/hmm2mast/mast2hmm/mast>";
                 params.treemix_optimize_methods = argv[cnt];
-                if (strcmp(argv[cnt], "hmm") != 0 && strcmp(argv[cnt], "hmm2mast") != 0 & strcmp(argv[cnt], "mast") != 0 && strcmp(argv[cnt], "mast2hmm") != 0)
+                if (strcmp(argv[cnt], "hmm") != 0 && strcmp(argv[cnt], "hmm2mast") != 0 && strcmp(argv[cnt], "mast") != 0 && strcmp(argv[cnt], "mast2hmm") != 0 && strcmp(argv[cnt], "hmast") != 0)
                     throw "Wrong value for -tmix_opt_method";
                 continue;
             }
@@ -3787,6 +3788,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_partition_lh = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-wmp") == 0) {
+                params.print_marginal_prob = true;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
 				params.print_site_lh = WSL_RATECAT;

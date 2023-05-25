@@ -952,6 +952,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     if (params.print_site_prob)
         cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
                 << endl;
+    
+    if (params.print_marginal_prob && params.optimize_params_use_hmm)
+        cout << "  Marginal probability:          " << params.out_prefix << ".mprob" << endl;
 
     if (params.print_ancestral_sequence) {
         cout << "  Ancestral state:               " << params.out_prefix << ".state" << endl;
@@ -2201,8 +2204,14 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         string hmm_file = params.out_prefix;
         hmm_file += ".hmm";
         printHMMResult(hmm_file.c_str(), &iqtree);
+        
+        if (params.print_marginal_prob) {
+            string mp_file = params.out_prefix;
+            mp_file += ".mprob";
+            printMarginalProb(mp_file.c_str(), &iqtree);
+        }
     }
-
+    
     if (params.print_partition_lh && !iqtree.isSuperTree()) {
         outWarning("-wpl does not work with non-partition model");
         params.print_partition_lh = false;

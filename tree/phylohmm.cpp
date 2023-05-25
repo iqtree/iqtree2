@@ -403,24 +403,35 @@ void PhyloHmm::checkEachSiteBackFwdLikeArray() {
 }
 
 // compute the marginal probabilities for each site
-void PhyloHmm::computeMarginalProb() {
+void PhyloHmm::computeMarginalProb(ostream* out) {
     double score;
     double* f_array = fwd_array;
     double* b_array = bwd_array;
     double* mprob = marginal_prob;
+    int i;
     
     computeBackLikeArray();
     computeFwdLikeArray();
 
-    // cout << "Marginal probabilities:" << endl;
-    for (int i=0; i<nsite; i++) {
-        // cout << i+1;
+    if (out != NULL) {
+        *out << "# Marginal probabilities" << endl;
+        *out << "Site";
+        for (i=0; i<ncat; i++) {
+            *out << "\tCat_" << i+1;
+        }
+        *out << endl;
+    }
+    for (i=0; i<nsite; i++) {
+        if (out != NULL)
+            *out << i+1;
         score = logDotProd(f_array, b_array, ncat);
         for (int j=0; j<ncat; j++) {
             mprob[j] = exp(f_array[j]+b_array[j]-score);
-            // cout << "\t" << mprob[j];
+            if (out != NULL)
+                *out << "\t" << mprob[j];
         }
-        // cout << endl;
+        if (out != NULL)
+            *out << endl;
         f_array += ncat;
         b_array += ncat;
         mprob += ncat;

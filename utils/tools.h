@@ -1859,6 +1859,9 @@ public:
 
     /** TRUE to print partition log-likelihood, default: FALSE */
     bool print_partition_lh;
+    
+    /** TRUE to print the marginal probability for HMM model, default: FALSE */
+    bool print_marginal_prob;
 
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories
