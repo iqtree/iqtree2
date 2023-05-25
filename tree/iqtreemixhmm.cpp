@@ -283,7 +283,10 @@ double IQTreeMixHmm::optimizeAllBranchLensByBFGS(double gradient_epsilon, double
         step++;
         for (int i = 0; i < branch_group.size(); i++) {
             score = optimizeBranchGroup(i, gradient_epsilon);
-            cout << ".. Current HMM log-likelihood: " << score << endl;
+            if (objFun == 1) // MAST
+                cout << ".. Current MAST log-likelihood: " << score << endl;
+            else // HMM
+                cout << ".. Current HMM log-likelihood: " << score << endl;
         }
     } while (score - pre_score > logl_epsilon && step < maxsteps);
     return score;
@@ -374,6 +377,11 @@ string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon
         ans = optimizeModelParamHMM(printInfo, logl_epsilon);
     }
     
+    else if (params->treemix_optimize_methods == "hmast") {
+        objFun = 1;
+        ans = optimizeModelParamMAST(printInfo, params->treemix_eps);
+    }
+
     else {
         outError("Error! Unknown option: " + params->treemix_optimize_methods);
     }
@@ -430,7 +438,7 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
             if (isEdgeLenRestrict) {
                 // +TR model : branches with the same partition information across the trees are restricted the same
                 // use BFGS method
-                score = optimizeAllBranchLensByBFGS(gradient_epsilon, logl_epsilon, 1);
+                score = optimizeAllBranchLensByBFGS(gradient_epsilon, logl_epsilon);
             } else {
                 score = optimizeAllBranches();
             }
@@ -640,6 +648,20 @@ void IQTreeMixHmm::printResults(const char *filename) {
     
     out.close();
 }
+
+// print out the marginal probabilities to a file
+void IQTreeMixHmm::printMarginalProb(const char *filename) {
+    
+    size_t i, j;
+    ofstream out;
+    out.open(filename);
+
+    computeLogLikelihoodSiteTree();
+    computeMarginalProb(&out);
+
+    out.close();
+}
+
 
 // print out the HMM estimated parameters
 void IQTreeMixHmm::showParameters(ostream& out) {

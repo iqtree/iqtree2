@@ -2249,8 +2249,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         is_ptnfrq_posterior = false;
                     }
                     models[0]->optimizeParameters(gradient_epsilon);
-                    // score = computeLikelihood();
-                    // cout << "after optimizing linked subsitution model, likelihood = " << score << endl;
+                    if (verbose_mode >= VB_MED) {
+                        score = computeLikelihood();
+                        cout << "after optimizing linked subsitution model, likelihood = " << score << endl;
+                    }
                 }
 
                 // optimize the unlinked subsitution models one by one
@@ -2284,8 +2286,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         }
                         computeFreqArray(pattern_mix_lh, true);
                     }
-                    // score = computeLikelihood();
-                    // cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
+                    if (verbose_mode >= VB_MED) {
+                        score = computeLikelihood();
+                        cout << "after optimizing unlinked subsitution model, likelihood = " << score << endl;
+                    }
                 }
 
                 // optimize tree branches for non-branch-length-restricted model
@@ -2305,8 +2309,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         optimizeAllBranches(1, logl_epsilon);
                         computeFreqArray(pattern_mix_lh, true);
                     }
-                    // score = computeLikelihood();
-                    // cout << "after optimizing branches, likelihood = " << score << endl;
+                    if (verbose_mode >= VB_MED) {
+                        score = computeLikelihood();
+                        cout << "after optimizing branches, likelihood = " << score << endl;
+                    }
                 }
 
                 // optimize tree branches for branch-length-restricted model
@@ -2316,8 +2322,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         is_ptnfrq_posterior = false;
                     }
                     optimizeBranchLensByBFGS(gradient_epsilon);
-                    // score = computeLikelihood();
-                    // cout << "after optimizing branches by BFGS, likelihood = " << score << endl;
+                    if (verbose_mode >= VB_MED) {
+                        score = computeLikelihood();
+                        cout << "after optimizing branches by BFGS, likelihood = " << score << endl;
+                    }
                 }
 
                 score = computeLikelihood();
@@ -2338,8 +2346,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                 }
                 site_rates[0]->setTree(this);
                 site_rates[0]->optimizeParameters(gradient_epsilon);
-                // score = computeLikelihood();
-                // cout << "after optimizing linked site rate model, likelihood = " << score << endl;
+                if (verbose_mode >= VB_MED) {
+                    score = computeLikelihood();
+                    cout << "after optimizing linked site rate model, likelihood = " << score << endl;
+                }
             }
 
             // optimize the unlinked site rate model
@@ -2371,8 +2381,10 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                     }
                     computeFreqArray(pattern_mix_lh, true);
                 }*/
-                // score = computeLikelihood();
-                // cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
+                if (verbose_mode >= VB_MED) {
+                    score = computeLikelihood();
+                    cout << "after optimizing unlinked site-rate model, likelihood = " << score << endl;
+                }
             }
 
             score = computeLikelihood();
@@ -2393,10 +2405,11 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             } else {
                 m = 1 + step / 100;
                 score = optimizeTreeWeightsByEM(pattern_mix_lh, gradient_epsilon, m, tree_weight_converge);  // loop max n times
-                // cout << "tree_weight_converge = " << tree_weight_converge << endl;
             }
-            // score = computeLikelihood();
-            // cout << "after optimizing tree weights, likelihood = " << score << endl;
+            if (verbose_mode >= VB_MED) {
+                score = computeLikelihood();
+                cout << "after optimizing tree weights, likelihood = " << score << endl;
+            }
         }
 
         cout << step+2 << ". Current log-likelihood: " << score;

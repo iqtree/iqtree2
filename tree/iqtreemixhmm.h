@@ -46,7 +46,7 @@ public:
     
     // obtain the log-likelihoods for every pattern and every tree
     // output ptn_like_cat[i * ntree + j] : log-likelihood of pattern i and tree j
-    void computeLogLikelihoodSiteTree(int updateTree);
+    void computeLogLikelihoodSiteTree(int updateTree = -1);
     
     // compute backward log-likelihood
     virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
@@ -91,7 +91,10 @@ public:
     
     // print out all the results to a file
     void printResults(const char *filename);
-    
+
+    // print out the marginal probabilities to a file
+    void printMarginalProb(const char *filename);
+
     // show the values of the parameters
     void showParameters(ostream& out);
     

@@ -71,6 +71,13 @@ void printHMMResult(const char* filename, PhyloTree *tree) {
     cout << "HMM results printed to " << filename << endl;
 }
 
+void printMarginalProb(const char* filename, PhyloTree *tree) {
+    // For HMM model, to show the assignment of the categories along sites with max likelihood
+    IQTreeMixHmm* iqtreehmm = dynamic_cast<IQTreeMixHmm*>(tree);
+    iqtreehmm->printMarginalProb(filename);
+    cout << "Marginal probabilities printed to " << filename << endl;
+}
+
 void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                       bool append, const char *linename) {
     
