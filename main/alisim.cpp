@@ -12,16 +12,8 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     // call a simple function
     cmaple::printCMapleCopyright(std::cout);
     
-    // init CMaple params
-    cmaple::Params& cmaple_params = cmaple::Params::getInstance();
-    cmaple::initDefaultValue(cmaple_params);
-    cmaple_params.redo_inference = true;
-    string diff_file = "test_5K.diff";
-    cmaple_params.diff_path = new char[diff_file.length() + 1];
-    strcpy(cmaple_params.diff_path, diff_file.c_str());
-    
     // run an inference with cmaple
-    runCMaple(cmaple_params);
+    cmaple::executeCMaple(params.aln_file);
     
     MPIHelper::getInstance().barrier();
     auto start = getRealTime();
