@@ -1497,6 +1497,8 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree,
                    vector<TreeInfo> &info, IntVector &distinct_ids)
 {
     cout << "Reading trees in " << treeset_file << " ..." << endl;
+    if (!fileExists(treeset_file))
+        outError("File not found ", treeset_file);
     ifstream in(treeset_file);
     evaluateTrees(in, params, tree, info, distinct_ids);
     in.close();
