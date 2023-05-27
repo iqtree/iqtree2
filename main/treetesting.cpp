@@ -134,7 +134,8 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, filename);
     }    
-    delete[] pattern_lh;
+    if (!ptn_lh)
+        delete[] pattern_lh;
 }
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
