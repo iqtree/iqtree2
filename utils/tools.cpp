@@ -2021,6 +2021,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (strcmp(argv[cnt], "--bscf") == 0 || strcmp(argv[cnt], "--scfl") == 0) {
+                // UPDATE: sCFL now ignore subtrees with all gaps for a particular site
                 if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
                     throw "Do not specify --scf or --gcf with --scfl";
                 params.ancestral_site_concordance = 2;
@@ -2030,6 +2031,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --scfl please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--scflg") == 0) {
+                // OUTDATED: with gaps for historical reason
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify --scf or --gcf with --scflg";
+                params.ancestral_site_concordance = 3;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --scflg NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --scflg please";
                 continue;
             }
             if (strcmp(argv[cnt], "--scf1") == 0) {
