@@ -112,7 +112,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, int* rstream);
+    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, int* rstream, default_random_engine& generator);
     
     /**
     *  reset tree (by reset some variables of nodes)
@@ -189,18 +189,18 @@ protected:
     /**
         branch-specific evolution by multi threads
     */
-    void branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream);
+    void branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator);
     
     
     /**
         branch-specific evolution by the master thread
     */
-    void branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream);
+    void branchSpecificEvolutionMasterThread(int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator);
     
     /**
         simulate a sequence for a node from a specific branch
     */
-    void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, string lengths = "");
+    void simulateASequenceFromBranch(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator, string lengths = "");
     
     /**
         simulate a sequence for a node from a specific branch after all variables has been initializing
@@ -210,7 +210,7 @@ protected:
     /**
         initialize variables
     */
-    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache);
+    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, default_random_engine& generator);
     
     /**
         process after simulating sequences
@@ -220,7 +220,7 @@ protected:
     /**
         initialize variables (e.g., site-specific rate)
     */
-    virtual void initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence = false);
+    virtual void initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence = false);
     
     /**
         regenerate the root sequence if the user has specified specific state frequencies in branch-specific model
@@ -240,22 +240,22 @@ protected:
     /**
         handle indels
     */
-    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream);
+    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream, default_random_engine& generator);
     
     /**
         handle substitution events
     */
-    void handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream);
+    void handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream, default_random_engine& generator);
     
     /**
         handle insertion events, return the insertion-size
     */
-    int handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleInsertion(int &sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method, default_random_engine& generator);
     
     /**
         handle deletion events, return the deletion-size
     */
-    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method);
+    int handleDeletion(int sequence_length, vector<short int> &indel_sequence, double &total_sub_rate, vector<double> &sub_rate_by_site, SIMULATION_METHOD simulation_method, default_random_engine& generator);
     
     /**
         extract array of substitution rates and Jmatrix
@@ -271,7 +271,7 @@ protected:
     *  insert a new sequence into the current sequence
     *
     */
-    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence);
+    virtual void insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator);
     
     /**
     *  update internal sequences due to Indels
@@ -474,11 +474,6 @@ public:
         constructor
     */
     AliSimulator(Params *params, IQTree *tree, int expected_number_sites = -1, double new_partition_rate = 1);
-    
-    /**
-        deconstructor
-    */
-    ~AliSimulator();
     
     /**
     *  simulate sequences for all nodes in the tree

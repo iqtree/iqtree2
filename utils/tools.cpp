@@ -2998,6 +2998,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.aln_output_format = IN_FASTA;
                 else if (strcmp(format.c_str(), "NEXUS") == 0)
                     params.aln_output_format = IN_NEXUS;
+                else if (strcmp(format.c_str(), "MAPLE") == 0)
+                    params.aln_output_format = IN_MAPLE;
 				else
 					throw "Unknown output format";
 				continue;
@@ -6140,8 +6142,6 @@ inline T quantile(const vector<T>& v, const double q) {
 int init_random(int seed) {
     srand(seed);
     cout << "(Using rand() - Standard Random Number Generator)" << endl;
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return seed;
 }
 
@@ -6258,8 +6258,6 @@ int init_random(int seed) /* RAND4 */ {
         }
     }
 #endif
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 
@@ -6304,8 +6302,6 @@ int init_random(int seed, bool write_info, int** rstream) {
         }
     }
 #endif /* PARALLEL */
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 
@@ -7572,3 +7568,18 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
    }
    return sqrt(sum);
  }
+
+string getOutputNameWithExt(const InputType& format, const string& output_filepath)
+{
+    switch (format)
+    {
+        case IN_MAPLE:
+            return output_filepath + ".maple";
+        case IN_FASTA:
+            return output_filepath + ".fa";
+        case IN_PHYLIP:
+            return output_filepath + ".phy";
+        default:
+            return output_filepath + ".phy";
+    }
+}

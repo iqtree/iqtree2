@@ -69,7 +69,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segmen
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorInvar::initVariablesRateHeterogeneity(int sequence_length, bool regenerate_root_sequence)
+void AliSimulatorInvar::initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence)
 {
     initSiteSpecificRates(site_specific_rates, sequence_length);
 }
@@ -94,7 +94,7 @@ void AliSimulatorInvar::initSiteSpecificRates(vector<double> &site_specific_rate
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
+void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator)
 {
     // initialize new_site_specific_rates for new sequence
     vector<double> new_site_specific_rates;
@@ -104,5 +104,5 @@ void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &in
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, generator);
 }
