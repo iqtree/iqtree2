@@ -13,7 +13,32 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     cmaple::printCMapleCopyright(std::cout);
     
     // run an inference with cmaple
-    cmaple::executeCMaple(params.aln_file);
+    cmaple::inferTree(params.aln_file);
+    // cmaple::inferTree(params.aln_file, params.model_name);
+    /* cmaple::Params cmaple_params = cmaple::Params::getInstance();
+    cmaple::initDefaultValue(cmaple_params);
+    cmaple_params.overwrite_output = true;
+    cmaple::inferTree(params.aln_file, cmaple_params);*/
+    // cmaple::extractDiff(params.aln_file);
+    /*string ref_str = "ref.fa";
+    char* ref = new char(ref_str.length() + 1);
+    strcpy(ref, ref_str.c_str());
+    cmaple::extractDiff(params.aln_file, ref);*/
+    // cmaple::reconstructAln(params.aln_file);
+    // cmaple::extendTree(params.user_file, params.aln_file);
+    // cmaple::extendTree(params.user_file, params.aln_file, params.model_name);
+    /*cmaple::Params cmaple_params = cmaple::Params::getInstance();
+    cmaple::initDefaultValue(cmaple_params);
+    cmaple_params.overwrite_output = true;
+    cmaple::extendTree(params.user_file, params.aln_file, cmaple_params);*/
+    // cmaple::computeBranchSupports(params.aln_file);
+    // cmaple::computeBranchSupports(params.aln_file, params.num_threads, 1);
+    // cmaple::computeBranchSupports(params.user_file, params.aln_file, params.num_threads, 1);
+    // cmaple::computeBranchSupports(params.user_file, params.aln_file, params.model_name, params.num_threads, 1);
+    /*cmaple::Params cmaple_params = cmaple::Params::getInstance();
+    cmaple::initDefaultValue(cmaple_params);
+    cmaple_params.overwrite_output = true;
+    cmaple::computeBranchSupports(params.user_file, params.aln_file, cmaple_params, params.num_threads, 1);*/
     
     MPIHelper::getInstance().barrier();
     auto start = getRealTime();
