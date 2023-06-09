@@ -12,8 +12,19 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     // call a simple function
     cmaple::printCMapleCopyright(std::cout);
     
+    // init CMaple
+    // cmaple::init();
+    
+    // set the aln
+    cmaple::setAln(params.aln_file);
+    
+    // set the model
+    cmaple::setModel(params.model_name);
+    
     // run an inference with cmaple
-    cmaple::inferTree(params.aln_file);
+    cmaple::runInference();
+    
+    // cmaple::inferTree(params.aln_file);
     // cmaple::inferTree(params.aln_file, params.model_name);
     /* cmaple::Params cmaple_params = cmaple::Params::getInstance();
     cmaple::initDefaultValue(cmaple_params);
