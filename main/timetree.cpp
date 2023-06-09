@@ -7,6 +7,11 @@
 
 #include "timetree.h"
 
+#include <Eigen/Eigenvalues>
+#include <unsupported/Eigen/MatrixFunctions>
+using namespace Eigen;
+using Eigen:: Map;
+
 #ifdef USE_LSD2
 #include "lsd2/src/lsd.h"
 #endif
@@ -332,6 +337,73 @@ void runLSD2(PhyloTree *tree) {
 }
 #endif
 
+void computeHessian(PhyloTree *tree){
+
+    cout << "----- Computing derivatives---------" << endl;
+
+    size_t orig_nptn = tree->aln->size();
+    size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+    size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
+    size_t n_branches = tree->branchNum;
+    double *gradient_vector = tree->gradient_vector;
+    double *G = tree->G_matrix;
+    double *hessian_diagonal = tree->hessian_diagonal;
+
+    cout << "------- Gradient vector  -----------" << endl;
+    Map<RowVectorXd> gradient_vector_eigen(gradient_vector, n_branches);
+    cout << gradient_vector_eigen << endl;
+
+    cout << "--------- G matrix  ----------------" << endl;
+
+    MatrixXd G_matrix = Map<MatrixXd, 0>(G, n_branches, nPtn);
+    cout << G_matrix << endl;
+
+    cout << "---------- G Transpose  ------------" << endl;
+    MatrixXd G_matrix_t = G_matrix.transpose();
+    cout << G_matrix_t << endl;
+
+    cout << "----- Pattern frequency vector ------" << endl;
+    // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
+    Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
+    cout<< ptn_freq_diagonal << endl;
+    cout << "------------ Hessian -----------------" << endl;
+    MatrixXd hessian = G_matrix*ptn_freq_diagonal.asDiagonal()*G_matrix_t;
+    hessian = (-1)* hessian;
+    cout<< hessian << endl;
+
+    cout << "--- Hessian diagonal with analytical values ----" << endl;
+    hessian.diagonal() =  Map<VectorXd>(hessian_diagonal, n_branches).array();
+    cout<< hessian << endl;
+
+    cout << "------- Hessian diagonal vector -------" << endl;
+    Map<VectorXd> hessian_diagonal_vector(tree->hessian_diagonal, n_branches);
+    cout<< hessian_diagonal_vector << endl;
+
+
+    string outFileName = ((string) tree->params->out_prefix + ".gh");
+    ofstream outfile(outFileName);
+    outfile << gradient_vector_eigen << endl << endl;
+    outfile << hessian << endl;
+    outfile.close();
+
+
+//    aligned_free(G);
+//    aligned_free(tree->G_matrix);
+
+    cout << "---- Hessian computation completed -----" << endl;
+
+
+}
+
+void runMCMCTree(PhyloTree *tree) {
+    string basename = (string)Params::getInstance().out_prefix + ".timetree";
+    cout << "Building time tree by MCMCTree with command:" << endl;
+    computeHessian(tree);
+    cout << "Completed time-tree generation." << endl;
+
+
+}
+
 void doTimeTree(PhyloTree *tree) {
 
     cout << "--- Start phylogenetic dating ---" << endl;
@@ -340,6 +412,10 @@ void doTimeTree(PhyloTree *tree) {
 #ifdef USE_LSD2
     if (Params::getInstance().dating_method == "LSD") {
         runLSD2(tree);
+        cout << "--- End phylogenetic dating ---" << endl;
+        return;
+    } else if (Params::getInstance().dating_method == "mcmctree") {
+        runMCMCTree(tree);
         cout << "--- End phylogenetic dating ---" << endl;
         return;
     }

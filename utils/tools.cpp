@@ -5107,11 +5107,15 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--dating") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --dating LSD";
+                    throw "Use --dating LSD or --dating mcmctree";
                 params.dating_method = argv[cnt];
-                if (params.dating_method != "LSD")
-                    throw "Currently only LSD (least-square dating) method is supported";
-                continue;
+                if (params.dating_method != "LSD"){
+                    if (params.dating_method != "mcmctree"){
+                        throw "Currently only LSD (least-square dating) method or MCMCTree method is supported";
+                        continue;
+                    }
+
+                }
             }
 
             if (strcmp(argv[cnt], "--date") == 0) {
@@ -5359,9 +5363,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 err += "\" option.";
                 throw err;
             } else {
-                if (params.user_file == NULL)
-                    params.user_file = argv[cnt];
-                else
+//                if (params.user_file == NULL)
+//                    params.user_file = argv[cnt];
+//                else
                     params.out_file = argv[cnt];
             }
         }
