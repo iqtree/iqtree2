@@ -239,6 +239,14 @@ public:
                                 , bool append = false, const char *aln_site_list = NULL
                                 , int exclude_sites = 0, const char *ref_seq_name = NULL);
 
+    /**
+     * print the super-alignment to a stream
+     * @param out output stream
+     * @param print_taxid true to print taxa IDs instead of names, default: false
+     */
+    
+    void printCombinedAlignment(ostream &out, bool print_taxid = false);
+
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name
 	 * @param prefix prefix of output files

@@ -82,7 +82,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, 
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, std::ios_base::openmode open_mode = std::ios_base::out);
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, vector<SeqType>& seqtypes, vector<std::string>& aln_names, std::ios_base::openmode open_mode = std::ios_base::out);
 
 /**
 *  clear out all sequences in the super_tree
@@ -117,5 +117,15 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 *  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
 */
 void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name);
+
+/**
+*  output a treefile with internal node names when outputting internal sequences
+*/
+void outputTreeWithInternalNames(AliSimulator* alisimulator);
+
+/**
+*  set internal node name as the node's id
+*/
+void updateInternalNodeName(Node *node, Node *dad = NULL);
 
 #endif /* alisim_h */

@@ -404,7 +404,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_MAPLE, IN_OTHER
 };
 
   // TODO DS: SAMPLING_SAMPLED is DEPRECATED and it is not possible to run PoMo with SAMPLING_SAMPLED.
@@ -2512,11 +2512,6 @@ public:
     double alisim_simulation_thresh;
     
     /**
-    *  random generator
-    */
-    default_random_engine generator;
-    
-    /**
     *  messages which are delayed to show
     */
     string delay_msgs;
@@ -2590,7 +2585,11 @@ public:
     *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
     */
     bool no_merge;
-
+    
+    /**
+    *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
+    */
+    int alignment_id;
 };
 
 /**
@@ -2720,6 +2719,11 @@ std::istream& safeGetline(std::istream& is, std::string& t);
         @return the random branch length
  */
 double randomLen(Params &params);
+
+/**
+    Try to generate a branch length but it could be out of the range (params.min_len, params.max_len)
+ */
+double tryGeneratingBlength(Params &params);
 
 /**
         Compute the logarithm of the factorial of an integer number
@@ -3527,6 +3531,11 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // Calculate the Frobenius norm of an N x N matrix M (flattened, rows
 // concatenated) and linearly scaled by SCALE.
 double frob_norm (double m[], int n, double scale=1.0);
+
+/**
+    concatenate the output file name with corresponding extension (for AliSim)
+*/
+string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
 
 #endif
