@@ -2693,7 +2693,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
     }
 
-    size_t nBranch = 2*aln->getNSeq() - 3;
+    size_t nBranch = branchNum;
     gradient_vector = aligned_alloc<double>(nBranch);
     hessian_diagonal = aligned_alloc<double>(nBranch);
 

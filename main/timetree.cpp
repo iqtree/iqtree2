@@ -381,7 +381,12 @@ void computeHessian(PhyloTree *tree){
 
 
     string outFileName = ((string) tree->params->out_prefix + ".gh");
+    DoubleVector branchLengths;
+    tree->saveBranchLengths(branchLengths);
+    Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
     ofstream outfile(outFileName);
+    outfile << tree->getTreeString() << endl << endl;
+    outfile << branch_lengths_vector << endl << endl;
     outfile << gradient_vector_eigen << endl << endl;
     outfile << hessian << endl;
     outfile.close();
