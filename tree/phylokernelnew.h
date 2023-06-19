@@ -2378,7 +2378,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_lh,all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
 #endif
     for (int packet_id = 0; packet_id < num_packets; packet_id++) {
-        VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
+        VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0), hessian_ddf(0,0);
         size_t ptn_lower = limits[packet_id];
         size_t ptn_upper = limits[packet_id+1];
 
@@ -2504,12 +2504,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     VectorClass tmp2 = ddf_frac * freq;
                     my_df += tmp1;
                     my_ddf += nmul_add(tmp1, df_frac, tmp2);
-//                    std::cout << G_matrix[0] << std::endl;
-//                    std::cout << G_matrix[1] << std::endl;
-//                    size_t current_index = get_safe_upper_limit(branch_id*orig_nptn);
-//                    ddf_frac.store(&G_matrix[current_index+ptn]);
+                    hessian_ddf = nmul_add(df_frac, df_frac, ddf_frac);
                     //todo: need to do further optimization with store_a in vector class
-                    ddf_frac.store(&G_matrix[branch_id * nptn + ptn]);
+                    hessian_ddf.store(&G_matrix[branch_id * nptn + ptn]);
 
                 } else {
                     // ascertainment bias correction
@@ -2560,6 +2557,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     } // FOR packet
     gradient_vector[branch_id] = all_df;
     hessian_diagonal[branch_id] = all_ddf;
+    df_ddf_frac[branch_id] = all_df/all_ddf;
 
     // mark buffer as computed
     theta_computed = true;

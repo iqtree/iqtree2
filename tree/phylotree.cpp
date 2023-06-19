@@ -138,6 +138,10 @@ void PhyloTree::init() {
     isSummaryBorrowed = false;
     progress = nullptr;
     progressStackDepth = 0;
+    gradient_vector = nullptr;
+    hessian_diagonal = nullptr;
+    G_matrix = nullptr;
+    df_ddf_frac = nullptr;
 }
 
 void PhyloTree::initSequences(Node* node, Node* dad)
@@ -264,6 +268,14 @@ PhyloTree::~PhyloTree() {
         pllAlignmentDataDestroy(pllAlignment);
     if (pllInst)
         pllDestroyInstance(pllInst);
+    if(gradient_vector)
+        aligned_free(gradient_vector);
+    if(hessian_diagonal)
+        aligned_free(hessian_diagonal);
+    if(G_matrix)
+        aligned_free(G_matrix);
+    if(df_ddf_frac)
+        aligned_free(df_ddf_frac);
 
     pllPartitions = NULL;
     pllAlignment = NULL;
@@ -896,7 +908,16 @@ void PhyloTree::initializeAllPartialLh() {
     size_t mem_size = get_safe_upper_limit(getAlnNPattern()) + max(get_safe_upper_limit(numStates),
         get_safe_upper_limit(model_factory->unobserved_ptns.size()));
 
-//    G_matrix = aligned_alloc<double>(mem_size*(2*aln->getNSeq()-3));
+    if(!gradient_vector)
+        gradient_vector = aligned_alloc<double>(branchNum);
+    if(!hessian_diagonal)
+        hessian_diagonal = aligned_alloc<double>(branchNum);
+    if(!G_matrix) {
+        size_t g_matrix_size = branchNum * mem_size;
+        G_matrix = aligned_alloc<double>(g_matrix_size);
+    }
+    if(!df_ddf_frac)
+        df_ddf_frac = aligned_alloc<double>(branchNum);
 
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
@@ -2692,17 +2713,6 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     if (verbose_mode >= VB_MAX) {
         cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
     }
-
-    size_t nBranch = branchNum;
-    gradient_vector = aligned_alloc<double>(nBranch);
-    hessian_diagonal = aligned_alloc<double>(nBranch);
-
-    size_t orig_nptn = aln->size();
-    size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
-    size_t nPtn = max_orig_nptn + model_factory->unobserved_ptns.size();
-
-    size_t g_matrix_size = nBranch*nPtn;
-    G_matrix = aligned_alloc<double>(g_matrix_size);
 
     NodeVector nodes, nodes2;
     computeBestTraversal(nodes, nodes2);

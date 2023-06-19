@@ -1577,6 +1577,11 @@ public:
      * */
     double *hessian_diagonal;
 
+    /**
+    df to ddf fraction array for storing df/ddf elements for the debugging purpose
+    * */
+    double *df_ddf_frac;
+
 
 
     /****************************************************************************
