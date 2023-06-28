@@ -7,7 +7,6 @@ This directory contains tests for the IQ-TREE project. The tests are written in 
 - Python 3.11 or higher
 - C++ Compiler (e.g., GCC, Clang)
 - CMake
-- Git
 
 ### Building the iqtree2 Binary
 
