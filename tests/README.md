@@ -68,7 +68,27 @@ This will create the `iqtree2` binary in the `build` directory.
     pip install -r requirements.txt
     ```
 
-4. Run the tests using `pytest`.
+## Running the Tests
+
+1. Activate the virtual environment.
+
+    - On Windows:
+
+        ```sh
+        .\venv\Scripts\activate
+        ```
+
+    - On macOS and Linux:
+
+        ```sh
+        source venv/bin/activate
+        ```
+2. Navigate to the `tests` directory.
+    
+        ```sh
+        cd tests
+        ```
+3. Run the tests using `pytest`.
 
     ```sh
     pytest
