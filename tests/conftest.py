@@ -77,12 +77,14 @@ def temp_dir(request, repo_paths):
         for data_file in request.param:
             shutil.copy(data_dir / data_file, data_subdir)
 
-    # Yield control to the test function
-    yield temp_path
-
-    # Change back to the original directory
-    os.chdir(original_dir)
-    
+    try:
+        # Yield control to the test function
+        yield temp_path
+    finally:
+        # Change back to the original directory and remove the temporary directory
+        os.chdir(original_dir)
+        shutil.rmtree(temp_path)
+            
 @pytest.fixture(scope="function")
 def data_files(request):
     """
