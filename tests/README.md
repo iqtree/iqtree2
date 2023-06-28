@@ -42,12 +42,44 @@ This will create the `iqtree2` binary in the `build` directory.
 
 ### Setting Up a Virtual Environment
 
-1. It is recommended to create a virtual environment to isolate the dependencies. Navigate to the project directory and run:
+1. Navigate to the `tests` directory.
+    
+        ```sh
+        cd tests
+        ```
+2. It is recommended to create a virtual environment to isolate the dependencies. Navigate to the project directory and run:
 
     ```sh
     python -m venv venv
     ```
 
+3. Activate the virtual environment.
+
+    - On Windows:
+
+        ```sh
+        .\venv\Scripts\activate
+        ```
+
+    - On macOS and Linux:
+
+        ```sh
+        source venv/bin/activate
+        ```
+
+4. Install the Python dependencies from the `requirements.txt` file.
+
+    ```sh
+    pip install -r requirements.txt
+    ```
+
+## Running the Tests
+
+1. Navigate to the `tests` directory.
+    
+        ```sh
+        cd tests
+        ```
 2. Activate the virtual environment.
 
     - On Windows:
@@ -60,33 +92,6 @@ This will create the `iqtree2` binary in the `build` directory.
 
         ```sh
         source venv/bin/activate
-        ```
-
-3. Install the Python dependencies from the `requirements.txt` file.
-
-    ```sh
-    pip install -r requirements.txt
-    ```
-
-## Running the Tests
-
-1. Activate the virtual environment.
-
-    - On Windows:
-
-        ```sh
-        .\venv\Scripts\activate
-        ```
-
-    - On macOS and Linux:
-
-        ```sh
-        source venv/bin/activate
-        ```
-2. Navigate to the `tests` directory.
-    
-        ```sh
-        cd tests
         ```
 3. Run the tests using `pytest`.
 
