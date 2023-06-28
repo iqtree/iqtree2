@@ -34,3 +34,4 @@ test_scripts/
 vectorclass/
 zlib-1.2.7/
 __pycache__/
+venv/
