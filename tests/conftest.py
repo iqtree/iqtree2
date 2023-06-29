@@ -4,66 +4,65 @@ import shutil
 import os
 from pathlib import Path
 
+
 @pytest.fixture(scope="session")
 def repo_paths():
     """
     Determine the repository root and other important paths.
-    
+
     This fixture determines the repository root by searching for the .git directory
     and defines other important paths relative to the repository root.
-    
+
     Returns
     -------
     dict
         A dictionary containing paths to the repository root, build directory,
         tests directory, and data directory. The keys are 'repo_root', 'build_dir',
-        'tests_dir', and 'data_dir'.
+        'tests_root', and 'tests_data'.
     """
 
-   
     # Find the repository root by searching for the .git directory
     current_dir = Path(__file__).parent
     repo_root = current_dir
-    while repo_root != Path('/') and not (repo_root / '.git').is_dir():
+    while repo_root != Path("/") and not (repo_root / ".git").is_dir():
         repo_root = repo_root.parent
-    
+
     # Define other important paths
-    build_dir = repo_root / 'build'
-    tests_dir = repo_root / 'tests'
-    data_dir = tests_dir / 'data'
-    
+    build_dir = repo_root / "build"
+    tests_root = repo_root / "tests"
+    tests_data = tests_root / "data"
+
     # Return the paths in a dictionary
     return {
-        'repo_root': repo_root,
-        'build_dir': build_dir,
-        'tests_dir': tests_dir,
-        'data_dir': data_dir
+        "repo_root": repo_root,
+        "build_dir": build_dir,
+        "tests_root": tests_root,
+        "tests_data": tests_data,
     }
+
 
 @pytest.fixture(scope="function")
 def temp_dir(request, repo_paths):
     """
-    Create a temporary directory with a data subdirectory for running tests.
-    
-    This fixture creates a temporary directory and a data subdirectory within it
-    inside the /tests directory.
-    
-    If the test has declared specific data files, they are copied to the data subdirectory.
+    Create a temporary directory with a data subdirectory, change to it for running tests, and clean up.
+
+    This fixture creates a temporary directory and a data subdirectory within it,
+    and changes the current working directory to this temporary directory before running tests.
+    After the tests are complete, it changes back to the original directory and removes the
+    temporary directory.
 
     Yields
     ------
-    pathlib.Path
-        The file path of the temporary directory.
+    dict
+        The updated repo_paths dictionary with the paths to the temporary directory and its data subdirectory.
     """
-    
+
     # Save the current working directory
     original_dir = os.getcwd()
-    
-    # Create a temporary directory inside the /tests directory
-    tests_dir = repo_paths['tests_dir']
-    temp_path = Path(tempfile.mkdtemp(dir=tests_dir))
+    tests_root = repo_paths["tests_root"]
 
-    # Change the current working directory to the temporary directory
+    # Create a temporary directory and change to it
+    temp_path = Path(tempfile.mkdtemp(dir=tests_root))
     os.chdir(temp_path)
 
     # Create a data subdirectory
@@ -72,31 +71,31 @@ def temp_dir(request, repo_paths):
 
     # If the test has declared specific data files, copy them to the data subdirectory
     if hasattr(request, "param"):
-        data_dir = repo_paths['data_dir']
+        data_dir = repo_paths["data_dir"]
 
         for data_file in request.param:
             shutil.copy(data_dir / data_file, data_subdir)
 
-    try:
-        # Yield control to the test function
-        yield temp_path
-    finally:
-        # Change back to the original directory and remove the temporary directory
-        os.chdir(original_dir)
-        shutil.rmtree(temp_path)
-            
+    # Yield control to the test function
+    yield repo_paths
+
+    # Change back to the original directory and remove the temporary directory
+    os.chdir(original_dir)
+    shutil.rmtree(temp_path)
+
+
 @pytest.fixture(scope="function")
 def data_files(request):
     """
     Fixture to pass data files as parameters to the test function.
-    
+
     This fixture is used in conjunction with pytest.mark.parametrize to pass
     data files as parameters to the test function. The data files should be
-    specified as a list of filenames.  Setting indirect=True in the arguments 
-    of the pytest.mark.parametrize decorator indicates that the data_files will 
-    be passed through to the temp_dir fixture for copying to the temporary data 
+    specified as a list of filenames.  Setting indirect=True in the arguments
+    of the pytest.mark.parametrize decorator indicates that the data_files will
+    be passed through to the temp_dir fixture for copying to the temporary data
     directory.
-    
+
 
     Parameters
     ----------
@@ -106,7 +105,7 @@ def data_files(request):
     Returns
     -------
     list
-        The list of data files passed as parameters.
+        The list of data files passed as parameters, or an empty list if no data files are specified.
     """
-    
-    return request.param
+
+    return getattr(request, "param", [])
