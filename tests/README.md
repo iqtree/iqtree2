@@ -1,108 +1,20 @@
 # IQ-TREE Testing Directory
 
-This directory contains tests for the IQ-TREE project. The tests are written in Python using the `pytest` framework. This document provides instructions on how to set up the environment and run the tests.
-
-## Prerequisites
-
-- Python 3.11 or higher
-- C++ Compiler (e.g., GCC, Clang)
-- CMake
-
-### Building the iqtree2 Binary
-
-Before running the tests, you need to build the `iqtree2` binary. Navigate to the root of the IQ-TREE repository and run the following commands:
-
-```sh
-rm -rf build
-mkdir -p build
-cd build
-cmake ..
-make
-```
-
-This will create the `iqtree2` binary in the `build` directory.
-
-## Setting Up the Environment
-
-### Installing Python 3.11
-
-1. Go to the official Python downloads page: [Python Downloads](https://www.python.org/downloads/).
-
-2. Download Python 3.11 for your operating system (Windows, macOS, or Linux).
-
-3. Run the installer and follow the instructions to install Python 3.11 on your system.
-
-4. Verify the installation by opening a terminal or command prompt and running:
-
-    ```sh
-    python --version
-    ```
-
-    This should display the version of Python that you installed.
-
-### Setting Up a Virtual Environment
-
-1. Navigate to the `tests` directory.
-    
-        ```sh
-        cd tests
-        ```
-2. It is recommended to create a virtual environment to isolate the dependencies. Navigate to the project directory and run:
-
-    ```sh
-    python -m venv venv
-    ```
-
-3. Activate the virtual environment.
-
-    - On Windows:
-
-        ```sh
-        .\venv\Scripts\activate
-        ```
-
-    - On macOS and Linux:
-
-        ```sh
-        source venv/bin/activate
-        ```
-
-4. Install the Python dependencies from the `requirements.txt` file.
-
-    ```sh
-    pip install -r requirements.txt
-    ```
-
-## Running the Tests
-
-1. Navigate to the `tests` directory.
-    
-        ```sh
-        cd tests
-        ```
-2. Activate the virtual environment.
-
-    - On Windows:
-
-        ```sh
-        .\venv\Scripts\activate
-        ```
-
-    - On macOS and Linux:
-
-        ```sh
-        source venv/bin/activate
-        ```
-3. Run the tests using `pytest`.
-
-    ```sh
-    pytest
-    ```
+This directory contains tests for the IQ-TREE project. The tests are written in Python using the `pytest` framework and are located in the `/tests` path. Each test script contains one or more test functions, and are named `test_<feature being tested>.py`. The `pytest` framework is used to execute these test functions and report the results.
 
 ## Directory Structure
 
 - `tests/`: Contains the Python test scripts.
 - `tests/data`: Contains sample data files used for testing.
 - `tests/bin`: Contains binaries including the iqtree version 1 binary.
-- `tests/conftest.py`: Contains fixtures for the pytest framework.
+- `tests/conftest.py`: Contains fixtures for the pytest framework. Fixtures are reusable pieces of code that can be used to set up resources (like temporary directories), as well as pass data or configurations to tests.
 - `requirements.txt`: Contains the Python dependencies required for testing.
+
+## Getting Started
+
+- [How to write tests](docs/writing_tests.md)
+- [How to run tests](docs/running_tests.md)
+
+## Contributing
+
+Contributions to the test suite are welcome. If you are implementing new features or fixing bugs in the IQ-TREE code, please consider adding tests that verify the correctness of your changes.
