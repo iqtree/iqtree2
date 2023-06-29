@@ -1,2 +1,3 @@
 pytest
 cogent3
+black
