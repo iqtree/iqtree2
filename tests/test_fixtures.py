@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from .utils import run_test_using
 
+
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
 )
@@ -40,7 +41,7 @@ def test_fixtures(temp_dir, data_files, repo_paths):
 
     # Assert that the data_files specified are in the <temp>/data subdirectory
     for data_file in data_files:
-        data_file_path = temp_dir / 'data' / data_file
+        data_file_path = temp_dir / "data" / data_file
         assert data_file_path.is_file()
 
     # Assert that repo_paths build_dir, tests_dir, and data_dir are all ultimately in the path below the repo_root
@@ -48,6 +49,7 @@ def test_fixtures(temp_dir, data_files, repo_paths):
     assert repo_paths["build_dir"].parts[: len(repo_root.parts)] == repo_root.parts
     assert repo_paths["tests_root"].parts[: len(repo_root.parts)] == repo_root.parts
     assert repo_paths["tests_data"].parts[: len(repo_root.parts)] == repo_root.parts
+
 
 if __name__ == "__main__":
     run_test_using(__file__)

@@ -1,5 +1,6 @@
 from cogent3 import load_aligned_seqs, get_model, make_tree, open_
 
+
 def get_cogent3_result():
     aln = load_aligned_seqs("three-ungapped.fa", moltype="dna")
     tree = make_tree("(Human,Rhesus,Mouse)")

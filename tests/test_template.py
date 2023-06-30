@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 import pytest
-from .utils import run_test_using 
+from .utils import run_test_using
+
 
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
@@ -26,6 +27,7 @@ def test_sample_feature(temp_dir, data_files, repo_paths):
 
     # Add your test logic here
     assert True
+
 
 if __name__ == "__main__":
     run_test_using(__file__)

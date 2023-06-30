@@ -106,4 +106,3 @@ def data_files(request):
         The list of data files passed as parameters, or an empty list if no data files are specified.
     """
     return request.param if hasattr(request, "param") else []
-
