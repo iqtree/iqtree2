@@ -42,7 +42,7 @@ def repo_paths():
 
 
 @pytest.fixture(scope="function")
-def temp_dir(request, repo_paths):
+def temp_dir(request, data_files, repo_paths):
     """
     Create a temporary directory with a data subdirectory, change to it for running tests, and clean up.
 
@@ -69,15 +69,13 @@ def temp_dir(request, repo_paths):
     data_subdir = temp_path / "data"
     data_subdir.mkdir()
 
-    # If the test has declared specific data files, copy them to the data subdirectory
-    if hasattr(request, "param"):
-        data_dir = repo_paths["data_dir"]
-
-        for data_file in request.param:
-            shutil.copy(data_dir / data_file, data_subdir)
+    # Copy the files specified in data_files to the data subdirectory
+    data_dir = repo_paths["tests_data"]
+    for data_file in data_files:
+        shutil.copy(data_dir / data_file, data_subdir)
 
     # Yield control to the test function
-    yield repo_paths
+    yield temp_path
 
     # Change back to the original directory and remove the temporary directory
     os.chdir(original_dir)
@@ -107,5 +105,5 @@ def data_files(request):
     list
         The list of data files passed as parameters, or an empty list if no data files are specified.
     """
+    return request.param if hasattr(request, "param") else []
 
-    return getattr(request, "param", [])
