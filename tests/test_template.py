@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import pytest
-from utils import run_test_using 
+from .utils import run_test_using 
 
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
