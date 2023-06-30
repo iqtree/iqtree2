@@ -27,3 +27,32 @@ def run_test_using(filename):
     subprocess.check_call(
         [sys.executable, "-m", "pytest", "--rootdir", str(root_dir), str(current_path)]
     )
+
+def iqtree2_log_liklihood(from_yml_file):
+    from yaml import load as load_yml, Loader
+    from numpy.testing import assert_allclose
+    from cogent3 import load_aligned_seqs, get_model, make_tree, open_
+    data = load_yml(open_(from_yml_file), Loader=Loader)
+    # getting the key for the best tree
+    best = min(data["CandidateSet"])
+    # extract log-likelihood
+    lnL = float(data["CandidateSet"][best].split()[0])
+    return lnL
+
+def exec_command(cmnd, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+    """executes shell command and returns stdout if completes exit code 0
+
+    Parameters
+    ----------
+
+    cmnd : str
+      shell command to be executed
+    stdout, stderr : streams
+      Default value (PIPE) intercepts process output, setting to None
+      blocks this."""
+    proc = subprocess.Popen(cmnd, shell=True, stdout=stdout, stderr=stderr)
+    out, err = proc.communicate()
+    if proc.returncode != 0:
+        msg = err
+        raise RuntimeError(f"FAILED: {cmnd}\n{msg}")
+    return out.decode("utf8") if out is not None else None
