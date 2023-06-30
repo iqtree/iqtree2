@@ -12,11 +12,16 @@ When writing a new test, you can use the provided `test_template.py` as a starti
 
 2. **Update the Docstring**: Update the docstring at the beginning of the test function to reflect what your test is doing.
 
-3. **Write the Test**: Replace the sample test logic in the `test_sample_feature` function with your own test logic to assert all the conditions that must be true for your test to pass.
+3. **Write the Test**: Replace the sample test logic in the `test_sample_feature` function with your own test logic to assert all the conditions that must be true for your test to pass.  keeping the following block so the test can be run directly.
+```Python
+if __name__ == "__main__":
+    run_test_using(__file__)
+```
 
-4. **Run the Test**: Run the test using `python test_example_feature.py` to verify that it passes.
 
-5. **Run All Tests**: Run all tests using `pytest` to verify that your new test does not break any existing tests.
+4. **Run the Test**: Run the test directly using `python test_example_feature.py` to verify that it passes.
+
+5. **Run All Tests**: Run all tests using `pytest` in the `\tests` root directory to verify that your new test does not break any existing tests.
 
 6. **Auto-format the code**: Run `black .` to auto-format your code to ensure that it conforms to Python best practice style guidelines.
 
