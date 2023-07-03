@@ -12,7 +12,7 @@ def test_iqtree_simple(data_files, temp_dir, repo_paths):
     # need better determination of path
     build_path = repo_paths["build_dir"]
     cmnd = build_path / "iqtree2 -s data/three-ungapped.fa -m HKY -redo"
-    _ = exec_command(cmnd)
+    _ = exec_command(str(cmnd))
     lnL = iqtree2_log_liklihood(outpath)
     # cogent3 value
     c3_lf = get_cogent3_result()

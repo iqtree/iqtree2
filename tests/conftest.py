@@ -34,8 +34,8 @@ def repo_paths():
 
     # Return the paths in a dictionary
     return {
-        "repo_root": repo_root,
-        "build_dir": build_dir,
+        "repo_root": repo_root, 
+        "build_dir": build_dir, # iqtree2
         "tests_root": tests_root,
         "tests_data": tests_data,
     }
