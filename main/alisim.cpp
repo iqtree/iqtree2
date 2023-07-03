@@ -9,47 +9,31 @@
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
-    // call a simple function
-    cmaple::printCMapleCopyright(std::cout);
+    std::vector<CMaple> instances;
     
-    // init CMaple
-    // cmaple::init();
+    // test default constructor
+    instances.push_back(CMaple());
     
-    // set the aln
-    cmaple::setAln(params.aln_file);
-    
-    // set the model
-    cmaple::setModel(params.model_name);
-    
-    // run an inference with cmaple
-    cmaple::runInference();
-    
-    // cmaple::inferTree(params.aln_file);
-    // cmaple::inferTree(params.aln_file, params.model_name);
-    /* cmaple::Params cmaple_params = cmaple::Params::getInstance();
-    cmaple::initDefaultValue(cmaple_params);
+    // test constructor with params
+    cmaple::Params cmaple_params = cmaple::Params();
+    cmaple_params.aln_path = "test_2K.diff";
     cmaple_params.overwrite_output = true;
-    cmaple::inferTree(params.aln_file, cmaple_params);*/
-    // cmaple::extractDiff(params.aln_file);
-    /*string ref_str = "ref.fa";
-    char* ref = new char(ref_str.length() + 1);
-    strcpy(ref, ref_str.c_str());
-    cmaple::extractDiff(params.aln_file, ref);*/
-    // cmaple::reconstructAln(params.aln_file);
-    // cmaple::extendTree(params.user_file, params.aln_file);
-    // cmaple::extendTree(params.user_file, params.aln_file, params.model_name);
-    /*cmaple::Params cmaple_params = cmaple::Params::getInstance();
-    cmaple::initDefaultValue(cmaple_params);
-    cmaple_params.overwrite_output = true;
-    cmaple::extendTree(params.user_file, params.aln_file, cmaple_params);*/
-    // cmaple::computeBranchSupports(params.aln_file);
-    // cmaple::computeBranchSupports(params.aln_file, params.num_threads, 1);
-    // cmaple::computeBranchSupports(params.user_file, params.aln_file, params.num_threads, 1);
-    // cmaple::computeBranchSupports(params.user_file, params.aln_file, params.model_name, params.num_threads, 1);
-    /*cmaple::Params cmaple_params = cmaple::Params::getInstance();
-    cmaple::initDefaultValue(cmaple_params);
-    cmaple_params.overwrite_output = true;
-    cmaple::computeBranchSupports(params.user_file, params.aln_file, cmaple_params, params.num_threads, 1);*/
+    instances.emplace_back(std::move(cmaple_params));
+    
+    // test constructor with aln
+    instances.emplace_back("test_2K.diff", "MAPLE", "DNA");
+
+    // run Inference
+    instances[0].setAlignment("test_1K.diff");
+    instances[0].overwriteOutputs(true);
+    instances[0].runInference();
+    instances[0].extractFASTA("test_1K.diff", "test_1K.diff.fa");
+    
+    instances[1].runInference();
+    
+    instances[2].overwriteOutputs(true);
+    instances[2].runInference();
+
     
     MPIHelper::getInstance().barrier();
     auto start = getRealTime();
