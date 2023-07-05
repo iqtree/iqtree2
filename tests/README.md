@@ -14,6 +14,7 @@ This directory contains tests for the IQ-TREE project. The tests are written in 
 
 - [How to write tests](docs/writing_tests.md)
 - [How to run tests](docs/running_tests.md)
+- [Regression tests to be ported](docs/legacy_tests.md)
 
 ## Contributing
 
