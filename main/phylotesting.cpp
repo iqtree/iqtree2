@@ -3367,13 +3367,8 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
 
         for (i=0; i<model_names.size(); i++) {
             string new_model_str;
-            if (action == 3) {
-                if (changeModel(model_str, new_model_str, model_names[i], class_k))
-                    candidate_models.push_back(CandidateModel(new_model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
-            } else {
-                addModel(model_str, new_model_str, model_names[i]);
-                candidate_models.push_back(CandidateModel(new_model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
-            }
+            addModel(model_str, new_model_str, model_names[i]);
+            candidate_models.push_back(CandidateModel(new_model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
         }
 
         skip_all_when_drop = false;
@@ -3557,7 +3552,7 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     } while (better_model);
     
     best_subst_name = model_str;
-
+    
     if (params.opt_rhas_again) {
         // Step 4: estimate the RHAS model again
         action = 1; // estimating the RHAS model
@@ -3599,12 +3594,14 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     else
         optimiseQMixModel_method_update(params, iqtree, model_info, model_str);
 
-    cout << endl << "** The result of the optimization of Q-mixture model **" << endl;
-    cout << "Best-fit Q-Mixture model: " << model_str << endl << endl;
+    cout << "-------------------------------------------------------" << endl;
+    cout << "  Best-fit Q-Mixture model: " << model_str << endl;
+    cout << "-------------------------------------------------------" << endl;
+
+    params.model_name = model_str;
+    iqtree->aln->model_name = model_str;
 
     // create a new IQTree object for this mixture model
-    params.model_name = model_str;
-    cout << "Creating a new IQTree object for model: " << model_str << endl;
     // allocate heterotachy tree if neccessary
     int pos = posRateHeterotachy(iqtree->aln->model_name);
     if (params.num_mixlen > 1) {
