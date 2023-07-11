@@ -3514,7 +3514,11 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
 
     // Step 2: do tree search for this single-class model
+    // disable the bootstrapping
+    int orig_gbo_replicates = params.gbo_replicates;
+    params.gbo_replicates = 0;
     runTreeReconstruction(params, iqtree);
+    params.gbo_replicates = orig_gbo_replicates;
     curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
     curr_loglike = iqtree->getCurScore();
     curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
