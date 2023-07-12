@@ -3334,6 +3334,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         skip_all_when_drop = false;
     } else {
         params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
+        
         getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
                       params.model_set, params.model_subset, model_names);
         
@@ -3425,7 +3426,15 @@ void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &
     int action, best_class_num, i;
     set<string> skip_models;
     string model_str1, model_i;
-    
+    bool better_model;
+    CandidateModel best_model;
+    int curr_df;
+    double curr_loglike;
+    double LR, df_diff, pvalue;
+    string criteria_str;
+
+    criteria_str = criterionName(params.model_test_criterion);
+
     // Step 1: estimate the RHAS model using GTR+FO model
     action = 1; // estimating the RHAS model
     do_init_tree = true; // initization of the tree
@@ -3433,19 +3442,42 @@ void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &
     runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
     
     // Step 2: do tree search for this single-class model
-    // disable the bootstrapping
-    int orig_gbo_replicates = params.gbo_replicates;
-    params.gbo_replicates = 0;
     runTreeReconstruction(params, iqtree);
-    params.gbo_replicates = orig_gbo_replicates;
+    curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+    curr_loglike = iqtree->getCurScore();
 
     // Step 3: estimate the optimal number of classes inside the model mixture
-    action = 2; // estimating the number of classes in a mixture model
-    do_init_tree = false;
-    model_str = best_subst_name;
-    runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+    if (params.opt_qmix_criteria == 1) {
+        cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;
+        action = 4;
+        string orig_model_set = params.model_set;
+        params.model_set = "GTR+FO"; // TODO: should depend on the sequence type
+        do_init_tree = false;
+        do {
+            model_str = best_subst_name;
+            best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+            cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
+            LR = 2.0 * (best_model.logl - curr_loglike);
+            df_diff = best_model.df - curr_df;
+            pvalue = computePValueChiSquare(LR, df_diff);
+            better_model = (pvalue <= params.opt_qmix_pthres);
+            cout << " pvalue: " << pvalue << "; ";
+            cout << endl;
+            if (better_model) {
+                curr_df = best_model.df;
+                curr_loglike = best_model.logl;
+            }
+        } while (better_model);
+        params.model_set = orig_model_set;
+        best_subst_name = model_str;
+    } else {
+        cout << endl << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl;
+        action = 2; // estimating the number of classes in a mixture model
+        do_init_tree = false;
+        model_str = best_subst_name;
+        runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+    }
     best_class_num = getClassNum(best_subst_name);
-    
     cout << endl << "Optimal number of classes in mixture model: " << best_class_num << endl;
     
     if (params.opt_rhas_again) {
@@ -3482,7 +3514,7 @@ void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &
 }
 
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-// Method 2 or 3
+// Method 2
 void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
 
     bool do_init_tree;
@@ -3518,11 +3550,7 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
 
     // Step 2: do tree search for this single-class model
-    // disable the bootstrapping
-    int orig_gbo_replicates = params.gbo_replicates;
-    params.gbo_replicates = 0;
     runTreeReconstruction(params, iqtree);
-    params.gbo_replicates = orig_gbo_replicates;
     curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
     curr_loglike = iqtree->getCurScore();
     curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
@@ -3530,10 +3558,10 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
     
     // Step 3: keep adding a new class until no further improvement
-    if (params.opt_qmix_method == 2) {
-        cout << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl << endl;
+    if (params.opt_qmix_criteria == 1) {
+        cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;
     } else {
-        cout << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl << endl;
+        cout << endl << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl;
     }
     action = 4;
     do_init_tree = false;
@@ -3541,7 +3569,7 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
         model_str = best_subst_name;
         best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
         cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
-        if (params.opt_qmix_method == 2) {
+        if (params.opt_qmix_criteria == 1) {
             LR = 2.0 * (best_model.logl - curr_loglike);
             df_diff = best_model.df - curr_df;
             pvalue = computePValueChiSquare(LR, df_diff);
@@ -3597,10 +3625,23 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     cout << "|                Optimizing Q-mixture model                        |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
 
+    // disable the bootstrapping
+    int orig_gbo_replicates = params.gbo_replicates;
+    ConsensusType orig_consensus_type = params.consensus_type;
+    STOP_CONDITION orig_stop_condition = params.stop_condition;
+    params.gbo_replicates = 0;
+    params.consensus_type = CT_NONE;
+    params.stop_condition = SC_UNSUCCESS_ITERATION;
+
     if (params.opt_qmix_method==1)
         optimiseQMixModel_method(params, iqtree, model_info, model_str);
     else
         optimiseQMixModel_method_update(params, iqtree, model_info, model_str);
+    
+    // restore the original values
+    params.gbo_replicates = orig_gbo_replicates;
+    params.consensus_type = orig_consensus_type;
+    params.stop_condition = orig_stop_condition;
 
     cout << "-------------------------------------------------------" << endl;
     cout << "  Best-fit Q-Mixture model: " << model_str << endl;

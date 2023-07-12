@@ -1185,6 +1185,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.start_subst = "GTR+FO";
     params.opt_rhas_again = true;
     params.opt_qmix_method = 2;
+    params.opt_qmix_criteria = 1; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
     params.opt_qmix_pthres = 0.05;
     params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
@@ -3443,10 +3444,19 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-opt_qmix_method") == 0 || strcmp(argv[cnt], "--opt_qmix_method") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -opt_qmix_method <1|2|3>";
+                    throw "Use -opt_qmix_method <1|2>";
                 params.opt_qmix_method = convert_int(argv[cnt]);
-                if (params.opt_qmix_method < 1 || params.opt_qmix_method > 3)
-                    throw "Wrong number for -opt_qmix_method. Only 1, 2 or 3 is allowed.";
+                if (params.opt_qmix_method < 1 || params.opt_qmix_method > 2)
+                    throw "Wrong number for -opt_qmix_method. Only 1 or 2 is allowed.";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-opt_qmix_criteria") == 0 || strcmp(argv[cnt], "--opt_qmix_criteria") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -opt_qmix_criteria <1|2>";
+                params.opt_qmix_criteria = convert_int(argv[cnt]);
+                if (params.opt_qmix_criteria < 1 || params.opt_qmix_criteria > 2)
+                    throw "Wrong number for -opt_qmix_criteria. Only 1 or 2 is allowed.";
                 continue;
             }
             if (strcmp(argv[cnt], "-opt_qmix_pthres") == 0 || strcmp(argv[cnt], "--opt_qmix_pthres") == 0) {
