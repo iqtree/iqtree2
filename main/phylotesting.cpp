@@ -3403,8 +3403,8 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
 
     params.model_set = orig_model_set;
     params.ratehet_set = orig_ratehet_set;
-    params.startCPUTime = cpu_time;
-    params.start_real_time = real_time;
+    // params.startCPUTime = cpu_time;
+    // params.start_real_time = real_time;
     cpu_time = getCPUTime() - cpu_time;
     real_time = getRealTime() - real_time;
     cout << endl;
@@ -3433,8 +3433,12 @@ void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &
     runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
     
     // Step 2: do tree search for this single-class model
+    // disable the bootstrapping
+    int orig_gbo_replicates = params.gbo_replicates;
+    params.gbo_replicates = 0;
     runTreeReconstruction(params, iqtree);
-    
+    params.gbo_replicates = orig_gbo_replicates;
+
     // Step 3: estimate the optimal number of classes inside the model mixture
     action = 2; // estimating the number of classes in a mixture model
     do_init_tree = false;

@@ -2458,6 +2458,10 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
 
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
+
+    params.startCPUTime = getCPUTime();
+    params.start_real_time = getRealTime();
+
     string best_subst_name, best_rate_name;
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
     
@@ -2496,8 +2500,8 @@ bool isTreeMixture(Params& params) {
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     //    string dist_file;
-    params.startCPUTime = getCPUTime();
-    params.start_real_time = getRealTime();
+    // params.startCPUTime = getCPUTime();
+    // params.start_real_time = getRealTime();
     
     int absent_states = 0;
     if (iqtree->isSuperTree()) {
