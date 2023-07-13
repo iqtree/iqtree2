@@ -18,7 +18,7 @@ protected:
     /**
         get site-specific rates based on Continuous Gamma Distribution
     */
-    virtual void getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length);
+    virtual void getSiteSpecificRatesContinuousGamma(vector<double> &site_specific_rates, int sequence_length, default_random_engine& generator);
     
     /**
       estimate the state from accumulated trans_matrices

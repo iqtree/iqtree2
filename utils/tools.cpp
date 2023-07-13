@@ -108,7 +108,7 @@ void outWarning(string warn) {
     outWarning(warn.c_str());
 }
 
-double randomLen(Params &params) {
+double tryGeneratingBlength(Params &params) {
     // randomly generate branch lengths based on
     // a user-specified distribution
     if (params.branch_distribution)
@@ -131,6 +131,20 @@ double randomLen(Params &params) {
         }
         return len;
     }
+}
+
+double randomLen(Params &params) {
+    // bug fixed: avoid negative branch lengths
+    double len = -1;
+    int attemp = 0;
+    while ((len < params.min_len || len > params.max_len) && attemp < 1000)
+    {
+        len = tryGeneratingBlength(params);
+        ++attemp;
+    }
+    if (len < params.min_len || len > params.max_len)
+        outError("Failed to generate a branch length (in the range(" + convertDoubleToString(params.min_len) + ", " + convertDoubleToString(params.max_len) + ")) after 1000 attempts. Please check the input and try again!");
+    return len;
 }
 
 std::istream& safeGetline(std::istream& is, std::string& t)
@@ -1478,6 +1492,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.rebuild_indel_history_param = 1.0/3;
     params.alisim_openmp_alg = IM;
     params.no_merge = false;
+    params.alignment_id = 0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -2014,6 +2029,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (strcmp(argv[cnt], "--bscf") == 0 || strcmp(argv[cnt], "--scfl") == 0) {
+                // UPDATE: sCFL now ignore subtrees with all gaps for a particular site
                 if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
                     throw "Do not specify --scf or --gcf with --scfl";
                 params.ancestral_site_concordance = 2;
@@ -2023,6 +2039,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --scfl please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--scflg") == 0) {
+                // OUTDATED: with gaps for historical reason
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify --scf or --gcf with --scflg";
+                params.ancestral_site_concordance = 3;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --scflg NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --scflg please";
                 continue;
             }
             if (strcmp(argv[cnt], "--scf1") == 0) {
@@ -2991,6 +3020,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.aln_output_format = IN_FASTA;
                 else if (strcmp(format.c_str(), "NEXUS") == 0)
                     params.aln_output_format = IN_NEXUS;
+                else if (strcmp(format.c_str(), "MAPLE") == 0)
+                    params.aln_output_format = IN_MAPLE;
 				else
 					throw "Unknown output format";
 				continue;
@@ -6193,8 +6224,6 @@ inline T quantile(const vector<T>& v, const double q) {
 int init_random(int seed) {
     srand(seed);
     cout << "(Using rand() - Standard Random Number Generator)" << endl;
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return seed;
 }
 
@@ -6311,8 +6340,6 @@ int init_random(int seed) /* RAND4 */ {
         }
     }
 #endif
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 
@@ -6357,8 +6384,6 @@ int init_random(int seed, bool write_info, int** rstream) {
         }
     }
 #endif /* PARALLEL */
-    // init random generator for AliSim
-    Params::getInstance().generator.seed(seed);
     return (seed);
 } /* initrandom */
 
@@ -7625,3 +7650,18 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
    }
    return sqrt(sum);
  }
+
+string getOutputNameWithExt(const InputType& format, const string& output_filepath)
+{
+    switch (format)
+    {
+        case IN_MAPLE:
+            return output_filepath + ".maple";
+        case IN_FASTA:
+            return output_filepath + ".fa";
+        case IN_PHYLIP:
+            return output_filepath + ".phy";
+        default:
+            return output_filepath + ".phy";
+    }
+}

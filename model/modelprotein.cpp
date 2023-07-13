@@ -943,16 +943,16 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
             size_t num_params = std::count(model_params.begin(), model_params.end(), separator) + 1;
             
             // validate the number of params
-            if (num_params != 189 && num_params != 400)
-                outError("The number of model parameters of a protein model should be 189 (for revesible model) or 400 (for non-revesible model)!");
+            if (num_params != 189 && num_params != 379)
+                outError("The number of model parameters of a protein model should be 189 (for revesible model) or 379 (for non-revesible model)!");
             
             // validate GTR20
             if (name_upper == "GTR20" && num_params != 189)
                 outError("The GTR20 requires 189 parameters. Please check and try again!");
             
             // validate NONREV
-            if (name_upper == "NONREV" && num_params != 400)
-                outError("The NONREV requires 400 parameters. Please check and try again!");
+            if (name_upper == "NONREV" && num_params != 379)
+                outError("The NONREV requires 379 parameters. Please check and try again!");
             
             // ----- CONVERT INPUT PARAMS (VIA COMMAND LINE) INTO NEXUS FORMAT -----------
             // replace separator by space

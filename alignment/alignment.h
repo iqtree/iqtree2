@@ -1004,6 +1004,11 @@ public:
      * @param the expected_num_sites
      */
     void setExpectedNumSites(int new_expected_num_sites);
+    
+    /**
+        Extract Maple file from an alignment file
+     */
+    void extractMapleFile(const std::string& aln_name, const InputType& format);
 
 protected:
 
@@ -1033,6 +1038,24 @@ protected:
      */
     double* cache_ntfreq = NULL;
 
+private:
+    /**
+        Generate a reference genome from input_sequences
+        @param sequences the input sequences;
+        @return a reference genome
+     */
+    std::string generateRef(StrVector &sequences);
+
+    /**
+        Extract Mutation from sequences regarding the reference sequence
+        @param sequences, seq_names: the input sequences,  ref_sequence; ref_sequence, out: output stream to write the Maple file
+     */
+    void extractMutations(StrVector &sequences, StrVector &seq_names, std::string& ref_sequence, std::ofstream &out);
+    
+    /**
+        Output a mutation into Maple file
+     */
+    void outputMutation(std::ofstream &out, char state_char, int32_t pos, int32_t length = -1);
 };
 
 

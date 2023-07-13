@@ -375,6 +375,25 @@ void executeSimulation(Params params, IQTree *&tree)
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
+    // export tree with new blengths if users want to do so
+    if (params.branch_distribution && params.user_file && !params.alisim_inference_mode)
+    {
+        string tree_path(params.user_file);
+        tree_path += ".new_blength";
+        std::cout << "Tree with randomly generated branch lengths is outputted at " << tree_path << std::endl;
+        ofstream out = ofstream(tree_path.c_str());
+        alisimulator->tree->printTree(out);
+        if (alisimulator->tree->isSuperTree() && params.partition_type == BRLEN_OPTIMIZE)
+        {
+            for (int i = 1; i < ((PhyloSuperTree*) alisimulator->tree)->size(); i++)
+            {
+                out << std::endl;
+                ((PhyloSuperTree*) alisimulator->tree)->at(i)->printTree(out);
+            }
+        }
+        out.close();
+    }
+    
     // load input MSA if any
     map<string,string> input_msa = loadInputMSA(alisimulator);
     
@@ -382,6 +401,8 @@ void executeSimulation(Params params, IQTree *&tree)
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
     
     // delete alisimulator
+    if (alisimulator->tree) delete alisimulator->tree;
+    if (alisimulator->first_insertion) delete alisimulator->first_insertion;
     delete alisimulator;
     
     cout << "[Alignment Simulator] Done"<<"\n";
@@ -577,13 +598,34 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     }
 #endif
     
+    // the output format of the simulated alignment
+    InputType actual_output_format = super_alisimulator->params->aln_output_format;
+    vector<SeqType> seqtypes;
+    vector<std::string> aln_names;
+    // If users want to output Maple format -> temporarily output PHYLIP first
+    if (actual_output_format == IN_MAPLE)
+    {
+        super_alisimulator->params->aln_output_format = IN_PHYLIP;
+        Params::getInstance().aln_output_format = IN_PHYLIP;
+    }
+    
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
         // parallelize over MPI ranks statically
         int proc_ID = MPIHelper::getInstance().getProcessID();
         int nprocs  = MPIHelper::getInstance().getNumProcesses();
-        if (i%nprocs != proc_ID) continue; 
+        if (i%nprocs != proc_ID) continue;
+        
+        // If users want to output Maple format -> clear seqtypes and aln_names
+        if (actual_output_format == IN_MAPLE)
+        {
+            seqtypes.clear();
+            aln_names.clear();
+        }
+        
+        // record the alignment_id to generate different random seed when simulating different alignment
+        super_alisimulator->params->alignment_id = i;
         
         // output the simulated aln at the current execution localtion
         string output_filepath = super_alisimulator->params->alisim_output_filename;
@@ -614,6 +656,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             
             for (int partition_index = 0; partition_index < super_tree->size(); partition_index++)
             {
+                // update the alignment_id, taking into account the partition index, so that we use different random seed for each partition in each alignment
+                super_alisimulator->params->alignment_id = (i + 1) * 1000000 + partition_index;
                 // get variables
                 IQTree *current_tree = (IQTree*) super_tree->at(partition_index);
                 int expected_num_states_current_tree = current_tree->aln->getNSite();
@@ -667,10 +711,21 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // skip updating if using +ASC or Fundi model as they must be already updated
                 if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
                     partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels);
+                
+                // delete partition_simulator
+                if (partition_simulator->first_insertion) delete partition_simulator->first_insertion;
+                delete partition_simulator;
             }
         }
         else
         {
+            // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Maple format
+            if (actual_output_format == IN_MAPLE)
+            {
+                seqtypes.push_back(super_alisimulator->tree->aln->seq_type);
+                aln_names.push_back(output_filepath);
+            }
+            
             // check whether we could write the output to file immediately after simulating it
             if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio == 0)
                 generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath, open_mode);
@@ -683,7 +738,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
             || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
-            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, open_mode);
+            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, seqtypes, aln_names, open_mode);
         
         // only report model params when simulating the first MSA
         if (i == 0)
@@ -699,6 +754,27 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
             remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
         
+        // if users want to output Maple format -> convert PHY into MAPLE and delete PHY
+        if (actual_output_format == IN_MAPLE)
+        {
+            for (auto aln_id = 0 ; aln_id < aln_names.size(); ++ aln_id)
+            {
+                // initialize a dummy alignment to make sure we'll not change the main alignment when converting the simulated alignment files into Maple format
+                Alignment aln;
+                aln.seq_type = seqtypes[aln_id];
+                
+                // convert the simulated alignment files into Maple format
+                aln.extractMapleFile(aln_names[aln_id], IN_PHYLIP);
+                
+                // remove the simulated alignment files (in PHYLIP format)
+                remove(getOutputNameWithExt(IN_PHYLIP, aln_names[aln_id]).c_str());
+                
+                // show the output file name
+                if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
+                    cout << "The simulated alignment has been converted into Maple format: "<< getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) <<endl;
+            }
+        }
+        
         // delete output alignments (for testing only)
         if (super_alisimulator->params->delete_output)
         {
@@ -710,10 +786,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                     output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
                 
                 // add file extension
-                if (super_alisimulator->params->aln_output_format == IN_PHYLIP)
-                    output_filename += ".phy";
-                else
-                    output_filename += ".fa";
+                output_filename = getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename);
                 
                 // delete the output file
                 remove((output_filename).c_str());
@@ -724,6 +797,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             }
         }
     }
+    
+    // output full tree (with internal node names) if outputting internal sequences
+    if (super_alisimulator->params->alisim_write_internal_sequences)
+        outputTreeWithInternalNames(super_alisimulator);
 }
 
 /**
@@ -776,37 +853,57 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     bool is_mixture_model = alisimulator->tree->getModel()->isMixture();
     
     // case 1: without rate heterogeneity or mixture model -> using the current alisimulator (don't need to re-initialize it)
+    AliSimulator *tmp_alisimulator = alisimulator;
     
     // case 2: with rate heterogeneity or mixture model
     if ((!rate_name.empty()) || is_mixture_model)
     {
         // if user specifies +I without invariant_rate -> set it to 0
         if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)) {
-            alisimulator->tree->getRate()->setPInvar(0);
+            tmp_alisimulator->tree->getRate()->setPInvar(0);
             outWarning("Invariant rate is now set to Zero since it has not been specified");
         }
         
         // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
         if (!rate_name.compare("+I") && !is_mixture_model)
         {
-            alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
+            tmp_alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
         }
         else
         {
             // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
             if (invariant_proportion > 0)
             {
-                alisimulator = new AliSimulatorHeterogeneityInvar(alisimulator, invariant_proportion);
+                tmp_alisimulator = new AliSimulatorHeterogeneityInvar(alisimulator, invariant_proportion);
             }
             // case 2.2: with rate heterogeneity (gamma/freerate model without invariant sites)
             else
             {
-                alisimulator = new AliSimulatorHeterogeneity(alisimulator);
+                tmp_alisimulator = new AliSimulatorHeterogeneity(alisimulator);
             }
         }
     }
     
-    alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath, open_mode);
+    tmp_alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath, open_mode);
+    
+    // clone indel data before deleting tmp_alisimulator
+    if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+    {
+        alisimulator->seq_length_indels = tmp_alisimulator->seq_length_indels;
+        alisimulator->map_seqname_node = std::move(tmp_alisimulator->map_seqname_node);
+        
+        // tmp_alisimulator != alisimulator
+        if ((!rate_name.empty()) || is_mixture_model)
+        {
+            if (alisimulator->first_insertion) delete alisimulator->first_insertion;
+            alisimulator->first_insertion = tmp_alisimulator->first_insertion;
+        }
+    }
+    
+    // delete tmp_alisimulator
+    if ((!rate_name.empty()) || is_mixture_model)
+        delete tmp_alisimulator;
+    
 }
 
 /**
@@ -829,10 +926,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             }
         
             // add ".phy" or ".fa" to the output_filepath
-            if (alisimulator->params->aln_output_format != IN_FASTA)
-                file_path = file_path + ".phy";
-            else
-                file_path = file_path + ".fa";
+            file_path = getOutputNameWithExt(alisimulator->params->aln_output_format, file_path);
             ostream *out;
             if (alisimulator->params->do_compression)
                 out = new ogzstream(file_path.c_str(), open_mode);
@@ -844,7 +938,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             int seq_length_times_num_sites_per_state = (aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length);
             string first_line = "";
             uint64_t start_pos = 0;
-            if (alisimulator->params->aln_output_format != IN_FASTA)
+            if (alisimulator->params->aln_output_format == IN_PHYLIP)
             {
                 first_line = convertIntToString(num_leaves) + " " + convertIntToString(seq_length_times_num_sites_per_state) + "\n";
                 *out << first_line;
@@ -922,7 +1016,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, std::ios_base::openmode open_mode){
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, vector<SeqType>& seqtypes, vector<std::string>& aln_names, std::ios_base::openmode open_mode){
     // in case with partitions -> merge & write sequences to a single/multiple files
     if (alisimulator->tree->isSuperTree())
     {
@@ -1045,11 +1139,19 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
                 }
                 
                 
-                //  get the num_leaves
-                int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
+                //  get the num_nodes
+                int num_nodes = super_tree->leafNum;
+                if (alisimulator->params->alisim_write_internal_sequences)
+                    num_nodes = super_tree->nodeNum;
+                // don't count the fake root
+                num_nodes -= ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
+                
+                // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Maple format
+                seqtypes.push_back(super_tree->at(i)->aln->seq_type);
+                aln_names.push_back(file_path + partition_list);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
-                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator, open_mode);
+                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_nodes, alisimulator, open_mode);
             }
         }
     }
@@ -1062,9 +1164,14 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator,
         if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
             sequence_length = alisimulator->seq_length_indels;
         
-        //  get the num_leaves
-        int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
-        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator, open_mode);
+        //  get the num_nodes
+        int num_nodes = alisimulator->tree->leafNum;
+        if (alisimulator->params->alisim_write_internal_sequences)
+            num_nodes = alisimulator->tree->nodeNum;
+        // don't count the fake root
+        num_nodes -= ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
+        
+        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_nodes, alisimulator, open_mode);
     }
 }
 
@@ -1398,4 +1505,33 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     
     // close the tmp_data file
     in.close();
+}
+
+void outputTreeWithInternalNames(AliSimulator* alisimulator)
+{
+    // don't need to handle supertree here (at current stage) as AliSim doesn't support outputting internal sequences in simulations with partitions
+    // set names for internal nodes
+    updateInternalNodeName(alisimulator->tree->root);
+    
+    // output the treefile
+    string output_filepath = alisimulator->params->alisim_output_filename + ".full.treefile";
+    std::ofstream treefile(output_filepath, std::ios::out);
+    alisimulator->tree->printTree(treefile);
+    treefile.close();
+    
+    // show message
+    std::cout << "A tree (with internal node names) has been outputted to " << output_filepath << std::endl;
+}
+
+void updateInternalNodeName(Node *node, Node *dad)
+{
+    // if node is an internal and has an empty name -> set its name as its id
+    if (!node->isLeaf() && node->name == "")
+        node->name = convertIntToString(node->id);
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        updateInternalNodeName((*it)->node, node);
+    }
 }
