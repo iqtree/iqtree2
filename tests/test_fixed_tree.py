@@ -20,17 +20,19 @@ def get_cogent3_result(alignment_file):
     "data_files", [(["three-ungapped.fa"])], indirect=True
 )
 def test_iqtree_simple(data_files, temp_dir, repo_paths):
-    # need better determination of path
-    build_path = repo_paths["build_dir"]
-    cmnd = build_path / "iqtree2 -s data/three-ungapped.fa -m HKY -redo"
-    current = os.getcwd()
-    _ = exec_command(str(cmnd))
-    lnL = iqtree2_log_liklihood("data/three-ungapped.fa.ckp.gz")
+    iqtree2_binary = repo_paths["build_dir"] / "iqtree2"
+    # check IQ-Tree2 binary exists
+    assert iqtree2_binary.is_file()
+    alignment_file = temp_dir / "data" / data_files[0]
+    iqtree2_params = " -s "+ str(alignment_file) +" -m HKY -redo"
+    _ = exec_command(str(iqtree2_binary)+" "+iqtree2_params)
+    # check IQ-Tree2 generated a checkpoint file
+    assert pathlib.Path(str(alignment_file)+".ckp.gz").is_file()
+    lnL = iqtree2_log_liklihood(str(alignment_file)+".ckp.gz")
     # cogent3 value
-    c3_lf = get_cogent3_result("data/three-ungapped.fa")
+    c3_lf = get_cogent3_result(alignment_file)
     # hope they're the same!
     assert_allclose(lnL, c3_lf.lnL)
-
 
 if __name__ == "__main__":
     run_test_using(__file__)
