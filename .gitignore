@@ -35,3 +35,4 @@ vectorclass/
 zlib-1.2.7/
 __pycache__/
 venv/
+tests/iqtree1/iqtree
