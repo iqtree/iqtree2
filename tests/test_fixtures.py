@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 from .utils import run_test_using
 
-
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
 )
@@ -49,6 +48,7 @@ def test_fixtures(temp_dir, data_files, repo_paths):
     assert repo_paths["build_dir"].parts[: len(repo_root.parts)] == repo_root.parts
     assert repo_paths["tests_root"].parts[: len(repo_root.parts)] == repo_root.parts
     assert repo_paths["tests_data"].parts[: len(repo_root.parts)] == repo_root.parts
+    assert repo_paths["iqtree1_dir"].parts[: len(repo_root.parts)] == repo_root.parts
 
 
 if __name__ == "__main__":

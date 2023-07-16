@@ -31,6 +31,7 @@ def repo_paths():
     build_dir = repo_root / "build"
     tests_root = repo_root / "tests"
     tests_data = tests_root / "data"
+    iqtree1_dir = tests_root / "iqtree1"
 
     # Return the paths in a dictionary
     return {
@@ -38,6 +39,8 @@ def repo_paths():
         "build_dir": build_dir, # iqtree2
         "tests_root": tests_root,
         "tests_data": tests_data,
+        "iqtree1_dir": iqtree1_dir,
+        
     }
 
 

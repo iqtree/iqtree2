@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import pytest
-from tests.utils import run_test_using
+from .utils import run_test_using
 
 
 @pytest.mark.parametrize("options", ["-cmin 2", "-mtree"])
