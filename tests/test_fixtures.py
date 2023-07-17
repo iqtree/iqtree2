@@ -2,12 +2,12 @@ import pathlib
 import pytest
 import os
 from pathlib import Path
-from .utils import run_test_using
+from .utils import run_test_using, repo_root, tests_root, tests_data, iqtree1_dir, iqtree2_dir
 
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
 )
-def test_fixtures(temp_dir, data_files, repo_paths):
+def test_fixtures(temp_dir, data_files):
     """
     Test the functionality of the custom fixtures.
 
@@ -34,7 +34,6 @@ def test_fixtures(temp_dir, data_files, repo_paths):
     # Assert that the current directory is a subdirectory of the /tests directory
     # and starts with the prefix 'tmp'
     current_dir = Path(os.getcwd())
-    tests_root = repo_paths["tests_root"]
     assert current_dir.parent == tests_root
     assert current_dir.name.startswith("tmp")
 
@@ -43,12 +42,11 @@ def test_fixtures(temp_dir, data_files, repo_paths):
         data_file_path = temp_dir / "data" / data_file
         assert data_file_path.is_file()
 
-    # Assert that repo_paths build_dir, tests_dir, and data_dir are all ultimately in the path below the repo_root
-    repo_root = repo_paths["repo_root"]
-    assert repo_paths["build_dir"].parts[: len(repo_root.parts)] == repo_root.parts
-    assert repo_paths["tests_root"].parts[: len(repo_root.parts)] == repo_root.parts
-    assert repo_paths["tests_data"].parts[: len(repo_root.parts)] == repo_root.parts
-    assert repo_paths["iqtree1_dir"].parts[: len(repo_root.parts)] == repo_root.parts
+    # Assert that repo_paths iqtree2_dir, tests_dir, and data_dir are all ultimately in the path below the repo_root
+    assert iqtree2_dir.parts[: len(repo_root.parts)] == repo_root.parts
+    assert tests_root.parts[: len(repo_root.parts)] == repo_root.parts
+    assert tests_data.parts[: len(repo_root.parts)] == repo_root.parts
+    assert iqtree1_dir.parts[: len(repo_root.parts)] == repo_root.parts
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ from ..utils import run_test_using
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
 )
-def test_sample_feature(temp_dir, data_files, repo_paths):
+def test_sample_feature(temp_dir, data_files):
     """
     Sample test function to demonstrate the usage of fixtures.
 
@@ -20,9 +20,6 @@ def test_sample_feature(temp_dir, data_files, repo_paths):
         Path object representing the temporary directory created by the temp_dir fixture.
     data_files : list
         List of data files processed by the data_files fixture.
-    repo_paths : dict
-        Dictionary containing paths to the repo_root, build_dir,tests_dir, tests_data.
-        It is created by the repo_paths fixture.
     """
 
     # Add your test logic here

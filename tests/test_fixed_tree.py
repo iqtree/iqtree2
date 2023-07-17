@@ -3,7 +3,7 @@ import subprocess
 import pathlib
 from numpy.testing import assert_allclose
 import pytest
-from .utils import iqtree2_log_liklihood, exec_command, run_test_using
+from .utils import Iqtree2, iqtree2_log_liklihood, exec_command, run_test_using, repo_root, tests_root, tests_data, iqtree2_dir, iqtree1_dir
 from cogent3 import load_aligned_seqs, get_model, make_tree, open_
 
 def get_cogent3_result(alignment_file):
@@ -19,15 +19,14 @@ def get_cogent3_result(alignment_file):
 @pytest.mark.parametrize(
     "data_files", [(["three-ungapped.fa"])], indirect=True
 )
-def test_iqtree_simple(data_files, temp_dir, repo_paths):
+def test_iqtree_simple(data_files, temp_dir):
     assert len(data_files) == 1, "Only one alignment file should be specified per test"
-    iqtree2_binary = repo_paths["build_dir"] / "iqtree2"
+    iqtree2_binary = iqtree2_dir / "iqtree2"
     assert iqtree2_binary.is_file(), "IQ-Tree2 binary not found"
     alignment_file = temp_dir / "data" / data_files[0]
     iqtree2_params = " -s "+ str(alignment_file) +" -m HKY -redo"
-    _ = exec_command(str(iqtree2_binary)+" "+iqtree2_params)
-    assert pathlib.Path(str(alignment_file)+".ckp.gz").is_file(), "IQ-Tree2 did not generate a checkpoint file"
-    lnL = iqtree2_log_liklihood(str(alignment_file)+".ckp.gz")
+    lnL = Iqtree2().exec(alignment_file, iqtree2_params).get_log_likelihood()
+
     # cogent3 log_likelihood from the same alignment
     c3_lf = get_cogent3_result(alignment_file)
     # hope they're the same!

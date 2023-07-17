@@ -3,49 +3,12 @@ import tempfile
 import shutil
 import os
 from pathlib import Path
+from .utils import repo_root, tests_root, tests_data, iqtree1_dir, iqtree2_dir
 
-
-@pytest.fixture(scope="session")
-def repo_paths():
-    """
-    Determine the repository root and other important paths.
-
-    This fixture determines the repository root by searching for the .git directory
-    and defines other important paths relative to the repository root.
-
-    Returns
-    -------
-    dict
-        A dictionary containing paths to the repository root, build directory,
-        tests directory, and data directory. The keys are 'repo_root', 'build_dir',
-        'tests_root', and 'tests_data'.
-    """
-
-    # Find the repository root by searching for the .git directory
-    current_dir = Path(__file__).parent
-    repo_root = current_dir
-    while repo_root != Path("/") and not (repo_root / ".git").is_dir():
-        repo_root = repo_root.parent
-
-    # Define other important paths
-    build_dir = repo_root / "build"
-    tests_root = repo_root / "tests"
-    tests_data = tests_root / "data"
-    iqtree1_dir = tests_root / "iqtree1"
-
-    # Return the paths in a dictionary
-    return {
-        "repo_root": repo_root, 
-        "build_dir": build_dir, # iqtree2
-        "tests_root": tests_root,
-        "tests_data": tests_data,
-        "iqtree1_dir": iqtree1_dir,
-        
-    }
 
 
 @pytest.fixture(scope="function")
-def temp_dir(request, data_files, repo_paths):
+def temp_dir(request, data_files):
     """
     Create a temporary directory with a data subdirectory, change to it for running tests, and clean up.
 
@@ -62,7 +25,6 @@ def temp_dir(request, data_files, repo_paths):
 
     # Save the current working directory
     original_dir = os.getcwd()
-    tests_root = repo_paths["tests_root"]
 
     # Create a temporary directory and change to it
     temp_path = Path(tempfile.mkdtemp(dir=tests_root))
@@ -73,9 +35,8 @@ def temp_dir(request, data_files, repo_paths):
     data_subdir.mkdir()
 
     # Copy the files specified in data_files to the data subdirectory
-    data_dir = repo_paths["tests_data"]
     for data_file in data_files:
-        shutil.copy(data_dir / data_file, data_subdir)
+        shutil.copy(tests_data / data_file, data_subdir)
 
     # Yield control to the test function
     yield temp_path
