@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
+
 import pytest
-from ..utils import run_test_using
 
 
 @pytest.mark.parametrize(
@@ -24,7 +24,3 @@ def test_sample_feature(temp_dir, data_files):
 
     # Add your test logic here
     assert True
-
-
-if __name__ == "__main__":
-    run_test_using(__file__)

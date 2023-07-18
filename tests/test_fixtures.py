@@ -1,8 +1,11 @@
-import pathlib
-import pytest
 import os
+import pathlib
 from pathlib import Path
-from .utils import run_test_using, repo_root, tests_root, tests_data, iqtree1_dir, iqtree2_dir
+
+import pytest
+
+from .utils import iqtree1_dir, iqtree2_dir, repo_root, tests_data, tests_root
+
 
 @pytest.mark.parametrize(
     "data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True
@@ -47,7 +50,3 @@ def test_fixtures(temp_dir, data_files):
     assert tests_root.parts[: len(repo_root.parts)] == repo_root.parts
     assert tests_data.parts[: len(repo_root.parts)] == repo_root.parts
     assert iqtree1_dir.parts[: len(repo_root.parts)] == repo_root.parts
-
-
-if __name__ == "__main__":
-    run_test_using(__file__)

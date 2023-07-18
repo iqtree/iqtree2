@@ -1,10 +1,11 @@
-import pytest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
 from pathlib import Path
-from .utils import repo_root, tests_root, tests_data, iqtree1_dir, iqtree2_dir
 
+import pytest
+
+from .utils import iqtree1_dir, iqtree2_dir, repo_root, tests_data, tests_root
 
 
 @pytest.fixture(scope="function")
