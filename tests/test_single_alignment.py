@@ -35,7 +35,7 @@ def test_single_alignment(temp_dir, data_files, options):
     alignment_file = temp_dir / "data" / data_files[0]
     iqtree_params = " " + options + " -m TEST"
 
-    lnL1 = Iqtree1().exec(alignment_file, iqtree_params).get_log_likelihood()
-    lnL2 = Iqtree2().exec(alignment_file, iqtree_params).get_log_likelihood()
+    lnL1 = Iqtree1().exec(alignment_file, iqtree_params).checkpoint.log_likelihood
+    lnL2 = Iqtree2().exec(alignment_file, iqtree_params).checkpoint.log_likelihood
     # hope they're the same!
     assert_allclose(lnL1, lnL2)

@@ -47,6 +47,61 @@ def exec_command(cmnd: str, stdout=PIPE, stderr=PIPE) -> str:
         raise RuntimeError(f"FAILED: {cmnd}\n{msg}")
     return out.decode("utf8") if out is not None else None
 
+class Checkpoint:
+    """
+    Class for loading and accessing data from an IQ-TREE checkpoint file.
+
+    Parameters
+    ----------
+    file_path : str
+        The path to the checkpoint file.
+
+    Attributes
+    ----------
+    data : Dict[str, Any]
+        The checkpoint file loaded as a dictionary.
+    """
+
+    def __init__(self, file_path: str):
+        # load the checkpoint file using cogent3's open_ function to handle gzipped files
+        self.data = load_yml(open_(file_path), Loader=Loader)
+
+    @classmethod
+    def from_cache(cls, data: Dict[str, Any]) -> "Checkpoint":
+        """
+        Creates a Checkpoint instance from a cached instance.
+
+        Parameters
+        ----------
+        data : Dict[str, Any]
+            The checkpoint data as a dictionary.
+
+        Returns
+        -------
+        Checkpoint
+            The new Checkpoint instance.
+        """
+        instance = cls.__new__(cls)
+        instance.data = data
+        return instance
+    
+    @property
+    def log_likelihood(self) -> float:
+        """
+        Gets the log likelihood from the checkpoint file.
+
+        Returns
+        -------
+        float
+            The log likelihood.
+        """
+        assert self.data is not None, "No checkpoint data found"
+        # getting the key for the best tree - this has to be cast to int as the keys are strings and sometimes include a leading zero
+        best = min(int(key) for key in self.data["CandidateSet"].keys())
+        # extract log-likelihood
+        lnL = float(self.data["CandidateSet"][str(best)].split()[0])
+        return lnL
+
 
 class Iqtree:
     """
@@ -59,13 +114,13 @@ class Iqtree:
 
     Attributes
     ----------
-    checkpointYAML : Dict[str, Any]
-        The checkpoint file loaded as a dictionary.
+    checkpoint : Checkpoint
+        The checkpoint file loaded as a Checkpoint object.
     """
 
     def __init__(self, iqtree_binary: Path):
         self.iqtree_binary = iqtree_binary
-        self.checkpointYAML: Dict[str, Any] = None
+        self.checkpoint: Checkpoint = None
 
     def exec(self, alignment_file: str, parameters: str) -> "Iqtree":
         """
@@ -90,27 +145,8 @@ class Iqtree:
             + " "
             + parameters
         )
-        self.checkpointYAML = load_yml(
-            open_(str(alignment_file) + ".ckp.gz"), Loader=Loader
-        )
-        return self
-
-    def get_log_likelihood(self) -> float:
-        """
-        Gets the log likelihood from the checkpoint file.
-
-        Returns
-        -------
-        float
-            The log likelihood.
-        """
-        assert self.checkpointYAML is not None, "No checkpoint file found"
-        # getting the key for the best tree
-        best = min(int(key) for key in self.checkpointYAML["CandidateSet"].keys())
-        # extract log-likelihood
-        lnL = float(self.checkpointYAML["CandidateSet"][str(best)].split()[0])
-        return lnL
-
+        self.checkpoint = Checkpoint(str(alignment_file) + ".ckp.gz")
+        return self        
 
 class Iqtree1(Iqtree):
     """
@@ -157,23 +193,21 @@ class Iqtree1(Iqtree):
         with lock:
             if Path(self.cache_file).exists():
                 with open(self.cache_file, "r") as f:
-                    self.cache = load(f)
+                    cache = load(f)
             else:
-                self.cache = {}
+                cache = {}
 
-            if cache_key in self.cache:
-                self.checkpointYAML = self.cache[cache_key]
+            if cache_key in cache:
+                self.checkpoint = Checkpoint.from_cache(cache[cache_key])
             else:
                 super().exec(alignment_file, parameters)
-                self.cache[cache_key] = self.checkpointYAML
+                cache[cache_key] = self.checkpoint.data
                 with open(self.cache_file, "w") as f:
-                    dump(self.cache, f)
+                    dump(cache, f)
                 # reread the checkpoint from the cache file as dump converts integer keys to strings
                 with open(self.cache_file, "r") as f:
-                    self.cache = load(f)
-                self.checkpointYAML = self.cache[cache_key]
-                    
-
+                    cache = load(f)
+                self.checkpoint = Checkpoint.from_dict(cache[cache_key])
         return self
 
 
@@ -216,7 +250,7 @@ class Iqtree2(Iqtree):
         """
         alignment_file_name = Path(alignment_file).name
         parameters = sub(r"-s\s+\S+", f"-s {alignment_file_name}", parameters)
-        key = f"{parameters}"
+        cache_key = f"{parameters}"
         iqtree2_mod_time = Path(self.iqtree_binary).stat().st_mtime
 
         lock = FileLock(str(self.cache_file) + ".lock")
@@ -233,16 +267,16 @@ class Iqtree2(Iqtree):
             if cache.get("mod_time") != iqtree2_mod_time:
                 cache = {"mod_time": iqtree2_mod_time}
 
-            if key in cache:
-                self.checkpointYAML = cache[key]
+            if cache_key in cache:
+                self.checkpoint = Checkpoint.from_cache(cache[cache_key]) 
             else:
                 super().exec(alignment_file, parameters)
-                cache[key] = self.checkpointYAML
+                cache[cache_key] = self.checkpoint.data
                 with open(self.cache_file, "w") as f:
                     dump(cache, f)
                 # reread the checkpoint from the cache file as dump converts integer keys to strings
                 with open(self.cache_file, "r") as f:
                     cache = load(f)
-                self.checkpointYAML = cache[key]
+                self.checkpoint = Checkpoint.from_cache(cache[cache_key])
 
         return self
