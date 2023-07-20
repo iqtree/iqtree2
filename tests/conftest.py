@@ -2,10 +2,8 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-
 import pytest
-
-from .utils import iqtree1_dir, iqtree2_dir, repo_root, tests_data, tests_root
+from .test_utils import iqtree1_dir, iqtree2_dir, repo_root, tests_data, tests_root, checkpoint_file
 
 
 @pytest.fixture(scope="function")
