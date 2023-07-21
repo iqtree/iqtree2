@@ -1,8 +1,8 @@
 from pathlib import Path
+from typing import Any, Dict
 from .checkpoint_file import Checkpoint
 from .execute import exec_command
 from .log_file import Log
-
 
 class Iqtree:
     """
@@ -16,43 +16,33 @@ class Iqtree:
     Attributes
     ----------
     results : Dict[str, Union[Checkpoint, Logfile]]
-        A dictionary to store the results of the execution, including the checkpoint and log file.
+        A dictionary to store the results of the query, 
+        including the checkpoint and log file.
     """
 
     def __init__(self, iqtree_binary: Path):
         self.iqtree_binary = iqtree_binary
-        self.results = {
-            "checkpoint": Checkpoint(),
-            "log": Log()
-        }
-            
-    @property
-    def checkpoint(self) -> Checkpoint:
-        return self.results["checkpoint"]
+        self.results = {}
+
+    def calculate(self, alignment_file: str, parameters: str) -> "Iqtree":
+        self.results = self.get_result(alignment_file, parameters)
+        return self
+
+    def get_result(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
+        return self.exec_iqtree_binary(alignment_file, parameters)
     
-    @property
-    def log(self) -> Log:
-        return self.results["log"]
-
-    def exec(self, alignment_file: str, parameters: str) -> "Iqtree":
-        """
-        Executes IQ-TREE and loads the checkpoint file.
-
-        Parameters
-        ----------
-        alignment_file : str
-            The path to the alignment file.
-        parameters : str
-            The parameters for the IQ-TREE command.
-
-        Returns
-        -------
-        Iqtree
-            The current instance.
-        """
+    def exec_iqtree_binary(self, alignment_file: str, parameters: str)-> Dict[str, Any]:
         _ = exec_command(
             str(self.iqtree_binary) + " -s " + str(alignment_file) + " " + parameters + " -redo -nt AUTO"
         )
-        self.results["checkpoint"] = Checkpoint(str(alignment_file) + ".ckp.gz")
-        self.results["log"] = Log(str(alignment_file) + ".log")
-        return self
+        checkpoint = Checkpoint(str(alignment_file) + ".ckp.gz")
+        log = Log(str(alignment_file) + ".log")
+        return {"checkpoint": checkpoint, "log": log}
+
+    @property
+    def checkpoint(self) -> Checkpoint:
+        return self.results.get("checkpoint") 
+        
+    @property
+    def log(self) -> Log:
+        return self.results.get("log")

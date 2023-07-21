@@ -35,7 +35,11 @@ def temp_dir(request, data_files):
 
     # Copy the files specified in data_files to the data subdirectory
     for data_file in data_files:
-        shutil.copy(tests_data / data_file, data_subdir)
+        # check to see if the file is in the tests_data directory
+        if (tests_data / data_file).is_file():
+            shutil.copy(tests_data / data_file, data_subdir)
+        else:
+            raise FileNotFoundError(f"Data file {data_file} not found in {tests_data}")
 
     # Yield control to the test function
     yield temp_path

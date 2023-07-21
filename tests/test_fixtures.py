@@ -50,3 +50,5 @@ def test_fixtures(temp_dir, data_files):
     assert tests_root.parts[: len(repo_root.parts)] == repo_root.parts
     assert tests_data.parts[: len(repo_root.parts)] == repo_root.parts
     assert iqtree1_dir.parts[: len(repo_root.parts)] == repo_root.parts
+
+
