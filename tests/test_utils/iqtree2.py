@@ -21,6 +21,7 @@ class Iqtree2(Iqtree):
         super().__init__(iqtree2_dir / "iqtree2")
         self.cache_file = tests_data / "iqtree2.cache.json"
 
-    def get(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
+    def process(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
         cache = Cache(self.cache_file)
-        cache.get(alignment_file, parameters, self.exec_iqtree_binary, Path(self.iqtree_binary).stat().st_mtime)
+        self.results = cache.get(alignment_file, parameters,lambda: self.exec_iqtree_binary(alignment_file, parameters),Path(self.iqtree_binary).stat().st_mtime)
+        return self

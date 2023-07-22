@@ -26,7 +26,7 @@ def test_against_cogent3(data_files, temp_dir):
     assert iqtree2_binary.is_file(), "IQ-Tree2 binary not found"
     alignment_file = temp_dir / "data" / data_files[0]
     iqtree2_params = " -m HKY -redo"
-    lnL = Iqtree2().exec(alignment_file, iqtree2_params).checkpoint.log_likelihood
+    lnL = Iqtree2().process(alignment_file, iqtree2_params).checkpoint.log_likelihood
 
     # cogent3 log_likelihood from the same alignment
     c3_lf = get_cogent3_result(alignment_file)

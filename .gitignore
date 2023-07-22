@@ -36,4 +36,5 @@ zlib-1.2.7/
 __pycache__/
 venv/
 tests/iqtree1/iqtree
-tests/data/cache*
+tests/data/iqtree*.cache.json.lock
+tests/data/iqtree2.cache.json

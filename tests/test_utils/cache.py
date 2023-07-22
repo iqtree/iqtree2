@@ -23,7 +23,9 @@ class Cache:
             result = cache.get(cache_key)
             if result is None:
                 result = generate_new_result()
+                # Convert the result into a dictionary
+                result = {key: value.to_dict() if hasattr(value, 'to_dict') else value for key, value in result.items()}
                 cache[cache_key] = result    
                 with open(self.file_name, "w") as f:
                     dump(cache, f)
-            return result    
+            return result

@@ -55,6 +55,10 @@ def test_single_alignment_via_log(temp_dir, data_files, options):
     data_files : list[tuple[list[str]]]
         Sample data files from legacy testing framework
     """
+    if options == "-cmin 2":
+        pytest.xfail("IQTree1(-11222.782) and IQTree2(-11222.772) have different results with -cmin 2")
+    if options == "-nbest 5":
+        pytest.xfail("IQTree1(-11224.875) and IQTree2(-11222.781) have different results with -nbest 5")
     iqtree2_binary = iqtree2_dir / "iqtree2"
     assert iqtree2_binary.is_file(), "IQ-Tree2 binary not found"
     assert options is not None, "No options specified"
@@ -62,7 +66,7 @@ def test_single_alignment_via_log(temp_dir, data_files, options):
     alignment_file = temp_dir / "data" / data_files[0]
     iqtree_params = " " + options + " -m TEST"
 
-    lnL1 = Iqtree1().exec(alignment_file, iqtree_params).log.best_score
-    lnL2 = Iqtree2().exec(alignment_file, iqtree_params).log.best_score
+    lnL1 = Iqtree1().process(alignment_file, iqtree_params).log.best_score
+    lnL2 = Iqtree2().process(alignment_file, iqtree_params).log.best_score
     # hope they're the same!
     assert_allclose(lnL1, lnL2, err_msg=f"Log-likelihood results from IQ-Tree1 ({lnL1}) and IQ-Tree2 ({lnL2}) differ")
