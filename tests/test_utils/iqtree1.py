@@ -6,7 +6,7 @@ from .paths import iqtree1_dir, tests_data
 
 class Iqtree1(Iqtree):
     """
-    Class for running IQ-TREE 1 with caching and file locking.
+    Class for running IQ-TREE 1 with caching of previously calculated results
 
     Attributes
     ----------

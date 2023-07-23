@@ -6,8 +6,8 @@ from .paths import tests_data, iqtree2_dir
 
 class Iqtree2(Iqtree):
     """
-    Class for running IQ-TREE 2 with caching, cache invalidation when the
-    binary changes, and file locking.
+    Class for running IQ-TREE 2 with caching of previously calculated results
+    The cache is invalidated when the binary is changed
 
     Attributes
     ----------

@@ -1,6 +1,8 @@
+'''
+Set global variables to point to important paths
+'''
 from pathlib import Path
 
-# Set global variables to point to important paths
 current_dir = Path(__file__).parent
 repo_root = current_dir
 while repo_root != Path("/") and not (repo_root / ".git").is_dir():
