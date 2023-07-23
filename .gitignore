@@ -38,3 +38,5 @@ venv/
 tests/iqtree1/iqtree
 tests/data/iqtree*.cache.json.lock
 tests/data/iqtree2.cache.json
+tests/test_fixtures.py
+tests/test_utils/test_test_utils.py
