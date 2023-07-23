@@ -33,10 +33,18 @@ terraphast/
 test_scripts/
 vectorclass/
 zlib-1.2.7/
+
+# exclude python specific files and folders
 __pycache__/
 venv/
+
+# do not check in the iqtree binary 
 tests/iqtree1/iqtree
+
+# do not check in cache files 
 tests/data/iqtree*.cache.json.lock
 tests/data/iqtree2.cache.json
+
+# do not check in test framwork development tests
 tests/test_fixtures.py
 tests/test_utils/test_test_utils.py
