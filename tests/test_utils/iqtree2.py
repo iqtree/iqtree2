@@ -1,8 +1,10 @@
 from pathlib import Path
 from typing import Any, Dict
+
 from .cache import Cache
 from .iqtree import Iqtree
-from .paths import tests_data, iqtree2_dir
+from .paths import iqtree2_dir, tests_data
+
 
 class Iqtree2(Iqtree):
     """
@@ -23,5 +25,10 @@ class Iqtree2(Iqtree):
 
     def process(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
         cache = Cache(self.cache_file)
-        self.results = cache.get(alignment_file, parameters,lambda: self.exec_iqtree_binary(alignment_file, parameters),Path(self.iqtree_binary).stat().st_mtime)
+        self.results = cache.get(
+            alignment_file,
+            parameters,
+            lambda: self.exec_iqtree_binary(alignment_file, parameters),
+            Path(self.iqtree_binary).stat().st_mtime,
+        )
         return self

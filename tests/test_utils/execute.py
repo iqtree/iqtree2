@@ -1,5 +1,6 @@
 from subprocess import PIPE, Popen, check_call
 
+
 def exec_command(cmnd: str, stdout=PIPE, stderr=PIPE) -> str:
     proc = Popen(cmnd, shell=True, stdout=stdout, stderr=stderr)
     out, err = proc.communicate()

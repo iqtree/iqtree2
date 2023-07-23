@@ -1,6 +1,6 @@
-'''
+"""
 Set global variables to point to important paths
-'''
+"""
 from pathlib import Path
 
 current_dir = Path(__file__).parent

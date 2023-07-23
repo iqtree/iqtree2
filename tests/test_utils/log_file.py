@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+
 class Log:
     def __init__(self, file_path: str = None):
         # If file_path is not None, load the log file
@@ -12,7 +13,7 @@ class Log:
     @staticmethod
     def _load_log_file(file_path: str) -> Dict[str, Any]:
         data = {}
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             data["lines"] = file.readlines()
         return data
 

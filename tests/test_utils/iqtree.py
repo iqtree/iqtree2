@@ -1,10 +1,11 @@
 from pathlib import Path
 from typing import Any, Dict
 
-from .iqtree_stdout import Iqtree_stdout
 from .checkpoint_file import Checkpoint
 from .execute import exec_command
+from .iqtree_stdout import Iqtree_stdout
 from .log_file import Log
+
 
 class Iqtree:
     """
@@ -43,8 +44,10 @@ class Iqtree:
         """
         self.results = self.exec_iqtree_binary(alignment_file, parameters)
         return self
-    
-    def exec_iqtree_binary(self, alignment_file: str, parameters: str)-> Dict[str, Any]:
+
+    def exec_iqtree_binary(
+        self, alignment_file: str, parameters: str
+    ) -> Dict[str, Any]:
         """
         Execute the IQ-TREE binary and return the results.
 
@@ -61,7 +64,12 @@ class Iqtree:
             The results of the IQ-TREE run.
         """
         stdout = exec_command(
-            str(self.iqtree_binary) + " -s " + str(alignment_file) + " " + parameters + " -redo -nt AUTO"
+            str(self.iqtree_binary)
+            + " -s "
+            + str(alignment_file)
+            + " "
+            + parameters
+            + " -redo -nt AUTO"
         )
         output = Iqtree_stdout(stdout.split("\n"))
         checkpoint = Checkpoint(str(alignment_file) + ".ckp.gz")
@@ -78,8 +86,8 @@ class Iqtree:
         Checkpoint
             The checkpoint from the results.
         """
-        return Checkpoint.from_dict(self.results.get("checkpoint")) 
-        
+        return Checkpoint.from_dict(self.results.get("checkpoint"))
+
     @property
     def log(self) -> Log:
         """

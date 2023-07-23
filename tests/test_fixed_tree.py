@@ -6,7 +6,9 @@ import pytest
 import utils
 from cogent3 import get_model, load_aligned_seqs, make_tree, open_
 from numpy.testing import assert_allclose
+
 from .test_utils import Iqtree2, iqtree2_dir, repo_root, tests_data, tests_root
+
 
 def get_cogent3_result(alignment_file):
     aln = load_aligned_seqs(alignment_file, moltype="dna")

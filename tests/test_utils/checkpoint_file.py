@@ -1,7 +1,9 @@
 from typing import Any, Dict
+
 from cogent3 import open_
 from yaml import Loader
 from yaml import load as load_yml
+
 
 class Checkpoint:
     """
@@ -26,7 +28,7 @@ class Checkpoint:
             self.data = load_yml(open_(file_path), Loader=Loader)
         else:
             self.data = None
-            
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Checkpoint":
         instance = cls.__new__(cls)
@@ -35,7 +37,7 @@ class Checkpoint:
 
     def to_dict(self) -> Dict[str, Any]:
         return self.data
-    
+
     @property
     def log_likelihood(self) -> float:
         """
@@ -50,11 +52,11 @@ class Checkpoint:
         # Getting the key for the best tree. The key is cast to int as the keys are strings and sometimes include a leading zero.
         # The best tree is the one with the smallest key.
         best = min(int(key) for key in self.data["CandidateSet"].keys())
-        # Note: the CandidateSet key in the YAML returned by IQTREE is an integer, 
-        # but the key once it's been put into the cache as JSON is a string  
-        best_CandidateSet = self.data["CandidateSet"].get(str(best), self.data["CandidateSet"].get(best))
+        # Note: the CandidateSet key in the YAML returned by IQTREE is an integer,
+        # but the key once it's been put into the cache as JSON is a string
+        best_CandidateSet = self.data["CandidateSet"].get(
+            str(best), self.data["CandidateSet"].get(best)
+        )
         # Extract log-likelihood from the best CandidateSet
         lnL = float(best_CandidateSet.split()[0])
         return lnL
-
-

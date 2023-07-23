@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 
+
 class Iqtree_stdout:
     def __init__(self, iqtree_output: List[str] = None):
         # If iqtree_output is not None, load the lines into data
@@ -18,4 +19,3 @@ class Iqtree_stdout:
 
     def to_dict(self) -> Dict[str, Any]:
         return self.data
-
