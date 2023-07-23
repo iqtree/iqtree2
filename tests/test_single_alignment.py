@@ -16,7 +16,7 @@ from .test_utils import (
 )
 
 @pytest.mark.parametrize("options", ["-cmin 2", "-nbest 5"])
-@pytest.mark.parametrize("data_files", [(["example.phy"])], indirect=True)
+@pytest.mark.parametrize("data_files", [(["example.phy"]),(["d59_8.phy"])], indirect=True)
 def test_single_alignment_via_checkpoint(temp_dir, data_files, options):
     """
     single alignment comparison between iqtree1 and iqtree2, comparing log likelihoods from checkpoint files
@@ -42,7 +42,7 @@ def test_single_alignment_via_checkpoint(temp_dir, data_files, options):
     assert_allclose(lnL1, lnL2, rtol=1e-6, err_msg=f"Log-likelihood results from IQ-Tree1 ({lnL1}) and IQ-Tree2 ({lnL2}) differ with {options}")
 
 @pytest.mark.parametrize("options", ["-cmin 2", "-nbest 5"])
-@pytest.mark.parametrize("data_files", [(["example.phy"])], indirect=True)
+@pytest.mark.parametrize("data_files", [(["example.phy"]),(["d59_8.phy"])], indirect=True)
 def test_single_alignment_via_log(temp_dir, data_files, options):
     """
     single alignment comparison between iqtree1 and iqtree2, comparing BEST SCORE FOUND from log files
