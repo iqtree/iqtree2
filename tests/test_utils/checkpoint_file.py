@@ -31,11 +31,17 @@ class Checkpoint:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Checkpoint":
+        """
+        Create a Checkpoint instance from a dictionary.
+        """
         instance = cls.__new__(cls)
         instance.data = data
         return instance
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the Checkpoint instance to a dictionary.
+        """
         return self.data
 
     @property
@@ -53,7 +59,7 @@ class Checkpoint:
         # The best tree is the one with the smallest key.
         best = min(int(key) for key in self.data["CandidateSet"].keys())
         # Note: the CandidateSet key in the YAML returned by IQTREE is an integer,
-        # but the key once it's been put into the cache as JSON is a string
+        # but the key once it's been put into the cache as JSON is a string so we have to check both
         best_CandidateSet = self.data["CandidateSet"].get(
             str(best), self.data["CandidateSet"].get(best)
         )

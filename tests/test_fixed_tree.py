@@ -4,6 +4,7 @@ import subprocess
 
 import pytest
 import utils
+
 from cogent3 import get_model, load_aligned_seqs, make_tree, open_
 from numpy.testing import assert_allclose
 

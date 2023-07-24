@@ -1,12 +1,21 @@
 import os
+
 from pathlib import Path
 
 import pytest
+
 from numpy import allclose
 from numpy.testing import assert_allclose
 
-from .test_utils import (Iqtree1, Iqtree2, iqtree1_dir, iqtree2_dir, repo_root,
-                         tests_data, tests_root)
+from .test_utils import (
+    Iqtree1,
+    Iqtree2,
+    iqtree1_dir,
+    iqtree2_dir,
+    repo_root,
+    tests_data,
+    tests_root,
+)
 
 
 @pytest.mark.parametrize("options", ["-cmin 2", "-nbest 5"])
@@ -44,9 +53,7 @@ def test_single_alignment_via_checkpoint(temp_dir, data_files, options):
 
 
 @pytest.mark.parametrize("options", ["-cmin 2", "-nbest 5"])
-@pytest.mark.parametrize(
-    "data_files", [(["example.phy"])], indirect=True
-)
+@pytest.mark.parametrize("data_files", [(["example.phy"])], indirect=True)
 def test_single_alignment_via_log(temp_dir, data_files, options):
     """
     single alignment comparison between iqtree1 and iqtree2, comparing BEST SCORE FOUND from log files

@@ -30,24 +30,17 @@ class Iqtree:
         """
         Run IQ-TREE and process the results.
 
-        Parameters
-        ----------
-        alignment_file : str
-            The path to the alignment file.
-        parameters : str
-            The parameters for the IQ-TREE run.
+        Stub method that should be overridden by subclasses.
 
         Returns
         -------
-        Dict[str, Any]
-            The results of the IQ-TREE run.
+        Iqtree
+            The instance so that the process method can be chained.
         """
-        self.results = self.exec_iqtree_binary(alignment_file, parameters)
+        self.results = self.invoke_iqtree(alignment_file, parameters)
         return self
 
-    def exec_iqtree_binary(
-        self, alignment_file: str, parameters: str
-    ) -> Dict[str, Any]:
+    def invoke_iqtree(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
         """
         Execute the IQ-TREE binary and return the results.
 
@@ -61,7 +54,7 @@ class Iqtree:
         Returns
         -------
         Dict[str, Any]
-            The results of the IQ-TREE run.
+            The results of the IQ-TREE invokation.
         """
         stdout = exec_command(
             str(self.iqtree_binary)
@@ -69,7 +62,7 @@ class Iqtree:
             + str(alignment_file)
             + " "
             + parameters
-            + " -redo -nt AUTO"
+            + " -redo -nt AUTO"  # invariant parameters for all tests: overwrite existing results, use all available threads
         )
         output = Iqtree_stdout(stdout.split("\n"))
         checkpoint = Checkpoint(str(alignment_file) + ".ckp.gz")
@@ -80,11 +73,6 @@ class Iqtree:
     def checkpoint(self) -> Checkpoint:
         """
         Get the checkpoint from the results.
-
-        Returns
-        -------
-        Checkpoint
-            The checkpoint from the results.
         """
         return Checkpoint.from_dict(self.results.get("checkpoint"))
 
@@ -92,11 +80,6 @@ class Iqtree:
     def log(self) -> Log:
         """
         Get the log from the results.
-
-        Returns
-        -------
-        Log
-            The log from the results.
         """
         return Log.from_dict(self.results.get("log"))
 
@@ -104,10 +87,5 @@ class Iqtree:
     def stdout(self) -> Iqtree_stdout:
         """
         Get the console output of the execution.
-
-        Returns
-        -------
-        Iqtree_stdout
-            The console output of the execution.
         """
         return Iqtree_stdout.from_dict(self.results.get("output"))

@@ -1,10 +1,12 @@
 # remove from git repo
 import pytest
+
 from numpy.testing import assert_allclose
 
 from .cache import Cache
 from .iqtree1 import Iqtree1
 from .iqtree2 import Iqtree2
+
 
 def test_cache():
     def test_func(alignment_file, parameters):

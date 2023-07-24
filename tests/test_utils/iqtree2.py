@@ -24,11 +24,25 @@ class Iqtree2(Iqtree):
         self.cache_file = tests_data / "iqtree2.cache.json"
 
     def process(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
-        cache = Cache(self.cache_file)
+        """
+        Run IQ-TREE 2 with caching, cache invalidation when the binary changes.
+
+        Parameters
+        ----------
+        alignment_file : str
+            The path to the alignment file.
+        parameters : str
+            The parameters for the IQ-TREE run.
+
+        Returns
+        -------
+        Iqtree2
+            The instance so that the process method can be chained.
+        """
+        cache = Cache(self.cache_file, Path(self.iqtree_binary).stat().st_mtime)
         self.results = cache.get(
             alignment_file,
             parameters,
-            lambda: self.exec_iqtree_binary(alignment_file, parameters),
-            Path(self.iqtree_binary).stat().st_mtime,
+            lambda: self.invoke_iqtree(alignment_file, parameters),
         )
         return self

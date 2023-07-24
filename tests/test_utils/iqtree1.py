@@ -23,11 +23,25 @@ class Iqtree1(Iqtree):
         self.cache_file = tests_data / "iqtree1.cache.json"
 
     def process(self, alignment_file: str, parameters: str) -> Dict[str, Any]:
+        """
+        Run IQ-TREE 1 with caching
+
+        Parameters
+        ----------
+        alignment_file : str
+            The path to the alignment file.
+        parameters : str
+            The parameters for the IQ-TREE run.
+
+        Returns
+        -------
+        Iqtree1
+            The instance so that the process method can be chained.
+        """
         cache = Cache(self.cache_file)
         self.results = cache.get(
             alignment_file,
             parameters,
-            lambda: self.exec_iqtree_binary(alignment_file, parameters),
-            Path(self.iqtree_binary).stat().st_mtime,
+            lambda: self.invoke_iqtree(alignment_file, parameters),
         )
         return self

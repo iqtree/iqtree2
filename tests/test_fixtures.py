@@ -1,12 +1,18 @@
 # remove from git repo
 import os
 import pathlib
+
 from pathlib import Path
 
 import pytest
 
-from .test_utils import (iqtree1_dir, iqtree2_dir, repo_root, tests_data,
-                         tests_root)
+from .test_utils import (
+    iqtree1_dir,
+    iqtree2_dir,
+    repo_root,
+    tests_data,
+    tests_root,
+)
 
 
 @pytest.mark.parametrize(
