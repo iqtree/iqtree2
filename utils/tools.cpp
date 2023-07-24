@@ -1183,7 +1183,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_params_use_hmm_gm = false;
     params.HMM_no_avg_brlen = false;
     params.HMM_min_stran = 0.0;
-    params.treemix_optimize_methods = "hmm";
+    params.treemix_optimize_methods = "mast"; // default is MAST
 
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
@@ -3415,16 +3415,23 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "-hmmster") == 0) {
                 params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = true;
+                params.optimize_params_use_hmm_gm = false;
+                params.treemix_optimize_methods = "hmm";
                 continue;
             }
             if (strcmp(argv[cnt], "-hmmster{sm}") == 0) {
                 params.optimize_params_use_hmm = true;
                 params.optimize_params_use_hmm_sm = true;
+                params.optimize_params_use_hmm_gm = false;
+                params.treemix_optimize_methods = "hmm";
                 continue;
             }
             if (strcmp(argv[cnt], "-hmmster{gm}") == 0) {
                 params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = false;
                 params.optimize_params_use_hmm_gm = true;
+                params.treemix_optimize_methods = "hmm";
                 continue;
             }
 //            if (strcmp(argv[cnt], "-hmmonly") == 0) {
@@ -5377,7 +5384,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     }
     
-    if (params.treemix_optimize_methods.find("hmm")!=string::npos) {
+    if (params.treemix_optimize_methods.find("hmm")!=string::npos &&
+        params.model_name.find("+T") != string::npos) {
         params.optimize_params_use_hmm = true;
     } else {
         params.optimize_params_use_hmm = false;
