@@ -6,8 +6,10 @@ This directory contains tests for the IQ-TREE project. The tests are written in 
 
 - `tests/`: Contains the Python test scripts.
 - `tests/data`: Contains sample data files used for testing.
-- `tests/bin`: Contains binaries including the iqtree version 1 binary.
-- `tests/conftest.py`: Contains fixtures for the pytest framework. Fixtures are reusable pieces of code that can be used to set up resources (like temporary directories), as well as pass data or configurations to tests.
+  - `tests/data/iqtree?.cache.json`: are cached results stored in this directory when tests are run. 
+- `tests/iqtree1`: An IQ-TREE 1.x binary should be built and copied into this directory for regression testing.  This binary will not be stored in the repository as it should be specific to the OS platform on which the tests will be run.
+- `tests/test_utils` : Contains utility functions used by the test scripts to run iqtree binaries, and cache their results.
+- `tests/conftest.py`: Contains fixtures for the pytest framework, that include the creation of temporary directories for each test, and the copying of test specific `tests/data` data files to a `data` subdirectory under the tests temporary directory .
 - `requirements.txt`: Contains the Python dependencies required for testing.
 
 ## Getting Started
