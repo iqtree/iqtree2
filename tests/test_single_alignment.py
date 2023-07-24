@@ -52,7 +52,7 @@ def test_single_alignment_via_checkpoint(temp_dir, data_files, options):
     )
 
 
-@pytest.mark.parametrize("options", ["-cmin 2", "-nbest 5"])
+@pytest.mark.parametrize("options", ["-cmin 2", "-nbest 5","-nstop 100"])
 @pytest.mark.parametrize("data_files", [(["example.phy"])], indirect=True)
 def test_single_alignment_via_log(temp_dir, data_files, options):
     """

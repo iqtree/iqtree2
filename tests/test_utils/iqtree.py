@@ -56,6 +56,8 @@ class Iqtree:
         Dict[str, Any]
             The results of the IQ-TREE invokation.
         """
+        if not self.iqtree_binary.exists():
+            raise FileNotFoundError(f'Could not find IQ-TREE binary "{self.iqtree_binary}".')
         stdout = exec_command(
             str(self.iqtree_binary)
             + " -s "
