@@ -476,8 +476,6 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     }
 
     backLogLike = score;
-    setCurScore(score);
-    stop_rule.setCurIt(step);
     computeMaxPath();
 
     // set the tree weights according to the marginal probabilities
@@ -485,13 +483,12 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
         setWeightToMarginalProb();
     }
     
-    /*
-    if (params->proceed_MAST_after_HMMSTER) {
-        // proceed to optimization of parameters according to MAST model
-        cout << endl << "Proceed to optimization of parameters according to MAST model" << endl;
-        optimizeModelParamTreeMix(printInfo, logl_epsilon);
-    }
-    */
+    // compute the corresponding score according to the tree mixture formula
+    objFun = 1;
+    score = computeLikelihood();
+
+    setCurScore(score);
+    stop_rule.setCurIt(step);
 
     return getTreeString();
 }
