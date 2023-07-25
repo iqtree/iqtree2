@@ -37,7 +37,7 @@ The following fixtures are available to all tests;
   - tests_dir: path to the tests root directory
   - tests_data: path to any sample data that will be used in tests
 - **temp_dir**: runs the test in a temporary directory. The temporary directory is automatically deleted after the test is run.  This is useful for testing features that create output files.
-- **data_files**: takes a list of file names of files specified using a decorator `@pytest.mark.parametrize("data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True)` in the `/tests/data` directory and copies each file into the `data` subdirectory of the temporary directory that the test is run in.  This is useful for testing features that require input files.
+- **data_files**: takes a list of file names of files specified using a decorator `@pytest.mark.parametrize("data_files", [(["sample_file1.txt", "sample_file2.txt"])], indirect=True)` in the `/tests/data` directory and copies each file into the temporary directory that the test is run in.  This is useful for testing features that require input files.
 
 ### Parameterizing Tests
 
