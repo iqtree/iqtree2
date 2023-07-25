@@ -541,7 +541,12 @@ void reportRate(ostream &out, PhyloTree &tree) {
     }
     
     RateHeterogeneity *rate_model = tree.getRate();
-    out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
+    // NHANLT: temporarily fixed bug when reporting continuous gamma model
+    // Note: I use RateGamma class (to avoid potential bug if users want to use continuous Gamma for the inference process) and an addition flag is_continuous_gamma to detect continuous Gamma
+    if (tree.getModelFactory()->is_continuous_gamma)
+        out << "Model of rate heterogeneity: Continuous Gamma" << endl;
+    else
+        out << "Model of rate heterogeneity: " << rate_model->full_name << endl;
     rate_model->writeInfo(out);
 
     if (rate_model->getNDiscreteRate() > 1 || rate_model->getPInvar() > 0.0) {
@@ -1184,7 +1189,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 out << "\t" << (*it)->aln->getNSeq() << "\t" << (*it)->aln->getNSite()
                     << "\t" << (*it)->aln->getNPattern() << "\t" << (*it)->aln->num_informative_sites
                     << "\t" << (*it)->getAlnNSite() - (*it)->aln->num_variant_sites
-                    << "\t" << int((*it)->aln->frac_const_sites*(*it)->getAlnNSite())
+                    << "\t" << round((*it)->aln->frac_const_sites*(*it)->getAlnNSite())
                     << "\t";
                 out << left << (*it)->aln->name;
                 out << endl;
@@ -1661,6 +1666,9 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             }
             out << endl;
         }
+        
+        // export AliSim command if needed
+        exportAliSimCMD(params, tree, out);
 
         time_t cur_time;
         time(&cur_time);
@@ -1682,32 +1690,30 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
     }
     
     printOutfilesInfo(params, tree);
-    
-    // export AliSim command if needed
-    exportAliSimCMD(params, tree);
 }
 
-void exportAliSimCMD(Params &params, IQTree &tree)
+void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
 {
-    // only show alisim command if users specify --alisim
-    if (!params.alisim_active) return;
-    
     // make sure this method will not make IQTREE crashed
     if (!(params.aln_file || params.partition_file) || !params.out_prefix || !tree.aln || !tree.getModel()
         || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH)
         || tree.isTreeMix())
         return;
     
-    cout << "ALISIM COMMAND" << endl;
-    cout << "--------------" << endl;
+    out << "ALISIM COMMAND" << endl;
+    out << "--------------" << endl;
     
+    string more_info = "For more information on using AliSim, please visit: www.iqtree.org/doc/AliSim";
     
     // skip unsupported models
     if (tree.getModel()->isMixture() || tree.getRate()->isHeterotachy() || tree.getModel()->isLieMarkov() || tree.aln->seq_type == SEQ_CODON)
     {
-        cout << "Currently, we only support exporting AliSim commands from common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        out << "Currently, we only support exporting AliSim commands automatically from the analysis for common models of DNA, Protein, Binary, and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        out << more_info << endl << endl;
         return;
     }
+    
+    out << "To simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis, you can use the following command:" << endl << endl;
     
     // init alisim command
     string alisim_cmd = "--alisim simulated_MSA";
@@ -1761,7 +1767,24 @@ void exportAliSimCMD(Params &params, IQTree &tree)
     }
     
     // output alisim cmd
-    cout << alisim_cmd << endl << endl;
+    out << alisim_cmd << endl << endl;
+    
+    out << "To mimic the alignment used to produce this analysis, i.e. simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis *and* copying the same gap positions as the original alignment, you can use the following command:" << endl << endl;
+    
+    if (params.aln_file)
+        out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA" << endl << endl;
+    else
+        out << "iqtree -s <alignment.phy> --alisim mimicked_MSA" << endl << endl;
+
+
+    out << "To simulate any number of alignments in either of the two commandlines above, use the --num-alignments options, for example mimic 100 alignments you would use the command line:" << endl << endl;
+
+    if (params.aln_file)
+        out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA --num-alignments 100" << endl << endl;
+    else
+        out << "iqtree -s <alignment.phy> --alisim mimicked_MSA --num-alignments 100" << endl << endl;
+    
+    out << more_info << endl << endl;
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {
@@ -2935,6 +2958,14 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
     printMiscInfo(params, *iqtree, pattern_lh);
 
+    if (params.alisim_fundi_taxon_set.size() > 0 && !params.alisim_active) {
+        cout << "Optimizing FunDi model..." << endl;
+        double start_time = getRealTime();
+        double score = iqtree->optimizeFundiModel();
+        cout << "FunDi log-likelihood: " << score << endl;
+        cout << "Time taken to optimize FunDi model: " << getRealTime() - start_time << " sec" << endl;
+    }
+    
     if (params.root_test) {
         cout << "Testing root positions..." << endl;
         string out_file = (string)params.out_prefix + ".roottest.trees";
@@ -4316,6 +4347,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
             runMultipleTreeReconstruction(params, tree->aln, tree);
         }
         
+        if (params.ancestral_site_concordance)
+            tree->computeAllAncestralSiteConcordance();
+        
         if (MPIHelper::getInstance().isMaster()) {
             reportPhyloAnalysis(params, *tree, *model_info);
         }
@@ -4518,7 +4552,7 @@ void assignBranchSupportNew(Params &params) {
     }
     string prefix = (params.out_prefix) ? params.out_prefix : params.user_file;
     string str = prefix + ".cf.tree";
-    tree->printTree(str.c_str());
+    tree->printTree(str.c_str(), WT_BR_LEN + WT_NEWLINE);
     cout << "Tree with concordance factors written to " << str << endl;
     str = prefix + ".cf.tree.nex";
     string filename = prefix + ".cf.stat";
@@ -4607,6 +4641,8 @@ void assignBranchSupportNew(Params &params) {
         out.close();
         cout << "Site concordance factors for quartets printed to " << filename << endl;
     }
+    
+    outWarning("You probably want the --scfl option. The site concordance factor\n implemented with the --scf option is based on parsimony (described here:\n https://doi.org/10.1093/molbev/msaa106). It has since been superseded by a more\n accurate likelihood-based approach which is implemented in the --scfl option, and\n is described in the paper \"Updated site concordance factors minimize effects of\n homoplasy and taxon sampling\" by Yu et al.. Please see the tutorial here for more\n information: http://www.iqtree.org/doc/Concordance-Factor");
     
     if (!params.site_concordance_partition)
         return;

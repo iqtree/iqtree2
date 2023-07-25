@@ -215,11 +215,11 @@ size_t CandidateModel::getUsualModel(Alignment *aln) {
         SuperAlignment *super_aln = (SuperAlignment*)aln;
         for (auto it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
             CandidateModel usual_model(*it);
-            if (!subst_name.empty())
+            if (!subst_name.empty() || !rate_name.empty()) {
                 subst_name += ',';
-            subst_name += usual_model.subst_name;
-            if (!rate_name.empty())
                 rate_name += ',';
+            }
+            subst_name += usual_model.subst_name;
             rate_name += usual_model.rate_name;
             aln_len += (*it)->getNSite();
         }
@@ -640,7 +640,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     }
 
     iqtree->getModelFactory()->restoreCheckpoint();
-    iqtree->ensureNumberOfThreadsIsSet(nullptr);
+    iqtree->ensureNumberOfThreadsIsSet(&params);
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
     params.modelEps = params.modelfinder_eps;

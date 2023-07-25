@@ -26,7 +26,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
         
         // parse input into vector
         DoubleVector tmp_rates;
-        convert_double_vec_with_distributions(model_params.c_str(), tmp_rates, separator);
+        convert_double_vec_with_distributions(model_params.c_str(), tmp_rates, false, separator);
         
         // validate the number of params (11 or 12)
         if (tmp_rates.size() != num_params && tmp_rates.size() != num_params + 1)

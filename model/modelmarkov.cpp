@@ -1225,7 +1225,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
         scaleStateFreq(true);
         changed = true;
     }
-    if (changed) {
+    if (changed || score == -1.0e+30) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
         score = phylo_tree->computeLikelihood();
@@ -1643,7 +1643,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	} else if (is_reversible ){
         // reversible model
 		try {
-			rates[0] = convert_double_with_distribution(str.c_str());
+			rates[0] = convert_double_with_distribution(str.c_str(), true);
 		} catch (string &str) {
 			outError(str);
 		}
@@ -1654,7 +1654,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
             in >> tmp_value;
             if (tmp_value.length() == 0)
                 throw "Rate entries could not be read";
-            rates[i] = convert_double_with_distribution(tmp_value.c_str());
+            rates[i] = convert_double_with_distribution(tmp_value.c_str(), true);
             
 			if (rates[i] < 0.0)
 				throw "Negative rates not allowed";
@@ -1668,7 +1668,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
                 if (row == 0 && col == 0) {
                     // top-left element was already red
                     try {
-                        row_sum = convert_double_with_distribution(str.c_str());
+                        row_sum = convert_double_with_distribution(str.c_str(), false);
                     } catch (string &str) {
                         outError(str);
                     }
@@ -1678,7 +1678,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
                     in >> tmp_value;
                     if (tmp_value.length() == 0)
                         throw name+string(": Rate entries could not be read");
-                    rates[i] = convert_double_with_distribution(tmp_value.c_str());
+                    rates[i] = convert_double_with_distribution(tmp_value.c_str(), true);
                     
                     if (rates[i] < 0.0)
                         throw "Negative rates found";
@@ -1712,7 +1712,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 	} else for (int i = 0; i < nrates; i++) {
 		int new_end_pos;
 		try {
-			rates[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
+			rates[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, true, separator);
 		} catch (string &str) {
 			outError(str);
 		}
@@ -1740,7 +1740,7 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
         in >> tmp_value;
         if (tmp_value.length() == 0)
             throw "State frequencies could not be read";
-        state_freq[i] = convert_double_with_distribution(tmp_value.c_str());
+        state_freq[i] = convert_double_with_distribution(tmp_value.c_str(), true);
 		if (state_freq[i] < 0.0)
 			throw "Negative state frequencies found";
 	}
@@ -1766,7 +1766,7 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
     
 	for (i = 0; i < num_states; i++) {
 		int new_end_pos;
-		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, separator);
+		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, true, separator);
 		end_pos += new_end_pos;
 		//cout << i << " " << state_freq[i] << endl;
 		if (state_freq[i] < 0.0 || state_freq[i] > 1)
@@ -1845,7 +1845,7 @@ void ModelMarkov::readParametersString(string &model_str, bool adapt_tree) {
     // if detect if reading full matrix or half matrix by the first entry
     int end_pos;
     double d = 0.0;
-    d = convert_double_with_distribution(model_str.c_str(), end_pos);
+    d = convert_double_with_distribution(model_str.c_str(), end_pos, false);
     if (d < 0) {
         setReversible(false, adapt_tree);
     }

@@ -109,7 +109,7 @@ void reportRate(ostream &out, PhyloTree &tree);
 
 void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree);
 
-void exportAliSimCMD(Params &params, IQTree &tree);
+void exportAliSimCMD(Params &params, IQTree &tree, ostream &out);
 
 /** compute rootstrap for a user defined tree from a set of trees */
 void runRootstrap(Params &params);

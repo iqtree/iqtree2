@@ -4833,7 +4833,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     for (int i = 0; i < 4; i++)
                     {
                         size_t pos = freq_params.find(separator);
-                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str(), true);
                         if (ntfreq[i] < 0)
                             outError("State frequency cannot be negative!");
                         
@@ -4938,7 +4938,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
                     for (int i = 0; i < 12; i++)
                     {
                         size_t pos = freq_params.find(separator);
-                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str());
+                        ntfreq[i] = convert_double_with_distribution(freq_params.substr(0, pos).c_str(), true);
                         if (ntfreq[i] < 0)
                             outError("State frequency cannot be negative!");
                         
@@ -5716,4 +5716,232 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
  */
 void Alignment::setExpectedNumSites(int new_expected_num_sites){
     expected_num_sites = new_expected_num_sites;
+}
+
+void Alignment::extractMapleFile(const std::string& aln_name, const InputType& format)
+{
+    // ------ read input sequences ----------
+    std::string aln_file = getOutputNameWithExt(format, aln_name);
+    char* aln_file_ptr = new char[aln_file.length() + 1];
+    std::strcpy(aln_file_ptr, aln_file.c_str());
+    
+    // dummy variables
+    StrVector sequences;
+    int nseq = 0;
+    int nsite = 0;
+    
+    // read the alignment file
+    switch (format) {
+        case IN_FASTA:
+            doReadFasta(aln_file_ptr, nullptr, sequences, nseq, nsite);
+            break;
+            
+        case IN_PHYLIP:
+            doReadPhylip(aln_file_ptr, nullptr, sequences, nseq, nsite);
+            break;
+            
+        default:
+            outError("Unsupported alignment format!");
+            break;
+    }
+    
+    // delete char* varaibles
+    delete[] aln_file_ptr;
+    // ------ read input sequences ----------
+    
+    // generate reference sequence from the input sequences
+    string ref_sequence = generateRef(sequences);
+    
+    // open the output file
+    ofstream out = ofstream(getOutputNameWithExt(IN_MAPLE, aln_name));
+    
+    // write reference sequence to the output file
+    out << ">REF" << endl;
+    out << ref_sequence << endl;
+    
+    // extract and write mutations of each sequence to file
+    extractMutations(sequences, seq_names, ref_sequence, out);
+    
+    // close the output file
+    out.close();
+}
+
+string Alignment::generateRef(StrVector &sequences)
+{
+    // default state/characters
+    std::string default_state_str = convertStateBackStr(0);
+    
+    // validate the input sequences
+    if (sequences.size() == 0 || sequences[0].length() == 0)
+        outError("Empty input sequences. Please check & try again!");
+    
+    // init dummy variables
+    char NULL_CHAR = '\0';
+    string ref_str (sequences[0].length(), NULL_CHAR);
+    
+    // determine a character for each site one by one
+    int32_t threshold = sequences.size() * 0.5;
+    for (auto i = 0; i < ref_str.length(); ++i)
+    {
+        // Init a map to count the number of times each character appears
+        std::map<char, int32_t> num_appear;
+        
+        for (auto j = 0; j < sequences.size(); ++j)
+        {
+            // update num_appear for the current character
+            int32_t count = num_appear[sequences[j][i]] + 1;
+            num_appear[sequences[j][i]] = count;
+            
+            // stop counting if a character appear in more than 1/2 sequences at the current site
+            if (count >= threshold && sequences[j][i] != '-')
+            {
+                ref_str[i] = sequences[j][i];
+                break;
+            }
+        }
+        
+        // manually determine the most popular charater for the current site (if no character dominates all the others)
+        if (ref_str[i] == NULL_CHAR)
+        {
+            for (const std::pair<const char, int32_t>& character : num_appear)
+                if (character.first != '-' &&
+                    (ref_str[i] == NULL_CHAR || character.second > num_appear[ref_str[i]]))
+                    ref_str[i] = character.first;
+        }
+        
+        // if ref_str[i] is still null (gaps were found at this site in all sequences) -> use the default character
+        if (ref_str[i] == NULL_CHAR)
+        {
+            // not codon -> simply replace once character
+            if (seq_type != SEQ_CODON)
+                ref_str[i] = default_state_str[0];
+            // otherwise, condon -> replace 3 characters
+            else
+            {
+                // get the start pos of the codon
+                int start_pos = i - i % 3; // pos_in_codon is 0 1 2
+                // replace the condon with gaps by the default codon
+                for (int pos_in_codon = 0; pos_in_codon < 3; ++pos_in_codon)
+                    ref_str[start_pos + pos_in_codon] = default_state_str[pos_in_codon];
+                
+                // move to the start of the next codon
+                i = start_pos + 3;
+            }
+        }
+    }
+    
+    // return the reference genome
+    return ref_str;
+}
+
+void Alignment::extractMutations(StrVector &str_sequences, StrVector &seq_names, string& ref_sequence, ofstream &out)
+{
+    ASSERT(str_sequences.size() == seq_names.size() && str_sequences.size() > 0 && out);
+    int32_t seq_length = ref_sequence.length();
+    
+    // extract mutations of sequences one by one
+    for (auto i = 0; i < str_sequences.size(); ++i)
+    {
+        // validate the sequence length
+        string str_sequence = str_sequences[i];
+        ASSERT(seq_length == str_sequence.length());
+        
+        // write taxon name
+        out << ">" << seq_names[i] << endl;
+        
+        // init dummy variables
+        int state = 0;
+        int32_t length = 0;
+        for (auto pos = 0; pos < seq_length; ++pos)
+        {
+            switch (state)
+            {
+                case 0: // previous character is neither 'N' nor '-'
+                    if (str_sequence[pos] != ref_sequence[pos])
+                    {
+                        length = 1;
+                        
+                        // starting a sequence of 'N'
+                        if (toupper(str_sequence[pos]) == 'N' && seq_type == SEQ_DNA)
+                            state = 1;
+                        // starting a sequence of '-'
+                        else if (str_sequence[pos] == '-')
+                            state = 2;
+                        // output a mutation
+                        else
+                            outputMutation(out, str_sequence[pos], pos);
+                    }
+                    break;
+                case 1: // previous character is 'N'
+                    // inscrease the length if the current character is still 'N'
+                    if (toupper(str_sequence[pos]) == 'N' && str_sequence[pos] != ref_sequence[pos])
+                        ++length;
+                    else
+                    {
+                        // output the previous sequence of 'N'
+                        outputMutation(out, str_sequence[pos-1], pos - length, length);
+                        
+                        // reset state
+                        state = 0;
+                        
+                        // handle new character different from the reference
+                        if (str_sequence[pos] != ref_sequence[pos])
+                        {
+                            length = 1;
+                            // starting a sequence of '-'
+                            if (str_sequence[pos] == '-')
+                                state = 2;
+                            // output a mutation
+                            else
+                            {
+                                outputMutation(out, str_sequence[pos], pos);
+                                state = 0;
+                            }
+                        }
+                    }
+                    break;
+                case 2: // previous character is '-'
+                    // inscrease the length if the current character is still '-'
+                    if (toupper(str_sequence[pos]) == '-' && str_sequence[pos] != ref_sequence[pos])
+                        ++length;
+                    else
+                    {
+                        // output the previous sequence of '-'
+                        outputMutation(out, str_sequence[pos-1], pos - length, length);
+                        
+                        // reset state
+                        state = 0;
+                        
+                        // handle new character different from the reference
+                        if (str_sequence[pos] != ref_sequence[pos])
+                        {
+                            length = 1;
+                            // starting a sequence of 'N'
+                            if (toupper(str_sequence[pos]) == 'N' && seq_type == SEQ_DNA)
+                                state = 1;
+                            // output a mutation
+                            else
+                            {
+                                outputMutation(out, str_sequence[pos], pos);
+                                state = 0;
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        //  output the last sequence of 'N' or '-' (if any)
+        if (state != 0)
+            outputMutation(out, str_sequence[str_sequence.length() - 1], str_sequence.length() - length, length);
+    }
+}
+
+void Alignment::outputMutation(ofstream &out, char state_char, int32_t pos, int32_t length)
+{
+    // output the mutation into a Diff file
+    out << state_char << "\t" << (pos + 1);
+    if (length != -1)
+        out << "\t" << length;
+    out << endl;
 }

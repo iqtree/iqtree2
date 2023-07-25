@@ -82,6 +82,12 @@ public:
         MPIHelper::processID = processID;
     }
 
+    void barrier() {
+        #ifdef _IQTREE_MPI
+            MPI_Barrier(MPI_COMM_WORLD);
+        #endif
+    }
+
     /** synchronize random seed from master to all workers */
     void syncRandomSeed();
     

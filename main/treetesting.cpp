@@ -125,7 +125,8 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, filename);
     }    
-    delete[] pattern_lh;
+    if (!ptn_lh)
+        delete[] pattern_lh;
 }
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
@@ -1501,6 +1502,8 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree,
                    vector<TreeInfo> &info, IntVector &distinct_ids)
 {
     cout << "Reading trees in " << treeset_file << " ..." << endl;
+    if (!fileExists(treeset_file))
+        outError("File not found ", treeset_file);
     ifstream in(treeset_file);
     evaluateTrees(in, params, tree, info, distinct_ids);
     in.close();

@@ -1202,10 +1202,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			if (pos_rate != string::npos) {
 				size_t pos_weight = this_name.find(':', pos_rate+1);
 				if (pos_weight == string::npos) {
-					rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str());
+					rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str(), true);
 				} else {
-					rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-					weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str());
+					rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str(), true);
+					weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str(), true);
 					fix_prop = true;
 					if (weight <= 0.0)
 						outError("Mixture component weight is negative!");
@@ -1288,10 +1288,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		if (pos_rate != string::npos) {
 			size_t pos_weight = this_name.find(':', pos_rate+1);
 			if (pos_weight == string::npos) {
-				rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str());
+				rate = convert_double_with_distribution(this_name.substr(pos_rate+1).c_str(), true);
 			} else {
-				rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str());
-				weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str());
+				rate = convert_double_with_distribution(this_name.substr(pos_rate+1, pos_weight-pos_rate-1).c_str(), true);
+				weight = convert_double_with_distribution(this_name.substr(pos_weight+1).c_str(), true);
 				fix_prop = true;
 				if (weight <= 0.0)
 					outError("Mixture component weight is negative!");
@@ -1359,7 +1359,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     model_freq = FREQ_EMPIRICAL;
                 }
                 this_name = this_name.substr(0, fpos);
-            } else {
+            } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
                 switch(model_freq) {
                     case FREQ_USER_DEFINED:
                         if (freq_params.length() > 0) {
@@ -1952,6 +1952,28 @@ bool ModelMixture::isFused() {
     return true;
 }
 
+bool ModelMixture::isMixtureSameQ() {
+    if (share_same_Q == -1)
+    {
+        share_same_Q = 1;
+        string model_name_0 = at(0)->ModelSubst::getName();
+        model_name_0 = model_name_0.substr(0, model_name_0.find("+"));
+        
+        for (iterator it = begin() + 1; it != end(); it++)
+        {
+            string model_name_i = (*it)->ModelSubst::getName();
+            model_name_i = model_name_i.substr(0, model_name_i.find("+"));
+            if (model_name_i != model_name_0)
+            {
+                share_same_Q = 0;
+                break;
+            }
+        }
+    }
+    
+    return share_same_Q == 1;
+}
+
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = true;
 
@@ -2154,7 +2176,7 @@ string ModelMixture::getNameParams(bool show_fixed_params) {
     retname += OPEN_BRACKET;
     for (iterator it = begin(); it != end(); it++) {
         if (it != begin()) retname += ",";
-        retname += (*it)->getNameParams();
+        retname += (*it)->getNameParams(show_fixed_params);
     }
     retname += CLOSE_BRACKET;
     return retname;
