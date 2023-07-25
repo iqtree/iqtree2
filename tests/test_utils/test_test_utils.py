@@ -22,16 +22,16 @@ def test_cache():
 @pytest.mark.parametrize("data_files", [(["example.phy"])], indirect=True)
 def test_iqtree1(temp_dir, data_files):
     iqtree1_result = Iqtree1().process(
-        temp_dir / "data" / data_files[0], "-cmin 2 -m TEST -nt AUTO "
+        temp_dir / data_files[0], "-cmin 2 -m TEST -nt AUTO "
     )
     lnL = iqtree1_result.checkpoint.log_likelihood
     assert_allclose(lnL, -11224, rtol=10)
 
 
 @pytest.mark.parametrize("data_files", [(["example.phy"])], indirect=True)
-def test_iqtree1(temp_dir, data_files):
+def test_iqtree2(temp_dir, data_files):
     iqtree2_result = Iqtree2().process(
-        temp_dir / "data" / data_files[0], "-cmin 2 -m TEST -nt AUTO "
+        temp_dir / data_files[0], "-cmin 2 -m TEST -nt AUTO "
     )
     lnL = iqtree2_result.checkpoint.log_likelihood
     assert_allclose(lnL, -11224, rtol=10)

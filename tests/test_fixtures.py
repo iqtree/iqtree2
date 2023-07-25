@@ -45,12 +45,12 @@ def test_fixtures(temp_dir, data_files):
     # Assert that the current directory is a subdirectory of the /tests directory
     # and starts with the prefix 'tmp'
     current_dir = Path(os.getcwd())
-    assert current_dir.parent == tests_root
-    assert current_dir.name.startswith("tmp")
+    # assert current_dir.parent == tests_root
+    assert current_dir.name.startswith("temp")
 
     # Assert that the data_files specified are in the <temp>/data subdirectory
     for data_file in data_files:
-        data_file_path = temp_dir / "data" / data_file
+        data_file_path = temp_dir / data_file
         assert data_file_path.is_file()
 
     # Assert that repo_paths iqtree2_dir, tests_dir, and data_dir are all ultimately in the path below the repo_root

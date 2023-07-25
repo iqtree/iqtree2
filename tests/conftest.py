@@ -17,7 +17,7 @@ from .test_utils import (
 
 
 @pytest.fixture(scope="function")
-def temp_dir(request, data_files):
+def temp_dir(request, data_files, tmp_path_factory):
     """
     Create a temporary directory with a data subdirectory, change to it for running tests, and clean up.
 
@@ -28,26 +28,22 @@ def temp_dir(request, data_files):
 
     Yields
     ------
-    dict
-        The updated repo_paths dictionary with the paths to the temporary directory and its data subdirectory.
+    pathlib.Path
+        The path to the temporary directory.
     """
 
     # Save the current working directory
     original_dir = os.getcwd()
 
     # Create a temporary directory and change to it
-    temp_path = Path(tempfile.mkdtemp(dir=tests_root))
+    temp_path = tmp_path_factory.mktemp(basename="temp_dir", numbered=True)
     os.chdir(temp_path)
 
-    # Create a data subdirectory
-    data_subdir = temp_path / "data"
-    data_subdir.mkdir()
-
-    # Copy the files specified in data_files to the data subdirectory
+    # Copy the files specified in data_files to the temporary directory
     for data_file in data_files:
         # check to see if the file is in the tests_data directory
         if (tests_data / data_file).is_file():
-            shutil.copy(tests_data / data_file, data_subdir)
+            shutil.copy(tests_data / data_file, temp_path)
         else:
             raise FileNotFoundError(f"Data file {data_file} not found in {tests_data}")
 
@@ -56,8 +52,7 @@ def temp_dir(request, data_files):
 
     # Change back to the original directory and remove the temporary directory
     os.chdir(original_dir)
-    shutil.rmtree(temp_path)
-
+    
 
 @pytest.fixture(scope="function")
 def data_files(request):
@@ -70,12 +65,6 @@ def data_files(request):
     of the pytest.mark.parametrize decorator indicates that the data_files will
     be passed through to the temp_dir fixture for copying to the temporary data
     directory.
-
-
-    Parameters
-    ----------
-    request : _pytest.fixtures.SubRequest
-        The pytest request object.
 
     Returns
     -------

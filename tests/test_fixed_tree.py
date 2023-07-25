@@ -27,7 +27,7 @@ def test_against_cogent3(data_files, temp_dir):
     assert len(data_files) == 1, "Only one alignment file should be specified per test"
     iqtree2_binary = iqtree2_dir / "iqtree2"
     assert iqtree2_binary.is_file(), "IQ-Tree2 binary not found"
-    alignment_file = temp_dir / "data" / data_files[0]
+    alignment_file = temp_dir / data_files[0]
     iqtree2_params = " -m HKY -redo"
     lnL = Iqtree2().process(alignment_file, iqtree2_params).checkpoint.log_likelihood
 
