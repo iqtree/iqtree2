@@ -1976,6 +1976,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	int64_t num_model = 0;
     int64_t total_num_model = in_tree->size();
 
+    // for greedy algorithm
+    if (params.partition_merge == MERGE_GREEDY) {
+        params.partfinder_rcluster_max = in_tree->size() * (in_tree->size()-1) / 2;
+        params.partfinder_log_rate = false;
+        params.partfinder_rcluster = 100.0;
+    }
+    
     // 2017-06-07: -rcluster-max for max absolute number of pairs
     if (params.partfinder_rcluster_max == 0) {
         params.partfinder_rcluster_max = max((size_t)1000, 10 * in_tree->size());
