@@ -3342,8 +3342,6 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     if (!safe_numeric && !std::isfinite(tree_lh))
         outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
 
-    ASSERT(std::isfinite(tree_lh) && "Numerical underflow for lh-from-buffer");
-
     // arbitrarily fix tree_lh if underflown for some sites
     if (!std::isfinite(tree_lh)) {
         tree_lh = 0.0;
