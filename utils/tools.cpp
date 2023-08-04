@@ -2509,7 +2509,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     if (params.partfinder_rcluster == 100)
                         params.partfinder_rcluster = 99.9999;
                     params.partition_merge = MERGE_RCLUSTERF;
-                } else if (strcmp(argv[cnt], "rcluster") == 0)
+                } else if (strcmp(argv[cnt], "kmeans") == 0)
                     params.partition_merge = MERGE_KMEANS;
                 else
                     throw "Use --merge [none|greedy|rcluster|rclusterf|kmeans]";
