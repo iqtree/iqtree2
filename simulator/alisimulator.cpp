@@ -524,7 +524,7 @@ void AliSimulator::getOnlyVariantSites(vector<short int> &variant_state_mask, No
 /**
 *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
 */
-void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
+void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode)
 {
     // reset number of chunks of the root sequence to 1
     tree->MTree::root->sequence->sequence_chunks.resize(1);
@@ -573,7 +573,7 @@ void AliSimulator::generatePartitionAlignment(vector<short int> &ancestral_seque
     validataSeqLengthCodon();
     
     // simulate the sequence for each node in the tree by DFS
-    simulateSeqsForTree(input_msa, output_filepath, open_mode);
+    simulateSeqsForTree(input_msa, site_locked_vec, output_filepath, open_mode);
 }
 
 /**
@@ -720,7 +720,7 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
 /**
 *  simulate sequences for all nodes in the tree
 */
-void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode)
+void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode)
 {
     // get variables
     int sequence_length = expected_num_sites;
@@ -742,15 +742,15 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, string outp
     
     // execute one of the AliSim-OpenMP algorithms to simulate sequences
     if (params->alisim_openmp_alg == IM)
-        executeIM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
+        executeIM(thread_id, sequence_length, default_segment_length, model, input_msa, site_locked_vec, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
     else
-        executeEM(thread_id, sequence_length, default_segment_length, model, input_msa, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
+        executeEM(thread_id, sequence_length, default_segment_length, model, input_msa, site_locked_vec, output_filepath, open_mode, write_sequences_to_tmp_data, store_seq_at_cache, max_depth, state_mapping);
     
     // process after simulating sequences
     postSimulateSeqs(sequence_length, output_filepath, write_sequences_to_tmp_data);
 }
 
-void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
+void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
 {
     ostream *single_output = NULL;
     ostream *out = NULL;
@@ -790,7 +790,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         
         // initialize trans_matrix
         double *trans_matrix = new double[max_num_states * max_num_states];
-        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream, generator);
+        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, site_locked_vec, rstream, generator);
         
         // delete trans_matrix array
         delete[] trans_matrix;
@@ -982,7 +982,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
     }
 }
 
-void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
+void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping)
 {
     int actual_segment_length = sequence_length;
     ostream *out = NULL;
@@ -1060,7 +1060,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         {
             // initialize trans_matrix
             double *trans_matrix = new double[max_num_states * max_num_states];
-            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, rstream, generator);
+            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, site_locked_vec, rstream, generator);
             
             // delete trans_matrix array
             delete[] trans_matrix;
@@ -1392,7 +1392,7 @@ void AliSimulator::closeOutputStream(ostream *&out, bool force_uncompression)
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, int* rstream, default_random_engine& generator)
+void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, int* rstream, default_random_engine& generator)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -1420,7 +1420,18 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         if (((*it)->length * params->alisim_branch_scale > params->alisim_simulation_thresh && !(model->isMixture() && params->alisim_mixture_at_sub_level))
             || tree->getRate()->isHeterotachy()
             || (*it)->attributes.find("model") != (*it)->attributes.end())
+        {
             simulation_method = TRANS_PROB_MATRIX;
+            
+            // if predefined mutations are specified -> use Rate Matrix
+            if (tree->params->include_pre_mutations && (*it)->attributes.find(MTree::ANTT_MUT) != (*it)->attributes.end())
+            {
+                if (tree->getRate()->isHeterotachy() || (*it)->attributes.find("model") != (*it)->attributes.end())
+                    outWarning("Ignore predefined mutations in simulations with either Heterotachy or branch-specific models");
+                else
+                    simulation_method = RATE_MATRIX;
+            }
+        }
         
         // if branch_length is too short (less than 1 substitution is expected to occur) -> clone the sequence from the parent's node
         if ((*it)->length == 0)
@@ -1451,7 +1462,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 
                 // handle indels
                 if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
-                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream, generator);
+                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, 0, rstream, generator);
             }
             // otherwise (Rate_matrix is used as the simulation method) + also handle Indels (if any).
             else
@@ -1459,8 +1470,14 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 // clone the sequence chunk from the parent node
                 (*node_seq_chunk) = (*dad_seq_chunk);
                 
+                // handle predefined mutations
+                // count the number of mutations occur in this segment
+                int predefined_mutation_count = 0;
+                if (tree->params->include_pre_mutations)
+                    handlePreMutations(it, predefined_mutation_count, segment_start, segment_length, node_seq_chunk);
+                
                 // Each thread simulate a chunk of sequence using the Gillespie algorithm
-                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, rstream, generator);
+                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, predefined_mutation_count, rstream, generator);
             }
         }
         
@@ -1496,7 +1513,50 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, rstream, generator);
+        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, site_locked_vec, rstream, generator);
+    }
+}
+
+void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& predefined_mutation_count, const int& segment_start, const int& segment_length, vector<short int>* const node_seq_chunk)
+{
+    // parse the list of predefined mutations (if any)
+    auto atb_it = (*it)->attributes.find(MTree::ANTT_MUT);
+    if (atb_it != (*it)->attributes.end())
+    {
+        Substitutions* pre_mutations = new Substitutions(atb_it->second, tree->aln);
+        
+        // Apply the predefined mutations
+        for (auto mut_it = pre_mutations->begin(); mut_it != pre_mutations->end(); ++mut_it)
+        {
+            // compute the relative position of the mutation regarding segment_start
+            const int relative_pos = mut_it->getPosition() - segment_start;
+            
+            // only handle mutations occur in the current segment
+            if (relative_pos >= 0 && relative_pos < segment_length)
+            {
+                // Change to the new state if the old state is observed at the specified position
+                if ((*node_seq_chunk)[relative_pos] == mut_it->getOldState())
+                {
+                    // apply the substitution
+                    (*node_seq_chunk)[relative_pos] = mut_it->getNewState();
+                    
+                    // count the number of mutations occur in this segment
+                    ++predefined_mutation_count;
+                    
+                    // write log - for debugging only
+                    /*ofstream myfile;
+                    myfile.open ("thread_" + convertIntToString(omp_get_thread_num()) + ".txt", std::ostream::app);
+                    myfile << tree->aln->convertStateBackStr(mut_it->getOldState()) << mut_it->getPosition() + 1 << tree->aln->convertStateBackStr(mut_it->getNewState())<< std::endl;
+                    myfile.close();*/
+                }
+                // otherwise, the old state is different from the one observed at the specified position
+                else
+                    outError("Failed to apply a predefined mutation. State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead! Make sure you specify the root sequence and all the mutations occur along the tree at that site.");
+            }
+        }
+        
+        // delete pre_mutations
+        delete pre_mutations;
     }
 }
 
@@ -1524,6 +1584,12 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         // clone sequence chunk from cache
         node->sequence->sequence_chunks[thread_id] = dad_seq_chunk;
         (*it)->node->sequence->sequence_chunks[thread_id].resize(dad_seq_chunk.size());
+    }
+    // Bug fixed -> still need to update waiting flag if not storing at cache
+    else
+    {
+        // manual implementation of barrier
+        waitAtBarrier(1, (*it)->node);
     }
     
     // manual implementation of barrier
@@ -2698,8 +2764,9 @@ void AliSimulator::initVariables4RateMatrix(int segment_start, double &total_sub
 /**
     handle indels
 */
-void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream, default_random_engine& generator)
+void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, std::vector<bool>* const site_locked_vec, const int& total_predefined_mutation_count, int *rstream, default_random_engine& generator)
 {
+    int predefined_mutation_count = total_predefined_mutation_count;
     int num_gaps = 0;
     double total_sub_rate = 0;
     vector<double> sub_rate_by_site;
@@ -2790,7 +2857,12 @@ void AliSimulator::simulateSeqByGillespie(int segment_start, int &segment_length
                 {
                     if (simulation_method == RATE_MATRIX)
                     {
-                        handleSubs(segment_start, total_sub_rate, sub_rate_by_site, node_seq_chunk, model->getNMixtures(), rstream, generator);
+                        // ignore substituion event to pay back for predefined mutations occur at this branch
+                        if (predefined_mutation_count)
+                            --predefined_mutation_count;
+                        // otherwise, no predefined mutations or all of them were paid, handle a new substitution
+                        else
+                            handleSubs(segment_start, total_sub_rate, sub_rate_by_site, node_seq_chunk, model->getNMixtures(), site_locked_vec, rstream, generator);
                     }
                     break;
                 }
@@ -3062,11 +3134,23 @@ int AliSimulator::handleDeletion(int sequence_length, vector<short int> &indel_s
 /**
     handle substitution events
 */
-void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream, default_random_engine& generator)
+void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, std::vector<bool>* const site_locked_vec, int* rstream, default_random_engine& generator)
 {
     // select a position where the substitution event occurs
     discrete_distribution<> random_discrete_dis(sub_rate_by_site.begin(), sub_rate_by_site.end());
-    int pos = random_discrete_dis(generator);
+    int pos;
+    // make up to indel_sequence.size() attempts to select an unlocked site
+    for (int i = 0; i < indel_sequence.size(); i++)
+    {
+        pos = random_discrete_dis(generator);
+        
+        // a valid site must NOT be locked
+        if (!site_locked_vec || !site_locked_vec->at(segment_start + pos))
+            break;
+    }
+    // validate the selected site
+    if (site_locked_vec && site_locked_vec->at(segment_start + pos))
+        outError("Failed to select a site for a substitution to occur. It may be because almost all sites are locked by prededfined mutaions!");
     
     // extract the current state
     short int current_state = indel_sequence[pos];

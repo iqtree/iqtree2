@@ -364,6 +364,7 @@ const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for bra
 const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
+const double ONE_THIRD = 1.0 / 3.0;
 
 /**
  *  Specify different ways of doing an NNI.
@@ -2585,6 +2586,11 @@ public:
     *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
     */
     bool no_merge;
+    
+    /**
+    *  TRUE to include predefined mutations
+    */
+    bool include_pre_mutations;
     
     /**
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments

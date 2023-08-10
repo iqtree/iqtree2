@@ -898,9 +898,12 @@ public:
     *   Pointer to the global params
     */
     Params* params;
-    
+
     /** a generic pointer to the expected starting node -> to make sure (after unrooting a rooted tree) we traverse the tree at the same starting node as BaseML*/
     void* traversal_starting_node = NULL;
+
+    // constant variables for annotations on branches
+    const static string ANTT_MUT;
 
     /**
             release the nemory.
