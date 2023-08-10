@@ -11,6 +11,7 @@
 #include "utils/tools.h"
 #include "tree/node.h"
 #include "tree/genometree.h"
+#include "alignment/substitution.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentunlinked.h"
 #include "tree/phylotreemixlen.h"
@@ -109,10 +110,15 @@ protected:
     int binarysearchItemWithAccumulatedProbabilityMatrix(vector<double> &accumulated_probability_maxtrix, double random_number, int start, int end, int first);
     
     /**
+    *  handle predefined mutations at a branch
+    */
+    void handlePreMutations(const NeighborVec::iterator& it, int& predefined_mutation_count, const int& segment_start, const int& segment_length, vector<short int>* const node_seq_chunk);
+    
+    /**
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, int* rstream, default_random_engine& generator);
+    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, std::vector<bool>* const site_locked_vec, int* rstream, default_random_engine& generator);
     
     /**
     *  reset tree (by reset some variables of nodes)
@@ -240,12 +246,12 @@ protected:
     /**
         handle indels
     */
-    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, int *rstream, default_random_engine& generator);
+    void simulateSeqByGillespie(int segment_start, int &segment_length, ModelSubst *model, vector<short int> &node_seq_chunk, int &sequence_length, NeighborVec::iterator it, SIMULATION_METHOD simulation_method, std::vector<bool>* const site_locked_vec, const int& total_predefined_mutation_count, int *rstream, default_random_engine& generator);
     
     /**
         handle substitution events
     */
-    void handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, int* rstream, default_random_engine& generator);
+    void handleSubs(int segment_start, double &total_sub_rate, vector<double> &sub_rate_by_site, vector<short int> &indel_sequence, int num_mixture_models, std::vector<bool>* const site_locked_vec, int* rstream, default_random_engine& generator);
     
     /**
         handle insertion events, return the insertion-size
@@ -395,12 +401,12 @@ protected:
     /**
     *  simulate sequences with AliSim-OpenMP-IM algorithm
     */
-    void executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping);
+    void executeIM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping);
     
     /**
     *  simulate sequences with AliSim-OpenMP-EM algorithm
     */
-    void executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping);
+    void executeEM(int thread_id, int &sequence_length, int default_segment_length, ModelSubst *model, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data, bool store_seq_at_cache, int max_depth, vector<string> &state_mapping);
     
     /**
         merge output files when using multiple threads
@@ -478,12 +484,12 @@ public:
     /**
     *  simulate sequences for all nodes in the tree
     */
-    virtual void simulateSeqsForTree(map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
+    void simulateSeqsForTree(map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  generate the current partition of an alignment from a tree (model, alignment instances are supplied via the IQTree instance)
     */
-    void generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
+    void generatePartitionAlignment(vector<short int> &ancestral_sequence, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
     
     /**
     *  update the expected_num_sites due to the change of the sequence_length
