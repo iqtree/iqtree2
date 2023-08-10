@@ -347,17 +347,18 @@ void computeHessian(PhyloTree *tree){
     size_t nBranches = tree->branchNum;
     double *ptn_freq = tree->ptn_freq;
 
-//    BranchVector branches;
-//    tree->getBranches(branches);
-//    for( auto branch : branches){
-//        double df = 0.0;
-//        double ddf = 0.0;
-//        double lh = tree->getCurScore();
-//        tree->computeLikelihoodDerv((PhyloNeighbor*)branch.first->findNeighbor(branch.second), (PhyloNode*)branch.first, &df, &ddf);
-//        cout << "recalculating derivatives form likelihood function......" << endl;
-//        cout << lh << " " << df << " " << ddf << endl;
+    BranchVector branches;
+    tree->getBranches(branches);
+    for( auto branch : branches){
+        double df = 0.0;
+        double ddf = 0.0;
+        double lh = tree->getCurScore();
+        tree->theta_computed = false;
+        tree->computeLikelihoodDerv((PhyloNeighbor*)branch.first->findNeighbor(branch.second), (PhyloNode*)branch.first, &df, &ddf);
+        cout << "recalculating derivatives form likelihood function......" << endl;
+        cout << lh << " " << df << " " << ddf << endl;
 
-//    }
+    }
 
 //    auto *hessian = aligned_alloc<double>(nBranches * nBranches);
 //    double *G_matrix = tree->G_matrix;
