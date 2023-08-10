@@ -413,8 +413,10 @@ void computeHessian(PhyloTree *tree){
 
     // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
     Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
-    cout << "ptn_freq diagonal " << endl;
-    cout << ptn_freq_diagonal << endl;
+    if (verbose_mode >= VB_MED) {
+        cout << "ptn_freq diagonal " << endl;
+        cout << ptn_freq_diagonal << endl;
+    }
     MatrixXd hessian_1 = G_matrix_1*ptn_freq_diagonal.asDiagonal()*G_matrix_t_1;
     MatrixXd G_ptr_diag = ptn_freq_diagonal.asDiagonal()*G_matrix_t_1;
     hessian_1 = (-1)* hessian_1;
@@ -454,9 +456,10 @@ void computeHessian(PhyloTree *tree){
     outfile << hessian_1 << endl;
 //    outfile.close();
 
-    cout << "hessian 1" << endl;
-    cout << hessian_1 << endl;
-
+    if (verbose_mode >= VB_MED) {
+        cout << "hessian 1" << endl;
+        cout << hessian_1 << endl;
+    }
     cout << "---- Hessian computation completed -----" << endl;
     double *gv1 = tree->gradient_vector;
     auto *branchLengthV1 = aligned_alloc<double>(nBranches);
@@ -506,18 +509,22 @@ void computeHessian(PhyloTree *tree){
 
     Map<Matrix<double, Dynamic, Dynamic, RowMajor>>  G_matrix_1_test(GMV1, nBranches, nPtn);
 
-    cout << "G matrix revised" << endl;
-    cout << G_matrix_1_test << endl;
-
+    if (verbose_mode >= VB_MED) {
+        cout << "G matrix revised" << endl;
+        cout << G_matrix_1_test << endl;
+    }
     MatrixXd G_matrix_t_1_test = G_matrix_1_test.transpose();
 
-    cout << "G matrix revised transposed" << endl;
-    cout << G_matrix_t_1_test << endl;
-
+    if (verbose_mode >= VB_MED) {
+        cout << "G matrix revised transposed" << endl;
+        cout << G_matrix_t_1_test << endl;
+    }
     // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
 //    Map<RowVectorXd> ptn_freq_diagonal_test(ptn_freq_V1, nPtn);
-    cout << "ptn_freq diagonal " << endl;
-    cout << ptn_freq_diagonal << endl;
+    if (verbose_mode >= VB_MED) {
+        cout << "ptn_freq diagonal " << endl;
+        cout << ptn_freq_diagonal << endl;
+    }
     MatrixXd hessian_1_test = G_matrix_1_test*ptn_freq_diagonal.asDiagonal()*G_matrix_t_1_test;
 
     hessian_1_test = (-1)* hessian_1_test;
@@ -542,8 +549,10 @@ void computeHessian(PhyloTree *tree){
     outfile << hessian_1_test << endl;
     outfile.close();
 
-    cout << "hessian test" << endl;
-    cout << hessian_1_test << endl;
+    if (verbose_mode >= VB_MED) {
+        cout << "hessian test" << endl;
+        cout << hessian_1_test << endl;
+    }
 
     string outFileNameBranchLengths = ((string) tree->params->out_prefix + "_blengths.gh");
     string outFileNameTree = ((string) tree->params->out_prefix + "_tree.gh");
