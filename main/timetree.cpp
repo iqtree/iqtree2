@@ -345,31 +345,90 @@ void computeHessian(PhyloTree *tree){
     size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
     size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
     size_t nBranches = tree->branchNum;
+    double *ptn_freq = tree->ptn_freq;
 
-    BranchVector branches;
-    tree->getBranches(branches);
-    for( auto branch : branches){
-        double df = 0.0;
-        double ddf = 0.0;
-        double lh = tree->getCurScore();
-        tree->computeLikelihoodDerv((PhyloNeighbor*)branch.first->findNeighbor(branch.second), (PhyloNode*)branch.first, &df, &ddf);
-        cout << "recalculating derivatives form likelihood function......" << endl;
-        cout << lh << " " << df << " " << ddf << endl;
+//    BranchVector branches;
+//    tree->getBranches(branches);
+//    for( auto branch : branches){
+//        double df = 0.0;
+//        double ddf = 0.0;
+//        double lh = tree->getCurScore();
+//        tree->computeLikelihoodDerv((PhyloNeighbor*)branch.first->findNeighbor(branch.second), (PhyloNode*)branch.first, &df, &ddf);
+//        cout << "recalculating derivatives form likelihood function......" << endl;
+//        cout << lh << " " << df << " " << ddf << endl;
 
-    }
+//    }
+
+//    auto *hessian = aligned_alloc<double>(nBranches * nBranches);
+//    double *G_matrix = tree->G_matrix;
+//    auto *G_matrix_t = aligned_alloc<double>(nPtn * nBranches);
+//    for (int i = 0; i < nPtn; i++) {
+//        for (int j = 0; j < nBranches; j++) {
+//            G_matrix_t[i * nBranches + j] = G_matrix[j * (nPtn) + i];
+//        }
+//
+//    }
+
+//    cout << "G matrix array" << endl;
+//    for(int i=0; i< nBranches*nPtn; i++){
+//        cout << G_matrix[i] << " " ;
+//    }
+//    cout << endl;
+//    cout << "G matrix" << endl;
+//    for (int i = 0; i < nBranches; i++) {
+//        for (int j = 0; j < nPtn; j++) {
+//            cout << G_matrix[i * (nPtn) + j] << " ";
+//        }
+//        cout << endl;
+//    }
+//    cout << "G_matrix_t" << endl;
+//    for (int i = 0; i < nPtn; i++) {
+//        for (int j = 0; j < nBranches; j++) {
+//            cout << G_matrix[j * (nPtn) + i] << " ";
+//        }
+//        cout << endl;
+//    }
+//
+//    for (int i = 0; i < nBranches; i++) {
+//        for (int j = 0; j < nBranches; j++) {
+//            double sum = 0;
+//            for (int k = 0; k < nPtn; k++) {
+//                sum = sum + G_matrix[i * (nPtn) + k] * G_matrix_t[k * (nBranches) + j]*ptn_freq[k];
+//            }
+//            hessian[i * (nBranches) + j] = (-1)*sum;
+//        }
+//    }
+//    cout << "Hessian" << endl;
+//    cout.precision(10);
+//    for (int i = 0; i < nBranches; i++) {
+//        for (int j = 0; j < nBranches; j++) {
+//            cout << hessian[i * (nBranches) + j] << " ";
+//        }
+//        cout << endl;
+//    }
 
     Map<RowVectorXd> gradient_vector_eigen(tree->gradient_vector, nBranches);
-
-    MatrixXd G_matrix = Map<MatrixXd, 0>(tree->G_matrix, nBranches, nPtn);
-
-    MatrixXd G_matrix_t = G_matrix.transpose();
+    Map<Matrix<double, Dynamic, Dynamic, RowMajor>>  G_matrix_1(tree->G_matrix, nBranches, nPtn);
+    MatrixXd G_matrix_t_1 = G_matrix_1.transpose();
 
     // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
     Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
-    MatrixXd hessian = G_matrix*ptn_freq_diagonal.asDiagonal()*G_matrix_t;
-    hessian = (-1)* hessian;
+    cout << "ptn_freq diagonal " << endl;
+    cout << ptn_freq_diagonal << endl;
+    MatrixXd hessian_1 = G_matrix_1*ptn_freq_diagonal.asDiagonal()*G_matrix_t_1;
+    MatrixXd G_ptr_diag = ptn_freq_diagonal.asDiagonal()*G_matrix_t_1;
+    hessian_1 = (-1)* hessian_1;
 
-    hessian.diagonal() =  Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
+//    cout << "G matrix 1" << endl;
+//    cout << G_matrix_1 << endl;
+//
+//    cout << "G matrix t 1" << endl;
+//    cout << G_matrix_t_1 << endl;
+//
+//    cout << "G matrix ptr diag" << endl;
+//    cout << G_ptr_diag << endl;
+
+    hessian_1.diagonal() =  Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
 
     Map<RowVectorXd> hessian_diagonal_vector(tree->hessian_diagonal, nBranches);
     Map<RowVectorXd> df_ddf_frac_vec(tree->df_ddf_frac, nBranches);
@@ -379,8 +438,10 @@ void computeHessian(PhyloTree *tree){
     tree->saveBranchLengths(branchLengths);
     Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
     ofstream outfile(outFileName);
+    stringstream tree_stream;
+    tree->printTree(tree_stream,WT_BR_LEN + WT_SORT_TAXA);
     outfile << "Tree topology: " << endl;
-    outfile << tree->getTreeString() << endl << endl;
+    outfile << tree_stream.str() << endl << endl;
     outfile << "Branch lengths: " << endl;
     outfile << branch_lengths_vector << endl << endl;
     outfile << "df: " << endl;
@@ -390,10 +451,126 @@ void computeHessian(PhyloTree *tree){
     outfile << "df/ddf: " << endl;
     outfile << df_ddf_frac_vec << endl << endl;
     outfile << "Hessian: " << endl;
-    outfile << hessian << endl;
-    outfile.close();
+    outfile << hessian_1 << endl;
+//    outfile.close();
+
+    cout << "hessian 1" << endl;
+    cout << hessian_1 << endl;
 
     cout << "---- Hessian computation completed -----" << endl;
+    double *gv1 = tree->gradient_vector;
+    auto *branchLengthV1 = aligned_alloc<double>(nBranches);
+    auto *GMV1 = aligned_alloc<double>(nBranches*nPtn);
+    auto *dfV1 = aligned_alloc<double>(nBranches);
+    auto *ddfV1 = aligned_alloc<double>(nBranches);
+    auto *df_ddf_frac_V1 = aligned_alloc<double>(nBranches);
+//    auto *ptn_freq_V1 = aligned_alloc<double>(nPtn);
+
+    auto *temp_var = aligned_alloc<double>(4);
+    auto *temp_GM = aligned_alloc<double>(nPtn);
+
+    for(int i=0; i<nBranches; i++){
+        if(i==0){
+            temp_var[0] = branchLengths[0];
+            temp_var[1] = gv1[0];
+            temp_var[2] = tree->hessian_diagonal[0];
+            temp_var[3] = tree->df_ddf_frac[0];
+            for(int j =0; j<nPtn; j++){
+                temp_GM[j] = tree->G_matrix[j];
+            }
+        }
+        if( i< nBranches-1){
+            branchLengthV1[i] = branchLengths[i+1];
+            dfV1[i] = gv1[i+1];
+            ddfV1[i] = tree->hessian_diagonal[i+1];
+            df_ddf_frac_V1[i] = tree->df_ddf_frac[i+1];
+            for(int j =0; j<nPtn; j++){
+                GMV1[i*nPtn+j] = tree->G_matrix[(i+1)*nPtn+j];
+            }
+
+
+        }
+        else if(i==(nBranches-1)){
+            branchLengthV1[i] = temp_var[0];
+            dfV1[i] = temp_var[1];
+            ddfV1[i] = temp_var[2];
+            df_ddf_frac_V1[i] = temp_var[3];
+            for(int j =0; j<nPtn; j++){
+                GMV1[(i*nPtn)+j] = temp_GM[j];
+            }
+        }
+
+    }
+
+    Map<RowVectorXd> gradient_vector_eigen_test(dfV1, nBranches);
+
+    Map<Matrix<double, Dynamic, Dynamic, RowMajor>>  G_matrix_1_test(GMV1, nBranches, nPtn);
+
+    cout << "G matrix revised" << endl;
+    cout << G_matrix_1_test << endl;
+
+    MatrixXd G_matrix_t_1_test = G_matrix_1_test.transpose();
+
+    cout << "G matrix revised transposed" << endl;
+    cout << G_matrix_t_1_test << endl;
+
+    // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
+//    Map<RowVectorXd> ptn_freq_diagonal_test(ptn_freq_V1, nPtn);
+    cout << "ptn_freq diagonal " << endl;
+    cout << ptn_freq_diagonal << endl;
+    MatrixXd hessian_1_test = G_matrix_1_test*ptn_freq_diagonal.asDiagonal()*G_matrix_t_1_test;
+
+    hessian_1_test = (-1)* hessian_1_test;
+    hessian_1_test.diagonal() =  Map<VectorXd>(ddfV1, nBranches).array();
+
+    Map<RowVectorXd> hessian_diagonal_vector_test(ddfV1, nBranches);
+    Map<RowVectorXd> df_ddf_frac_vec_test(df_ddf_frac_V1, nBranches);
+
+
+    Map<RowVectorXd> branch_lengths_vector_test(branchLengthV1, branchLengths.size());
+
+
+    outfile << "Branch lengths revised: " << endl;
+    outfile << branch_lengths_vector_test << endl << endl;
+    outfile << "df revised: " << endl;
+    outfile << gradient_vector_eigen_test << endl << endl;
+    outfile << "ddf revised: " << endl;
+    outfile << hessian_diagonal_vector_test << endl << endl;
+    outfile << "df/ddf revised: " << endl;
+    outfile << df_ddf_frac_vec_test << endl << endl;
+    outfile << "Hessian revised: " << endl;
+    outfile << hessian_1_test << endl;
+    outfile.close();
+
+    cout << "hessian test" << endl;
+    cout << hessian_1_test << endl;
+
+    string outFileNameBranchLengths = ((string) tree->params->out_prefix + "_blengths.gh");
+    string outFileNameTree = ((string) tree->params->out_prefix + "_tree.gh");
+    string outFileNameHessian = ((string) tree->params->out_prefix + "_hessian.gh");
+    string outFileNameGradient = ((string) tree->params->out_prefix + "_gradient.gh");
+
+    ofstream outfileBranchLengths(outFileNameBranchLengths);
+    ofstream outfileTree(outFileNameTree);
+    ofstream outfileHessian(outFileNameHessian);
+    ofstream outfileGradient(outFileNameGradient);
+
+    outfileBranchLengths << branch_lengths_vector << endl;
+    outfileBranchLengths.close();
+
+    outfileTree << tree->getNumTaxa() << "  " << 1 << endl;
+    outfileTree << tree_stream.str() << endl;
+    outfileTree.close();
+
+    outfileHessian << hessian_1 << endl;
+    outfileHessian.close();
+
+    outfileGradient << gradient_vector_eigen << endl;
+    outfileGradient.close();
+
+
+
+
 }
 
 void runMCMCTree(PhyloTree *tree) {

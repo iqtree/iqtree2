@@ -2504,9 +2504,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     VectorClass tmp2 = ddf_frac * freq;
                     my_df += tmp1;
                     my_ddf += nmul_add(tmp1, df_frac, tmp2);
-                    hessian_ddf = nmul_add(df_frac, df_frac, ddf_frac);
+//                    hessian_ddf = nmul_add(df_frac, df_frac, ddf_frac);
                     //todo: need to do further optimization with store_a in vector class
-                    hessian_ddf.store(&G_matrix[branch_id * nptn + ptn]);
+                    df_frac.store(&G_matrix[branch_id * nptn + ptn]);
 
                 } else {
                     // ascertainment bias correction

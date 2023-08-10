@@ -2623,7 +2623,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 //    mem_slots.cleanup();
     if (optimize_by_newton) {
         // Newton-Raphson method
-        optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
+        optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, 0.0000000000000000001, negative_lh, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
         }
