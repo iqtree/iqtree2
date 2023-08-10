@@ -1485,6 +1485,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_openmp_alg = IM;
     params.no_merge = false;
     params.alignment_id = 0;
+    params.include_pre_mutations = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {

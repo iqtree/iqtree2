@@ -31,6 +31,9 @@ using namespace std;
 	class MTree
 *********************************************/
 
+// constant variables for annotations on branches
+const string MTree::ANTT_MUT = "mutations";
+
 MTree::MTree() {
     root = NULL;
     leafNum = 0;
@@ -1023,6 +1026,20 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
             // extract key, value
             string key = key_value_pair.substr(0, pos_equal);
             string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
+            
+            // detect key = mutations (to include pre-defined mutations for AliSim
+            // convert key to lowercase
+            std::string key_lower = key;
+            transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+            if (key_lower == ANTT_MUT)
+            {
+                // Make sure we store key "mutations" in the lowercase
+                key = key_lower;
+                
+                // update flag include_pre_mutations (if it's still false)
+                if (!Params::getInstance().include_pre_mutations)
+                    Params::getInstance().include_pre_mutations = true;
+            }
             
             // add key/value to attributes
             node1->findNeighbor(node2)->putAttr(key, value);
