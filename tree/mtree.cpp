@@ -1011,12 +1011,28 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
     string KEYWORD="&";
     string tmp_comment = in_comment;
     
-    // remove "&"
-    tmp_comment.erase(0, KEYWORD.length());
-    
     // split tmp_comment into multiple key_value_pairs by ","
     while (tmp_comment.length() > 0) {
-        size_t pos_comma = tmp_comment.find(',');
+        // remove "&" (if any)
+        if (tmp_comment[0] == KEYWORD[0])
+            tmp_comment.erase(0, KEYWORD.length());
+        
+        size_t pos_comma = 0;
+        // find the first comma ',' that is not inside a pair of brackets '{}'
+        int num_open_brackets = 0;
+        // browse the characters one by one
+        for (pos_comma = 0; pos_comma < tmp_comment.length(); ++pos_comma)
+        {
+            // record the number of open brackets
+            if (tmp_comment[pos_comma] == '{')
+                ++num_open_brackets;
+            // reduce the number of open brackets if a close bracket is found
+            else if (tmp_comment[pos_comma] == '}')
+                --num_open_brackets;
+            // return the position where we found a comma outside of pairs of open and close brackets
+            else if (tmp_comment[pos_comma] == ',' && !num_open_brackets)
+                break;
+        }
         string key_value_pair = tmp_comment.substr(0, pos_comma);
         
         // parse key/value

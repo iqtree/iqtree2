@@ -89,9 +89,17 @@ Substitutions::Substitutions(const std::string& sub_str, Alignment* const aln)
     std::string list_mut_str = sub_str.substr(1, length - 2);
     
     // parse mutations one by one
-    const std::string delimiter = "/";
-    const int max_subs = std::count(list_mut_str.begin(), list_mut_str.end(), delimiter[0]) + 1;
-    reserve(max_subs);
+    std::string delimiter = ","; // default delimiter
+    int max_subs = std::count(list_mut_str.begin(), list_mut_str.end(), delimiter[0]);
+    
+    // if no ',' found, users may use '/' instead
+    if (!max_subs)
+    {
+        delimiter = '/';
+        max_subs = std::count(list_mut_str.begin(), list_mut_str.end(), delimiter[0]);
+    }
+    
+    reserve(max_subs + 1);
     size_t pos = 0;
     while ((pos = list_mut_str.find(delimiter)) != std::string::npos) {
         emplace_back(list_mut_str.substr(0, pos), aln);
