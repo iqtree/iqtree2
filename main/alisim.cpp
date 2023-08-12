@@ -333,6 +333,96 @@ void generateRandomTree(Params &params)
 
 }
 
+std::vector<std::pair<std::string,std::string>> readMutations(const std::string& mutation_file)
+{
+    // init a vector of node mutations
+    std::vector<std::pair<std::string,std::string>> node_mutations;
+    
+    // open file, read line by line
+    try
+    {
+        // open file
+        if (!fileExists(mutation_file))
+            outError("File not found: " + mutation_file);
+        std::ifstream file(mutation_file);
+        std::string line;
+        
+        // read line by line
+        while (std::getline(file, line))
+        {
+            // ignore empty line
+            if (!line.length()) continue;
+            
+            // remove spaces at the begining of the line
+            auto pos = line.find_first_not_of(" ");
+            // find the first non-space character
+            if (pos != string::npos)
+            {
+                // if that character is not at the begining of the line -> remove all the spaces at the begining
+                if (pos > 0)
+                    line = line.substr(pos, line.length() - pos);
+            }
+            // if not found -> all characters are spaces -> invalid
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+            
+            // remove spaces at the ending of the line
+            pos = line.find_last_not_of(" ");
+            // find the last non-space character
+            if (pos != string::npos)
+            {
+                // if that character is not at the end of the line -> remove all the spaces at the end
+                if (pos < line.length() - 1)
+                    line = line.substr(0, pos + 1);
+            }
+            // if not found -> all characters are spaces -> invalid
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+            
+            // validate the input format <node_name><spaces><old_state><site><new_state>
+            if (line.length() < 5)
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+            
+            // get the node name
+            std::string node_name = "";
+            pos = line.find(" ");
+            if (pos != std::string::npos)
+            {
+                node_name = line.substr(0, pos);
+                
+                // convert node_name to uppercase
+                transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
+            }
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+            
+            // get mutation list at that node
+            std::string mutation_str = "";
+            // find the first non-space character after the position
+            for (; pos < line.length(); ++pos)
+                if (line[pos] != ' ')
+                    break;
+            if (line.length() - pos)
+                mutation_str = line.substr(pos, line.length() - pos);
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+            
+            // record the mutations at that node
+            node_mutations.push_back(std::pair<std::string,std::string>(node_name, mutation_str));
+        }
+        
+        // close file
+        file.close();
+    }
+    catch(std::exception e)
+    {
+        outError("File not found or invalid format " + mutation_file);
+    }
+    
+    // return result
+    return node_mutations;
+}
+
 /**
 *  execute AliSim Simulation
 */
@@ -564,6 +654,55 @@ void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const 
     }
 }
 
+void createNodeMapping(std::map<std::string, std::pair<Node*, Node*>>& node_mapping, Node* const node, Node* const dad)
+{
+    // add the current node to the mapping
+    if (node->name.length())
+    {
+        std::string node_name = node->name;
+        // convert to uppercase
+        transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
+        
+        node_mapping.insert(std::pair<std::string, std::pair<Node*, Node*>>(node_name, std::pair<Node*, Node*>(dad, node)));
+    }
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        createNodeMapping(node_mapping, (*it)->node, node);
+    }
+}
+
+void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& node_mutations, IQTree* const tree)
+{
+    // validate input
+    ASSERT(tree && tree->root);
+    
+    // create a mapping between each node name and a pair of pointers <dad_node, node>
+    std::map<std::string, std::pair<Node*, Node*>> node_mapping;
+    createNodeMapping(node_mapping, tree->root, NULL);
+    
+    // browse the list of node_mutations to add mutations of each node to the corresponding node in the tree
+    for (const std::pair<std::string, std::string>& mutations : node_mutations)
+    {
+        // seek the corresponding node
+        auto it = node_mapping.find(mutations.first);
+        if( it != node_mapping.end())
+        {
+            // Extract the corresponding pair of nodes
+            Node* dad = (it->second).first;
+            Node* node = (it->second).second;
+            
+            // add attribute (mutations,<mutations_list> to the corresponding branch
+            dad->findNeighbor(node)->putAttr(MTree::ANTT_MUT, "{" + mutations.second + "}");
+            node->findNeighbor(dad)->putAttr(MTree::ANTT_MUT, "{" + mutations.second + "}");
+        }
+        // node_name is not found
+        else
+            outError("Node " + mutations.first + " is not found in the tree.");
+    }
+}
+
 /**
 *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
 */
@@ -653,6 +792,16 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         else
         {
             ASSERT(super_alisimulator->tree && super_alisimulator->tree->root && super_alisimulator->tree->aln);
+            
+            // load predefined mutations from a file (if specified)
+            if (super_alisimulator->params->mutation_file.length())
+            {
+                std::vector<std::pair<std::string, std::string>> node_mutations = readMutations(super_alisimulator->params->mutation_file);
+                
+                // add mutations to tree
+                if (node_mutations.size())
+                    addMutations2Tree(node_mutations, super_alisimulator->tree);
+            }
             
             // init site_locked_vec
             site_locked_vec = new std::vector<bool>(super_alisimulator->expected_num_sites, false);

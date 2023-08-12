@@ -1486,6 +1486,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.no_merge = false;
     params.alignment_id = 0;
     params.include_pre_mutations = false;
+    params.mutation_file = "";
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5386,6 +5387,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (!params.alisim_ancestral_sequence_aln_filepath || params.alisim_ancestral_sequence_name.length() == 0)
                     throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
                 
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--mutation") == 0 || strcmp(argv[cnt], "-mut") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mutation <MUTATION_FILE>";
+                params.mutation_file = argv[cnt];
+                params.include_pre_mutations = true;
                 continue;
             }
 
