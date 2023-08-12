@@ -717,6 +717,44 @@ void AliSimulator::generateRandomBaseFrequencies(double *base_frequencies)
         base_frequencies[i] *= sum;
 }
 
+void AliSimulator::updateRootSeq4PredefinedMut(std::vector<bool>& site_needs_updating, Node* const node, Node* const dad)
+{
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        
+        // parse the list of predefined mutations (if any)
+        auto atb_it = (*it)->attributes.find(MTree::ANTT_MUT);
+        if (atb_it != (*it)->attributes.end())
+        {
+            // parse the list of mutations
+            Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln);
+            
+            // Browse mutations one by one
+            for (Substitution& mutation : pre_mutations)
+            {
+                // validate site
+                const int pos = mutation.getPosition();
+                if (pos >= tree->root->sequence->sequence_chunks[0].size())
+                    outError("Predefined mutation occurs at " + convertIntToString(pos * num_sites_per_state + 1) + " which is beyond the sequence length");
+                
+                // if the state at the site (where that mutation occurs) has not been updated by any other mutation -> update it
+                if (site_needs_updating[pos])
+                {
+                    // update the state at the root sequence
+                    tree->root->sequence->sequence_chunks[0][pos] = mutation.getOldState();
+                    
+                    // mark the corresponding site updated
+                    site_needs_updating[pos] = false;
+                }
+            }
+            
+        }
+        
+        // traverse deeper
+        updateRootSeq4PredefinedMut(site_needs_updating, (*it)->node, node);
+    }
+}
+
 /**
 *  simulate sequences for all nodes in the tree
 */
@@ -738,7 +776,7 @@ void AliSimulator::simulateSeqsForTree(map<string,string> input_msa, std::vector
 
     
     // init variables
-    initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache, generator);
+    initVariables(sequence_length, output_filepath, state_mapping, model, default_segment_length, max_depth, write_sequences_to_tmp_data, store_seq_at_cache, site_locked_vec, generator);
     
     // execute one of the AliSim-OpenMP algorithms to simulate sequences
     if (params->alisim_openmp_alg == IM)
@@ -1193,7 +1231,7 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
 /**
     initialize variables
 */
-void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, default_random_engine& generator)
+void AliSimulator::initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, std::vector<bool>* const site_locked_vec, default_random_engine& generator)
 {
     // check if we can store sequences at a fixed cache instead of at nodes
     store_seq_at_cache = params->alisim_insertion_ratio + params->alisim_deletion_ratio == 0 && (output_filepath.length() > 0 || write_sequences_to_tmp_data) && params->alisim_fundi_taxon_set.size() == 0;
@@ -1240,6 +1278,18 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     
     // initialize variables (site_specific_rates; site_specific_rate_index; site_specific_model_index)
     initVariablesRateHeterogeneity(sequence_length, generator, true);
+    
+    // update the root sequence at selected sites according to the predefined mutations (if specified)
+    if (params->include_pre_mutations && site_locked_vec)
+    {
+        // show info
+        if (params->alisim_ancestral_sequence_aln_filepath)
+            outWarning("Update states at the root sequence according to predefined mutations");
+        
+        // clone site_locked_vec
+        std::vector<bool> site_needs_updating = *site_locked_vec;
+        updateRootSeq4PredefinedMut(site_needs_updating, tree->root, NULL);
+    }
     
     // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
     write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
@@ -1523,10 +1573,10 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
     auto atb_it = (*it)->attributes.find(MTree::ANTT_MUT);
     if (atb_it != (*it)->attributes.end())
     {
-        Substitutions* pre_mutations = new Substitutions(atb_it->second, tree->aln);
+        Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln);
         
         // Apply the predefined mutations
-        for (auto mut_it = pre_mutations->begin(); mut_it != pre_mutations->end(); ++mut_it)
+        for (auto mut_it = pre_mutations.begin(); mut_it != pre_mutations.end(); ++mut_it)
         {
             // compute the relative position of the mutation regarding segment_start
             const int relative_pos = mut_it->getPosition() - segment_start;
@@ -1551,12 +1601,9 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
                 }
                 // otherwise, the old state is different from the one observed at the specified position
                 else
-                    outError("Failed to apply a predefined mutation. State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead! Make sure you specify the root sequence and all the mutations occur along the tree at that site.");
+                    outError("Failed to apply a predefined mutation. State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead! Make sure you specify all the mutations occur at that site.");
             }
         }
-        
-        // delete pre_mutations
-        delete pre_mutations;
     }
 }
 
