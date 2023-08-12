@@ -383,6 +383,9 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             if (line.length() < 5)
                 outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
             
+            // replace \t by a space
+            line = regex_replace(line, std::regex("\t"), " ");
+            
             // get the node name
             std::string node_name = "";
             pos = line.find(" ");
