@@ -216,7 +216,7 @@ protected:
     /**
         initialize variables
     */
-    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, default_random_engine& generator);
+    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, std::vector<bool>* const site_locked_vec, default_random_engine& generator);
     
     /**
         process after simulating sequences
@@ -417,6 +417,11 @@ protected:
         output a sequence to file (if using AliSim-OpenMP-EM) or store it to common cache (if using AliSim-OpenMP-IM)
     */
     void outputOneSequence(Node* node, string &output, int thread_id, int segment_start, ostream &out);
+    
+    /**
+        Traverse the tree from root to update the ancestral (root) sequence according to the predefined mutations
+    */
+    void updateRootSeq4PredefinedMut(std::vector<bool>& site_needs_updating, Node* const node, Node* const dad);
     
 public:
     
