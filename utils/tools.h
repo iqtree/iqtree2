@@ -2596,6 +2596,11 @@ public:
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
     */
     int alignment_id;
+    
+    /**
+    *  Mutation file that specifies pre-defined mutations occurs at nodes
+    */
+    std::string mutation_file;
 };
 
 /**

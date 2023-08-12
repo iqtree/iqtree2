@@ -25,6 +25,21 @@
 void runAliSim(Params &params, Checkpoint *checkpoint);
 
 /**
+*  read predefined mutations from a file
+*/
+std::vector<std::pair<std::string,std::string>> readMutations(const std::string& mutation_file);
+
+/**
+*  create a mapping between each node name and a pair of pointers <dad_node, node>
+*/
+void createNodeMapping(std::map<std::string, std::pair<Node*, Node*>>& node_mapping, Node* const node, Node* const dad);
+
+/**
+*  add predefined mutations to the corresponding branch in the tree
+*/
+void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& node_mutations, IQTree* const tree);
+
+/**
 *  execute AliSim Simulation
 */
 void executeSimulation(Params &params, IQTree *&tree);
