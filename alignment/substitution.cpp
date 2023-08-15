@@ -2,7 +2,7 @@
 
 using namespace std;
 
-Substitution::Substitution(const std::string& sub_str, Alignment* const aln)
+Substitution::Substitution(const std::string& sub_str, Alignment* const aln, const int& seq_length)
 {
     // validate the input
     if (!aln)
@@ -26,6 +26,15 @@ Substitution::Substitution(const std::string& sub_str, Alignment* const aln)
     position = convert_int(sub_str.substr(num_sites_per_state, input_length - (num_sites_per_state + num_sites_per_state)).c_str()) - 1;
     if (aln->seq_type == SEQ_CODON)
         position = position * ONE_THIRD;
+    
+    // change -1 to seq_length -1
+    if (position == -1)
+    {
+        if (verbose_mode >= VB_DEBUG)
+            outWarning("Parsing predefined mutations: Invalid site index 0 is converted to the last site " + convertIntToString(seq_length));
+        position = seq_length - 1;
+    }
+    
     if (position < 0)
         outError("Failed to parse the predefined mutation: " + sub_str + ". Position must be positive!");
 }
@@ -74,7 +83,7 @@ int Substitution::getPosition() const
     return position;
 }
 
-Substitutions::Substitutions(const std::string& sub_str, Alignment* const aln)
+Substitutions::Substitutions(const std::string& sub_str, Alignment* const aln, const int& seq_length)
 {
     const int length = sub_str.length();
     // Validate the input
@@ -102,9 +111,9 @@ Substitutions::Substitutions(const std::string& sub_str, Alignment* const aln)
     reserve(max_subs + 1);
     size_t pos = 0;
     while ((pos = list_mut_str.find(delimiter)) != std::string::npos) {
-        emplace_back(list_mut_str.substr(0, pos), aln);
+        emplace_back(list_mut_str.substr(0, pos), aln, seq_length);
         list_mut_str.erase(0, pos + delimiter.length());
     }
     if (list_mut_str.length())
-        emplace_back(list_mut_str, aln);
+        emplace_back(list_mut_str, aln, seq_length);
 }

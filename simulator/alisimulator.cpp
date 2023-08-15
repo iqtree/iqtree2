@@ -727,24 +727,24 @@ void AliSimulator::updateRootSeq4PredefinedMut(std::vector<bool>& site_needs_upd
         if (atb_it != (*it)->attributes.end())
         {
             // parse the list of mutations
-            Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln);
+            Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln, site_needs_updating.size());
             
             // Browse mutations one by one
             for (Substitution& mutation : pre_mutations)
             {
                 // validate site
                 const int pos = mutation.getPosition();
-                if (pos >= tree->root->sequence->sequence_chunks[0].size())
-                    outError("Predefined mutation occurs at " + convertIntToString(pos * num_sites_per_state + 1) + " which is beyond the sequence length");
-                
-                // if the state at the site (where that mutation occurs) has not been updated by any other mutation -> update it
-                if (site_needs_updating[pos])
+                if (pos < tree->root->sequence->sequence_chunks[0].size())
                 {
-                    // update the state at the root sequence
-                    tree->root->sequence->sequence_chunks[0][pos] = mutation.getOldState();
-                    
-                    // mark the corresponding site updated
-                    site_needs_updating[pos] = false;
+                    // if the state at the site (where that mutation occurs) has not been updated by any other mutation -> update it
+                    if (site_needs_updating[pos])
+                    {
+                        // update the state at the root sequence
+                        tree->root->sequence->sequence_chunks[0][pos] = mutation.getOldState();
+                        
+                        // mark the corresponding site updated
+                        site_needs_updating[pos] = false;
+                    }
                 }
             }
             
@@ -1474,10 +1474,15 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
             simulation_method = TRANS_PROB_MATRIX;
             
             // if predefined mutations are specified -> use Rate Matrix
-            if (tree->params->include_pre_mutations && (*it)->attributes.find(MTree::ANTT_MUT) != (*it)->attributes.end())
+            if (tree->params->include_pre_mutations)
             {
+                // Ignore predefined mutations in simulations with either Heterotachy or branch-specific models
                 if (tree->getRate()->isHeterotachy() || (*it)->attributes.find("model") != (*it)->attributes.end())
-                    outWarning("Ignore predefined mutations in simulations with either Heterotachy or branch-specific models");
+                {
+                    // Only the master thread shows the warning
+                    if (!thread_id)
+                        outWarning("Ignore predefined mutations in simulations with either Heterotachy or branch-specific models");
+                }
                 else
                     simulation_method = RATE_MATRIX;
             }
@@ -1524,7 +1529,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 // count the number of mutations occur in this segment
                 int predefined_mutation_count = 0;
                 if (tree->params->include_pre_mutations)
-                    handlePreMutations(it, predefined_mutation_count, segment_start, segment_length, node_seq_chunk);
+                    handlePreMutations(it, predefined_mutation_count, segment_start, segment_length, sequence_length, node_seq_chunk);
                 
                 // Each thread simulate a chunk of sequence using the Gillespie algorithm
                 simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, predefined_mutation_count, rstream, generator);
@@ -1567,13 +1572,13 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
     }
 }
 
-void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& predefined_mutation_count, const int& segment_start, const int& segment_length, vector<short int>* const node_seq_chunk)
+void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& predefined_mutation_count, const int& segment_start, const int& segment_length, const int& seq_length, vector<short int>* const node_seq_chunk)
 {
     // parse the list of predefined mutations (if any)
     auto atb_it = (*it)->attributes.find(MTree::ANTT_MUT);
     if (atb_it != (*it)->attributes.end())
     {
-        Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln);
+        Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln, seq_length);
         
         // Apply the predefined mutations
         for (auto mut_it = pre_mutations.begin(); mut_it != pre_mutations.end(); ++mut_it)
@@ -1584,24 +1589,27 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
             // only handle mutations occur in the current segment
             if (relative_pos >= 0 && relative_pos < segment_length)
             {
-                // Change to the new state if the old state is observed at the specified position
-                if ((*node_seq_chunk)[relative_pos] == mut_it->getOldState())
+                // show infor
+                if (verbose_mode >= VB_MED)
+                    std::cout << "Apply a predefined mutation " << tree->aln->convertStateBackStr(mut_it->getOldState()) << convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) << tree->aln->convertStateBackStr(mut_it->getNewState()) << std::endl;
+                
+                // if the old state is different from the one observed at the specified position -> show a warning
+                if ((*node_seq_chunk)[relative_pos] != mut_it->getOldState())
                 {
-                    // apply the substitution
-                    (*node_seq_chunk)[relative_pos] = mut_it->getNewState();
-                    
-                    // count the number of mutations occur in this segment
-                    ++predefined_mutation_count;
-                    
-                    // write log - for debugging only
-                    /*ofstream myfile;
-                    myfile.open ("thread_" + convertIntToString(omp_get_thread_num()) + ".txt", std::ostream::app);
-                    myfile << tree->aln->convertStateBackStr(mut_it->getOldState()) << mut_it->getPosition() + 1 << tree->aln->convertStateBackStr(mut_it->getNewState())<< std::endl;
-                    myfile.close();*/
+                    outWarning("State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead.");
                 }
-                // otherwise, the old state is different from the one observed at the specified position
-                else
-                    outError("Failed to apply a predefined mutation. State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead! Make sure you specify all the mutations occur at that site.");
+                
+                // apply the substitution
+                (*node_seq_chunk)[relative_pos] = mut_it->getNewState();
+                
+                // count the number of mutations occur in this segment
+                ++predefined_mutation_count;
+                
+                // write log - for debugging only
+                /*ofstream myfile;
+                 myfile.open ("thread_" + convertIntToString(omp_get_thread_num()) + ".txt", std::ostream::app);
+                 myfile << tree->aln->convertStateBackStr(mut_it->getOldState()) << mut_it->getPosition() + 1 << tree->aln->convertStateBackStr(mut_it->getNewState())<< std::endl;
+                 myfile.close();*/
             }
         }
     }
