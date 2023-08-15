@@ -112,7 +112,7 @@ protected:
     /**
     *  handle predefined mutations at a branch
     */
-    void handlePreMutations(const NeighborVec::iterator& it, int& predefined_mutation_count, const int& segment_start, const int& segment_length, vector<short int>* const node_seq_chunk);
+    void handlePreMutations(const NeighborVec::iterator& it, int& predefined_mutation_count, const int& segment_start, const int& segment_length, const int& seq_length, vector<short int>* const node_seq_chunk);
     
     /**
     *  simulate sequences for all nodes in the tree by DFS

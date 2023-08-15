@@ -635,7 +635,7 @@ void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const 
             const int seq_length = site_locked_vec->size();
             
             // parse a list of mutations
-            Substitutions pre_mutations = Substitutions(atb_it->second, aln);
+            Substitutions pre_mutations = Substitutions(atb_it->second, aln, seq_length);
             
             // mark those sites locked
             for (auto mut_it = pre_mutations.begin(); mut_it != pre_mutations.end(); ++mut_it)
@@ -645,7 +645,9 @@ void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const 
                 
                 // vailidate position
                 if (pos >= seq_length)
-                    outError("A predefined mutation occurs at position/site " + convertIntToString((aln->seq_type == SEQ_CODON ? pos * 3 : pos) + 1) + " which is out of the sequence length " + convertIntToString(aln->seq_type == SEQ_CODON ? seq_length * 3 : seq_length));
+                {
+                    outWarning("Ignore a predefined mutation " + aln->convertStateBackStr(mut_it->getOldState()) + convertIntToString((aln->seq_type == SEQ_CODON ? pos * 3 : pos) + 1) + aln->convertStateBackStr(mut_it->getNewState()) + ". Position exceeds the sequence length " + convertIntToString(aln->seq_type == SEQ_CODON ? seq_length * 3 : seq_length));
+                }
                 // mark the site as locked
                 else
                     site_locked_vec->at(pos) = true;
@@ -702,7 +704,7 @@ void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& n
         }
         // node_name is not found
         else
-            outError("Node " + mutations.first + " is not found in the tree.");
+            outWarning("Parsing predefined mutations. Node " + mutations.first + " is not found in the tree.");
     }
 }
 
@@ -795,6 +797,9 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         else
         {
             ASSERT(super_alisimulator->tree && super_alisimulator->tree->root && super_alisimulator->tree->aln);
+            
+            // show info
+            std::cout << "Predefined mutations detected" << std::endl;
             
             // load predefined mutations from a file (if specified)
             if (super_alisimulator->params->mutation_file.length())

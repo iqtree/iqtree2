@@ -35,7 +35,7 @@ public:
     /**
      Custom constructor from a string
      */
-    Substitution(const std::string& sub_str, Alignment* const aln);
+    Substitution(const std::string& sub_str, Alignment* const aln, const int& seq_length);
     
     /**
      Get the old state
@@ -59,7 +59,7 @@ public:
     /**
      Custom constructor from a string {<Sub>/.../<Sub>}
      */
-    Substitutions(const std::string& sub_str, Alignment* const aln);
+    Substitutions(const std::string& sub_str, Alignment* const aln, const int& seq_length);
 };
 
 #endif
