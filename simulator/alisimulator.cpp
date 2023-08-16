@@ -1591,12 +1591,12 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
             {
                 // show infor
                 if (verbose_mode >= VB_MED)
-                    std::cout << "Apply a predefined mutation " << tree->aln->convertStateBackStr(mut_it->getOldState()) << convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) << tree->aln->convertStateBackStr(mut_it->getNewState()) << std::endl;
+                    std::cout << "Apply a predefined mutation " << tree->aln->convertStateBackStr(mut_it->getOldState()) << convertIntToString(mut_it->getPosition() * num_sites_per_state + params->site_starting_index) << tree->aln->convertStateBackStr(mut_it->getNewState()) << std::endl;
                 
                 // if the old state is different from the one observed at the specified position -> show a warning
                 if ((*node_seq_chunk)[relative_pos] != mut_it->getOldState())
                 {
-                    outWarning("State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + 1) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead.");
+                    outWarning("State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + params->site_starting_index) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead.");
                 }
                 
                 // apply the substitution
@@ -1608,7 +1608,7 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
                 // write log - for debugging only
                 /*ofstream myfile;
                  myfile.open ("thread_" + convertIntToString(omp_get_thread_num()) + ".txt", std::ostream::app);
-                 myfile << tree->aln->convertStateBackStr(mut_it->getOldState()) << mut_it->getPosition() + 1 << tree->aln->convertStateBackStr(mut_it->getNewState())<< std::endl;
+                 myfile << tree->aln->convertStateBackStr(mut_it->getOldState()) << mut_it->getPosition() + params->site_starting_index << tree->aln->convertStateBackStr(mut_it->getNewState())<< std::endl;
                  myfile.close();*/
             }
         }

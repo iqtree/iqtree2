@@ -364,7 +364,7 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             }
             // if not found -> all characters are spaces -> invalid
             else
-                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
             
             // remove spaces at the ending of the line
             pos = line.find_last_not_of(" ");
@@ -377,11 +377,11 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             }
             // if not found -> all characters are spaces -> invalid
             else
-                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
             
-            // validate the input format <node_name><spaces><old_state><site><new_state>
+            // validate the input format <node_name><spaces><list_of_mutations>
             if (line.length() < 5)
-                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
             
             // replace \t by a space
             line = regex_replace(line, std::regex("\t"), " ");
@@ -397,7 +397,7 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
                 transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
             }
             else
-                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
             
             // get mutation list at that node
             std::string mutation_str = "";
@@ -408,7 +408,7 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             if (line.length() - pos)
                 mutation_str = line.substr(pos, line.length() - pos);
             else
-                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><old_state><site><new_state>");
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
             
             // record the mutations at that node
             node_mutations.push_back(std::pair<std::string,std::string>(node_name, mutation_str));
@@ -646,7 +646,7 @@ void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const 
                 // vailidate position
                 if (pos >= seq_length)
                 {
-                    outWarning("Ignore a predefined mutation " + aln->convertStateBackStr(mut_it->getOldState()) + convertIntToString((aln->seq_type == SEQ_CODON ? pos * 3 : pos) + 1) + aln->convertStateBackStr(mut_it->getNewState()) + ". Position exceeds the sequence length " + convertIntToString(aln->seq_type == SEQ_CODON ? seq_length * 3 : seq_length));
+                    outWarning("Ignore a predefined mutation " + aln->convertStateBackStr(mut_it->getOldState()) + convertIntToString((aln->seq_type == SEQ_CODON ? pos * 3 : pos) + Params::getInstance().site_starting_index) + aln->convertStateBackStr(mut_it->getNewState()) + ". Position exceeds the sequence length " + convertIntToString(aln->seq_type == SEQ_CODON ? seq_length * 3 : seq_length));
                 }
                 // mark the site as locked
                 else

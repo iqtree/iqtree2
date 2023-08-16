@@ -1487,6 +1487,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alignment_id = 0;
     params.include_pre_mutations = false;
     params.mutation_file = "";
+    params.site_starting_index = 0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5267,6 +5268,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 // set default model_name
                 if (params.model_name.empty())
                     params.model_name = "HKY";
+                
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "--index-from-one") == 0) {
+                params.site_starting_index = 1;
                 
                 continue;
             }

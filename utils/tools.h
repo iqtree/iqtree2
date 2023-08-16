@@ -2601,6 +2601,11 @@ public:
     *  Mutation file that specifies pre-defined mutations occurs at nodes
     */
     std::string mutation_file;
+    
+    /**
+    *  site starting index (for predefined mutations in AliSim)
+    */
+    int site_starting_index;
 };
 
 /**

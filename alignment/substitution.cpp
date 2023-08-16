@@ -23,7 +23,7 @@ Substitution::Substitution(const std::string& sub_str, Alignment* const aln, con
         outError("Failed to parse the predefined mutation: '" + sub_str + "'. The new state is invalid.");
     
     // Parse the position
-    position = convert_int(sub_str.substr(num_sites_per_state, input_length - (num_sites_per_state + num_sites_per_state)).c_str()) - 1;
+    position = convert_int(sub_str.substr(num_sites_per_state, input_length - (num_sites_per_state + num_sites_per_state)).c_str()) - Params::getInstance().site_starting_index;
     if (aln->seq_type == SEQ_CODON)
         position = position * ONE_THIRD;
     
