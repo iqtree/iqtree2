@@ -10,17 +10,17 @@ Substitution::Substitution(const std::string& sub_str, Alignment* const aln, con
     const int num_sites_per_state = aln->seq_type == SEQ_CODON ? 3 : 1;
     const int input_length = sub_str.length();
     if (input_length < num_sites_per_state + num_sites_per_state + 1)
-        outError("Failed to parse the predefined mutation: " + sub_str);
+        outError("Failed to parse the predefined mutation: '" + sub_str + "'");
     
     // Parse the old state
     old_state = parseState(sub_str.substr(0, num_sites_per_state), aln);
     if (old_state >= aln->num_states)
-        outError("Failed to parse the predefined mutation: " + sub_str + ". The old state is invalid.");
+        outError("Failed to parse the predefined mutation: '" + sub_str + "'. The old state is invalid.");
     
     // Parse the new state
     new_state = parseState(sub_str.substr(input_length - num_sites_per_state, num_sites_per_state), aln);
     if (new_state >= aln->num_states)
-        outError("Failed to parse the predefined mutation: " + sub_str + ". The new state is invalid.");
+        outError("Failed to parse the predefined mutation: '" + sub_str + "'. The new state is invalid.");
     
     // Parse the position
     position = convert_int(sub_str.substr(num_sites_per_state, input_length - (num_sites_per_state + num_sites_per_state)).c_str()) - 1;
@@ -36,7 +36,7 @@ Substitution::Substitution(const std::string& sub_str, Alignment* const aln, con
     }
     
     if (position < 0)
-        outError("Failed to parse the predefined mutation: " + sub_str + ". Position must be positive!");
+        outError("Failed to parse the predefined mutation: '" + sub_str + "'. Position must be positive!");
 }
 
 int Substitution::parseState(const std::string& old_state_str, Alignment* const aln) const
@@ -96,6 +96,18 @@ Substitutions::Substitutions(const std::string& sub_str, Alignment* const aln, c
     
     // Remove {}
     std::string list_mut_str = sub_str.substr(1, length - 2);
+    
+    // Remove unnecessary spaces between mutations
+    std::string list_mut_str_wo_space(list_mut_str.length(), ' ');
+    auto wo_space_index = 0;
+    for (auto i = 0; i < list_mut_str.length(); ++i)
+    {
+        // add non-space characters
+        if (list_mut_str[i] != ' ' && list_mut_str[i] != '\t')
+            list_mut_str_wo_space[wo_space_index++] = list_mut_str[i];
+    }
+    // remove spaces
+    list_mut_str = list_mut_str_wo_space.substr(0, wo_space_index);
     
     // parse mutations one by one
     std::string delimiter = ","; // default delimiter
