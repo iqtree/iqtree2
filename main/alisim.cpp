@@ -722,8 +722,15 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (MPIHelper::getInstance().getNumProcesses() > super_alisimulator->params->alisim_dataset_num)
         outError("You are employing more MPI processes (" + convertIntToString(MPIHelper::getInstance().getNumProcesses()) + ") than the number of alignments (" + convertIntToString(super_alisimulator->params->alisim_dataset_num) + "). Please reduce the number of MPI processes to save the computational resources and try again!");
     
+    // BUG FIXED: set auto num_threads to the max #cores
+#ifdef _OPENMP
+    // num_threads == 0 <=> auto
+    if (!super_alisimulator->params->num_threads)
+        super_alisimulator->params->num_threads = countPhysicalCPUCores();
+#endif
+    
     // reset number of OpenMP threads to 1 in simulations with Indels
-    if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
+    if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
         outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
     
     // do not support compression when outputting multiple data sets into a same file
@@ -736,7 +743,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     }
     
     // cannot skip concatenating sequence chunks from intermediate files in simulations with FunDi, Partitions, or +ASC models
-    if (Params::getInstance().num_threads > 1 && Params::getInstance().no_merge)
+    if (Params::getInstance().num_threads != 1 && Params::getInstance().no_merge)
     {
         // ignore --no-merge option if using AliSim-OpenMP-IM
         if (Params::getInstance().alisim_openmp_alg == IM)
@@ -756,7 +763,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // show a warning if the user wants to write internal sequences in not-supported cases
     if (super_alisimulator->params->alisim_write_internal_sequences
         &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-           || super_alisimulator->tree->isSuperTree() || (super_alisimulator->params->alisim_fundi_taxon_set.size() > 0 && Params::getInstance().num_threads > 1)))
+           || super_alisimulator->tree->isSuperTree() || (super_alisimulator->params->alisim_fundi_taxon_set.size() > 0 && Params::getInstance().num_threads != 1)))
     {
         outWarning("Could not write out the internal sequences when using partition, ASC models, or FunDi model with multithreading. Only sequences at tips will be written to the output file.");
         Params::getInstance().alisim_write_internal_sequences = false;
@@ -1003,7 +1010,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             
             for (int thread_id = 0; thread_id < super_alisimulator->params->num_threads; thread_id++)
             {
-                if (super_alisimulator->params->num_threads > 1 && super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->no_merge)
+                if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->no_merge)
                     output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
                 
                 // add file extension
@@ -1443,7 +1450,7 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, 
             #endif
             {
                 // jump to the correct position if user want to keep sequence order
-                if (num_threads > 1 && keep_seq_order)
+                if (num_threads != 1 && keep_seq_order)
                     out.seekp(output_pos);
                 
                 // write output to file
