@@ -835,7 +835,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         
         // close the output stream
         if (output_filepath.length() > 0 || write_sequences_to_tmp_data)
-            closeOutputStream(out, num_threads > 1);
+            closeOutputStream(out, num_threads != 1);
         
         // release sequence cache
         if (store_seq_at_cache)
@@ -866,7 +866,7 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
     if (output_filepath.length() > 0 && !write_sequences_to_tmp_data)
     {
         // merge output files into a single file
-        if (num_threads > 1)
+        if (num_threads != 1)
         {
             // open single_output stream
             #ifdef _OPENMP
@@ -1049,7 +1049,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         if (store_seq_at_cache)
         {
             // don't need to init sequence_cache for the writing thread
-            if (!(num_threads > 1 && thread_id == num_threads - 1))
+            if (!(num_threads != 1 && thread_id == num_threads - 1))
             {
                 sequence_cache.resize(max_depth + 1);
                 for (int i = 1; i < max_depth + 1; i++)
@@ -1064,7 +1064,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
             #pragma omp single
             #endif
             {
-                if (num_threads > 1)
+                if (num_threads != 1)
                 {
                     // default cache_size_per_thread = num_simulating_threads * 2;
                     cache_size_per_thread = tree->params->mem_limit_factor == 0 ? num_simulating_threads * 2 : ceil(tree->leafNum * tree->params->mem_limit_factor);
@@ -1078,7 +1078,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         }
         
         // writing thread
-        if (num_threads > 1 && thread_id == num_threads - 1 && store_seq_at_cache)
+        if (num_threads != 1 && thread_id == num_threads - 1 && store_seq_at_cache)
         {
             while (num_thread_done < num_simulating_threads)
             {
@@ -1200,7 +1200,7 @@ void AliSimulator::postSimulateSeqs(int sequence_length, string output_filepath,
         delete[] ptn_accumulated_rate_dis;
     
     // merge chunks into a single sequence if using multiple threads and sequences have not been outputted
-    if (num_threads > 1 && (output_filepath.length() == 0 || write_sequences_to_tmp_data))
+    if (num_threads != 1 && (output_filepath.length() == 0 || write_sequences_to_tmp_data))
         mergeChunksAllNodes();
     
     // record the actual (final) seq_length due to Indels
@@ -1243,7 +1243,7 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     {
         num_threads = omp_get_num_threads();
         num_simulating_threads = num_threads;
-        if (params->alisim_openmp_alg == IM && num_threads > 1 && store_seq_at_cache)
+        if (params->alisim_openmp_alg == IM && num_threads != 1 && store_seq_at_cache)
             num_simulating_threads = num_threads - 1;
     }
     #endif
@@ -1334,7 +1334,7 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     resetTree(max_depth, store_seq_at_cache);
     
     // if using AliSim-OpenMP-EM algorithm, update whether we need to output temporary files in PHYLIP format
-    force_output_PHYLIP = params->alisim_openmp_alg == EM && num_threads > 1 && !params->no_merge;
+    force_output_PHYLIP = params->alisim_openmp_alg == EM && num_threads != 1 && !params->no_merge;
 }
 
 /**
@@ -1357,14 +1357,14 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
         {
             // only add thread_id to filename if using multiple threads with AliSim-OpenMP-EM
             string thread_id_str = "";
-            if (params->alisim_openmp_alg == EM && num_threads > 1)
+            if (params->alisim_openmp_alg == EM && num_threads != 1)
                 thread_id_str = "_" + convertIntToString(thread_id + 1);
             
             // add ".phy" or ".fa" to the output_filepath
             output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath + thread_id_str);
             
             // open the output stream (create new or append an existing file)
-            if (params->alisim_openmp_alg == EM && num_threads > 1)
+            if (params->alisim_openmp_alg == EM && num_threads != 1)
                 openOutputStream(out, output_filepath, std::ios_base::out, true);
             else
                 openOutputStream(out, output_filepath, open_mode);
@@ -1388,7 +1388,7 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 // -> without merging intermediate output files -> also output the first line
                 // -> with merging step -> the first line will be output later when merging output files
                 if (num_threads == 1
-                    || (num_threads > 1 && params->no_merge))
+                    || (num_threads != 1 && params->no_merge))
                     *out << num_nodes << " " << round(actual_segment_length * inverse_length_ratio) * num_sites_per_state << endl;
             }
             // if using AliSim-OpenMP-IM algorithm
@@ -1935,7 +1935,7 @@ void AliSimulator::outputOneSequence(Node* node, string &output, int thread_id, 
             output = output + "\n";
         
         //  cache output into the writing queue
-        if (num_threads > 1)
+        if (num_threads != 1)
         {
             int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
             pos += starting_pos + (num_sites_per_state == 1 ? segment_start : (segment_start * num_sites_per_state)) + (thread_id == 0 ? 0 : seq_name_length);
