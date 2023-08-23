@@ -1448,8 +1448,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_no_copy_gaps = false;
     params.alisim_sequence_length = 1000;
     params.alisim_dataset_num = 1;
-    params.alisim_ancestral_sequence_aln_filepath = NULL;
-    params.alisim_ancestral_sequence_name = "";
+    params.root_ref_seq_aln = "";
+    params.root_ref_seq_name = "";
     params.alisim_max_rate_categories_for_applying_caching = 100;
     params.alisim_num_states_morph = 0;
     params.alisim_num_taxa_uniform_start = -1;
@@ -1485,6 +1485,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_openmp_alg = IM;
     params.no_merge = false;
     params.alignment_id = 0;
+    params.enable_CMaple = false;
+    params.in_aln_format_str = "AUTO";
+    params.shallow_tree_search = false;
+    params.tree_search_type_str = "NORMAL";
+    params.allow_replace_input_tree = false;
+    params.tree_format_str = "BIN";
+    params.make_consistent = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -3004,8 +3011,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
-
-
+            if (strcmp(argv[cnt], "--enable-cmaple") == 0) {
+                params.enable_CMaple = true;
+                continue;
+            }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
                 params.output_format = FORMAT_CSV;
                 continue;
@@ -5352,7 +5361,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--root-seq") == 0) {
+            if (strcmp(argv[cnt], "--root-seq") == 0  || strcmp(argv[cnt], "--ref-seq") == 0 || strcmp(argv[cnt], "-ref") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
@@ -5360,16 +5369,53 @@ void parseArg(int argc, char *argv[], Params &params) {
                 string delimiter = ",";
                 if ((ancestral_sequence_params.find(delimiter) == std::string::npos)||ancestral_sequence_params.find(delimiter) == 0)
                     throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
-                params.alisim_ancestral_sequence_aln_filepath = new char[ancestral_sequence_params.find(delimiter) + 1];
-                params.alisim_ancestral_sequence_aln_filepath = strcpy(params.alisim_ancestral_sequence_aln_filepath, ancestral_sequence_params.substr(0, ancestral_sequence_params.find(delimiter)).c_str());
-                ancestral_sequence_params.erase(0, ancestral_sequence_params.find(delimiter) + delimiter.length());
-                params.alisim_ancestral_sequence_name = ancestral_sequence_params;
-                if (!params.alisim_ancestral_sequence_aln_filepath || params.alisim_ancestral_sequence_name.length() == 0)
+                auto delimiter_pos = ancestral_sequence_params.find(delimiter);
+                params.root_ref_seq_aln = ancestral_sequence_params.substr(0, delimiter_pos);
+                ancestral_sequence_params.erase(0, delimiter_pos + delimiter.length());
+                params.root_ref_seq_name = ancestral_sequence_params;
+                if (!params.root_ref_seq_aln.length() || !params.root_ref_seq_name.length())
                     throw "Use --root-seq <ALN_FILE>,<SEQ_NAME>";
                 
                 continue;
             }
+            
+            if (strcmp(argv[cnt], "-aln-format") == 0 || strcmp(argv[cnt], "--aln-format") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    outError("Use -aln-format MAPLE, PHYLIP, FASTA, or AUTO");
+                params.in_aln_format_str = argv[cnt];
+                
+                continue;
+            }
+            if (strcmp(argv[cnt], "--tree-search") == 0 || strcmp(argv[cnt], "-tree-search") == 0) {
+                ++cnt;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    outError("Use -tree-search <FAST|NORMAL|MORE_ACCURATE>");
+                
+                params.tree_search_type_str = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "--shallow-tree-search") == 0 || strcmp(argv[cnt], "-shallow-search") == 0) {
+                
+                params.shallow_tree_search = true;
 
+                continue;
+            }
+            if (strcmp(argv[cnt], "--replace-input-tree") == 0 || strcmp(argv[cnt], "-rep-tree") == 0) {
+                params.allow_replace_input_tree = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--output-multifurcating-tree") == 0 || strcmp(argv[cnt], "-out-mul-tree") == 0) {
+                
+                params.tree_format_str = "MUL";
+
+                continue;
+            }
+            if (strcmp(argv[cnt], "--make-consistent") == 0 || strcmp(argv[cnt], "-consistent") == 0) {
+                params.make_consistent = true;
+                continue;
+            }
+            
             if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

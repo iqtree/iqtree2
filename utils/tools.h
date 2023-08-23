@@ -2401,12 +2401,12 @@ public:
     /**
     *  alignment_filepath containing the ancestral sequence of alisim
     */
-    char * alisim_ancestral_sequence_aln_filepath;
+    string root_ref_seq_aln;
     
     /**
     *  the sequence name of the ancestral sequence of alisim
     */
-    string alisim_ancestral_sequence_name;
+    string root_ref_seq_name;
     
     /**
     *  the maximum number of rate_categories that cached_trans_matrix could be applied
@@ -2590,6 +2590,46 @@ public:
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
     */
     int alignment_id;
+    
+    /**
+    *  TRUE to enable [C]Maple algorithm
+    */
+    bool enable_CMaple;
+    
+    /**
+    *  Format of the input alignment
+    */
+    std::string in_aln_format_str;;
+    
+    /**
+     @private
+    *  type of tree search (for CMaple)
+    */
+    std::string tree_search_type_str;
+    
+    /**
+     @private
+    *  TRUE to run an additional short range search for tree topology improvement (for CMaple)
+    */
+    bool shallow_tree_search;
+    
+    /**
+     @private
+    *  TRUE to allow replace the input tree by its NNI neighbor (with a higher lh) when computing aLRT-SH
+    */
+    bool allow_replace_input_tree;
+    
+    /**
+     @private
+    *  format of the output tree
+    */
+    std::string tree_format_str;
+    
+    /**
+     * @private
+     * TRUE to make the processes of outputting->re-inputting a tree consistent
+     */
+    bool make_consistent;
 };
 
 /**

@@ -9,32 +9,6 @@
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
-    std::vector<CMaple> instances;
-    
-    // test default constructor
-    instances.push_back(CMaple());
-    
-    // test constructor with params
-    cmaple::Params cmaple_params = cmaple::Params();
-    cmaple_params.aln_path = "test_2K.diff";
-    cmaple_params.overwrite_output = true;
-    instances.emplace_back(std::move(cmaple_params));
-    
-    // test constructor with aln
-    instances.emplace_back("test_2K.diff", "MAPLE", "DNA");
-
-    // run Inference
-    instances[0].setAlignment("test_1K.diff");
-    instances[0].overwriteOutputs(true);
-    instances[0].runInference();
-    instances[0].extractFASTA("test_1K.diff", "test_1K.diff.fa");
-    
-    instances[1].runInference();
-    
-    instances[2].overwriteOutputs(true);
-    instances[2].runInference();
-
-    
     MPIHelper::getInstance().barrier();
     auto start = getRealTime();
     
@@ -449,8 +423,6 @@ void showParameters(Params params, bool is_partition_model)
             cout << " - Model: " << params.model_name <<"\n";
     }
     cout << " - Number of output datasets: " << params.alisim_dataset_num<<"\n";
-    if (params.alisim_ancestral_sequence_name.length() > 0)
-        cout << " - Ancestral sequence position: " << params.alisim_dataset_num <<"\n";
 }
 
 /**
@@ -459,8 +431,9 @@ void showParameters(Params params, bool is_partition_model)
 void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, vector<short int> &sequence)
 {
     // get variables
-    char *aln_filepath = super_alisimulator->params->alisim_ancestral_sequence_aln_filepath;
-    string sequence_name = super_alisimulator->params->alisim_ancestral_sequence_name;
+    char* aln_filepath = new char[super_alisimulator->params->root_ref_seq_aln.length() + 1];
+    strcpy(aln_filepath, super_alisimulator->params->root_ref_seq_aln.c_str());
+    string sequence_name = super_alisimulator->params->root_ref_seq_name;
     
     // in normal case (without partition) -> using the current tree to load the ancestral sequence
     IQTree *src_tree = super_alisimulator->tree;
@@ -483,6 +456,7 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
     char *sequence_type = strcpy(new char[src_tree->aln->sequence_type.length() + 1], src_tree->aln->sequence_type.c_str());
     aln->extractSequences(aln_filepath, sequence_type, sequences, nseq, nsite);
     StrVector seq_names = aln->getSeqNames();
+    delete[] aln_filepath;
     
     // delete aln
     delete aln;
@@ -556,7 +530,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 {
     // Load ancestral sequence from the input file if user has specified it
     vector<short int> ancestral_sequence;
-    if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
+    if (super_alisimulator->params->root_ref_seq_name.length() > 0)
         retrieveAncestralSequenceFromInputFile(super_alisimulator, ancestral_sequence);
     
     // terminate if users employ more MPI processes than the number of alignments

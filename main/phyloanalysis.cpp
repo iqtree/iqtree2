@@ -4320,18 +4320,175 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 }
 
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
-    IQTree *tree;
-    Alignment *alignment;
-    
-    runPhyloAnalysis(params, checkpoint, tree, alignment);
+    bool runCMapleAlg = false;
+    // check and run CMaple algorithm (if users want to do so)
+    if (params.enable_CMaple)
+        runCMapleAlg = runCMaple(params);
+        
+    // run IQ-TREE algorithm, by default
+    if (!runCMapleAlg)
+    {
+        IQTree *tree;
+        Alignment *alignment;
+        
+        runPhyloAnalysis(params, checkpoint, tree, alignment);
+        
+        // 2015-09-22: bug fix, move this line to before deleting tree
+        alignment = tree->aln;
+        delete tree;
+        // BUG FIX: alignment can be changed, should delete tree->aln instead
+        // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
+        //    alignment = tree->aln;
+        delete alignment;
+    }
+}
 
-    // 2015-09-22: bug fix, move this line to before deleting tree
-    alignment = tree->aln;
-    delete tree;
-    // BUG FIX: alignment can be changed, should delete tree->aln instead
-    // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
-//    alignment = tree->aln;
-    delete alignment;
+bool runCMaple(Params &params)
+{
+    // Validate the input aln
+    if (!params.aln_file) outError("Please supply an input alignment via '-s <alignment_file>");
+    
+    try
+    {
+        // record the start time
+        auto start = getRealTime();
+        
+        // Dummy variables
+        std::string aln_path(params.aln_file);
+        const std::string prefix(params.out_prefix ? params.out_prefix : aln_path);
+        const std::string output_treefile = prefix + ".treefile";
+        const cmaple::Tree::TreeType tree_format = cmaple::Tree::parseTreeType(params.tree_format_str);
+        
+        // Check whether output file is already exists
+        if (!params.ignore_checkpoint && fileExists(output_treefile))
+            outError("File " + output_treefile + " already exists. Use `-redo` to redo the inference.\n");
+        
+        // Parse the sequence type (if specified)
+        const cmaple::SeqRegion::SeqType seq_type = params.sequence_type ? cmaple::SeqRegion::parseSeqType(std::string(params.sequence_type)) : cmaple::SeqRegion::SEQ_AUTO;
+        // Validate the seq_type
+        if (seq_type == cmaple::SeqRegion::SEQ_UNKNOWN)
+            throw std::invalid_argument("Unknown/Unsupported SeqType " + std::string(params.sequence_type));
+        
+        // Initialize an Alignment
+        // Retrieve the reference genome (if specified) from an alignment -> this feature has not yet exposed to APIs -> should be refactoring later
+        std::string ref_seq = "";
+        if (params.root_ref_seq_aln.length() && params.root_ref_seq_name.length())
+        {
+            cmaple::Alignment aln_tmp;
+            ref_seq = aln_tmp.readRefSeq(params.root_ref_seq_aln, params.root_ref_seq_name);
+        }
+        const cmaple::Alignment::InputType aln_format = cmaple::Alignment::parseAlnFormat(params.in_aln_format_str);
+        // Validate the aln_format
+        if (aln_format == cmaple::Alignment::IN_UNKNOWN)
+            throw std::invalid_argument("Unknown alignment format " + params.in_aln_format_str);
+        cmaple::Alignment aln(aln_path, ref_seq, aln_format, seq_type);
+        
+        // check if CMaple is suitable for the input alignment
+        if (!checkMapleSuitability(aln))
+        {
+            std::cout << "The input alignment is too divergent, which is inappropriate for [C]Maple algorithm." <<std::endl;
+            std::cout << "Running IQ-TREE algorithm..." << std::endl;
+            return false;
+        }
+        else
+        {
+            std::cout << "Running [C]MAPLE algorithm..." << std::endl;
+            
+            // If running multi-processes -> only the master works
+            if (MPIHelper::getInstance().getNumProcesses() > 1 && MPIHelper::getInstance().getProcessID() > 0)
+                return true;
+            
+            // Initialize a Model
+            cmaple::ModelBase::SubModel sub_model = params.model_name.length() ? cmaple::ModelBase::parseModel(params.model_name) : cmaple::ModelBase::DEFAULT;
+            // Validate the sub_model
+            if (sub_model == cmaple::ModelBase::UNKNOWN)
+            {
+                std::cout << "Unknown/Unsupported model '" + params.model_name + "'. Using the default model instead (i.e., GTR for DNA and LG for Protein data)" << std::endl;
+                sub_model = cmaple::ModelBase::DEFAULT;
+            }
+            cmaple::Model model(sub_model, aln.getSeqType());
+            
+            // Initialize a Tree
+            const std::string input_treefile(params.user_file ? params.user_file : "");
+            cmaple::Tree tree(&aln, &model, input_treefile, (params.fixed_branch_length == BRLEN_FIX), cmaple::ParamsBuilder().build());
+            
+            // Infer a phylogenetic tree
+            const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
+            std::string redirected_msgs = tree.autoProceedMAPLE(tree_search_type, params.shallow_tree_search);
+            if (cmaple::verbose_mode >= cmaple::VB_MED)
+                std::cout << redirected_msgs << std::endl;
+            
+            // Compute branch supports (if users want to do so)
+            if (params.aLRT_test)
+            {
+                // if users don't input a tree file, always allow CMaple to replace the ML tree by a higher-likelihood tree (if found)
+                bool allow_replacing_ML_tree = true;
+                // if users input a tree -> depend on the setting in params (false ~ don't allow replacing (by default)
+                if (input_treefile.length())
+                    allow_replacing_ML_tree = params.allow_replace_input_tree;
+                
+                redirected_msgs = tree.computeBranchSupport(params.num_threads, params.aLRT_replicates, 0.1, allow_replacing_ML_tree);
+                if (cmaple::verbose_mode >= cmaple::VB_MED)
+                    std::cout << redirected_msgs << std::endl;
+                
+                // write the tree file with branch supports
+                ofstream out_tree_branch_supports = ofstream(prefix + ".aLRT_SH.treefile");
+                out_tree_branch_supports << tree.exportNewick(tree_format, true);
+                out_tree_branch_supports.close();
+            }
+            
+            // If needed, apply some minor changes (collapsing zero-branch leaves into less-info sequences, re-estimating model parameters) to make the processes of outputting then re-inputting a tree result in a consistent tree
+            if (params.make_consistent)
+                tree.makeTreeInOutConsistent();
+            
+            // output log-likelihood of the tree
+            if (cmaple::verbose_mode > cmaple::VB_QUIET)
+                std::cout << std::setprecision(10) << "Tree log likelihood: " << tree.computeLh() << std::endl;
+            
+            // Write the normal tree file
+            ofstream out = ofstream(output_treefile);
+            out << tree.exportNewick(tree_format);
+            out.close();
+                
+            // Show model parameters
+            if (cmaple::verbose_mode > cmaple::VB_QUIET)
+            {
+                cmaple::Model::ModelParams model_params = model.getParams();
+                std::cout << "\nMODEL: " + model_params.model_name + "\n";
+                std::cout << "\nROOT FREQUENCIES\n";
+                std::cout << model_params.state_freqs;
+                std::cout << "\nMUTATION MATRIX\n";
+                std::cout << model_params.mut_rates << std::endl;
+            }
+                
+            // Show information about output files
+            std::cout << "Analysis results written to:" << std::endl;
+            std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
+            if (params.aLRT_test)
+                std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;
+            std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
+            
+            // show runtime
+            auto end = getRealTime();
+            if (cmaple::verbose_mode > cmaple::VB_QUIET)
+                cout << "CMAPLE Runtime: " << end - start << "s" << endl;
+        }
+    }
+    catch (std::invalid_argument e)
+    {
+        outError(e.what());
+    }
+    catch (std::logic_error e)
+    {
+        outError(e.what());
+    }
+    catch (ios::failure e)
+    {
+        outError(e.what());
+    }
+    
+    // return true, by default
+    return true;
 }
 
 /**

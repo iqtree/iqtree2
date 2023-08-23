@@ -2014,7 +2014,7 @@ void AliSimulator::validataSeqLengthCodon()
 {
     if (tree->aln->seq_type == SEQ_CODON && (!params->partition_file && params->alisim_sequence_length%3))
     {
-        if (params->aln_file || params->alisim_ancestral_sequence_aln_filepath || params->original_params.find("--length") != std::string::npos)
+        if (params->aln_file || params->root_ref_seq_aln.length() || params->original_params.find("--length") != std::string::npos)
             outError("Sequence length of Codon must be divisible by 3. Please check & try again!");
         else
             params->alisim_sequence_length = 999;
