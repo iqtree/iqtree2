@@ -4419,7 +4419,7 @@ bool runCMaple(Params &params)
                 std::cout << redirected_msgs << std::endl;
             
             // Compute branch supports (if users want to do so)
-            if (params.aLRT_test)
+            if (params.aLRT_replicates)
             {
                 // if users don't input a tree file, always allow CMaple to replace the ML tree by a higher-likelihood tree (if found)
                 bool allow_replacing_ML_tree = true;
@@ -4464,7 +4464,7 @@ bool runCMaple(Params &params)
             // Show information about output files
             std::cout << "Analysis results written to:" << std::endl;
             std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
-            if (params.aLRT_test)
+            if (params.aLRT_replicates)
                 std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;
             std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
             
