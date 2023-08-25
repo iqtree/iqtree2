@@ -2678,10 +2678,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->clearAllPartialLH();
         initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
 
-//        if (params.dating_method != "") {
-//            doTimeTree(iqtree);
-//        }
-        
         if (params.lmap_num_quartets >= 0) {
             cout << endl << "Performing likelihood mapping with ";
             if (params.lmap_num_quartets > 0)
@@ -3021,7 +3017,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
     }
     if (params.dating_method != "") {
-//        iqtree->optimizeModelParameters();
         doTimeTree(iqtree);
     }
     // BUG FIX: readTreeString(bestTreeString) not needed before this line
@@ -4298,10 +4293,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
             tree->printResultTree();
         }
         delete model_info;
-//
-//        if (params.dating_method != "") {
-//            doTimeTree(tree);
-//        }
 
     } else {
         // the classical non-parameter bootstrap (SBS)
