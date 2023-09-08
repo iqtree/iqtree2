@@ -104,7 +104,8 @@ void IQTreeMixHmm::initializeTransitModel(Params &params) {
     }
     
     // show the transition model
-    cout << "HMM transition model: " << modelHmm->getFullName() << " (" << modelHmm->getName() << ")"<< endl;
+    if (params.treemix_optimize_methods != "mast")
+        cout << "HMM transition model: " << modelHmm->getFullName() << " (" << modelHmm->getName() << ")"<< endl;
 
     // set the associated PhyloHmm of modelHmm to this
     modelHmm->setPhyloHmm(this);
