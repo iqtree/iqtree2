@@ -1603,8 +1603,6 @@ void IQTreeMix::setParams(Params* params) {
  * Branches of different trees with the same partition share the same ID
  */
 void IQTreeMix::computeBranchID() {
-    cout << "Enter IQTreeMix::computeBranchID" << endl << flush;
-
     StrVector taxname;
     NodeVector nodes1, nodes2;
     Split* split;
