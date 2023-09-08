@@ -82,8 +82,10 @@ void PhyloTree::init() {
     central_partial_lh = NULL;
     nni_partial_lh = NULL;
     tip_partial_lh = NULL;
+    tip_raw_partial_lh = NULL;
     tip_partial_pars = NULL;
     tip_partial_lh_computed = 0;
+    tip_raw_partial_lh_computed = 0;
     ptn_freq_computed = false;
     central_scale_num = NULL;
     nni_scale_num = NULL;
@@ -669,6 +671,7 @@ void PhyloTree::clearAllPartialLH(bool make_null) {
     }
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh(make_null, (PhyloNode*) root);
     tip_partial_lh_computed = 0;
+    tip_raw_partial_lh_computed = 0;
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
 }
@@ -953,6 +956,8 @@ void PhyloTree::deleteAllPartialLh() {
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
+    if (tip_raw_partial_lh) delete[] tip_raw_partial_lh;
+    tip_raw_partial_lh = nullptr;
     tip_partial_pars  = nullptr;
 
     clearAllPartialLH();

@@ -817,6 +817,13 @@ public:
     double *tip_partial_lh;
     int tip_partial_lh_computed;
     UINT *tip_partial_pars;
+    
+    /**
+     * this stores the RAW/REAL partial_lh (without multiplying by the eigen vector) for each state at the leaves of the tree because they are the same between leaves
+     * e.g. (1,0,0,0) for A,  (0,0,0,1) for T
+     */
+    double *tip_raw_partial_lh;
+    int tip_raw_partial_lh_computed;
 
     bool ptn_freq_computed;
 
@@ -884,6 +891,7 @@ public:
     void computeTipPartialParsimony();
     void computePtnInvar();
     void computePtnFreq();
+    void computeTipRawPartialLikelihood();
 
 
     /**
@@ -894,6 +902,17 @@ public:
     virtual void computePartialLikelihood(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
     typedef void (PhyloTree::*ComputePartialLikelihoodType)(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id);
     ComputePartialLikelihoodType computePartialLikelihoodPointer;
+    
+    /**
+     compute the RAW/REAL partial likelihood at a subtree or a tip
+     @param dad the dad of the node where we want to compute the partial lh
+     @param node the node where we want to compute the partial lh
+     @param raw_partial_lh the output (raw/real) partial lh
+     */
+    virtual void computeRawPartialLikelihood(PhyloNode* dad, PhyloNode* node, double* &raw_partial_lh);
+
+    typedef void (PhyloTree::*ComputeRawPartialLikelihoodType)(PhyloNode*, PhyloNode*, double*&);
+    ComputeRawPartialLikelihoodType computeRawPartialLikelihoodPointer;
 
 
     //template <const int nstates>
@@ -968,6 +987,11 @@ public:
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeRawPartialLikelihoodSIMD(PhyloNode* dad, PhyloNode* node, double* &raw_partial_lh);
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode* node, double* &raw_partial_lh);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>

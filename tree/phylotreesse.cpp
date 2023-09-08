@@ -131,6 +131,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
+        computeRawPartialLikelihoodPointer = &PhyloTree::computeRawPartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
         sse = LK_386;
 #else
@@ -138,6 +139,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodDervPointer = NULL;
         computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = NULL;
+        computeRawPartialLikelihoodPointer = NULL;
         computeLikelihoodFromBufferPointer = NULL;
         sse = LK_386;
 #endif
@@ -179,6 +181,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH, false, true>;
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH, false, true>;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH, false, true>;
+        computeRawPartialLikelihoodPointer = &PhyloTree::computeRawPartialLikelihoodGenericSIMD<Vec1d, SAFE_LH, false, true>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH, false, true>;
         return;
     }
@@ -188,12 +191,14 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
+    computeRawPartialLikelihoodPointer = &PhyloTree::computeRawPartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
 #else
     computeLikelihoodBranchPointer = NULL;
     computeLikelihoodDervPointer = NULL;
     computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = NULL;
+    computeRawPartialLikelihoodPointer = NULL;
     computeLikelihoodFromBufferPointer = NULL;
 #endif
 }
@@ -211,6 +216,12 @@ void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 
 void PhyloTree::computePartialLikelihood(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int packet_id) {
 	(this->*computePartialLikelihoodPointer)(info, ptn_left, ptn_right, packet_id);
+}
+
+void PhyloTree::computeRawPartialLikelihood(PhyloNode* dad, PhyloNode* node, double* &raw_partial_lh) {
+    if (!computeRawPartialLikelihoodPointer)
+        outError("computeRawPartialLikelihood() has not been implemented for your kernel/model");
+    (this->*computeRawPartialLikelihoodPointer)(dad, node, raw_partial_lh);
 }
 
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -239,6 +250,44 @@ double PhyloTree::dotProductDoubleCall(double *x, double *y, int size) {
     return (this->*dotProductDouble)(x, y, size);
 }
 
+void PhyloTree::computeTipRawPartialLikelihood() {
+    if ((tip_raw_partial_lh_computed & 1) != 0)
+        return;
+    tip_raw_partial_lh_computed |= 1;
+    
+    //-------------------------------------------------------
+    // initialize ptn_freq and ptn_invar
+    //-------------------------------------------------------
+
+    computePtnFreq();
+    // for +I model
+    computePtnInvar();
+
+    if (getModel()->isSiteSpecificModel())
+        outError("computeTipRawPartialLikelihood() is not supported site-specific model yet");
+    
+    // 2020-06-23: refactor to use computeTipLikelihood
+    int nmixtures = 1;
+    if (getModel()->useRevKernel())
+        nmixtures = getModel()->getNMixtures();
+    int nstates = getModel()->num_states;
+    int state;
+    if (aln->seq_type == SEQ_POMO) {
+        if (aln->pomo_sampling_method != SAMPLING_WEIGHTED_BINOM &&
+            aln->pomo_sampling_method != SAMPLING_WEIGHTED_HYPER)
+            outError("Sampling method not supported by PoMo.");
+        ASSERT(aln->STATE_UNKNOWN == nstates + aln->pomo_sampled_states.size());
+    }
+
+    // assign tip_partial_lh for all admissible states
+    int step = nstates*nmixtures;
+    // init tip_raw_partial_lh (if necessary)
+    if (!tip_raw_partial_lh)
+        tip_raw_partial_lh = new double[nstates * step];
+    double* state_partial_lh = tip_raw_partial_lh;
+    for (state = 0; state <= aln->STATE_UNKNOWN; state++, state_partial_lh += step)
+        getModel()->computeTipLikelihood(state, state_partial_lh);
+}
 
 void PhyloTree::computeTipPartialLikelihood() {
 	if ((tip_partial_lh_computed & 1) != 0)

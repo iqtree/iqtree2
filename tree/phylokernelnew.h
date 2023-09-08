@@ -2632,6 +2632,170 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     }
 }
 
+
+/*******************************************************
+ *
+ * Compute the "raw" (without multiplying by the inverse eigen vector) partial likelihood 
+ *
+ ******************************************************/
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
+void PhyloTree::computeRawPartialLikelihoodSIMD(PhyloNode* dad, PhyloNode* node, double* &raw_partial_lh)
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
+void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode* node, double* &raw_partial_lh)
+#endif
+{
+    // validate the inputs
+    ASSERT(dad && "Dad node is null!");
+    ASSERT(node && "Node is null");
+    
+    // dummy variables
+#ifndef KERNEL_FIX_STATES
+    size_t nstates = aln->num_states;
+#endif
+    size_t orig_nptn = aln->size();
+    size_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
+    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    vector<size_t> limits;
+    computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
+    size_t ncat = site_rate->getNRate();
+    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    size_t block = ncat_mix * nstates;
+    double* evec = model->getEigenvectors();
+    
+    // initialize raw_partial_lh (if necessary)
+    if (!raw_partial_lh)
+        raw_partial_lh = new double[nstates * nptn];
+    memset(raw_partial_lh, 0, nstates * nptn * sizeof(double));
+    
+    // compute the partial likelihood of a leaf
+    if (node->isLeaf())
+    {
+        // pre-compute tip partial lh
+        if ((tip_raw_partial_lh_computed & 1) == 0)
+            computeTipRawPartialLikelihood();
+        
+        // use multiple threads to compute the partial lhs
+#ifdef _OPENMP
+#pragma omp parallel for  schedule(dynamic,1) num_threads(num_threads)
+#endif
+        for (int packet_id = 0; packet_id < num_packets; packet_id++)
+        {
+            // dummy variables
+            size_t ptn_lower = limits[packet_id];
+            size_t ptn_upper = limits[packet_id+1];
+            auto tipStateRow   = this->getConvertedSequenceByNumber(node->id);
+            auto unknown  = aln->STATE_UNKNOWN;
+            int nmixtures = 1;
+            if (getModel()->useRevKernel())
+                nmixtures = getModel()->getNMixtures();
+            const int nstates_times_nmixtures = nstates * nmixtures;
+            double* raw_partial_lh_ptr = raw_partial_lh + ptn_lower * nstates;
+            
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn++, raw_partial_lh_ptr += nstates)
+            {
+                // extract the state of the tip at the current site pattern
+                int tipState;
+                if (ptn < orig_nptn)
+                {
+                    if (tipStateRow!=nullptr)
+                        tipState = tipStateRow[ptn];
+                    else
+                        tipState = (aln->at(ptn))[node->id];
+                }
+                else if (ptn < max_orig_nptn)
+                    tipState = unknown;
+                else if (ptn < nptn)
+                    tipState  = model_factory->unobserved_ptns[ptn-max_orig_nptn][node->id];
+                else
+                    tipState  = unknown;
+                
+                // extract the values and store them in raw_partial_lh
+                double* tip_raw_partial_lh_ptr = tip_raw_partial_lh + tipState * nstates_times_nmixtures;
+                for (auto i = 0; i < nstates; ++i)
+                    raw_partial_lh_ptr[i] = tip_raw_partial_lh_ptr[i];
+            }
+        }
+    }
+    // compute the partial likelihood of an iternal node
+    else
+    {
+        // compute the traversal info to recursively compute the partial lh
+#ifdef KERNEL_FIX_STATES
+        computeTraversalInfo<VectorClass, nstates>(node, dad, false);
+#else
+        computeTraversalInfo<VectorClass>(node, dad, false);
+#endif
+      
+        // use multiple threads to compute the partial lhs
+#ifdef _OPENMP
+#pragma omp parallel for  schedule(dynamic,1) num_threads(num_threads)
+#endif
+        for (int packet_id = 0; packet_id < num_packets; packet_id++)
+        {
+            // dummy variables
+            size_t ptn_lower = limits[packet_id];
+            size_t ptn_upper = limits[packet_id+1];
+            
+            // extract the branch connecting dad and node
+            PhyloNeighbor* tmp_branch = (PhyloNeighbor*) (dad->findNeighbor(node));
+            
+            // recursively compute the partial lhs
+            for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); ++it)
+                computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id);
+            
+            // compute the raw partial lh (removing the eigen vector factor)
+            size_t jump_step = VectorClass::size() * block;
+            int index = ptn_lower * jump_step;
+            size_t jump_step_raw_partial_lh = VectorClass::size() * nstates;
+            int index_raw_partial_lh = ptn_lower * jump_step_raw_partial_lh;
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn += VectorClass::size(), index += jump_step, index_raw_partial_lh += jump_step_raw_partial_lh)
+            {
+                // get the starting location of the memory that store the partial lh of the current site_pattern
+                VectorClass* partial_lh = (VectorClass*)(tmp_branch->partial_lh + index);
+                
+                // get the starting location of raw_partial_lh
+                double* raw_partial_lh_ptr = raw_partial_lh + index_raw_partial_lh;
+                
+                // get the starting location of evec
+                double* evec_ptr = evec;
+                
+                // Loop to handle cases with mixture models
+                for (size_t c = 0; c < ncat_mix; c++) {
+                    
+                    // compute raw partial likelihood vector (removing the eigen vector factor)
+                    for (size_t x = 0; x < nstates; x++) {
+                        double* raw_partial_lh_row = raw_partial_lh_ptr + x;
+                        // dummy vector to store the probabilities of observing state 'x' in site pattern ptn to (ptn + VectorClass::size() - 1)
+                        VectorClass vec_lh;
+                        
+                        // remove the eigen vector factor from the pre-computed partial lh
+#ifdef KERNEL_FIX_STATES
+                        dotProductVec<VectorClass, double, nstates, FMA>(evec_ptr, partial_lh, vec_lh);
+#else
+                        dotProductVec<VectorClass, double, FMA>(evec_ptr, partial_lh, vec_lh, nstates);
+#endif
+                        
+                        // extract the values and store them in raw_partial_lh
+                        for (auto i = 0; i < VectorClass::size(); ++i, raw_partial_lh_row += nstates)
+                            raw_partial_lh_row[0] += vec_lh[i];
+
+                        evec_ptr += nstates;
+                    }
+                    
+                    // move to the corresponding memory location for another mixture component
+                    partial_lh += nstates;
+                }
+            }
+        }
+    }
+    
+    // return raw_partial_lh
+    return raw_partial_lh;
+}
+
 /*******************************************************
  *
  * NEW! highly-vectorized log-likelihood function

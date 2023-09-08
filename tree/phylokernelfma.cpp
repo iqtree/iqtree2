@@ -139,6 +139,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec4d, SAFE_LH, 4, true>;
             computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec4d, SAFE_LH, 4, true>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec4d, SAFE_LH, 4, true>;
+            computeRawPartialLikelihoodPointer    = &PhyloTree::computeRawPartialLikelihoodSIMD   <Vec4d, SAFE_LH, 4, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec4d, 4, true>;
             break;
         case 20:
@@ -146,6 +147,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec4d, SAFE_LH, 20, true>;
             computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec4d, SAFE_LH, 20, true>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec4d, SAFE_LH, 20, true>;
+            computeRawPartialLikelihoodPointer    = &PhyloTree::computeRawPartialLikelihoodSIMD   <Vec4d, SAFE_LH, 20, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec4d, 20, true>;
             break;
         default:
@@ -153,6 +155,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
             computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervGenericSIMD      <Vec4d, SAFE_LH, true>;
             computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenGenericSIMD<Vec4d, SAFE_LH, true>;
             computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodGenericSIMD   <Vec4d, SAFE_LH, true>;
+            computeRawPartialLikelihoodPointer    = &PhyloTree::computeRawPartialLikelihoodGenericSIMD   <Vec4d, SAFE_LH, true>;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec4d, true>;
             break;
         }
@@ -165,6 +168,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
         computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec4d, NORM_LH, 4, true>;
         computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec4d, NORM_LH, 4, true>;
         computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec4d, NORM_LH, 4, true>;
+        computeRawPartialLikelihoodPointer    = &PhyloTree::computeRawPartialLikelihoodSIMD   <Vec4d, NORM_LH, 4, true>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec4d, 4, true>;
 		break;
 	case 20:
@@ -172,6 +176,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
         computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec4d, NORM_LH, 20, true>;
         computeLikelihoodDervMixlenPointer = &PhyloTree::computeLikelihoodDervMixlenSIMD<Vec4d, NORM_LH, 20, true>;
         computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec4d, NORM_LH, 20, true>;
+        computeRawPartialLikelihoodPointer    = &PhyloTree::computeRawPartialLikelihoodSIMD   <Vec4d, NORM_LH, 20, true>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec4d, 20, true>;
 		break;
 	default:
