@@ -25,9 +25,24 @@
 void runAliSim(Params &params, Checkpoint *checkpoint);
 
 /**
+*  read predefined mutations from a file
+*/
+std::vector<std::pair<std::string,std::string>> readMutations(const std::string& mutation_file);
+
+/**
+*  create a mapping between each node name and a pair of pointers <dad_node, node>
+*/
+void createNodeMapping(std::map<std::string, std::pair<Node*, Node*>>& node_mapping, Node* const node, Node* const dad);
+
+/**
+*  add predefined mutations to the corresponding branch in the tree
+*/
+void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& node_mutations, IQTree* const tree);
+
+/**
 *  execute AliSim Simulation
 */
-void executeSimulation(Params params, IQTree *&tree);
+void executeSimulation(Params &params, IQTree *&tree);
 
 /**
 *  inferring input parameters for AliSim
@@ -42,12 +57,17 @@ void generateRandomTree(Params &params);
 /**
 *  show all input parameters for AliSim
 */
-void showParameters(Params params, bool is_partition_model);
+void showParameters(Params &params, bool is_partition_model);
 
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
 void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, vector<short int> &sequence);
+
+/**
+*  get a vector of site statuses denote whether a site is locked (by predefined mutations) or not
+*/
+void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const site_locked_vec, Alignment* const aln);
 
 /**
 *  generate mutiple alignments from a tree (model, alignment instances are supplied via the IQTree instance)
@@ -57,7 +77,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> &ancestral_sequence, map<string,string> input_msa, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> &ancestral_sequence, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath = "", std::ios_base::openmode open_mode = std::ios_base::out);
 
 /**
 *  compute the total sequence length of all partitions

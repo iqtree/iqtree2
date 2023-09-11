@@ -364,6 +364,7 @@ const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for bra
 const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
+const double ONE_THIRD = 1.0 / 3.0;
 
 /**
  *  Specify different ways of doing an NNI.
@@ -2622,9 +2623,24 @@ public:
     bool no_merge;
     
     /**
+    *  TRUE to include predefined mutations
+    */
+    bool include_pre_mutations;
+    
+    /**
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
     */
     int alignment_id;
+    
+    /**
+    *  Mutation file that specifies pre-defined mutations occurs at nodes
+    */
+    std::string mutation_file;
+    
+    /**
+    *  site starting index (for predefined mutations in AliSim)
+    */
+    int site_starting_index;
 };
 
 /**

@@ -50,6 +50,7 @@ const char* builtin_state_spaces = R"(
   state: [ A, R, N, D, C, Q, E, G, H, I, L, K, M, F, P, S, T, W, Y, V ]
   missing: [ X, "?", "*" ]
   gap: "-"
+  frame shift: "!"
   equate:
     B: [ N, D ]
     Z: [ Q, E ]
