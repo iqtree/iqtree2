@@ -823,6 +823,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     string KEYWORD="&";
     bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                           && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+    bool in_comment_for_ghost_model = (!in_comment_contains_key_value) && (in_comment.find('/') != string::npos);
     
     double len;
     // randomly generate branch length based on a user-defined distribution
@@ -832,13 +833,13 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     else
         len = convert_double_with_distribution(lenstr.c_str(), true);
     
-    if (in_comment.empty() || in_comment_contains_key_value) {
+    if (in_comment.empty() || (!in_comment_for_ghost_model)) {
         branch_len.push_back(len);
         return;
     }
     
     // don't try to parse multiple lengths if in_comment starts with "&" (input key=value)
-    if (!in_comment_contains_key_value)
+    if (in_comment_for_ghost_model)
     {
         // randomly generate a set of branch lengths based on a user-defined distribution
         if (Params::getInstance().branch_distribution)
