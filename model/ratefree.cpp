@@ -17,9 +17,6 @@ const double MIN_FREE_RATE = 0.001;
 const double MAX_FREE_RATE = 1000.0;
 const double TOL_FREE_RATE = 0.0001;
 
-// Modified by Thomas on 13 May 2015
-//const double MIN_FREE_RATE_PROP = 0.0001;
-//const double MAX_FREE_RATE_PROP = 0.9999;
 const double MIN_FREE_RATE_PROP = 0.001;
 const double MAX_FREE_RATE_PROP = 1000;
 
@@ -281,17 +278,12 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
         right = 0;
     }
 
-    // changed to Wi -> Ri by Thomas on Sept 11, 15
     for (optimizing_params = right; optimizing_params >= left; optimizing_params--) {
     
         ndim = getNDim();
         // by BFGS algorithm
         setVariables(variables);
         setBounds(lower_bound, upper_bound, bound_check);
-
-//        if (optimizing_params == 2 && optimize_alg.find("-EM") != string::npos)
-//            score = optimizeWeights();
-//        else 
         if (optimize_alg.find("BFGS-B") != string::npos)
             score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
         else
@@ -356,15 +348,7 @@ void RateFree::setVariables(double *variables) {
 	if (getNDim() == 0) return;
 	int i;
 
-	// Modified by Thomas on 13 May 2015
-	// --start--
-	/*
-	variables[1] = prop[0];
-	for (i = 2; i < ncategory; i++)
-		variables[i] = variables[i-1] + prop[i-1];
-	*/
-    
-    if (optimizing_params == 2) {    
+    if (optimizing_params == 2) {
         // proportions
         for (i = 0; i < ncategory-1; i++)
             variables[i+1] = prop[i] / prop[ncategory-1];
@@ -387,32 +371,6 @@ bool RateFree::getVariables(double *variables) {
 	if (getNDim() == 0) return false;
 	int i;
     bool changed = false;
-	// Modified by Thomas on 13 May 2015
-	// --start--
-	/*
-	double *y = new double[2*ncategory+1];
-	double *z = y+ncategory+1;
-	//  site proportions: y[0..c] <-> (0.0, variables[1..c-1], 1.0)
-	y[0] = 0; y[ncategory] = 1.0;
-	memcpy(y+1, variables+1, (ncategory-1) * sizeof(double));
-	std::sort(y+1, y+ncategory);
-
-	// category rates: z[0..c-1] <-> (variables[c..2*c-2], 1.0)
-	memcpy(z, variables+ncategory, (ncategory-1) * sizeof(double));
-	z[ncategory-1] = 1.0;
-	//std::sort(z, z+ncategory-1);
-
-	double sum = 0.0;
-	for (i = 0; i < ncategory; i++) {
-		prop[i] = (y[i+1]-y[i]);
-		sum += prop[i] * z[i];
-	}
-	for (i = 0; i < ncategory; i++) {
-		rates[i] = z[i] / sum;
-	}
-
-	delete [] y;
-	*/
 
 	double sum = 1.0;
     if (optimizing_params == 2) {
@@ -426,32 +384,12 @@ bool RateFree::getVariables(double *variables) {
         }
         changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
-        // added by Thomas on Sept 10, 15
-        // update the values of rates, in order to
-        // maintain the sum of prop[i]*rates[i] = 1
-//        sum = 0;
-//        for (i = 0; i < ncategory; i++) {
-//            sum += prop[i] * rates[i];
-//        }
-//        for (i = 0; i < ncategory; i++) {
-//            rates[i] = rates[i] / sum;
-//        }
     } else if (optimizing_params == 1) {
         // rates
         for (i = 0; i < ncategory-1; i++) {
             changed |= (rates[i] != variables[i+1]);
             rates[i] = variables[i+1];
         }
-        // added by Thomas on Sept 10, 15
-        // need to normalize the values of rates, in order to
-        // maintain the sum of prop[i]*rates[i] = 1
-//        sum = 0;
-//        for (i = 0; i < ncategory; i++) {
-//            sum += prop[i] * rates[i];
-//        }
-//        for (i = 0; i < ncategory; i++) {
-//            rates[i] = rates[i] / sum;
-//        }
     } else {
         // both weights and rates
         for (i = 0; i < ncategory-1; i++) {
@@ -476,7 +414,6 @@ bool RateFree::getVariables(double *variables) {
         changed |= (rates[ncategory-1] != 1.0 / sum);
     	rates[ncategory-1] = 1.0 / sum;
     }
-	// --end--
     return changed;
 }
 

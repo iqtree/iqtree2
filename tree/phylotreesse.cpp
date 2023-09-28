@@ -213,8 +213,8 @@ void PhyloTree::computePartialLikelihood(TraversalInfo &info, size_t ptn_left, s
 	(this->*computePartialLikelihoodPointer)(info, ptn_left, ptn_right, packet_id);
 }
 
-double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return (this->*computeLikelihoodBranchPointer)(dad_branch, dad);
+double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+	return (this->*computeLikelihoodBranchPointer)(dad_branch, dad, save_log_value);
 
 }
 
@@ -230,7 +230,7 @@ double PhyloTree::computeLikelihoodFromBuffer() {
 	if (computeLikelihoodFromBufferPointer && optimize_by_newton)
 		return (this->*computeLikelihoodFromBufferPointer)();
 	else {
-		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node);
+		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node, true);
     }
 
 }

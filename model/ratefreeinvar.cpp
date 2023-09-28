@@ -30,6 +30,18 @@ void RateFreeInvar::restoreCheckpoint() {
     RateFree::restoreCheckpoint();
 }
 
+/**
+    return the number of dimensions
+*/
+int RateFreeInvar::getNDim() {
+    if (optimizing_params == 1) {
+        // only rates
+        return RateFree::getNDim();
+    } else {
+        return RateInvar::getNDim() + RateFree::getNDim();
+    }
+}
+
 void RateFreeInvar::setNCategory(int ncat) {
     /* NHANLT: bug fixed
      we should NOT re-initialize probs equally
@@ -59,7 +71,9 @@ double RateFreeInvar::computeFunction(double value) {
 }
 
 double RateFreeInvar::targetFunk(double x[]) {
-	return RateFree::targetFunk(x);
+    getVariables(x);
+    phylo_tree->clearAllPartialLH();
+    return -phylo_tree->computeLikelihood();
 }
 
 void RateFreeInvar::writeInfo(ostream &out) {
@@ -80,8 +94,10 @@ void RateFreeInvar::writeParameters(ostream &out) {
 void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	RateFree::setBounds(lower_bound, upper_bound, bound_check);
 	if (RateInvar::getNDim() == 0) return;
-	int ndim = getNDim()-1;
-	RateInvar::setBounds(lower_bound+ndim, upper_bound+ndim, bound_check+ndim);
+    if (optimizing_params != 1) {
+        int ndim = getNDim()-1;
+        RateInvar::setBounds(lower_bound+ndim, upper_bound+ndim, bound_check+ndim);
+    }
 }
 
 /**
@@ -90,14 +106,37 @@ void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound, bool *bo
 */
 double RateFreeInvar::optimizeParameters(double gradient_epsilon) {
 	double tree_lh;
+    //optimize_alg = "1-BFGS";
 	tree_lh = RateFree::optimizeParameters(gradient_epsilon);
 	return tree_lh;
 }
 
 void RateFreeInvar::setVariables(double *variables) {
-	RateFree::setVariables(variables);
-	if (RateInvar::getNDim() == 0) return;
-	variables[getNDim()] = p_invar;
+    int n = getNDim();
+    if (n == 0) return;
+    int i;
+
+    if (optimizing_params == 2) {
+        // proportions
+        for (i = 0; i < ncategory-1; i++)
+            variables[i+1] = prop[i] / prop[ncategory-1];
+        if (RateInvar::getNDim() > 0)
+            variables[n] = getPInvar() / prop[ncategory-1];
+    } else if (optimizing_params == 1) {
+        // rates
+        for (i = 0; i < ncategory-1; i++)
+            variables[i+1] = rates[i] / rates[ncategory-1];
+    } else {
+        // both rates and weights
+        for (i = 0; i < ncategory-1; i++) {
+            variables[i+1] = prop[i] / prop[ncategory-1];
+        }
+        for (i = 0; i < ncategory-1; i++) {
+            variables[i+ncategory] = rates[i] / rates[ncategory-1];
+        }
+        if (RateInvar::getNDim() > 0)
+            variables[n] = getPInvar() / prop[ncategory-1];
+    }
 }
 
 /**
@@ -106,10 +145,79 @@ void RateFreeInvar::setVariables(double *variables) {
 	@param variables vector of variables, indexed from 1
 */
 bool RateFreeInvar::getVariables(double *variables) {
-	bool changed = RateFree::getVariables(variables);
-	if (RateInvar::getNDim() == 0) return changed;
-    changed |= (p_invar != variables[getNDim()]);
-	p_invar = variables[getNDim()];
+    int n = getNDim();
+    if (n == 0) return false;
+    int i;
+    bool changed = false;
+
+    double sum = 1.0;
+    if (optimizing_params == 2) {
+        // proportions
+        for (i = 0; i < ncategory-1; i++) {
+            sum += variables[i+1];
+        }
+        if (RateInvar::getNDim() > 0)
+            sum += variables[n];
+        else {
+            // the proportion of invariable sites are fixed
+            sum /= (1.0 - getPInvar());
+        }
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
+            prop[i] = variables[i+1] / sum;
+        }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
+        prop[ncategory-1] = 1.0 / sum;
+        if (RateInvar::getNDim() > 0) {
+            changed |= (p_invar != variables[n] / sum);
+            setPInvar(variables[n] / sum);
+        }
+        RateFree::rescaleRates();
+    } else if (optimizing_params == 1) {
+        // rates
+        sum = prop[ncategory-1];
+        for (i = 0; i < ncategory-1; i++) {
+            sum += prop[i] * variables[i+1];
+        }
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+1] / sum);
+            rates[i] = variables[i+1] / sum;
+        }
+        changed |= (rates[ncategory-1] != 1.0 / sum);
+        rates[ncategory-1] = 1.0 / sum;
+    } else {
+        // both weights and rates
+        for (i = 0; i < ncategory-1; i++) {
+            sum += variables[i+1];
+        }
+        if (RateInvar::getNDim() > 0)
+            sum += variables[n];
+        else {
+            // the proportion of invariable sites are fixed
+            sum /= (1.0 - getPInvar());
+        }
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
+            prop[i] = variables[i+1] / sum;
+        }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
+        prop[ncategory-1] = 1.0 / sum;
+        if (RateInvar::getNDim() > 0) {
+            changed |= (p_invar != variables[n] / sum);
+            setPInvar(variables[n] / sum);
+        }
+
+        // then rates
+        sum = prop[ncategory-1];
+        for (i = 0; i < ncategory-1; i++) {
+            sum += prop[i] * variables[i+ncategory];
+        }
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+ncategory] / sum);
+            rates[i] = variables[i+ncategory] / sum;
+        }
+        changed |= (rates[ncategory-1] != 1.0 / sum);
+        rates[ncategory-1] = 1.0 / sum;
+    }
     return changed;
 }
-
