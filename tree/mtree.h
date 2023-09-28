@@ -898,6 +898,9 @@ public:
     *   Pointer to the global params
     */
     Params* params;
+    
+    // constant variables for annotations on branches
+    const static string ANTT_MUT;
 
     /**
             release the nemory.
