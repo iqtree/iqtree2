@@ -588,6 +588,33 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 " of the portion of the Gamma distribution falling in the category." << endl;
         }
     }
+    //output ratemat to iqtree file -JD
+    if(Params::getInstance().optimize_linked_gtr) { 
+        string fname = Params::getInstance().out_prefix;
+        fname += ".ratemat";
+        ifstream f(fname.c_str());
+        if(f.good()) {
+            out << endl << "Rate matrix:" << endl;
+            cout << endl << "Rate matrix:" << endl;
+            string data;
+            getline(f,data);
+            size_t last = 0;
+            size_t next = 0;
+            while ((next = data.find(" ", last)) != string::npos) { 
+                string outline = data.substr(last, next-last) + " ";
+                out << outline;   
+                cout << outline;
+                last = next + 1; 
+            } 
+            out << data.substr(last) << endl;
+            cout << data.substr(last) << endl;
+            if(!Params::getInstance().rates_file) { //delete ratemat files if not using flag to keep them
+                remove(fname.c_str());
+                remove((fname+"_init").c_str());
+            }
+        }
+        f.close();
+    }
     out << endl;
 }
 

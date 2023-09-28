@@ -1213,6 +1213,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
+
+    // defaults for new options -JD
+    params.optimize_linked_gtr = false;
+    params.gtr20_model = "POISSON";
+    params.guess_multiplier = 0.5;
+    params.rates_file = false;
+    params.reset_method = "const";
+
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1620,6 +1628,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_gammai = argv[cnt];
                 continue;
             }
+
             if (strcmp(argv[cnt], "-optalg_treeweight") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1627,6 +1636,40 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_treeweight = argv[cnt];
                 continue;
             }
+
+            //new options added -JD
+            if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
+                params.optimize_linked_gtr = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--gtr20-model") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --gtr20-model <POISSON/LG>";
+                params.gtr20_model = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "--guess-multiplier") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --guess-multiplier <value>";
+                params.guess_multiplier = convert_double(argv[cnt]);
+                continue;
+            } 
+            if (strcmp(argv[cnt], "--rates-file") == 0) {
+                params.rates_file = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--reset-method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --reset-method <const/random>";
+                if(strcmp(argv[cnt], "const") != 0 && strcmp(argv[cnt], "random") != 0) 
+                    throw "Invalid option for --reset-method : use 'const' or 'random'";
+                params.reset_method = argv[cnt];
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
 				params.is_rooted = true;
 				continue;
@@ -5532,6 +5575,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
         outError("-b bootstrap option does not work with -S yet.");
+
+    //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos) 
+        outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
 
     if (params.dating_method != "") {
     #ifndef USE_LSD2

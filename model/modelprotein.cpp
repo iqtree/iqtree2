@@ -975,7 +975,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
     } else if (name_upper == "GTR20") {
-        if (!Params::getInstance().link_model) {
+        if (!Params::getInstance().link_model && !Params::getInstance().optimize_linked_gtr) { //suppress this warning -JD
             outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
             outWarning("Please only use GTR20 with very large data and always test for model fit!");
         }
@@ -993,8 +993,8 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
             if (!isReversible())
                 outError("Cannot initialize from non-reversible model");
         } else {
-            // initialize rate matrix with LG
-            nxs_model = models_block->findModel("LG");
+            // initialize rate matrix with a model (default: POISSON) -JD
+            nxs_model = models_block->findModel(Params::getInstance().gtr20_model);
             ASSERT(nxs_model);
             readParametersString(nxs_model->description, false);
             rescaleRates(rates, getNumRateEntries());

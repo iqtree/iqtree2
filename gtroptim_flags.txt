@@ -1,0 +1,31 @@
+--link-exchange-rates
+	This flag indicates to the program that you want to optimize a single rate
+	matrix that's linked between every class. It triggers the optimizeLinkedSubst
+	method within the ModelMixture class which utilizes BFGS to optimize the
+	model parameters. 
+
+--rates-file
+	Tells the program to generate a .ratemat file that includes the linked
+	exchange rate matrix, assuming the above option is used.
+
+--gtr20-model
+	Which model should be used as the starting point when optimizing with
+	GTR20. Comes with an associated value: POISSON, or LG.
+	By default, it uses POISSON. (previously it defaulted to LG)
+
+--reset-method
+	Defines the behavior of the Optimization::restartParameters routine.
+	Comes with an associated value: const, or rand. Default: const.
+	"const" is the new behavior that we have defined wherein the rate matrix
+	values are all multiplied by a constant value if one or more values goes
+	over the boundary. "rand" is the previous behavior wherein all values
+	are multiplied by random_double() * (upper[i] - lower[i])/3 + lower[i].
+
+--guess-multiplier
+	Very closely related to the above option, if the reset method is "const",
+	then this controls the constant value by which to multiply each value
+	(hereby referred to as "c"). If parameters are detected to go over the
+	upper boundary, then every parameter is multiplied by c, if the result isn't
+	also under the lower boundary. Conversely, if parameters are detected to go
+	under the lower boundary, then every parameter is multiplied by 1/c, if the
+	result isn't also over the upper boundary. 

@@ -1140,6 +1140,7 @@ ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
+    optimizing_gtr = false;
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
@@ -1149,6 +1150,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
+    optimizing_gtr = false;
     optimize_steps = 0;
 	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
@@ -1188,6 +1190,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector freq_weights;
 	fix_prop = false;
 	optimizing_submodels = false;
+    optimizing_gtr = false;
 
 	if (freq == FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
@@ -1639,15 +1642,29 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
+// added case for gtr optimization -JD
 int ModelMixture::getNDim() {
 	int dim = (fix_prop) ? 0: (size()-1);
 //    int dim = 0;
+    
+    if (optimizing_gtr) { 
+        // report the number of variables while optimizing the linked substitution model
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type = FREQ_USER_DEFINED;
+        dim = (*it)->getNDim();
+        (*it)->freq_type = freq;
+        return dim;
+    }
+
     if (!optimizing_submodels && !fix_prop) {
         dim = size() - 1;
     }
+
     for (iterator it = begin(); it != end(); it++) {
         dim += (*it)->getNDim();
     }
+
 	return dim;
 }
 
@@ -1682,20 +1699,30 @@ int ModelMixture::getNDimFreq() {
 	return dim;
 }
 
+// changed to work for GTR optimization -JD
 double ModelMixture::targetFunk(double x[]) {
+    if (verbose_mode >= VB_DEBUG) {
+        cout << "targetFunk called: ";
+        int ndim = getNDim();
+        for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
+        cout << endl;
+    }
 	getVariables(x);
-//	decomposeRateMatrix();
-	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		if ((*it)->getNDim() > 0)
-			(*it)->decomposeRateMatrix();
-		dim += ((*it)->getNDim());
-	}
-	ASSERT(phylo_tree);
-	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
-		phylo_tree->clearAllPartialLH();
-//	if (prop[size()-1] < 0.0) return 1.0e+12;
-	return -phylo_tree->computeLikelihood();
+    
+ 
+    //	decomposeRateMatrix();
+    	int dim = 0;
+    	for (iterator it = begin(); it != end(); it++) {
+    		if ((*it)->getNDim() > 0)
+    			(*it)->decomposeRateMatrix();
+    		dim += ((*it)->getNDim());
+    	}
+    	ASSERT(phylo_tree);
+    	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
+    		phylo_tree->clearAllPartialLH();
+    //	if (prop[size()-1] < 0.0) return 1.0e+12;
+    	return -phylo_tree->computeLikelihood();
+    
 }
 
 double ModelMixture::optimizeWeights() {
@@ -1980,15 +2007,44 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 
     int dim = getNDim();
     double score = 0.0;
+    IntVector params;
+    if (dim != 0) {
+        score = 1.0;
+    }
 
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
     // Fused model can use EM algorithm
     // Non-Fused model can only use BFGS algorithm
-    if (isFused()) {
+    if (isFused() || Params::getInstance().optimize_linked_gtr) {
 		if (dim > 0) {
+			// set num_params to 0 when linking exchange rates
+			if (Params::getInstance().optimize_linked_gtr) { // added routine for GTR optimization -JD
+				for (iterator it = begin(); it != end(); it++) {
+					params.push_back((*it)->num_params);
+					(*it)->num_params = 0;
+				}
+				//divide all values in intial matrix by the last value
+				int nrate = getNumRateEntries();
+				double *matrix = new double[nrate];
+				at(0)->getRateMatrix(matrix);
+				double div = matrix[nrate-1];
+				for(int i=0; i<nrate; i++){
+					matrix[i] = matrix[i] / div;
+				}
+				for (iterator it = begin(); it != end(); it++) {
+					(*it)->setRateMatrix(matrix);
+				}
+			}
 			score = optimizeWithEM(gradient_epsilon);
+			// restore num_params
+			if (Params::getInstance().optimize_linked_gtr) {
+				int i = 0;
+				for (iterator it = begin(); it != end(); it++, i++) {
+					(*it)->num_params = params[i];
+				}
+			}
 		}
 		else if (!fix_prop) {
 			score = optimizeWeights();
@@ -1997,6 +2053,14 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 		score = ModelMarkov::optimizeParameters(gradient_epsilon);
 	}
 	optimizing_submodels = false;
+
+//  optimize a gtr matrix if specified (enters main routine) -JD
+    if (Params::getInstance().optimize_linked_gtr) {
+        score = optimizeLinkedSubst(gradient_epsilon);
+    }
+
+//	double score = ModelGTR::optimizeParameters(gradient_epsilon);
+
     if (getNDim() == 0) {
         return score;
     }
@@ -2033,6 +2097,76 @@ void ModelMixture::computeTipLikelihood(PML::StateType state, double *state_lk) 
     }
 }
 
+// new method added for optimizing GTR matrix -JD
+double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
+
+    if (fixed_parameters) {
+        return 0.0;
+    }
+	int ndim = getNDim();
+	
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
+
+    // flag that tells other methods (notably getNDim) that we're in the middle of optimizing GTR
+    optimizing_gtr = true;
+
+	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	double score;
+
+    //int nval = (num_states * (num_states - 1))/2 - 1; //number of values per class (5 for DNA)
+
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > state_freq[highest_freq_state]) {
+            highest_freq_state = i;
+        }
+    }
+
+	// by BFGS algorithm
+	setVariables(variables);
+	setBounds(lower_bound, upper_bound, bound_check);
+
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+
+    bool changed = getVariables(variables);
+
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
+        scaleStateFreq(true);
+        changed = true;
+    }
+    if (changed) {
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
+    }
+	
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+    optimizing_gtr = false;
+    
+    //write matrix contents to file (later parsed and outputted into console log)
+    string fname = Params::getInstance().out_prefix;
+    fname += ".ratemat";
+    ofstream writer(fname);
+    int nrate = getNumRateEntries();
+    double *matrix = new double[nrate];
+    at(0)->getRateMatrix(matrix);
+    writer << matrix[0];
+    for(int i=1; i<nrate; i++){
+        writer << " " << matrix[i];
+    }
+    writer << endl;
+    writer.close();
+
+	return score;
+}
+
 bool ModelMixture::isUnstableParameters() {
     int c, ncategory = size();
     for (c = 0; c < ncategory; c++)
@@ -2050,8 +2184,18 @@ void ModelMixture::decomposeRateMatrix() {
 		(*it)->decomposeRateMatrix();
 }
 
+// added case for gtr optimization -JD
 void ModelMixture::setVariables(double *variables) {
 	int dim = 0;
+    if (optimizing_gtr) {       
+        // only need to get the variable from the first class
+        // because all classes are sharing the same substitution matrix
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type = FREQ_USER_DEFINED;
+		(*it)->setVariables(&variables[dim]);
+        (*it)->freq_type = freq;
+    } else
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->setVariables(&variables[dim]);
 		dim += (*it)->getNDim();
@@ -2077,65 +2221,73 @@ void ModelMixture::setVariables(double *variables) {
 
 }
 
+//added case for gtr optimization -JD
 bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
     bool changed = false;
-	for (iterator it = begin(); it != end(); it++) {
-		changed |= (*it)->getVariables(&variables[dim]);
-		dim += (*it)->getNDim();
+    if (optimizing_gtr) {
+        for (iterator it = begin(); it != end(); it++) {
+            // assign exchange erates for each mixture compontent to variables
+            auto freq = (*it)->freq_type;
+            (*it)->freq_type = FREQ_USER_DEFINED;
+            changed |= (*it)->getVariables(&variables[dim]);
+            (*it)->freq_type = freq;
+        }
+    } else {
+		for (iterator it = begin(); it != end(); it++) {
+			changed |= (*it)->getVariables(&variables[dim]);
+			dim += (*it)->getNDim();
+		}
+		if (fix_prop) return changed;
+		int i, ncategory = size();
+
+		// BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
+		double value, sum = 1.0;
+		for (i = 0; i < ncategory-1; i++) {
+			sum += variables[dim+i+1];
+		}
+		for (i = 0; i < ncategory-1; i++) {
+			value = variables[dim+i+1] / sum;
+			changed |= (prop[i] != value);
+			prop[i] = value;
+		}
+		prop[ncategory-1] = 1.0 / sum;
 	}
-	if (fix_prop) return changed;
-	int i, ncategory = size();
-
-//	double *y = new double[ncategory+1];
-//	y[0] = 0; y[ncategory] = 1.0;
-//	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
-//	std::sort(y+1, y+ncategory);
-//	double sum = 0.0;
-//	for (i = 0; i < ncategory; i++) {
-//		prop[i] = (y[i+1]-y[i]);
-//	}
-
-    // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
-	double value, sum = 1.0;
-	for (i = 0; i < ncategory-1; i++) {
-		sum += variables[dim+i+1];
-	}
-	for (i = 0; i < ncategory-1; i++) {
-        value = variables[dim+i+1] / sum;
-        changed |= (prop[i] != value);
-		prop[i] = value;
-	}
-	prop[ncategory-1] = 1.0 / sum;
-
-
-//	for (i = 0, sum = 0.0; i < ncategory; i++)
-//		sum += prop[i]*at(i)->total_num_subst;
-//	for (i = 0; i < ncategory; i++)
-//		at(i)->total_num_subst /= sum;
-
-//	if (verbose_mode >= VB_MAX) {
-//		for (i = 0; i < ncategory; i++)
-//			cout << "Component " << i << " prop=" << prop[i] << endl;
-//	}
-//	delete [] y;
 
     return changed;
 }
 
+//added case for gtr optimization -JD
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
-		dim += (*it)->getNDim();
-	}
-	if (fix_prop) return;
-	int i, ncategory = size();
-	for (i = 1; i < ncategory; i++) {
-		lower_bound[dim+i] = MIN_MIXTURE_PROP;
-		upper_bound[dim+i] = MAX_MIXTURE_PROP;
-		bound_check[dim+i] = false;
-	}
+    if(optimizing_gtr) {
+        // only consider the first class as this is a unlinked substitution matrix
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        int ndim = (*it)->getNDim();
+        (*it)->freq_type=FREQ_USER_DEFINED;
+        (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+        (*it)->freq_type=freq;
+        //manually set these params for the restartParameters method; TODO: properly fix this -JD
+        if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
+            for(int i=1; i<=ndim; i++){
+                bound_check[i] = true;
+                upper_bound[i] = 100;
+            }
+        }
+    } else {
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+            dim += (*it)->getNDim();
+        }
+		if (fix_prop) return;
+		int i, ncategory = size();
+		for (i = 1; i < ncategory; i++) {
+			lower_bound[dim+i] = MIN_MIXTURE_PROP;
+			upper_bound[dim+i] = MAX_MIXTURE_PROP;
+			bound_check[dim+i] = false;
+		}
+    }
 }
 
 void ModelMixture::writeInfo(ostream &out) {
