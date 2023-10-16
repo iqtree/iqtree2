@@ -1723,7 +1723,10 @@ public:
 
     /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
     bool optimize_params_use_hmm_gm;
-    
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using type-dependent transition model*/
+    bool optimize_params_use_hmm_tm;
+
     /** proceed to MAST model after HMMSTER , default true */
     // bool proceed_MAST_after_HMMSTER;
 
