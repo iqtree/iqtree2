@@ -64,11 +64,19 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
         delete[] pattern_lh;
 }
 
-void printHMMResult(const char* filename, PhyloTree *tree) {
+void printHMMResult(const char* filename, PhyloTree *tree, int cat_assign_method) {
     // For HMM model, to show the assignment of the categories along sites with max likelihood
+    // cat_assign_method:
+    //  0 - the categories along sites is assigned according to the path with maximum probability (default)
+    //  1 - the categories along sites is assigned according to the max posterior probability
     IQTreeMixHmm* iqtreehmm = dynamic_cast<IQTreeMixHmm*>(tree);
-    iqtreehmm->printResults(filename);
-    cout << "HMM results printed to " << filename << endl;
+    iqtreehmm->printResults(filename, cat_assign_method);
+    /*
+    if (cat_assign_method == 0)
+        cout << "HMM results printed to " << filename << endl;
+    else
+        cout << "HMM results with max-posterior prob printed to " << filename << endl;
+    */
 }
 
 void printMarginalProb(const char* filename, PhyloTree *tree) {

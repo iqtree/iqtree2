@@ -1011,6 +1011,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
 
     if (params.optimize_params_use_hmm) {
         cout << "  HMM result file:               " << params.out_prefix << ".hmm" << endl;
+        cout << "                                 " << params.out_prefix << ".pp.hmm" << endl;
     }
     
     cout << endl;
@@ -2224,10 +2225,16 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     }
     
     if (params.optimize_params_use_hmm){
-        string hmm_file = params.out_prefix;
-        hmm_file += ".hmm";
-        printHMMResult(hmm_file.c_str(), &iqtree);
-        
+        string hmm_file = string(params.out_prefix) + ".hmm";
+        int cat_assign_method = 0;
+        // the categories along sites is assigned according to the path with maximum probability (default)
+        printHMMResult(hmm_file.c_str(), &iqtree, cat_assign_method);
+
+        hmm_file = string(params.out_prefix) + ".pp.hmm";
+        cat_assign_method = 1;
+        // the categories along sites is assigned according to the max posterior probability
+        printHMMResult(hmm_file.c_str(), &iqtree, cat_assign_method);
+
         if (params.print_marginal_prob) {
             string mp_file = params.out_prefix;
             mp_file += ".mprob";

@@ -179,14 +179,16 @@ void IQTreeMixHmm::setWeightToMarginalProb() {
     for (i = 0; i < ntree; i++) {
         weight_logs[i] = log(weights[i]);
     }
-    // show the initial tree weights
-    cout << "According to the marginal probabilities from the HMM model along the sites, the tree weights are initialized to:" << endl;
+    /*
+    // show the tree weights according to the posterior probability
+    cout << "According to the posterior probabilities from the HMM model along the sites, the tree weights are :" << endl;
     for (i=0; i<ntree; i++) {
         if (i>0)
             cout << ",";
         cout << weights[i];
     }
     cout << endl;
+    */
 }
 
 // obtain the log-likelihoods for every site and every tree
@@ -503,16 +505,18 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
             // converged
             break;
 
+        /*
         if (verbose_mode >= VB_MED) {
-            computeMaxPath();
+            // computeMaxPath();
             showSiteCatMaxLike(cout, false);
         }
+        */
 
         prev_score = score;
     }
 
     backLogLike = score;
-    computeMaxPath();
+    // computeMaxPath();
 
     // set the tree weights according to the marginal probabilities
     if (!isTreeWeightFixed) {
@@ -666,7 +670,10 @@ int IQTreeMixHmm::getNParameters() {
 }
 
 // print out all the results to a file
-void IQTreeMixHmm::printResults(const char *filename) {
+// cat_assign_method:
+//  0 - the categories along sites is assigned according to the path with maximum probability (default)
+//  1 - the categories along sites is assigned according to the max posterior probability
+void IQTreeMixHmm::printResults(const char *filename, int cat_assign_method) {
     
     size_t i, j;
     ofstream out;
@@ -676,8 +683,8 @@ void IQTreeMixHmm::printResults(const char *filename) {
     showParameters(out);
     out << endl;
     
-    // show the assignment of the categories along sites with max likelihood
-    showSiteCatMaxLike(out);
+    // show the assignment of the categories along the path with max likelihood
+    showSiteCatMaxLike(out, true, cat_assign_method);
     
     out.close();
 }

@@ -117,7 +117,7 @@ double ModelHmmGm::optimizeParametersByEM() {
     }
     computeNormalizedTransits();
     computeLogTransits();
-    return -phylo_hmm->computeBackLike();
+    return phylo_hmm->computeBackLike();
 }
 
 /**

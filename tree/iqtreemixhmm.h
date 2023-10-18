@@ -91,7 +91,7 @@ public:
     virtual int getNParameters();
     
     // print out all the results to a file
-    void printResults(const char *filename);
+    void printResults(const char *filename, int cat_assign_method = 0);
 
     // print out the marginal probabilities to a file
     void printMarginalProb(const char *filename);
