@@ -80,8 +80,11 @@ public:
     // optimize the parameters, including the probability array and the transition matrix
     double optimizeParameters(double gradient_epsilon);
 
-    // show the assignment of the categories along sites with max likelihood
-    void showSiteCatMaxLike(ostream& out, bool show_assignment = true);
+    // show the assignment of the categories along the sites
+    // cat_assign_method:
+    //  0 - the categories along sites is assigned according to the path with maximum probability (default)
+    //  1 - the categories along sites is assigned according to the max posterior probability
+    void showSiteCatMaxLike(ostream& out, bool show_assignment = true, int cat_assign_method = 0);
     
     // number of sites
     int nsite;

@@ -192,7 +192,7 @@ double ModelHmmTm::optimizeParametersByEM() {
     delete[] tmpNums;
 
     updateTransits();
-    return -phylo_hmm->computeBackLike();
+    return phylo_hmm->computeBackLike();
 }
 
 /**

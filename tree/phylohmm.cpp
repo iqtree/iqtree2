@@ -189,7 +189,7 @@ double PhyloHmm::optimizeProbEM() {
         k = pre_k ^ 1;
         work = work_arr + k * ncat;
         site_lh_arr += ncat;
-        transit_arr = modelHmm->getTransitLog(i);
+        transit_arr = modelHmm->getTransitLog(nsite-i);
         for (j = 0; j < ncat; j++) {
             work[j] = logDotProd(transit_arr, pre_work, ncat) + site_lh_arr[j];
             transit_arr += ncat;
@@ -263,49 +263,93 @@ double PhyloHmm::optimizeParameters(double gradient_epsilon) {
     score = modelHmm->optimizeParameters(gradient_epsilon);
     if (verbose_mode >= VB_MED) {
         cout << "after optimizing the transition matrix, HMM likelihood = " << score << endl;
+        /*
         cout << "   modelHmm->tranSameCat : " << scientific << modelHmm->tranSameCat << endl;
         cout << "   1 - modelHmm->tranSameCat : " << scientific << 1.0 - modelHmm->tranSameCat << endl;
+         */
     }
     // optimize the probability array
     score = optimizeProbEM();
     if (verbose_mode >= VB_MED) {
         cout << "after optimizing the probability array, HMM likelihood = " << score << endl;
+        /*
         cout << "   probability array :";
         for (size_t i = 0; i < ncat; i++) {
             cout << " " << scientific << prob[i];
         }
         cout << endl;
+        */
     }
     return score;
 }
 
-// show the assignment of the categories along sites with max likelihood
-void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment) {
-    size_t i;
+// show the assignment of the categories along the sites
+// cat_assign_method:
+//  0 - the categories along sites is assigned according to the path with maximum probability (default)
+//  1 - the categories along sites is assigned according to the max posterior probability
+void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment, int cat_assign_method) {
+    int i,j;
     int* numSites; // number of sites for each category
     double* rateSites; // ratio of sites for each category
-    
-    if (show_assignment) {
-        out << "The assignment of categories along sites with maximum likelihood" << endl;
-        out << "Sites\tCategory" << endl;
-        int pre_max_cat = site_categories[0];
-        int pre_site = 0;
-        for (i=1; i<nsite; i++) {
-            if (site_categories[i] != pre_max_cat) {
-                out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
-                pre_max_cat = site_categories[i];
-                pre_site = (int) i;
-            }
-        }
-        out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
-    }
-    
+    int pre_max_cat;
+    int pre_site;
+
     numSites = new int[nsite];
     memset(numSites, 0, sizeof(int) * nsite);
     rateSites = new double[nsite];
-    for (i=0; i<nsite; i++) {
-        numSites[site_categories[i]]++;
+
+    if (show_assignment) {
+        if (cat_assign_method == 0)
+            out << "The assignment of categories along sites according to the path with maximum probability." << endl;
+        else
+            out << "The assignment of categories along sites according to maximum posterior probability." << endl;
+        out << "Sites\tCategory" << endl;
     }
+    
+    if (cat_assign_method == 0) {
+        // the categories is assigned according to the path with maximum probability
+        computeMaxPath();
+        for (i=0; i<nsite; i++)
+            numSites[site_categories[i]]++;
+        if (show_assignment) {
+            pre_max_cat = site_categories[0];
+            pre_site = 0;
+            for (i=1; i<nsite; i++) {
+                if (site_categories[i] != pre_max_cat) {
+                    out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
+                    pre_max_cat = site_categories[i];
+                    pre_site = i;
+                }
+            }
+        }
+    } else {
+        // the categories along sites is assigned according to the max posterior probability
+        computeMarginalProb();
+        pre_max_cat = -1;
+        pre_site = -1;
+        double* mprob = marginal_prob;
+        for (i=0; i<nsite; i++) {
+            int cur_max_cat = 0;
+            double cur_max_prob = mprob[0];
+            for (j=1; j<ncat; j++) {
+                if (mprob[j] > cur_max_prob) {
+                    cur_max_cat = j;
+                    cur_max_prob = mprob[j];
+                }
+            }
+            if (cur_max_cat != pre_max_cat) {
+                if (pre_site >= 0 && show_assignment)
+                    out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
+                pre_max_cat = cur_max_cat;
+                pre_site = i;
+            }
+            mprob += ncat;
+            numSites[pre_max_cat]++;
+        }
+    }
+    if (show_assignment)
+        out << "[" << pre_site + 1 << "," << i << "]\t" << pre_max_cat+1 << endl;
+    
     for (i=0; i<ncat; i++)
         rateSites[i] = (double) numSites[i] / nsite;
     
@@ -320,8 +364,10 @@ void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment) {
         out << " " << fixed << setprecision(5) << rateSites[i];
     out << endl << endl;
 
-    // show the max log likelihood
-    out << "The path with maximum log likelihood: " << fixed << setprecision(5) << pathLogLike << endl;
+    if (cat_assign_method == 0) {
+        // show the max log likelihood
+        out << "The path with maximum log likelihood: " << fixed << setprecision(5) << pathLogLike << endl;
+    }
 
     delete[] numSites;
     delete[] rateSites;
