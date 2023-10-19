@@ -39,12 +39,12 @@ public:
     /**
      * @return HMM model name
      */
-    virtual string getName() { return "GM"; }
+    virtual string getName() { return "GRM"; }
     
     /**
      * @return HMM model full name
      */
-    virtual string getFullName() { return "General Model"; }
+    virtual string getFullName() { return "General Reversible Model"; }
 
     // initialize transitLog array
     virtual void initialize_transitLog();
