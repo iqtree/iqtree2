@@ -100,13 +100,15 @@ double ModelHmmGm::optimizeParametersByEM() {
     // reset the values of transit array
     memset(transit, 0, sizeof(double) * sq_ncat);
     for (k=0; k<dim; k++) {
-        for (i=0; i<sq_ncat; i++) {
-            transit[i] += marginalTran[i];
+        for (i=0; i<ncat; i++) {
+            for (j=0; j<ncat; j++) {
+                transit[i * ncat + j] += (marginalTran[i * ncat + j] + marginalTran[j * ncat + i]);
+            }
         }
         marginalTran += sq_ncat;
     }
     for (i=0; i<sq_ncat; i++) {
-        transit[i] = transit[i] / (double) dim;
+        transit[i] = transit[i] / (double) 2 * dim;
     }
     // verify whether the transition between the same category is too small
     for (i=0; i<sq_ncat; i+=(ncat+1)) {
