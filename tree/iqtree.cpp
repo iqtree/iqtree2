@@ -559,6 +559,17 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         aln->orderPatternByNumChars(PAT_VARIANT);
 
     setParsimonyKernel(kernel);
+    
+    // show a warning if users want to perform tree dating (with mcmc) but they didn't supply a rooted tree
+    if (params->dating_method == "mcmctree"
+        && !in && !params->user_file)
+    {
+        // show a warning
+        outWarning("Ignore '--dating mcmctree' flag since no rooted tree is provided. To perform tree dating with MCMC, please specify a rooted tree with '-te <tree_file>'");
+        
+        // turn off the dating flag
+        params->dating_method = "";
+    }
 
     if (in != NULL || params->user_file) {
         
@@ -573,6 +584,18 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         if (myrooted && !isSuperTreeUnlinked()) {
             cout << " rooted tree";
         }
+        
+        // show a warning if users want to perform tree dating (with mcmc) but supply an unrooted tree
+        if (params->dating_method == "mcmctree"
+            && !(myrooted && !isSuperTreeUnlinked()))
+        {
+            // show a warning
+            outWarning("Ignore '--dating mcmctree' flag since the input tree is unrooted. To perform tree dating with MCMC, please specify a rooted tree with '-te <tree_file>'");
+            
+            // turn off the dating flag
+            params->dating_method = "";
+        }
+        
         cout << endl;
         setAlignment(aln);
         if (isSuperTree())
