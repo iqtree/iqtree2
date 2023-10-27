@@ -5887,6 +5887,9 @@ void PhyloTree::forceConvertingToUnrooted()
         node1->findNeighbor(node2)->attributes = attributes;
         node2->findNeighbor(node1)->attributes = attributes;
         
+        // Memorize the "expected starting tree" to make sure (after unrooting a rooted tree) we traverse the tree at the same "starting node" as BaseML (for dating task)
+        params->traversal_starting_node = node1;
+        
         delete node;
     } else {
         // only delete root node

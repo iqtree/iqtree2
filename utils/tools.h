@@ -2326,6 +2326,9 @@ public:
 
     /** method for phylogenetic dating, currently only LSD is supported */
     string dating_method;
+    
+    /** a generic pointer to the expected starting node -> to make sure (after unrooting a rooted tree) we traverse the tree at the same starting node as BaseML*/
+    void* traversal_starting_node = NULL;
 
     /** extra commands passed to the dating method */
     string dating_options;

@@ -429,6 +429,13 @@ void doTimeTree(PhyloTree *tree) {
 
     cout << "--- Start phylogenetic dating ---" << endl;
     cout.unsetf(ios::fixed);
+    
+    // make sure we traverse the tree from the same starting node as BaseML
+    if (Params::getInstance().traversal_starting_node && tree->root != Params::getInstance().traversal_starting_node)
+    {
+        tree->root = (Node*) Params::getInstance().traversal_starting_node;
+        tree->initializeTree();
+    }
 
 #ifdef USE_LSD2
     if (Params::getInstance().dating_method == "LSD") {
