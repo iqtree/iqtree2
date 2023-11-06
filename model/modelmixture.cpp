@@ -2029,8 +2029,8 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
     // Fused model can use EM algorithm
-    // Non-Fused model can only use BFGS algorithm
-    if (isFused() || Params::getInstance().optimize_linked_gtr) {
+    // Non-Fused model can only use BFGS algorithm unless optimize_alg_qmix = "EM"
+    if (isFused() || Params::getInstance().optimize_linked_gtr || Params::getInstance().optimize_alg_qmix == "EM") {
 		if (dim > 0) {
 			// set num_params to 0 when linking exchange rates
 			if (Params::getInstance().optimize_linked_gtr) { // added routine for GTR optimization -JD

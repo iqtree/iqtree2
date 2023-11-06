@@ -1213,6 +1213,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
+    params.optimize_alg_qmix = "BFGS";
 
     // defaults for new options -JD
     params.optimize_linked_gtr = false;
@@ -1647,6 +1648,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -optalg_treeweight <BFGS|EM>";
                 params.optimize_alg_treeweight = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-optalg_qmix") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -optalg_qmix <BFGS|EM>";
+                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") != 0)
+                    throw "Invalid option for -optalg_qmix : use 'BFGS' or 'EM'";
+                params.optimize_alg_qmix = argv[cnt];
                 continue;
             }
 
