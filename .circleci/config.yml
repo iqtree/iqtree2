@@ -1,0 +1,36 @@
+version: 2.1
+
+jobs:
+  Linux-aarch64:
+    
+    machine:
+      image: ubuntu-2004:current
+    resource_class: arm.medium
+
+    steps:
+      - checkout
+      - run:
+          name: Sync submodules
+          command: |
+            git submodule sync
+            git submodule update --init
+
+      - run:
+          name: Install dependencies
+          command: |
+            sudo apt update -y
+            sudo apt-get install -y git file g++ cmake make libeigen3-dev libboost-dev
+
+      - run:
+          name: Build iqtree2 Linux ARM64 binary
+          command: |
+            mkdir build
+            cd build
+            cmake ..
+            make
+            file iqtree2 | grep aarch64
+      
+workflows:
+  build:
+    jobs:
+      - Linux-aarch64
