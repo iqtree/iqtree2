@@ -25,7 +25,6 @@ jobs:
         cd build
         cmake ..
         make -j
-        ls -la
         file iqtree2 | grep x86-64
 
   build-aarch64:
@@ -54,5 +53,5 @@ jobs:
           mkdir build
           cd build
           cmake ..
-          make -j
+          make -j1
           file iqtree2 | grep aarch64
