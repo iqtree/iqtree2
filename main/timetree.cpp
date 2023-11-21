@@ -335,7 +335,6 @@ void runLSD2(PhyloTree *tree) {
         cout << endl;
     }
 }
-
 #endif
 
 void computeHessian(PhyloTree *tree) {

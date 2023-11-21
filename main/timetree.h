@@ -14,6 +14,6 @@
  main function to build time-tree
  @param tree input phylogenetic tree
  */
-void doTimeTree(PhyloTree *tree);
+void doTimeTree(PhyloTree *tree, int part);
 
 #endif

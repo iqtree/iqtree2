@@ -977,6 +977,10 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(gradient_vector);
     aligned_free(hessian_diagonal);
     aligned_free(_pattern_scaling);
+    aligned_free(G_matrix);
+    aligned_free(gradient_vector);
+    aligned_free(hessian_diagonal);
+    aligned_free(df_ddf_frac);
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
@@ -1628,7 +1632,7 @@ void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
-    
+
     size_t ptn, nptn = aln->getNPattern();
     size_t cat, ncat = getNumLhCat(wsl);
     // Right now only Naive version store _pattern_lh_cat!
