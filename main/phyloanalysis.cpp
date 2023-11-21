@@ -62,6 +62,12 @@
 #include "tree/upperbounds.h"
 #include "utils/MPIHelper.h"
 #include "timetree.h"
+#include <Eigen/Eigenvalues>
+#include <unsupported/Eigen/MatrixFunctions>
+
+using namespace Eigen;
+using Eigen::Map;
+
 
 #ifdef USE_BOOSTER
 extern "C" {
@@ -2411,6 +2417,44 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
     treesOut.close();
 }
 
+void printHessian(PhyloTree *tree){
+
+    size_t orig_nptn = tree->aln->size();
+    size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+    size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
+    size_t nBranches = tree->branchNum;
+
+    Map<RowVectorXd> gradient_vector_eigen(tree->gradient_vector, nBranches);
+    Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
+    MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+
+    // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
+    Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
+    MatrixXd hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+    hessian = (-1) * hessian;
+    hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
+
+    Map<RowVectorXd> hessian_diagonal_vector(tree->hessian_diagonal, nBranches);
+    Map<RowVectorXd> df_ddf_frac_vec(tree->df_ddf_frac, nBranches);
+
+    string outFileName = ((string) tree->params->out_prefix + ".out1.BV");
+
+    DoubleVector branchLengths;
+    tree->saveBranchLengths(branchLengths);
+    Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
+    ofstream outfile(outFileName,ofstream::app);
+    stringstream tree_stream;
+    tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+    outfile << endl << tree->aln->getNSeq() << endl << endl;
+    outfile << tree_stream.str() << endl << endl;
+    outfile << branch_lengths_vector << endl << endl;
+    outfile << gradient_vector_eigen << endl << endl << endl;
+    outfile << "Hessian " << endl << endl;
+    outfile << hessian;
+    outfile.close();
+
+}
+
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
  ***********************************************************/
@@ -3017,7 +3061,18 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
     }
     if (params.dating_method != "") {
-        doTimeTree(iqtree);
+        int index = 0;
+        if (iqtree->isSuperTree()) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
+            for (auto i = stree->begin(); i != stree->end(); i++, index++) {
+//                ((PhyloTree *) *i)->clearAllPartialLH();
+                doTimeTree((PhyloTree *) *i, index);
+                printHessian((PhyloTree *) *i);
+            }
+        }
+        else{
+            doTimeTree(iqtree, index);
+        }
     }
     // BUG FIX: readTreeString(bestTreeString) not needed before this line
     iqtree->printResultTree();

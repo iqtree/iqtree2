@@ -912,13 +912,13 @@ void PhyloTree::initializeAllPartialLh() {
         gradient_vector = aligned_alloc<double>(branchNum);
     if(!hessian_diagonal)
         hessian_diagonal = aligned_alloc<double>(branchNum);
+    //todo: please check here for memory allocation
     if(!G_matrix) {
         size_t g_matrix_size = branchNum * mem_size;
         G_matrix = aligned_alloc<double>(g_matrix_size);
     }
     if(!df_ddf_frac)
         df_ddf_frac = aligned_alloc<double>(branchNum);
-
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)
@@ -973,6 +973,10 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
     aligned_free(_site_lh);
+    aligned_free(G_matrix);
+    aligned_free(gradient_vector);
+    aligned_free(hessian_diagonal);
+    aligned_free(df_ddf_frac);
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
@@ -2623,6 +2627,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 //    mem_slots.cleanup();
     if (optimize_by_newton) {
         // Newton-Raphson method
+        //todo: Chage here for better optimization
         optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;

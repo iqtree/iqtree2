@@ -2378,7 +2378,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_lh,all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
 #endif
     for (int packet_id = 0; packet_id < num_packets; packet_id++) {
-        VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0), hessian_ddf(0,0);
+        VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
         size_t ptn_lower = limits[packet_id];
         size_t ptn_upper = limits[packet_id+1];
 
@@ -2460,13 +2460,13 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     all_ddfvec[i] += my_ddf[i];
             }
         } else {
+            size_t g_index = branch_id * nptn;
             // normal joint branch length model
             for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 VectorClass lh_ptn;
                 //lh_ptn.load_a(&ptn_invar[ptn]);
                 VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
                 VectorClass df_ptn, ddf_ptn;
-                // What is SITE_MODEL?
                 if (SITE_MODEL) {
                     VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
                     lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
@@ -2506,7 +2506,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     my_ddf += nmul_add(tmp1, df_frac, tmp2);
 //                    hessian_ddf = nmul_add(df_frac, df_frac, ddf_frac);
                     //todo: need to do further optimization with store_a in vector class
-                    df_frac.store(&G_matrix[branch_id * nptn + ptn]);
+                    df_frac.store_a(&G_matrix[g_index + ptn]);
 
                 } else {
                     // ascertainment bias correction
