@@ -2143,6 +2143,9 @@ public:
 	StrVector twin_seqs;
 
 	size_t num_partial_lh_computations;
+    
+    /** a generic pointer to the expected starting node -> to make sure (after unrooting a rooted tree) we traverse the tree at the same starting node as BaseML*/
+    void* traversal_starting_node = NULL;
 
 	/** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);

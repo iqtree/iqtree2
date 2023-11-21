@@ -340,9 +340,9 @@ void runLSD2(PhyloTree *tree) {
 
 void computeHessian(PhyloTree *tree, int part) {
     // make sure we traverse the tree from the same starting node as BaseML
-    if (Params::getInstance().traversal_starting_node && tree->root != Params::getInstance().traversal_starting_node)
+    if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node)
     {
-        tree->root = (Node*) Params::getInstance().traversal_starting_node;
+        tree->root = (Node*) tree->traversal_starting_node;
         tree->initializeTree();
     }
 
