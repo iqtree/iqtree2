@@ -303,7 +303,7 @@ public:
     void generateCandidates(Params &params, PhyloSuperTree* in_tree, bool merge_phase);
     
     /** evaulate */
-    void test(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads, int brlen_type, vector<CandidateModel>& best_models);
+    void test(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads, int brlen_type, vector<CandidateModel>& best_models, double start_time, int64_t start_num_model, int64_t total_num_model);
 
     CandidateModelSet partmodelSet;
     vector<Alignment*> prot_alns;

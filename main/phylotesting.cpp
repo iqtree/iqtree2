@@ -2058,7 +2058,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     CandidatePartModelSet candidateset;
     vector<CandidateModel> best_models;
     candidateset.generateCandidates(params, in_tree, test_merge);
-    candidateset.test(params, in_tree, model_info, models_block, num_threads, brlen_type, best_models);
+    candidateset.test(params, in_tree, model_info, models_block, num_threads, brlen_type, best_models, start_time, num_model, total_num_model);
     model_info.dump();
 
     /*
@@ -2405,7 +2405,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         best_models.clear();
         candidateset.generateCandidates(params, in_tree, false);
         num_threads = 1;
-        candidateset.test(params, in_tree, model_info, models_block, num_threads, brlen_type, best_models);
+        candidateset.test(params, in_tree, model_info, models_block, num_threads, brlen_type, best_models, start_time, num_model, total_num_model);
         model_info.dump();
         
         /*
@@ -3207,7 +3207,7 @@ void CandidatePartModelSet::generateCandidates(Params &params, PhyloSuperTree* i
 }
 
 /** evaluate */
-void CandidatePartModelSet::test(Params &params, PhyloSuperTree* in_supertree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads, int brlen_type, vector<CandidateModel>& best_models) {
+void CandidatePartModelSet::test(Params &params, PhyloSuperTree* in_supertree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads, int brlen_type, vector<CandidateModel>& best_models, double start_time, int64_t start_num_model, int64_t total_num_model) {
 
     vector<pair<int,double> > candidateID;
     // compute the estimated computation cost
@@ -3269,6 +3269,7 @@ void CandidatePartModelSet::test(Params &params, PhyloSuperTree* in_supertree, M
     vector<double> bestscore_AIC, bestscore_AICc, bestscore_BIC;
     vector<string> besttree_AIC, besttree_AICc, besttree_BIC;
     vector<Alignment*> best_aln;
+    int num_model = 0;
 
     // initialize
     int npart = in_supertree->size();
@@ -3433,6 +3434,18 @@ void CandidatePartModelSet::test(Params &params, PhyloSuperTree* in_supertree, M
                 if (best_tree_BIC != "")
                     CKP_SAVE(best_tree_BIC);
                 checkpoint->dump(true);
+                
+                // for showing the estimated time
+                num_model++;
+                double est_num_model = start_num_model + (double) num_model / partmodelSet.size() * npart;
+                if (est_num_model >= 10) {
+                    double remain_time = (total_num_model-est_num_model)*(getRealTime()-start_time)/est_num_model;
+                    double finish_percent = (double) est_num_model * 100.0 / total_num_model;
+                    cout << "Finished subset " << (int)est_num_model << "/" << total_num_model << "\t" << finish_percent << " percent done";
+                    cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                        << convert_time(remain_time) << " left)\r";
+                    cout << flush;
+                }
             }
 
             switch (params.model_test_criterion) {
