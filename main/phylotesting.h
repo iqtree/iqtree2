@@ -12,6 +12,8 @@
 #include "utils/checkpoint.h"
 #include "nclextra/modelsblock.h"
 #include "alignment/superalignment.h"
+#include "tree/phylosupertree.h"
+#include <vector>
 
 class PhyloTree;
 class IQTree;
@@ -167,6 +169,7 @@ public:
     bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
 
     Alignment *aln; // associated alignment
+    int partid; // partition
     
 protected:
     
@@ -285,6 +288,26 @@ private:
     
     /** current model */
     int64_t current_model;
+};
+
+class CandidatePartModelSet {
+public:
+
+    /** destructor */
+    ~CandidatePartModelSet();
+    
+    /** clear */
+    void clear();
+    
+    /** generate candidates */
+    void generateCandidates(Params &params, PhyloSuperTree* in_tree, bool merge_phase);
+    
+    /** evaulate */
+    void test(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads, int brlen_type, vector<CandidateModel>& best_models);
+
+    CandidateModelSet partmodelSet;
+    vector<Alignment*> prot_alns;
+    vector<Alignment*> dna_alns;
 };
 
 //typedef vector<ModelInfo> ModelCheckpoint;

@@ -2035,6 +2035,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	dfvec.resize(in_tree->size());
 	lenvec.resize(in_tree->size());
 
+    /*
     // sort partition by computational cost for OpenMP effciency
     vector<pair<int,double> > partitionID;
     
@@ -2046,13 +2047,21 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (num_threads > 1) {
         std::sort(partitionID.begin(), partitionID.end(), comparePartition);
     }
-    bool parallel_over_partitions = false;
+    bool parallel_over_partitions = false;*/
+    
     int brlen_type = params.partition_type;
     if (brlen_type == TOPO_UNLINKED) {
         brlen_type = BRLEN_OPTIMIZE;
     }
     bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
-    
+
+    CandidatePartModelSet candidateset;
+    vector<CandidateModel> best_models;
+    candidateset.generateCandidates(params, in_tree, test_merge);
+    candidateset.test(params, in_tree, model_info, models_block, num_threads, brlen_type, best_models);
+    model_info.dump();
+
+    /*
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
@@ -2106,6 +2115,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
             model_info.dump();
         }
+    }*/
+
+    for (i = 0; i < best_models.size(); i++) {
+        num_model++;
+        in_tree->at(i)->aln->model_name = best_models[i].getName();
+        lhsum += (lhvec[i] = best_models[i].logl);
+        dfsum += (dfvec[i] = best_models[i].df);
+        lenvec[i] = best_models[i].tree_len;
     }
 
     // in case ModelOMatic change the alignment
@@ -2384,7 +2401,16 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 dfsum -= 1;
         }
 
+        candidateset.clear();
+        best_models.clear();
+        candidateset.generateCandidates(params, in_tree, false);
+        num_threads = 1;
+        candidateset.test(params, in_tree, model_info, models_block, num_threads, brlen_type, best_models);
+        model_info.dump();
+        
+        /*
         // sort partition by computational cost for OpenMP effciency
+        vector<pair<int,double> > partitionID;
         partitionID.clear();
         for (i = 0; i < in_tree->size(); i++) {
             Alignment *this_aln = in_tree->at(i)->aln;
@@ -2400,6 +2426,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         cout << "No. Model        Score       Charset" << endl;
         int partition_id = 0;
 
+        bool parallel_over_partitions = false;
     #ifdef _OPENMP
         parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
         #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
@@ -2448,6 +2475,25 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
             model_info.dump();
             }
+        }*/
+        
+        cout << endl;
+        cout << "No. Model        Score       Charset" << endl;
+        int partition_id = 0;
+        for (i = 0; i < best_models.size(); i++) {
+            double score = best_models[i].computeICScore(in_tree->at(i)->getAlnNSite());
+            in_tree->at(i)->aln->model_name = best_models[i].getName();
+            num_model++;
+            cout.width(4);
+            cout << right << ++partition_id << " ";
+            cout.width(12);
+            cout << left << best_models[i].getName() << " ";
+            cout.width(11);
+            cout << score << " " << in_tree->at(i)->aln->name;
+            cout << endl;
+            lhsum += (lhvec[i] = best_models[i].logl);
+            dfsum += (dfvec[i] = best_models[i].df);
+            lenvec[i] = best_models[i].tree_len;
         }
     }
 
@@ -2633,7 +2679,6 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             model_scores.push_back(DBL_MAX);
             continue;
         }
-		//cout << model_names[model] << endl;
         if (at(model).subst_name == "") {
             // now switching to test rate heterogeneity
             if (best_model == -1)
@@ -2850,7 +2895,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 
     string best_tree;
     model_info.getBestTree(best_tree);
-
+    
     // BQM 2015-07-21 with Lars: load the best_tree
 //	if (params.model_test_and_tree)
 		in_tree->readTreeString(best_tree);
@@ -3077,4 +3122,429 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     return at(best_model);
 }
 
+/** destructor */
+CandidatePartModelSet::~CandidatePartModelSet() {
+    clear();
+}
 
+/** clear */
+void CandidatePartModelSet::clear() {
+    int i;
+    for (i = 0; i < prot_alns.size(); i++) {
+        if (prot_alns[i])
+            delete prot_alns[i];
+    }
+    for (i = 0; i < dna_alns.size(); i++) {
+        if (dna_alns[i])
+            delete dna_alns[i];
+    }
+    prot_alns.clear();
+    dna_alns.clear();
+    partmodelSet.clear();
+}
+
+/** generate candidates */
+void CandidatePartModelSet::generateCandidates(Params &params, PhyloSuperTree* in_supertree, bool merge_phase) {
+    
+    PhyloTree *in_tree;
+    string part_model_name;
+    bool do_modelomatic;
+    double adjusted_logl;
+    int adjusted_df;
+    size_t i, j, start;
+    
+    for (i = 0; i < in_supertree->size(); i++) {
+        in_tree = in_supertree->at(i);
+        part_model_name = "";
+        if (params.model_name.empty())
+            part_model_name = in_tree->aln->model_name;
+        in_tree->params = &params;
+        // for ModelOMatic
+        Alignment *prot_aln = NULL;
+        Alignment *dna_aln = NULL;
+        do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
+        if (part_model_name.empty()) {
+            start = partmodelSet.size();
+            partmodelSet.generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+            for (j = start; j < partmodelSet.size(); j++) {
+                partmodelSet.at(j).partid = i;
+            }
+            if (do_modelomatic) {
+                // generate models for protein
+                // adapter coefficient according to Whelan et al. 2015
+                prot_aln = in_tree->aln->convertCodonToAA();
+                adjusted_logl = computeAdapter(in_tree->aln, prot_aln, adjusted_df);
+                if (in_tree->aln->name.empty())
+                    cout << "Adjusted LnL: " << adjusted_logl << "  df: " << adjusted_df << endl;
+                start = partmodelSet.size();
+                partmodelSet.generate(params, prot_aln, params.model_test_separate_rate, merge_phase);
+                for (j = start; j < partmodelSet.size(); j++) {
+                    partmodelSet.at(j).logl = adjusted_logl;
+                    partmodelSet.at(j).df = adjusted_df;
+                    partmodelSet.at(j).partid = i;
+}
+                // generate models for DNA
+                dna_aln = in_tree->aln->convertCodonToDNA();
+                start = partmodelSet.size();
+                partmodelSet.generate(params, dna_aln, params.model_test_separate_rate, merge_phase);
+                for (j = start; j < partmodelSet.size(); j++) {
+                    partmodelSet.at(j).setFlag(MF_SAMPLE_SIZE_TRIPLE);
+                    partmodelSet.at(j).partid = i;
+                }
+            }
+        } else {
+            partmodelSet.push_back(CandidateModel(part_model_name, "", in_tree->aln));
+            partmodelSet.at(partmodelSet.size() - 1).partid = i;
+        }
+        prot_alns.push_back(prot_aln);
+        dna_alns.push_back(dna_aln);
+    }
+
+//    cout << "Total number of candidates inside partmodelSet: " << partmodelSet.size() << endl;
+//    for (i = 0; i < partmodelSet.size(); i++) {
+//        cout << i+1 << "\t" << partmodelSet.at(i).aln->name << "\t" << partmodelSet.at(i).getName() << endl;
+//    }
+}
+
+/** evaluate */
+void CandidatePartModelSet::test(Params &params, PhyloSuperTree* in_supertree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads, int brlen_type, vector<CandidateModel>& best_models) {
+
+    vector<pair<int,double> > candidateID;
+    // compute the estimated computation cost
+    for (int i = 0; i < partmodelSet.size(); i++) {
+        Alignment *this_aln = partmodelSet.at(i).aln;
+        string model_name = partmodelSet.at(i).getName();
+        ModelFactory modelfactory(params, model_name, in_supertree->at(partmodelSet.at(i).partid), models_block);
+        int df = modelfactory.getNParameters(brlen_type);
+        // computation cost is proportional to #sequences, #patterns, #states, and #df
+        candidateID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states*df});
+    }
+    
+    const char *rates[] = {"+R", "*R", "+H", "*H"};
+    const int nrates = 4;
+    
+    // set all +R, *R, +H, *H model with number of categories greater than 2 to "MF_IGNORED"
+    // add the ignored computational cost to the R2's
+    for (int i = 0; i < nrates; i++) {
+        int k = 0;
+        string pre_aln_name = "";
+        string pre_first_part = "";
+        int id_R2 = -1;
+        double accum_cost = 0.0;
+        for (int j = 0; j < partmodelSet.size(); j++) {
+            size_t posR = partmodelSet.at(j).getName().find(rates[i]);
+            if (!partmodelSet.at(j).hasFlag(MF_IGNORED) && posR != string::npos) {
+                if (partmodelSet.at(j).aln->name != pre_aln_name || partmodelSet.at(j).getName().substr(0, posR+2) != pre_first_part) {
+                    pre_aln_name = partmodelSet.at(j).aln->name;
+                    pre_first_part = partmodelSet.at(j).getName().substr(0, posR+2);
+                    k = 0;
+                }
+                k++;
+                if (k == 1) {
+                    // the smallest number of categories with +R/*R/+H/*H for each subst model and partition
+                    id_R2 = j;
+                } else {
+                    // this candidate is to be ignored
+                    partmodelSet.at(j).setFlag(MF_IGNORED);
+                    // its computational cost will be added to the candidate with the smallest number of categories
+                    // for the same subst model and partition
+                    if (id_R2 != -1) {
+                        candidateID[id_R2].second += candidateID[j].second;
+                    }
+                    candidateID[j].second = 0.0;
+                }
+            } else {
+                id_R2 = -1;
+            }
+        }
+    }
+
+    // sort the candidates
+    if (num_threads > 1) {
+        std::sort(candidateID.begin(), candidateID.end(), comparePartition);
+    }
+
+    // record for each partition
+    vector<int> best_model_AIC, best_model_AICc, best_model_BIC;
+    vector<double> bestscore_AIC, bestscore_AICc, bestscore_BIC;
+    vector<string> besttree_AIC, besttree_AICc, besttree_BIC;
+    vector<Alignment*> best_aln;
+
+    // initialize
+    int npart = in_supertree->size();
+    for (int i = 0; i < npart; i++) {
+        best_model_AIC.push_back(-1); best_model_AICc.push_back(-1); best_model_BIC.push_back(-1);
+        bestscore_AIC.push_back(DBL_MAX); bestscore_AICc.push_back(DBL_MAX); bestscore_BIC.push_back(DBL_MAX);
+        besttree_AIC.push_back(""); besttree_AICc.push_back(""); besttree_BIC.push_back("");
+        best_aln.push_back(in_supertree->at(i)->aln);
+    }
+    
+    DoubleVector model_scores;
+    for (int i = 0; i < partmodelSet.size(); i++) {
+        model_scores.push_back(DBL_MAX);
+    }
+
+  #ifdef _OPENMP
+  #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1)
+  #endif
+    for (int k = 0; k < partmodelSet.size(); k++) {
+        
+        int i = candidateID[k].first;
+        if (partmodelSet[i].hasFlag(MF_IGNORED))
+            continue;
+        
+        int partid = partmodelSet.at(i).partid;
+        ModelCheckpoint part_model_info;
+        
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+        {
+            extractModelInfo(in_supertree->at(partid)->aln->name, model_info, part_model_info);
+        }
+        
+        ModelCheckpoint *checkpoint = &part_model_info;
+        bool do_modelomatic = params.modelomatic && in_supertree->at(partid)->aln->seq_type == SEQ_CODON;
+        
+        int ssize = in_supertree->at(partid)->aln->getNSite(); // sample size
+        if (params.model_test_sample_size)
+            ssize = params.model_test_sample_size;
+
+        bool cont_nxt_iter;
+        int inner_iter = 0;
+
+        do {
+            // this inner loop is designed for +R/*R/+H/*H rates
+            // for +R/*R/+H/*H rates, first R2, then R3,..., until the score increases
+            
+            inner_iter++;
+            bool isRHrate = false;
+            for (int j = 0; j < nrates; j++) {
+                size_t posR = partmodelSet.at(i).getName().find(rates[j]);
+                if (posR != string::npos)
+                    isRHrate = true;
+            }
+            
+            if (inner_iter > 1) {
+                // the second time, only serve for those are +R/*R/+H/*H and MF_IGNORED and those with partid same as the previous one
+                if (!isRHrate || !partmodelSet[i].hasFlag(MF_IGNORED))
+                    break;
+                if (partmodelSet.at(i).partid != partid)
+                    break;
+            }
+
+            
+            // optimize model parameters
+            string orig_model_name = partmodelSet.at(i).getName();
+            // keep separate output model_info to only update model_info if better model found
+            ModelCheckpoint out_model_info;
+            partmodelSet.at(i).set_name = in_supertree->at(partid)->aln->name;
+            string tree_string;
+            int nthres = 1;
+
+            /***** main call to estimate model parameters ******/
+            tree_string = partmodelSet.at(i).evaluate(params,
+                                                      part_model_info, out_model_info, models_block, nthres, brlen_type);
+
+            partmodelSet.at(i).computeICScores(ssize);
+            partmodelSet.at(i).setFlag(MF_DONE);
+            
+            cont_nxt_iter = false;
+            if (isRHrate) {
+                if (inner_iter == 1)
+                    cont_nxt_iter = true;
+                else {
+                    switch (params.model_test_criterion) {
+                        case MTC_ALL:
+                            if (partmodelSet.at(i).AIC_score < partmodelSet.at(i-1).AIC_score ||
+                                partmodelSet.at(i).AICc_score < partmodelSet.at(i-1).AICc_score ||
+                                partmodelSet.at(i).BIC_score < partmodelSet.at(i-1).BIC_score) {
+                                // continue next iteration
+                                cont_nxt_iter = true;
+                            }
+                            break;
+                        case MTC_AIC:
+                            if (partmodelSet.at(i).AIC_score < partmodelSet.at(i-1).AIC_score) {
+                                // continue next iteration
+                                cont_nxt_iter = true;
+                            }
+                            break;
+                        case MTC_AICC:
+                            if (partmodelSet.at(i).AICc_score < partmodelSet.at(i-1).AICc_score) {
+                                // continue next iteration
+                                cont_nxt_iter = true;
+                            }
+                            break;
+                        case MTC_BIC:
+                            if (partmodelSet.at(i).BIC_score < partmodelSet.at(i-1).BIC_score) {
+                                // continue next iteration
+                                cont_nxt_iter = true;
+                            }
+                            break;
+                    }
+                }
+            }
+            
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
+            {
+                if (partmodelSet.at(i).AIC_score < bestscore_AIC[partmodelSet.at(i).partid]) {
+                    best_model_AIC[partmodelSet.at(i).partid] = i;
+                    bestscore_AIC[partmodelSet.at(i).partid] = partmodelSet.at(i).AIC_score;
+                    if (!tree_string.empty())
+                        besttree_AIC[partmodelSet.at(i).partid] = tree_string;
+                    // only update model_info with better model
+                    if (params.model_test_criterion == MTC_AIC) {
+                        part_model_info.putSubCheckpoint(&out_model_info, "");
+                        best_aln[partmodelSet.at(i).partid] = partmodelSet.at(i).aln;
+                    }
+                }
+                if (partmodelSet.at(i).AICc_score < bestscore_AICc[partmodelSet.at(i).partid]) {
+                    best_model_AICc[partmodelSet.at(i).partid] = i;
+                    bestscore_AICc[partmodelSet.at(i).partid] = partmodelSet.at(i).AICc_score;
+                    if (!tree_string.empty())
+                        besttree_AICc[partmodelSet.at(i).partid] = tree_string;
+                    // only update model_info with better model
+                    if (params.model_test_criterion == MTC_AICC) {
+                        part_model_info.putSubCheckpoint(&out_model_info, "");
+                        best_aln[partmodelSet.at(i).partid] = partmodelSet.at(i).aln;
+                    }
+                }
+                if (partmodelSet.at(i).BIC_score < bestscore_BIC[partmodelSet.at(i).partid]) {
+                    best_model_BIC[partmodelSet.at(i).partid] = i;
+                    bestscore_BIC[partmodelSet.at(i).partid] = partmodelSet.at(i).BIC_score;
+                    if (!tree_string.empty())
+                        besttree_BIC[partmodelSet.at(i).partid] = tree_string;
+                    // only update model_info with better model
+                    if (params.model_test_criterion == MTC_BIC) {
+                        part_model_info.putSubCheckpoint(&out_model_info, "");
+                        best_aln[partmodelSet.at(i).partid] = partmodelSet.at(i).aln;
+                    }
+                }
+                string best_tree_AIC, best_tree_AICc, best_tree_BIC;
+                best_tree_AIC = besttree_AIC[partmodelSet.at(i).partid];
+                best_tree_AICc = besttree_AICc[partmodelSet.at(i).partid];
+                best_tree_BIC = besttree_BIC[partmodelSet.at(i).partid];
+                if (best_tree_AIC != "")
+                    CKP_SAVE(best_tree_AIC);
+                if (best_tree_AICc != "")
+                    CKP_SAVE(best_tree_AICc);
+                if (best_tree_BIC != "")
+                    CKP_SAVE(best_tree_BIC);
+                checkpoint->dump(true);
+            }
+
+            switch (params.model_test_criterion) {
+                case MTC_AIC: model_scores[i] = partmodelSet.at(i).AIC_score; break;
+                case MTC_AICC: model_scores[i] = partmodelSet.at(i).AICc_score; break;
+                default: model_scores[i] = partmodelSet.at(i).BIC_score; break;
+            }
+            i++;
+            if (i >= partmodelSet.size())
+                break;
+            
+        } while (cont_nxt_iter);
+        
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+        {
+            replaceModelInfo(in_supertree->at(partid)->aln->name, model_info, part_model_info);
+        }
+
+    }
+
+    // collect the starting and the ending index for each partition
+    int pre_partid = -1;
+    vector<int> kstart, kend;
+    for (int k = 0; k < partmodelSet.size(); k++) {
+        if (partmodelSet.at(k).partid != pre_partid) {
+            if (pre_partid != -1) {
+                kend.push_back(k-1);
+            }
+            pre_partid = partmodelSet.at(k).partid;
+            kstart.push_back(k);
+        }
+    }
+    if (pre_partid != -1) {
+        kend.push_back(partmodelSet.size()-1);
+    }
+    
+    ASSERT(kstart.size() == kend.size());
+
+    for (int k = 0; k < kstart.size(); k++) {
+        // for each partition
+        
+        // collect the list of models in increasing order of their scores
+        int ksize = kend[k] - kstart[k] + 1;
+        int *model_rank = new int[ksize];
+        
+        sort_index(model_scores.data() + kstart[k], model_scores.data() + kend[k] + 1, model_rank);
+
+        string model_list;
+        for (int i = 0; i < ksize; i++) {
+            int model = kstart[k] + model_rank[i];
+            if (model_scores[model] == DBL_MAX)
+                break;
+            if (i > 0)
+                model_list += " ";
+            model_list += partmodelSet.at(model).getName();
+        }
+
+        ModelCheckpoint part_model_info;
+        extractModelInfo(in_supertree->at(k)->aln->name, model_info, part_model_info);
+        ModelCheckpoint *checkpoint = &part_model_info;
+
+        part_model_info.putBestModelList(model_list);
+        part_model_info.put("best_model_AIC", partmodelSet.at(best_model_AIC[k]).getName());
+        part_model_info.put("best_model_AICc", partmodelSet.at(best_model_AICc[k]).getName());
+        part_model_info.put("best_model_BIC", partmodelSet.at(best_model_BIC[k]).getName());
+
+        double best_score_AIC = bestscore_AIC[k];
+        double best_score_AICc = bestscore_AICc[k];
+        double best_score_BIC = bestscore_BIC[k];
+
+        CKP_SAVE(best_score_AIC);
+        CKP_SAVE(best_score_AICc);
+        CKP_SAVE(best_score_BIC);
+
+        checkpoint->dump();
+
+        delete[] model_rank;
+
+        // update alignment if best data type changed
+        if (best_aln[k] != in_supertree->at(k)->aln) {
+            delete in_supertree->at(k)->aln;
+            in_supertree->at(k)->aln = best_aln[k];
+            if (best_aln[k] == prot_alns[k])
+                prot_alns[k] = NULL;
+            else
+                dna_alns[k] = NULL;
+        }
+
+        if (dna_alns[k])
+            delete dna_alns[k];
+        if (prot_alns[k])
+            delete prot_alns[k];
+
+        string best_tree;
+        part_model_info.getBestTree(best_tree);
+        in_supertree->at(k)->readTreeString(best_tree);
+
+        switch (params.model_test_criterion) {
+            case MTC_AIC:
+                best_models.push_back(partmodelSet.at(best_model_AIC[k]));
+                break;
+            case MTC_AICC:
+                best_models.push_back(partmodelSet.at(best_model_AICc[k]));
+                break;
+            case MTC_BIC:
+                best_models.push_back(partmodelSet.at(best_model_BIC[k]));
+                break;
+            default: ASSERT(0);
+        }
+        
+        replaceModelInfo(in_supertree->at(k)->aln->name, model_info, part_model_info);
+    }
+}
