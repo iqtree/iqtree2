@@ -2417,42 +2417,82 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
     treesOut.close();
 }
 
-void printHessian(PhyloTree *tree){
+void printHessian(IQTree *iqtree) {
 
-    size_t orig_nptn = tree->aln->size();
-    size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
-    size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
-    size_t nBranches = tree->branchNum;
 
-    Map<RowVectorXd> gradient_vector_eigen(tree->gradient_vector, nBranches);
-    Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
-    MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+    string outFileName = ((string) iqtree->params->out_prefix + ".out.BV");
+    ofstream outfile(outFileName);
 
-    // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
-    Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
-    MatrixXd hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
-    hessian = (-1) * hessian;
-    hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
+    if (iqtree->isSuperTree()) {
+        auto *stree = (PhyloSuperTree *) iqtree;
+        for (auto &it: *stree) {
+            size_t orig_nptn = it->aln->size();
+            size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+            size_t nPtn = max_orig_nptn + it->getModelFactory()->unobserved_ptns.size();
+            size_t nBranches = it->branchNum;
 
-    Map<RowVectorXd> hessian_diagonal_vector(tree->hessian_diagonal, nBranches);
-    Map<RowVectorXd> df_ddf_frac_vec(tree->df_ddf_frac, nBranches);
+            Map<RowVectorXd> gradient_vector_eigen(it->gradient_vector, nBranches);
+            Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(it->G_matrix, nBranches, nPtn);
+            MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
 
-    string outFileName = ((string) tree->params->out_prefix + ".out1.BV");
+            // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
+            Map<RowVectorXd> ptn_freq_diagonal(it->ptn_freq, nPtn);
+            MatrixXd hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+            hessian = (-1) * hessian;
+            hessian.diagonal() = Map<VectorXd>(it->hessian_diagonal, nBranches).array();
 
-    DoubleVector branchLengths;
-    tree->saveBranchLengths(branchLengths);
-    Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
-    ofstream outfile(outFileName,ofstream::app);
-    stringstream tree_stream;
-    tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
-    outfile << endl << tree->aln->getNSeq() << endl << endl;
-    outfile << tree_stream.str() << endl << endl;
-    outfile << branch_lengths_vector << endl << endl;
-    outfile << gradient_vector_eigen << endl << endl << endl;
-    outfile << "Hessian " << endl << endl;
-    outfile << hessian;
+            Map<RowVectorXd> hessian_diagonal_vector(it->hessian_diagonal, nBranches);
+            Map<RowVectorXd> df_ddf_frac_vec(it->df_ddf_frac, nBranches);
+
+
+            DoubleVector branchLengths;
+            it->saveBranchLengths(branchLengths);
+            Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
+
+            stringstream tree_stream;
+            it->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+            outfile << endl << it->aln->getNSeq() << endl << endl;
+            outfile << tree_stream.str() << endl << endl;
+            outfile << branch_lengths_vector << endl << endl;
+            outfile << gradient_vector_eigen << endl << endl << endl;
+            outfile << "Hessian " << endl << endl;
+            outfile << hessian << endl;
+
+        }
+    } else {
+        size_t orig_nptn = iqtree->aln->size();
+        size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
+        size_t nPtn = max_orig_nptn + iqtree->getModelFactory()->unobserved_ptns.size();
+        size_t nBranches = iqtree->branchNum;
+
+        Map<RowVectorXd> gradient_vector_eigen(iqtree->gradient_vector, nBranches);
+        Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(iqtree->G_matrix, nBranches, nPtn);
+        MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+
+        // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
+        Map<RowVectorXd> ptn_freq_diagonal(iqtree->ptn_freq, nPtn);
+        MatrixXd hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+        hessian = (-1) * hessian;
+        hessian.diagonal() = Map<VectorXd>(iqtree->hessian_diagonal, nBranches).array();
+
+        Map<RowVectorXd> hessian_diagonal_vector(iqtree->hessian_diagonal, nBranches);
+        Map<RowVectorXd> df_ddf_frac_vec(iqtree->df_ddf_frac, nBranches);
+
+
+        DoubleVector branchLengths;
+        iqtree->saveBranchLengths(branchLengths);
+        Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
+
+        stringstream tree_stream;
+        iqtree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+        outfile << endl << iqtree->aln->getNSeq() << endl << endl;
+        outfile << tree_stream.str() << endl << endl;
+        outfile << branch_lengths_vector << endl << endl;
+        outfile << gradient_vector_eigen << endl << endl << endl;
+        outfile << "Hessian " << endl;
+        outfile << hessian << endl;
+    }
     outfile.close();
-
 }
 
 /************************************************************
@@ -3060,19 +3100,19 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
     }
+    //check for dating
     if (params.dating_method != "") {
-        int index = 0;
         if (iqtree->isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
-            for (auto i = stree->begin(); i != stree->end(); i++, index++) {
-//                ((PhyloTree *) *i)->clearAllPartialLH();
-                doTimeTree((PhyloTree *) *i, index);
-                printHessian((PhyloTree *) *i);
+            auto *stree = (PhyloSuperTree*)iqtree;
+            for (auto & it : *stree) {
+                doTimeTree((PhyloTree *) it);
+//                printHessian((PhyloTree *) *it, index);
             }
         }
         else{
-            doTimeTree(iqtree, index);
+            doTimeTree(iqtree);
         }
+        printHessian(iqtree);
     }
     // BUG FIX: readTreeString(bestTreeString) not needed before this line
     iqtree->printResultTree();

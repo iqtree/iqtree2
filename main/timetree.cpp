@@ -338,13 +338,17 @@ void runLSD2(PhyloTree *tree) {
 
 #endif
 
-void computeHessian(PhyloTree *tree, int part) {
+void computeHessian(PhyloTree *tree) {
     // make sure we traverse the tree from the same starting node as BaseML
     if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node)
     {
         tree->root = (Node*) tree->traversal_starting_node;
+        tree->clearBranchDirection();
         tree->initializeTree();
+        tree->computeBranchDirection();
+
     }
+//    tree->initializeTree();
 
     size_t orig_nptn = tree->aln->size();
     size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
@@ -359,7 +363,6 @@ void computeHessian(PhyloTree *tree, int part) {
         double ddf = 0.0;
         double lh = tree->getCurScore();
         tree->theta_computed = false;
-//        tree->initializeAllPartialLh();
         tree->computeLikelihoodDerv((PhyloNeighbor *) branch.first->findNeighbor(branch.second),
                                     (PhyloNode *) branch.first, &df, &ddf);
         if (verbose_mode >= VB_MED) {
@@ -381,23 +384,22 @@ void computeHessian(PhyloTree *tree, int part) {
     Map<RowVectorXd> hessian_diagonal_vector(tree->hessian_diagonal, nBranches);
     Map<RowVectorXd> df_ddf_frac_vec(tree->df_ddf_frac, nBranches);
 
-    string outFileName = ((string) tree->params->out_prefix + ".out.BV");
+//    string outFileName = ((string) tree->params->out_prefix + ".out.BV");
 
     DoubleVector branchLengths;
     tree->saveBranchLengths(branchLengths);
     Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
-    ofstream outfile(outFileName);
+//    ofstream outfile(outFileName);
     stringstream tree_stream;
     tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
-    outfile << endl << tree->aln->getNSeq() << endl << endl;
-    outfile << tree_stream.str() << endl << endl;
-    outfile << branch_lengths_vector << endl << endl;
-    outfile << gradient_vector_eigen << endl << endl << endl;
-    outfile << "Hessian " << endl << endl;
-    outfile << hessian;
-    outfile.close();
+//    outfile << endl << tree->aln->getNSeq() << endl << endl;
+//    outfile << tree_stream.str() << endl << endl;
+//    outfile << branch_lengths_vector << endl << endl;
+//    outfile << gradient_vector_eigen << endl << endl << endl;
+//    outfile << "Hessian " << endl << endl;
+//    outfile << hessian;
+//    outfile.close();
 
-    string part_index = convertIntToString(part);
     string outFileNameBranchLengths = ((string) tree->params->out_prefix + "_blengths.gh");
     string outFileNameTree = ((string) tree->params->out_prefix +  "_tree.gh");
     string outFileNameHessian = ((string) tree->params->out_prefix +  "_hessian.gh");
@@ -423,14 +425,14 @@ void computeHessian(PhyloTree *tree, int part) {
 
 }
 
-void runMCMCTree(PhyloTree *tree, int part) {
+void runMCMCTree(PhyloTree *tree) {
     string basename = (string) Params::getInstance().out_prefix + ".timetree";
     cout << "Building time tree by MCMCTree with command:" << endl;
-    computeHessian(tree, part);
+    computeHessian(tree);
     cout << "Completed time-tree generation." << endl;
 }
 
-void doTimeTree(PhyloTree *tree, int part) {
+void doTimeTree(PhyloTree *tree) {
     //todo: check the code for LSD (integration testing)
     cout << "--- Start phylogenetic dating ---" << endl;
     cout.unsetf(ios::fixed);
@@ -441,7 +443,7 @@ void doTimeTree(PhyloTree *tree, int part) {
         cout << "--- End phylogenetic dating ---" << endl;
         return;
     } else if (Params::getInstance().dating_method == "mcmctree") {
-        runMCMCTree(tree, part);
+        runMCMCTree(tree);
         cout << "--- End phylogenetic dating ---" << endl;
         return;
     }

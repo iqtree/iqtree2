@@ -215,8 +215,8 @@ void PhyloSuperTreePlen::mapTrees() {
 		string taxa_set;
         Pattern taxa_pat = ((SuperAlignment*)aln)->getPattern(part);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
-        
-        // remember the id of the expected starting node -> to make sure we traverse the tree at the same starting node as BaseML
+
+        //For Hessian extraction for MCMCTree in BaseML format: Remember the starting node to traverse in BaseML format
         int traversal_starting_node_id = (*it)->traversal_starting_node ? ((Node*)(*it)->traversal_starting_node)->id : -1;
         
 		(*it)->copyTree(this, taxa_set);
