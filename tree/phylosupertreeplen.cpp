@@ -215,15 +215,8 @@ void PhyloSuperTreePlen::mapTrees() {
 		string taxa_set;
         Pattern taxa_pat = ((SuperAlignment*)aln)->getPattern(part);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
-
-        //For Hessian extraction for MCMCTree in BaseML format: Remember the starting node to traverse in BaseML format
-        int traversal_starting_node_id = (*it)->traversal_starting_node ? ((Node*)(*it)->traversal_starting_node)->id : -1;
         
 		(*it)->copyTree(this, taxa_set);
-        
-        // record the pointer to the new expected starting node after deleting and clone the partition tree
-        if ((*it)->traversal_starting_node)
-            (*it)->traversal_starting_node = (*it)->findNodeID(traversal_starting_node_id);
 
 		// the only difference with PhyloSuperTree::mapTrees()
 		(*it)->scaleLength(part_info[part].part_rate);

@@ -3105,7 +3105,21 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         if (iqtree->isSuperTree()) {
             auto *stree = (PhyloSuperTree*)iqtree;
             for (auto & it : *stree) {
-                doTimeTree((PhyloTree *) it);
+                PhyloTree* partition_tree = (PhyloTree *) it;
+                
+                // If we memorized the traversal starting node -> find the corresponding traversal starting node for the current partition
+                if (stree->traversal_starting_node)
+                {
+                    // change the partition tree so that its traversal starting node matches that of the super tree -> temporarily set the root at the first taxon in the alignment
+                    partition_tree->root = partition_tree->findNodeID(0);
+                    partition_tree->initializeTree();
+                    
+                    // set the traversal starting node for the current partition tree
+                    partition_tree->traversal_starting_node = partition_tree->findNodeID(((Node*)stree->traversal_starting_node)->id);
+                }
+                
+                
+                doTimeTree(partition_tree);
 //                printHessian((PhyloTree *) *it, index);
             }
         }
