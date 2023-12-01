@@ -1030,7 +1030,14 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
     }
     *df  = all_df;
     *ddf = all_ddf;
-    ASSERT(std::isfinite(*df) && "Numerical underflow for non-rev lh-derivative");
+    // ASSERT(std::isfinite(*df) && "Numerical underflow for non-rev lh-derivative");
+    if (!std::isfinite(*df)) {
+        getModel()->writeInfo(cout);
+        getRate()->writeInfo(cout);
+    }
+    if (!SAFE_NUMERIC && !std::isfinite(*df)) {
+        outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
+    }
 
     if (isASC) {
         // ascertainment bias correction
@@ -1040,6 +1047,10 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         size_t nsites = aln->getNSite();
         *df  += nsites * df_frac;
         *ddf += nsites *(ddf_frac + df_frac*df_frac);
+    }
+    if (!std::isfinite(*df)) {
+        cout << "WARNING: Numerical underflow for lh-derivative" << endl;
+        *df = *ddf = 0.0;
     }
 }
 
