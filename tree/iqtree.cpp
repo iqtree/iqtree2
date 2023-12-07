@@ -560,15 +560,28 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
 
     setParsimonyKernel(kernel);
     
-    // show a warning if users want to perform tree dating (with mcmc) but they didn't supply a rooted tree
-    if (params->dating_method == "mcmctree"
-        && !in && !params->user_file)
+    // if users want to perform tree dating (with mcmc)
+    if (params->dating_method == "mcmctree")
     {
-        // show a warning
-        outWarning("Ignore '--dating mcmctree' flag since no rooted tree is provided. To perform tree dating with MCMC, please specify a rooted tree with '-te <tree_file>'");
-        
-        // turn off the dating flag
-        params->dating_method = "";
+        // if they didn't supply a rooted tree, show a warning and ignore '--dating mcmctree' flag
+        if(!in && !params->user_file)
+        {
+            // show a warning
+            outWarning("Ignore '--dating mcmctree' flag since no rooted tree is provided. To perform tree dating with MCMC, please specify a rooted tree with '-te <tree_file>'");
+            
+            // turn off the dating flag
+            params->dating_method = "";
+        }
+        // otherwise, if they supply a tree but didn't fix the topology with '-te', show a warning and fix it
+        else if (params->min_iterations || params->stop_condition != SC_FIXED_ITERATION)
+        {
+            // show a warning
+            outWarning("Fix the tree topology to perform tree dating with MCMC");
+            
+            // fix the topology
+            params->min_iterations = 0;
+            params->stop_condition = SC_FIXED_ITERATION;
+        }
     }
 
     if (in != NULL || params->user_file) {
