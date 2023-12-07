@@ -546,13 +546,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
                 if ((*it)->node->name != ROOT_NAME) {
                     ostringstream ss;
                     IntString *str = new IntString;
-                    // by default, output the internal nodes sorted by the smallest_taxid
                     str->id = printTree(ss, brtype, (*it)->node, node);
-                    
-                    // if running MCMC dating -> output the internal nodes according to the node->id (same as the actual tree structure) rather than the smallest_taxid
-                    if (Params::getInstance().dating_method == "mcmctree")
-                        str->id = (it - node->neighbors.begin());
-                    
                     //ss.flush();
                     str->str = ss.str();
                     strout.insert(str);
