@@ -574,6 +574,12 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         	printBranchLength(out, brtype, !node->name.empty(), length_nei);
         }
     }
+    
+    // if running MCMC dating -> output the internal nodes according to the node->id (same as the actual tree structure) rather than the smallest_taxid
+    if (Params::getInstance().dating_method == "mcmctree")
+        return node->id;
+    
+    // by default, output the internal nodes sorted by the smallest_taxid
     return smallest_taxid;
 }
 
