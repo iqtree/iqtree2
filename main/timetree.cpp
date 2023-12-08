@@ -341,21 +341,20 @@ void runLSD2(PhyloTree *tree) {
 void computeHessian(PhyloTree *tree) {
     // make sure we traverse the tree from the same starting node as BaseML
     if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node)
-    {
         tree->root = (Node*) tree->traversal_starting_node;
-        tree->clearBranchDirection();
-        tree->initializeTree();
-        tree->computeBranchDirection();
 
-    }
-//    tree->initializeTree();
+    // sort the internal nodes according to their smallest taxon id
+    tree->sortTaxa();
+    tree->clearBranchDirection();
+    tree->initializeTree();
+    tree->computeBranchDirection();
 
     size_t orig_nptn = tree->aln->size();
     size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
     size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
     size_t nBranches = tree->branchNum;
     double *ptn_freq = tree->ptn_freq;
-
+    
     BranchVector branches;
     tree->getBranches(branches);
     for (auto branch: branches) {
