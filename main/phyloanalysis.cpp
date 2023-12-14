@@ -4414,9 +4414,9 @@ bool runCMaple(Params &params)
             
             // Infer a phylogenetic tree
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
-            std::string redirected_msgs = tree.autoProceedMAPLE(tree_search_type, params.shallow_tree_search);
-            if (cmaple::verbose_mode >= cmaple::VB_MED)
-                std::cout << redirected_msgs << std::endl;
+            std::ostream null_stream(0);
+            std::ostream& out_stream = cmaple::verbose_mode >= cmaple::VB_MED ? std::cout : null_stream;
+            tree.autoProceedMAPLE(tree_search_type, params.shallow_tree_search, out_stream);
             
             // Compute branch supports (if users want to do so)
             if (params.aLRT_replicates)
@@ -4427,9 +4427,7 @@ bool runCMaple(Params &params)
                 if (input_treefile.length())
                     allow_replacing_ML_tree = params.allow_replace_input_tree;
                 
-                redirected_msgs = tree.computeBranchSupport(params.num_threads, params.aLRT_replicates, 0.1, allow_replacing_ML_tree);
-                if (cmaple::verbose_mode >= cmaple::VB_MED)
-                    std::cout << redirected_msgs << std::endl;
+                tree.computeBranchSupport(params.num_threads, params.aLRT_replicates, 0.1, allow_replacing_ML_tree, out_stream);
                 
                 // write the tree file with branch supports
                 ofstream out_tree_branch_supports = ofstream(prefix + ".aLRT_SH.treefile");
