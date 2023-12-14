@@ -5651,6 +5651,9 @@ void usage(char* argv[]) {
     //	cout << "  -rep <times>        Repeat algorithm a number of times." << endl;
     //	cout << "  -noout              Print no output file." << endl;
     cout << endl;
+    cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
+    cout << "  --enable-cmaple   Run the tree inference with [C]MAPLE algorithm" << endl;
+    cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
     exit(0);
@@ -5962,6 +5965,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -g_print_induced     Write induced partition subtrees." << endl
     << "  -g_print_m           Write presence-absence matrix." << endl
     << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
+    
+    << endl << "GENOMIC EPIDEMIOLOGICAL ANALYSIS:" << endl
+    << "  --enable-cmaple      Run the tree inference with [C]MAPLE algorithm." << endl
     
     
     
