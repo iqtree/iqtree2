@@ -661,7 +661,7 @@ endif(ZLIB_FOUND)
 ##################################################################
 # subdirectories containing necessary libraries for the build
 ##################################################################
-
+SET(INSTALL_CMAPLE OFF CACHE BOOL "Disable installation of googletest" FORCE)
 option(USE_BOOSTER "Use Booster for transfer bootstrap expectation" ON)
 if (USE_BOOSTER)
     add_subdirectory(booster)
