@@ -808,9 +808,9 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple cmaple_alignment ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 target_link_libraries(iqtree2-aa pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple-aa cmaple_alignment-aa ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple-aa ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 	
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)
