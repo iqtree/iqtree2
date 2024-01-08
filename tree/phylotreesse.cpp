@@ -283,7 +283,7 @@ void PhyloTree::computeTipRawPartialLikelihood() {
     int step = nstates*nmixtures;
     // init tip_raw_partial_lh (if necessary)
     if (!tip_raw_partial_lh)
-        tip_raw_partial_lh = new double[nstates * step];
+        tip_raw_partial_lh = new double[(aln->STATE_UNKNOWN + 1) * step];
     double* state_partial_lh = tip_raw_partial_lh;
     for (state = 0; state <= aln->STATE_UNKNOWN; state++, state_partial_lh += step)
         getModel()->computeTipLikelihood(state, state_partial_lh);
