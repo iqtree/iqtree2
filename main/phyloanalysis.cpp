@@ -2664,6 +2664,10 @@ void replaceNameById(Node* const node, Node* const dad)
 
 void selectConnectedRegions(IQTree* const tree, const int num_connected_regions, const int num_leave_per_region)
 {
+    // validate the inputs
+    if (num_leave_per_region > tree->leafNum)
+        outError("num_leave_per_region > tree->leafNum!");
+    
     // for testing only, replace node name by its id
     replaceNameById(tree->root, nullptr);
     
