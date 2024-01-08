@@ -2743,8 +2743,8 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
                     // don't need to check further
                     break;
                 }
-            tree->computeRawPartialLikelihood(tmp_dad, tmp_node
-                                                , buffer_partial_lh);
+            tree->computeRawPartialLikelihood(tmp_dad, tmp_node,
+                                                buffer_partial_lh);
             
             // show result
             double* buffer_partial_lh_ptr = buffer_partial_lh;

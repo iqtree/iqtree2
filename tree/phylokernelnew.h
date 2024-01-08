@@ -2748,9 +2748,9 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
             
             // compute the raw partial lh (removing the eigen vector factor)
             size_t jump_step = VectorClass::size() * block;
-            int index = ptn_lower * jump_step;
+            int index = ptn_lower * nstates;
             size_t jump_step_raw_partial_lh = VectorClass::size() * nstates;
-            int index_raw_partial_lh = ptn_lower * jump_step_raw_partial_lh;
+            int index_raw_partial_lh = ptn_lower * nstates;
             for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn += VectorClass::size(), index += jump_step, index_raw_partial_lh += jump_step_raw_partial_lh)
             {
                 // get the starting location of the memory that store the partial lh of the current site_pattern
