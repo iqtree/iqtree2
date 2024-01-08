@@ -4350,11 +4350,12 @@ std::vector<std::vector<double>> extractDisMat(const std::vector<Node*>& selecte
 
 void replaceNameById(Node* const node, Node* const dad)
 {
-    node->name = convertIntToString(node->id);
+    if (!node->isLeaf() && node->name.length() == 0)
+        node->name = convertIntToString(node->id);
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        (*it)->length = (*it)->node->id;
-        (*it)->node->findNeighbor(node)->length = (*it)->node->id;
+        /*(*it)->length = (*it)->node->id;
+        (*it)->node->findNeighbor(node)->length = (*it)->node->id;*/
         // Traverse downward to find the node
         replaceNameById((*it)->node, node);
     }
@@ -4362,14 +4363,15 @@ void replaceNameById(Node* const node, Node* const dad)
 
 void selectConnectedRegions(IQTree* const tree, const int num_connected_regions, const int num_leave_per_region)
 {
-    // replace node name by its id
+    // for testing only, replace node name by its id
     replaceNameById(tree->root, nullptr);
     
-    // print the tree
+    // for testing only, print the tree
     std::cout << "\n Tree: \n";
     tree->printTree(std::cout);
     std::cout << std::endl;
     
+    // for testing only
     std::vector<int> histogram;
     histogram.resize(tree->nodeNum, 0);
     
@@ -4378,12 +4380,13 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
     {
         std::vector<Node*> connected_regions = selectConnectedRegion(tree, num_leave_per_region);
         
+        // for testing only
         ++histogram[connected_regions[0]->id];
         
         // output the connected region
         std::cout << "\nConnected region " << (i + 1) << ":" << std::endl;
         for (auto it = connected_regions.begin(); it != connected_regions.end(); ++it)
-            std::cout << " " << (*it)->id;
+            std::cout << " " << (*it)->name;
         std::cout << std::endl;
         
         // output the new leave of the connected region
@@ -4391,7 +4394,7 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
         ASSERT(leaves.size() == num_leave_per_region);
         std::cout << "Leaves of the connected region " << (i + 1) << ":" << std::endl;
         for (auto it = leaves.begin(); it != leaves.end(); ++it)
-            std::cout << (*it)->id << "\t";
+            std::cout << (*it)->name << "\t";
         std::cout << std::endl;
         
         // extract distance matrix
@@ -4405,7 +4408,7 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
         }
     }
     
-    // show histogram
+    // for testing only, show histogram
     std::cout << "\n Histogram: " <<  std::endl;
     for (auto i = 0; i < histogram.size(); ++i)
         std::cout << histogram[i] << " ";
