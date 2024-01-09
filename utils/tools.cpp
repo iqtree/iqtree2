@@ -1485,7 +1485,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.alisim_openmp_alg = IM;
     params.no_merge = false;
     params.alignment_id = 0;
-    params.enable_CMaple = false;
+    params.inference_alg = ALG_IQ_TREE;
     params.in_aln_format_str = "AUTO";
     params.shallow_tree_search = false;
     params.tree_search_type_str = "NORMAL";
@@ -3011,8 +3011,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
-            if (strcmp(argv[cnt], "--enable-cmaple") == 0) {
-                params.enable_CMaple = true;
+            if (strcmp(argv[cnt], "-infer-alg") == 0 || strcmp(argv[cnt], "--inference-algorithm") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -infer-alg auto|iqtree|cmaple";
+                string alg = argv[cnt];
+                transform(alg.begin(), alg.end(), alg.begin(), ::toupper);
+                if (strcmp(alg.c_str(), "AUTO") == 0)
+                    params.inference_alg = ALG_AUTO;
+                else if (strcmp(alg.c_str(), "IQTREE") == 0)
+                    params.inference_alg = ALG_IQ_TREE;
+                else if (strcmp(alg.c_str(), "CMAPLE") == 0)
+                    params.inference_alg = ALG_CMAPLE;
+                else
+                    throw "Use -infer-alg auto|iqtree|cmaple";
                 continue;
             }
             if (strcmp(argv[cnt], "--out-csv") == 0) {

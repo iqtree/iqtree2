@@ -4322,7 +4322,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     bool runCMapleAlg = false;
     // check and run CMaple algorithm (if users want to do so)
-    if (params.enable_CMaple)
+    if (params.inference_alg != ALG_IQ_TREE)
         runCMapleAlg = runCMaple(params);
         
     // run IQ-TREE algorithm, by default
@@ -4387,10 +4387,27 @@ bool runCMaple(Params &params)
         if (!checkMapleSuitability(aln))
         {
             std::cout << "The input alignment is too divergent, which is inappropriate for [C]Maple algorithm." <<std::endl;
-            std::cout << "Running IQ-TREE algorithm..." << std::endl;
-            return false;
+            
+            // if users force running CMAPLE -> show a warning
+            if (params.inference_alg == ALG_CMAPLE)
+            {
+                std::cout << "We highly recommend to use the IQ-TREE inference algorithm for this analysis."
+                << " Please stop and re-try with `-infer-alg auto`!" << std::endl;
+            }
+            // otherwise, users allow us to choose the inference algorithm -> choose IQ-TREE
+            else
+            {
+                params.inference_alg = ALG_IQ_TREE;
+                std::cout << "Running IQ-TREE algorithm..." << std::endl;
+                return false;
+            }
         }
+        // otherwise, it's suitable to run CMAPLE algorithm here
         else
+            params.inference_alg = ALG_CMAPLE;
+        
+        // run CMAPLE algorithm
+        if (params.inference_alg == ALG_CMAPLE)
         {
             std::cout << "Running [C]MAPLE algorithm..." << std::endl;
             

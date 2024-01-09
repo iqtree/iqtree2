@@ -197,6 +197,15 @@ enum ALI_OPENMP_ALG {
 };
 
 /**
+ *  Specify inference algorithms.
+ */
+enum INFERENCE_ALG {
+    ALG_IQ_TREE,
+    ALG_CMAPLE,
+    ALG_AUTO
+};
+
+/**
  *  Specify 2 simulation approaches.
  */
 enum SEQ_CHUNK_STATUS {
@@ -2603,9 +2612,9 @@ public:
     int alignment_id;
     
     /**
-    *  TRUE to enable [C]Maple algorithm
+    *  The inference algorithm
     */
-    bool enable_CMaple;
+    INFERENCE_ALG inference_alg;
     
     /**
     *  Format of the input alignment
