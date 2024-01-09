@@ -6285,6 +6285,11 @@ void ConnectedRegion::initLeaves()
                 }
         }
     }
+    
+    // make sure all new leaves having names
+    for (auto it = leaves_.begin(); it != leaves_.end(); ++it)
+        if ((*it)->name.length() == 0)
+            (*it)->name = convertIntToString((*it)->id);
 }
 
 ConnectedRegion PhyloTree::selectConnectedRegion(const int& num_leaves)
@@ -6401,6 +6406,33 @@ std::vector<std::vector<double>> ConnectedRegion::extractDisMat()
     }
     
     return dis_mat;
+}
+    
+void ConnectedRegion::outputDisMat(const std::string& file_path)
+{
+    // validate the input
+    if (file_path.length() == 0)
+        outError("Empty file_path!");
+    
+    // first compute the pairwise distance matrix
+    std::vector<std::vector<double>> dis_mat = extractDisMat();
+    
+    // Open a stream to write the output
+    std::ofstream out_stream = ofstream(file_path);
+
+    // Write the distance matrix to file
+    // each line contains <leaf_1> <leaf_2> <distance>
+    for (auto it_1 = leaves_.begin(); it_1 != leaves_.end(); ++it_1)
+    {
+        for (auto it_2 = leaves_.begin(); it_2 != leaves_.end(); ++it_2)
+        {
+            if ((*it_1)->id < (*it_2)->id)
+                out_stream << (*it_1)->name << "\t" << (*it_2)->name << "\t" << std::setprecision(20) << std::fixed << dis_mat[it_1 - leaves_.begin()][it_2 - leaves_.begin()] << std::endl;
+        }
+    }
+
+    // Close the stream
+    out_stream.close();
 }
     
 void ConnectedRegion::computeRawPartialLhAtNode(Node* leaf, double* &raw_partial_lh)

@@ -395,6 +395,11 @@ public:
      @param [out]  raw_partial_lh The output partial lhs
      */
     void computeRawPartialLhAtNode(Node* leaf, double* &raw_partial_lh);
+    
+    /**
+     Output pairwise distance matrix to a file
+     */
+    void outputDisMat(const std::string& file_path);
 };
 
 /**

@@ -2491,24 +2491,8 @@ bool isTreeMixture(Params& params) {
     return (params.model_name.find("+T") != string::npos);
 }
 
-void replaceNameById(Node* const node, Node* const dad)
-{
-    if (!node->isLeaf() && node->name.length() == 0)
-        node->name = convertIntToString(node->id);
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        /*(*it)->length = (*it)->node->id;
-        (*it)->node->findNeighbor(node)->length = (*it)->node->id;*/
-        // Traverse downward to find the node
-        replaceNameById((*it)->node, node);
-    }
-}
-
 void selectConnectedRegions(IQTree* const tree, const int num_connected_regions, const int num_leave_per_region)
 {
-    // for testing only, replace node name by its id
-    replaceNameById(tree->root, nullptr);
-    
     // for testing only, print the tree
     std::cout << "\n Tree: \n";
     tree->printTree(std::cout);
@@ -2564,6 +2548,8 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
 
             std::cout << std::endl;
         }
+        // compute and output distance mat to a file
+        connected_region.outputDisMat("connected_reg_dis_" + convertIntToString(i + 1) + ".txt");
         
         // compute the partial lhs at each new leaf
         tree->clearAllPartialLH();
