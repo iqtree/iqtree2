@@ -334,6 +334,68 @@ public:
 // END traversal information
 // ********************************************
 
+/**
+ A connected region, which is a part of a tree
+ */
+class ConnectedRegion {
+private:
+    /**
+     The parent tree
+     */
+    PhyloTree* parent_tree_;
+    
+    /**
+     A vector of nodes belongs to the connected region
+     */
+    std::vector<Node*> nodes_;
+    
+    /**
+     The leaves of the connected region; each of them could be a leaf or an internal node in the parent tree
+     */
+    std::vector<Node*> leaves_;
+    
+    /**
+     Extract the vector of leaves from the vector of nodes
+     */
+    void initLeaves();
+    
+    /**
+     Recursively compute a pairwise distance between leaves
+     */
+    void extractDistance(std::vector<double>& distance_row, const double& dis_from_root, Node* node, Node* const dad);
+    
+public:
+    /**
+     Constructor
+     @param [in] nodes A vector of nodes belongs to the connected region
+     */
+    ConnectedRegion(std::vector<Node*>&& nodes, PhyloTree* const parent_tree);
+    
+    /**
+     Get the vector of nodes
+     @return A vector of nodes
+     */
+    std::vector<Node*>& getNodes() { return nodes_; };
+    
+    /**
+     Get the vector of leaves
+     @return A vector of leaves
+     */
+    std::vector<Node*>& getLeaves() { return leaves_; };
+    
+    /**
+     Extract the pairwise distance matrix among the new "leave" in a connected region
+     @return A  pairwise distance matrix
+     */
+    std::vector<std::vector<double>> extractDisMat();
+    
+    /**
+     Compute the raw partial lh at a node in a connected region
+     @param [in] leaf The leaf to compute the partial lh
+     @param [out]  raw_partial_lh The output partial lhs
+     */
+    void computeRawPartialLhAtNode(Node* leaf, double* &raw_partial_lh);
+};
 
 /**
 Phylogenetic Tree class
@@ -593,6 +655,13 @@ public:
      * restore branch lengths from a vector previously called with saveBranchLengths
      */
     virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    
+    /**
+     Select a connected region from the current tree
+     @param [in] num_leaves The number of "leaves" in the connected region
+     @return a Connected Region
+     */
+    ConnectedRegion selectConnectedRegion(const int& num_leaves);
 
     /****************************************************************************
             Dot product

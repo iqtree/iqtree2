@@ -6236,3 +6236,191 @@ void PhyloTree::doNNI_simple(NNIMove &move) {
     }
 }
 
+Node* getNodeByID(Node* const node, Node* const dad, const int node_id)
+{
+    // Check if we found the node
+    if (node && node->id == node_id)
+        return node;
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        
+        // Traverse downward to find the node
+        Node* result = getNodeByID((*it)->node, node, node_id);
+        
+        // return result, if found
+        if (result)
+            return result;
+    }
+    
+    // If not found, return null
+    return nullptr;
+}
+    
+void ConnectedRegion::initLeaves()
+{
+    leaves_.resize(0);
+    
+    // Browse selected nodes one by one
+    for (auto it = nodes_.begin(); it != nodes_.end(); ++it)
+    {
+        // If it's a new leave, i.e.,
+        // - either an actual leaf
+        // - or an internal but some of its neighbors have not been selected
+        // -> add it to leaves
+        if ((*it)->isLeaf())
+            leaves_.push_back(*it);
+        else
+        {
+            // browse all neighbors one by one to check whether all of them are selected
+            for (auto neighbor_it = (*it)->neighbors.begin(); neighbor_it !=  (*it)->neighbors.end(); ++neighbor_it)
+                // if one of the neighbor is not selected -> the current node is a new leaf
+                if (std::find(nodes_.begin(), nodes_.end(), (*neighbor_it)->node) == nodes_.end())
+                {
+                    // add the new leaf
+                    leaves_.push_back(*it);
+                    
+                    // don't need to check further
+                    break;
+                }
+        }
+    }
+}
+
+ConnectedRegion PhyloTree::selectConnectedRegion(const int& num_leaves)
+{
+    // validate the inputs
+    if (root == nullptr)
+        outError("root is null!");
+    if (num_leaves > leafNum)
+        outError("num_leave_per_region > leafNum!");
+    if (num_leaves < 0)
+        outError("num_leaves is negative!");
+    
+    std::vector<Node*> selected_nodes(0);
+    
+    // Randomly select the first node
+    Node* selected_node = nullptr;
+    while (!selected_node)
+    {
+        // Randomly select a node id
+        const int selected_node_id = random_int(nodeNum);
+        // Retrieve the pointer to the selected node
+        selected_node = getNodeByID(root, nullptr, selected_node_id);
+    }
+    
+    // Add the newly selected node into the list selected_nodes
+    selected_nodes.push_back(selected_node);
+    int num_selected_leaves = 1;
+    
+    // Iteratively select the remaining nodes
+    while (num_selected_leaves < num_leaves)
+    {
+        int num_new_nodes = 0;
+        
+        // Randomly select a node i from selected_nodes
+        Node* selected_node = selected_nodes[random_int(selected_nodes.size())];
+        
+        // Add all neighbors of the selected_node to the list selected_nodes if they don't exist in that list
+        NeighborVec::iterator it;
+        FOR_NEIGHBOR(selected_node, nullptr, it)
+        {
+            // If a neighbor is not selected yet -> add it to selected_nodes
+            if(std::find(selected_nodes.begin(), selected_nodes.end(), (*it)->node) == selected_nodes.end())
+            {
+                selected_nodes.push_back((*it)->node);
+                ++num_new_nodes;
+            }
+        }
+        
+        // If any new (neighbor) nodes is selected -> update num_selected_leaves
+        if (num_new_nodes > 0)
+        {
+            num_selected_leaves += num_new_nodes;
+            
+            // Adding neighbors of an internal node -> the internal node is not a leaf anymore
+            if (num_new_nodes > 1)
+                --num_selected_leaves;
+        }
+    }
+    
+    // init and return a connected region
+    return ConnectedRegion(std::move(selected_nodes), this);
+}
+
+void ConnectedRegion::extractDistance(std::vector<double>& distance_row, const double& dis_from_root, Node* node, Node* const dad)
+{
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // if current node is a leaf -> record the distance to the root
+        auto leaf_index = std::find(leaves_.begin(), leaves_.end(), (*it)->node);
+        if (leaf_index != leaves_.end())
+            distance_row[leaf_index - leaves_.begin()] = dis_from_root + (*it)->length;
+        // otherwise, it's an internal node -> keep traversing further down
+        else
+            extractDistance(distance_row, dis_from_root + (*it)->length, (*it)->node, node);
+    }
+}
+    
+ConnectedRegion::ConnectedRegion(std::vector<Node*>&& nodes, PhyloTree* const parent_tree)
+{
+    nodes_ = std::move(nodes);
+    parent_tree_ = parent_tree;
+    
+    // init the vector of leaves from the vector of nodes
+    initLeaves();
+}
+
+std::vector<std::vector<double>> ConnectedRegion::extractDisMat()
+{
+    // init the matrix
+    const int num_leaves = leaves_.size();
+    std::vector<std::vector<double>> dis_mat(num_leaves);
+    for (auto i = 0; i < num_leaves; ++i)
+        dis_mat[i].resize(num_leaves);
+    
+    // Browse all leaves
+    // for (std::vector<Node*>::iterator it = leaves.begin(), int i = 0; (it != leaves.end()); it++, i++)
+    for (auto it = leaves_.begin(); it != leaves_.end(); ++it)
+    {
+        Node* dad = nullptr;
+        // if the current leaf is not an actually leaf (i.e., it's an internal node but some of its neighbor have not been selected)
+        if (!(*it)->isLeaf())
+        {
+            // find the unselected neighbor -> it will be the dad node to start traverse the tree from the current leaf
+            for (auto neighbor_it = (*it)->neighbors.begin(); neighbor_it != (*it)->neighbors.end(); ++neighbor_it)
+                if (std::find(nodes_.begin(), nodes_.end(), (*neighbor_it)->node) == nodes_.end())
+                {
+                    dad = (*neighbor_it)->node;
+                    break;
+                }
+        }
+        
+        // extract pairwise distance from one leave to other leave
+        extractDistance(dis_mat[it - leaves_.begin()], 0, (*it), dad);
+    }
+    
+    return dis_mat;
+}
+    
+void ConnectedRegion::computeRawPartialLhAtNode(Node* leaf, double* &raw_partial_lh)
+{
+    // cast the leaf
+    PhyloNode* tmp_node = (PhyloNode*) leaf;
+    
+    // search the dad node
+    PhyloNode* tmp_dad = nullptr;
+    for (auto neighbor_it = tmp_node->neighbors.begin(); neighbor_it !=  tmp_node->neighbors.end(); ++neighbor_it)
+        // if one of the neighbor is selected -> that one is the parent node of this leaf
+        if (std::find(nodes_.begin(), nodes_.end(), (*neighbor_it)->node) != nodes_.end())
+        {
+            // add the new leaf
+            tmp_dad = (PhyloNode*) (*neighbor_it)->node;
+            
+            // don't need to check further
+            break;
+        }
+    
+    // compute the partial lh
+    parent_tree_->computeRawPartialLikelihood(tmp_dad, tmp_node, raw_partial_lh);
+}

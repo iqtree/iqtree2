@@ -2491,164 +2491,6 @@ bool isTreeMixture(Params& params) {
     return (params.model_name.find("+T") != string::npos);
 }
 
-Node* getNodeByID(Node* const node, Node* const dad, const int node_id)
-{
-    // Check if we found the node
-    if (node && node->id == node_id)
-        return node;
-    
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        
-        // Traverse downward to find the node
-        Node* result = getNodeByID((*it)->node, node, node_id);
-        
-        // return result, if found
-        if (result)
-            return result;
-    }
-    
-    // If not found, return null
-    return nullptr;
-}
-
-std::vector<Node*> selectConnectedRegion(const IQTree* const tree, const int& num_leaves)
-{
-    // validate the input
-    if (!tree)
-        outError("Tree is null!");
-    if (num_leaves < 0)
-        outError("num_leaves is negative!");
-    
-    std::vector<Node*> selected_nodes;
-    
-    // Randomly select the first node
-    Node* selected_node = nullptr;
-    while (!selected_node)
-    {
-        // Randomly select a node id
-        const int selected_node_id = random_int(tree->nodeNum);
-        // Retrieve the pointer to the selected node
-        selected_node = getNodeByID(tree->root, nullptr, selected_node_id);
-    }
-    
-    // Add the newly selected node into the list selected_nodes
-    selected_nodes.push_back(selected_node);
-    int num_selected_leaves = 1;
-    
-    // Iteratively select the remaining nodes
-    while (num_selected_leaves < num_leaves)
-    {
-        int num_new_nodes = 0;
-        
-        // Randomly select a node i from selected_nodes
-        Node* selected_node = selected_nodes[random_int(selected_nodes.size())];
-        
-        // Add all neighbors of the selected_node to the list selected_nodes if they don't exist in that list
-        NeighborVec::iterator it;
-        FOR_NEIGHBOR(selected_node, nullptr, it)
-        {
-            // If a neighbor is not selected yet -> add it to selected_nodes
-            if(std::find(selected_nodes.begin(), selected_nodes.end(), (*it)->node) == selected_nodes.end())
-            {
-                selected_nodes.push_back((*it)->node);
-                ++num_new_nodes;
-            }
-        }
-        
-        // If any new (neighbor) nodes is selected -> update num_selected_leaves
-        if (num_new_nodes > 0)
-        {
-            num_selected_leaves += num_new_nodes;
-            
-            // Adding neighbors of an internal node -> the internal node is not a leaf anymore
-            if (num_new_nodes > 1)
-                --num_selected_leaves;
-        }
-    }
-    
-    // return selected_nodes
-    return selected_nodes;
-}
-
-vector<Node*> getNewLeaves(const std::vector<Node*>& selected_nodes)
-{
-    vector<Node*> leaves;
-    
-    // Browse selected nodes one by one
-    for (auto it = selected_nodes.begin(); it != selected_nodes.end(); ++it)
-    {
-        // If it's a new leave, i.e.,
-        // - either an actual leaf
-        // - or an internal but some of its neighbors have not been selected
-        // -> add it to leaves
-        if ((*it)->isLeaf())
-            leaves.push_back(*it);
-        else
-        {
-            // browse all neighbors one by one to check whether all of them are selected
-            for (auto neighbor_it = (*it)->neighbors.begin(); neighbor_it !=  (*it)->neighbors.end(); ++neighbor_it)
-                // if one of the neighbor is not selected -> the current node is a new leaf
-                if (std::find(selected_nodes.begin(), selected_nodes.end(), (*neighbor_it)->node) == selected_nodes.end())
-                {
-                    // add the new leaf
-                    leaves.push_back(*it);
-                    
-                    // don't need to check further
-                    break;
-                }
-        }
-    }
-    
-    return leaves;
-}
-
-void extractDistance(std::vector<double>& distance_row, const std::vector<Node*>& leaves, double dis_from_root, Node* node, Node* const dad)
-{
-    NeighborVec::iterator it;
-    FOR_NEIGHBOR(node, dad, it) {
-        // if current node is a leaf -> record the distance to the root
-        auto leaf_index = std::find(leaves.begin(), leaves.end(), (*it)->node);
-        if (leaf_index != leaves.end())
-            distance_row[leaf_index - leaves.begin()] = dis_from_root + (*it)->length;
-        // otherwise, it's an internal node -> keep traversing further down
-        else
-            extractDistance(distance_row, leaves, dis_from_root + (*it)->length, (*it)->node, node);
-    }
-}
-
-std::vector<std::vector<double>> extractDisMat(const std::vector<Node*>& selected_nodes, const std::vector<Node*>& leaves)
-{
-    // init the matrix
-    const int num_leaves = leaves.size();
-    std::vector<std::vector<double>> dis_mat(num_leaves);
-    for (auto i = 0; i < num_leaves; ++i)
-        dis_mat[i].resize(num_leaves);
-    
-    // Browse all leaves
-    // for (std::vector<Node*>::iterator it = leaves.begin(), int i = 0; (it != leaves.end()); it++, i++)
-    for (auto it = leaves.begin(); it != leaves.end(); ++it)
-    {
-        Node* dad = nullptr;
-        // if the current leaf is not an actually leaf (i.e., it's an internal node but some of its neighbor have not been selected)
-        if (!(*it)->isLeaf())
-        {
-            // find the unselected neighbor -> it will be the dad node to start traverse the tree from the current leaf
-            for (auto neighbor_it = (*it)->neighbors.begin(); neighbor_it != (*it)->neighbors.end(); ++neighbor_it)
-                if (std::find(selected_nodes.begin(), selected_nodes.end(), (*neighbor_it)->node) == selected_nodes.end())
-                {
-                    dad = (*neighbor_it)->node;
-                    break;
-                }
-        }
-        
-        // extract pairwise distance from one leave to other leave
-        extractDistance(dis_mat[it - leaves.begin()], leaves, 0, (*it), dad);
-    }
-    
-    return dis_mat;
-}
-
 void replaceNameById(Node* const node, Node* const dad)
 {
     if (!node->isLeaf() && node->name.length() == 0)
@@ -2664,10 +2506,6 @@ void replaceNameById(Node* const node, Node* const dad)
 
 void selectConnectedRegions(IQTree* const tree, const int num_connected_regions, const int num_leave_per_region)
 {
-    // validate the inputs
-    if (num_leave_per_region > tree->leafNum)
-        outError("num_leave_per_region > tree->leafNum!");
-    
     // for testing only, replace node name by its id
     replaceNameById(tree->root, nullptr);
     
@@ -2696,28 +2534,29 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
     // select connected regions
     for (auto i = 0; i < num_connected_regions; ++i)
     {
-        std::vector<Node*> connected_regions = selectConnectedRegion(tree, num_leave_per_region);
+        ConnectedRegion connected_region = tree->selectConnectedRegion(num_leave_per_region);
+        std::vector<Node*>& nodes = connected_region.getNodes();
+        std::vector<Node*>& leaves = connected_region.getLeaves();
+        ASSERT(leaves.size() == num_leave_per_region);
         
         // for testing only
-        ++histogram[connected_regions[0]->id];
+        ++histogram[nodes[0]->id];
         
         // output the connected region
         std::cout << "\nConnected region " << (i + 1) << ":" << std::endl;
-        for (auto it = connected_regions.begin(); it != connected_regions.end(); ++it)
+        for (auto it = nodes.begin(); it != nodes.end(); ++it)
             std::cout << " " << (*it)->name;
         std::cout << std::endl;
         
         // output the new leave of the connected region
-        std::vector<Node*> leaves = getNewLeaves(connected_regions);
-        ASSERT(leaves.size() == num_leave_per_region);
         std::cout << "Leaves of the connected region " << (i + 1) << ":" << std::endl;
         for (auto it = leaves.begin(); it != leaves.end(); ++it)
             std::cout << (*it)->name << "\t";
         std::cout << std::endl;
         
         // extract distance matrix
+        std::vector<std::vector<double>> dis_mat = connected_region.extractDisMat();
         std::cout << "Distance matrix:" << std::endl;
-        std::vector<std::vector<double>> dis_mat = extractDisMat(connected_regions, leaves);
         for (auto row_it = dis_mat.begin(); row_it != dis_mat.end(); ++row_it)
         {
             for (auto cell_it = (*row_it).begin(); cell_it != (*row_it).end(); ++cell_it)
@@ -2727,28 +2566,14 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
         }
         
         // compute the partial lhs at each new leaf
-        std::cout << "Partial lhs at each new leaf:" << std::endl;
+        tree->clearAllPartialLH();
         double* buffer_partial_lh = nullptr;
+        std::cout << "Partial lhs at each new leaf:" << std::endl;
         for (auto it = leaves.begin(); it != leaves.end(); ++it)
         {
             std::cout << "- Partial lhs at " << (*it)->name << ":" << std::endl;
             
-            // extract leaf and its parent node
-            tree->clearAllPartialLH();
-            PhyloNode* tmp_node = (PhyloNode*) (*it);
-            PhyloNode* tmp_dad = nullptr;
-            for (auto neighbor_it = tmp_node->neighbors.begin(); neighbor_it !=  tmp_node->neighbors.end(); ++neighbor_it)
-                // if one of the neighbor is selected -> that one is the parent node of this leaf
-                if (std::find(connected_regions.begin(), connected_regions.end(), (*neighbor_it)->node) != connected_regions.end())
-                {
-                    // add the new leaf
-                    tmp_dad = (PhyloNode*) (*neighbor_it)->node;
-                    
-                    // don't need to check further
-                    break;
-                }
-            tree->computeRawPartialLikelihood(tmp_dad, tmp_node,
-                                                buffer_partial_lh);
+            connected_region.computeRawPartialLhAtNode((*it), buffer_partial_lh);
             
             // show result
             double* buffer_partial_lh_ptr = buffer_partial_lh;
