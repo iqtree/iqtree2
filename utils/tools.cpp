@@ -5664,7 +5664,8 @@ void usage(char* argv[]) {
     //	cout << "  -noout              Print no output file." << endl;
     cout << endl;
     cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
-    cout << "  --enable-cmaple   Run the tree inference with [C]MAPLE algorithm" << endl;
+    cout << "  -infer-alg <ALG>     Choose the inference algorithm." << endl;
+    cout << "                       <ALGORITHM> could be `iqtree`, `cmaple`, or `auto`." << endl;
     cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
@@ -5979,7 +5980,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
     
     << endl << "GENOMIC EPIDEMIOLOGICAL ANALYSIS:" << endl
-    << "  --enable-cmaple      Run the tree inference with [C]MAPLE algorithm." << endl
+    << "  -infer-alg <ALG>     Choose the inference algorithm." << endl
+    << "                       <ALG> could be `iqtree`, `cmaple`, or `auto`." << endl
     
     
     
