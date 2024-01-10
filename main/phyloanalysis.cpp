@@ -2516,12 +2516,16 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
     std::cout << std::endl;
     
     // select connected regions
+    const std::string connected_reg_pref = "connected_region";
     for (auto i = 0; i < num_connected_regions; ++i)
     {
-        ConnectedRegion connected_region = tree->selectConnectedRegion(num_leave_per_region);
+        ConnectedRegion connected_region = tree->selectConnectedRegion(num_leave_per_region, connected_reg_pref + "_" + convertIntToString(i + 1));
         std::vector<Node*>& nodes = connected_region.getNodes();
         std::vector<Node*>& leaves = connected_region.getLeaves();
         ASSERT(leaves.size() == num_leave_per_region);
+        
+        // write the connected region to a file
+        connected_region.write(connected_region.getKey() + ".txt");
         
         // for testing only
         ++histogram[nodes[0]->id];
@@ -2549,7 +2553,7 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
             std::cout << std::endl;
         }
         // compute and output distance mat to a file
-        connected_region.outputDisMat("connected_reg_dis_" + convertIntToString(i + 1) + ".txt");
+        connected_region.outputDisMat("dis_mat_" + connected_region.getKey() + ".txt");
         
         // compute the partial lhs at each new leaf
         tree->clearAllPartialLH();

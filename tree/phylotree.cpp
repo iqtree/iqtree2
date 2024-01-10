@@ -6285,14 +6285,9 @@ void ConnectedRegion::initLeaves()
                 }
         }
     }
-    
-    // make sure all new leaves having names
-    for (auto it = leaves_.begin(); it != leaves_.end(); ++it)
-        if ((*it)->name.length() == 0)
-            (*it)->name = convertIntToString((*it)->id);
 }
 
-ConnectedRegion PhyloTree::selectConnectedRegion(const int& num_leaves)
+ConnectedRegion PhyloTree::selectConnectedRegion(const int& num_leaves, const std::string& key)
 {
     // validate the inputs
     if (root == nullptr)
@@ -6350,7 +6345,7 @@ ConnectedRegion PhyloTree::selectConnectedRegion(const int& num_leaves)
     }
     
     // init and return a connected region
-    return ConnectedRegion(std::move(selected_nodes), this);
+    return ConnectedRegion(std::move(selected_nodes), this, key);
 }
 
 void ConnectedRegion::extractDistance(std::vector<double>& distance_row, const double& dis_from_root, Node* node, Node* const dad)
@@ -6367,10 +6362,16 @@ void ConnectedRegion::extractDistance(std::vector<double>& distance_row, const d
     }
 }
     
-ConnectedRegion::ConnectedRegion(std::vector<Node*>&& nodes, PhyloTree* const parent_tree)
+ConnectedRegion::ConnectedRegion(std::vector<Node*>&& nodes, PhyloTree* const parent_tree, const std::string& key)
 {
+    key_ = key;
     nodes_ = std::move(nodes);
     parent_tree_ = parent_tree;
+    
+    // make sure all new nodes having names
+    for (auto it = nodes_.begin(); it != nodes_.end(); ++it)
+        if ((*it)->name.length() == 0)
+            (*it)->name = convertIntToString((*it)->id);
     
     // init the vector of leaves from the vector of nodes
     initLeaves();
@@ -6408,6 +6409,33 @@ std::vector<std::vector<double>> ConnectedRegion::extractDisMat()
     return dis_mat;
 }
     
+void ConnectedRegion::write(const std::string& file_path)
+{
+    // validate the input
+    if (file_path.length() == 0)
+        outError("Empty file_path!");
+    
+    // Open a stream to write the output
+    std::ofstream out_stream = ofstream(file_path);
+
+    // write the first line: <tree_id>
+    out_stream << key_ << std::endl;
+    
+    // write <list of leaves>
+    for (auto it_1 = leaves_.begin(); it_1 != leaves_.end(); ++it_1)
+        out_stream << (*it_1)->name << "\t";
+    out_stream << std::endl;
+    
+    // write <list of nodes>
+    for (auto it_1 = nodes_.begin(); it_1 != nodes_.end(); ++it_1)
+        out_stream << (*it_1)->name << "\t";
+    out_stream << std::endl;
+    
+    // Close the stream
+    out_stream.close();
+    
+}
+    
 void ConnectedRegion::outputDisMat(const std::string& file_path)
 {
     // validate the input
@@ -6426,7 +6454,7 @@ void ConnectedRegion::outputDisMat(const std::string& file_path)
     {
         for (auto it_2 = leaves_.begin(); it_2 != leaves_.end(); ++it_2)
         {
-            if ((*it_1)->id < (*it_2)->id)
+            if (it_1 < it_2)
                 out_stream << (*it_1)->name << "\t" << (*it_2)->name << "\t" << std::setprecision(20) << std::fixed << dis_mat[it_1 - leaves_.begin()][it_2 - leaves_.begin()] << std::endl;
         }
     }

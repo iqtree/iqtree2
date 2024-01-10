@@ -340,6 +340,11 @@ public:
 class ConnectedRegion {
 private:
     /**
+     The key of the connected region
+     */
+    std::string key_;
+    
+    /**
      The parent tree
      */
     PhyloTree* parent_tree_;
@@ -369,19 +374,31 @@ public:
      Constructor
      @param [in] nodes A vector of nodes belongs to the connected region
      */
-    ConnectedRegion(std::vector<Node*>&& nodes, PhyloTree* const parent_tree);
+    ConnectedRegion(std::vector<Node*>&& nodes, PhyloTree* const parent_tree, const std::string& key = "");
+    
+    /**
+     Get the key
+     @return key
+     */
+    std::string getKey() { return key_; }
+    
+    /**
+     Set the key
+     @param [in] key The new key
+     */
+    void setKey(const std::string& key) { key_ = key; }
     
     /**
      Get the vector of nodes
      @return A vector of nodes
      */
-    std::vector<Node*>& getNodes() { return nodes_; };
+    std::vector<Node*>& getNodes() { return nodes_; }
     
     /**
      Get the vector of leaves
      @return A vector of leaves
      */
-    std::vector<Node*>& getLeaves() { return leaves_; };
+    std::vector<Node*>& getLeaves() { return leaves_; }
     
     /**
      Extract the pairwise distance matrix among the new "leave" in a connected region
@@ -397,7 +414,14 @@ public:
     void computeRawPartialLhAtNode(Node* leaf, double* &raw_partial_lh);
     
     /**
-     Output pairwise distance matrix to a file
+     Output the connected region
+     @param [in] file_path Path to the output file
+     */
+    void write(const std::string& file_path);
+    
+    /**
+     Output pairwise distance matrix among leaves of a connected region to a file
+     @param [in] file_path Path to the output file
      */
     void outputDisMat(const std::string& file_path);
 };
@@ -664,9 +688,10 @@ public:
     /**
      Select a connected region from the current tree
      @param [in] num_leaves The number of "leaves" in the connected region
+     @param [in] key The key (identity) of the connected region
      @return a Connected Region
      */
-    ConnectedRegion selectConnectedRegion(const int& num_leaves);
+    ConnectedRegion selectConnectedRegion(const int& num_leaves, const std::string& key = "");
 
     /****************************************************************************
             Dot product
