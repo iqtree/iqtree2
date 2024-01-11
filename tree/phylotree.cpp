@@ -6455,10 +6455,58 @@ void ConnectedRegion::outputDisMat(const std::string& file_path)
         for (auto it_2 = leaves_.begin(); it_2 != leaves_.end(); ++it_2)
         {
             if (it_1 < it_2)
-                out_stream << (*it_1)->name << "\t" << (*it_2)->name << "\t" << std::setprecision(20) << std::fixed << dis_mat[it_1 - leaves_.begin()][it_2 - leaves_.begin()] << std::endl;
+                out_stream << (*it_1)->name << "\t" << (*it_2)->name << "\t" << std::setprecision(30) << std::scientific << dis_mat[it_1 - leaves_.begin()][it_2 - leaves_.begin()] << std::endl;
         }
     }
 
+    // Close the stream
+    out_stream.close();
+}
+    
+void ConnectedRegion::outputPartialLhs(const std::string& file_path)
+{
+    // validate the input
+    if (file_path.length() == 0)
+        outError("Empty file_path!");
+    
+    // Open a stream to write the output
+    std::ofstream out_stream = ofstream(file_path);
+    
+    // Write the site pattern frequencies
+    auto nptn = parent_tree_->aln->size();
+    auto nstates = parent_tree_->getModel()->num_states;
+    
+    // output site_pattern info
+    Alignment* const aln = parent_tree_->aln;
+    for (auto i = 0; i < nptn; ++i)
+    {
+        out_stream << aln->at(i).frequency << "\t";
+    }
+    out_stream << std::endl;
+    
+    // compute the partial lhs at each new leaf
+    parent_tree_->clearAllPartialLH();
+    double* buffer_partial_lh = nullptr;
+    for (auto it = leaves_.begin(); it != leaves_.end(); ++it)
+    {
+        out_stream << ">" << (*it)->name << std::endl;
+        
+        computeRawPartialLhAtNode((*it), buffer_partial_lh);
+        
+        // output the results
+        double* buffer_partial_lh_ptr = buffer_partial_lh;
+        for (auto i = 0; i < nptn; ++i)
+        {
+            for (auto j = 0; j < nstates; ++j, ++buffer_partial_lh_ptr)
+            {
+                out_stream << std::setprecision(50) << std::scientific << buffer_partial_lh_ptr[0] << "\t";
+            }
+            out_stream << std::endl;
+        }
+    }
+    // delete buffer_partial_lh
+    delete[] buffer_partial_lh;
+    
     // Close the stream
     out_stream.close();
 }

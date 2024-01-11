@@ -424,6 +424,12 @@ public:
      @param [in] file_path Path to the output file
      */
     void outputDisMat(const std::string& file_path);
+    
+    /**
+     Output partial lhs at leaves to a file
+     @param [in] file_path Path to the output file
+     */
+    void outputPartialLhs(const std::string& file_path);
 };
 
 /**

@@ -2555,28 +2555,8 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
         // compute and output distance mat to a file
         connected_region.outputDisMat("dis_mat_" + connected_region.getKey() + ".txt");
         
-        // compute the partial lhs at each new leaf
-        tree->clearAllPartialLH();
-        double* buffer_partial_lh = nullptr;
-        std::cout << "Partial lhs at each new leaf:" << std::endl;
-        for (auto it = leaves.begin(); it != leaves.end(); ++it)
-        {
-            std::cout << "- Partial lhs at " << (*it)->name << ":" << std::endl;
-            
-            connected_region.computeRawPartialLhAtNode((*it), buffer_partial_lh);
-            
-            // show result
-            double* buffer_partial_lh_ptr = buffer_partial_lh;
-            for (auto i = 0; i < nptn; ++i)
-            {
-                for (auto j = 0; j < nstates; ++j, ++buffer_partial_lh_ptr)
-                    std::cout << std::setprecision(50) << buffer_partial_lh_ptr[0] << " ";
-                std::cout << std::endl;
-            }
-            std::cout << std::endl;
-        }
-        // delete buffer_partial_lh
-        delete[] buffer_partial_lh;
+        // compute and write the partial lhs at leaves to a file
+        connected_region.outputPartialLhs("partial_lhs_" + connected_region.getKey() + ".txt");
     }
     
     // for testing only, show histogram
