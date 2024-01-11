@@ -1129,6 +1129,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_type = BRLEN_OPTIMIZE;
     params.partfinder_rcluster = 100;
     params.partfinder_rcluster_max = 0;
+    params.partfinder_threading_method = 0;
     params.partition_merge = MERGE_NONE;
     params.merge_models = "1";
     params.merge_rates = "1";
@@ -2482,12 +2483,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -rcluster-max <num>";
                 params.partfinder_rcluster_max = convert_int(argv[cnt]);
                 if (params.partfinder_rcluster_max <= 0)
-                    throw "rcluster-max must be between > 0";
+                    throw "rcluster-max must be > 0";
                 if (params.partfinder_rcluster == 100)
                     params.partfinder_rcluster = 99.9999;
                 if (params.partition_merge != MERGE_RCLUSTER && params.partition_merge != MERGE_RCLUSTERF)
                     params.partition_merge = MERGE_RCLUSTERF;
 				continue;
+            }
+            
+            if (strcmp(argv[cnt], "-rcluster-threading") == 0 || strcmp(argv[cnt], "--rcluster-threading") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -rcluster-threading <0|1|2|3>";
+                params.partfinder_threading_method = convert_int(argv[cnt]);
+                if (params.partfinder_threading_method < 0 || params.partfinder_threading_method > 3)
+                    throw "rcluster-threading must be between 0 and 3";
+                continue;
             }
 
             if (strcmp(argv[cnt], "--merge") == 0) {

@@ -975,6 +975,13 @@ public:
 
     /** absolute limit on #partition pairs for rcluster algorithm */
     size_t partfinder_rcluster_max;
+    
+    /** threading method for PartitionFinder
+     *  0 (default) : when number of threads is less than or equal to the number of partitions, each thread is assigned to work on one partition
+     *           otherwise, analysis on every partition one by one using all threads
+     *  1:                each thread is assigned for one job, which is defined as an analysis under one model on one partition
+     */
+    int partfinder_threading_method;
 
     /** set of models used for model merging phase */
     string merge_models;
