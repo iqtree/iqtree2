@@ -2791,9 +2791,6 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
             }
         }
     }
-    
-    // return raw_partial_lh
-    return raw_partial_lh;
 }
 
 /*******************************************************
