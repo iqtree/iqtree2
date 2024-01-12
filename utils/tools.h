@@ -2365,6 +2365,26 @@ public:
     double suppress_duplicate_sequence_warnings;
     
     /**
+    *  number of connected regions to extract from the tree
+    */
+    int num_con_regs;
+    
+    /**
+    *  size (interm of #leaves) of a connected region
+    */
+    int con_regs_size;
+    
+    /**
+    *  prefix to output the distance matricies of connected regions
+    */
+    string dis_mat_pref;
+    
+    /**
+    *  prefix to output the partial lhs at leaves of connected regions
+    */
+    string partial_lhs_pref;
+    
+    /**
     *  TRUE to execute alisim
     */
     bool alisim_active;

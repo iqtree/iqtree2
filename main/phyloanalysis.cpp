@@ -2494,32 +2494,35 @@ bool isTreeMixture(Params& params) {
 void selectConnectedRegions(IQTree* const tree, const int num_connected_regions, const int num_leave_per_region)
 {
     // for testing only, print the tree
-    std::cout << "\n Tree: \n";
+    /*std::cout << "\n Tree: \n";
     tree->printTree(std::cout);
     std::cout << std::endl;
     
     // for testing only
     std::vector<int> histogram;
-    histogram.resize(tree->nodeNum, 0);
+    histogram.resize(tree->nodeNum, 0);*/
     
     // dummy variables
     auto nstates = tree->getModel()->num_states;
     auto nptn = tree->aln->size();
     
-    // output site_pattern info
-    std::cout << "\n#site_patterns: " << nptn << std::endl;
+    // for testing only, output site_pattern info
+    /* std::cout << "\n#site_patterns: " << nptn << std::endl;
     std::cout << "#site_ptn_freqs " << ":" << std::endl;
     for (auto i = 0; i < nptn; ++i)
     {
         std::cout << tree->aln->at(i).frequency << " ";
     }
-    std::cout << std::endl;
+    std::cout << std::endl;*/
     
     // select connected regions
-    const std::string connected_reg_pref = "connected_region";
+    std::string connected_reg_pref = tree->params->user_file != nullptr ? string(tree->params->user_file) : "";
+    if (connected_reg_pref == "")
+        connected_reg_pref = string(tree->params->aln_file);
+    
     for (auto i = 0; i < num_connected_regions; ++i)
     {
-        ConnectedRegion connected_region = tree->selectConnectedRegion(num_leave_per_region, connected_reg_pref + "_" + convertIntToString(i + 1));
+        ConnectedRegion connected_region = tree->selectConnectedRegion(num_leave_per_region, connected_reg_pref + ".con_reg_" + convertIntToString(i + 1));
         std::vector<Node*>& nodes = connected_region.getNodes();
         std::vector<Node*>& leaves = connected_region.getLeaves();
         ASSERT(leaves.size() == num_leave_per_region);
@@ -2528,13 +2531,13 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
         connected_region.write(connected_region.getKey() + ".txt");
         
         // for testing only
-        ++histogram[nodes[0]->id];
+        // ++histogram[nodes[0]->id];
         
         // output the connected region
-        std::cout << "\nConnected region " << (i + 1) << ":" << std::endl;
+        /* std::cout << "\nConnected region " << (i + 1) << ":" << std::endl;
         for (auto it = nodes.begin(); it != nodes.end(); ++it)
             std::cout << " " << (*it)->name;
-        std::cout << std::endl;
+        std::cout << std::endl;*/
         
         // output the new leave of the connected region
         std::cout << "Leaves of the connected region " << (i + 1) << ":" << std::endl;
@@ -2543,27 +2546,33 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
         std::cout << std::endl;
         
         // extract distance matrix
-        std::vector<std::vector<double>> dis_mat = connected_region.extractDisMat();
-        std::cout << "Distance matrix:" << std::endl;
-        for (auto row_it = dis_mat.begin(); row_it != dis_mat.end(); ++row_it)
+        if (tree->params->dis_mat_pref != "")
         {
-            for (auto cell_it = (*row_it).begin(); cell_it != (*row_it).end(); ++cell_it)
-                std::cout << std::setprecision(2) << (*cell_it) << "\t";
-
-            std::cout << std::endl;
+            std::vector<std::vector<double>> dis_mat = connected_region.extractDisMat();
+            /*std::cout << "Distance matrix:" << std::endl;
+             for (auto row_it = dis_mat.begin(); row_it != dis_mat.end(); ++row_it)
+             {
+             for (auto cell_it = (*row_it).begin(); cell_it != (*row_it).end(); ++cell_it)
+             std::cout << std::setprecision(2) << (*cell_it) << "\t";
+             
+             std::cout << std::endl;
+             }*/
+            // compute and output distance mat to a file
+            connected_region.outputDisMat(tree->params->dis_mat_pref + "_" + convertIntToString(i + 1) + ".txt");
         }
-        // compute and output distance mat to a file
-        connected_region.outputDisMat("dis_mat_" + connected_region.getKey() + ".txt");
         
         // compute and write the partial lhs at leaves to a file
-        connected_region.outputPartialLhs("partial_lhs_" + connected_region.getKey() + ".txt");
+        if (tree->params->partial_lhs_pref != "")
+        {
+            connected_region.outputPartialLhs(tree->params->partial_lhs_pref + "_" + convertIntToString(i + 1) + ".txt");
+        }
     }
     
     // for testing only, show histogram
-    std::cout << "\n Histogram: " <<  std::endl;
+    /*std::cout << "\n Histogram: " <<  std::endl;
     for (auto i = 0; i < histogram.size(); ++i)
         std::cout << histogram[i] << " ";
-    std::cout << std::endl;
+    std::cout << std::endl;*/
 }
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
@@ -2976,7 +2985,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     
     // NHANLT - TEST
     // --------------- BEGINNING OF TESTS ---------------------- //
-    selectConnectedRegions(iqtree, 10, 20);
+    
+    if (iqtree->params->num_con_regs > 0)
+        selectConnectedRegions(iqtree, iqtree->params->num_con_regs, iqtree->params->con_regs_size);
     
     // --------------- END OF TESTS ---------------------- //
 

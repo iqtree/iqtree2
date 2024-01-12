@@ -1442,6 +1442,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.suppress_zero_distance_warnings = false;
     params.suppress_duplicate_sequence_warnings = false;
     
+    params.num_con_regs = 0;
+    params.con_regs_size = 20;
+    params.dis_mat_pref = "";
+    params.partial_lhs_pref = "";
+    
     params.original_params = "";
     params.alisim_active = false;
     params.alisim_inference_mode = false;
@@ -5250,6 +5255,44 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "-num-con-regs") == 0) {
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "-num-con-regs <NUM>";
+                params.num_con_regs = convert_int(argv[cnt]);
+                
+                if (params.num_con_regs <= 0)
+                    throw "Number of connected regions must be positive!";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-con-regs-size") == 0) {
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "-con-regs-size <NUM>";
+                params.con_regs_size = convert_int(argv[cnt]);
+                
+                if (params.con_regs_size < 3)
+                    throw "Size of a connected region must be at least 3!";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-dis-mat") == 0) {
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "-dis-mat <PREFIX>";
+                params.dis_mat_pref = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-partial-lh") == 0) {
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "-partial-lh <PREFIX>";
+                params.partial_lhs_pref = argv[cnt];
+                continue;
+            }
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
                 
