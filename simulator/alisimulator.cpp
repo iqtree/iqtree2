@@ -380,7 +380,12 @@ void AliSimulator::initializeAlignment(IQTree *tree, string model_fullname)
                 }
             }
             if (tree->aln->seq_type != SEQ_UNKNOWN)
+            {
                 tree->aln->sequence_type = tree->aln->getSeqTypeStr(tree->aln->seq_type);
+                // Bug fix: avoid loosing the codon<format>
+                if (tree->aln->seq_type == SEQ_CODON && params->sequence_type && string(params->sequence_type) != "")
+                    tree->aln->sequence_type = params->sequence_type;
+            }
         }
     }
     
