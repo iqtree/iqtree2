@@ -2663,6 +2663,15 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
     size_t ncat = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t block = ncat_mix * nstates;
+    
+    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
+    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    for (size_t c = 0; c < ncat_mix; c++) {
+        size_t m = c/denom;
+        mix_addr_nstates[c] = m*nstates;
+        mix_addr[c] = mix_addr_nstates[c]*nstates;
+    }
+    
     double* evec = model->getEigenvectors();
     
     // initialize raw_partial_lh (if necessary)
@@ -2759,11 +2768,10 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
                 // get the starting location of raw_partial_lh
                 double* raw_partial_lh_ptr = raw_partial_lh + index_raw_partial_lh;
                 
-                // get the starting location of evec
-                double* evec_ptr = evec;
-                
                 // Loop to handle cases with mixture models
                 for (size_t c = 0; c < ncat_mix; c++) {
+                    // get the starting location of evec
+                    double* evec_ptr = evec + mix_addr[c];
                     
                     // compute raw partial likelihood vector (removing the eigen vector factor)
                     for (size_t x = 0; x < nstates; x++) {
