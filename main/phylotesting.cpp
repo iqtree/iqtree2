@@ -3507,8 +3507,8 @@ void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &
         string orig_model_set = params.model_set;
         params.model_set = "GTR+FO"; // TODO: should depend on the sequence type
         do_init_tree = false;
+        model_str = best_subst_name;
         do {
-            model_str = best_subst_name;
             best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
             cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
             LR = 2.0 * (best_model.logl - curr_loglike);
@@ -3520,8 +3520,9 @@ void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &
             if (better_model) {
                 curr_df = best_model.df;
                 curr_loglike = best_model.logl;
+                model_str = best_subst_name;
             }
-        } while (better_model);
+        } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
         params.model_set = orig_model_set;
         best_subst_name = model_str;
     } else {
@@ -3619,8 +3620,8 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     }
     action = 4;
     do_init_tree = false;
+    model_str = best_subst_name;
     do {
-        model_str = best_subst_name;
         best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
         cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
         if (params.opt_qmix_criteria == 1) {
@@ -3638,8 +3639,9 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
             curr_df = best_model.df;
             curr_loglike = best_model.logl;
             curr_score = best_model.getScore();
+            model_str = best_subst_name;
         }
-    } while (better_model);
+    } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
     
     best_subst_name = model_str;
     
@@ -3663,17 +3665,20 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     IQTree* new_iqtree;
     string model_str;
 
-    if (params.model_name != "ESTMIXNUM")
+    if (params.model_name.substr(0,6) != "MIX+MF")
         return;
     
+    bool test_only = (params.model_name == "MIX+MF");
+    params.model_name = "";
+    
     if (MPIHelper::getInstance().getNumProcesses() > 1)
-        outError("Error! The option -m 'ESTMIXNUM' does not support MPI parallelization");
+        outError("Error! The option -m '" + params.model_name + "' does not support MPI parallelization");
     
     if (iqtree->isSuperTree())
-        outError("Error! The option -m 'ESTMIXNUM' cannot work on data set with partitions");
+        outError("Error! The option -m '" + params.model_name + "' cannot work on data set with partitions");
     
     if (iqtree->aln->seq_type != SEQ_DNA)
-        outError("Error! The option -m 'ESTMIXNUM' can only work on DNA data set");
+        outError("Error! The option -m '" + params.model_name + "' can only work on DNA data set");
 
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|                Optimizing Q-mixture model                        |" << endl;
@@ -3718,4 +3723,8 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     new_iqtree->setParams(&params);
     delete(iqtree);
     iqtree = new_iqtree;
+    
+    if (test_only) {
+        params.min_iterations = 0;
+    }
 }

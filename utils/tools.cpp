@@ -3506,24 +3506,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
-            if (strcmp(argv[cnt], "-cmixmin") == 0 || strcmp(argv[cnt], "--cmixmin") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -cmixmin <#min_mix_classes>";
-                params.min_mix_cats = convert_int(argv[cnt]);
-                if (params.min_mix_cats < 1)
-                    throw "Wrong number of classes in mixture for -cmixmin";
-                continue;
-            }
-            if (strcmp(argv[cnt], "-cmixmax") == 0 || strcmp(argv[cnt], "--cmixmax") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -cmixmax <#max_mix_classes>";
-                params.max_mix_cats = convert_int(argv[cnt]);
-                if (params.max_mix_cats < 2)
-                    throw "Wrong number of classes in mixture for -cmixmax";
-                continue;
-            }
             if (strcmp(argv[cnt], "-start_subst") == 0 || strcmp(argv[cnt], "--start_subst") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -3531,39 +3513,39 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.start_subst = argv[cnt];
                 continue;
             }
-            if (strcmp(argv[cnt], "-opt-rhas-once") == 0 || strcmp(argv[cnt], "--opt-rhas-once") == 0) {
-                params.opt_rhas_again = false;
-                continue;
-            }
             if (strcmp(argv[cnt], "-skip-opt-combin-subst") == 0 || strcmp(argv[cnt], "--skip-opt-combin-subst") == 0) {
                 params.check_combin_q_mat = false;
                 continue;
             }
-            if (strcmp(argv[cnt], "-opt_qmix_method") == 0 || strcmp(argv[cnt], "--opt_qmix_method") == 0) {
+            if (strcmp(argv[cnt], "-qmax") == 0 || strcmp(argv[cnt], "--qmax") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -opt_qmix_method <1|2>";
-                params.opt_qmix_method = convert_int(argv[cnt]);
-                if (params.opt_qmix_method < 1 || params.opt_qmix_method > 2)
-                    throw "Wrong number for -opt_qmix_method. Only 1 or 2 is allowed.";
+                    throw "Use -qmax <#max_mix_classes>";
+                params.max_mix_cats = convert_int(argv[cnt]);
+                if (params.max_mix_cats < 2)
+                    throw "Wrong number of classes in mixture for -qmax. Must be at least 2";
                 continue;
             }
-            if (strcmp(argv[cnt], "-opt_qmix_criteria") == 0 || strcmp(argv[cnt], "--opt_qmix_criteria") == 0) {
+            if (strcmp(argv[cnt], "-mrate-twice") == 0 || strcmp(argv[cnt], "--mrate-twice") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -opt_qmix_criteria <1|2>";
-                params.opt_qmix_criteria = convert_int(argv[cnt]);
-                if (params.opt_qmix_criteria < 1 || params.opt_qmix_criteria > 2)
-                    throw "Wrong number for -opt_qmix_criteria. Only 1 or 2 is allowed.";
+                    throw "Use -mrate-twice <0|1>";
+                int in_option = convert_int(argv[cnt]);
+                if (in_option < 0 || in_option > 1)
+                    throw "Wrong option for -mrate-twice. Only 0 or 1 is allowed.";
+                if (in_option == 0)
+                    params.opt_rhas_again = false;
                 continue;
             }
-            if (strcmp(argv[cnt], "-opt_qmix_pthres") == 0 || strcmp(argv[cnt], "--opt_qmix_pthres") == 0) {
+            if (strcmp(argv[cnt], "-lrt") == 0 || strcmp(argv[cnt], "--lrt") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -opt_qmix_pthres <p-value threshold>";
+                    throw "Use -lrt <p-value threshold>";
                 params.opt_qmix_pthres = convert_double(argv[cnt]);
                 if (params.opt_qmix_pthres < 0.0 || params.opt_qmix_pthres > 1.0)
                     throw "Wrong p-value threshold for -opt_qmix_pthres. Must be between 0.0 and 1.0";
+                if (params.opt_qmix_pthres == 0)
+                    params.opt_qmix_criteria = 2; // using information critera instead of likelihood-ratio test for estimation of number of classes for Q-Mixture model
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
