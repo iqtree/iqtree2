@@ -559,15 +559,7 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
     
     // delete aln
     delete aln;
-    
-    // overwrite the output sequence_length
-    if (super_alisimulator->params->alisim_sequence_length != nsite)
-    {
-        super_alisimulator->params->alisim_sequence_length = nsite;
-        outWarning("Sequence length is now set equally to the length of ancestral sequence.");
-        super_alisimulator->refreshExpectedNumSites();
-    }
-    
+        
     string sequence_str = "";
     for (int i = 0; i < seq_names.size(); i++)
         if (!sequence_name.compare(seq_names[i]))
@@ -577,6 +569,14 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
         }
     if (sequence_str.length() == 0)
         outError("Sequence name could not be found in the input alignment file.");
+    
+    // overwrite the output sequence_length
+    if (super_alisimulator->params->alisim_sequence_length != sequence_str.length())
+    {
+        super_alisimulator->params->alisim_sequence_length = sequence_str.length();
+        outWarning("Sequence length is now set equally to the length of ancestral sequence.");
+        super_alisimulator->refreshExpectedNumSites();
+    }
     
     // get Max number of states
     int max_num_states = src_tree->aln->getMaxNumStates();
