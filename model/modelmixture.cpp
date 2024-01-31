@@ -1371,32 +1371,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     nxsmodel_freq_name = freq_mod->name;
                 }
                 this_name = this_name.substr(0, fpos);
-            /*
-            } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
-                switch(model_freq) {
-                    case FREQ_USER_DEFINED:
-                        if (freq_params.length() > 0) {
-                            cout << "Model " << this_name << " => " << this_name << "+F{" << freq_params << "}" << endl;
-                        } else {
-                            outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
-                        }
-                        break;
-                    case FREQ_EQUAL:
-                        cout << "Model " << this_name << " => " << this_name << "+FQ" << endl;
-                        break;
-                    case FREQ_EMPIRICAL:
-                        cout << "Model " << this_name << " => " << this_name << "+F" << endl;
-                        break;
-                    case FREQ_ESTIMATE:
-                        cout << "Model " << this_name << " => " << this_name << "+FO" << endl;
-                        break;
-                    case FREQ_UNKNOWN:
-                        outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
-                        break;
-                    default:
-                        cout << "Model " << this_name << endl;
-                        break;
-                }*/
             }
             
 			model = (ModelMarkov*)createModel(this_name, models_block, model_freq, freq_params, tree);
@@ -1431,7 +1405,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			sum += prop[i];
 		}
 	} else {
-		// initialize rates as increasing
 		for (i = 0, sum = 0.0; i < nmixtures; i++) {
 //			prop[i] = random_double();
             prop[i] = 1.0/nmixtures;
@@ -1445,6 +1418,13 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
     }
+    
+    // initialize vary frequency vectors
+    if (Params::getInstance().estimate_init_freq==1)
+        estimateInitFreq();
+    else if (Params::getInstance().estimate_init_freq==2)
+        estimateInitFreq2();
+
 	// rescale total_num_subst such that the global rate is 1
     for (i = 0, sum = 0.0; i < nmixtures; i++) {
         sum += prop[i] * at(i)->total_num_subst;
@@ -1636,6 +1616,108 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     //   cout << state_freq[i] << " ";
     // }
     // cout << endl;
+}
+
+// estimate the initial frequency vectors
+void ModelMixture::estimateInitFreq() {
+    cout << endl << "Estimate the initial frequency vectors" << endl;
+    int nseqs = phylo_tree->aln->getNSeq();
+    int nsites = phylo_tree->aln->getNSite();
+    int avgCSize = nsites / size();
+    int i, j, k, posStart, posEnd, ptnidx;
+    double state_freq[num_states];
+    double sum;
+    Pattern ptn;
+    
+    if (avgCSize < 50)
+        return estimateInitFreq2();
+
+    for (i = 0; i < size(); i++) {
+        
+        if (at(i)->freq_type != FREQ_ESTIMATE)
+            continue;
+                
+        int pos_start = i * avgCSize;
+        int pos_end = pos_start + avgCSize;
+        if (pos_end > nsites) {
+            pos_end = nsites;
+        }
+        
+        // show the initial frequency vectors
+        at(i)->getStateFrequency(state_freq);
+        cout << "[" << i << "] init Freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+        
+        memset(state_freq, 0, sizeof(double)*num_states);
+        
+        for (j = pos_start; j < pos_end; j++) {
+            ptnidx = phylo_tree->aln->getPatternID(j);
+            ptn = phylo_tree->aln->at(ptnidx);
+            for (k = 0; k < nseqs; k++)
+                state_freq[ptn[k]]+=1.0;
+        }
+        sum = (pos_end - pos_start) * nseqs;
+        for (j = 0; j < num_states; j++)
+            state_freq[j] = state_freq[j] / sum;
+        
+        cout << "[" << i << "] Freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+        
+        // update the frequency vectors
+        at(i)->setStateFrequency(state_freq);
+    }
+}
+
+// another method to estimate the initial frequency vectors
+void ModelMixture::estimateInitFreq2() {
+    cout << endl << "Estimate the initial frequency vectors" << endl;
+    int nsamples = 500;
+    double r = 0.7;
+    int i,j,k,ptnidx;
+    int nseqs = phylo_tree->aln->getNSeq();
+    int nsites = phylo_tree->aln->getNSite();
+    int sum = nsamples * nseqs;
+    double state_freq[num_states];
+    Pattern ptn;
+
+    if (nsamples > r * nsites)
+        nsamples = ceil(r * nsites);
+
+    for (i = 0; i < size(); i++) {
+        
+        if (at(i)->freq_type != FREQ_ESTIMATE)
+            continue;
+        
+        // show the initial frequency vectors
+        at(i)->getStateFrequency(state_freq);
+        cout << "[" << i << "] init Freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+        
+        memset(state_freq, 0, sizeof(double)*num_states);
+        for (j = 0; j < nsamples; j++) {
+            k = random_int(nsites);
+            ptnidx = phylo_tree->aln->getPatternID(k);
+            ptn = phylo_tree->aln->at(ptnidx);
+            for (k = 0; k < nseqs; k++)
+                state_freq[ptn[k]]+=1.0;
+        }
+        for (j = 0; j < num_states; j++)
+            state_freq[j] = state_freq[j] / sum;
+        
+        cout << "[" << i << "] Freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+
+        // update the frequency vectors
+        at(i)->setStateFrequency(state_freq);
+    }
 }
 
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
@@ -2016,6 +2098,7 @@ bool ModelMixture::isMixtureSameQ() {
 }
 
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
+    
 	optimizing_submodels = true;
 
     int dim = getNDim();
@@ -2079,13 +2162,23 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     }
 
     // normalize state freq
-    int i, ncategory = size();
+    int i, j, ncategory = size();
     for (i = 0; i < ncategory; i++) {
         if (at(i)->is_reversible && at(i)->freq_type == FREQ_ESTIMATE) {
             at(i)->scaleStateFreq(true);
         }
     }
     
+    // show the frequency vectors
+    double state_freq[num_states];
+    for (i = 0; i < ncategory; i++) {
+        at(i)->getStateFrequency(state_freq);
+        cout << "Class " << i+1 << "'s freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+    }
+
     // now rescale Q matrices to have proper interpretation of branch lengths
 
 	double sum;

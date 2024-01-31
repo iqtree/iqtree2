@@ -1214,6 +1214,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
     params.optimize_alg_qmix = "BFGS";
+    params.estimate_init_freq = 0;
 
     // defaults for new options -JD
     params.optimize_linked_gtr = false;
@@ -1658,6 +1659,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") != 0)
                     throw "Invalid option for -optalg_qmix : use 'BFGS' or 'EM'";
                 params.optimize_alg_qmix = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-init_nucl_freq") == 0 || strcmp(argv[cnt], "--init_nucl_freq") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -init_nucl_freq <0|1|2>";
+                params.estimate_init_freq = convert_int(argv[cnt]);
+                if (params.estimate_init_freq > 2)
+                    throw "Use -init_nucl_freq <0|1|2>";
                 continue;
             }
 

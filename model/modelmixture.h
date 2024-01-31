@@ -135,7 +135,11 @@ public:
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
-
+    
+    // estimate the initial frequence vector for the class
+    void estimateInitFreq();
+    void estimateInitFreq2(); // for short sequences
+    
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)

@@ -1753,6 +1753,11 @@ public:
      *  Optimization algorithm for q-mixture model
      */
     string optimize_alg_qmix;
+    
+    /**
+     * non-zero if want to estimate the initial frequency vectors for q-mixture model
+     */
+    int estimate_init_freq;
 
     //new params added -JD
     /** TRUE if you want to exchange the rate matrix for an optimized GTR matrix */
