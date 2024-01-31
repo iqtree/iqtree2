@@ -6499,6 +6499,10 @@ void ConnectedRegion::outputPartialLhs(const std::string& file_path)
         {
             for (auto j = 0; j < nstates; ++j, ++buffer_partial_lh_ptr)
             {
+                // Log if negative partial lh found
+                if (buffer_partial_lh_ptr[0] < 0)
+                    std::cout << "Negative partial lh " << buffer_partial_lh_ptr[0] << std::endl;
+                
                 out_stream << std::setprecision(50) << std::scientific << buffer_partial_lh_ptr[0] << "\t";
             }
             out_stream << std::endl;
