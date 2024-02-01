@@ -208,6 +208,71 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
+/**
+ * report the number of threads should be used for a single partition
+ */
+int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
+    int thres = numThres;
+    switch(seqType) {
+        case SEQ_BINARY:
+            if (nptn <= 1000)
+                thres = 1;
+            else if (nptn <= 10000)
+                thres = 8;
+            break;
+        case SEQ_CODON:
+            if (nptn*3 <= 10)
+                thres = 1;
+            else if (nptn*3 <= 50)
+                thres = 4;
+            else if (nptn*3 <= 1000)
+                thres = 8;
+            else if (nptn*3 <= 10000)
+                thres = 16;
+            break;
+        case SEQ_PROTEIN:
+            if (nptn <= 100)
+                thres = 1;
+            else if (nptn <= 1000)
+                thres = 8;
+            else if (nptn <= 10000)
+                thres = 16;
+            break;
+        default: // DNA or others
+            if (nptn <= 1000)
+                thres = 1;
+            else if (nptn <= 10000)
+                thres = 4;
+            else if (nptn <= 50000)
+                thres = 16;
+            break;
+    }
+    return thres;
+}
+
+/**
+ * report the number of threads should be used for fast tree estimation
+ * and for the final step after modelFinder
+ */
+int numThresFastTree(int nPart, int nptn, SeqType seqType, int numThres) {
+    if (nptn == 1)
+        return numThres;
+    int thres = nPart;
+    switch(seqType) {
+        case SEQ_PROTEIN:
+            if (nptn >= 8000 && nPart < 8)
+                thres = 8;
+            break;
+        case SEQ_CODON:
+            if (nptn*3 >= 8000 && nPart < 8)
+                thres = 8;
+            break;
+        default:
+            break;
+    }
+    return thres;
+}
+
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -838,6 +903,23 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     
     ModelsBlock *models_block = readModelsDefinition(params);
     
+    // if number of partitions > 1
+    //
+    //    for AA/CODON
+    //    if number of patterns >= 8K, max # of threads = max{number of partitions, 8}
+    //    else, max # of threads = number of partitions
+    //
+    //    for DNA/BINARY
+    //    max # of threads = number of partitions
+    
+    int orig_nthreads = params.num_threads;
+    int fasttree_nthreads = params.num_threads;
+    if (iqtree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        fasttree_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
+        params.num_threads = fasttree_nthreads;
+    }
+    
     // compute initial tree
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
@@ -859,6 +941,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             iqtree.saveCheckpoint();
         }
     }
+    
+    params.num_threads = orig_nthreads;
     
     // also save initial tree to the original .ckp.gz checkpoint
     //        string initTree = iqtree.getTreeString();
@@ -937,6 +1021,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     if (test_only) {
         params.min_iterations = 0;
     }
+    
+    // change the number of threads
+    params.num_threads = fasttree_nthreads;
 }
 
 /**
@@ -1948,36 +2035,6 @@ void mergePairs(vector<SubsetPair> &dest, vector<SubsetPair> &src) {
     for (SubsetPair s: src)
         if (dest_set.find(convertIntToString(s.first) + "-" + convertIntToString(s.second)) == dest_set.end())
             dest.push_back(s);
-}
-
-/**
- * report the number of threads should be used for a single partition
- */
-int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
-    int thres = numThres;
-    switch(seqType) {
-        case SEQ_DNA:
-            if (nptn < 1000)
-                thres = 1;
-            else if (nptn < 10000)
-                thres = 4;
-            else if (nptn < 50000)
-                thres = 8;
-            break;
-        case SEQ_BINARY:
-            if (nptn*3 < 1000)
-                thres = 1;
-            else if (nptn*3 < 10000)
-                thres = 8;
-            break;
-        default:
-            if (nptn < 1000)
-                thres = 1;
-            else if (nptn < 10000)
-                thres = 8;
-            break;
-    }
-    return thres;
 }
 
 /**
