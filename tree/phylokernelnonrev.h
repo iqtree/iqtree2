@@ -250,6 +250,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     } else if (left->node->isLeaf() && right->node->isLeaf()) {
         
         /*--------------------- TIP-TIP (cherry) case ------------------*/
+        // NHANLT - debug
+        // std::cout << std::setprecision(10) << std::scientific << "Original partial lhs at " << node->id << " " << node->name  << " dad " << info.dad->id << std::endl;
         
         double *partial_lh_left = partial_lh_leaves;
         double *partial_lh_right = partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
@@ -347,12 +349,18 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
                     }
                 }
                 for (size_t i = 0; i < block; i++)
+                {
                     partial_lh[i] = vleft[i] * vright[i];
+                    // NHANLT - debug
+                    // std::cout << std::setprecision(10) << std::scientific << partial_lh[0][i] << " " << partial_lh[1][i] << " " << partial_lh[2][i] << " " << partial_lh[3][i] << std::endl;
+                }
             }
         }
     } else if (isRootLeaf(left->node) && !right->node->isLeaf()) {
         // left is root node
         /*--------------------- ROOT-INTERNAL NODE case ------------------*/
+        // NHANLT - debug
+        // std::cout << std::setprecision(10) << std::scientific << "Original partial lhs at " << node->id << " " << node->name  << " dad " << info.dad->id << std::endl;
         
         // only take scale_num from the right subtree
         memcpy(
@@ -379,7 +387,13 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
 #endif
                     eright_ptr += nstates;
                     partial_lh[x] = lh_left[x]*vright;
+                    
+                    // NHANLT - debug
+                    // std::cout << std::setprecision(10) << std::scientific << partial_lh[0][x] << " " << partial_lh[1][x] << " " << partial_lh[2][x] << " " << partial_lh[3][x] << std::endl;
                 }
+                // NHANLT - debug
+                // std::cout << std::endl;
+                
                 partial_lh_right += nstates;
                 lh_left += nstates;
                 partial_lh += nstates;
@@ -389,6 +403,8 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
     } else if (left->node->isLeaf() && !right->node->isLeaf()) {
         
         /*--------------------- TIP-INTERNAL NODE case ------------------*/
+        // NHANLT - debug
+        // std::cout << std::setprecision(10) << std::scientific << "Original partial lhs at " << node->id << " " << node->name  << " dad " << info.dad->id << std::endl;
         
         // only take scale_num from the right subtree
         memcpy(
@@ -485,10 +501,23 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
                         }
                 }
             }
+            
+            // NHANLT - debug
+            /*for (size_t x = 0; x < VectorClass::size(); x++)
+            {
+                double *partial_lh = dad_branch->partial_lh + (ptn*block + x);
+                for (size_t i = 0; i < block; i++) {
+                    std::cout << std::setprecision(10) << std::scientific << partial_lh[i*VectorClass::size()] << " ";
+                }
+                std::cout << std::endl;
+            }*/
+            
         }
     } else {
         
         /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
+        // NHANLT - debug
+        // std::cout << std::setprecision(10) << std::scientific << "Original partial lhs at " << node->id << " " << node->name  << " dad " << info.dad->id << std::endl;
         
         for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
             VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
@@ -570,6 +599,16 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info
                     }
                 }
             }
+            
+            // NHANLT - debug
+            /* for (size_t x = 0; x < VectorClass::size(); x++)
+            {
+                double *partial_lh = dad_branch->partial_lh + (ptn*block + x);
+                for (size_t i = 0; i < block; i++) {
+                    std::cout << std::setprecision(10) << std::scientific << partial_lh[i*VectorClass::size()] << " ";
+                }
+                std::cout << std::endl;
+            }*/
         }
     }
     if (Params::getInstance().buffer_mem_save) {
@@ -606,16 +645,24 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
     vector<size_t> limits;
     computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
     size_t ncat = site_rate->getNRate();
-    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    size_t nmix = (model_factory->fused_mix_rate) ? 1 : model->getNMixtures();
+    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*nmix;
     size_t block = ncat_mix * nstates;
     
-    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
+    // get an array of rate heterogeneity weights * mixture weights
+    double cat_mix_weights[ncat_mix];
+    size_t cat_mix_index = 0;
+    for (int i = 0 ; i < ncat; ++i)
+        for (int j = 0 ; j < nmix; ++j, ++cat_mix_index)
+            cat_mix_weights[cat_mix_index] = site_rate->getProp(i) * model->getMixtureWeight(j);
+    
+    /*size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
     for (size_t c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
         mix_addr_nstates[c] = m*nstates;
         mix_addr[c] = mix_addr_nstates[c]*nstates;
-    }
+    }*/
     
     double* evec = model->getEigenvectors();
     
@@ -701,7 +748,38 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, packet_id);
             
             // for non-rev kernel, copy the partial lh
-            memcpy(raw_partial_lh, tmp_branch->partial_lh, nstates * nptn * sizeof(double));
+            size_t jump_step = VectorClass::size() * block;
+            size_t jump_step_raw_partial_lh = VectorClass::size() * nstates;
+            int index = ptn_lower * nstates;
+            int index_raw_partial_lh = ptn_lower * nstates;
+            for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn += VectorClass::size(), index += jump_step, index_raw_partial_lh += jump_step_raw_partial_lh) {
+                VectorClass *partial_lh = (VectorClass*)(tmp_branch->partial_lh + index);
+                
+                // get the starting location of raw_partial_lh
+                double* raw_partial_lh_ptr = raw_partial_lh + index_raw_partial_lh;
+                
+                // debug
+                /*std::cout << "debug" << std::endl;
+                for (size_t i = 0; i < 20; ++i)
+                {
+                    for (size_t j = 0; j < VectorClass::size(); ++j)
+                        std::cout << partial_lh[i][j] << " ";
+                    std::cout << std::endl;
+                }*/
+                
+                // convert the memory ogranization format of partial_lh
+                for (size_t i = 0; i < ncat_mix; i++, partial_lh += nstates)
+                {
+                    raw_partial_lh_ptr = raw_partial_lh + index_raw_partial_lh;
+                    for (size_t k = 0; k < VectorClass::size(); ++k, raw_partial_lh_ptr += VectorClass::size())
+                    {
+                        for (size_t j = 0; j < nstates; ++j)
+                        {
+                            raw_partial_lh_ptr[j] += cat_mix_weights[i] * partial_lh[j][k];
+                        }
+                    }
+                }
+            }
             
             // compute the raw partial lh (removing the eigen vector factor) => don't need to do that on nonrev-kernel
             /*size_t jump_step = VectorClass::size() * block;

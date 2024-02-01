@@ -6491,9 +6491,17 @@ void ConnectedRegion::outputPartialLhs(const std::string& file_path)
     {
         out_stream << ">" << (*it)->name << std::endl;
         
+        // NHANLT - debug
+        /*if ((*it)->id == 53)
+        {
+            std::cout << "Raw partial lhs at 53 (dad = 48)" << std::endl;
+        }*/
+        
         computeRawPartialLhAtNode((*it), buffer_partial_lh);
         
         // output the results
+        // NHANLT - debug
+        // std::cout << "Raw partial lhs at " << (*it)->name << std::endl;
         double* buffer_partial_lh_ptr = buffer_partial_lh;
         for (auto i = 0; i < nptn; ++i)
         {
@@ -6503,8 +6511,12 @@ void ConnectedRegion::outputPartialLhs(const std::string& file_path)
                 if (buffer_partial_lh_ptr[0] < 0)
                     std::cout << "Negative partial lh " << buffer_partial_lh_ptr[0] << std::endl;
                 
+                // NHANLT - debug
+                // std::cout << std::setprecision(10) << std::scientific << buffer_partial_lh_ptr[0] << " ";
                 out_stream << std::setprecision(50) << std::scientific << buffer_partial_lh_ptr[0] << "\t";
             }
+            // NHANLT - debug
+            // std::cout << std::endl;
             out_stream << std::endl;
         }
     }
