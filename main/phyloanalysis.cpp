@@ -2493,6 +2493,9 @@ bool isTreeMixture(Params& params) {
 
 void selectConnectedRegions(IQTree* const tree, const int num_connected_regions, const int num_leave_per_region)
 {
+    // currently, we can only use nonrev kernel to extract the partial lhs
+    if (!tree->params->kernel_nonrev)
+        outError("Sorry! currently, we can only use nonrev kernel (`--kernel-nonrev`) to extract the partial lhs");
     // for testing only, print the tree
     /*std::cout << "\n Tree: \n";
     tree->printTree(std::cout);
