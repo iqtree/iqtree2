@@ -634,11 +634,12 @@ int IQTreeMixHmm::getNParameters() {
         if (verbose_mode >= VB_MED) {
             if (isLinkSiteRate) {
                 cout << " linked site rate : " << site_rates[i]->getNDim() << endl;
-                break;
             } else {
                 cout << " siterate " << i+1 << " : " << site_rates[i]->getNDim() << endl;
             }
         }
+        if (isLinkSiteRate)
+            break;
     }
     // for branch parameters
     if (params->fixed_branch_length != BRLEN_FIX) {
