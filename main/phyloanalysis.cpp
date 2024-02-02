@@ -601,22 +601,13 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     vector<double> totalLens; // for tree mixture
     int df;
     size_t i;
-    IQTreeMixHmm* treemixhmm;
     IQTreeMix* treemix;
 
     if (tree.isTreeMix()) {
-        if (tree.isHMM()) {
-            treemixhmm = (IQTreeMixHmm*) &tree;
-            df = treemixhmm->getNParameters();
-            for (i=0; i<treemix->size(); i++) {
-                totalLens.push_back(treemixhmm->at(i)->treeLength());
-            }
-        } else {
-            treemix = (IQTreeMix*) &tree;
-            df = treemix->getNParameters();
-            for (i=0; i<treemix->size(); i++) {
-                totalLens.push_back(treemix->at(i)->treeLength());
-            }
+        treemix = (IQTreeMix*) &tree;
+        df = treemix->getNParameters();
+        for (i=0; i<treemix->size(); i++) {
+            totalLens.push_back(treemix->at(i)->treeLength());
         }
     } else {
         df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
