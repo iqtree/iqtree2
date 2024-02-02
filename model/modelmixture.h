@@ -137,8 +137,14 @@ public:
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
     
     // estimate the initial frequence vector for the class
-    void estimateInitFreq();
-    void estimateInitFreq2(); // for short sequences
+
+    // method 1: given a set of classes in the mixture model, randomly assign each alignment position to one of the classes.
+    // Then the nucleotide frequency array of each class is initialized according to the nucleotide frequencies among the positions assigned to the class.
+    void estimateInitFreq1();
+
+    // Method 2: evenly divide the alignment into K partitions where K = number of classes in the mixture
+    // The nucleotide frequency array of i-th class is initialized according to the nucleotide frequencies in the i-th partition
+    void estimateInitFreq2();
     
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.

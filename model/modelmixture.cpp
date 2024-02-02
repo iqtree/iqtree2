@@ -1421,7 +1421,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     
     // initialize vary frequency vectors
     if (Params::getInstance().estimate_init_freq==1)
-        estimateInitFreq();
+        estimateInitFreq1();
     else if (Params::getInstance().estimate_init_freq==2)
         estimateInitFreq2();
 
@@ -1619,8 +1619,70 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
 }
 
 // estimate the initial frequency vectors
-void ModelMixture::estimateInitFreq() {
-    cout << endl << "Estimate the initial frequency vectors" << endl;
+// method 1: given a set of classes in the mixture model, randomly assign each alignment position to one of the classes.
+// Then the nucleotide frequency array of each class is initialized according to the nucleotide frequencies among the positions assigned to the class.
+void ModelMixture::estimateInitFreq1() {
+    cout << endl << "Estimate the initial frequency vectors (method 1)" << endl;
+    int nseqs = phylo_tree->aln->getNSeq();
+    int nsites = phylo_tree->aln->getNSite();
+    int nclass = size();
+    int whichclass[nsites];
+    double state_freq[num_states];
+    Pattern ptn;
+    int ptnidx;
+    int i,j,k,n;
+    
+    double min_freq = 0.0001;
+    
+    for (i=0; i<nsites; i++) {
+        whichclass[i] = random_int(nclass);
+    }
+    
+    for (i=0; i<nclass; i++) {
+        if (at(i)->freq_type != FREQ_ESTIMATE)
+            continue;
+
+        // show the initial frequency vectors
+        at(i)->getStateFrequency(state_freq);
+        cout << "[" << i << "] init Freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+
+        memset(state_freq, 0, sizeof(double)*num_states);
+        n=0;
+        for (j=0; j<nsites; j++) {
+            if (whichclass[j] == i) {
+                ptnidx = phylo_tree->aln->getPatternID(j);
+                ptn = phylo_tree->aln->at(ptnidx);
+                for (k = 0; k < nseqs; k++)
+                    state_freq[ptn[k]]+=1.0;
+                n += nseqs;
+            }
+        }
+        if (n > 0) {
+            for (j=0; j<num_states; j++)
+                state_freq[j] = state_freq[j] / (double) n;
+        }
+        for (j=0; j<num_states; j++)
+            if (state_freq[j] < min_freq)
+                state_freq[j] = min_freq;
+
+        cout << "[" << i << "] Freq:";
+        for (j = 0; j < num_states; j++)
+            cout << " " << state_freq[j];
+        cout << endl;
+
+        // update the frequency vectors
+        at(i)->setStateFrequency(state_freq);
+    }
+}
+
+// estimate the initial frequency vectors
+// Method 2: evenly divide the alignment into K partitions where K = number of classes in the mixture
+// The nucleotide frequency array of i-th class is initialized according to the nucleotide frequencies in the i-th partition
+void ModelMixture::estimateInitFreq2() {
+    cout << endl << "Estimate the initial frequency vectors (method 2)" << endl;
     int nseqs = phylo_tree->aln->getNSeq();
     int nsites = phylo_tree->aln->getNSite();
     int avgCSize = nsites / size();
@@ -1628,9 +1690,8 @@ void ModelMixture::estimateInitFreq() {
     double state_freq[num_states];
     double sum;
     Pattern ptn;
-    
-    if (avgCSize < 50)
-        return estimateInitFreq2();
+
+    double min_freq = 0.0001;
 
     for (i = 0; i < size(); i++) {
         
@@ -1661,60 +1722,16 @@ void ModelMixture::estimateInitFreq() {
         sum = (pos_end - pos_start) * nseqs;
         for (j = 0; j < num_states; j++)
             state_freq[j] = state_freq[j] / sum;
-        
+
+        for (j=0; j<num_states; j++)
+            if (state_freq[j] < min_freq)
+                state_freq[j] = min_freq;
+
         cout << "[" << i << "] Freq:";
         for (j = 0; j < num_states; j++)
             cout << " " << state_freq[j];
         cout << endl;
         
-        // update the frequency vectors
-        at(i)->setStateFrequency(state_freq);
-    }
-}
-
-// another method to estimate the initial frequency vectors
-void ModelMixture::estimateInitFreq2() {
-    cout << endl << "Estimate the initial frequency vectors" << endl;
-    int nsamples = 500;
-    double r = 0.7;
-    int i,j,k,ptnidx;
-    int nseqs = phylo_tree->aln->getNSeq();
-    int nsites = phylo_tree->aln->getNSite();
-    int sum = nsamples * nseqs;
-    double state_freq[num_states];
-    Pattern ptn;
-
-    if (nsamples > r * nsites)
-        nsamples = ceil(r * nsites);
-
-    for (i = 0; i < size(); i++) {
-        
-        if (at(i)->freq_type != FREQ_ESTIMATE)
-            continue;
-        
-        // show the initial frequency vectors
-        at(i)->getStateFrequency(state_freq);
-        cout << "[" << i << "] init Freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
-        
-        memset(state_freq, 0, sizeof(double)*num_states);
-        for (j = 0; j < nsamples; j++) {
-            k = random_int(nsites);
-            ptnidx = phylo_tree->aln->getPatternID(k);
-            ptn = phylo_tree->aln->at(ptnidx);
-            for (k = 0; k < nseqs; k++)
-                state_freq[ptn[k]]+=1.0;
-        }
-        for (j = 0; j < num_states; j++)
-            state_freq[j] = state_freq[j] / sum;
-        
-        cout << "[" << i << "] Freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
-
         // update the frequency vectors
         at(i)->setStateFrequency(state_freq);
     }
