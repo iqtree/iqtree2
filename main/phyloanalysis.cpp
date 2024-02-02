@@ -3933,16 +3933,28 @@ int checkCharInFile(char* infile, char c) {
 }
 
 IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
-    int i;
+    int i, k;
     vector<IQTree*> trees;
     
-    // check how many trees inside the user input file
-    if (numTree == 0)
-        numTree = checkCharInFile(params.user_file, ';');
-    cout << "Number of input trees: " << numTree << endl;
-    if (numTree <= 1) {
-        outError("For using the tree mixture model, there must be at least 2 trees inside the tree file: " + string(params.user_file) + ", and each tree must be followed by the character ';'.");
+    if (numTree == 1) {
+        outError("The number after +T has to be greater than 1");
     }
+    
+    // check how many trees inside the user input file
+    k = checkCharInFile(params.user_file, ';');
+    if (k <= 1) {
+        outError("Tree mixture model only supports at least 2 trees inside the tree file: " + string(params.user_file) + ". Each tree must be followed by the character ';'.");
+    }
+    
+    if (numTree == 0) {
+        numTree = k;
+        cout << "Number of input trees: " << numTree << endl;
+    } else if (numTree < k) {
+        cout << "Note: Only " << numTree << " trees are considered, although there are more than " << numTree << " trees in the tree file: " << params.user_file << endl;
+    } else if (numTree > k) {
+        outError("The number of trees inside the tree file '" + string(params.user_file) + "' is less than " + convertIntToString(numTree));
+    }
+    
     for (i=0; i<numTree; i++) {
         trees.push_back(newIQTree(params,alignment));
     }
@@ -4243,6 +4255,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         // tree-mixture model
         cout << "Tree-mixture model" << endl;
 
+        if (params.compute_ml_tree_only) {
+            outError("option compute_ml_tree_only cannot be set for tree-mixture model");
+        }
+
         // the minimum gamma shape should be greater than MIN_GAMMA_SHAPE_TREEMIX for tree mixture model
         if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
             if (params.min_gamma_shape != MIN_GAMMA_SHAPE)
@@ -4251,19 +4267,17 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         }
 
         if (params.user_file == NULL) {
-            // get the number after "+T" for tree-mixture model
-            int treeNum = getTreeMixNum(params);
-            if (treeNum == 0) {
-                outError("Specify the number of trees in the model or input the tree file using the option '-te' for tree-mixture model");
-            }
-            tree = newIQTreeMix(params, alignment, treeNum); // tree mixture model
-        } else {
+            outError("To use tree-mixture model, use an option: -te <newick file with multiple trees>");
+        }
+        
+        // get the number after "+T" for tree-mixture model
+        int treeNum = getTreeMixNum(params);
+        if (treeNum == 0) {
             tree = newIQTreeMix(params, alignment); // tree mixture model
+        } else {
+            tree = newIQTreeMix(params, alignment, treeNum); // tree mixture model
         }
-        if (params.compute_ml_tree_only) {
-            outError("option compute_ml_tree_only cannot be set for tree-mixture model");
-        }
-        tree = newIQTreeMix(params, alignment); // tree mixture model
+
     } else {
         tree = newIQTree(params, alignment);
     }
