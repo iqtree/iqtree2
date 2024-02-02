@@ -10,7 +10,7 @@
 IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
     optimTree = -1;
     optimBranchGrp = -1;
-    objFun = 0;
+    objFun = 1; // default: MAST model
     objAlgo = new string[2];
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
@@ -21,7 +21,7 @@ IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
 IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTreeMix(params, aln, trees), PhyloHmm(getAlnNSite(), trees.size()) {
     optimTree = -1;
     optimBranchGrp = -1;
-    objFun = 0;
+    objFun = 1; // default: MAST model
     objAlgo = new string[2];
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
@@ -390,10 +390,13 @@ void IQTreeMixHmm::startCheckpoint() {
 string IQTreeMixHmm::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     string ans;
 
-    if (params->treemix_optimize_methods == "hmm")
+    if (params->treemix_optimize_methods == "hmm") {
+        objFun = 0;
         ans = optimizeModelParamHMM(printInfo, logl_epsilon);
+    }
     
     else if (params->treemix_optimize_methods == "hmm2mast") {
+        objFun = 0;
         optimizeModelParamHMM(printInfo, logl_epsilon);
         ans = optimizeModelParamMAST(printInfo, logl_epsilon);
     }
@@ -639,14 +642,19 @@ int IQTreeMixHmm::getNParameters() {
     }
     // for branch parameters
     if (params->fixed_branch_length != BRLEN_FIX) {
-        for (i=0; i<size(); i++) {
-            k = at(i)->getNBranchParameters(BRLEN_OPTIMIZE);
+        if (isEdgeLenRestrict) {
             if (verbose_mode >= VB_MED)
-                cout << " branches of tree " << i+1 << " : " << k << endl;
-            df += k;
+                cout << " branch groups (for branch-len-restricted) : " << branch_group.size() << endl;
+            df += branch_group.size();
+        } else {
+            for (i=0; i<size(); i++) {
+                k = at(i)->getNBranchParameters(BRLEN_OPTIMIZE);
+                if (verbose_mode >= VB_MED)
+                    cout << " branches of tree " << i+1 << " : " << k << endl;
+                df += k;
+            }
         }
     }
-    
     if (objFun == 0) {
         // for transition matrix
         if (verbose_mode >= VB_MED)
@@ -659,9 +667,17 @@ int IQTreeMixHmm::getNParameters() {
     } else {
         // for MAST
         // for tree weight
-        if (verbose_mode >= VB_MED)
-            cout << " tree weights : " << ntree - 1 << endl;
-        df += ntree - 1;
+        if (!isTreeWeightFixed) {
+            if (weightGrpExist) {
+                if (verbose_mode >= VB_MED)
+                    cout << " tree weight groups (for weight-restricted) : " << (weight_group_member.size() - 1) << endl;
+                df += (weight_group_member.size() - 1);
+            } else {
+                if (verbose_mode >= VB_MED)
+                    cout << " tree weights : " << (size() - 1) << endl;
+                df += ntree - 1;
+            }
+        }
     }
 
     if (verbose_mode >= VB_MED)

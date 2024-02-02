@@ -117,7 +117,7 @@ private:
     // >=0 : optimizing a specific branch group
     int optimBranchGrp;
     
-    // which objective function (default: backLikelihood)
+    // which objective function (default: MAST)
     // 0: backLikelihood
     // 1: MAST
     int objFun;
