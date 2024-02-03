@@ -1129,7 +1129,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_type = BRLEN_OPTIMIZE;
     params.partfinder_rcluster = 100;
     params.partfinder_rcluster_max = 0;
-    params.partfinder_threading_method = 0;
+    params.partfinder_threading_method = 2;
     params.partition_merge = MERGE_NONE;
     params.merge_models = "1";
     params.merge_rates = "1";
