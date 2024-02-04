@@ -4384,7 +4384,7 @@ bool runCMaple(Params &params)
         cmaple::Alignment aln(aln_path, ref_seq, aln_format, seq_type);
         
         // check if CMaple is suitable for the input alignment
-        if (!checkMapleSuitability(aln))
+        if (!cmaple::isEffective(aln))
         {
             std::cout << "The input alignment is too divergent, which is inappropriate for [C]Maple algorithm." <<std::endl;
             
@@ -4392,7 +4392,7 @@ bool runCMaple(Params &params)
             if (params.inference_alg == ALG_CMAPLE)
             {
                 std::cout << "We highly recommend to use the IQ-TREE inference algorithm for this analysis."
-                << " Please stop and re-try with `-infer-alg auto`!" << std::endl;
+                << " Please stop and re-try with `-search-alg auto`!" << std::endl;
             }
             // otherwise, users allow us to choose the inference algorithm -> choose IQ-TREE
             else
@@ -4433,7 +4433,7 @@ bool runCMaple(Params &params)
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
             std::ostream null_stream(0);
             std::ostream& out_stream = cmaple::verbose_mode >= cmaple::VB_MED ? std::cout : null_stream;
-            tree.autoProceedMAPLE(tree_search_type, params.shallow_tree_search, out_stream);
+            tree.infer(tree_search_type, params.shallow_tree_search, out_stream);
             
             // Compute branch supports (if users want to do so)
             if (params.aLRT_replicates)

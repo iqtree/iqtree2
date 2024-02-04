@@ -3011,10 +3011,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
-            if (strcmp(argv[cnt], "-infer-alg") == 0 || strcmp(argv[cnt], "--inference-algorithm") == 0) {
+            if (strcmp(argv[cnt], "-search-alg") == 0 || strcmp(argv[cnt], "--search-alg") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -infer-alg auto|iqtree|cmaple";
+                    throw "Use -search-alg auto|iqtree|cmaple";
                 string alg = argv[cnt];
                 transform(alg.begin(), alg.end(), alg.begin(), ::toupper);
                 if (strcmp(alg.c_str(), "AUTO") == 0)
@@ -3024,7 +3024,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else if (strcmp(alg.c_str(), "CMAPLE") == 0)
                     params.inference_alg = ALG_CMAPLE;
                 else
-                    throw "Use -infer-alg auto|iqtree|cmaple";
+                    throw "Use -search-alg auto|iqtree|cmaple";
                 continue;
             }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
@@ -5664,7 +5664,7 @@ void usage(char* argv[]) {
     //	cout << "  -noout              Print no output file." << endl;
     cout << endl;
     cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
-    cout << "  -infer-alg <ALG>     Choose the inference algorithm." << endl;
+    cout << "  -search-alg <ALG>     Choose the inference algorithm." << endl;
     cout << "                       <ALGORITHM> could be `iqtree`, `cmaple`, or `auto`." << endl;
     cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
@@ -5980,7 +5980,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
     
     << endl << "GENOMIC EPIDEMIOLOGICAL ANALYSIS:" << endl
-    << "  -infer-alg <ALG>     Choose the inference algorithm." << endl
+    << "  -search-alg <ALG>     Choose the inference algorithm." << endl
     << "                       <ALG> could be `iqtree`, `cmaple`, or `auto`." << endl
     
     
