@@ -1566,7 +1566,7 @@ public:
     double *gradient_vector;
 
     /**
-     G matrix for second order derivative (Hessian) calculation to be used in MCMCTree
+     G matrix for second order derivatives (Hessian) calculation to be used in MCMCTree
      * */
 
     double *G_matrix;

@@ -341,7 +341,7 @@ void runLSD2(PhyloTree *tree) {
 void computeHessian(PhyloTree *tree) {
     // make sure we traverse the tree from the same starting node as BaseML
     if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node)
-        tree->root = (Node*) tree->traversal_starting_node;
+        tree->root = (Node *) tree->traversal_starting_node;
 
     // sort the internal nodes according to their smallest taxon id
     tree->sortTaxa();
@@ -349,12 +349,6 @@ void computeHessian(PhyloTree *tree) {
     tree->initializeTree();
     tree->computeBranchDirection();
 
-    size_t orig_nptn = tree->aln->size();
-    size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
-    size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
-    size_t nBranches = tree->branchNum;
-    double *ptn_freq = tree->ptn_freq;
-    
     BranchVector branches;
     tree->getBranches(branches);
     for (auto branch: branches) {
@@ -370,65 +364,13 @@ void computeHessian(PhyloTree *tree) {
         }
     }
 
-    Map<RowVectorXd> gradient_vector_eigen(tree->gradient_vector, nBranches);
-    Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
-    MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
-
-    // todo: check whether row vector is compatible for the maxtrix operatiob -GNG^T
-    Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
-    MatrixXd hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
-    hessian = (-1) * hessian;
-    hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
-
-    Map<RowVectorXd> hessian_diagonal_vector(tree->hessian_diagonal, nBranches);
-    Map<RowVectorXd> df_ddf_frac_vec(tree->df_ddf_frac, nBranches);
-
-//    string outFileName = ((string) tree->params->out_prefix + ".out.BV");
-
-    DoubleVector branchLengths;
-    tree->saveBranchLengths(branchLengths);
-    Map<RowVectorXd> branch_lengths_vector(branchLengths.data(), branchLengths.size());
-//    ofstream outfile(outFileName);
-    stringstream tree_stream;
-    tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
-//    outfile << endl << tree->aln->getNSeq() << endl << endl;
-//    outfile << tree_stream.str() << endl << endl;
-//    outfile << branch_lengths_vector << endl << endl;
-//    outfile << gradient_vector_eigen << endl << endl << endl;
-//    outfile << "Hessian " << endl << endl;
-//    outfile << hessian;
-//    outfile.close();
-
-    string outFileNameBranchLengths = ((string) tree->params->out_prefix + "_blengths.gh");
-    string outFileNameTree = ((string) tree->params->out_prefix +  "_tree.gh");
-    string outFileNameHessian = ((string) tree->params->out_prefix +  "_hessian.gh");
-    string outFileNameGradient = ((string) tree->params->out_prefix +"_gradient.gh");
-
-    ofstream outfileBranchLengths(outFileNameBranchLengths);
-    ofstream outfileTree(outFileNameTree);
-    ofstream outfileHessian(outFileNameHessian);
-    ofstream outfileGradient(outFileNameGradient);
-
-    outfileBranchLengths << branch_lengths_vector << endl;
-    outfileBranchLengths.close();
-
-    outfileTree << tree->getNumTaxa() << "  " << 1 << endl;
-    outfileTree << tree_stream.str() << endl;
-    outfileTree.close();
-
-    outfileHessian << hessian << endl;
-    outfileHessian.close();
-
-    outfileGradient << gradient_vector_eigen << endl;
-    outfileGradient.close();
-
 }
 
 void runMCMCTree(PhyloTree *tree) {
     string basename = (string) Params::getInstance().out_prefix + ".timetree";
-    cout << "Building time tree by MCMCTree with command:" << endl;
+    cout << "Generating the gradients and the Hessian by MCMCTree." << endl;
     computeHessian(tree);
-    cout << "Completed time-tree generation." << endl;
+    cout << "Completed the gradients and the Hessian generation." << endl;
 }
 
 void doTimeTree(PhyloTree *tree) {

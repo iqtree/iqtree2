@@ -1638,6 +1638,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	block_size.resize(ntrees);
 	scale_block_size.resize(ntrees);
     branch_block_size.resize(ntrees);
+    g_matrix_block_size.resize(ntrees);
 
 	vector<uint64_t> mem_size, lh_cat_size, buffer_size;
 	mem_size.resize(ntrees);
@@ -1649,7 +1650,9 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         total_block_size = 0,
         total_scale_block_size = 0,
         total_lh_cat_size = 0,
-        total_buffer_size = 0;
+        total_buffer_size = 0,
+        total_branch_block_size = 0,
+        total_g_matrix_block_size = 0;
 
 	if (part_order.empty())
 		computePartitionOrder();
@@ -1664,6 +1667,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
 		block_size[part] = mem_cat_size * (*it)->aln->num_states;
 		scale_block_size[part] = mem_cat_size;
+        branch_block_size[part] = (*it)->branchNum;
+        g_matrix_block_size[part] = (*it)->branchNum*mem_size[part];// todo: check for mixture models: mem_size or block_size
 
 		lh_cat_size[part] = mem_size[part] * (*it)->getRate()->getNDiscreteRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
@@ -1672,20 +1677,20 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         total_scale_block_size += scale_block_size[part];
 		total_lh_cat_size += lh_cat_size[part];
         total_buffer_size += (buffer_size[part] = (*it)->getBufferPartialLhSize());
+        total_branch_block_size += branch_block_size[part];
+        total_g_matrix_block_size += g_matrix_block_size[part];
 	}
     if(!gradient_vector)
-        gradient_vector = aligned_alloc<double>(branchNum);
-    if(!hessian_diagonal)
-        hessian_diagonal = aligned_alloc<double>(branchNum);
-    if(!G_matrix) {
-        size_t g_matrix_size = branchNum * total_mem_size;
-        G_matrix = aligned_alloc<double>(g_matrix_size);
-    }
+        gradient_vector = aligned_alloc<double>(total_branch_block_size);
     at(part_order[0])->gradient_vector = gradient_vector;
+    if(!hessian_diagonal)
+        hessian_diagonal = aligned_alloc<double>(total_branch_block_size);
     at(part_order[0])->hessian_diagonal = hessian_diagonal;
+    if(!G_matrix)
+        G_matrix = aligned_alloc<double>(total_g_matrix_block_size);
     at(part_order[0])->G_matrix = G_matrix;
     if(!df_ddf_frac)
-        df_ddf_frac = aligned_alloc<double>(branchNum);
+        df_ddf_frac = aligned_alloc<double>(total_branch_block_size);
     at(part_order[0])->df_ddf_frac = df_ddf_frac;
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(total_mem_size);
@@ -1742,11 +1747,10 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		(*it)->ptn_invar = (*prev_it)->ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];
         (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*scale_block_size[part];
-        (*it)->G_matrix = (*prev_it)->G_matrix + (*prev_it)->branchNum*mem_size[part];
-        (*it)->gradient_vector = (*prev_it)->gradient_vector + (*prev_it)->branchNum*block_size[part];
-        (*it)->hessian_diagonal = (*prev_it)->hessian_diagonal + (*prev_it)->branchNum*block_size[part];
-        (*it)->df_ddf_frac = (*prev_it)->df_ddf_frac + (*prev_it)->branchNum*block_size[part];
-
+        (*it)->G_matrix = (*prev_it)->G_matrix + g_matrix_block_size[part];
+        (*it)->gradient_vector = (*prev_it)->gradient_vector + branch_block_size[part];
+        (*it)->hessian_diagonal = (*prev_it)->hessian_diagonal + branch_block_size[part];
+        (*it)->df_ddf_frac = (*prev_it)->df_ddf_frac + branch_block_size[part];
 	}
 
 	// compute total memory for all partitions

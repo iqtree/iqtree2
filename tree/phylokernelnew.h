@@ -2460,6 +2460,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     all_ddfvec[i] += my_ddf[i];
             }
         } else {
+            // to access g-matrix elements to store derivatives
             size_t g_index = branch_id * nptn;
             // normal joint branch length model
             for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
