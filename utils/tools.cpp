@@ -1205,6 +1205,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
+    params.optimize_params_use_hmm = false;
+    params.optimize_params_use_hmm_sm = false;
+    params.optimize_params_use_hmm_gm = false;
+    params.optimize_params_use_hmm_tm = false;
+    params.HMM_no_avg_brlen = false;
+    params.HMM_min_stran = 0.0;
+    params.treemix_optimize_methods = "mast"; // default is MAST
+
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1237,6 +1245,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.kernel_nonrev = false;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
+    params.print_marginal_prob = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = 0;
@@ -1312,6 +1321,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     params.modelEps = 0.01;
     params.modelfinder_eps = 0.1;
+    params.treemix_eps = 0.001;
+    params.treemixhmm_eps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -3475,6 +3486,64 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_from_given_params = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-hmmster") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = true;
+                params.optimize_params_use_hmm_gm = false;
+                params.optimize_params_use_hmm_tm = false;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{sm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = true;
+                params.optimize_params_use_hmm_gm = false;
+                params.optimize_params_use_hmm_tm = false;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{gm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = false;
+                params.optimize_params_use_hmm_gm = true;
+                params.optimize_params_use_hmm_tm = false;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{tm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = false;
+                params.optimize_params_use_hmm_gm = false;
+                params.optimize_params_use_hmm_tm = true;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+//            if (strcmp(argv[cnt], "-hmmonly") == 0) {
+//                params.proceed_MAST_after_HMMSTER = false;
+//                continue;
+//            }
+            if (strcmp(argv[cnt], "-hmm_min_stran") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -hmm_min_stran <minimum HMM same-category transition probability>";
+                params.HMM_min_stran = convert_double(argv[cnt]);
+                if (params.HMM_min_stran >= 1.0 || params.HMM_min_stran < 0.0)
+                    throw "Wrong probability for -hmm_min_stran";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmm_no_avg_brlen") == 0) {
+                params.HMM_no_avg_brlen = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-tmix_opt_method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -tmix_opt_method <hmm/hmm2mast/mast2hmm/mast>";
+                params.treemix_optimize_methods = argv[cnt];
+                if (strcmp(argv[cnt], "hmm") != 0 && strcmp(argv[cnt], "hmm2mast") != 0 && strcmp(argv[cnt], "mast") != 0 && strcmp(argv[cnt], "mast2hmm") != 0 && strcmp(argv[cnt], "hmast") != 0)
+                    throw "Wrong value for -tmix_opt_method";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-brent") == 0) {
 				params.optimize_by_newton = false;
 				continue;
@@ -3810,6 +3879,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_partition_lh = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-wmp") == 0) {
+                params.print_marginal_prob = true;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
 				params.print_site_lh = WSL_RATECAT;
@@ -4304,6 +4378,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.suppress_duplicate_sequence_warnings = true;
                 params.optimize_alg_freerate = "1-BFGS";
                 params.opt_gammai = false;
+                params.treemix_eps = 0.01;
+                params.treemixhmm_eps = 0.05;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -4438,6 +4514,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Model epsilon must be positive";
 				if (params.modelEps > 1.0)
 					throw "Model epsilon must not be larger than 1.0";
+                params.treemix_eps = params.modelEps;
+                params.treemixhmm_eps = params.modelEps;
 				continue;
 			}
 
@@ -5445,6 +5523,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
         usage(argv, false);
 #endif
+    }
+    
+    if (params.treemix_optimize_methods.find("hmm")!=string::npos &&
+        params.model_name.find("+T") != string::npos) {
+        params.optimize_params_use_hmm = true;
+    } else {
+        params.optimize_params_use_hmm = false;
     }
 
 //    if (params.do_au_test)

@@ -533,7 +533,7 @@ enum LhMemSave {
 };
 
 enum SiteLoglType {
-    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT, WSL_TMIXTURE
 };
 
 enum SiteFreqType {
@@ -580,6 +580,8 @@ const double MIN_GAMMA_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
+// change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
 
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -745,7 +747,17 @@ public:
      */
     double modelfinder_eps;
 
-	/**
+    /**
+     logl epsilon for Tree Mixture
+     */
+    double treemix_eps;
+
+    /**
+     logl epsilon for HMM Tree Mixture
+     */
+    double treemixhmm_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
@@ -1702,7 +1714,30 @@ public:
 
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
+    
+    /** optimize the parameters according to the HMM model (HMMSTER) */
+    bool optimize_params_use_hmm;
 
+    /** optimize the parameters according to the HMM model (HMMSTER) using simple transition model*/
+    bool optimize_params_use_hmm_sm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
+    bool optimize_params_use_hmm_gm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using type-dependent transition model*/
+    bool optimize_params_use_hmm_tm;
+
+    /** proceed to MAST model after HMMSTER , default true */
+    // bool proceed_MAST_after_HMMSTER;
+
+    /** no averaging the branch length during the initialization of the HMM model */
+    bool HMM_no_avg_brlen;
+
+    /** minimum value allowed for HMM transition probability between the same tree (category) */
+    double HMM_min_stran;
+    
+    /** optimization methods: hmm / hmm2mast / mast2hmm / mast */
+    string treemix_optimize_methods;
 
     /**
             criterion to assess important quartet
@@ -1853,6 +1888,9 @@ public:
 
     /** TRUE to print partition log-likelihood, default: FALSE */
     bool print_partition_lh;
+    
+    /** TRUE to print the marginal probability for HMM model, default: FALSE */
+    bool print_marginal_prob;
 
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories

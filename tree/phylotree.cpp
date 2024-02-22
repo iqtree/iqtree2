@@ -94,6 +94,7 @@ void PhyloTree::init() {
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
     _pattern_lh_cat_state = NULL;
+    _pattern_scaling = NULL;
     _site_lh = NULL;
     //root_state = STATE_UNKNOWN;
     root_state = 126;
@@ -244,6 +245,7 @@ PhyloTree::~PhyloTree() {
     site_rate = NULL;
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
+    aligned_free(_pattern_scaling);
     aligned_free(_site_lh);
     aligned_free(theta_all);
     aligned_free(buffer_scale_all);
@@ -686,6 +688,7 @@ string getASCName(ASCType ASC_type) {
         case ASC_INFORMATIVE_MISSING:
             return "+ASC_INF_MIS";
     }
+    return "";
 }
 
 string PhyloTree::getSubstName() {
@@ -905,6 +908,8 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_site_lh && (params->robust_phy_keep < 1.0 || params->robust_median)) {
         _site_lh = aligned_alloc<double>(getAlnNSite());
     }
+    if (!_pattern_scaling)
+        _pattern_scaling = aligned_alloc<double>(mem_size);
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!buffer_scale_all)
@@ -950,6 +955,7 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
     aligned_free(_site_lh);
+    aligned_free(_pattern_scaling);
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
@@ -1224,7 +1230,7 @@ Node *findFirstFarLeaf(Node *node, Node *dad = NULL) {
     
 }
 
-double PhyloTree::computeLikelihood(double *pattern_lh) {
+double PhyloTree::computeLikelihood(double *pattern_lh, bool save_log_value) {
     ASSERT(model);
     ASSERT(site_rate);
     ASSERT(root->isLeaf());
@@ -1246,12 +1252,12 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //            cout << __func__ << " HIT ROOT STATE " << endl;
 //        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
 //    } else {
-        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node, save_log_value);
 //    }
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
-    if (pattern_lh && current_it->lh_scale_factor < 0.0) {
+    if (pattern_lh && current_it->lh_scale_factor < 0.0 && save_log_value) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -1299,6 +1305,8 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
         return getRate()->getNDiscreteRate();
     case WSL_MIXTURE:
         return getModel()->getNMixtures();
+    default:
+        return 0;
     }
 }
 
@@ -1599,6 +1607,7 @@ void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
+    
     size_t ptn, nptn = aln->getNPattern();
     size_t cat, ncat = getNumLhCat(wsl);
     // Right now only Naive version store _pattern_lh_cat!
@@ -6016,7 +6025,9 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
 
 void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     // error checking
-    if (!getModel()->isMixture()) {
+    if (isTreeMix()) {
+        wsl = WSL_TMIXTURE;
+    } else if (!getModel()->isMixture()) {
         if (wsl != WSL_RATECAT) {
             outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
             wsl = WSL_RATECAT;

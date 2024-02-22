@@ -342,7 +342,7 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
-double PhyloSuperTreePlen::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+double PhyloSuperTreePlen::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
     current_it = dad_branch;
     current_it_back = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
     return -computeFunction(dad_branch->length);

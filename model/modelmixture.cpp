@@ -1329,14 +1329,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 				full_name += model->name;
 			}
 		} else {
-            
             // for Mixture model, check the frequency of the model
+            string nxsmodel_freq_name = "";
             StateFreqType model_freq = freq;
             size_t slen = this_name.length();
             size_t fpos = this_name.find("+F");
             if (fpos != string::npos) {
                 string fstr3 = "";
                 string fstr4 = "";
+                string fstr = this_name.substr(fpos);
                 if (fpos+2 < this_name.length())
                     fstr3 = this_name.substr(fpos, 3);
                 if (fpos+3 < this_name.length())
@@ -1350,13 +1351,21 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     } else {
                         outError("The user defined frequency model is incorrect");
                     }
-                } else if (fstr3 == "+FO" || fstr3 == "+Fo") {
+                } else if (fstr == "+FO" || fstr == "+Fo") {
                     model_freq = FREQ_ESTIMATE;
-                } else if (fstr3 == "+FQ" || fstr3 == "+Fq") {
+                } else if (fstr == "+FQ" || fstr == "+Fq") {
                     model_freq = FREQ_EQUAL;
-                } else{
-                    // "+F"
+                } else if (fstr == "+F"){
                     model_freq = FREQ_EMPIRICAL;
+                } else {
+                    // others, for example, fstr == +FC10pi1
+                    fstr = fstr.substr(2); // get rid of +F
+                    NxsModel *freq_mod = models_block->findModel(fstr);
+                    if (!freq_mod)
+                        outError("Frequency mixture name not found ", fstr);
+                    model_freq = FREQ_USER_DEFINED;
+                    freq_params = freq_mod->description;
+                    nxsmodel_freq_name = freq_mod->name;
                 }
                 this_name = this_name.substr(0, fpos);
             } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
@@ -1388,6 +1397,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
             
 			model = (ModelMarkov*)createModel(this_name, models_block, model_freq, freq_params, tree);
 			model->total_num_subst = rate;
+            if (nxsmodel_freq_name.length() > 0) {
+                model->name += "+F" + nxsmodel_freq_name + "";
+                model->full_name += "+F" + nxsmodel_freq_name + "";
+            }
 			push_back(model);
 			weights.push_back(weight);
 			if (m > 0) {
