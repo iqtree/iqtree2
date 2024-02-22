@@ -2558,7 +2558,6 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     } // FOR packet
     gradient_vector[branch_id] = all_df;
     hessian_diagonal[branch_id] = all_ddf;
-    df_ddf_frac[branch_id] = all_df/all_ddf;
 
     // mark buffer as computed
     theta_computed = true;

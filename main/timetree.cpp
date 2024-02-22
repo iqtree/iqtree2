@@ -340,8 +340,9 @@ void runLSD2(PhyloTree *tree) {
 
 void computeHessian(PhyloTree *tree) {
     // make sure we traverse the tree from the same starting node as BaseML
-    if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node)
+    if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node){
         tree->root = (Node *) tree->traversal_starting_node;
+    }
 
     // sort the internal nodes according to their smallest taxon id
     tree->sortTaxa();

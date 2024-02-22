@@ -138,7 +138,6 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
         (*it)->gradient_vector = NULL;
         (*it)->G_matrix = NULL;
         (*it)->hessian_diagonal = NULL;
-        (*it)->df_ddf_frac = NULL;
 	}
     PhyloTree::deleteAllPartialLh();
 }
@@ -164,7 +163,6 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
         (*it)->gradient_vector = NULL;
         (*it)->G_matrix = NULL;
         (*it)->hessian_diagonal = NULL;
-        (*it)->df_ddf_frac = NULL;
 	}
 }
 
@@ -1689,9 +1687,6 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     if(!G_matrix)
         G_matrix = aligned_alloc<double>(total_g_matrix_block_size);
     at(part_order[0])->G_matrix = G_matrix;
-    if(!df_ddf_frac)
-        df_ddf_frac = aligned_alloc<double>(total_branch_block_size);
-    at(part_order[0])->df_ddf_frac = df_ddf_frac;
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(total_mem_size);
     at(part_order[0])->_pattern_lh = _pattern_lh;
@@ -1750,7 +1745,6 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         (*it)->G_matrix = (*prev_it)->G_matrix + g_matrix_block_size[part];
         (*it)->gradient_vector = (*prev_it)->gradient_vector + branch_block_size[part];
         (*it)->hessian_diagonal = (*prev_it)->hessian_diagonal + branch_block_size[part];
-        (*it)->df_ddf_frac = (*prev_it)->df_ddf_frac + branch_block_size[part];
 	}
 
 	// compute total memory for all partitions

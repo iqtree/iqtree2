@@ -141,7 +141,6 @@ void PhyloTree::init() {
     gradient_vector = nullptr;
     hessian_diagonal = nullptr;
     G_matrix = nullptr;
-    df_ddf_frac = nullptr;
 }
 
 void PhyloTree::initSequences(Node* node, Node* dad)
@@ -274,8 +273,6 @@ PhyloTree::~PhyloTree() {
         aligned_free(hessian_diagonal);
     if(G_matrix)
         aligned_free(G_matrix);
-    if(df_ddf_frac)
-        aligned_free(df_ddf_frac);
 
     pllPartitions = NULL;
     pllAlignment = NULL;
@@ -917,8 +914,6 @@ void PhyloTree::initializeAllPartialLh() {
         size_t g_matrix_size = branchNum * mem_size;
         G_matrix = aligned_alloc<double>(g_matrix_size);
     }
-    if(!df_ddf_frac)
-        df_ddf_frac = aligned_alloc<double>(branchNum);
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)
@@ -976,7 +971,6 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(G_matrix);
     aligned_free(gradient_vector);
     aligned_free(hessian_diagonal);
-    aligned_free(df_ddf_frac);
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
