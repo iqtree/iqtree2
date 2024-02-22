@@ -980,7 +980,6 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(G_matrix);
     aligned_free(gradient_vector);
     aligned_free(hessian_diagonal);
-    aligned_free(df_ddf_frac);
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
