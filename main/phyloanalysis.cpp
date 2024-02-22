@@ -601,7 +601,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     vector<double> totalLens; // for tree mixture
     int df;
     size_t i;
-    IQTreeMix* treemix;
+    IQTreeMix* treemix = NULL;
 
     if (tree.isTreeMix()) {
         treemix = (IQTreeMix*) &tree;
