@@ -1589,7 +1589,7 @@ void IQTreeMix::setMinBranchLen(Params& params) {
         }
         */
     }
-    // cout << setprecision(7) << "Minimum branch length is set to " << params.min_branch_length << endl;
+    cout << setprecision(7) << "Minimum branch length is set to " << params.min_branch_length << endl;
 }
 
 /** set pointer of params variable */
@@ -1904,64 +1904,6 @@ void showDoubleArrayContent(string name, int dim, double* arr) {
 }
 
 /**
-    Estimate the average branch length for each tree
-    Based on this value to set the minimum value of branch length
- */
-void IQTreeMix::estimateAvgBrLen() {
-    size_t i,j,k;
-    int freq;
-    int* parsimony_scores;
-    double avgLen;
-    vector<int> sumParScores;
-    
-    if (!parsi_computed) {
-        // compute parsimony scores for each tree along the patterns
-        // results are stored in the array patn_parsimony
-        computeParsimony();
-    }
-    
-    estAvgBrlen.clear();
-    sumParScores.clear();
-    for (i=0; i<ntree; i++)
-        sumParScores.push_back(0);
-    
-    k=0;
-    for (i=0; i<nptn; i++) {
-        freq = ptn_freq[i];
-        for (j=0; j<ntree; j++) {
-            sumParScores[j] += patn_parsimony[k] * freq;
-            k++;
-        }
-    }
-    
-    /*
-    cout << "sum of parsimony scores along all sites for each tree: ";
-    for (i=0; i<ntree; i++) {
-        if (i>0)
-            cout << ",";
-        cout << sumParScores[i];
-    }
-    cout << endl;
-    */
-    
-    for (i=0; i<ntree; i++) {
-        avgLen = (double) sumParScores[i] / getAlnNSite() / nbranch;
-        estAvgBrlen.push_back(avgLen);
-    }
-    
-    /*
-    cout << "estimated avg branch lengths: ";
-    for (i=0; i<ntree; i++) {
-        if (i>0)
-            cout <<",";
-        cout << estAvgBrlen[i];
-    }
-    cout << endl;
-    */
-}
-
-
-/**
     Initialize the tree weights using parsimony scores
     Idea:
     1. Check the parsimony score for each tree along all the sites
@@ -2264,14 +2206,6 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     
     // set all the branches of the same group to their weighted average for initialization of the branch lengths
     checkBranchGrp();
-
-    // adjust the minimum branch length if params.min_branch_length > 0.1 * estimate_avg_branch_len
-    estimateAvgBrLen();
-    for (i = 0; i < ntree; i++) {
-        if (params->min_branch_length > 0.1 * estAvgBrlen[i])
-            params->min_branch_length = 0.1 * estAvgBrlen[i];
-    }
-    cout << setprecision(7) << "Minimum branch length is set to " << params->min_branch_length << endl;
 
     // show trees
     // cout << "Initial trees:" << endl;

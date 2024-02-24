@@ -22,8 +22,8 @@
 //#include "phylokernelnew.h"
 #include <vectorclass/vectorclass.h>
 
-// by default, the minimum branch length for MAST model is 0.001
-#define MAST_MIN_BRANCH_LEN 1e-3;
+// by default, the minimum branch length for MAST model is 0.0001
+#define MAST_MIN_BRANCH_LEN 1e-4;
 
 // for checking the scaling for the likelihood values
 #define TINY_SCALE_DIFF 0.5
@@ -188,12 +188,6 @@ public:
      */
     virtual int testNumThreads();
     
-    /**
-        Estimate the average branch length for each tree
-        Based on this value to set the minimum value of branch length
-     */
-    void estimateAvgBrLen();
-
     /**
      Initialize the tree weights using parsimony scores
      Idea:
