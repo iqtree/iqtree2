@@ -2419,51 +2419,167 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
 }
 
 void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_stream,
-                               RowVectorXd &branch_lengths_vector, RowVectorXd &gradient_vector_eigen) {
+                         RowVectorXd &branch_lengths_vector, RowVectorXd &gradient_vector_eigen,
+                         PhyloSuperTree *superTree = nullptr, int part_id = 0) {
+
     size_t orig_nptn = tree->aln->size();
     size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
     size_t nPtn = max_orig_nptn + tree->getModelFactory()->unobserved_ptns.size();
     size_t nBranches = tree->branchNum;
-
-    Map<RowVectorXd> gradient_vector_eigen_mapped(tree->gradient_vector, nBranches);
-    Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
-    MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
-
     Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
-    hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
-    hessian = (-1) * hessian;
-    hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
 
-    gradient_vector_eigen = gradient_vector_eigen_mapped;
+
+    if (superTree && superTree->params->partition_type != BRLEN_OPTIMIZE) {
+        vector<pair<int, int>> part_br_map;
+        BranchVector stree_branches;
+        superTree->getBranches(stree_branches);
+
+        for (Branch branch: stree_branches) {
+            auto nei = (SuperNeighbor *) branch.first->findNeighbor(branch.second);
+            auto nei1 = (SuperNeighbor *) branch.second->findNeighbor(branch.first);
+            if (nei->link_neighbors[part_id] && nei1->link_neighbors[part_id]) {
+                part_br_map.emplace_back(nei->id, nei->link_neighbors[part_id]->id);
+            }
+        }
+        int numStates = tree->getModel()->num_states;
+        size_t mem_size = get_safe_upper_limit(tree->getAlnNSite()) + max(get_safe_upper_limit(numStates),
+                                                                          get_safe_upper_limit(
+                                                                                  tree->getModelFactory()->unobserved_ptns.size()));
+        size_t branchNum = superTree->branchNum;
+        size_t g_matrix_size = branchNum * mem_size;
+        auto *G_matrix_part = aligned_alloc<double>(g_matrix_size);
+        memset(G_matrix_part, 0, g_matrix_size * sizeof(double));
+        auto *gradient_vector_part = aligned_alloc<double>(branchNum);
+        memset(gradient_vector_part, 0, branchNum * sizeof(double));
+        auto *hessian_diagonal_part = aligned_alloc<double>(branchNum);
+        memset(hessian_diagonal_part, 0, branchNum * sizeof(double));
+
+        double *G_matrix_sub_tree = tree->G_matrix;
+
+        for (auto mapping: part_br_map) {
+            int stree_branch_id = mapping.first;
+            int part_branch_id = mapping.second;
+            for (int i = 0; i < nPtn; i++) {
+                G_matrix_part[stree_branch_id * nPtn + i] = tree->G_matrix[part_branch_id * nPtn + i];
+            }
+            //memcpy(G_matrix_part+(sizeof(double)*stree_branch_id*nPtn), G_matrix_sub_tree+sizeof(double)*(part_branch_id*nPtn), sizeof(double)*nPtn);
+            gradient_vector_part[stree_branch_id] = tree->gradient_vector[part_branch_id];
+            hessian_diagonal_part[stree_branch_id] = tree->hessian_diagonal[part_branch_id];
+        }
+
+        Map<RowVectorXd> gradient_vector_eigen_mapped(gradient_vector_part, branchNum);
+        Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(G_matrix_part, branchNum, nPtn);
+        MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+
+        hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+        hessian = (-1) * hessian;
+        hessian.diagonal() = Map<VectorXd>(hessian_diagonal_part, branchNum).array();
+
+        gradient_vector_eigen = gradient_vector_eigen_mapped;
+
+        aligned_free(G_matrix_part);
+        aligned_free(gradient_vector_part);
+        aligned_free(hessian_diagonal_part);
+
+    } else {
+        Map<RowVectorXd> gradient_vector_eigen_mapped(tree->gradient_vector, nBranches);
+        Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
+        MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+
+        hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+        hessian = (-1) * hessian;
+        hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
+
+        gradient_vector_eigen = gradient_vector_eigen_mapped;
+
+    }
     DoubleVector branchLengths;
     tree->saveBranchLengths(branchLengths);
     Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
     branch_lengths_vector = branch_lengths_vector_mapped;
-
     tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
 
 }
 
-void printHessian(IQTree *iqtree, int partition_type) {
+void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignment) {
+    size_t ndata;
+    if (iqtree->isSuperTree()) {
+        auto *stree = (PhyloSuperTree *) iqtree;
+        ndata = stree->size();
+    } else {
+        ndata = 1;
+    }
+    ctl << "seed = -1" << endl
+        << "seqfile = " << (string) iqtree->params->out_prefix + "_dummyAln.txt" << endl
+        << "treefile = " << iqtree->params->user_file << endl
+        << "outfile = " << "out" << endl << endl
 
-    string outFileName = ((string) iqtree->params->out_prefix + ".out.BV");
-    string outFileName1 = ((string) iqtree->params->out_prefix + ".out.allpartitions.BV");
-    ofstream outfile(outFileName);
-    ofstream outfile1(outFileName1);
+        << "ndata = " << ndata << endl
+        << "seqtype = 0    * 0: nucleotides; 1:codons; 2:AAs" << endl
+        << "usedata = 2    * 0: no data; 1:seq like; 2:use in.BV; 3: out.BV" << endl
+        << "clock = 3      * 1: global clock; 2: independent rates; 3: correlated rates" << endl
+        << "RootAge = <1.0  * safe constraint on root age, used if no fossil for root." << endl << endl
+
+        << "model = 0      * The model specification is not necessary for approximate likelihood method" << endl
+        << "alpha = 0      * alpha for gamma rates at sites" << endl
+        << "ncatG = 0      * No. categories in discrete gamma" << endl << endl
+
+        << "cleandata = 0  * remove sites with ambiguity data (1:yes, 0:no)?" << endl << endl
+
+        << "BDparas = 1 1 0.5      * birth, death, sampling" << endl
+        << "kappa_gamma = 6 2      * gamma prior for kappa" << endl
+        << "alpha_gamma = 1 1      * gamma prior for alpha" << endl << endl
+
+        << "rgene_gamma = 2 2      * gamma prior for overall rates for genes" << endl
+        << "sigma2_gamma = 1 10    * gamma prior for sigma^2     (for clock=2 or 3)" << endl << endl
+
+        << "finetune = 1: 0.1  0.1  0.1  0.01 .5  * auto (0 or 1) : times, musigma2, rates, mixing, paras, FossilErr"
+        << endl << endl
+
+        << "print = 1" << endl
+        << "burnin = 2000" << endl
+        << "sampfreq = 2" << endl
+        << "nsample = 20000" << endl << endl
+
+        << "*** Note: Make your window wider (100 columns) before running the program." << endl;
 
     if (iqtree->isSuperTree()) {
         auto *stree = (PhyloSuperTree *) iqtree;
-        // for topology shared partitions
+        for (auto tree: *stree) {
+            NodeVector nodeVector;
+            auto alignment = tree->aln->getPattern(0);
+            tree->getOrderedTaxa(nodeVector);
+            dummyAlignment << "   " << nodeVector.size() << "   " << 1 << endl;
+            for (Node *node: nodeVector) {
+                dummyAlignment << node->name << "              " << "A" << endl;
+            }
+            dummyAlignment << endl;
+        }
+    }
+}
+
+void printHessian(IQTree *iqtree, int partition_type) {
+
+    string outFileName = ((string) iqtree->params->out_prefix + "in.BV");
+    string ctlFileName = ((string) iqtree->params->out_prefix + "mcmctree.ctl");
+    string alnFileName = ((string) iqtree->params->out_prefix + "_dummyAln.txt");
+    ofstream outfile(outFileName);
+    ofstream ctlFile(ctlFileName);
+    ofstream alnFile(alnFileName);
+
+    if (iqtree->isSuperTree()) {
+        auto *stree = (PhyloSuperTree *) iqtree;
+
+        // for branch linked partitions
         auto iqtree_branchNum = iqtree->branchNum;
         size_t global_nseq = iqtree->aln->getNSeq();
         stringstream global_tree_stream;
         MatrixXd global_hessian = MatrixXd::Zero(iqtree_branchNum, iqtree_branchNum);
         RowVectorXd global_gradient_vector = RowVectorXd::Zero(iqtree_branchNum);
-        RowVectorXd global_blength_vector = RowVectorXd::Zero(iqtree_branchNum);
+        RowVectorXd global_branch_length_vector = RowVectorXd::Zero(iqtree_branchNum);
         auto part_info = stree->part_info;
         int part_id = 0;
 
-        //todo: check on partition tree rooting
         if (stree->traversal_starting_node) {
             // change the partition tree so that its traversal starting node matches that of the super tree -> temporarily set the root at the first taxon in the alignment
             stree->root = stree->findNodeID(0);
@@ -2482,7 +2598,6 @@ void printHessian(IQTree *iqtree, int partition_type) {
         stree->computeBranchDirection();
         // rooting ends here
 
-
         // Hessian calculation for partition models
         for (auto &it: *stree) {
 
@@ -2492,9 +2607,10 @@ void printHessian(IQTree *iqtree, int partition_type) {
             RowVectorXd partition_gradient_vector_eigen;
 
             printMCMCFileFormat(it, partition_hessian, partition_tree_stream, partition_branch_lengths_vector,
-                                partition_gradient_vector_eigen);
+                                partition_gradient_vector_eigen, stree, part_id);
 
             if (partition_type != BRLEN_OPTIMIZE) {
+
                 if (partition_type == BRLEN_SCALE) {
                     auto part_rate = part_info[part_id].part_rate;
                     auto hessian_scale = part_rate * part_rate;
@@ -2504,10 +2620,6 @@ void printHessian(IQTree *iqtree, int partition_type) {
                 if (partition_type == BRLEN_FIX) {
                     global_hessian += partition_hessian;
                     global_gradient_vector += partition_gradient_vector_eigen;
-                    if (it == stree->back()) { //todo: need to check for brlen-scale model.
-                        global_tree_stream << partition_tree_stream.rdbuf();
-                        global_blength_vector = partition_branch_lengths_vector;
-                    }
                 }
             } else {
                 outfile << endl << it->aln->getNSeq() << endl << endl;
@@ -2517,34 +2629,23 @@ void printHessian(IQTree *iqtree, int partition_type) {
                 outfile << "Hessian " << endl << endl;
                 outfile << partition_hessian << endl;
             }
-            //Todo: Remove after testing
-            outfile1 << endl << it->aln->getNSeq() << endl << endl;
-            outfile1 << partition_tree_stream.str() << endl << endl;
-            outfile1 << partition_branch_lengths_vector << endl << endl;
-            outfile1 << partition_gradient_vector_eigen << endl << endl << endl;
-            outfile1 << "Hessian " << endl << endl;
-            outfile1 << partition_hessian << endl;
-
             part_id++;
         }
-        if (partition_type == BRLEN_SCALE) {
+        if (partition_type != BRLEN_OPTIMIZE) {
             DoubleVector branchLengths;
             stree->saveBranchLengths(branchLengths);
             Map<RowVectorXd> branch_lengths_vector_br_scaled(branchLengths.data(), iqtree_branchNum);
-            global_blength_vector = branch_lengths_vector_br_scaled;
+            global_branch_length_vector = branch_lengths_vector_br_scaled;
             stree->printTree(global_tree_stream, WT_BR_LEN + WT_SORT_TAXA);
 
-        }
-        if (partition_type != BRLEN_OPTIMIZE) {
             outfile << endl << global_nseq << endl << endl;
             outfile << global_tree_stream.str() << endl << endl;
-            outfile << global_blength_vector << endl << endl;
+            outfile << global_branch_length_vector << endl << endl;
             outfile << global_gradient_vector << endl << endl << endl;
             outfile << "Hessian " << endl << endl;
             outfile << global_hessian << endl;
         }
     } else {
-
         MatrixXd hessian;
         stringstream tree_stream;
         RowVectorXd branch_lengths_vector;
@@ -2564,9 +2665,32 @@ void printHessian(IQTree *iqtree, int partition_type) {
         outfile << "Hessian " << endl;
         outfile << hessian << endl;
     }
+
+    printMCMCTreeCtlFile(iqtree, ctlFile, alnFile);
+
     outfile.close();
-    outfile1.close();
+    ctlFile.close();
+    alnFile.close();
+
+    cout << endl << "Gradients and Hessians written to: " << outFileName << endl;
+    cout << "Ctl file for MCMCTree written to: " << ctlFileName << endl;
+    cout << "Add time records calibrations to: " << iqtree->params->user_file << endl;
+
 }
+
+// method to check the existence of traversal starting node of species-tree on a gene-tree for hessian calculation
+SuperNeighbor* findRootedNeighbour(SuperNeighbor* super_root, int part_id){
+    if(super_root->link_neighbors[part_id]){
+        return super_root;
+    }
+    for(auto nei: super_root->node->neighbors){
+        auto super_nei  = (SuperNeighbor*)nei;
+        if(super_nei->link_neighbors[part_id]){
+            return super_nei;
+        }
+        findRootedNeighbour(super_nei, part_id);
+    }
+};
 
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
@@ -3173,29 +3297,46 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
     }
-    //check for dating
-    if (params.dating_method != "") {
+    //check for dating with mcmctree
+    if (params.dating_method == "mcmctree") {
+        cout << endl << "--- Generating the gradients and the Hessian by MCMCTree ---" << endl;
         if (iqtree->isSuperTree()) {
             auto *stree = (PhyloSuperTree *) iqtree;
+            int part_id = 0;
             for (auto &it: *stree) {
                 auto *partition_tree = (PhyloTree *) it;
 
                 // If we memorized the traversal starting node -> find the corresponding traversal starting node for the current partition
                 if (stree->traversal_starting_node) {
+
+                    auto nei = (SuperNeighbor *) (((Node *) stree->traversal_starting_node)->neighbors[0]->node)->findNeighbor(
+                            (Node *) stree->traversal_starting_node);
+                    auto linked_super_nei = findRootedNeighbour(nei, part_id);
+                    auto part_traversal_starting_nei = linked_super_nei->link_neighbors[part_id];
+
+                    if (part_traversal_starting_nei->node->neighbors.size() == 1) {
+                        part_traversal_starting_nei = (PhyloNeighbor *) ((part_traversal_starting_nei->node)->findNeighbor(
+                                (part_traversal_starting_nei->node->neighbors[0]->node)));
+                    }
+
                     // change the partition tree so that its traversal starting node matches that of the super tree -> temporarily set the root at the first taxon in the alignment
                     partition_tree->root = partition_tree->findNodeID(0);
                     partition_tree->initializeTree();
 
                     // set the traversal starting node for the current partition tree
-                    partition_tree->traversal_starting_node = partition_tree->findNodeID(
-                            ((Node *) stree->traversal_starting_node)->id);
+                    partition_tree->traversal_starting_node = (part_traversal_starting_nei->node);
+                    part_id++;
                 }
                 doTimeTree(partition_tree);
             }
         } else {
             doTimeTree(iqtree);
         }
+        cout << "--- Completed the gradients and the Hessian generation ---" << endl;
+
         printHessian(iqtree, params.partition_type);
+
+
     }
     // BUG FIX: readTreeString(bestTreeString) not needed before this line
     iqtree->printResultTree();

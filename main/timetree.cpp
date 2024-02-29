@@ -368,25 +368,22 @@ void computeHessian(PhyloTree *tree) {
 }
 
 void runMCMCTree(PhyloTree *tree) {
-    string basename = (string) Params::getInstance().out_prefix + ".timetree";
-    cout << "Generating the gradients and the Hessian by MCMCTree." << endl;
+    // only hessian calculation for now
     computeHessian(tree);
-    cout << "Completed the gradients and the Hessian generation." << endl;
 }
 
 void doTimeTree(PhyloTree *tree) {
-    //todo: check the code for LSD (integration testing)
-    cout << "--- Start phylogenetic dating ---" << endl;
     cout.unsetf(ios::fixed);
 
 #ifdef USE_LSD2
     if (Params::getInstance().dating_method == "LSD") {
+        cout << "--- Start phylogenetic dating ---" << endl;
         runLSD2(tree);
         cout << "--- End phylogenetic dating ---" << endl;
         return;
-    } else if (Params::getInstance().dating_method == "mcmctree") {
+    }
+    else if (Params::getInstance().dating_method == "mcmctree") {
         runMCMCTree(tree);
-        cout << "--- End phylogenetic dating ---" << endl;
         return;
     }
 #endif
