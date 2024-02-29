@@ -771,7 +771,7 @@ void PhyloTree::computeRawPartialLikelihoodGenericSIMD(PhyloNode* dad, PhyloNode
                 for (size_t i = 0; i < ncat_mix; i++, partial_lh += nstates)
                 {
                     raw_partial_lh_ptr = raw_partial_lh + index_raw_partial_lh;
-                    for (size_t k = 0; k < VectorClass::size(); ++k, raw_partial_lh_ptr += VectorClass::size())
+                    for (size_t k = 0; k < VectorClass::size(); ++k, raw_partial_lh_ptr += nstates)
                     {
                         for (size_t j = 0; j < nstates; ++j)
                         {
