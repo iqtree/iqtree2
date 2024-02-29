@@ -6465,6 +6465,9 @@ void ConnectedRegion::outputDisMat(const std::string& file_path)
     
 void ConnectedRegion::outputPartialLhs(const std::string& file_path)
 {
+    // dummy variable
+    const double zero = 0;
+    
     // validate the input
     if (file_path.length() == 0)
         outError("Empty file_path!");
@@ -6515,6 +6518,9 @@ void ConnectedRegion::outputPartialLhs(const std::string& file_path)
                 // std::cout << std::setprecision(10) << std::scientific << buffer_partial_lh_ptr[0] << " ";
                 out_stream << std::setprecision(50) << std::scientific << buffer_partial_lh_ptr[0] << "\t";
             }
+            // if using amino-acid, add two zero entries, which represent 'X' and '-'
+            if (aln->seq_type == SEQ_PROTEIN)
+                out_stream << std::setprecision(50) << std::scientific << zero << "\t" << zero << "\t";
             // NHANLT - debug
             // std::cout << std::endl;
             out_stream << std::endl;
