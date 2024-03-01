@@ -2524,9 +2524,20 @@ void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_
 
 }
 
-void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignment) {
+void generateDummyAlignment(PhyloTree* tree, ofstream &dummyAlignment){
+    NodeVector nodeVector;
+    // auto alignment = tree->aln->getPattern(0);
+    tree->getOrderedTaxa(nodeVector);
+    dummyAlignment << "   " << nodeVector.size() << "   " << 1 << endl;
+    for (Node *node: nodeVector) {
+        dummyAlignment << node->name << "              " << "A" << endl;
+    }
+    dummyAlignment << endl;
+}
+
+void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignment, int partition_type = 0) {
     size_t ndata;
-    if (iqtree->isSuperTree()) {
+    if (iqtree->isSuperTree() && partition_type == BRLEN_OPTIMIZE) {
         auto *stree = (PhyloSuperTree *) iqtree;
         ndata = stree->size();
     } else {
@@ -2538,14 +2549,14 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
         << "outfile = " << "out" << endl << endl
 
         << "ndata = " << ndata << endl
-        << "seqtype = 0    * 0: nucleotides; 1:codons; 2:AAs" << endl
-        << "usedata = 2    * 0: no data; 1:seq like; 2:use in.BV; 3: out.BV" << endl
+        << "seqtype = 0    * 0: No Alignment datatype required" << endl
+        << "usedata = 2    *  2:use in.BV" << endl
         << "clock = 3      * 1: global clock; 2: independent rates; 3: correlated rates" << endl
         << "RootAge = <1.0  * safe constraint on root age, used if no fossil for root." << endl << endl
 
         << "model = 0      * The model specification is not necessary for approximate likelihood method" << endl
-        << "alpha = 0      * alpha for gamma rates at sites" << endl
-        << "ncatG = 0      * No. categories in discrete gamma" << endl << endl
+        << "alpha = 0      * The alpha value specification is not necessary for approximate likelihood method" << endl
+        << "ncatG = 0      * The No. categories in discrete gamma specification is not necessary for approximate likelihood method" << endl << endl
 
         << "cleandata = 0  * remove sites with ambiguity data (1:yes, 0:no)?" << endl << endl
 
@@ -2566,18 +2577,13 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
 
         << "*** Note: Make your window wider (100 columns) before running the program." << endl;
     // generating a dummy alignment for approximate likelihood method with MCMCTree
-    if (iqtree->isSuperTree()) {
+    if (iqtree->isSuperTree() && partition_type == BRLEN_OPTIMIZE) {
         auto *stree = (PhyloSuperTree *) iqtree;
-        for (auto tree: *stree) {
-            NodeVector nodeVector;
-            auto alignment = tree->aln->getPattern(0);
-            tree->getOrderedTaxa(nodeVector);
-            dummyAlignment << "   " << nodeVector.size() << "   " << 1 << endl;
-            for (Node *node: nodeVector) {
-                dummyAlignment << node->name << "              " << "A" << endl;
+            for (auto tree: *stree) {
+                generateDummyAlignment(tree, dummyAlignment);
             }
-            dummyAlignment << endl;
-        }
+    }else{
+        generateDummyAlignment(iqtree, dummyAlignment);
     }
 }
 
@@ -2689,7 +2695,7 @@ void printHessian(IQTree *iqtree, int partition_type) {
         outfile << hessian << endl;
     }
 
-    printMCMCTreeCtlFile(iqtree, ctlFile, alnFile);
+    printMCMCTreeCtlFile(iqtree, ctlFile, alnFile, partition_type);
 
     outfile.close();
     ctlFile.close();
@@ -4494,8 +4500,12 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 
     /*************** initialize tree ********************/
     bool isTreeMix = isTreeMixture(params);
-    
+
     if (isTreeMix) {
+        // TreeMix cannot be used for MCMCTree gradients and Hessian calculation
+        if(params.dating_method=="mcmctree"){
+            outError("Approximate likelihood techniques for MCMCTree cannot be used with tree mixture models.");
+        }
         cout << "Tree-mixture model" << endl;
         // tree-mixture model
         if (params.user_file == NULL) {
