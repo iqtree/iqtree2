@@ -1446,6 +1446,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.con_regs_size = 20;
     params.dis_mat_pref = "";
     params.partial_lhs_pref = "";
+    params.connected_regions_pref = "";
     
     params.original_params = "";
     params.alisim_active = false;
@@ -5291,6 +5292,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc || argv[cnt][0] == '-')
                     throw "-partial-lh <PREFIX>";
                 params.partial_lhs_pref = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-con-regions-pref") == 0) {
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "-con-regions-pref <PREFIX>";
+                params.connected_regions_pref = argv[cnt];
                 continue;
             }
             if (strcmp(argv[cnt], "--alisim") == 0) {

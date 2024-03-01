@@ -2385,6 +2385,11 @@ public:
     string partial_lhs_pref;
     
     /**
+    *  prefix to output the connected regions
+    */
+    string connected_regions_pref;
+    
+    /**
     *  TRUE to execute alisim
     */
     bool alisim_active;

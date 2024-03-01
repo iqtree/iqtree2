@@ -2522,6 +2522,9 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
     std::string connected_reg_pref = tree->params->user_file != nullptr ? string(tree->params->user_file) : "";
     if (connected_reg_pref == "")
         connected_reg_pref = string(tree->params->aln_file);
+    // if users specify a prefix for the connected regions -> use it
+    if (tree->params->connected_regions_pref.length())
+        connected_reg_pref = tree->params->connected_regions_pref;
     
     for (auto i = 0; i < num_connected_regions; ++i)
     {
