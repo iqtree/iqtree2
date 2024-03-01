@@ -1663,6 +1663,10 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             }
             out << endl;
         }
+
+        if(params.dating_method == "mcmctree"){
+            exportMCMCTreeCMD(params, out);
+        }
         
         // export AliSim command if needed
         exportAliSimCMD(params, tree, out);
@@ -1687,6 +1691,25 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
     }
     
     printOutfilesInfo(params, tree);
+}
+
+void exportMCMCTreeCMD(Params &params, ostream &out)
+{
+
+    out << "MCMCTREE COMMAND" << endl;
+    out << "--------------" << endl;
+
+    out << "Currently, IQ-TREE supports gradients and Hessian calculation of branch lengths for divergence times estimation in MCMCTree with approximate likelihood method." << endl;
+    out << "The following files are generated to run MCMCTree with approximate likelihood method." << endl << endl;
+    out << "Gradients and Hessians: " << ((string) params.out_prefix + ".in.BV") << endl;
+    out << "Ctl file for MCMCTree: "  << ((string) params.out_prefix + ".mcmctree.ctl") << endl << endl;
+
+    out << "For Divergence time estimation with approximate likelihood method a substitution or an alignment is not needed after the gradients and Hessian file is generated." << endl;
+    out << "Note: The tree file should be calibrate with time records (eg: fossil dates). You can find the tree file at: " << (string) params.user_file << endl;
+    out << "Note: Please make sure the gradients and Hessian file: " << ((string) params.out_prefix + ".in.BV") << " is named as in.BV" << endl;
+    out << "Note: The parameters for MCMC runs could be change via ctl file at: " << ((string) params.out_prefix + ".mcmctree.ctl")  << endl << endl;
+
+    out << "Command for MCMCTree: " << "mcmctree " << ((string) params.out_prefix + ".mcmctree.ctl") << endl << endl;
 }
 
 void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
@@ -2510,7 +2533,7 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
         ndata = 1;
     }
     ctl << "seed = -1" << endl
-        << "seqfile = " << (string) iqtree->params->out_prefix + "_dummyAln.txt" << endl
+        << "seqfile = " << (string) iqtree->params->out_prefix + ".dummyAln.txt" << endl
         << "treefile = " << iqtree->params->user_file << endl
         << "outfile = " << "out" << endl << endl
 
@@ -2542,7 +2565,7 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
         << "nsample = 20000" << endl << endl
 
         << "*** Note: Make your window wider (100 columns) before running the program." << endl;
-
+    // generating a dummy alignment for approximate likelihood method with MCMCTree
     if (iqtree->isSuperTree()) {
         auto *stree = (PhyloSuperTree *) iqtree;
         for (auto tree: *stree) {
@@ -2560,9 +2583,9 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
 
 void printHessian(IQTree *iqtree, int partition_type) {
 
-    string outFileName = ((string) iqtree->params->out_prefix + "in.BV");
-    string ctlFileName = ((string) iqtree->params->out_prefix + "mcmctree.ctl");
-    string alnFileName = ((string) iqtree->params->out_prefix + "_dummyAln.txt");
+    string outFileName = ((string) iqtree->params->out_prefix + ".in.BV");
+    string ctlFileName = ((string) iqtree->params->out_prefix + ".mcmctree.ctl");
+    string alnFileName = ((string) iqtree->params->out_prefix + ".dummyAln.txt");
     ofstream outfile(outFileName);
     ofstream ctlFile(ctlFileName);
     ofstream alnFile(alnFileName);
@@ -2674,7 +2697,7 @@ void printHessian(IQTree *iqtree, int partition_type) {
 
     cout << endl << "Gradients and Hessians written to: " << outFileName << endl;
     cout << "Ctl file for MCMCTree written to: " << ctlFileName << endl;
-    cout << "Add time records calibrations to: " << iqtree->params->user_file << endl;
+    // cout << "Add time records calibrations to: " << iqtree->params->user_file << endl;
 
 }
 
@@ -3299,7 +3322,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
     //check for dating with mcmctree
     if (params.dating_method == "mcmctree") {
-        cout << endl << "--- Generating the gradients and the Hessian by MCMCTree ---" << endl;
+        cout << endl << "--- Generating the gradients and the Hessian for MCMCTree ---" << endl;
         if (iqtree->isSuperTree()) {
             auto *stree = (PhyloSuperTree *) iqtree;
             int part_id = 0;
