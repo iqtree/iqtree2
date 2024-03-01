@@ -964,7 +964,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     if (params.print_site_prob)
         cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
                 << endl;
-    
+
     if (params.print_marginal_prob && params.optimize_params_use_hmm)
         cout << "  Marginal probability:          " << params.out_prefix << ".mprob" << endl;
 
