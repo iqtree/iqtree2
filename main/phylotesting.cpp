@@ -2000,6 +2000,7 @@ void replaceModelInfo(ModelCheckpoint* model_info, ModelCheckpoint &new_info) {
     for (auto it = new_info.begin(); it != new_info.end(); it++) {
         model_info->put(it->first, it->second);
     }
+}
 
 /**
  * select models for all partitions
