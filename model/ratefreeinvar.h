@@ -40,7 +40,7 @@ public:
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return RateInvar::getNDim() + RateFree::getNDim(); }
+    virtual int getNDim();
 
 	/**
 		get the proportion of sites under a specified category.

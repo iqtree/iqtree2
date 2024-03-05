@@ -92,8 +92,8 @@ add_definitions(-I${onnxruntime_INCLUDE_DIRS})
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
-set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH ".0-beta")
+set (iqtree_VERSION_MINOR 3)
+set (iqtree_VERSION_PATCH ".0")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -598,7 +598,8 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inlin
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
 
 if(CLANG AND IQTREE_FLAGS MATCHES "static")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 endif()
 
 if (IQTREE_FLAGS MATCHES "libcxx")
@@ -947,8 +948,10 @@ set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     if (IQTREE_FLAGS MATCHES "oldmac")
         set (SYSTEM_NAME "MacOS10.5")
+    elseif (OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+        set (SYSTEM_NAME "MacOSX-arm64")
     else()
-        set (SYSTEM_NAME "MacOSX")
+        set (SYSTEM_NAME "MacOSX-intel")
     endif()
 endif()
 

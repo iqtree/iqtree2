@@ -177,6 +177,24 @@ enum SIMULATION_METHOD {
     RATE_MATRIX
 };
 
+/**
+ *  Specify 2 AliSim-OpenMP algorithms.
+ */
+enum ALI_OPENMP_ALG {
+    IM,
+    EM
+};
+
+/**
+ *  Specify 2 simulation approaches.
+ */
+enum SEQ_CHUNK_STATUS {
+    EMPTY,
+    OCCUPIED,
+    WRITING,
+    READING
+};
+
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
     double param_1 = -1, param_2 = -1;
@@ -348,6 +366,7 @@ const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for bra
 const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
+const double ONE_THIRD = 1.0 / 3.0;
 
 /**
  *  Specify different ways of doing an NNI.
@@ -388,7 +407,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_MAPLE, IN_OTHER
 };
 
   // TODO DS: SAMPLING_SAMPLED is DEPRECATED and it is not possible to run PoMo with SAMPLING_SAMPLED.
@@ -516,7 +535,7 @@ enum LhMemSave {
 };
 
 enum SiteLoglType {
-    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT, WSL_TMIXTURE
 };
 
 enum SiteFreqType {
@@ -563,6 +582,8 @@ const double MIN_GAMMA_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
+// change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
 
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -728,7 +749,17 @@ public:
      */
     double modelfinder_eps;
 
-	/**
+    /**
+     logl epsilon for Tree Mixture
+     */
+    double treemix_eps;
+
+    /**
+     logl epsilon for HMM Tree Mixture
+     */
+    double treemixhmm_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
@@ -1367,6 +1398,13 @@ public:
         number of quartets for site concordance factor
      */
     int site_concordance;
+    
+    /**
+        0 (default): do the published sCF (Minh, Matt, Rob 2020)
+        1 to compute site concordance using ancestral states at four surrounding nodes
+        2 to use ancestral state based on separate subtrees
+    */
+    int ancestral_site_concordance;
 
     /**
      TRUE to print concordant sites per partition
@@ -1652,6 +1690,11 @@ public:
      *  Optimization algorithm for +I+G
      */
     string optimize_alg_gammai;
+    
+    /**
+     *  Optimization algorithm for tree weights in tree-mixture model
+     */
+    string optimize_alg_treeweight;
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
@@ -1673,7 +1716,30 @@ public:
 
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
+    
+    /** optimize the parameters according to the HMM model (HMMSTER) */
+    bool optimize_params_use_hmm;
 
+    /** optimize the parameters according to the HMM model (HMMSTER) using simple transition model*/
+    bool optimize_params_use_hmm_sm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
+    bool optimize_params_use_hmm_gm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using type-dependent transition model*/
+    bool optimize_params_use_hmm_tm;
+
+    /** proceed to MAST model after HMMSTER , default true */
+    // bool proceed_MAST_after_HMMSTER;
+
+    /** no averaging the branch length during the initialization of the HMM model */
+    bool HMM_no_avg_brlen;
+
+    /** minimum value allowed for HMM transition probability between the same tree (category) */
+    double HMM_min_stran;
+    
+    /** optimization methods: hmm / hmm2mast / mast2hmm / mast */
+    string treemix_optimize_methods;
 
     /**
             criterion to assess important quartet
@@ -1824,6 +1890,9 @@ public:
 
     /** TRUE to print partition log-likelihood, default: FALSE */
     bool print_partition_lh;
+    
+    /** TRUE to print the marginal probability for HMM model, default: FALSE */
+    bool print_marginal_prob;
 
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories
@@ -2493,11 +2562,6 @@ public:
     double alisim_simulation_thresh;
     
     /**
-    *  random generator
-    */
-    default_random_engine generator;
-    
-    /**
     *  messages which are delayed to show
     */
     string delay_msgs;
@@ -2518,6 +2582,11 @@ public:
     double alisim_branch_scale;
     
     /**
+    *  TRUE to output all replicate alignments into a single file
+    */
+    bool alisim_single_output;
+    
+    /**
     *  Type to assign rate heterogeneity to sites (default: posterior mean)
     */
     ASSIGNMENT_TYPE alisim_rate_heterogeneity;
@@ -2528,24 +2597,64 @@ public:
     ASSIGNMENT_TYPE alisim_stationarity_heterogeneity;
     
     /**
-    *  path to output the simulation time
-    */
-    string outputfile_runtime;
-    
-    /**
     *  path to the tmp_data file to temporarily output sequences at tips when using Indels
     */
     string tmp_data_filename;
     
     /**
-    *  model id
+    *  TRUE to keep the order of output sequences
     */
-    string model_id;
+    bool keep_seq_order;
+    
+    /**
+    *  TRUE to delete output file (for testing only)
+    */
+    bool delete_output;
     
     /**
     *  param to rebuild the indel history when using indel
     */
     double rebuild_indel_history_param;
+    
+    /**
+    *  factor to limit memory usage
+    */
+    double mem_limit_factor;
+    
+    /**
+    *  TRUE to allow indel-rate variation
+    */
+    bool indel_rate_variation;
+    
+    /**
+    *  AliSim-OpenMP algorithm
+    */
+    ALI_OPENMP_ALG alisim_openmp_alg;
+    
+    /**
+    *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
+    */
+    bool no_merge;
+    
+    /**
+    *  TRUE to include predefined mutations
+    */
+    bool include_pre_mutations;
+    
+    /**
+    *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
+    */
+    int alignment_id;
+    
+    /**
+    *  Mutation file that specifies pre-defined mutations occurs at nodes
+    */
+    std::string mutation_file;
+    
+    /**
+    *  site starting index (for predefined mutations in AliSim)
+    */
+    int site_starting_index;
 };
 
 /**
@@ -2675,6 +2784,11 @@ std::istream& safeGetline(std::istream& is, std::string& t);
         @return the random branch length
  */
 double randomLen(Params &params);
+
+/**
+    Try to generate a branch length but it could be out of the range (params.min_len, params.max_len)
+ */
+double tryGeneratingBlength(Params &params);
 
 /**
         Compute the logarithm of the factorial of an integer number
@@ -2832,9 +2946,10 @@ double convert_double(const char *str, int &end_pos);
         @param str original string
         @param end_pos end position
         @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
         @return the double
  */
-double convert_double_with_distribution(const char *str, int &end_pos, char separator = ',');
+double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator = ',');
 
 /**
         convert comma-separated string to integer vector, with error checking
@@ -2849,8 +2964,9 @@ void convert_double_vec(const char *str, DoubleVector &vec, char separator = ','
         @param str original string with doubles separated by comma
         @param vec (OUT) double vector
         @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
  */
-void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, char separator = ',');
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, bool non_negative, char separator = ',');
 
 /**
         convert separated string to an array of double number (double*) or generate them from distributions
@@ -2858,8 +2974,9 @@ void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, c
         @param array an array of double number (double*)
         @param num_items the number of items in the array
         @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
  */
-void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, char separator);
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, bool non_negative, char separator);
 
 /**
         normalize state frequencies so that sum of them is equal to 1
@@ -2914,28 +3031,32 @@ void read_distributions(char* filepath = NULL);
 /**
         randomly select a number from the pool of random numbers of a distribution
         @param distribution_name storing name of distribution
+        @param non_negative TRUE to only return non-negative number
  */
-double random_number_from_distribution(string distribution_name);
+double random_number_from_distribution(string distribution_name, bool non_negative);
 
 /**
         initialize a number by converting string to double (if the user supplies a number) or randomly generating it from a distribution (if the user supplies a distribution name)
         @param input storing a number or a distribution name
+        @param non_negative TRUE to only return non-negative number
  */
-double convert_double_with_distribution(const char *str);
+double convert_double_with_distribution(const char *str, bool non_negative);
 
 /**
         initialize a number (with an upper bound constraint) by converting string to double (if the user supplies a number) or randomly generating it (with up to 1000 attempts) from a distribution (if the user supplies a distribution name)
         @param input storing a number or a distribution name
         @param upper_bound storing the upper bound value
+        @param non_negative TRUE to only return non-negative number
  */
-double convert_double_with_distribution_and_upperbound(string input, double upper_bound);
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound, bool non_negative);
 
 /**
         randomly generating a double (with up to 1000 attempts) from a distribution with an upper bound constraint
         @param input storing a distribution name
         @param upper_bound storing the upper bound value, lower_bound is 0 (implicitly)
+        @param non_negative TRUE to only return non-negative number
  */
-double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound);
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound, bool non_negative);
 
 /**
        check whether a string is a number
@@ -3144,7 +3265,7 @@ double random_double(int *rstream = NULL);
  * returns a random double based on an exponential distribution
  * @param mean the mean of exponential distribution
  */
-double random_double_exponential_distribution(double mean);
+double random_double_exponential_distribution(double mean, int *rstream = NULL);
 
 /**
  * geometric random number generation
@@ -3475,6 +3596,11 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // Calculate the Frobenius norm of an N x N matrix M (flattened, rows
 // concatenated) and linearly scaled by SCALE.
 double frob_norm (double m[], int n, double scale=1.0);
+
+/**
+    concatenate the output file name with corresponding extension (for AliSim)
+*/
+string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
 
 #endif

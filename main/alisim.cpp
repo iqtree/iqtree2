@@ -6,11 +6,12 @@
  */
 
 #include "alisim.h"
-#include <chrono>
-using namespace std::chrono;
 
 void runAliSim(Params &params, Checkpoint *checkpoint)
 {
+    MPIHelper::getInstance().barrier();
+    auto start = getRealTime();
+    
     // Init variables
     IQTree *tree;
     Alignment *aln;
@@ -41,7 +42,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     params.alisim_inference_mode = inference_mode;
     
     // generate a random tree if neccessary
-    if (params.tree_gen != NONE)
+    if (params.tree_gen != NONE && MPIHelper::getInstance().isMaster())
     {
         // draw a random num_taxa from a user-defined list
         if (!params.alisim_num_taxa_list.empty())
@@ -62,17 +63,28 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
         params.start_tree = STT_PLL_PARSIMONY;
         params.tree_gen = NONE;
     }
+    // make sure the tree is generated before other MPI processes do further steps
+    MPIHelper::getInstance().barrier();
     
     // inferring input parameters if inference mode is active
     if (inference_mode)
     {
         inferInputParameters(params, checkpoint, tree, aln);
+        
+        if (params.include_pre_mutations)
+        {
+            outWarning("Ignore predefined mutations in the input tree since it is not supported in simulations to mimick an input alignment.");
+            params.include_pre_mutations = false;
+        }
     }
     
     // execute AliSim Simulation
     executeSimulation(params, tree);
     
     // aln and tree are deleted in distructor of AliSimSimulator
+    MPIHelper::getInstance().barrier();
+    auto end = getRealTime();
+    cout << "Simulation time: " << fixed << end-start << "s" << endl;
 }
 
 /**
@@ -107,8 +119,8 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
         else
             strcat(params.user_file,".treefile");
     }
-    // reload tree from tree_file
-    else
+    // NhanLT: we shouldn't reload the tree
+    /*else
     {
         // do not reload the tree from file in case with heterotachy
         if (!tree->getRate()->isHeterotachy())
@@ -162,7 +174,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
             auto end = getRealTime();
             cout<<" - Time spent on reloading trees: "<<end-start<<endl;
         }
-    }
+    }*/
     
     // update sequence_length
     if (params.original_params.find("--length") == std::string::npos)
@@ -175,8 +187,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
         // in normal case (without partitions) -> using the sequence length in the tree
         else
         {
-            int num_sites_per_state = tree->aln->seq_type == SEQ_CODON?3:1;
-            params.alisim_sequence_length = tree->aln->getNSite() * num_sites_per_state;
+            params.alisim_sequence_length = (tree->aln->seq_type == SEQ_CODON ? (tree->aln->getNSite() * 3) : tree->aln->getNSite());
         }
     }
 }
@@ -191,8 +202,7 @@ int computeTotalSequenceLengthAllPartitions(PhyloSuperTree *super_tree)
     for (int i = 0; i < super_tree->size(); i++)
     {
         Alignment *aln = super_tree->at(i)->aln;
-        int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-        total_length += aln->getNSite() * num_sites_per_state;
+        total_length += (aln->seq_type == SEQ_CODON ? (aln->getNSite() * 3) : aln->getNSite());
     }
     return total_length;
 }
@@ -217,7 +227,11 @@ void generateRandomTree(Params &params)
 
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
             params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE || params.tree_gen == BIRTH_DEATH) {
-            if (!overwriteFile(params.user_file)) return;
+            if (MPIHelper::getInstance().isMaster() && fileExists(params.user_file) && !params.ignore_checkpoint)
+            {
+                string tmp_str(params.user_file);
+                outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");
+            }
             ofstream out;
             out.open(params.user_file);
             MTree itree;
@@ -283,13 +297,21 @@ void generateRandomTree(Params &params)
         // Generate random trees if optioned
         else if (params.tree_gen == CIRCULAR_SPLIT_GRAPH) {
             cout << "Generating random circular split network..." << endl;
-            if (!overwriteFile(params.user_file)) return;
+            if (MPIHelper::getInstance().isMaster() && fileExists(params.user_file) && !params.ignore_checkpoint)
+            {
+                string tmp_str(params.user_file);
+                outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");
+            }
             sg.generateCircular(params);
         } else if (params.tree_gen == TAXA_SET) {
             sg.init(params);
             cout << "Generating random taxa set of size " << params.sub_size <<
                 " overlap " << params.overlap << " with " << params.repeated_time << " times..." << endl;
-            if (!overwriteFile(params.pdtaxa_file)) return;
+            if (MPIHelper::getInstance().isMaster() && fileExists(params.pdtaxa_file) && !params.ignore_checkpoint)
+            {
+                string tmp_str(params.pdtaxa_file);
+                outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");
+            }
             sg.generateTaxaSet(params.pdtaxa_file, params.sub_size, params.overlap, params.repeated_time);
         }
     } catch (bad_alloc) {
@@ -311,10 +333,103 @@ void generateRandomTree(Params &params)
 
 }
 
+std::vector<std::pair<std::string,std::string>> readMutations(const std::string& mutation_file)
+{
+    // init a vector of node mutations
+    std::vector<std::pair<std::string,std::string>> node_mutations;
+    
+    // open file, read line by line
+    try
+    {
+        // open file
+        if (!fileExists(mutation_file))
+            outError("File not found: " + mutation_file);
+        std::ifstream file(mutation_file);
+        std::string line;
+        
+        // read line by line
+        while (std::getline(file, line))
+        {
+            // ignore empty line
+            if (!line.length()) continue;
+            
+            // remove spaces at the begining of the line
+            auto pos = line.find_first_not_of(" ");
+            // find the first non-space character
+            if (pos != string::npos)
+            {
+                // if that character is not at the begining of the line -> remove all the spaces at the begining
+                if (pos > 0)
+                    line = line.substr(pos, line.length() - pos);
+            }
+            // if not found -> all characters are spaces -> invalid
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
+            
+            // remove spaces at the ending of the line
+            pos = line.find_last_not_of(" ");
+            // find the last non-space character
+            if (pos != string::npos)
+            {
+                // if that character is not at the end of the line -> remove all the spaces at the end
+                if (pos < line.length() - 1)
+                    line = line.substr(0, pos + 1);
+            }
+            // if not found -> all characters are spaces -> invalid
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
+            
+            // validate the input format <node_name><spaces><list_of_mutations>
+            if (line.length() < 5)
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
+            
+            // replace \t by a space
+            line = regex_replace(line, std::regex("\t"), " ");
+            
+            // get the node name
+            std::string node_name = "";
+            pos = line.find(" ");
+            if (pos != std::string::npos)
+            {
+                node_name = line.substr(0, pos);
+                
+                // convert node_name to uppercase
+                transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
+            }
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
+            
+            // get mutation list at that node
+            std::string mutation_str = "";
+            // find the first non-space character after the position
+            for (; pos < line.length(); ++pos)
+                if (line[pos] != ' ')
+                    break;
+            if (line.length() - pos)
+                mutation_str = line.substr(pos, line.length() - pos);
+            else
+                outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
+            
+            // record the mutations at that node
+            node_mutations.push_back(std::pair<std::string,std::string>(node_name, mutation_str));
+        }
+        
+        // close file
+        file.close();
+    }
+    catch(std::exception e)
+    {
+        outError("File not found or invalid format " + mutation_file);
+    }
+    
+    // return result
+    return node_mutations;
+}
+
 /**
 *  execute AliSim Simulation
 */
-void executeSimulation(Params params, IQTree *&tree)
+void executeSimulation(Params& params, IQTree *&tree)
 {
     cout << "[Alignment Simulator] Executing" <<"\n";
     
@@ -359,27 +474,34 @@ void executeSimulation(Params params, IQTree *&tree)
     // show parameters
     showParameters(params, alisimulator->tree->isSuperTree());
     
+    // export tree with new blengths if users want to do so
+    if (params.branch_distribution && params.user_file && !params.alisim_inference_mode)
+    {
+        string tree_path(params.user_file);
+        tree_path += ".new_blength";
+        std::cout << "Tree with randomly generated branch lengths is outputted at " << tree_path << std::endl;
+        ofstream out = ofstream(tree_path.c_str());
+        alisimulator->tree->printTree(out);
+        if (alisimulator->tree->isSuperTree() && params.partition_type == BRLEN_OPTIMIZE)
+        {
+            for (int i = 1; i < ((PhyloSuperTree*) alisimulator->tree)->size(); i++)
+            {
+                out << std::endl;
+                ((PhyloSuperTree*) alisimulator->tree)->at(i)->printTree(out);
+            }
+        }
+        out.close();
+    }
+    
     // load input MSA if any
     map<string,string> input_msa = loadInputMSA(alisimulator);
     
-    auto start_time = high_resolution_clock::now();
-    
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
-
-    if (params.outputfile_runtime.length() > 0)
-    {
-        auto end_time = high_resolution_clock::now();
-        
-        /* Getting number of milliseconds as a double. */
-        duration<double, std::milli> ms_double = end_time - start_time;
-
-        std::ofstream outfile;
-        outfile.open(params.outputfile_runtime+".txt", std::ios_base::app); // append instead of overwrite
-        outfile << "Model "+params.model_id+": "+convertDoubleToString(ms_double.count())+"\n";
-    }
     
     // delete alisimulator
+    if (alisimulator->tree) delete alisimulator->tree;
+    if (alisimulator->first_insertion) delete alisimulator->first_insertion;
     delete alisimulator;
     
     cout << "[Alignment Simulator] Done"<<"\n";
@@ -388,7 +510,7 @@ void executeSimulation(Params params, IQTree *&tree)
 /**
 *  show all input parameters for AliSim
 */
-void showParameters(Params params, bool is_partition_model)
+void showParameters(Params &params, bool is_partition_model)
 {
     cout << " - Tree filepath: " << params.user_file <<"\n";
     cout << " - Length of output sequences: " << params.alisim_sequence_length <<"\n";
@@ -407,10 +529,9 @@ void showParameters(Params params, bool is_partition_model)
 /**
 *  retrieve the ancestral sequence for the root node from an input file
 */
-vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator)
+void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, vector<short int> &sequence)
 {
     // get variables
-    vector<short int> sequence;
     char *aln_filepath = super_alisimulator->params->alisim_ancestral_sequence_aln_filepath;
     string sequence_name = super_alisimulator->params->alisim_ancestral_sequence_name;
     
@@ -438,15 +559,7 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
     
     // delete aln
     delete aln;
-    
-    // overwrite the output sequence_length
-    if (super_alisimulator->params->alisim_sequence_length != nsite)
-    {
-        super_alisimulator->params->alisim_sequence_length = nsite;
-        outWarning("Sequence length is now set equally to the length of ancestral sequence.");
-        super_alisimulator->refreshExpectedNumSites();
-    }
-    
+        
     string sequence_str = "";
     for (int i = 0; i < seq_names.size(); i++)
         if (!sequence_name.compare(seq_names[i]))
@@ -457,12 +570,20 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
     if (sequence_str.length() == 0)
         outError("Sequence name could not be found in the input alignment file.");
     
+    // overwrite the output sequence_length
+    if (super_alisimulator->params->alisim_sequence_length != sequence_str.length())
+    {
+        super_alisimulator->params->alisim_sequence_length = sequence_str.length();
+        outWarning("Sequence length is now set equally to the length of ancestral sequence.");
+        super_alisimulator->refreshExpectedNumSites();
+    }
+    
     // get Max number of states
     int max_num_states = src_tree->aln->getMaxNumStates();
     
     // convert the input sequence into (numerical states) sequence
-    int num_sites_per_state = src_tree->aln->seq_type == SEQ_CODON?3:1;
-    int sequence_length = super_alisimulator->params->alisim_sequence_length/num_sites_per_state;
+    int num_sites_per_state = src_tree->aln->seq_type == SEQ_CODON ? 3 : 1;
+    int sequence_length = (src_tree->aln->seq_type == SEQ_CODON ? (super_alisimulator->params->alisim_sequence_length / 3) : super_alisimulator->params->alisim_sequence_length);
     
     // make sure the length of the ancestral sequence must be equal to the total length of all partitions
     if (super_alisimulator->tree->isSuperTree() && sequence_length != super_alisimulator->tree->getAlnNSite())
@@ -471,14 +592,19 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
     sequence.resize(sequence_length);
     ostringstream err_str;
     int num_error = 0;
-    for (int i = 0; i < sequence_length; i++)
+    if (src_tree->aln->seq_type == SEQ_CODON)
     {
-        if (src_tree->aln->seq_type == SEQ_CODON)
+        int site_index = 0;
+        for (int i = 0; i < sequence_length; i++, site_index += num_sites_per_state)
         {
-            int site_index = i*num_sites_per_state;
+            // NHANLT: potential improvement
+            // change to use pointer of sequence_str to avoid accessing sequence_str[]
             sequence[i] = src_tree->aln->getCodonStateTypeFromSites(src_tree->aln->convertState(sequence_str[site_index], SEQ_DNA), src_tree->aln->convertState(sequence_str[site_index+1], SEQ_DNA), src_tree->aln->convertState(sequence_str[site_index+2], SEQ_DNA), sequence_name, site_index, err_str, num_error);
         }
-        else
+    }
+    else
+    {
+        for (int i = 0; i < sequence_length; i++)
         {
             sequence[i] = src_tree->aln->convertState(sequence_str[i]);
         
@@ -494,8 +620,92 @@ vector<short int> retrieveAncestralSequenceFromInputFile(AliSimulator *super_ali
     
     // show warning
     outWarning("Using an ancestral sequence with base frequencies that are not compatible with the specification of the model may lead to unexpected results.");
+}
+
+void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const site_locked_vec, Alignment* const aln)
+{
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // get locked sites from the predefined mutations at this branch (if any)
+        auto atb_it = (*it)->attributes.find(MTree::ANTT_MUT);
+        if (atb_it != (*it)->attributes.end())
+        {
+            // sequence length
+            const int seq_length = site_locked_vec->size();
+            
+            // parse a list of mutations
+            Substitutions pre_mutations = Substitutions(atb_it->second, aln, seq_length);
+            
+            // mark those sites locked
+            for (auto mut_it = pre_mutations.begin(); mut_it != pre_mutations.end(); ++mut_it)
+            {
+                // extract position
+                const int pos = mut_it->getPosition();
+                
+                // vailidate position
+                if (pos >= seq_length)
+                {
+                    outWarning("Ignore a predefined mutation " + aln->convertStateBackStr(mut_it->getOldState()) + convertIntToString((aln->seq_type == SEQ_CODON ? pos * 3 : pos) + Params::getInstance().site_starting_index) + aln->convertStateBackStr(mut_it->getNewState()) + ". Position exceeds the sequence length " + convertIntToString(aln->seq_type == SEQ_CODON ? seq_length * 3 : seq_length));
+                }
+                // mark the site as locked
+                else
+                    site_locked_vec->at(pos) = true;
+            }
+        }
         
-    return sequence;
+        // browse 1-step deeper to the neighbor node
+        getLockedSites((*it)->node, node, site_locked_vec, aln);
+    }
+}
+
+void createNodeMapping(std::map<std::string, std::pair<Node*, Node*>>& node_mapping, Node* const node, Node* const dad)
+{
+    // add the current node to the mapping
+    if (node->name.length())
+    {
+        std::string node_name = node->name;
+        // convert to uppercase
+        transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
+        
+        node_mapping.insert(std::pair<std::string, std::pair<Node*, Node*>>(node_name, std::pair<Node*, Node*>(dad, node)));
+    }
+    // process its neighbors/children
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        createNodeMapping(node_mapping, (*it)->node, node);
+    }
+}
+
+void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& node_mutations, IQTree* const tree)
+{
+    // validate input
+    ASSERT(tree && tree->root);
+    
+    // create a mapping between each node name and a pair of pointers <dad_node, node>
+    std::map<std::string, std::pair<Node*, Node*>> node_mapping;
+    createNodeMapping(node_mapping, tree->root, NULL);
+    
+    // browse the list of node_mutations to add mutations of each node to the corresponding node in the tree
+    for (const std::pair<std::string, std::string>& mutations : node_mutations)
+    {
+        // seek the corresponding node
+        auto it = node_mapping.find(mutations.first);
+        if( it != node_mapping.end())
+        {
+            // Extract the corresponding pair of nodes
+            Node* dad = (it->second).first;
+            Node* node = (it->second).second;
+            
+            // add attribute (mutations,<mutations_list> to the corresponding branch
+            dad->findNeighbor(node)->putAttr(MTree::ANTT_MUT, "{" + mutations.second + "}");
+            node->findNeighbor(dad)->putAttr(MTree::ANTT_MUT, "{" + mutations.second + "}");
+        }
+        // node_name is not found
+        else
+            outWarning("Parsing predefined mutations. Node " + mutations.first + " is not found in the tree.");
+    }
 }
 
 /**
@@ -506,26 +716,156 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // Load ancestral sequence from the input file if user has specified it
     vector<short int> ancestral_sequence;
     if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
-        ancestral_sequence = retrieveAncestralSequenceFromInputFile(super_alisimulator);
+        retrieveAncestralSequenceFromInputFile(super_alisimulator, ancestral_sequence);
+    
+    // terminate if users employ more MPI processes than the number of alignments
+    if (MPIHelper::getInstance().getNumProcesses() > super_alisimulator->params->alisim_dataset_num)
+        outError("You are employing more MPI processes (" + convertIntToString(MPIHelper::getInstance().getNumProcesses()) + ") than the number of alignments (" + convertIntToString(super_alisimulator->params->alisim_dataset_num) + "). Please reduce the number of MPI processes to save the computational resources and try again!");
+    
+    // BUG FIXED: set auto num_threads to the max #cores
+#ifdef _OPENMP
+    // num_threads == 0 <=> auto
+    if (!super_alisimulator->params->num_threads)
+        super_alisimulator->params->num_threads = countPhysicalCPUCores();
+#endif
+    
+    // reset number of OpenMP threads to 1 in simulations with Indels
+    if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
+        outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
+    
+    // do not support compression when outputting multiple data sets into a same file
+    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
+    {
+        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or keeping the order of output sequences. AliSim will output file in normal format.");
+
+        Params::getInstance().do_compression = false;
+        super_alisimulator->params->do_compression = false;
+    }
+    
+    // cannot skip concatenating sequence chunks from intermediate files in simulations with FunDi, Partitions, or +ASC models
+    if (Params::getInstance().num_threads != 1 && Params::getInstance().no_merge)
+    {
+        // ignore --no-merge option if using AliSim-OpenMP-IM
+        if (Params::getInstance().alisim_openmp_alg == IM)
+            outWarning("Ignore --no-merge option as it is only appliable for AliSim-OpenMP-EM algorithm.");
+        // otherwise, if using AliSim-OpenMP-EM -> show a warning in cases that we cannot skip merging
+        else if (super_alisimulator->tree->isSuperTree()
+                  || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0
+                  || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE))
+        {
+            outWarning("Cannot skip merging sequence chunks in simulations with FunDi, Partitions, or +ASC models. AliSim will concatenate sequence chunks from intermediate files into a single output file.");
+            
+            Params::getInstance().no_merge = false;
+            super_alisimulator->params->no_merge = false;
+        }
+    }
     
     // show a warning if the user wants to write internal sequences in not-supported cases
     if (super_alisimulator->params->alisim_write_internal_sequences
         &&((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
-           || super_alisimulator->tree->isSuperTree()))
+           || super_alisimulator->tree->isSuperTree() || (super_alisimulator->params->alisim_fundi_taxon_set.size() > 0 && Params::getInstance().num_threads != 1)))
     {
-        outWarning("Could not write out the internal sequences when using partition, or ASC models. Only sequences at tips will be written to the output file.");
+        outWarning("Could not write out the internal sequences when using partition, ASC models, or FunDi model with multithreading. Only sequences at tips will be written to the output file.");
         Params::getInstance().alisim_write_internal_sequences = false;
+        super_alisimulator->params->alisim_write_internal_sequences = false;
+    }
+    
+    // check to output a single file
+    if (super_alisimulator->params->alisim_single_output && super_alisimulator->params->alisim_dataset_num == 1)
+            super_alisimulator->params->alisim_single_output = false;
+    
+    // don't allow --no-merge and --single-output
+    if (super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->alisim_single_output && super_alisimulator->params->no_merge)
+    {
+        outWarning("Ignore --single-output option since it is not supported if using with --no-merge option.");
+        super_alisimulator->params->alisim_single_output = false;
+    }
+        
+    // ignore --single-output in version with MPI
+#ifdef _IQTREE_MPI
+    if (super_alisimulator->params->alisim_single_output)
+    {
+        outWarning("Ignore --single-output option since it is not supported in IQ-TREE version with MPI. Alignments will be outputted in separated files.");
+        super_alisimulator->params->alisim_single_output = false;
+    }
+#endif
+    
+    // ignore predefined mutations if using the following models: Partitions, Indels
+    // a vector of site status, which denotes whether a site is locked or not. Locked means that site only evolves according to the predefined mutations
+    std::vector<bool>* site_locked_vec = nullptr;
+    if (super_alisimulator->params->include_pre_mutations)
+    {
+        if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0 || // Indels
+            super_alisimulator->tree->isSuperTree()) // Partitions
+        {
+            outWarning("Ignore predefined mutations in the input tree since it is not supported in simulations with Indels or Partition models.");
+            super_alisimulator->params->include_pre_mutations = false;
+        }
+        else
+        {
+            ASSERT(super_alisimulator->tree && super_alisimulator->tree->root && super_alisimulator->tree->aln);
+            
+            // show info
+            std::cout << "Predefined mutations detected" << std::endl;
+            
+            // load predefined mutations from a file (if specified)
+            if (super_alisimulator->params->mutation_file.length())
+            {
+                std::vector<std::pair<std::string, std::string>> node_mutations = readMutations(super_alisimulator->params->mutation_file);
+                
+                // add mutations to tree
+                if (node_mutations.size())
+                    addMutations2Tree(node_mutations, super_alisimulator->tree);
+            }
+            
+            // init site_locked_vec
+            site_locked_vec = new std::vector<bool>(super_alisimulator->expected_num_sites, false);
+            
+            // browse the tree to mark all locked sites
+            getLockedSites(super_alisimulator->tree->root, NULL, site_locked_vec, super_alisimulator->tree->aln);
+        }
+    }
+    
+    // the output format of the simulated alignment
+    InputType actual_output_format = super_alisimulator->params->aln_output_format;
+    vector<SeqType> seqtypes;
+    vector<std::string> aln_names;
+    // If users want to output Maple format -> temporarily output PHYLIP first
+    if (actual_output_format == IN_MAPLE)
+    {
+        super_alisimulator->params->aln_output_format = IN_PHYLIP;
+        Params::getInstance().aln_output_format = IN_PHYLIP;
     }
     
     // iteratively generate multiple datasets for each tree
     for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
     {
+        // parallelize over MPI ranks statically
+        int proc_ID = MPIHelper::getInstance().getProcessID();
+        int nprocs  = MPIHelper::getInstance().getNumProcesses();
+        if (i%nprocs != proc_ID) continue;
+        
+        // If users want to output Maple format -> clear seqtypes and aln_names
+        if (actual_output_format == IN_MAPLE)
+        {
+            seqtypes.clear();
+            aln_names.clear();
+        }
+        
+        // record the alignment_id to generate different random seed when simulating different alignment
+        super_alisimulator->params->alignment_id = i;
+        
         // output the simulated aln at the current execution localtion
         string output_filepath = super_alisimulator->params->alisim_output_filename;
         
         // only add alignment id if users want to generate multiple alignments
-        if (super_alisimulator->params->alisim_dataset_num > 1)
+        if (super_alisimulator->params->alisim_dataset_num > 1 && !super_alisimulator->params->alisim_single_output)
             output_filepath = output_filepath+"_"+convertIntToString(i+1);
+        
+        // check whether we should write output to a new file or append it into an existing one
+        std::ios_base::openmode open_mode = std::ios_base::out;
+        if (i > 0 && super_alisimulator->params->alisim_single_output)
+            open_mode = std::ios_base::in|std::ios_base::out|std::ios_base::ate;
         
         // generate multiple alignments one by one
         if (super_alisimulator->tree->isSuperTree())
@@ -544,6 +884,8 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
             
             for (int partition_index = 0; partition_index < super_tree->size(); partition_index++)
             {
+                // update the alignment_id, taking into account the partition index, so that we use different random seed for each partition in each alignment
+                super_alisimulator->params->alignment_id = (i + 1) * 1000000 + partition_index;
                 // get variables
                 IQTree *current_tree = (IQTree*) super_tree->at(partition_index);
                 int expected_num_states_current_tree = current_tree->aln->getNSite();
@@ -552,7 +894,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // create position_spec in case aln_files are specified in a directory
                 if (super_alisimulator->params->partition_file && isDirectory(super_alisimulator->params->partition_file))
                 {
-                    ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = "1-" + convertIntToString(super_tree->at(partition_index)->aln->getNSite()*num_sites_per_state);
+                    int total_num_states = super_tree->at(partition_index)->aln->getNSite();
+                    if (num_sites_per_state != 1)
+                        total_num_states *= num_sites_per_state;
+                    ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = "1-" + convertIntToString(total_num_states);
                 }
                 
                 // extract site_ids of the partition
@@ -560,7 +905,11 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 // convert position_spec from "*" to "start-end"
                 if (!info_spec_str.compare("*") && super_tree->at(partition_index)->aln->getNSite() > 0)
                 {
-                    info_spec_str = "1-" + convertIntToString(super_tree->at(partition_index)->aln->getNSite()*num_sites_per_state);
+                    int total_num_states = super_tree->at(partition_index)->aln->getNSite();
+                    if (num_sites_per_state != 1)
+                        total_num_states *= num_sites_per_state;
+                    
+                    info_spec_str = "1-" + convertIntToString(total_num_states);
                     ((SuperAlignment*) super_tree->aln)->partitions[partition_index]->CharSet::position_spec = info_spec_str;
                 }
                 
@@ -584,58 +933,124 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 double partition_rate = super_tree->params->partition_type == BRLEN_SCALE ? super_tree->part_info[partition_index].part_rate:1;
                 // generate alignment for the current tree/partition
                 AliSimulator* partition_simulator = new AliSimulator(super_tree->params, current_tree, expected_num_states_current_tree, partition_rate);
-                generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree, input_msa);
+                generatePartitionAlignmentFromSingleSimulator(partition_simulator, ancestral_sequence_current_tree, input_msa, site_locked_vec);
                 
                 // update new genome at tips from the original genome and the genome tree
                 // skip updating if using +ASC or Fundi model as they must be already updated
-                if (super_alisimulator->params->alisim_insertion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
+                if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0 && !(partition_simulator->tree->getModelFactory() && partition_simulator->tree->getModelFactory()->getASC() != ASC_NONE) && (partition_simulator->params->alisim_fundi_taxon_set.size() == 0))
                     partition_simulator->updateNewGenomeIndels(partition_simulator->seq_length_indels);
+                
+                // delete partition_simulator
+                if (partition_simulator->first_insertion) delete partition_simulator->first_insertion;
+                delete partition_simulator;
             }
         }
         else
         {
+            // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Maple format
+            if (actual_output_format == IN_MAPLE)
+            {
+                seqtypes.push_back(super_alisimulator->tree->aln->seq_type);
+                aln_names.push_back(output_filepath);
+            }
+            
             // check whether we could write the output to file immediately after simulating it
             if (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() == ASC_NONE && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio == 0)
-                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, output_filepath);
+                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, site_locked_vec, output_filepath, open_mode);
             // otherwise, writing output to file after completing the simulation
             else
-                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa);
+                generatePartitionAlignmentFromSingleSimulator(super_alisimulator, ancestral_sequence, input_msa, site_locked_vec);
         }
         
         // merge & write alignments to files if they have not yet been written
         if ((super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
             || super_alisimulator->tree->isSuperTree()
-            || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio != 0)
-            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator);
+            || super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
+            mergeAndWriteSequencesToFiles(output_filepath, super_alisimulator, seqtypes, aln_names, open_mode);
         
-        // report model's parameters
-        reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));
-        // show omega/kappa/kappa2 when using codon models
-        if (super_alisimulator->tree->aln->seq_type == SEQ_CODON)
-            super_alisimulator->tree->getModel()->writeInfo(cout);
+        // only report model params when simulating the first MSA
+        if (i == 0)
+        {
+            // report model's parameters
+            reportSubstitutionProcess(cout, *(super_alisimulator->params), *(super_alisimulator->tree));
+            // show omega/kappa/kappa2 when using codon models
+            if (super_alisimulator->tree->aln->seq_type == SEQ_CODON)
+                super_alisimulator->tree->getModel()->writeInfo(cout);
+        }
         
-        // remove tmp_data if using Insertion
-        if (super_alisimulator->params->alisim_insertion_ratio > 0)
-            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + ".phy").c_str());
+        // remove tmp_data if using Indels
+        if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
+            remove((super_alisimulator->params->alisim_output_filename + "_" + super_alisimulator->params->tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
+        
+        // if users want to output Maple format -> convert PHY into MAPLE and delete PHY
+        if (actual_output_format == IN_MAPLE)
+        {
+            for (auto aln_id = 0 ; aln_id < aln_names.size(); ++ aln_id)
+            {
+                // initialize a dummy alignment to make sure we'll not change the main alignment when converting the simulated alignment files into Maple format
+                Alignment aln;
+                aln.seq_type = seqtypes[aln_id];
+                
+                // convert the simulated alignment files into Maple format
+                aln.extractMapleFile(aln_names[aln_id], IN_PHYLIP);
+                
+                // remove the simulated alignment files (in PHYLIP format)
+                remove(getOutputNameWithExt(IN_PHYLIP, aln_names[aln_id]).c_str());
+                
+                // show the output file name
+                if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
+                    cout << "The simulated alignment has been converted into Maple format: "<< getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) <<endl;
+            }
+        }
+        
+        // delete output alignments (for testing only)
+        if (super_alisimulator->params->delete_output)
+        {
+            string output_filename = output_filepath;
+            
+            for (int thread_id = 0; thread_id < super_alisimulator->params->num_threads; thread_id++)
+            {
+                if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->no_merge)
+                    output_filename = output_filepath + "_" + convertIntToString(thread_id + 1);
+                
+                // add file extension
+                output_filename = getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename);
+                
+                // delete the output file
+                remove((output_filename).c_str());
+                
+                // stop deleting if output file was merging
+                if (super_alisimulator->params->alisim_openmp_alg == IM || !super_alisimulator->params->no_merge)
+                    break;
+            }
+        }
     }
+    
+    // output full tree (with internal node names) if outputting internal sequences
+    if (super_alisimulator->params->alisim_write_internal_sequences)
+        outputTreeWithInternalNames(super_alisimulator);
+    
+    // delete site_locked_vec (if necessary)
+    if (site_locked_vec)
+        delete site_locked_vec;
 }
 
 /**
     copy sequences of leaves from a partition tree to super_tree
 */
-void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad){
+void copySequencesToSuperTree(IntVector &site_ids, int expected_num_states_super_tree, IQTree *current_tree, int initial_state, Node *node, Node *dad){
     if (node->isLeaf() && node->name!=ROOT_NAME) {
         // find the corresponding node in the current_tree
         Node *current_node = current_tree->findLeafName(node->name);
 
         // initialize sequence of the super_node
-        if (node->sequence.size() != expected_num_states_super_tree)
+        if (node->sequence->sequence_chunks[0].size() != expected_num_states_super_tree)
         {
-#ifdef _OPENMP
-#pragma omp critical
-#endif
-            if (node->sequence.size() != expected_num_states_super_tree)
-                node->sequence.resize(expected_num_states_super_tree, initial_state);
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
+            if (node->sequence->sequence_chunks[0].size() != expected_num_states_super_tree)
+                node->sequence->sequence_chunks[0].resize(expected_num_states_super_tree, initial_state);
         }
         
         // copy sequence from the current_node to the super_node (if the current node is found)
@@ -643,7 +1058,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
         {
             // copy sites one by one from the current sequence to its position in the sequence of the super_node
             for (int i = 0; i < site_ids.size(); i++)
-                node->sequence[site_ids[i]] = current_node->sequence[i];
+                node->sequence->sequence_chunks[0][site_ids[i]] = current_node->sequence->sequence_chunks[0][i];
         }
     }
     
@@ -658,7 +1073,7 @@ void copySequencesToSuperTree(IntVector site_ids, int expected_num_states_super_
 /**
 *  generate a partition alignment from a single simulator
 */
-void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> ancestral_sequence, map<string,string> input_msa, string output_filepath)
+void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, vector<short int> &ancestral_sequence, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, string output_filepath, std::ios_base::openmode open_mode)
 {
     // show an error if continuous gamma is used in inference mode.
     if (alisimulator->params->alisim_inference_mode && alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->is_continuous_gamma)
@@ -670,43 +1085,64 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     bool is_mixture_model = alisimulator->tree->getModel()->isMixture();
     
     // case 1: without rate heterogeneity or mixture model -> using the current alisimulator (don't need to re-initialize it)
+    AliSimulator *tmp_alisimulator = alisimulator;
     
     // case 2: with rate heterogeneity or mixture model
     if ((!rate_name.empty()) || is_mixture_model)
     {
         // if user specifies +I without invariant_rate -> set it to 0
         if (rate_name.find("+I") != std::string::npos && isnan(invariant_proportion)) {
-            alisimulator->tree->getRate()->setPInvar(0);
+            tmp_alisimulator->tree->getRate()->setPInvar(0);
             outWarning("Invariant rate is now set to Zero since it has not been specified");
         }
         
         // case 2.3: with only invariant sites (without gamma/freerate model/mixture models)
         if (!rate_name.compare("+I") && !is_mixture_model)
         {
-            alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
+            tmp_alisimulator = new AliSimulatorInvar(alisimulator, invariant_proportion);
         }
         else
         {
             // case 2.1: with rate heterogeneity (gamma/freerate model with invariant sites)
             if (invariant_proportion > 0)
             {
-                alisimulator = new AliSimulatorHeterogeneityInvar(alisimulator, invariant_proportion);
+                tmp_alisimulator = new AliSimulatorHeterogeneityInvar(alisimulator, invariant_proportion);
             }
             // case 2.2: with rate heterogeneity (gamma/freerate model without invariant sites)
             else
             {
-                alisimulator = new AliSimulatorHeterogeneity(alisimulator);
+                tmp_alisimulator = new AliSimulatorHeterogeneity(alisimulator);
             }
         }
     }
     
-    alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, output_filepath);
+    tmp_alisimulator->generatePartitionAlignment(ancestral_sequence, input_msa, site_locked_vec, output_filepath, open_mode);
+    
+    // clone indel data before deleting tmp_alisimulator
+    if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+    {
+        alisimulator->seq_length_indels = tmp_alisimulator->seq_length_indels;
+        
+        // tmp_alisimulator != alisimulator
+        if ((!rate_name.empty()) || is_mixture_model)
+        {
+            // Bug fixed - only move map_seqname_node if tmp_alisimulator != alisimulator
+            alisimulator->map_seqname_node = std::move(tmp_alisimulator->map_seqname_node);
+            if (alisimulator->first_insertion) delete alisimulator->first_insertion;
+            alisimulator->first_insertion = tmp_alisimulator->first_insertion;
+        }
+    }
+    
+    // delete tmp_alisimulator
+    if ((!rate_name.empty()) || is_mixture_model)
+        delete tmp_alisimulator;
+    
 }
 
 /**
 *  write all sequences of a tree to an output file
 */
-void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator)
+void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length, int num_leaves, AliSimulator *alisimulator, std::ios_base::openmode open_mode)
 {
     try {
             // init output_stream for Indels to output aln without gaps
@@ -717,46 +1153,68 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             {
                 write_indels_output = true;
                 if (alisimulator->params->do_compression)
-                    out_indels = new ogzstream((file_path+"_withoutgaps.fa").c_str());
+                    out_indels = new ogzstream((file_path+".unaligned.fa").c_str(), open_mode);
                 else
-                    out_indels = new ofstream((file_path+"_withoutgaps.fa").c_str());
+                    out_indels = new ofstream((file_path+".unaligned.fa").c_str(), open_mode);
             }
         
             // add ".phy" or ".fa" to the output_filepath
-            if (alisimulator->params->aln_output_format != IN_FASTA)
-                file_path = file_path + ".phy";
-            else
-                file_path = file_path + ".fa";
+            file_path = getOutputNameWithExt(alisimulator->params->aln_output_format, file_path);
             ostream *out;
             if (alisimulator->params->do_compression)
-                out = new ogzstream(file_path.c_str());
+                out = new ogzstream(file_path.c_str(), open_mode);
             else
-                out = new ofstream(file_path.c_str());
+                out = new ofstream(file_path.c_str(), open_mode);
             out->exceptions(ios::failbit | ios::badbit);
 
             // write the first line <#taxa> <length_of_sequence> (for PHYLIP output format)
-            if (alisimulator->params->aln_output_format != IN_FASTA)
+            int seq_length_times_num_sites_per_state = (aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length);
+            string first_line = "";
+            uint64_t start_pos = 0;
+            if (alisimulator->params->aln_output_format == IN_PHYLIP)
             {
-                int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
-                *out <<num_leaves<<" "<<sequence_length*num_sites_per_state<< endl;
+                first_line = convertIntToString(num_leaves) + " " + convertIntToString(seq_length_times_num_sites_per_state) + "\n";
+                *out << first_line;
+                
+                // get the position to write output
+                start_pos = first_line.length();
+                
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++start_pos;
+                #endif
             }
+            
+            if (!alisimulator->params->do_compression)
+                start_pos = out->tellp();
+            uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
+        
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            output_line_length += alisimulator->params->aln_output_format == IN_FASTA ? 2 : 1;
+            #endif
         
             // initialize state_mapping (mapping from state to characters)
             vector<string> state_mapping;
             AliSimulator::initializeStateMapping(alisimulator->num_sites_per_state, aln, state_mapping);
         
             // write sequences at tips to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
-            bool write_sequences_from_tmp_data = alisimulator->params->alisim_insertion_ratio > 0 && alisimulator->params->alisim_fundi_taxon_set.size() == 0 && !(alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE) && !alisimulator->tree->isSuperTree();
+            bool write_sequences_from_tmp_data = alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0 && alisimulator->params->alisim_fundi_taxon_set.size() == 0 && !(alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE) && !alisimulator->tree->isSuperTree();
             if (write_sequences_from_tmp_data)
                 writeSeqsFromTmpDataAndGenomeTreesIndels(alisimulator, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name);
         
-
-#ifdef _OPENMP
-#pragma omp parallel
-#pragma omp single
-#endif
-            // browsing all sequences, converting each sequence & caching & writing output string to file
-            writeASequenceToFile(aln, sequence_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, write_sequences_from_tmp_data, alisimulator->tree->root, alisimulator->tree->root);
+            int num_threads = 1;
+            #ifdef _OPENMP
+            #pragma omp parallel
+            #pragma omp single
+            {
+                num_threads = omp_get_num_threads();
+            #endif
+                // browsing all sequences, converting each sequence & caching & writing output string to file
+                writeASequenceToFile(aln, sequence_length, num_threads, alisimulator->params->keep_seq_order, start_pos, output_line_length, *out, *out_indels, write_indels_output, state_mapping, alisimulator->params->aln_output_format, alisimulator->max_length_taxa_name, write_sequences_from_tmp_data, alisimulator->tree->root, alisimulator->tree->root);
+            #ifdef _OPENMP
+            }
+            #endif
 
             // close the output file for Indels
             if (write_indels_output)
@@ -777,10 +1235,11 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
             delete out;
         
             // show the output file name
-            cout << "An alignment has just been exported to "<<file_path<<endl;
+            if (!(MPIHelper::getInstance().getNumProcesses() > 1 && alisimulator->params->alisim_dataset_num > 1))
+                cout << "An alignment has just been exported to "<<file_path<<endl;
         
             // show actual output sequence length in simulations with Indels
-            if (alisimulator->params->alisim_insertion_ratio > 0)
+            if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
                 cout << "Output sequence length: " << convertIntToString(sequence_length) << endl;
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, file_path);
@@ -790,7 +1249,7 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
 /**
 *  merge and write all sequences to output files
 */
-void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator){
+void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator, vector<SeqType>& seqtypes, vector<std::string>& aln_names, std::ios_base::openmode open_mode){
     // in case with partitions -> merge & write sequences to a single/multiple files
     if (alisimulator->tree->isSuperTree())
     {
@@ -824,9 +1283,9 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 
                 // clear out all sequences in the current super_tree
                 clearoutSequencesSuperTree(super_tree->root, super_tree->root);
-#ifdef _OPENMP
-#pragma omp parallel for shared(partition_list, partition_count, max_site_index)
-#endif
+                #ifdef _OPENMP
+                #pragma omp parallel for shared(partition_list, partition_count, max_site_index)
+                #endif
                 for (j = i; j < super_tree->size(); j++)
                 {
                     IQTree *current_tree = (IQTree*) super_tree->at(j);
@@ -844,9 +1303,9 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                         for (int site_index:site_ids)
                             if (current_tree->max_site_id_mapping <site_index)
                                 current_tree->max_site_id_mapping = site_index;
-#ifdef _OPENMP
-#pragma omp critical
-#endif
+                        #ifdef _OPENMP
+                        #pragma omp critical
+                        #endif
                         {
                             // update the overall max_site_index
                             if (max_site_index < current_tree->max_site_id_mapping)
@@ -860,8 +1319,9 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 }
                 
                 // insert redundant sites (inserted sites due to Indels) to the sequences
-                if (super_tree->params->alisim_insertion_ratio > 0)
+                if (super_tree->params->alisim_insertion_ratio + super_tree->params->alisim_deletion_ratio > 0)
                 {
+                    cout << endl << "Actual sequence length of partitions (due to Indels):" << endl;
                     vector<short int> site_index_step_mapping(max_site_index+1, 0);
                     for (j = i; j < super_tree->size(); j++)
                     {
@@ -874,6 +1334,10 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                             int real_sequence_length = 0;
                             determineSequenceLength(current_tree->root, current_tree->root, stop, real_sequence_length);
                             int num_inserted_sites = real_sequence_length - expected_num_sites;
+                            
+                            // output actual sequence length of the current partition
+                            string partition_name = ((SuperAlignment*) super_tree->aln)->partitions[j]->CharSet::name;
+                            cout << partition_name << ": " << (current_tree->aln->seq_type == SEQ_CODON ? (real_sequence_length * 3) : real_sequence_length) << endl;
                             
                             if (num_inserted_sites > 0)
                             {
@@ -908,49 +1372,62 @@ void mergeAndWriteSequencesToFiles(string file_path, AliSimulator *alisimulator)
                 }
                 
                 
-                //  get the num_leaves
-                int num_leaves = super_tree->leafNum - ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
+                //  get the num_nodes
+                int num_nodes = super_tree->leafNum;
+                if (alisimulator->params->alisim_write_internal_sequences)
+                    num_nodes = super_tree->nodeNum;
+                // don't count the fake root
+                num_nodes -= ((super_tree->root->isLeaf() && super_tree->root->name == ROOT_NAME)?1:0);
+                
+                // record the seqtype and alignment names, which will be used later to convert the simulated alignment into Maple format
+                seqtypes.push_back(super_tree->at(i)->aln->seq_type);
+                aln_names.push_back(file_path + partition_list);
                 
                 // write the merged sequences to the output file for the current cluster of partitions
-                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_leaves, alisimulator);
+                writeSequencesToFile(file_path + partition_list, super_tree->at(i)->aln, max_site_index+1, num_nodes, alisimulator, open_mode);
             }
         }
     }
     // other cases (without partitions), just write sequences to a single file
     else
     {
-        int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
+        int sequence_length = round(alisimulator->expected_num_sites * alisimulator->inverse_length_ratio);
         
         // determine the real sequence_length if Indels is used
-        if (alisimulator->params->alisim_insertion_ratio > 0)
+        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
             sequence_length = alisimulator->seq_length_indels;
         
-        //  get the num_leaves
-        int num_leaves = alisimulator->tree->leafNum - ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
-        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_leaves, alisimulator);
+        //  get the num_nodes
+        int num_nodes = alisimulator->tree->leafNum;
+        if (alisimulator->params->alisim_write_internal_sequences)
+            num_nodes = alisimulator->tree->nodeNum;
+        // don't count the fake root
+        num_nodes -= ((alisimulator->tree->root->isLeaf() && alisimulator->tree->root->name == ROOT_NAME)?1:0);
+        
+        writeSequencesToFile(file_path, alisimulator->tree->aln, sequence_length, num_nodes, alisimulator, open_mode);
     }
 }
 
 /**
 *  write a sequence of a node to an output file
 */
-void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
+void writeASequenceToFile(Alignment *aln, int sequence_length, int num_threads, bool keep_seq_order, uint64_t start_pos, uint64_t output_line_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name, bool write_sequences_from_tmp_data, Node *node, Node *dad)
 {
     // if write_sequences_from_tmp_data and this node is a leaf -> skip this node as its sequence was already written to the output file
     if ((!(node->isLeaf() && write_sequences_from_tmp_data))
-        &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio != 0))) {
-#ifdef _OPENMP
-#pragma omp task firstprivate(node) shared(out, out_indels)
-#endif
+        &&((node->isLeaf() && node->name!=ROOT_NAME) || (Params::getInstance().alisim_write_internal_sequences && Params::getInstance().alisim_insertion_ratio + Params::getInstance().alisim_deletion_ratio > 0))) {
+        #ifdef _OPENMP
+        #pragma omp task firstprivate(node, num_threads, keep_seq_order) shared(out, out_indels, state_mapping)
+        #endif
         {
             int num_sites_per_state = aln->seq_type == SEQ_CODON?3:1;
             // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
             string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-            string output (sequence_length * num_sites_per_state+1, '-');
-            output[output.length()-1] = '\n';
+            string output(aln->seq_type == SEQ_CODON ? (3 * sequence_length) : sequence_length, '-');
+            uint64_t output_pos = start_pos + node->id * output_line_length;
             
             // convert non-empty sequence
-            output = AliSimulator::convertNumericalStatesIntoReadableCharacters(node, sequence_length, num_sites_per_state, state_mapping);
+            AliSimulator::convertNumericalStatesIntoReadableCharacters(node->sequence->sequence_chunks[0], output, sequence_length, num_sites_per_state, state_mapping);
             
             // preparing output (without gaps) for indels
             string output_indels = "";
@@ -968,23 +1445,27 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
             // concat pre_output & output
             output = pre_output + output;
             
-#ifdef _OPENMP
-#pragma omp critical
-#endif
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
             {
+                // jump to the correct position if user want to keep sequence order
+                if (num_threads != 1 && keep_seq_order)
+                    out.seekp(output_pos);
+                
                 // write output to file
-                out << output;
+                out << output << "\n";
                 
                 // write aln without gaps for Indels
                 if (write_indels_output)
-                    out_indels << output_indels;
+                    out_indels << output_indels << "\n";
             }
         }
     }
     
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        writeASequenceToFile(aln, sequence_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, write_sequences_from_tmp_data, (*it)->node, node);
+        writeASequenceToFile(aln, sequence_length, num_threads, keep_seq_order, start_pos, output_line_length, out, out_indels, write_indels_output, state_mapping, output_format, max_length_taxa_name, write_sequences_from_tmp_data, (*it)->node, node);
     }
 }
 
@@ -993,11 +1474,11 @@ void writeASequenceToFile(Alignment *aln, int sequence_length, ostream &out, ost
 *
 */
 void clearoutSequencesSuperTree(Node *node, Node *dad){
-#ifdef _OPENMP
-#pragma omp task firstprivate(node)
-#endif
+    #ifdef _OPENMP
+    #pragma omp task firstprivate(node)
+    #endif
     if (node->isLeaf())
-        node->sequence.clear();
+        node->sequence->sequence_chunks[0].clear();
 
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
@@ -1012,7 +1493,7 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
     if (alisimulator->params->alisim_inference_mode &&
         ((alisimulator->tree->getModelFactory() && alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
         || alisimulator->tree->isSuperTree()
-        || alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio != 0))
+        || alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0))
     {
         outWarning("AliSim will not copy gaps from the input alignment into the output alignments in simulations with Indels/Partitions/+ASC models.");
         return input_msa;
@@ -1034,8 +1515,8 @@ map<string,string> loadInputMSA(AliSimulator *alisimulator)
         seq_names = tmp_aln->getSeqNames();
 
         // show a warning if the length of input alignment is unequal to that of simulated sequence
-        int sequence_length = round(alisimulator->expected_num_sites/alisimulator->length_ratio);
-        if (sequences.size() > 0 && sequences[0].length() != sequence_length*alisimulator->num_sites_per_state)
+        int sequence_length = round(alisimulator->expected_num_sites * alisimulator->inverse_length_ratio);
+        if (sequences.size() > 0 && sequences[0].length() != (alisimulator->num_sites_per_state == 1 ? sequence_length : (sequence_length * alisimulator->num_sites_per_state)))
             outWarning("The sequence length of the input alignment is unequal to that of that simulated sequences. Thus, only gaps in the first MIN(input_sequence_length, simulated_sequence_length) sites are copied.");
         
         // return InputMSA;
@@ -1085,9 +1566,9 @@ void determineSequenceLength(Node *node, Node *dad, bool &stop, int &sequence_le
         return;
     
     // determine the real sequence_length
-    if (node->name!=ROOT_NAME && node->sequence.size() > 0)
+    if (node->name!=ROOT_NAME && node->sequence->sequence_chunks[0].size() > 0)
     {
-        sequence_length = node->sequence.size();
+        sequence_length = node->sequence->sequence_chunks[0].size();
         stop = true;
     }
     
@@ -1111,10 +1592,10 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 
         // if current_node is found, inserting sites normally
         if (current_node)
-            node->sequence.insert(node->sequence.begin()+position, current_node->sequence.begin()+starting_index, current_node->sequence.end());
+            node->sequence->sequence_chunks[0].insert(node->sequence->sequence_chunks[0].begin()+position, current_node->sequence->sequence_chunks[0].begin()+starting_index, current_node->sequence->sequence_chunks[0].end());
         // otherwise, insert gaps
         else
-            node->sequence.insert(node->sequence.begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
+            node->sequence->sequence_chunks[0].insert(node->sequence->sequence_chunks[0].begin()+position, num_inserted_sites, current_tree->aln->STATE_UNKNOWN);
     }
     
     // process its neighbors/children
@@ -1128,18 +1609,19 @@ void insertIndelSites(int position, int starting_index, int num_inserted_sites, 
 /**
 *  write sequences to output file from a tmp_data and genome trees => a special case: with Indels without FunDi/ASC/Partitions
 */
-void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> state_mapping, InputType output_format, int max_length_taxa_name)
+void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int sequence_length, ostream &out, ostream &out_indels, bool write_indels_output, vector<string> &state_mapping, InputType output_format, int max_length_taxa_name)
 {
     // read tmp_data line by line
     igzstream in;
     int line_num = 1;
     string line;
-    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename + ".phy").c_str());
+    in.open((Params::getInstance().alisim_output_filename + "_" + Params::getInstance().tmp_data_filename + "_" + convertIntToString(MPIHelper::getInstance().getProcessID())).c_str());
     
     // dummy variables
     GenomeTree* genome_tree = NULL;
     Insertion* previous_insertion = NULL;
-    int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON?3:1;
+    int num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON ? 3 : 1;
+    int seq_length_times_num_sites_per_state = alisimulator->tree->aln->seq_type == SEQ_CODON ? (sequence_length * 3) : sequence_length;
     int rebuild_indel_his_step = alisimulator->params->rebuild_indel_history_param * alisimulator->tree->leafNum;
     int rebuild_indel_his_thresh = rebuild_indel_his_step;
 
@@ -1147,7 +1629,7 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     {
         safeGetline(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
-        if (line == "" || line_num == 1) continue;
+        if (line == "" || (alisimulator->params->aln_output_format == IN_PHYLIP && line_num == 1)) continue;
         
         // extract seq_name
         int index_of_first_at = line.find_first_of("@");
@@ -1171,26 +1653,25 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         
         // initialize the output sequence with all gaps (to handle the cases with missing taxa in partitions)
         string pre_output = AliSimulator::exportPreOutputString(node, output_format, max_length_taxa_name);
-        string output (sequence_length * num_sites_per_state+1, '-');
-        output[output.length()-1] = '\n';
+        string output(seq_length_times_num_sites_per_state, '-');
         
         // build a new genome tree from the list of insertions if the genome tree has not been initialized (~NULL)
         if (!genome_tree)
         {
             genome_tree = new GenomeTree();
-            genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+            genome_tree->buildGenomeTree(node->sequence->insertion_pos, seq_length_ori, true);
         }
         // otherwise, update the tree by accepted gaps (inserted by previous insertions) as normal characters
         else
         {
             // if it is not the last tip -> rebuild/update the genome tree
-            if (node->insertion_pos->next)
+            if (node->sequence->insertion_pos->next)
             {
                 // rebuild the indel his if the number of tips (line_num) >= current threshold
                 if (line_num >= rebuild_indel_his_thresh)
                 {
                     // detach the insertion and genome nodes
-                    for (Insertion* insertion = node->insertion_pos; insertion; )
+                    for (Insertion* insertion = node->sequence->insertion_pos; insertion; )
                     {
                         // detach insertion and genome_nodes
                         insertion->genome_nodes.clear();
@@ -1202,14 +1683,14 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
                     // delete and rebuild genome tree
                     delete genome_tree;
                     genome_tree = new GenomeTree();
-                    genome_tree->buildGenomeTree(node->insertion_pos, seq_length_ori, true);
+                    genome_tree->buildGenomeTree(node->sequence->insertion_pos, seq_length_ori, true);
                     
                     // update the next threshold to rebuild the indel his
                     rebuild_indel_his_thresh += rebuild_indel_his_step;
                 }
                 // otherwise, just update indel his
                 else
-                    genome_tree->updateGenomeTree(previous_insertion, node->insertion_pos);
+                    genome_tree->updateGenomeTree(previous_insertion, node->sequence->insertion_pos);
             }
             // otherwise, it is the last tip -> the current sequence is already the latest sequence since there no more insertion occurs
             else
@@ -1220,10 +1701,10 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         }
         
         // keep track of previous insertion
-        previous_insertion = node->insertion_pos;
+        previous_insertion = node->sequence->insertion_pos;
         
         // delete the insertion_pos of this node as we updated its sequence.
-        node->insertion_pos = NULL;
+        node->sequence->insertion_pos = NULL;
         
         // export sequence of a leaf node from original sequence and genome_tree if using Indels
         genome_tree->exportReadableCharacters(seq_ori, num_sites_per_state, state_mapping, output);
@@ -1245,11 +1726,11 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
         output = pre_output + output;
         
         // write output to file
-        out << output;
+        out << output << "\n";
         
         // write aln without gaps for Indels
         if (write_indels_output)
-            out_indels << output_indels;
+            out_indels << output_indels << "\n";
     }
     
     // delete the genome tree
@@ -1257,4 +1738,33 @@ void writeSeqsFromTmpDataAndGenomeTreesIndels(AliSimulator* alisimulator, int se
     
     // close the tmp_data file
     in.close();
+}
+
+void outputTreeWithInternalNames(AliSimulator* alisimulator)
+{
+    // don't need to handle supertree here (at current stage) as AliSim doesn't support outputting internal sequences in simulations with partitions
+    // set names for internal nodes
+    updateInternalNodeName(alisimulator->tree->root);
+    
+    // output the treefile
+    string output_filepath = alisimulator->params->alisim_output_filename + ".full.treefile";
+    std::ofstream treefile(output_filepath, std::ios::out);
+    alisimulator->tree->printTree(treefile);
+    treefile.close();
+    
+    // show message
+    std::cout << "A tree (with internal node names) has been outputted to " << output_filepath << std::endl;
+}
+
+void updateInternalNodeName(Node *node, Node *dad)
+{
+    // if node is an internal and has an empty name -> set its name as its id
+    if (!node->isLeaf() && node->name == "")
+        node->name = convertIntToString(node->id);
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        updateInternalNodeName((*it)->node, node);
+    }
 }

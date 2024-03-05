@@ -1,4 +1,6 @@
 add_library(alignment
+substitution.h
+substitution.cpp
 pattern.cpp
 pattern.h
 alignment.cpp
@@ -17,6 +19,10 @@ superalignmentpairwiseplen.cpp
 superalignmentpairwiseplen.h
 superalignmentunlinked.cpp
 superalignmentunlinked.h
+sequence.cpp
+sequence.h
+sequencechunkstr.cpp
+sequencechunkstr.h
 )
 
 target_link_libraries(alignment simulator ncl gsl model)

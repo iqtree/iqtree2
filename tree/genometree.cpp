@@ -230,7 +230,7 @@ void GenomeTree::convertGapsIntoNormal(GenomeNode *node)
 /**
     export new genome from original genome and genome tree
  */
-vector<short int> GenomeTree::exportNewGenome(vector<short int> ori_seq, int seq_length, int UNKOWN_STATE)
+vector<short int> GenomeTree::exportNewGenome(vector<short int> &ori_seq, int seq_length, int UNKOWN_STATE)
 {
     // init new genome
     vector<short int> new_seq(seq_length, UNKOWN_STATE);
@@ -278,7 +278,7 @@ vector<short int> GenomeTree::exportNewGenome(vector<short int> ori_seq, int seq
 /**
  export readable characters (for writing to file) from original genome and genome tree
  */
-void GenomeTree::exportReadableCharacters(vector<short int> ori_seq, int num_sites_per_state, vector<string> state_mapping, string &output)
+void GenomeTree::exportReadableCharacters(vector<short int> &ori_seq, int num_sites_per_state, vector<string> &state_mapping, string &output)
 {
     queue<GenomeNode*> genome_nodes;
     root->cumulative_gaps_from_parent = 0;
@@ -295,20 +295,28 @@ void GenomeTree::exportReadableCharacters(vector<short int> ori_seq, int num_sit
             int pos_ori = node->pos_ori + node->cumulative_converts_from_parent + node->cumulative_converts_from_left_child;
             int pos_new = pos_ori + node->cumulative_gaps_from_parent + node->cumulative_gaps_from_left_child;
             ASSERT(pos_ori + node->length <= ori_seq.size());
-            ASSERT((pos_new + node->length) * num_sites_per_state <= output.length());
+            ASSERT((num_sites_per_state == 1 ? (pos_new + node->length) : ((pos_new + node->length) * num_sites_per_state)) <= output.length());
             
-            for (int i = 0; i < node->length; i++)
+            // NHANLT: potential improvement
+            // change to use pointer to avoid accessing []
+            // convert normal data
+            if (num_sites_per_state == 1)
             {
-                // convert normal data
-                if (num_sites_per_state == 1)
+                for (int i = 0; i < node->length; i++)
+                {
                     output[pos_new + i] = state_mapping[ori_seq[pos_ori + i]][0];
-                // convert CODON
-                else
+                }
+            }
+            // convert CODON
+            else
+            {
+                int index = pos_new * num_sites_per_state;
+                for (int i = 0; i < node->length; i++, index += num_sites_per_state)
                 {
                     string output_codon = state_mapping[ori_seq[pos_ori + i]];
-                    output[(pos_new + i) * num_sites_per_state] = output_codon[0];
-                    output[(pos_new + i) * num_sites_per_state + 1] = output_codon[1];
-                    output[(pos_new + i) * num_sites_per_state + 2] = output_codon[2];
+                    output[index] = output_codon[0];
+                    output[index + 1] = output_codon[1];
+                    output[index + 2] = output_codon[2];
                 }
             }
         }

@@ -34,11 +34,10 @@ string RateContinuousGammaInvar::getNameParams() {
     return RateInvar::getNameParams() + RateContinuousGamma::getNameParams();
 }
 
-void RateContinuousGammaInvar::getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length)
+void RateContinuousGammaInvar::getSiteSpecificRates(vector<double> &site_specific_rates, int sequence_length, default_random_engine& generator)
 {
     // initialize gamma distribution
     gamma_distribution<double> distribution(gamma_shape, 1/gamma_shape);
-    default_random_engine generator = Params::getInstance().generator;
     
     // rescale ratio due to invariant sites
     double scale = 1.0/(1 - p_invar);

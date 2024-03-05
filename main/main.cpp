@@ -106,7 +106,6 @@ void printCopyright(ostream &out) {
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
     out << " for " << getOSName();
     out << " built " << __DATE__;
-    out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
 #endif
@@ -2284,7 +2283,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // after loading, workers are not allowed to write checkpoint anymore
     if (MPIHelper::getInstance().isWorker())
         checkpoint->setFileName("");
 
@@ -2401,7 +2399,7 @@ int main(int argc, char *argv[]) {
             cout << "AVX+FMA";
         } else if (Params::getInstance().SSE >= LK_AVX) {
             cout << "AVX";
-        } else if (Params::getInstance().SSE >= LK_SSE2) {
+        } else if (Params::getInstance().SSE >= LK_SSE2){
             cout << "SSE2";
         } else
             cout << "x86";
@@ -2508,7 +2506,9 @@ int main(int argc, char *argv[]) {
     }
 
     if (MPIHelper::getInstance().getNumProcesses() > 1) {
-        if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+        if (Params::getInstance().alisim_active) {
+            runAliSim(Params::getInstance(), checkpoint);
+        } else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
             runPhyloAnalysis(Params::getInstance(), checkpoint);
         } else {
             outError("Please use one MPI process! The feature you wanted does not need parallelization.");

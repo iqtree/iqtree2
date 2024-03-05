@@ -124,6 +124,11 @@ public:
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
 	virtual void initSettings(Params& params);
+    
+    /**
+        init sequence instances for each nodes when using AliSim
+    */
+    virtual void initSequences(Node* node = NULL, Node* dad = NULL);
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
@@ -263,7 +268,7 @@ public:
                             assuming pattern_lh has the size of the number of patterns
             @return tree likelihood
      */
-    virtual double computeLikelihood(double *pattern_lh = NULL);
+    virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
 
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
@@ -417,6 +422,15 @@ public:
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
     virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        compute ancestral sequence probability for an internal node by partial_lh of that subtree
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    virtual void computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);

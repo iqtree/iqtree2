@@ -94,6 +94,7 @@ void PhyloTree::init() {
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
     _pattern_lh_cat_state = NULL;
+    _pattern_scaling = NULL;
     _site_lh = NULL;
     //root_state = STATE_UNKNOWN;
     root_state = 126;
@@ -138,6 +139,26 @@ void PhyloTree::init() {
     isSummaryBorrowed = false;
     progress = nullptr;
     progressStackDepth = 0;
+}
+
+void PhyloTree::initSequences(Node* node, Node* dad)
+{
+    // init the starting node
+    if (!node && !dad)
+    {
+        node = root;
+        dad = root;
+    }
+    
+    // init sequence for each node
+    if (!node->sequence)
+        node->sequence = new Sequence();
+    
+    // browse 1-step deeper to the neighbor node
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        PhyloTree::initSequences((*it)->node, node);
+    }
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -224,6 +245,7 @@ PhyloTree::~PhyloTree() {
     site_rate = NULL;
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
+    aligned_free(_pattern_scaling);
     aligned_free(_site_lh);
     aligned_free(theta_all);
     aligned_free(buffer_scale_all);
@@ -666,6 +688,7 @@ string getASCName(ASCType ASC_type) {
         case ASC_INFORMATIVE_MISSING:
             return "+ASC_INF_MIS";
     }
+    return "";
 }
 
 string PhyloTree::getSubstName() {
@@ -885,6 +908,8 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_site_lh && (params->robust_phy_keep < 1.0 || params->robust_median)) {
         _site_lh = aligned_alloc<double>(getAlnNSite());
     }
+    if (!_pattern_scaling)
+        _pattern_scaling = aligned_alloc<double>(mem_size);
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!buffer_scale_all)
@@ -930,6 +955,7 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
     aligned_free(_site_lh);
+    aligned_free(_pattern_scaling);
 
     ptn_freq_computed = false;
     tip_partial_lh    = nullptr;
@@ -993,6 +1019,7 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
             max_lh_slots = min_lh_slots;
         }
     }
+
 
     // also count MEM for nni_partial_lh
     mem_size += (max_lh_slots+2) * lh_scale_size;
@@ -1203,7 +1230,7 @@ Node *findFirstFarLeaf(Node *node, Node *dad = NULL) {
     
 }
 
-double PhyloTree::computeLikelihood(double *pattern_lh) {
+double PhyloTree::computeLikelihood(double *pattern_lh, bool save_log_value) {
     ASSERT(model);
     ASSERT(site_rate);
     ASSERT(root->isLeaf());
@@ -1225,12 +1252,12 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //            cout << __func__ << " HIT ROOT STATE " << endl;
 //        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
 //    } else {
-        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node, save_log_value);
 //    }
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
-    if (pattern_lh && current_it->lh_scale_factor < 0.0) {
+    if (pattern_lh && current_it->lh_scale_factor < 0.0 && save_log_value) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
@@ -1278,6 +1305,8 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
         return getRate()->getNDiscreteRate();
     case WSL_MIXTURE:
         return getModel()->getNMixtures();
+    default:
+        return 0;
     }
 }
 
@@ -1578,6 +1607,7 @@ void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
+    
     size_t ptn, nptn = aln->getNPattern();
     size_t cat, ncat = getNumLhCat(wsl);
     // Right now only Naive version store _pattern_lh_cat!
@@ -2741,6 +2771,166 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     }
     curScore = tree_lh;
     return tree_lh;
+}
+
+int PhyloTree::getNDim() {
+    // FunDi parameter: rho and central branch length
+    return 2;
+}
+
+double PhyloTree::targetFunk(double x[]) {
+    params->alisim_fundi_proportion = x[1];
+    current_it->length = x[2];
+    current_it_back->length = x[2];
+    return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+}
+
+double PhyloTree::computeFundiLikelihood() {
+    ASSERT(model);
+    ASSERT(site_rate);
+    ASSERT(root->isLeaf());
+    unordered_set<string> taxa_set;
+    pair<Node*,Neighbor*> central_branch = {nullptr, nullptr};
+    for (auto it = params->alisim_fundi_taxon_set.begin();
+         it != params->alisim_fundi_taxon_set.end(); it++) {
+        taxa_set.insert(*it);
+    }
+    
+    cout << "rho = " << params->alisim_fundi_proportion << endl;
+    
+    findNodeNames(taxa_set, central_branch, root, nullptr);
+    if (!central_branch.first) {
+        outWarning("Tree does not contain FunDi central node");
+        return 0.0;
+    }
+    if (!central_branch.second) {
+        outWarning("Tree does not contain FunDi central branch");
+        return 0.0;
+    }
+    
+    if (central_branch.first->isLeaf() || central_branch.second->node->isLeaf()) {
+        outWarning("FundDi central branch must be an internal branch");
+        return 0.0;
+    }
+    
+    cout << "Central branch length: " << central_branch.second->length << endl;
+    do_fundi = true;
+    /*
+    current_it = (PhyloNeighbor*) central_branch.second;
+    current_it_back = (PhyloNeighbor*)(central_branch.second->node->findNeighbor(central_branch.first));
+    double score;
+    score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+    cout << "Current LnL: " << score << endl;
+    double cur_length = current_it->length;
+    double best_score = score;
+    double best_length = cur_length;
+    for (double length = 0.0; length <= cur_length; length += 0.001) {
+        current_it->length = length;
+        current_it_back->length = length;
+        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+        cout << "For length " << length << " LnL: " << score << endl;
+        if (best_score < score) {
+            best_score = score;
+            best_length = length;
+        }
+    }
+    cout << "best_LnL: " << best_score << " best_brlen: " << best_length << endl;
+    current_it->length = cur_length;
+    current_it_back->length = cur_length;
+     */
+
+    auto orig_optimize_by_newton = optimize_by_newton;
+    optimize_by_newton = false;
+    double cur_length = central_branch.second->length;
+    double best_length, best_score;
+    
+    if (params->alisim_fundi_proportion > 0.0) {
+        // optimize fundi branch length while keeping rho fixed
+        optimizeOneBranch((PhyloNode*)central_branch.first, (PhyloNode*)(central_branch.second->node), false);
+        best_length = central_branch.second->length;
+        best_score = computeLikelihoodBranch((PhyloNeighbor*)central_branch.second, (PhyloNode*) central_branch.first);
+        current_it->length = best_length;
+        current_it_back->length = best_length;
+    } else {
+        // optimize both fundi branch length and rho
+        /*
+        cout << "Doing grid search for rho..." << endl;
+        // optimize rho now
+        double best_rho = 0.0;
+        for (double rho = 0.01; rho <= 1.0; rho += 0.01) {
+            params->alisim_fundi_proportion = rho;
+            optimizeOneBranch((PhyloNode*)central_branch.first, (PhyloNode*)(central_branch.second->node), false);
+            double this_length = central_branch.second->length;
+            double this_score = computeLikelihoodBranch((PhyloNeighbor*)central_branch.second, (PhyloNode*) central_branch.first);
+            if (best_score < this_score) {
+                best_score = this_score;
+                best_length = this_length;
+                best_rho = rho;
+            }
+        }
+        */
+        int ndim = getNDim();
+        ASSERT(ndim == 2);
+        
+        cout << "Optimizing FunDi model parameters..." << endl;
+        //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
+
+        double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+        double *upper_bound = new double[ndim+1];
+        double *lower_bound = new double[ndim+1];
+        bool *bound_check = new bool[ndim+1];
+        double score;
+
+        // by BFGS algorithm
+        current_it = (PhyloNeighbor*)central_branch.second;
+        current_it_back = (PhyloNeighbor*)central_branch.second->node->findNeighbor(central_branch.first);
+        variables[1] = params->alisim_fundi_proportion;
+        variables[2] = current_it->length;
+        lower_bound[1] = 0.0;
+        lower_bound[2] = params->min_branch_length;
+        upper_bound[1] = 1.0;
+        upper_bound[2] = params->max_branch_length;
+        bound_check[1] = true;
+        bound_check[2] = true;
+        minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, TOL_RATE);
+
+        best_length = variables[2];
+        best_score = -targetFunk(variables);
+        delete [] bound_check;
+        delete [] lower_bound;
+        delete [] upper_bound;
+        delete [] variables;
+
+        cout << "Best FunDi parameter rho: " << params->alisim_fundi_proportion << endl;
+    }
+
+    do_fundi = false;
+    optimize_by_newton = orig_optimize_by_newton;
+    cout << "Best FunDi central branch length: " << best_length << endl;
+    setCurScore(best_score);
+    
+    return best_score;
+}
+
+double PhyloTree::optimizeFundiModel() {
+    if (safe_numeric) {
+        outError("safe_numeric must be false");
+    }
+    auto orig_kernel_nonrev = params->kernel_nonrev;
+    if (!orig_kernel_nonrev) {
+        // switch to nonrev kernel to compute _pattern_lh_cat_state
+        params->kernel_nonrev = true;
+        setLikelihoodKernel(sse);
+        clearAllPartialLH();
+    }
+    double score = computeFundiLikelihood();
+    if (!orig_kernel_nonrev) {
+        // switch back to REV kernel
+        params->kernel_nonrev = orig_kernel_nonrev;
+        setLikelihoodKernel(sse);
+        clearAllPartialLH();
+    }
+    return score;
 }
 
 void PhyloTree::moveRoot(Node *node1, Node *node2) {
@@ -5835,7 +6025,9 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
 
 void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     // error checking
-    if (!getModel()->isMixture()) {
+    if (isTreeMix()) {
+        wsl = WSL_TMIXTURE;
+    } else if (!getModel()->isMixture()) {
         if (wsl != WSL_RATECAT) {
             outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
             wsl = WSL_RATECAT;

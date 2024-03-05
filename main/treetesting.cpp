@@ -15,6 +15,8 @@
 #include "treetesting.h"
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
+#include "tree/iqtreemix.h"
+#include "tree/iqtreemixhmm.h"
 #include "gsl/mygsl.h"
 #include "utils/timeutil.h"
 
@@ -22,12 +24,13 @@
 void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
                  bool append, const char *linename) {
     double *pattern_lh;
+
     if (!ptn_lh) {
         pattern_lh = new double[tree->getAlnNPattern()];
         tree->computePatternLikelihood(pattern_lh);
     } else
         pattern_lh = ptn_lh;
-    
+
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -35,16 +38,18 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
             out.open(filename, ios::out | ios::app);
         } else {
             out.open(filename);
-            out << 1 << " " << tree->getAlnNSite() << endl;
         }
-        IntVector pattern_index;
-        tree->aln->getSitePatternIndex(pattern_index);
+       
+        if (!append)
+            out << 1 << " " << tree->getAlnNSite() << endl;
         if (!linename)
             out << "Site_Lh   ";
         else {
             out.width(10);
             out << left << linename;
         }
+        IntVector pattern_index;
+        tree->aln->getSitePatternIndex(pattern_index);
         for (size_t i = 0; i < tree->getAlnNSite(); i++)
             out << " " << pattern_lh[pattern_index[i]];
         out << endl;
@@ -55,8 +60,30 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
         outError(ERR_WRITE_OUTPUT, filename);
     }
     
-    if (!ptn_lh)
+    if (!tree->isTreeMix() && !ptn_lh)
         delete[] pattern_lh;
+}
+
+void printHMMResult(const char* filename, PhyloTree *tree, int cat_assign_method) {
+    // For HMM model, to show the assignment of the categories along sites with max likelihood
+    // cat_assign_method:
+    //  0 - the categories along sites is assigned according to the path with maximum probability (default)
+    //  1 - the categories along sites is assigned according to the max posterior probability
+    IQTreeMixHmm* iqtreehmm = dynamic_cast<IQTreeMixHmm*>(tree);
+    iqtreehmm->printResults(filename, cat_assign_method);
+    /*
+    if (cat_assign_method == 0)
+        cout << "HMM results printed to " << filename << endl;
+    else
+        cout << "HMM results with max-posterior prob printed to " << filename << endl;
+    */
+}
+
+void printMarginalProb(const char* filename, PhyloTree *tree) {
+    // For HMM model, to show the assignment of the categories along sites with max likelihood
+    IQTreeMixHmm* iqtreehmm = dynamic_cast<IQTreeMixHmm*>(tree);
+    iqtreehmm->printMarginalProb(filename);
+    cout << "Marginal probabilities printed to " << filename << endl;
 }
 
 void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
@@ -106,13 +133,26 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, filename);
     }    
-    delete[] pattern_lh;
+    if (!ptn_lh)
+        delete[] pattern_lh;
 }
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
     
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
+    if (tree->isTreeMix()) {
+        wsl = WSL_TMIXTURE; // tree mixture model
+    } else if (!tree->getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            wsl = WSL_MIXTURE;
+        }
+    }
     int ncat = tree->getNumLhCat(wsl);
     if (tree->isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)tree;
@@ -300,7 +340,9 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
     // error checking
-    if (!tree->getModel()->isMixture()) {
+    if (tree->isTreeMix())
+        wsl = WSL_TMIXTURE; // tree mixture model
+    else if (!tree->getModel()->isMixture()) {
         if (wsl != WSL_RATECAT) {
             outWarning("Switch now to '-wspr' as it is the only option for non-mixture model");
             wsl = WSL_RATECAT;
@@ -1468,6 +1510,8 @@ void evaluateTrees(string treeset_file, Params &params, IQTree *tree,
                    vector<TreeInfo> &info, IntVector &distinct_ids)
 {
     cout << "Reading trees in " << treeset_file << " ..." << endl;
+    if (!fileExists(treeset_file))
+        outError("File not found ", treeset_file);
     ifstream in(treeset_file);
     evaluateTrees(in, params, tree, info, distinct_ids);
     in.close();

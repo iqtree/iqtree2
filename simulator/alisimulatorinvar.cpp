@@ -17,6 +17,7 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     params = alisimulator->params;
     num_sites_per_state = alisimulator->num_sites_per_state;
     length_ratio = alisimulator->length_ratio;
+    inverse_length_ratio = alisimulator->inverse_length_ratio;
     expected_num_sites = alisimulator->expected_num_sites;
     partition_rate = alisimulator->partition_rate;
     invariant_proportion = invar_prop;
@@ -28,15 +29,19 @@ AliSimulatorInvar::AliSimulatorInvar(AliSimulator *alisimulator, double invar_pr
     map_seqname_node = alisimulator->map_seqname_node;
     latest_insertion = alisimulator->latest_insertion;
     first_insertion = alisimulator->first_insertion;
+    starting_pos = alisimulator->starting_pos;
+    output_line_length = alisimulator->output_line_length;
+    num_threads = alisimulator->num_threads;
+    force_output_PHYLIP = alisimulator->force_output_PHYLIP;
 }
 
 /**
     simulate a sequence for a node from a specific branch after all variables has been initializing
 */
-void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst *model, int sequence_length, double *trans_matrix, Node *node, NeighborVec::iterator it, string lengths)
+void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(int segment_start, ModelSubst *model, double *trans_matrix, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, Node *node, NeighborVec::iterator it, int* rstream, string lengths)
 {
     // rescale ratio due to invariant sites
-    double scale = 1.0/(1 - invariant_proportion);
+    double scale = 1.0 / (1 - invariant_proportion);
     
     // compute the transition probability matrix
     model->computeTransMatrix(partition_rate * params->alisim_branch_scale * (*it)->length * scale, trans_matrix);
@@ -45,17 +50,18 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
     convertProMatrixIntoAccumulatedProMatrix(trans_matrix, max_num_states, max_num_states);
     
     // estimate the sequence for the current neighbor
-    (*it)->node->sequence.resize(sequence_length);
-    for (int i = 0; i < sequence_length; i++)
+    for (int i = 0; i < node_seq_chunk.size(); i++)
     {
         
         // if this site is invariant or the parent's state is a gap -> preserve the dad's state
-        if (site_specific_rates[i] == 0 || node->sequence[i] == STATE_UNKNOWN)
-            (*it)->node->sequence[i] = node->sequence[i];
+        if (site_specific_rates[segment_start + i] == 0 || dad_seq_chunk[i] == STATE_UNKNOWN)
+            node_seq_chunk[i] = dad_seq_chunk[i];
         else // otherwise, randomly select the state, considering it's dad states, and the transition_probability_matrix
         {
-            int starting_index = node->sequence[i]*max_num_states;
-            (*it)->node->sequence[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, starting_index, max_num_states, node->sequence[i]);
+            // NHANLT: potential improvement
+            // cache parent_state * max_num_states
+            int parent_state = dad_seq_chunk[i];
+            node_seq_chunk[i] = getRandomItemWithAccumulatedProbMatrixMaxProbFirst(trans_matrix, parent_state * max_num_states, max_num_states, parent_state, rstream);
         }
     }
 }
@@ -63,7 +69,7 @@ void AliSimulatorInvar::simulateASequenceFromBranchAfterInitVariables(ModelSubst
 /**
     initialize variables (e.g., site-specific rate)
 */
-void AliSimulatorInvar::initVariables(int sequence_length, bool regenerate_root_sequence)
+void AliSimulatorInvar::initVariablesRateHeterogeneity(int sequence_length, default_random_engine& generator, bool regenerate_root_sequence)
 {
     initSiteSpecificRates(site_specific_rates, sequence_length);
 }
@@ -88,7 +94,7 @@ void AliSimulatorInvar::initSiteSpecificRates(vector<double> &site_specific_rate
 *  insert a new sequence into the current sequence
 *
 */
-void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence)
+void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &indel_sequence, int position, vector<short int> &new_sequence, default_random_engine& generator)
 {
     // initialize new_site_specific_rates for new sequence
     vector<double> new_site_specific_rates;
@@ -98,5 +104,5 @@ void AliSimulatorInvar::insertNewSequenceForInsertionEvent(vector<short int> &in
     site_specific_rates.insert(site_specific_rates.begin()+position, new_site_specific_rates.begin(), new_site_specific_rates.end());
     
     // insert new_sequence into the current sequence
-    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence);
+    AliSimulator::insertNewSequenceForInsertionEvent(indel_sequence, position, new_sequence, generator);
 }

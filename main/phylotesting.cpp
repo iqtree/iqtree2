@@ -200,6 +200,7 @@ string getSeqTypeName(SeqType seq_type) {
         case SEQ_UNKNOWN: return "unknown";
         case SEQ_MULTISTATE: return "MultiState";
     }
+    return "unknown";
 }
 
 string getUsualModelSubst(SeqType seq_type) {
@@ -223,11 +224,11 @@ size_t CandidateModel::getUsualModel(Alignment *aln) {
         SuperAlignment *super_aln = (SuperAlignment*)aln;
         for (auto it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
             CandidateModel usual_model(*it);
-            if (!subst_name.empty())
+            if (!subst_name.empty() || !rate_name.empty()) {
                 subst_name += ',';
-            subst_name += usual_model.subst_name;
-            if (!rate_name.empty())
                 rate_name += ',';
+            }
+            subst_name += usual_model.subst_name;
             rate_name += usual_model.rate_name;
             aln_len += (*it)->getNSite();
         }
@@ -278,6 +279,7 @@ double CandidateModel::getScore(ModelTestCriterion mtc) {
             ASSERT(0 && "Unhandled case");
             return 0.0;
     }
+    return 0.0;
 }
 
 double CandidateModel::getScore() {
@@ -665,7 +667,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
     }
 
     iqtree->getModelFactory()->restoreCheckpoint();
-    iqtree->ensureNumberOfThreadsIsSet(nullptr);
+    iqtree->ensureNumberOfThreadsIsSet(&params);
     iqtree->initializeAllPartialLh();
     double saved_modelEps = params.modelEps;
     params.modelEps = params.modelfinder_eps;
@@ -839,6 +841,11 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
+    if (params.model_name.find("+T") != string::npos) {
+        // tree mixture
+        return;
+    }
+    
     //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) ||
         (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
@@ -1993,7 +2000,517 @@ void replaceModelInfo(ModelCheckpoint* model_info, ModelCheckpoint &new_info) {
     for (auto it = new_info.begin(); it != new_info.end(); it++) {
         model_info->put(it->first, it->second);
     }
+
+/**
+ * select models for all partitions
+ * @param[in,out] model_info (IN/OUT) all model information
+ * @return total number of parameters
+ */
+/*
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
+    ModelsBlock *models_block, int num_threads)
+{
+//    params.print_partition_info = true;
+//    params.print_conaln = true;
+	int i = 0;
+//	PhyloSuperTree::iterator it;
+	DoubleVector lhvec; // log-likelihood for each partition
+	DoubleVector dfvec; // number of parameters for each partition
+    DoubleVector lenvec; // tree length for each partition
+	double lhsum = 0.0;
+	int dfsum = 0;
+    int step = 0;
+    double pre_inf_score;
+    string blkStr = string(80,' ');
+    if (params.partition_type == BRLEN_FIX || params.partition_type == BRLEN_SCALE) {
+        dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
+        if (params.partition_type == BRLEN_SCALE)
+            dfsum -= 1;
+    }
+	size_t  ssize = in_tree->getAlnNSite();
+	int64_t num_model = 0;
+    int64_t total_num_model = in_tree->size();
+    
+    // get the name of the algorithm
+    string part_algo = "";
+    if (params.partition_merge == MERGE_GREEDY)
+        part_algo = "Greedy Algorithm";
+    else if (params.partition_merge == MERGE_RCLUSTER)
+        part_algo = "Relaxed Algorithm";
+    else if (params.partition_merge == MERGE_RCLUSTERF)
+        part_algo = "Fast Relaxed Algorithm";
+    else if (params.partition_merge == MERGE_KMEANS)
+        part_algo = "Kmean Algorithm";
+
+    // for greedy algorithm
+    if (params.partition_merge == MERGE_GREEDY) {
+        params.partfinder_rcluster_max = in_tree->size() * (in_tree->size()-1) / 2;
+        params.partfinder_log_rate = false;
+        params.partfinder_rcluster = 100.0;
+    }
+    
+    // 2017-06-07: -rcluster-max for max absolute number of pairs
+    if (params.partfinder_rcluster_max == 0) {
+        params.partfinder_rcluster_max = max((size_t)1000, 10 * in_tree->size());
+    }
+
+	if (params.partition_merge != MERGE_NONE) {
+        double p = params.partfinder_rcluster/100.0;
+        size_t num_pairs = round(in_tree->size()*(in_tree->size()-1)*p/2);
+        if (p < 1.0)
+            num_pairs = min(num_pairs, params.partfinder_rcluster_max);
+        total_num_model += num_pairs;
+        for (i = in_tree->size()-2; i > 0; i--)
+            total_num_model += max(round(i*p), 1.0);
+    }
+
+
+#ifdef _OPENMP
+    if (num_threads <= 0) {
+        // partition selection scales well with many cores
+        num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
+        num_threads = min(num_threads, params.num_threads_max);
+        omp_set_num_threads(num_threads);
+        cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
+    }
+#endif
+
+    double start_time = getRealTime();
+
+	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
+    
+	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
+	//cout << " No. AIC         AICc        BIC         Charset" << endl;
+	// cout << " No. Model        Score       TreeLen     Charset" << endl;
+
+	lhvec.resize(in_tree->size());
+	dfvec.resize(in_tree->size());
+	lenvec.resize(in_tree->size());
+
+    // sort partition by computational cost for OpenMP effciency
+    vector<pair<int,double> > partitionID;
+    
+	for (i = 0; i < in_tree->size(); i++) {
+        Alignment *this_aln = in_tree->at(i)->aln;
+        // computation cost is proportional to #sequences, #patterns, and #states
+        partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
+    }
+    if (num_threads > 1) {
+        std::sort(partitionID.begin(), partitionID.end(), comparePartition);
+    }
+    bool parallel_over_partitions = false;
+    int brlen_type = params.partition_type;
+    if (brlen_type == TOPO_UNLINKED) {
+        brlen_type = BRLEN_OPTIMIZE;
+    }
+    bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
+    
+#ifdef _OPENMP
+    parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
+#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+#endif
+	for (int j = 0; j < in_tree->size(); j++) {
+        i = partitionID[j].first;
+        PhyloTree *this_tree = in_tree->at(i);
+		// scan through models for this partition, assuming the information occurs consecutively
+		ModelCheckpoint part_model_info;
+		extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+		// do the computation
+        string part_model_name;
+        if (params.model_name.empty())
+            part_model_name = this_tree->aln->model_name;
+        CandidateModel best_model;
+		best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
+            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name, test_merge);
+
+        bool check = (best_model.restoreCheckpoint(&part_model_info));
+        ASSERT(check);
+
+		double score = best_model.computeICScore(this_tree->getAlnNSite());
+		this_tree->aln->model_name = best_model.getName();
+		lhsum += (lhvec[i] = best_model.logl);
+		dfsum += (dfvec[i] = best_model.df);
+        lenvec[i] = best_model.tree_len;
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
+            num_model++;
+//            cout.width(4);
+//            cout << right << num_model << " ";
+//            cout.width(12);
+//            cout << left << best_model.getName() << " ";
+//            cout.width(11);
+//            cout << score << " ";
+//            cout.width(11);
+//            cout << best_model.tree_len << " ";
+//            cout << this_tree->aln->name;
+//            if (num_model >= 10) {
+//                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+//                double finish_percent = (double) num_model * 100.0 / total_num_model;
+//                cout << "Finished subset " << num_model << "/" << total_num_model << "\t" << finish_percent << " percent done";
+//                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+//                    << convert_time(remain_time) << " left)\r";
+//                cout << flush;
+//            }
+//            cout << endl;
+            replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
+            model_info.dump();
+        }
+    }
+
+    // in case ModelOMatic change the alignment
+    fixPartitions(in_tree);
+    
+	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+	cout << "Full partition model " << criterionName(params.model_test_criterion)
+         << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+
+    pre_inf_score = inf_score;
+
+	if (!test_merge) {
+		super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+		super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+        model_info.dump();
+		return;
+	}
+
+    vector<set<int> > gene_sets;
+    StrVector model_names;
+    StrVector greedy_model_trees;
+
+    gene_sets.resize(in_tree->size());
+    model_names.resize(in_tree->size());
+    greedy_model_trees.resize(in_tree->size());
+    for (i = 0; i < gene_sets.size(); i++) {
+        gene_sets[i].insert(i);
+        model_names[i] = in_tree->at(i)->aln->model_name;
+        greedy_model_trees[i] = in_tree->at(i)->aln->name;
+    }
+
+    if (params.partition_merge == MERGE_KMEANS) {
+        // kmeans cluster based on parition tree length
+        double cur_score = inf_score;
+        for (int ncluster = in_tree->size()-1; ncluster >= 1; ncluster--) {
+            vector<set<int> > this_gene_sets;
+            StrVector this_model_names;
+            //double sum = in_tree->size()/std::accumulate(lenvec.begin(), lenvec.end(), 0.0);
+            double score = doKmeansClustering(params, in_tree, ncluster, lenvec, model_info,
+                models_block, num_threads, this_gene_sets, this_model_names);
+            if (score < cur_score) {
+                cout << "Better score found: " << score << endl;
+                cur_score = score;
+                gene_sets = this_gene_sets;
+                model_names = this_model_names;
+            } else {
+                //break;
+            }
+        }
+    } else {
+        cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
+    }
+
+    // following implements the greedy algorithm of Lanfear et al. (2012)
+	while (params.partition_merge != MERGE_KMEANS && gene_sets.size() >= 2) {
+		// stepwise merging charsets
+
+        // list of all better pairs of partitions than current partitioning scheme
+        ModelPairSet better_pairs;
+
+        // 2015-06-24: begin rcluster algorithm
+        // compute distance between gene_sets
+        ASSERT(gene_sets.size() == lenvec.size());
+        // find closest partition pairs
+        vector<SubsetPair> closest_pairs;
+        findClosestPairs(super_aln, lenvec, gene_sets, false, closest_pairs);
+        if (params.partfinder_log_rate) {
+            // additional consider pairs by log-rate
+            vector<SubsetPair> log_closest_pairs;
+            findClosestPairs(super_aln, lenvec, gene_sets, true, log_closest_pairs);
+            mergePairs(closest_pairs, log_closest_pairs);
+        }
+        // sort partition by computational cost for OpenMP effciency
+        for (i = 0; i < closest_pairs.size(); i++) {
+            // computation cost is proportional to #sequences, #patterns, and #states
+            Alignment *this_aln = in_tree->at(closest_pairs[i].first)->aln;
+            closest_pairs[i].distance = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+            this_aln = in_tree->at(closest_pairs[i].second)->aln;
+            closest_pairs[i].distance -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+        }
+        if (num_threads > 1) {
+            std::sort(closest_pairs.begin(), closest_pairs.end(), comparePairs);
+        }
+        size_t num_pairs = closest_pairs.size();
+        size_t compute_pairs = 0;
+
+#ifdef _OPENMP
+#pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
+#endif
+        for (size_t pair = 0; pair < num_pairs; pair++) {
+            // information of current partitions pair
+            ModelPair cur_pair;
+            cur_pair.part1 = closest_pairs[pair].first;
+            cur_pair.part2 = closest_pairs[pair].second;
+            ASSERT(cur_pair.part1 < cur_pair.part2);
+            cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
+            cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
+            cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
+            double weight1 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part1]);
+            double weight2 = getSubsetAlnLength(in_tree, gene_sets[cur_pair.part2]);
+            double sum = 1.0 / (weight1 + weight2);
+            weight1 *= sum;
+            weight2 *= sum;
+            CandidateModel best_model;
+            bool done_before = false;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            {
+                // if pairs previously examined, reuse the information
+                model_info.startStruct(cur_pair.set_name);
+                if (model_info.getBestModel(best_model.subst_name)) {
+                    best_model.restoreCheckpoint(&model_info);
+                    done_before = true;
+                }
+                model_info.endStruct();
+            }
+            ModelCheckpoint part_model_info;
+            double cur_tree_len = 0.0;
+            if (!done_before) {
+                Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
+                PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
+                //tree->scaleLength((weight1*lenvec[cur_pair.part1] + weight2*lenvec[cur_pair.part2])/tree->treeLength());
+                tree->scaleLength(sqrt(lenvec[cur_pair.part1]*lenvec[cur_pair.part2])/tree->treeLength());
+                cur_tree_len = tree->treeLength();
+                tree->setAlignment(aln);
+                extractModelInfo(cur_pair.set_name, model_info, part_model_info);
+                transferModelParameters(in_tree, model_info, part_model_info, gene_sets[cur_pair.part1], gene_sets[cur_pair.part2]);
+                tree->num_precision = in_tree->num_precision;
+                tree->setParams(&params);
+                tree->sse = params.SSE;
+                tree->optimize_by_newton = params.optimize_by_newton;
+                tree->setNumThreads(params.model_test_and_tree ? num_threads : 1);
+                {
+                    tree->setCheckpoint(&part_model_info);
+                    // trick to restore checkpoint
+                    tree->restoreCheckpoint();
+                    tree->saveCheckpoint();
+                }
+                best_model = CandidateModelSet().test(params, tree, part_model_info, models_block,
+                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name, "", true);
+                best_model.restoreCheckpoint(&part_model_info);
+                delete tree;
+                delete aln;
+            }
+            cur_pair.logl = best_model.logl;
+            cur_pair.df = best_model.df;
+            cur_pair.model_name = best_model.getName();
+            cur_pair.tree_len = best_model.tree_len;
+            double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
+            int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
+            cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+			{
+				if (!done_before) {
+					replaceModelInfo(cur_pair.set_name, model_info, part_model_info);
+                    model_info.dump();
+                    num_model++;
+                    compute_pairs++;
+//					cout.width(4);
+//					cout << right << num_model << " ";
+//					cout.width(12);
+//					cout << left << best_model.getName() << " ";
+//					cout.width(11);
+//                    cout << cur_pair.score << " ";
+//                    cout.width(11);
+//                    cout << cur_pair.tree_len << " " << cur_pair.set_name;
+                    if (num_model >= 10) {
+                        double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
+                        if (remain_time < 0.0)
+                            remain_time = 0.0;
+                        double finish_percent = (double) pair * 100.0 / num_pairs;
+                        cout << " Finished subset " << pair << "/" << num_pairs << "     " << finish_percent << "  percent done";
+                        cout << "     " << convert_time(getRealTime()-start_time) << " ("
+                            << convert_time(remain_time) << " left)     \r" << flush;
+                    }
+//                    cout << endl;
+
+				}
+                if (cur_pair.score < inf_score)
+                    better_pairs.insertPair(cur_pair);
+			}
+
+        }
+
+        // clear the message previous on this line
+        cout << blkStr << "\r" << flush;
+
+        if (better_pairs.size() > 0) {
+            ModelPairSet compatible_pairs;
+            
+            int num_comp_pairs = params.partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
+            better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
+            if (compatible_pairs.size() > 1)
+                cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+            
+            // 2017-12-21: simultaneously merging better pairs
+            for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
+                ModelPair opt_pair = it_pair->second;
+                
+                lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
+                dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
+                inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+                ASSERT(inf_score <= opt_pair.score + 0.1);
+                
+                // cout << "Merging " << opt_pair.set_name << " with " << criterionName(params.model_test_criterion)
+                //     << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
+                // change entry opt_part1 to merged one
+                gene_sets[opt_pair.part1] = opt_pair.merged_set;
+                lhvec[opt_pair.part1] = opt_pair.logl;
+                dfvec[opt_pair.part1] = opt_pair.df;
+                lenvec[opt_pair.part1] = opt_pair.tree_len;
+                model_names[opt_pair.part1] = opt_pair.model_name;
+                greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
+                greedy_model_trees[opt_pair.part2] + ")" +
+                convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" +
+                convertDoubleToString(inf_score);
+                
+                // delete entry opt_part2
+                lhvec.erase(lhvec.begin() + opt_pair.part2);
+                dfvec.erase(dfvec.begin() + opt_pair.part2);
+                lenvec.erase(lenvec.begin() + opt_pair.part2);
+                gene_sets.erase(gene_sets.begin() + opt_pair.part2);
+                model_names.erase(model_names.begin() + opt_pair.part2);
+                greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
+                
+                // decrease part ID for all pairs beyond opt_pair.part2
+                auto next_pair = it_pair;
+                for (next_pair++; next_pair != compatible_pairs.end(); next_pair++) {
+                    if (next_pair->second.part1 > opt_pair.part2)
+                        next_pair->second.part1--;
+                    if (next_pair->second.part2 > opt_pair.part2)
+                        next_pair->second.part2--;
+                }
+            }
+        }
+        
+        cout << "ModelFinder2\t";
+        if (part_algo.length() > 0)
+            cout << part_algo << "\t";
+        cout << "Step " << ++step << "\t" << compute_pairs << " Subsets\t" << criterionName(params.model_test_criterion) << " " << inf_score;
+        cout << "\tdeltaBIC " << inf_score - pre_inf_score;
+        cout << endl;
+        pre_inf_score = inf_score;
+
+        if (better_pairs.empty()) break;
+	}
+
+	string final_model_tree;
+	if (greedy_model_trees.size() == 1)
+		final_model_tree = greedy_model_trees[0];
+	else {
+		final_model_tree = "(";
+		for (i = 0; i < greedy_model_trees.size(); i++) {
+			if (i>0)
+				final_model_tree += ",";
+			final_model_tree += greedy_model_trees[i];
+		}
+		final_model_tree += ")";
+	}
+
+	// cout << "Agglomerative model selection: " << final_model_tree << endl;
+    
+    if (gene_sets.size() < in_tree->size())
+        mergePartitions(in_tree, gene_sets, model_names);
+
+    if (!iEquals(params.merge_models, "all")) {
+        // test all candidate models again
+        lhsum = 0.0;
+        dfsum = 0;
+        if (params.partition_type == BRLEN_FIX || params.partition_type == BRLEN_SCALE) {
+            dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
+            if (params.partition_type == BRLEN_SCALE)
+                dfsum -= 1;
+        }
+
+        // sort partition by computational cost for OpenMP effciency
+        partitionID.clear();
+        for (i = 0; i < in_tree->size(); i++) {
+            Alignment *this_aln = in_tree->at(i)->aln;
+            // computation cost is proportional to #sequences, #patterns, and #states
+            partitionID.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
+        }
+        
+        if (num_threads > 1) {
+            std::sort(partitionID.begin(), partitionID.end(), comparePartition);
+        }
+
+        cout << endl;
+        cout << "No. Model        Score       Charset" << endl;
+        int partition_id = 0;
+
+    #ifdef _OPENMP
+        parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
+        #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+    #endif
+        for (int j = 0; j < in_tree->size(); j++) {
+            i = partitionID[j].first;
+            PhyloTree *this_tree = in_tree->at(i);
+            // scan through models for this partition, assuming the information occurs consecutively
+            ModelCheckpoint part_model_info;
+            extractModelInfo(this_tree->aln->name, model_info, part_model_info);
+            // do the computation
+            string part_model_name;
+            if (params.model_name.empty())
+                part_model_name = this_tree->aln->model_name;
+            CandidateModel best_model;
+            best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
+                (parallel_over_partitions ? 1 : num_threads), brlen_type,
+                this_tree->aln->name, part_model_name, false);
+            
+            bool check = (best_model.restoreCheckpoint(&part_model_info));
+            ASSERT(check);
+            
+            double score = best_model.computeICScore(this_tree->getAlnNSite());
+            this_tree->aln->model_name = best_model.getName();
+            lhsum += (lhvec[i] = best_model.logl);
+            dfsum += (dfvec[i] = best_model.df);
+            lenvec[i] = best_model.tree_len;
+            
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+            {
+            num_model++;
+            cout.width(4);
+            cout << right << ++partition_id << " ";
+            cout.width(12);
+            cout << left << best_model.getName() << " ";
+            cout.width(11);
+            cout << score << " " << this_tree->aln->name;
+            if (num_model >= 10) {
+                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " ("
+                << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
+            replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
+            model_info.dump();
+            }
+        }
+    }
+
+    inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+    cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+
+    ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+    model_info.dump();
 }
+*/
 
 bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     size_t mix_pos;
