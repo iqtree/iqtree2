@@ -32,13 +32,20 @@ double NeuralNetwork::doAlphaInference() {
     //std::vector<int64_t> input_node_dims;
 
     //printf("Number of inputs = %zu\n", num_input_nodes);
+    std::vector<Ort::AllocatedStringPtr> inputNodeNameAllocatedStrings;
 
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
         // print input node names
-        char *input_name = session.GetInputName(i, allocator);
+        // changed session.GetInputName(i, allocator) --> session.GetInputNameAllocated(i, allocator).get()
+//        char *input_name = session.GetInputNameAllocated(i, allocator).get();
+//        //printf("Input %d : name=%s\n", i, input_name);
+//        input_node_names[i] = input_name;
+        auto input_name = session.GetInputNameAllocated(i, allocator);
+        inputNodeNameAllocatedStrings.push_back(std::move(input_name));
         //printf("Input %d : name=%s\n", i, input_name);
-        input_node_names[i] = input_name;
+        input_node_names[i] = inputNodeNameAllocatedStrings.back().get();
+
     /*
         // print input node types
         Ort::TypeInfo type_info = session.GetInputTypeInfo(i);
@@ -125,12 +132,17 @@ string NeuralNetwork::doModelInference() {
 
     // printf("Number of inputs = %zu\n", num_input_nodes);
 
+    std::vector<Ort::AllocatedStringPtr> inputNodeNameAllocatedStrings;
+
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
         // print input node names
-        char *input_name = session.GetInputName(i, allocator);
+//        char *input_name = session.GetInputName(i, allocator);
+        auto input_name = session.GetInputNameAllocated(i, allocator);
+        inputNodeNameAllocatedStrings.push_back(std::move(input_name));
+
         //printf("Input %d : name=%s\n", i, input_name);
-        input_node_names[i] = input_name;
+        input_node_names[i] = inputNodeNameAllocatedStrings.back().get();
     /*
         // print input node types
         Ort::TypeInfo type_info = session.GetInputTypeInfo(i);
