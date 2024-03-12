@@ -5994,11 +5994,13 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
         mem_slots.update(dad_branch);
     }
 
+    /*
     if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
         int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
         node->name = convertIntToString(slot_id);
         //cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
     }
+    */
 
     if (params->lh_mem_save == LM_MEM_SAVE) {
         for (it = neivec.begin(); it != neivec.end(); it++) {
