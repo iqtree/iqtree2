@@ -263,6 +263,11 @@ public:
     void printTaxa(ostream &out, NodeVector &subtree);
 
     void writeInternalNodeNames(string &out_file);
+    
+    /**
+            Set internal node names by their ids
+     */
+    void setInternalNamesByIds(Node *node, Node *dad = nullptr);
 
     /********************************************************
             DRAW TREE

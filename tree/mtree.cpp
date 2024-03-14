@@ -2343,6 +2343,19 @@ void MTree::writeInternalNodeNames(string &out_file) {
     }
 }
 
+void MTree::setInternalNamesByIds(Node *node, Node *dad)
+{
+    // if node is an internal and has an empty name -> set its name as its id
+    if (!node->isLeaf() && node->name == "")
+        node->name = convertIntToString(node->id);
+    
+    NeighborVec::iterator it;
+    FOR_NEIGHBOR(node, dad, it) {
+        // browse 1-step deeper to the neighbor node
+        setInternalNamesByIds((*it)->node, node);
+    }
+}
+
 void MTree::assignLeafID(Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {

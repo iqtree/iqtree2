@@ -2390,6 +2390,11 @@ public:
     string connected_regions_pref;
     
     /**
+    *  (dummy variable) TRUE to only output the tree with all internal nodes and skip generating the connected regions
+    */
+    bool skip_gen_connected_regions;
+    
+    /**
     *  TRUE to execute alisim
     */
     bool alisim_active;

@@ -2526,6 +2526,18 @@ void selectConnectedRegions(IQTree* const tree, const int num_connected_regions,
     if (tree->params->connected_regions_pref.length())
         connected_reg_pref = tree->params->connected_regions_pref;
     
+    // refill all internal node names by their ids
+    tree->setInternalNamesByIds(tree->root);
+    
+    // output tree in newick format with all internal node names
+    std::ofstream out_stream = ofstream(connected_reg_pref + ".intnames.nwk");
+    tree->printTree(out_stream);
+    out_stream.close();
+    
+    // skip generating the connected regions if users want to do so
+    if (tree->params->skip_gen_connected_regions)
+        return;
+    
     for (auto i = 0; i < num_connected_regions; ++i)
     {
         ConnectedRegion connected_region = tree->selectConnectedRegion(num_leave_per_region, connected_reg_pref + ".con_reg_" + convertIntToString(i + 1));

@@ -1447,6 +1447,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.dis_mat_pref = "";
     params.partial_lhs_pref = "";
     params.connected_regions_pref = "";
+    params.skip_gen_connected_regions = false;
     
     params.original_params = "";
     params.alisim_active = false;
@@ -5302,6 +5303,21 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.connected_regions_pref = argv[cnt];
                 continue;
             }
+            if (strcmp(argv[cnt], "-con-regions-size") == 0) {
+                
+                cnt++;
+                if (cnt >= argc || argv[cnt][0] == '-')
+                    throw "-con-regions-size <NUM>";
+                params.con_regs_size = convert_int(argv[cnt]);
+                if (params.con_regs_size < 3)
+                    throw "Connect region size must not be fewer than 3!";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-skip-gen-con-regions") == 0) {
+                params.skip_gen_connected_regions = true;
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
                 
