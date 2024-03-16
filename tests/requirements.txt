@@ -1,0 +1,6 @@
+pytest
+cogent3
+black
+pyYAML
+numpy
+filelock

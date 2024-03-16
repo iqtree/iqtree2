@@ -1,0 +1,74 @@
+import os
+import shutil
+import tempfile
+
+from pathlib import Path
+
+import pytest
+
+from .test_utils import (
+    checkpoint_file,
+    iqtree1_dir,
+    iqtree2_dir,
+    repo_root,
+    tests_data,
+    tests_root,
+)
+
+
+@pytest.fixture(scope="function")
+def temp_dir(request, data_files, tmp_path_factory):
+    """
+    Create a temporary directory with a data subdirectory, change to it for running tests, and clean up.
+
+    This fixture creates a temporary directory and a data subdirectory within it,
+    and changes the current working directory to this temporary directory before running tests.
+    After the tests are complete, it changes back to the original directory and removes the
+    temporary directory.
+
+    Yields
+    ------
+    pathlib.Path
+        The path to the temporary directory.
+    """
+
+    # Save the current working directory
+    original_dir = os.getcwd()
+
+    # Create a temporary directory and change to it
+    temp_path = tmp_path_factory.mktemp(basename="temp_dir", numbered=True)
+    os.chdir(temp_path)
+
+    # Copy the files specified in data_files to the temporary directory
+    for data_file in data_files:
+        # check to see if the file is in the tests_data directory
+        if (tests_data / data_file).is_file():
+            shutil.copy(tests_data / data_file, temp_path)
+        else:
+            raise FileNotFoundError(f"Data file {data_file} not found in {tests_data}")
+
+    # Yield control to the test function
+    yield temp_path
+
+    # Change back to the original directory and remove the temporary directory
+    os.chdir(original_dir)
+    
+
+@pytest.fixture(scope="function")
+def data_files(request):
+    """
+    Fixture to pass data files as parameters to the test function.
+
+    This fixture is used in conjunction with pytest.mark.parametrize to pass
+    data files as parameters to the test function. The data files should be
+    specified as a list of filenames.  Setting indirect=True in the arguments
+    of the pytest.mark.parametrize decorator indicates that the data_files will
+    be passed through to the temp_dir fixture for copying to the temporary data
+    directory.
+
+    Returns
+    -------
+    list
+        The list of data files passed as parameters, or an empty list if no data files are specified.
+    """
+    return request.param if hasattr(request, "param") else []

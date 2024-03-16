@@ -1,0 +1,11 @@
+#nexus
+begin sets;
+charset ndhf1st = 1-2183;
+charset rbcl1st = 2184-3527;
+charset rpoc23rd = 3528-4207;
+charset cprs = 4208-4571;
+charset phyb3rd = 4572-5753;
+charset set5_8S = 5754-5913;
+charset its2 = 5914-6177;
+charset gbss13rd = 6178-6951;
+end;
