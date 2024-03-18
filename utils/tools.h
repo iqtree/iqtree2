@@ -1767,7 +1767,7 @@ public:
     /** Matrix multiplier factor */
     double guess_multiplier;
     /** TRUE if you want to print out a .ratemat file during GTR optimization */
-    bool rates_file;
+    // bool rates_file;
     /** How the program should reset the values during Optimization::resetParameters */
     string reset_method;
 

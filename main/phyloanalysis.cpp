@@ -291,6 +291,76 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
+void reportLinkSubstMatrix(ostream &out, Alignment *aln, ModelSubst *m) {
+    int i, j, k;
+    double *rate_mat = new double[m->num_states * m->num_states];
+    if (!m->isSiteSpecificModel())
+        m->getRateMatrix(rate_mat);
+    else
+        ((ModelSet*)m)->front()->getRateMatrix(rate_mat);
+
+    if (m->num_states <= 4) {
+        out << "Linked rate parameter R:" << endl << endl;
+
+        if (m->isReversible()) {
+            for (i = 0, k = 0; i < m->num_states - 1; i++)
+                for (j = i + 1; j < m->num_states; j++, k++) {
+                    out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j) << ": "
+                            << rate_mat[k];
+                    if (m->num_states <= 4)
+                        out << endl;
+                    else if (k % 5 == 4)
+                        out << endl;
+                }
+
+        } else { // non-reversible model
+            for (i = 0, k = 0; i < m->num_states; i++)
+                for (j = 0; j < m->num_states; j++)
+                    if (i != j) {
+                        out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j)
+                                << ": " << rate_mat[k];
+                        if (m->num_states <= 4)
+                            out << endl;
+                        else if (k % 5 == 4)
+                            out << endl;
+                        k++;
+                    }
+
+        }
+        out << endl << endl;
+        out.unsetf(ios_base::fixed);
+    } else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+        ASSERT(m->num_states == 20);
+        double full_mat[400];
+        
+        out.precision(6);
+
+        if (m->isReversible()) {
+            for (i = 0, k = 0; i < m->num_states - 1; i++)
+                for (j = i + 1; j < m->num_states; j++, k++) {
+                    full_mat[i*m->num_states+j] = rate_mat[k];
+                }
+            out << "Linked substitution parameters (lower-diagonal):" << endl << endl;
+            for (i = 1; i < m->num_states; i++) {
+                for (j = 0; j < i; j++)
+                    out << " " << full_mat[j*m->num_states+i];
+                out << endl;
+            }
+        } else {
+            // non-reversible model
+            m->getQMatrix(full_mat);
+            out << "Linked full Q matrix:" << endl << endl;
+            for (i = 0; i < m->num_states; i++) {
+                for (j = 0; j < m->num_states; j++)
+                    out << " " << full_mat[i*m->num_states+j];
+                out << endl;
+            }
+        }
+        out << endl;
+        out.precision(4);
+    }
+}
+
 void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
     ASSERT(aln->num_states == m->num_states);
@@ -303,8 +373,6 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     if (m->num_states <= 4) {
         out << "Rate parameter R:" << endl << endl;
 
-        if (m->num_states > 4)
-            out << fixed;
         if (m->isReversible()) {
             for (i = 0, k = 0; i < m->num_states - 1; i++)
                 for (j = i + 1; j < m->num_states; j++, k++) {
@@ -499,6 +567,11 @@ void reportModel(ostream &out, PhyloTree &tree) {
             reportModel(out, tree.aln, m);
         }
         out << endl;
+        if (Params::getInstance().optimize_linked_gtr) {
+            // linked substitution matrix
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+            reportLinkSubstMatrix(out, tree.aln, m);
+        }
     } else {
         // Update rate name if continuous gamma is used.
         if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)
@@ -591,6 +664,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 " of the portion of the Gamma distribution falling in the category." << endl;
         }
     }
+    /*
     //output ratemat to iqtree file -JD
     if(Params::getInstance().optimize_linked_gtr) { 
         string fname = Params::getInstance().out_prefix;
@@ -618,6 +692,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
         }
         f.close();
     }
+    */
     out << endl;
 }
 

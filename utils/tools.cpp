@@ -1220,7 +1220,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_linked_gtr = false;
     params.gtr20_model = "POISSON";
     params.guess_multiplier = 0.5;
-    params.rates_file = false;
+    // params.rates_file = false;
     params.reset_method = "const";
 
     params.optimize_params_use_hmm = false;
@@ -1691,10 +1691,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.guess_multiplier = convert_double(argv[cnt]);
                 continue;
             } 
-            if (strcmp(argv[cnt], "--rates-file") == 0) {
-                params.rates_file = true;
-                continue;
-            }
+//            if (strcmp(argv[cnt], "--rates-file") == 0) {
+//                params.rates_file = true;
+//                continue;
+//            }
             if (strcmp(argv[cnt], "--reset-method") == 0) {
                 cnt++;
                 if (cnt >= argc)

@@ -2117,7 +2117,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
 
-            if (!fix_prop && !Params::getInstance().optimize_linked_gtr) {
+            if (c>0) {
                 // compute _pattern_lh_cat
                 phylo_tree->computePatternLhCat(WSL_MIXTURE);
                 // update the posterior probabilities of each category
@@ -2369,6 +2369,7 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 
     optimizing_gtr = false;
     
+    /*
     //write matrix contents to file (later parsed and outputted into console log)
     string fname = Params::getInstance().out_prefix;
     fname += ".ratemat";
@@ -2382,7 +2383,8 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     }
     writer << endl;
     writer.close();
-
+    */
+    
 	return score;
 }
 
