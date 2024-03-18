@@ -976,6 +976,104 @@ frequency C60pi59 = 0.3865149348 0.0037579334 0.0030420497 0.0022366810 0.021892
 frequency C60pi60 = 0.0146570745 0.0028841333 0.0012998335 0.0005210575 0.0024317913 0.0049362750 0.0014874369 0.0020953252 0.0010181940 0.1913901476 0.4432797758 0.0022898369 0.2217427062 0.0091637503 0.0007685153 0.0027251487 0.0170997497 0.0008779380 0.0014756028 0.0778557075;
 model C60 = POISSON+G+FMIX{C60pi1:1:0.0169698865,C60pi2:1:0.0211683374,C60pi3:1:0.0276589079,C60pi4:1:0.0065675964,C60pi5:1:0.0141221416,C60pi6:1:0.0068774834,C60pi7:1:0.0146909701,C60pi8:1:0.0067225777,C60pi9:1:0.0018396660,C60pi10:1:0.0102547197,C60pi11:1:0.0230896163,C60pi12:1:0.0057941033,C60pi13:1:0.0125394534,C60pi14:1:0.0204526478,C60pi15:1:0.0070629602,C60pi16:1:0.0117982741,C60pi17:1:0.0068334668,C60pi18:1:0.0433775839,C60pi19:1:0.0318278731,C60pi20:1:0.0222546108,C60pi21:1:0.0102264969,C60pi22:1:0.0150545891,C60pi23:1:0.0134159878,C60pi24:1:0.0148552065,C60pi25:1:0.0239111516,C60pi26:1:0.0128776278,C60pi27:1:0.0222318842,C60pi28:1:0.0247444742,C60pi29:1:0.0214274810,C60pi30:1:0.0115001882,C60pi31:1:0.0076017389,C60pi32:1:0.0130258568,C60pi33:1:0.0093701965,C60pi34:1:0.0467194264,C60pi35:1:0.0441940314,C60pi36:1:0.0322263154,C60pi37:1:0.0402999891,C60pi38:1:0.0150234227,C60pi39:1:0.0104589903,C60pi40:1:0.0214742395,C60pi41:1:0.0154957836,C60pi42:1:0.0101789953,C60pi43:1:0.0227980379,C60pi44:1:0.0123204539,C60pi45:1:0.0066777583,C60pi46:1:0.0004150083,C60pi47:1:0.0344385130,C60pi48:1:0.0113663379,C60pi49:1:0.0127143049,C60pi50:1:0.0124323741,C60pi51:1:0.0262124415,C60pi52:1:0.0064994957,C60pi53:1:0.0103203293,C60pi54:1:0.0142463512,C60pi55:1:0.0215600067,C60pi56:1:0.0199150700,C60pi57:1:0.0038964200,C60pi58:1:0.0113448855,C60pi59:1:0.0128595846,C60pi60:1:0.0117656776};
 
+
+[ ---------------------------------------------------------
+    GTRpmix : A linked general-time reversible model for profile mixture models by Banos et al (2024)
+ --------------------------------------------------------- ]
+
+model EAL =
+0.5139370
+0.7807780  2.2110100
+0.3985550  0.5385500  3.8694500
+5.5831300  0.5559990  1.3028100  0.4944880
+0.9362480  1.6762700  1.8301000  0.6558470  0.5471660
+0.6223140  1.1289600  1.4756000  5.0208000  0.1667620  1.8216600
+3.7051400  1.2115100  1.2700500  0.9099490  2.5239900  0.6990140  1.1097900
+0.4444860  1.6996900  2.7993900  0.9025050  1.0918600  2.5400300  0.3961960  0.5475320
+2.4907200  1.2686800  1.1841900  1.0829100  1.8004300  0.6217850  1.6785100  1.0725800  0.7655320
+1.9324900  0.8592640  1.0372200  0.6249040  2.1220600  0.8769700  1.0677400  1.1364400  0.8066080  9.1427200
+0.7555430  8.9405200  2.5649600  0.9172800  0.0826583  1.2688900  2.9719700  1.2370500  0.9748910  2.3652900  1.5178000
+2.7127800  1.5707200  2.0882500  1.3973200  1.6249600  3.9075200  1.5973400  1.7729700  1.1108400  6.9121800  7.5832200  2.2458000
+2.0314600  0.9821260  1.3882800  0.6327030  1.8262700  0.4818130  1.0207400  1.9136300  1.8327200  5.4506000  6.1859700  1.1400100  5.2475600
+1.1713300  0.9537300  1.3000600  0.9659520  0.8262060  0.8171450  1.2575000  1.2522000  1.0361500  1.6158100  1.0717700  1.8290200  0.7093520  1.7532800
+8.0914800  2.3764400  4.7629400  2.5900800  4.0817000  2.3677500  2.1567700  3.9314300  1.6875400  1.3852600  1.2670800  2.5542300  3.0932800  1.2163600  3.0917500
+2.3023200  1.2133700  2.9003000  1.2187000  3.9718400  1.1817500  1.1487300  1.2098600  0.9706650  2.4967300  1.7704400  1.5498200  3.0841500  1.2742700  1.1643700  8.5283000
+0.4911340  1.3526400  0.7412770  0.5771560  0.3220440  0.9613600  1.6970400  1.6389000  0.8426650  1.6891000  1.6070900  1.2321800  2.0918900  5.5276300  0.5448390  1.2929200  1.0004200
+1.4211900  1.5403500  1.6551800  0.8709190  1.8602800  1.0214500  1.4422300  1.2306100  4.7502400  3.7698200  2.5010600  2.2594600  2.3096100 17.6854000  1.2494000  1.7617800  1.4416900  6.0125900
+5.0733200  0.7400000  1.5209800  0.4532060  5.8701800  0.7119930  1.2315800  1.2114900  0.7947730 14.3103000  3.2848000  1.5964400  2.7493500  2.6470500  1.7743800  2.1992200  4.3692100  0.7982800  1.0000000
+
+0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000;
+
+
+model MXM =
+  0.2332900
+0.9808050  0.7443810
+0.2706990  0.1848560  1.7643800
+5.2165000  0.8656820  2.3557800  0.9037620
+0.9505180  0.5750980  1.3137000  0.2855000  0.9859390
+0.6928490  0.3143930  0.5294330  2.2441700 0.5013390  1.3402500
+1.6289500  0.4242270  0.6681420  0.2951540  1.3690000  0.4784850  0.3898560
+0.6144580  1.0482300  2.6938100  0.4050180  0.7626270  2.0206900  0.3133410  0.4549450
+0.7805330  0.3847290 0.5451260  0.3274970  1.3492900  0.3787360  0.3926660  0.3115850  0.4339150
+0.5678710  0.3646180  0.5796590  0.0793249  1.5349600  0.7718690  0.3914060  0.2398910  0.6293570  4.0147300
+0.6822860  2.9771500 1.3718800  0.3010460  0.3702210  0.9805130  0.7815960  0.4198170  0.5981820  0.6056620  0.5081670
+1.3322900  0.7133740  1.0502400  0.3630020  2.9252600  2.1367000  0.6419630  0.3593130  0.8780950  4.6329000 6.0047700  1.0908800
+0.5795820  0.3282180  0.6905420  0.1488660  0.9043480  0.2778070  0.3090150  0.5494990  1.2945500  1.6934900  2.1726600  0.3673500  1.9939500
+1.0918700  0.3562170  0.6634880  0.2648720 0.9495700  0.6430880  0.4500530  0.3512160  0.5842050  0.6500290  0.3367860  0.6559930  0.4300360  0.7049070
+5.7444600  0.7029660  3.0462500  0.8630300  5.6673700  1.5375000  0.6028700  2.1529500  1.1944900 0.4238030  0.5591120  0.8898900  1.2159200  0.8340830  0.9814980
+1.5478700  0.5756180  2.2907700  0.4513340  4.9282300  1.0420500  0.4774290  0.6174740  0.5797720  1.3017000  0.8051260  0.8779050  1.7343700 0.6132720  0.8479570  5.3737900
+0.3338250  0.7677340  0.1560190  0.3184380  0.4918480  0.3850580  0.4795190  0.4785750  0.4770770  0.3679130  0.2839460  0.5794890  0.8577890  2.3919000  0.4012300  0.5662410 0.2173720
+0.5183810  0.7135390  0.9368380  0.4490210  1.4416400  0.5404080  0.5828450  0.4454420  3.0225200  0.9521370  1.0814300  0.6605210  1.2049600 10.2351000  0.4376040  0.9013330  0.5013920  3.5512700
+2.0664600  0.3870920  0.7391250  0.2579040  5.6170400  0.5653760  0.6678390  0.4183060  0.4046500  8.0691100  1.9904500  0.6509790  1.7308900  1.1009800  0.7465900  0.5942150  2.6179500  0.1880520  1.0000000
+0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000;
+
+
+model ELM50 =
+0.628554
+1.200970  1.002000
+0.560625  0.241648  2.176490
+9.863080  1.860350  3.719970  0.993181
+1.784940  1.439340  2.023840  0.589731  1.806740
+1.218550  0.387511 0.464576  3.534470  0.511176  2.389970
+2.586840  0.559444  1.125400  0.532657  3.088800  0.752328  0.585608
+1.024050  1.724960  3.557330  0.860733  1.814830  3.485910 0.518697  0.673623
+1.095690  0.594108  1.203200  0.272131  3.142540  0.765769  0.556842  0.519606  0.611977
+1.215690  0.831812  1.125440  0.363361  3.630620  1.684430 0.699883  0.529286  1.391790  6.729010
+1.440750  5.109240  1.633160  0.441153  0.523731  1.833230  0.901261  0.662521  0.879144  0.611299  0.935004
+2.252740  1.081510 1.800250  0.641742  3.768710  4.517480  0.822158  1.037220  1.530570  8.618040  9.328680  1.594670
+1.150460  0.628386  1.073010  0.162817  3.463980  0.642255  0.452740 0.845470  3.050370  2.787220  3.123010  0.557388  4.431320
+1.822640  0.582380  0.648844  0.531341  1.574550  1.187440  0.720033  0.594291  0.923964  0.449114  0.574151 0.942144  0.553393  0.424243
+6.091110  1.103160  3.761540  1.364070  6.995040  2.378370  0.873278  2.825000  1.803880  0.559028  0.812634  1.304630  1.829820  1.100080 1.265650
+2.142590  0.941453  2.705540  0.897134  6.438870  1.859720  1.108810  0.787846  1.256610  2.297600  1.399570  1.698880  3.739190  1.075340  0.981912  6.171340
+0.438672  0.735235  0.338797  0.263517  1.834240  0.412832  0.364787  0.439492  0.997278  0.796435  0.851936  0.234492  1.065810  5.733270  0.343125  0.789577  0.417338
+0.732410  0.502102  0.993290  0.373923  2.641330  0.615014  0.388176  0.249692  4.251310  1.189700  1.556330  0.500968  1.593470 15.304800  0.467921  0.967373  0.903425 4.298630
+3.438910  0.761066  1.005660  0.295313 11.406800  1.301230  1.333630  0.519484  1.026090 14.487200  4.506730  1.266890  4.115800  2.288990  1.121020  0.758236 4.138300  0.636335  1.000000
+
+0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000;
+
+model ELM =
+0.715629
+1.508850  1.161630
+0.726973  0.286720  2.398750
+8.885660  2.420420  3.725230  1.256800
+2.005920  1.660300  2.310150  0.664903 1.807890
+1.454500  0.402780  0.620396  3.994270  0.563876  2.659760
+3.296750  0.693326  1.410850  0.718783  2.906000  0.970269  0.709861
+1.177100  1.943510  4.046790  0.944493  2.036010  4.057630  0.594082  0.739869
+1.226810  0.614885  1.391670  0.350519  3.388670  0.794346 0.591678  0.622542  0.684236
+1.442400  0.957143  1.243020  0.404098  3.795890  2.009610  0.812062  0.659230  1.459320  7.175270
+1.522220 6.019520  1.958980  0.549932  0.805462  2.116630  1.059890  0.868270  1.046510  0.673004  1.030980
+2.594450  1.282120  2.302210  0.685795 3.947350  4.718320  0.991296  1.310790  1.444100  9.184980 10.658400  1.806190
+1.321440  0.637156  1.254780  0.277047  3.626440  0.719102 0.502816  1.001800  3.361500  2.936780  3.692410  0.698696  4.922400
+2.260180  0.750571  0.850661  0.638748  1.646420  1.424490  0.847877 0.806691  1.293480  0.620409  0.733803  1.122450  0.631146  0.642565
+7.098000  1.314360  4.124020  1.474770  7.478990  2.566870  0.979055 3.328040  1.916990  0.764763  1.006860  1.485070  2.131750  1.337140  1.638470
+2.569250  1.028650  3.180980  0.977685  6.677990  2.015830 1.220300  0.978011  1.492980  2.952550  1.619930  1.945970  4.283060  1.112990  1.282440  7.091040
+0.526827  0.865586  0.467618  0.286157 2.120440  0.473558  0.398477  0.539925  0.992776  0.928090  0.947389  0.328019  1.204560  4.953660  0.400354  0.958659  0.444776
+0.814941 0.651825  1.258290  0.451721  3.035280  0.768014  0.453336  0.340569  5.019630  1.263840  1.667850  0.533863  1.671970 15.842500  0.608587 1.105020  1.079470  4.907340
+4.017660  0.790208  1.278070  0.496290 10.802500  1.447170  1.664840  0.664753  1.108450 15.168600  4.802210 1.448330  4.696670  2.395620  1.325620  1.052170  4.685250  0.728445  1.000000
+
+0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000;
+
 end;
 )";
 
@@ -1622,7 +1720,9 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
 // method 1: given a set of classes in the mixture model, randomly assign each alignment position to one of the classes.
 // Then the nucleotide frequency array of each class is initialized according to the nucleotide frequencies among the positions assigned to the class.
 void ModelMixture::estimateInitFreq1() {
-    cout << endl << "Estimate the initial frequency vectors (method 1)" << endl;
+    if (verbose_mode >= VB_DEBUG) {
+        cout << endl << "Estimate the initial frequency vectors (method 1)" << endl;
+    }
     int nseqs = phylo_tree->aln->getNSeq();
     int nsites = phylo_tree->aln->getNSite();
     int nclass = size();
@@ -1641,13 +1741,6 @@ void ModelMixture::estimateInitFreq1() {
     for (i=0; i<nclass; i++) {
         if (at(i)->freq_type != FREQ_ESTIMATE)
             continue;
-
-        // show the initial frequency vectors
-        at(i)->getStateFrequency(state_freq);
-        cout << "[" << i << "] init Freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
 
         memset(state_freq, 0, sizeof(double)*num_states);
         n=0;
@@ -1668,10 +1761,13 @@ void ModelMixture::estimateInitFreq1() {
             if (state_freq[j] < min_freq)
                 state_freq[j] = min_freq;
 
-        cout << "[" << i << "] Freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
+        if (verbose_mode >= VB_DEBUG) {
+            // show the initialised frequency vectors
+            cout << "[" << i << "] Freq:";
+            for (j = 0; j < num_states; j++)
+                cout << " " << state_freq[j];
+            cout << endl;
+        }
 
         // update the frequency vectors
         at(i)->setStateFrequency(state_freq);
@@ -1682,7 +1778,9 @@ void ModelMixture::estimateInitFreq1() {
 // Method 2: evenly divide the alignment into K partitions where K = number of classes in the mixture
 // The nucleotide frequency array of i-th class is initialized according to the nucleotide frequencies in the i-th partition
 void ModelMixture::estimateInitFreq2() {
-    cout << endl << "Estimate the initial frequency vectors (method 2)" << endl;
+    if (verbose_mode >= VB_DEBUG) {
+        cout << endl << "Estimate the initial frequency vectors (method 2)" << endl;
+    }
     int nseqs = phylo_tree->aln->getNSeq();
     int nsites = phylo_tree->aln->getNSite();
     int avgCSize = nsites / size();
@@ -1704,13 +1802,6 @@ void ModelMixture::estimateInitFreq2() {
             pos_end = nsites;
         }
         
-        // show the initial frequency vectors
-        at(i)->getStateFrequency(state_freq);
-        cout << "[" << i << "] init Freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
-        
         memset(state_freq, 0, sizeof(double)*num_states);
         
         for (j = pos_start; j < pos_end; j++) {
@@ -1727,10 +1818,13 @@ void ModelMixture::estimateInitFreq2() {
             if (state_freq[j] < min_freq)
                 state_freq[j] = min_freq;
 
-        cout << "[" << i << "] Freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
+        if (verbose_mode >= VB_DEBUG) {
+            // show the initialised frequency vectors
+            cout << "[" << i << "] Freq:";
+            for (j = 0; j < num_states; j++)
+                cout << " " << state_freq[j];
+            cout << endl;
+        }
         
         // update the frequency vectors
         at(i)->setStateFrequency(state_freq);
@@ -1814,7 +1908,6 @@ int ModelMixture::getNDimFreq() {
 // changed to work for GTR optimization -JD
 double ModelMixture::targetFunk(double x[]) {
     if (verbose_mode >= VB_DEBUG) {
-        cout << "targetFunk called: ";
         int ndim = getNDim();
         for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
         cout << endl;
@@ -2024,7 +2117,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
 
-            if (c>0) {
+            if (!fix_prop && !Params::getInstance().optimize_linked_gtr) {
                 // compute _pattern_lh_cat
                 phylo_tree->computePatternLhCat(WSL_MIXTURE);
                 // update the posterior probabilities of each category
@@ -2186,14 +2279,16 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         }
     }
     
-    // show the frequency vectors
-    double state_freq[num_states];
-    for (i = 0; i < ncategory; i++) {
-        at(i)->getStateFrequency(state_freq);
-        cout << "Class " << i+1 << "'s freq:";
-        for (j = 0; j < num_states; j++)
-            cout << " " << state_freq[j];
-        cout << endl;
+    if (verbose_mode >= VB_DEBUG) {
+        // show the frequency vectors
+        double state_freq[num_states];
+        for (i = 0; i < ncategory; i++) {
+            at(i)->getStateFrequency(state_freq);
+            cout << "Class " << i+1 << "'s freq:";
+            for (j = 0; j < num_states; j++)
+                cout << " " << state_freq[j];
+            cout << endl;
+        }
     }
 
     // now rescale Q matrices to have proper interpretation of branch lengths
@@ -2226,13 +2321,14 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     if (fixed_parameters) {
         return 0.0;
     }
+    
+    // flag that tells other methods (notably getNDim) that we're in the middle of optimizing GTR
+    optimizing_gtr = true;
+    
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
-
-    // flag that tells other methods (notably getNDim) that we're in the middle of optimizing GTR
-    optimizing_gtr = true;
 
 	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
 	double *upper_bound = new double[ndim+1];
@@ -2318,30 +2414,17 @@ void ModelMixture::setVariables(double *variables) {
         (*it)->freq_type = FREQ_USER_DEFINED;
 		(*it)->setVariables(&variables[dim]);
         (*it)->freq_type = freq;
-    } else
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setVariables(&variables[dim]);
-		dim += (*it)->getNDim();
-	}
-	if (fix_prop) return;
-	int i, ncategory = size();
-
-//	variables[dim+1] = prop[0]*at(0)->total_num_subst;
-//	for (i = 2; i < ncategory; i++)
-//		variables[dim+i] = variables[dim+i-1] + prop[i-1]*at(i-1)->total_num_subst;
-
-//	variables[dim+1] = prop[0];
-//	for (i = 2; i < ncategory; i++)
-//		variables[dim+i] = variables[dim+i-1] + prop[i-1];
-
-    // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
-	for (i = 0; i < ncategory-1; i++) {
-		variables[dim+i+1] = prop[i] / prop[ncategory-1];
-//        if (variables[dim+i+1] < MIN_MIXTURE_PROP*0.9 || variables[dim+i+1] > MAX_MIXTURE_PROP) {
-//            outWarning("For component " + convertIntToString(i+1) + ", mixture weight " + convertDoubleToString(variables[dim+i+1]) + " is out of bound and may cause numerical instability");
-//        }
+    } else {
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->setVariables(&variables[dim]);
+            dim += (*it)->getNDim();
+        }
+        if (fix_prop) return;
+        int i, ncategory = size();
+        for (i = 0; i < ncategory-1; i++) {
+            variables[dim+i+1] = prop[i] / prop[ncategory-1];
+        }
     }
-
 }
 
 //added case for gtr optimization -JD
@@ -2350,7 +2433,7 @@ bool ModelMixture::getVariables(double *variables) {
     bool changed = false;
     if (optimizing_gtr) {
         for (iterator it = begin(); it != end(); it++) {
-            // assign exchange erates for each mixture compontent to variables
+            // assign exchange rates of each mixture component from variables
             auto freq = (*it)->freq_type;
             (*it)->freq_type = FREQ_USER_DEFINED;
             changed |= (*it)->getVariables(&variables[dim]);
@@ -2363,8 +2446,6 @@ bool ModelMixture::getVariables(double *variables) {
 		}
 		if (fix_prop) return changed;
 		int i, ncategory = size();
-
-		// BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
 		double value, sum = 1.0;
 		for (i = 0; i < ncategory-1; i++) {
 			sum += variables[dim+i+1];
@@ -2384,7 +2465,7 @@ bool ModelMixture::getVariables(double *variables) {
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int dim = 0;
     if(optimizing_gtr) {
-        // only consider the first class as this is a unlinked substitution matrix
+        // only consider the first class as this is a linked substitution matrix
         iterator it = begin();
         auto freq = (*it)->freq_type;
         int ndim = (*it)->getNDim();

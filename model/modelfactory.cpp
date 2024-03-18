@@ -568,12 +568,15 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     /******************** initialize model ****************************/
 
     if (tree->aln->site_state_freq.empty()) {
-        if (model_str.substr(0, 4) == "MIX{" || freq_type == FREQ_MIXTURE) {
+        if (model_str.length() >= 4 && model_str.substr(0, 4) == "MIX{") {
             string model_list;
             if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
                 outError("Close bracket not found at the end of ", model_str);
             model_list = model_str.substr(4, model_str.length()-5);
             model_str = model_str.substr(0, 3);
+            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+        } else if (freq_type == FREQ_MIXTURE) {
+            string model_list;
             model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         } else {
             //            string model_desc;
