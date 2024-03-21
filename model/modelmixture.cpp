@@ -1975,13 +1975,14 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
     if (fixed_parameters) {
         return 0.0;
     }
-	int ndim = getNDim();
-	
-	// return if nothing to be optimized
-	if (ndim == 0) return 0.0;
 
     // flag that tells other methods (notably getNDim) that we're in the middle of optimizing GTR
     optimizing_gtr = true;
+
+    int ndim = getNDim();
+	
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
 
 	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
 	double *upper_bound = new double[ndim+1];
