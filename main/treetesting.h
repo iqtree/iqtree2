@@ -45,7 +45,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
  * @param filename output file name
  * @param tree IQTreeMixHmm
  */
-void printHMMResult(const char*filename, PhyloTree *tree);
+void printHMMResult(const char*filename, PhyloTree *tree, int cat_assign_method = 0);
 
 /**
  * print marginal probabilities to a fileExists

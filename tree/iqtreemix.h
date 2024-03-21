@@ -22,7 +22,7 @@
 //#include "phylokernelnew.h"
 #include <vectorclass/vectorclass.h>
 
-// by default, the minimum branch length for MAST model is 0.000001
+// by default, the minimum branch length for MAST model is 1e-6
 #define MAST_MIN_BRANCH_LEN 1e-6;
 
 // for checking the scaling for the likelihood values
@@ -386,6 +386,11 @@ public:
      whether the site rates are linked, if exists
      */
     bool isLinkSiteRate;
+    
+    /**
+     the estimated average branch length for each tree
+     */
+    vector<double> estAvgBrlen;
 
 protected:
     

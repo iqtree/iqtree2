@@ -15,6 +15,7 @@ IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
     isTMixOptimEngine = false;
+    siteTypes = NULL;
 }
 
 IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTreeMix(params, aln, trees), PhyloHmm(getAlnNSite(), trees.size()) {
@@ -25,10 +26,14 @@ IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &tree
     objAlgo[0] = "HMM";
     objAlgo[1] = "MAST";
     isTMixOptimEngine = false;
+    siteTypes = NULL;
+    setSiteTypes();
 }
 
 IQTreeMixHmm::~IQTreeMixHmm() {
     delete[] objAlgo;
+    if (siteTypes != NULL)
+        delete[] siteTypes;
 }
 
 // initialize the model
@@ -94,14 +99,21 @@ void IQTreeMixHmm::initializeModel(Params &params, string model_name, ModelsBloc
 void IQTreeMixHmm::initializeTransitModel(Params &params) {
     // by default, it uses the HMM simple transition matrix
     // the transition probabilities between different categories are the same
-    if (params.optimize_params_use_hmm_sm && params.optimize_params_use_hmm_gm) {
-        outError("Error! The options -hmmster{sm} and -hmmster{gm} cannot be used together.");
-    }
-    if (params.optimize_params_use_hmm_gm) {
+
+    if (params.optimize_params_use_hmm_tm) {
+        int ntype = 3; // (0) parsimony informatic, (1) invariant, and (2) uninformatic
+        string* types = new string[ntype];
+        types[0] = "parsimony informatic";
+        types[1] = "invariant";
+        types[2] = "uninformatic";
+        modelHmm = new ModelHmmTm(ncat, ntype, siteTypes, aln->getNSite(), types);
+        delete[] types;
+    } else if (params.optimize_params_use_hmm_gm) {
         modelHmm = new ModelHmmGm(ncat);
     } else {
         modelHmm = new ModelHmm(ncat);
     }
+    modelHmm->initialize_transitLog();
     
     // show the transition model
     if (params.treemix_optimize_methods != "mast")
@@ -109,6 +121,26 @@ void IQTreeMixHmm::initializeTransitModel(Params &params) {
 
     // set the associated PhyloHmm of modelHmm to this
     modelHmm->setPhyloHmm(this);
+}
+
+// get the type of all sites for type-dependent HMM model
+// 0 - parsimony informatic; 1 - invariant (including constant and e.g. GS--G-GGG (S = G/C));
+// 2 - uninformatic but not invariant (e.g. GTTTTTT)
+void IQTreeMixHmm::setSiteTypes() {
+    int ptn, i, ctype;
+    if (aln->getNSite() > 0) {
+        siteTypes = new int[aln->getNSite()];
+        for (i = 0; i < aln->getNSite(); i++) {
+            ptn = aln->getPatternID(i);
+            ctype = 2;
+            if (aln->at(ptn).isInformative()) {
+                ctype = 0;
+            } else if (aln->at(ptn).isConst() || aln->at(ptn).isInvariant()) {
+                ctype = 1;
+            }
+            siteTypes[i] = ctype;
+        }
+    }
 }
 
 // set the tree weights according to the marginal probabilities along the sites
@@ -147,14 +179,16 @@ void IQTreeMixHmm::setWeightToMarginalProb() {
     for (i = 0; i < ntree; i++) {
         weight_logs[i] = log(weights[i]);
     }
-    // show the initial tree weights
-    cout << "According to the marginal probabilities from the HMM model along the sites, the tree weights are initialized to:" << endl;
+    /*
+    // show the tree weights according to the posterior probability
+    cout << "According to the posterior probabilities from the HMM model along the sites, the tree weights are :" << endl;
     for (i=0; i<ntree; i++) {
         if (i>0)
             cout << ",";
         cout << weights[i];
     }
     cout << endl;
+    */
 }
 
 // obtain the log-likelihoods for every site and every tree
@@ -222,6 +256,9 @@ double IQTreeMixHmm::optimizeBranchGroup(int branchgrp, double gradient_epsilon)
     if (ndim == 1 || isEdgeLenRestrict) {
         len = setSingleVariable();
         double negative_lh;
+        
+        
+        
         double ferror,optx;
         double bvalue;
         if (verbose_mode >= VB_MED) {
@@ -422,7 +459,7 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     }
 
     score = computeLikelihood();
-    
+
     cout << "1. Initial HMM log-likelihood: " << score << endl;
 
     // first optimize prob array
@@ -471,16 +508,18 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
             // converged
             break;
 
+        /*
         if (verbose_mode >= VB_MED) {
-            computeMaxPath();
+            // computeMaxPath();
             showSiteCatMaxLike(cout, false);
         }
+        */
 
         prev_score = score;
     }
 
     backLogLike = score;
-    computeMaxPath();
+    // computeMaxPath();
 
     // set the tree weights according to the marginal probabilities
     if (!isTreeWeightFixed) {
@@ -617,7 +656,6 @@ int IQTreeMixHmm::getNParameters() {
             }
         }
     }
-    
     if (objFun == 0) {
         // for transition matrix
         if (verbose_mode >= VB_MED)
@@ -649,7 +687,10 @@ int IQTreeMixHmm::getNParameters() {
 }
 
 // print out all the results to a file
-void IQTreeMixHmm::printResults(const char *filename) {
+// cat_assign_method:
+//  0 - the categories along sites is assigned according to the path with maximum probability (default)
+//  1 - the categories along sites is assigned according to the max posterior probability
+void IQTreeMixHmm::printResults(const char *filename, int cat_assign_method) {
     
     size_t i, j;
     ofstream out;
@@ -659,8 +700,8 @@ void IQTreeMixHmm::printResults(const char *filename) {
     showParameters(out);
     out << endl;
     
-    // show the assignment of the categories along sites with max likelihood
-    showSiteCatMaxLike(out);
+    // show the assignment of the categories along the path with max likelihood
+    showSiteCatMaxLike(out, true, cat_assign_method);
     
     out.close();
 }

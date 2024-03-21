@@ -33,7 +33,7 @@ public:
     progress_display& operator =  (double workDoneNow);
     progress_display& hide ();
     progress_display& show ();
-    progress_display& done ();
+    progress_display& done (bool display = false);
     void reportProgress(double time, double cpu, bool newline);
     static void setProgressDisplay(bool displayIt);
     static bool getProgressDisplay();

@@ -81,8 +81,8 @@ endif()
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
-set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH ".8.mix")
+set (iqtree_VERSION_MINOR 3)
+set (iqtree_VERSION_PATCH ".1")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -913,8 +913,10 @@ set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     if (IQTREE_FLAGS MATCHES "oldmac")
         set (SYSTEM_NAME "MacOS10.5")
+    elseif (OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+        set (SYSTEM_NAME "osx-arm64")
     else()
-        set (SYSTEM_NAME "MacOSX")
+        set (SYSTEM_NAME "osx-x86_64")
     endif()
 endif()
 

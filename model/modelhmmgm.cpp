@@ -17,7 +17,6 @@ ModelHmmGm::ModelHmmGm(int numcat) : ModelHmm(numcat) {
     size_t transit_size = get_safe_upper_limit(numcat * numcat);
     transit = aligned_alloc<double>(transit_size);
     transit_normalize = aligned_alloc<double>(transit_size);
-    initialize_param();
 }
 
 /**
@@ -28,11 +27,18 @@ ModelHmmGm::~ModelHmmGm() {
     aligned_free(transit_normalize);
 }
 
-// initialize parameters
-void ModelHmmGm::initialize_param() {
+// initialize transitLog array
+void ModelHmmGm::initialize_transitLog() {
+    size_t i, j;
+
+    // memory allocation of the array
+    size_t transit_size = get_safe_upper_limit(ncat * ncat);
+    if (transitLog != NULL)
+        aligned_free(transitLog);
+    transitLog = aligned_alloc<double>(transit_size);
+
     // the transition probability going to the same state is initialized to INITIAL_PROB_SAME_CAT
     // and the other probabilities are initialized as equally distributed
-    size_t i, j;
     double init_other_tran = (1.0 - INITIAL_PROB_SAME_CAT) / ((double) ncat - 1.0);
     for (i = 0; i < ncat; i++) {
         for (j = 0; j < i; j++)
@@ -94,13 +100,15 @@ double ModelHmmGm::optimizeParametersByEM() {
     // reset the values of transit array
     memset(transit, 0, sizeof(double) * sq_ncat);
     for (k=0; k<dim; k++) {
-        for (i=0; i<sq_ncat; i++) {
-            transit[i] += marginalTran[i];
+        for (i=0; i<ncat; i++) {
+            for (j=0; j<ncat; j++) {
+                transit[i * ncat + j] += (marginalTran[i * ncat + j] + marginalTran[j * ncat + i]);
+            }
         }
         marginalTran += sq_ncat;
     }
     for (i=0; i<sq_ncat; i++) {
-        transit[i] = transit[i] / (double) dim;
+        transit[i] = transit[i] / (double) 2 * dim;
     }
     // verify whether the transition between the same category is too small
     for (i=0; i<sq_ncat; i+=(ncat+1)) {
@@ -111,7 +119,7 @@ double ModelHmmGm::optimizeParametersByEM() {
     }
     computeNormalizedTransits();
     computeLogTransits();
-    return -phylo_hmm->computeBackLike();
+    return phylo_hmm->computeBackLike();
 }
 
 /**

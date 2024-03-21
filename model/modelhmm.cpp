@@ -9,22 +9,25 @@
 
 ModelHmm::ModelHmm(int numcat) {
     ncat = numcat;
-    // memory allocation of the array
-    size_t transit_size = get_safe_upper_limit(ncat * ncat);
-    transitLog = aligned_alloc<double>(transit_size);
-    initialize_param();
+    sq_ncat = ncat * ncat;
+    transitLog = NULL;
 }
 
 /**
  destructor
  */
 ModelHmm::~ModelHmm() {
-    aligned_free(transitLog);
+    if (transitLog != NULL)
+        aligned_free(transitLog);
 }
 
-// initialize parameters
-void ModelHmm::initialize_param() {
-    // initialization of the transition probability between the same category
+// initialize transitLog array
+void ModelHmm::initialize_transitLog() {
+    // memory allocation of the array
+    size_t transit_size = get_safe_upper_limit(ncat * ncat);
+    if (transitLog != NULL)
+        aligned_free(transitLog);
+    transitLog = aligned_alloc<double>(transit_size);
     tranSameCat = INITIAL_PROB_SAME_CAT;
     // compute the log values of transition matrix
     computeLogTransits();

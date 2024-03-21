@@ -54,8 +54,8 @@ public:
      */
     virtual string getFullName() { return "Simple Model"; }
 
-    // initialize parameters
-    virtual void initialize_param();
+    // initialize transitLog array
+    virtual void initialize_transitLog();
     /**
         set the associated PhyloHmm
         @param phyloHmm the associated PhyloHmm
@@ -72,7 +72,7 @@ public:
     /**
      * @return log values of transition matrix
      */
-    double* getTransitLog() { return transitLog; }
+    virtual double* getTransitLog(int site_i) { return transitLog; }
     
     /**
      Show parameters
@@ -87,6 +87,7 @@ public:
 protected:
     
     int ncat; // number of categories
+    int sq_ncat; // ncat * ncat
 
     /**
         PhyloHmm associated
