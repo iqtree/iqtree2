@@ -2205,7 +2205,8 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     ptn_invar = at(0)->ptn_invar;
     
     // set all the branches of the same group to their weighted average for initialization of the branch lengths
-    checkBranchGrp();
+    if (params->fixed_branch_length != BRLEN_FIX)
+        checkBranchGrp();
 
     // show trees
     // cout << "Initial trees:" << endl;
