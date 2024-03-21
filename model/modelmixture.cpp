@@ -2054,8 +2054,9 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-//            double lk_ptn = phylo_tree->ptn_invar[ptn];
             double lk_ptn = 0.0;
+            if (Params::getInstance().optimize_linked_gtr)
+                lk_ptn = phylo_tree->ptn_invar[ptn];
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -2117,7 +2118,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
 
-            if (c>0) {
+            if (c>0 && !Params::getInstance().optimize_linked_gtr) {
                 // compute _pattern_lh_cat
                 phylo_tree->computePatternLhCat(WSL_MIXTURE);
                 // update the posterior probabilities of each category
@@ -2155,11 +2156,11 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
-            phylo_tree->clearAllPartialLH();
+            // phylo_tree->clearAllPartialLH();
 
         }
 
-        // phylo_tree->clearAllPartialLH();
+        phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
 
@@ -2214,6 +2215,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     int dim = getNDim();
     double score = 0.0;
     IntVector params;
+    int i, j, ncategory = size();
     if (dim != 0) {
         score = 1.0;
     }
@@ -2271,24 +2273,25 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         return score;
     }
 
-    // normalize state freq
-    int i, j, ncategory = size();
-    for (i = 0; i < ncategory; i++) {
-        if (at(i)->is_reversible && at(i)->freq_type == FREQ_ESTIMATE) {
-            at(i)->scaleStateFreq(true);
-        }
-    }
-    
-    if (verbose_mode >= VB_DEBUG) {
-        // show the frequency vectors
-        double state_freq[num_states];
-        for (i = 0; i < ncategory; i++) {
-            at(i)->getStateFrequency(state_freq);
-            cout << "Class " << i+1 << "'s freq:";
-            for (j = 0; j < num_states; j++)
-                cout << " " << state_freq[j];
-            cout << endl;
-        }
+	if (!Params::getInstance().optimize_linked_gtr) {
+		// normalize state freq
+		for (i = 0; i < ncategory; i++) {
+			if (at(i)->is_reversible && at(i)->freq_type == FREQ_ESTIMATE) {
+				at(i)->scaleStateFreq(true);
+			}
+		}
+		
+		if (verbose_mode >= VB_DEBUG) {
+			// show the frequency vectors
+			double state_freq[num_states];
+			for (i = 0; i < ncategory; i++) {
+				at(i)->getStateFrequency(state_freq);
+				cout << "Class " << i+1 << "'s freq:";
+				for (j = 0; j < num_states; j++)
+					cout << " " << state_freq[j];
+				cout << endl;
+			}
+		}
     }
 
     // now rescale Q matrices to have proper interpretation of branch lengths
