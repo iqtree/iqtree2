@@ -2195,8 +2195,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         }
         size_t num_pairs = closest_pairs.size();
         size_t compute_pairs = 0;
-        progress_display progress(num_pairs, "Calculating subsets");
-        progress.setProgressDisplay(true);
+        // progress_display progress(num_pairs, "Calculating subsets");
+        // progress.setProgressDisplay(true);
 
 #ifdef _OPENMP
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
@@ -2281,16 +2281,15 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 //                    cout << cur_pair.score << " ";
 //                    cout.width(11);
 //                    cout << cur_pair.tree_len << " " << cur_pair.set_name;
-                    if (num_model >= 10) {
+//                   if (num_model >= 10) {
 //                        double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
 //                        if (remain_time < 0.0)
 //                            remain_time = 0.0;
 //                        double finish_percent = (double) pair * 100.0 / num_pairs;
 //                        cout << " Finished subset " << pair << "/" << num_pairs << "     " << finish_percent << "  percent done";
 //                        cout << "     " << convert_time(getRealTime()-start_time) << " (" << convert_time(remain_time) << " left)     \r" << flush;
-                        progress += 1;
-                        // progress.reportProgress(getRealTime(), getCPUTime(), false);
-                    }
+                        // progress += 1;
+//                    }
 //                    cout << endl;
 
 				}
@@ -2302,9 +2301,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
         // clear the message previous on this line
         // cout << blkStr << "\r" << flush;
-        progress.done();
-        progress.hide();
-        progress.setProgressDisplay(false);
+        // progress.done();
+        // progress.hide();
+        // progress.setProgressDisplay(false);
 
         if (better_pairs.size() > 0) {
             ModelPairSet compatible_pairs;
@@ -2449,7 +2448,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout << left << best_model.getName() << " ";
             cout.width(11);
             cout << score << " " << this_tree->aln->name;
-            if (num_model >= 10) {
+            if (num_model >= 10 && total_num_model > num_model) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " ("
                 << convert_time(remain_time) << " left)";
