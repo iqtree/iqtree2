@@ -303,6 +303,11 @@ if (IQTREE_FLAGS MATCHES "lto")
     #endif()
 endif()
 
+# for mac arm boost compilation issue
+if (__ARM_NEON AND APPLE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=")
+endif()
+
 ##################################################################
 # detect 32 or 64 bit binary
 ##################################################################
