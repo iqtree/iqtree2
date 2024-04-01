@@ -5096,6 +5096,17 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     else
         cout << "unrooted tree detected" << endl;
     // reindex the taxa in the tree to aphabetical names
+
+    if (mytree.traversal_starting_node && mytree.root != mytree.traversal_starting_node){
+        mytree.root = (Node *) mytree.traversal_starting_node;
+    }
+
+    // sort the internal nodes according to their smallest taxon id
+    mytree.sortTaxa();
+//    mytree.clearBranchDirection();
+    mytree.initializeTree();
+//    mytree.computeBranchDirection();
+
     NodeVector taxa;
     mytree.getTaxa(taxa);
     sort(taxa.begin(), taxa.end(), nodenamecmp);
