@@ -252,7 +252,11 @@ double PartitionModel::computeFunction(double shape) {
     linked_alpha = shape;
     if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
+#ifdef __ARM_NEON
+#pragma omp parallel for reduction(+: res) schedule(static) if(tree->num_threads > 1)
+#else
 #pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)
+#endif
 #endif
     for (int j = 0; j < ntrees; j++) {
         int i = tree->part_order[j];
@@ -293,7 +297,11 @@ double PartitionModel::targetFunk(double x[]) {
     int ntrees = tree->size();
     if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
+#ifdef __ARM_NEON
+#pragma omp parallel for reduction(+: res) schedule(static) if(tree->num_threads > 1)
+#else
 #pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)
+#endif
 #endif
     for (int j = 0; j < ntrees; j++) {
         int i = tree->part_order[j];
@@ -466,7 +474,11 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         tree_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
         #ifdef _OPENMP
+        #ifdef __ARM_NEON
+        #pragma omp parallel for reduction(+: tree_lh) schedule(static) if(tree->num_threads > 1)
+        #else
         #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
+        #endif
         #endif
         for (int i = 0; i < ntrees; i++) {
             int part = tree->part_order[i];

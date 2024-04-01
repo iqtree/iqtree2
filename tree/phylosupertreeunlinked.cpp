@@ -199,7 +199,13 @@ double PhyloSuperTreeUnlinked::treeLengthInternal( double epsilon, Node *node, N
 pair<int, int> PhyloSuperTreeUnlinked::doNNISearch(bool write_info) {
     int NNIs = 0, NNI_steps = 0;
     double score = 0.0;
+#ifdef _OPENMP
+#ifdef __ARM_NEON
+#pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1) reduction(+: NNIs, NNI_steps, score)
+#else
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: NNIs, NNI_steps, score)
+#endif
+#endif
     for (int i = 0; i < size(); i++) {
         IQTree *part_tree = (IQTree*)at(part_order[i]);
         Checkpoint *ckp = new Checkpoint;
@@ -241,7 +247,13 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
     bool saved_print_ufboot_trees = params->print_ufboot_trees;
     params->print_ufboot_trees = false;
 
+#ifdef _OPENMP
+#ifdef __ARM_NEON
+#pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1) reduction(+: tree_lh)
+#else
 #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: tree_lh)
+#endif
+#endif
     for (int i = 0; i < size(); i++) {
         IQTree *part_tree = (IQTree*)at(part_order[i]);
         Checkpoint *ckp = new Checkpoint;

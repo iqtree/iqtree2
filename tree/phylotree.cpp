@@ -3371,7 +3371,11 @@ template <class L, class F> double computeDistanceMatrix
     progress_display progress(nseqs*(nseqs-1)/2, "Calculating observed distances"); //zork
 
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for schedule(static)
+    #else
     #pragma omp parallel for schedule(dynamic)
+    #endif
     #endif
     for (int seq1 = 0; seq1<nseqs; ++seq1 ) {
         //Scanning is from bottom to top so that if "uneven execution"
@@ -3438,7 +3442,11 @@ template <class L, class F> double computeDistanceMatrix
     //zeroes to the diagonal.
     //
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for schedule(static)
+    #else
     #pragma omp parallel for schedule(dynamic)
+    #endif
     #endif
     for ( int seq1 = nseqs-1; 0 <= seq1; --seq1 ) {
         int     rowOffset = nseqs * seq1;
@@ -3556,7 +3564,11 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     progress_display progress(nseqs*(nseqs-1)/2, "Calculating distance matrix"); //zork
     //compute the upper-triangle of distance matrix
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for schedule(static)
+    #else
     #pragma omp parallel for schedule(dynamic)
+    #endif
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
         #ifdef _OPENMP
@@ -3665,7 +3677,11 @@ double PhyloTree::computeObsDist(double *dist_mat) {
     size_t nseqs = aln->getNSeq();
     double longest_dist = 0.0;
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for schedule(static)
+    #else
     #pragma omp parallel for schedule(dynamic)
+    #endif
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
         size_t pos = seq1*nseqs;
@@ -3713,7 +3729,8 @@ void PhyloTree::computeBioNJ(Params &params) {
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
 #ifdef _OPENMP
-    omp_set_nested(true);
+    // omp_set_nested(true);
+    omp_set_max_active_levels(2);
     #pragma omp parallel num_threads(2)
     {
         int thread = omp_get_thread_num();
@@ -3751,7 +3768,8 @@ void PhyloTree::computeBioNJ(Params &params) {
     }
     #ifdef _OPENMP
         #pragma omp barrier
-        omp_set_nested(false);
+        // omp_set_nested(false);
+        omp_set_max_active_levels(1);
     #endif
         
     if (!wasDoneInMemory) {

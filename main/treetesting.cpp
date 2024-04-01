@@ -849,7 +849,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     double *boot_sample_dbl = aligned_alloc<double>(maxnptn);
     
 #ifdef _OPENMP
+#ifdef __ARM_NEON
+#pragma omp for schedule(static)
+#else
 #pragma omp for schedule(dynamic)
+#endif
 #endif
     for (int k = 0; k < nscales; ++k) {
         string str = "SCALE=" + convertDoubleToString(r[k]);

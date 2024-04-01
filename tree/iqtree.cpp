@@ -725,7 +725,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
             tree.rooted = rooted;
+    #ifdef _OPENMP
+        #ifdef __ARM_NEON
+            #pragma omp for schedule(static)
+        #else
             #pragma omp for schedule(dynamic)
+        #endif
+    #endif
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln, rstream);
                 pars_trees[i] = tree.getTreeString();

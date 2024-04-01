@@ -280,8 +280,12 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
     if (part_order.empty()) computePartitionOrder();
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for private(part) schedule(static) if(num_threads > 1)
+    #else
     #pragma omp parallel for private(part) schedule(dynamic) if(num_threads > 1)
     #endif    
+    #endif
     for (int partid = 0; partid < size(); partid++) {
         part = part_order_by_nptn[partid];
         if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
@@ -320,8 +324,12 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for reduction(+: tree_lh) schedule(static) if(num_threads > 1)
+    #else
     #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
     #endif    
+    #endif
 	for (int partid = 0; partid < ntrees; partid++) {
             int part = part_order_by_nptn[partid];
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
@@ -378,8 +386,12 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
+    #ifdef __ARM_NEON
+    #pragma omp parallel for reduction(+: df, ddf) schedule(static) if(num_threads > 1)
+    #else
     #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic) if(num_threads > 1)
     #endif    
+    #endif
 	for (int partid = 0; partid < ntrees; partid++) {
         int part = part_order_by_nptn[partid];
         double df_aux, ddf_aux;

@@ -367,7 +367,13 @@ void fbp(Tree *ref_tree, char **alt_tree_strings,char** taxname_lookup_table, in
   }
 
  
+#ifdef _OPENMP
+    #ifdef __ARM_NEON
+#pragma omp parallel for private( j, alt_tree, support) shared(nb_found, hm, ref_tree, alt_tree_strings, taxname_lookup_table, quiet, num_trees) schedule(static)
+    #else
 #pragma omp parallel for private( j, alt_tree, support) shared(nb_found, hm, ref_tree, alt_tree_strings, taxname_lookup_table, quiet, num_trees) schedule(dynamic)
+    #endif
+#endif
   for(i_tree=0; i_tree< num_trees; i_tree++){
     if(!quiet) fprintf(stderr,"New bootstrap tree : %d\n",i_tree);
     alt_tree = complete_parse_nh(alt_tree_strings[i_tree], &taxname_lookup_table);
@@ -445,7 +451,13 @@ void tbe(Tree *ref_tree, Tree *ref_raw_tree, char **alt_tree_strings,char** taxn
   }
   moved_species_counts = (double*) calloc(m,sizeof(double)); /* array of average branch rate in which each taxon moves */
 
+#ifdef _OPENMP
+    #ifdef __ARM_NEON
+#pragma omp parallel for private(min_dist,c_matrix,i_matrix,hamming,min_dist_edge, i, alt_tree, moved_species) shared(max_branches_boot, ref_tree, alt_tree_strings, dist_accu_tmp, taxname_lookup_table, m, moved_species_counts, moved_species_counts_per_branch) schedule(static)
+    #else
 #pragma omp parallel for private(min_dist,c_matrix,i_matrix,hamming,min_dist_edge, i, alt_tree, moved_species) shared(max_branches_boot, ref_tree, alt_tree_strings, dist_accu_tmp, taxname_lookup_table, m, moved_species_counts, moved_species_counts_per_branch) schedule(dynamic)
+    #endif
+#endif
   for(i_tree=0; i_tree< num_trees; i_tree++){
     if(!quiet) fprintf(stderr,"New bootstrap tree : %d\n",i_tree);
     alt_tree = complete_parse_nh(alt_tree_strings[i_tree], &taxname_lookup_table);

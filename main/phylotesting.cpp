@@ -2059,7 +2059,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
+#ifdef __ARM_NEON
+#pragma omp parallel for private(i) schedule(static) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+#else
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+#endif
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
         i = partitionID[j].first;
@@ -2199,7 +2203,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         // progress.setProgressDisplay(true);
 
 #ifdef _OPENMP
+#ifdef __ARM_NEON
+#pragma omp parallel for private(i) schedule(static) if(!params.model_test_and_tree)
+#else
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
+#endif
 #endif
         for (size_t pair = 0; pair < num_pairs; pair++) {
             // information of current partitions pair
@@ -2411,7 +2419,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
     #ifdef _OPENMP
         parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
+    #ifdef __ARM_NEON
+        #pragma omp parallel for private(i) schedule(static) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+    #else
         #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
+    #endif
     #endif
         for (int j = 0; j < in_tree->size(); j++) {
             i = partitionID[j].first;
