@@ -1219,9 +1219,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     // defaults for new options -JD
     params.optimize_linked_gtr = false;
     params.gtr20_model = "POISSON";
-    params.guess_multiplier = 0.5;
+    params.guess_multiplier = 0.75; // change from 0.5
     // params.rates_file = false;
-    params.reset_method = "const";
+    params.reset_method = "random"; // change from const
 
     params.optimize_params_use_hmm = false;
     params.optimize_params_use_hmm_sm = false;
@@ -1676,6 +1676,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             //new options added -JD
             if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
                 params.optimize_linked_gtr = true;
+                params.reset_method = "const";
                 continue;
             }
             if (strcmp(argv[cnt], "--gtr20-model") == 0) {
