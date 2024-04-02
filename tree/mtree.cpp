@@ -749,6 +749,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
                 throw ERR_NEG_BRANCH;
             rooted = is_rooted = true;
             root = newNode(leafNum, ROOT_NAME);
+            traversal_starting_node = root;
             root->addNeighbor(node, branch_len);
             node->addNeighbor(root, branch_len);
             leafNum++;
@@ -762,7 +763,9 @@ void MTree::readTree(istream &in, bool &is_rooted)
                 parseKeyValueFromComment(in_comment, root, node);
             
             
-        } else { // assign root to one of the neighbor of node, if any
+        } if (node->degree() == 3)  {
+            traversal_starting_node = node;
+        }else { // assign root to one of the neighbor of node, if any
             FOR_NEIGHBOR_IT(node, NULL, it)
             if ((*it)->node->isLeaf()) {
                 root = (*it)->node;
