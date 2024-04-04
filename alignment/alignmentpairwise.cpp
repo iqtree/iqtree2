@@ -303,13 +303,7 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
 
     if (site_rate->isSiteSpecificRate()) {
         if (sequence1!=nullptr && sequence2!=nullptr && frequencies!=nullptr) {
-#ifdef _OPENMP
-        #ifdef __ARM_NEON
-            #pragma omp parallel for reduction(-:df,ddf) schedule(static)
-        #else
             #pragma omp parallel for reduction(-:df,ddf) schedule(dynamic,100)
-        #endif
-#endif
             for (int i = 0; i < nptn; ++i) {
                 int state1 = sequence1[i];
                 if (num_states<=state1) {
@@ -353,13 +347,7 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
 
     if (tree->getModel()->isSiteSpecificModel()) {
         if (sequence1!=nullptr && sequence2!=nullptr && frequencies!=nullptr) {
-#ifdef _OPENMP
-        #ifdef __ARM_NEON
-            #pragma omp parallel for reduction(-:df,ddf) schedule(static)
-        #else
             #pragma omp parallel for reduction(-:df,ddf) schedule(dynamic,100)
-        #endif
-#endif
             for (int i = 0; i < nptn; i++) {
                 int state1 = sequence1[i];
                 if (num_states<=state1) {

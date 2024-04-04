@@ -693,12 +693,8 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
         storeTree0RHAS();
     }
     
-#ifdef _OPENMP
-    if (isNestedOpenmp) {
-        // omp_set_nested(1);
-        omp_set_max_active_levels(2);
-    }
-#endif
+    if (isNestedOpenmp)
+        omp_set_nested(1);
 
     // compute likelihood for each tree
     #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
@@ -725,13 +721,10 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
         at(t)->getRate()->setTree(ptree);
     }
     
-#ifdef _OPENMP
     if (isNestedOpenmp) {
-        // omp_set_nested(0);
-        omp_set_max_active_levels(1);
+        omp_set_nested(0);
         omp_set_num_threads(num_threads);
     }
-#endif
 
     // reorganize the array
     // #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
@@ -748,14 +741,7 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
     }
 
     // synchonize the scaling factor among the trees for every pattern
-#ifdef _OPENMP
-#ifdef __ARM_NEON
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
-#else
-    #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1)
-#endif
-#endif
-
     for (size_t ptn=0; ptn<nptn; ptn++) {
         double* pattern_lh_tree = ptn_like_cat + ntree * ptn;
         double* pattern_scale_tree = ptn_scale_cat + ntree * ptn;
@@ -823,23 +809,13 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
 
     if (wsl == WSL_TMIXTURE) {
         // compute likelihood for each tree
-#ifdef _OPENMP
-        if (isNestedOpenmp) {
-            // omp_set_nested(1);
-            omp_set_max_active_levels(2);
-        }
-    #ifdef __ARM_NEON
+        if (isNestedOpenmp)
+            omp_set_nested(1);
         #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-    #else
-        #pragma omp parallel for schedule(dynamic) num_threads(ntree) if (isNestedOpenmp)
-    #endif
-#endif
         for (size_t t=0; t<ntree; t++) {
-#ifdef _OPENMP
             if (isNestedOpenmp) {
                 omp_set_num_threads(at(t)->num_threads);
             }
-#endif
             double* pattern_lh_tree = _ptn_like_cat + t * nptn;
             // save the site rate's tree
             PhyloTree* ptree = at(t)->getRate()->getTree();
@@ -856,13 +832,10 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
             // set back the prevoius site rate's tree
             at(t)->getRate()->setTree(ptree);
         }
-#ifdef _OPENMP
         if (isNestedOpenmp) {
-            // omp_set_nested(0);
-            omp_set_max_active_levels(1);
+            omp_set_nested(0);
             omp_set_num_threads(num_threads);
         }
-#endif
 
         // reorganize the array
         // #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
@@ -878,13 +851,7 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
         }
 
         // synchonize the scaling factor among the trees for every pattern
-#ifdef _OPENMP
-    #ifdef __ARM_NEON
         #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
-    #else
-        #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1)
-    #endif
-#endif
         for (size_t ptn=0; ptn<nptn; ptn++) {
             // find the max scaling factor among the trees
             double* pattern_lh_tree = ptn_like_cat + ptn * ntree;
@@ -935,13 +902,9 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
     } else {
         // compute _pattern_lh_cat for each tree
         nmix = at(0)->getModel()->getNMixtures();
-#ifdef _OPENMP
-        if (isNestedOpenmp) {
-            // omp_set_nested(1);
-            omp_set_max_active_levels(2);
-        }
+        if (isNestedOpenmp)
+            omp_set_nested(1);
         #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-#endif
         for (size_t t = 0; t < ntree; t++) {
             if (isNestedOpenmp) {
                 omp_set_num_threads(at(t)->num_threads);
@@ -955,13 +918,10 @@ double IQTreeMix::computePatternLhCat(SiteLoglType wsl) {
             }
             at(t)->computePatternLhCat(wsl);
         }
-#ifdef _OPENMP
         if (isNestedOpenmp) {
-            // omp_set_nested(0);
-            omp_set_max_active_levels(1);
+            omp_set_nested(0);
             omp_set_num_threads(num_threads);
         }
-#endif
 
         // compute the overall _pattern_lh_cat
         #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
@@ -990,9 +950,7 @@ double IQTreeMix::computeLikelihood_combine(double *pattern_lh, bool save_log_va
     PhyloTree* ptree;
     
     // compute the total likelihood
-#ifdef _OPENMP
     #pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:logLike) if (num_threads > 1)
-#endif
     for (size_t ptn=0; ptn<nptn; ptn++) {
         size_t i = ptn * ntree;
         double subLike = 0.0;
@@ -1089,13 +1047,9 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
     }
     
     // compute likelihood for each tree
-#ifdef _OPENMP
-    if (isNestedOpenmp) {
-        // omp_set_nested(1);
-        omp_set_max_active_levels(2);
-    }
+    if (isNestedOpenmp)
+        omp_set_nested(1);
     #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-#endif
     for (size_t t=0; t<ntree; t++) {
         if (isNestedOpenmp) {
             omp_set_num_threads(at(t)->num_threads);
@@ -1116,22 +1070,13 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
         // set back the prevoius site rate's tree
         at(t)->getRate()->setTree(ptree);
     }
-#ifdef _OPENMP
     if (isNestedOpenmp) {
-        // omp_set_nested(0);
-        omp_set_max_active_levels(1);
+        omp_set_nested(0);
         omp_set_num_threads(num_threads);
     }
-#endif
 
     // reorganize the array
-#ifdef _OPENMP
-    #ifdef __ARM_NEON
-    #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
-    #else
     #pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1)
-    #endif
-#endif
     for (size_t t=0; t<ntree; t++) {
         int i = t * nptn;
         int j = t;
@@ -1146,9 +1091,7 @@ void IQTreeMix::computePatternLikelihood(double *pattern_lh, double *cur_logl,
     }
 
     // synchonize the scaling factor among the trees for every pattern
-#ifdef _OPENMP
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
-#endif
     for (size_t ptn=0; ptn<nptn; ptn++) {
         // find the max scaling factor among the trees
         double* pattern_lh_tree = ptn_like_cat + ptn * ntree;
@@ -1249,26 +1192,19 @@ void IQTreeMix::optimizeAllBranchesOneTree(int whichtree, int my_iterations, dou
  */
 double IQTreeMix::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 
-#ifdef _OPENMP
-    if (isNestedOpenmp) {
-        // omp_set_nested(1);
-        omp_set_max_active_levels(2);
-    }
+    if (isNestedOpenmp)
+        omp_set_nested(1);
     #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-#endif
     for (size_t i=0; i<ntree; i++) {
         if (isNestedOpenmp) {
             omp_set_num_threads(at(i)->num_threads);
         }
         optimizeAllBranchesOneTree(i, my_iterations, tolerance, maxNRStep);
     }
-#ifdef _OPENMP
     if (isNestedOpenmp) {
-        // omp_set_nested(0);
-        omp_set_max_active_levels(1);
+        omp_set_nested(0);
         omp_set_num_threads(num_threads);
     }
-#endif
 
     return computeLikelihood();
 }
@@ -1942,13 +1878,9 @@ void IQTreeMix::optimizeTreeSeparately(int k, bool printInfo, double logl_epsilo
  */
 void IQTreeMix::optimizeTreesSeparately(bool printInfo, double logl_epsilon, double gradient_epsilon) {
 
-#ifdef _OPENMP
-    if (isNestedOpenmp) {
-        // omp_set_nested(1);
-        omp_set_max_active_levels(2);
-    }
+    if (isNestedOpenmp)
+        omp_set_nested(1);
     #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-#endif
     for (size_t i=0; i<ntree; i++) {
         // optimize tree i
         if (isNestedOpenmp) {
@@ -1956,13 +1888,10 @@ void IQTreeMix::optimizeTreesSeparately(bool printInfo, double logl_epsilon, dou
         }
         optimizeTreeSeparately(i, printInfo, logl_epsilon, gradient_epsilon);
     }
-#ifdef _OPENMP
     if (isNestedOpenmp) {
-        // omp_set_nested(0);
-        omp_set_max_active_levels(1);
+        omp_set_nested(0);
         omp_set_num_threads(num_threads);
     }
-#endif
 }
 
 void showDoubleArrayContent(string name, int dim, double* arr) {
@@ -2344,26 +2273,19 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                         }
                     } else {
                         // call computeFreqArray() once after all optimizeParameters()
-                    #ifdef _OPENMP
-                        if (isNestedOpenmp) {
-                            // omp_set_nested(1);
-                            omp_set_max_active_levels(2);
-                        }
+                        if (isNestedOpenmp)
+                            omp_set_nested(1);
                         #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-                    #endif
                         for (int k=0; k<ntree; k++) {
                             if (isNestedOpenmp) {
                                 omp_set_num_threads(at(k)->num_threads);
                             }
                             models[k]->optimizeParameters(gradient_epsilon);
                         }
-                    #ifdef _OPENMP
                         if (isNestedOpenmp) {
-                            // omp_set_nested(0);
-                            omp_set_max_active_levels(1);
+                            omp_set_nested(0);
                             omp_set_num_threads(num_threads);
                         }
-                    #endif
                         computeFreqArray(pattern_mix_lh, true);
                     }
                     if (verbose_mode >= VB_MED) {
@@ -2446,26 +2368,19 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
                     }
                 /* } else {
                     // call computeFreqArray() once after all optimizeParameters()
-                 #ifdef _OPENMP
-                    if (isNestedOpenmp) {
-                        // omp_set_nested(1);
-                        omp_set_max_active_levels(2);
-                    }
+                    if (isNestedOpenmp)
+                        omp_set_nested(1);
                     #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-                 #endif
                     for (int k=0; k<ntree; k++) {
                         if (isNestedOpenmp) {
                             omp_set_num_threads(at(k)->num_threads);
                         }
                         site_rates[k]->optimizeParameters(gradient_epsilon);
                     }
-                 #ifdef _OPENMP
                     if (isNestedOpenmp) {
-                        // omp_set_nested(0);
-                        omp_set_max_active_levels(1);
+                        omp_set_nested(0);
                         omp_set_num_threads(num_threads);
                     }
-                 #endif
                     computeFreqArray(pattern_mix_lh, true);
                 }*/
                 if (verbose_mode >= VB_MED) {
@@ -3131,14 +3046,10 @@ void IQTreeMix::computeParsimony() {
     
     deleteAllPartialLh();
     
-#ifdef _OPENMP
     // compute the parsimony scores along patterns for each tree
-    if (isNestedOpenmp) {
-        // omp_set_nested(1);
-        omp_set_max_active_levels(2);
-    }
+    if (isNestedOpenmp)
+        omp_set_nested(1);
     #pragma omp parallel for schedule(static) num_threads(ntree) if (isNestedOpenmp)
-#endif
     for (size_t t=0; t<ntree; t++) {
         if (isNestedOpenmp) {
             omp_set_num_threads(at(t)->num_threads);
@@ -3150,13 +3061,10 @@ void IQTreeMix::computeParsimony() {
         at(t)->computeTipPartialParsimony();
         at(t)->computeParsimonyOutOfTreeSankoff(curr_ptn_scores);
     }
-#ifdef _OPENMP
     if (isNestedOpenmp) {
-        // omp_set_nested(0);
-        omp_set_max_active_levels(1);
+        omp_set_nested(0);
         omp_set_num_threads(num_threads);
     }
-#endif
 
     // build opattern2id
     for (size_t optn=0; optn<noptn; optn++) {
@@ -3184,9 +3092,7 @@ void IQTreeMix::computeParsimony() {
          */
     }
 
-#ifdef _OPENMP
     #pragma omp parallel for schedule(static) num_threads(num_threads) if (num_threads > 1)
-#endif
     for (size_t ptn=0; ptn<nptn; ptn++) {
         map<Pattern,int>::iterator itr = opattern2id.find(aln->at(ptn));
         int* curr_pars_scores = &patn_parsimony[ptn*ntree];

@@ -625,13 +625,7 @@ protected:
     {
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #ifdef _OPENMP
-        #ifdef __ARM_NEON
-        #pragma omp parallel for schedule(static)
-        #else
         #pragma omp parallel for schedule(dynamic)
-        #endif
-        #endif
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
@@ -752,13 +746,7 @@ protected:
         }
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #ifdef _OPENMP
-        #ifdef __ARM_NEON
-        #pragma omp parallel for schedule(static)
-        #else
         #pragma omp parallel for schedule(dynamic)
-        #endif
-        #endif
         for (size_t row=1; row<n; ++row) {
             float  bestVrc    = infiniteDistance;
             size_t bestColumn = 0;
@@ -989,13 +977,7 @@ public:
             //   RapidNJ papers).
             entriesSorted.setSize(n);
             entryToCluster.setSize(n);
-#ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static)
-#else
 #pragma omp parallel for schedule(dynamic)
-#endif
-#endif
             for (size_t r=0; r<n; ++r) {
                 sortRow(r,r);
                 ++setupProgress;
@@ -1306,13 +1288,7 @@ public:
         }
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #ifdef _OPENMP
-        #ifdef __ARM_NEON
-        #pragma omp parallel for schedule(static)
-        #else
         #pragma omp parallel for schedule(dynamic)
-        #endif
-        #endif
         for (size_t row=1; row<n; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];
@@ -1384,13 +1360,7 @@ public:
         T* nums = matrixAlign ( scratchColumnNumbers.data() );
         rowMinima.resize(n);
         rowMinima[0].value = infiniteDistance;
-        #ifdef _OPENMP
-        #ifdef __ARM_NEON
-        #pragma omp parallel for schedule(static)
-        #else
         #pragma omp parallel for schedule(dynamic)
-        #endif
-        #endif
         for (size_t row=1; row<n; ++row) {
             Position<T> pos(row, 0, infiniteDistance, 0);
             const T* rowData = rows[row];

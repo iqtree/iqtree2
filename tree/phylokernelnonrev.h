@@ -723,11 +723,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         
     	// now do the real computation
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#endif
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
@@ -879,11 +875,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         }
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#endif
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0);
@@ -1186,11 +1178,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
     	// now do the real computation
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#endif
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
@@ -1340,11 +1328,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#endif
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);

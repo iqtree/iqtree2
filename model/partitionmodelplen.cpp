@@ -101,11 +101,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         cur_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for reduction(+: cur_lh) schedule(static) if(tree->num_threads > 1)
-#else
 #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic) if(tree->num_threads > 1)
-#endif
 #endif
         for (int partid = 0; partid < ntrees; partid++) {
             int part = tree->part_order[partid];
@@ -235,11 +231,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     if (tree->part_order.empty()) tree->computePartitionOrder();
     
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for reduction(+: score) schedule(static) if(tree->num_threads > 1)
-#else
 #pragma omp parallel for reduction(+: score) schedule(dynamic) if(tree->num_threads > 1)
-#endif
 #endif
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];

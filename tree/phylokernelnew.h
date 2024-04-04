@@ -1268,11 +1268,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
         computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
 
         #ifdef _OPENMP
-        #ifdef __ARM_NEON
-        #pragma omp parallel for schedule(static) num_threads(num_threads)
-        #else
         #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads)
-        #endif
         #endif
         for (int packet_id = 0; packet_id < num_packets; ++packet_id) {
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
@@ -2378,11 +2374,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     
     double all_lh(0.0), all_df(0.0), all_ddf(0.0), all_prob_const(0.0), all_df_const(0.0), all_ddf_const(0.0);
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_lh,all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_lh,all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#endif
 #endif
     for (int packet_id = 0; packet_id < num_packets; packet_id++) {
         VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
@@ -2814,11 +2806,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         // cout << "num_threads = " << num_threads << endl;
         // cout << "nptn = " << nptn << endl;
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for  schedule(static) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#else
 #pragma omp parallel for  schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#endif
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             // cout << "packet_id = " << packet_id << " ptn_lower = " << limits[packet_id] << " ptn_upper = " << limits[packet_id+1] << endl;
@@ -2979,11 +2967,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         //ASSERT(0 && "Don't compute tree log-likelihood from internal branch!");
     	//-------- both dad and node are internal nodes -----------/
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
-#endif
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             size_t ptn_lower = limits[packet_id];
@@ -3541,11 +3525,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
     double all_df(0.0), all_ddf(0.0), all_prob_const(0.0), all_df_const(0.0), all_ddf_const(0.0);
 
 #ifdef _OPENMP
-#ifdef __ARM_NEON
-#pragma omp parallel for schedule(static) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#else
 #pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_df,all_ddf,all_prob_const,all_df_const,all_ddf_const)
-#endif
 #endif
     for (int packet_id = 0; packet_id < num_packets; packet_id++) {
         VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
