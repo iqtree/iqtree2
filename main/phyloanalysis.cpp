@@ -291,6 +291,43 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
+void reportNexusFile(ostream &out, ModelSubst *m) {
+    double full_mat[400];
+    int i,j,k;
+    double *rate_mat = new double[m->num_states * m->num_states];
+    m->getRateMatrix(rate_mat);
+    out << "#nexus" << endl;
+    out << "begin models;" << endl;
+    out << "model GTRPMIX =" << endl;
+    out.precision(6);
+    if (m->isReversible()) {
+        for (i = 0, k = 0; i < m->num_states - 1; i++)
+            for (j = i + 1; j < m->num_states; j++, k++) {
+                full_mat[i*m->num_states+j] = rate_mat[k];
+            }
+        for (i = 1; i < m->num_states; i++) {
+            for (j = 0; j < i; j++)
+                out << " " << full_mat[j*m->num_states+i];
+            out << endl;
+        }
+    } else {
+        // non-reversible model
+        m->getQMatrix(full_mat);
+        for (i = 0; i < m->num_states; i++) {
+            for (j = 0; j < m->num_states; j++)
+                out << " " << full_mat[i*m->num_states+j];
+            out << endl;
+        }
+    }
+    // print out the frequencies with same rate
+    double f = 1.0 / m->num_states;
+    for (i = 0; i < m->num_states; i++)
+        out << " " << f;
+    out << endl;
+    out.precision(4);
+    out << "end;" << endl;
+}
+
 void reportLinkSubstMatrix(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
     double *rate_mat = new double[m->num_states * m->num_states];
@@ -1116,6 +1153,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "                                 " << params.out_prefix << ".pp.hmm" << endl;
     }
     
+    if (params.optimize_linked_gtr) {
+        cout << "  GTRPMIX nex file:              " << params.out_prefix << ".gtrpmix.nex" << endl;
+    }
     cout << endl;
 
 }
@@ -1787,6 +1827,20 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 
         //reportCredits(out); // not needed, now in the manual
         out.close();
+
+        // for link-exchange-rates option
+        // output the nexus file
+        if (params.optimize_linked_gtr) {
+            ModelSubst *mmodel = tree.getModel();
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+            string outnexfile = params.out_prefix;
+            outnexfile += ".gtrpmix.nex";
+            ofstream outnex;
+            outnex.exceptions(ios::failbit | ios::badbit);
+            outnex.open(outnexfile.c_str());
+            reportNexusFile(outnex, m);
+            outnex.close();
+        }
 
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, outfile);
