@@ -2285,7 +2285,10 @@ double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
-	if (ndim == 0) return 0.0;
+    if (ndim == 0) {
+        optimizing_gtr = false;
+        return 0.0;
+    }
 
 	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
 	double *upper_bound = new double[ndim+1];
