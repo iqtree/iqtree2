@@ -324,7 +324,6 @@ public:
 
 protected:
 
-	bool optimizing_submodels;
 	bool optimizing_gtr;
 
     /** number of optimization steps, default: ncategory*2 */

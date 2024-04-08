@@ -1191,7 +1191,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 	prop = NULL;
 	fix_prop = true;
-	optimizing_submodels = false;
     optimizing_gtr = false;
 }
 
@@ -1201,7 +1200,6 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 {
 	prop = NULL;
 	fix_prop = true;
-	optimizing_submodels = false;
     optimizing_gtr = false;
     optimize_steps = 0;
 	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
@@ -1241,7 +1239,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector freq_rates;
 	DoubleVector freq_weights;
 	fix_prop = false;
-	optimizing_submodels = false;
     optimizing_gtr = false;
 
 	if (freq == FREQ_MIXTURE) {
@@ -2168,8 +2165,6 @@ bool ModelMixture::isMixtureSameQ() {
 
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
     
-	optimizing_submodels = true;
-
     int dim = getNDim();
     double score = 0.0;
     IntVector params;
@@ -2218,7 +2213,6 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	} else {
 		score = ModelMarkov::optimizeParameters(gradient_epsilon);
 	}
-	optimizing_submodels = false;
 
 //  optimize a gtr matrix if specified (enters main routine) -JD
     if (Params::getInstance().optimize_linked_gtr) {
