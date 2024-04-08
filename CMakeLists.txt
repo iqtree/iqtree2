@@ -147,8 +147,20 @@ if (APPLE)
       OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-		message("APPLE SILICON (M1) DETECTED!")
-		set (__ARM_NEON "TRUE")
+		message("APPLE SILICON (M1/M2/M3) DETECTED!")
+        set (__ARM_NEON "TRUE")
+        set (NEON 1)
+    endif()
+elseif (UNIX AND NOT APPLE)  # Unix and Linux
+    execute_process(
+      COMMAND uname -m
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE OS_NATIVE_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(OS_NATIVE_ARCHITECTURE STREQUAL "aarch64")
+        message("Unix/Linux ARM64 DETECTED!")
+	    set (__ARM_NEON "TRUE")
 		set (NEON 1)
 	endif()
 endif()
