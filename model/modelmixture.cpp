@@ -1804,25 +1804,29 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
 
 // added case for gtr optimization -JD
 int ModelMixture::getNDim() {
-	int dim = (fix_prop) ? 0: (size()-1);
-//    int dim = 0;
+    int dim = (fix_prop) ? 0: (size()-1);
+    int dim_linked_subst = 0;
     
-    if (optimizing_gtr) { 
-        // report the number of variables while optimizing the linked substitution model
+    if (Params::getInstance().optimize_linked_gtr) {
         iterator it = begin();
         auto freq = (*it)->freq_type;
         (*it)->freq_type = FREQ_USER_DEFINED;
-        dim = (*it)->getNDim();
+        dim_linked_subst = (*it)->getNDim();
         (*it)->freq_type = freq;
-        return dim;
     }
-
-    if (!optimizing_submodels && !fix_prop) {
-        dim = size() - 1;
+    
+    if (optimizing_gtr) {
+        // report the number of variables while optimizing the linked substitution model
+        return dim_linked_subst;
     }
 
     for (iterator it = begin(); it != end(); it++) {
         dim += (*it)->getNDim();
+    }
+
+    if (Params::getInstance().optimize_linked_gtr) {
+        // for linked substitution model
+        dim -= dim_linked_subst * (size() - 1);
     }
 
 	return dim;
