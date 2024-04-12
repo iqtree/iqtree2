@@ -618,6 +618,11 @@ string computeFastMLTree(Params &params, Alignment *aln,
     } else {
         iqtree = new IQTree(aln);
     }
+
+    if (params.constraint_tree_file) {
+        iqtree->constraintTree.readConstraint(params.constraint_tree_file, aln->getSeqNames());
+    }
+
     if ((params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) && !iqtree->isInitializedPLL()) {
         /* Initialized all data structure for PLL*/
         iqtree->initializePLL(params);
