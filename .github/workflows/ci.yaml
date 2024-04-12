@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: Linux x86_64
     runs-on: ubuntu-latest
 
     steps:
@@ -28,6 +29,7 @@ jobs:
         file iqtree2 | grep x86-64
 
   build-aarch64:
+    name: Linux aarch64
     runs-on: ubuntu-latest
 
     steps:
@@ -54,3 +56,28 @@ jobs:
             cmake ..
             make -j
             file iqtree2 | grep aarch64
+
+  build-macos-m:
+    name: Mac OS ARM64
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: "recursive"
+
+    - name: Install dependencies
+      run: brew install make eigen boost libomp
+
+    - name: Build
+      run: |
+        set -x
+        mkdir build
+        cd build
+        export LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+        export CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+        export CXXFLAGS="-I/opt/homebrew/opt/libomp/include"
+        cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+        gmake -j
+        file iqtree2 | grep arm64
