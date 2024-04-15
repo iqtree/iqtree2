@@ -88,6 +88,16 @@ inline void separator(ostream &out, int type = 0) {
 
 
 void printCopyright(ostream &out) {
+    string osname, pre, post;
+    osname = getOSName();
+    // change the "Mac OS X" to "MacOS"
+    size_t osx_pos = osname.find("Mac OS X");
+    if (osx_pos != string::npos) {
+        pre = osname.substr(0,osx_pos);
+        post = osname.substr(osx_pos+8);
+        osname = pre + "MacOS" + post;
+    }
+    
 #ifdef IQ_TREE
      out << "IQ-TREE";
     #ifdef _IQTREE_MPI
@@ -104,7 +114,12 @@ void printCopyright(ostream &out) {
      out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
-    out << " for " << getOSName();
+    out << " for " << osname;
+#if defined(__ARM_NEON)
+    out << " ARM";
+#else
+    cout << " Intel";
+#endif
     out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
