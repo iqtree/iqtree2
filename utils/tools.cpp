@@ -2576,13 +2576,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
             }
             
-            if (strcmp(argv[cnt], "-rcluster-threading") == 0 || strcmp(argv[cnt], "--rcluster-threading") == 0) {
+            if (strcmp(argv[cnt], "-merge-threading") == 0 || strcmp(argv[cnt], "--merge-threading") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -rcluster-threading <0|1|2|3>";
+                    throw "Use -merge-threading <0|1|2|3>";
                 params.partfinder_threading_method = convert_int(argv[cnt]);
                 if (params.partfinder_threading_method < 0 || params.partfinder_threading_method > 3)
-                    throw "rcluster-threading must be between 0 and 3";
+                    throw "merge-threading must be between 0 and 3";
                 continue;
             }
 
