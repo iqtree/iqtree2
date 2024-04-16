@@ -90,12 +90,27 @@ inline void separator(ostream &out, int type = 0) {
 void printCopyright(ostream &out) {
     string osname, pre, post;
     osname = getOSName();
-    // change the "Mac OS X" to "MacOS"
+
     size_t osx_pos = osname.find("Mac OS X");
+    size_t linux_pos = osname.find("Linux");
     if (osx_pos != string::npos) {
+        // change the "Mac OS X" to "MacOS ARM" or "MacOS Intel"
         pre = osname.substr(0,osx_pos);
         post = osname.substr(osx_pos+8);
-        osname = pre + "MacOS" + post;
+        #if defined(__ARM_NEON)
+            osname = pre + "MacOS ARM" + post;
+        #else
+            osname = pre + "MacOS Intel" + post;
+        #endif
+    } else if (linux_pos != string::npos) {
+        // change the "Linux" to "Linux ARM" or "Linux x86"
+        pre = osname.substr(0,linux_pos);
+        post = osname.substr(linux_pos+5);
+        #if defined(__ARM_NEON)
+            osname = pre + "Linux ARM" + post;
+        #else
+            osname = pre + "Linux x86" + post;
+        #endif
     }
     
 #ifdef IQ_TREE
@@ -115,19 +130,14 @@ void printCopyright(ostream &out) {
 #endif
     out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
     out << " for " << osname;
-#if defined(__ARM_NEON)
-    out << " ARM";
-#else
-    cout << " Intel";
-#endif
     out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
 #endif
 
 #ifdef IQ_TREE
-    out << endl << "Developed by Bui Quang Minh, James Barbetti, Nguyen Lam Tung,"
-        << endl << "Olga Chernomor, Heiko Schmidt, Dominik Schrempf, Michael Woodhams, Ly Trong Nhan, Thomas Wong" << endl << endl;
+    out << endl << "Developed by Bui Quang Minh, James Barbetti, Nguyen Lam Tung, Olga Chernomor,"
+        << endl << "Heiko Schmidt, Dominik Schrempf, Michael Woodhams, Ly Trong Nhan, Thomas Wong" << endl << endl;
 #else
     out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
