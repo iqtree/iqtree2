@@ -1127,7 +1127,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
     params.partition_type = BRLEN_OPTIMIZE;
-    params.partfinder_rcluster = 100;
+    params.partfinder_rcluster = 10; // change the default from 100 to 10
     params.partfinder_rcluster_max = 0;
     params.partition_merge = MERGE_NONE;
     params.merge_models = "1";
