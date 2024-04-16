@@ -1,0 +1,56 @@
+name: Linux x86_64
+
+on:
+  push: 
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: "recursive"
+
+    - name: Install dependencies
+      run: sudo apt-get update -q -y && sudo apt-get install -q -y cmake libeigen3-dev libboost-dev
+
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+        make -j
+        file iqtree2 | grep x86-64
+
+  build-aarch64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: Build on Linux ARM64
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: aarch64
+          distro: ubuntu20.04
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${PWD}:/iqtree2"
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y cmake gcc g++ file libeigen3-dev libboost-dev
+          run: |
+            cd /iqtree2
+            mkdir build
+            cd build
+            cmake ..
+            make -j
+            file iqtree2 | grep aarch64
