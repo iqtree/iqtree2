@@ -919,9 +919,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     //    for DNA/BINARY
     //    max # of threads = number of partitions
     
+    bool autoThread = (params.num_threads == 0);
     int orig_nthreads = params.num_threads;
     int fasttree_nthreads = params.num_threads;
-    if (iqtree.isSuperTree()) {
+    
+    if (!autoThread && iqtree.isSuperTree()) {
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
         fasttree_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
         params.num_threads = fasttree_nthreads;
@@ -949,7 +951,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         }
     }
     
-    params.num_threads = orig_nthreads;
+    if (!autoThread)
+        params.num_threads = orig_nthreads;
     
     // also save initial tree to the original .ckp.gz checkpoint
     //        string initTree = iqtree.getTreeString();
@@ -1032,7 +1035,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     }
     
     // change the number of threads
-    params.num_threads = fasttree_nthreads;
+    if (!autoThread)
+        params.num_threads = fasttree_nthreads;
 }
 
 /**
