@@ -2013,12 +2013,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
 
     // show the parameters for partition finder
-    cout << endl;
-    cout << "PartitionFinder's parameters:" << endl;
-    cout << part_algo << endl;
-    cout << "Percentage: " << params.partfinder_rcluster << endl;
-    cout << "Maximum pairs: " << params.partfinder_rcluster_max << endl;
-    cout << endl;
+    if (part_algo != "") {
+        cout << endl;
+        cout << "PartitionFinder's parameters:" << endl;
+        cout << part_algo << endl;
+        cout << "Percentage: " << params.partfinder_rcluster << endl;
+        cout << "Maximum pairs: " << params.partfinder_rcluster_max << endl;
+        cout << endl;
+    }
 
 	if (params.partition_merge != MERGE_NONE) {
         double p = params.partfinder_rcluster/100.0;
