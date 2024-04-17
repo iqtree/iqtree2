@@ -100,6 +100,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Build mode   : Release")
 endif()
 
+if (BUILD_LIB STREQUAL "ON")
+    message("Build lib    : ON")
+else()
+    message("Build lib    : OFF")
+endif()
+
 if (CMAKE_GENERATOR MATCHES "Xcode")
     set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 #    if (NOT CMAKE_XCODE_ATTRIBUTE_COMPILER_INDEX_STORE_ENABLE)
@@ -724,10 +730,6 @@ if (USE_LSD2)
     add_subdirectory(lsd2)
 endif()
 
-##################################################################
-# the main executable
-##################################################################
-
 add_library(kernelsse tree/phylokernelsse.cpp)
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -738,10 +740,22 @@ add_library(kernelfma tree/phylokernelfma.cpp)
     endif()
 endif()
 
-add_executable(iqtree2
-obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h
-)
+##################################################################
+# build lib file or main executable
+##################################################################
+option(BUILD_LIB "Build IQ-TREE2 library" OFF)
+
+if (BUILD_LIB STREQUAL "ON")
+    add_library(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+else()
+    add_executable(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+endif()
 
 if(Backtrace_FOUND)
   include_directories(${Backtrace_INCLUDE_DIR})
