@@ -1154,7 +1154,7 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     }
     
     if (params.optimize_linked_gtr) {
-        cout << "  GTRPMIX nex file:              " << params.out_prefix << ".gtrpmix.nex" << endl;
+        cout << "  GTRPMIX nex file:              " << params.out_prefix << ".GTRPMIX.nex" << endl;
     }
     cout << endl;
 
@@ -1834,7 +1834,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             ModelSubst *mmodel = tree.getModel();
             ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
             string outnexfile = params.out_prefix;
-            outnexfile += ".gtrpmix.nex";
+            outnexfile += ".GTRPMIX.nex";
             ofstream outnex;
             outnex.exceptions(ios::failbit | ios::badbit);
             outnex.open(outnexfile.c_str());
