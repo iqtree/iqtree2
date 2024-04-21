@@ -210,9 +210,11 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
                 string rate_set, StrVector &ratehet);
 
 /**
- * report the number of threads should be used for a single partition
+ * restrict the number of threads should be used for a single partition
  */
 int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
+    if (numThres == 0)
+        return numThres;
     int thres = numThres;
     switch(seqType) {
         case SEQ_BINARY:
@@ -248,15 +250,17 @@ int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
                 thres = 16;
             break;
     }
+    if (thres > numThres)
+        thres = numThres;
     return thres;
 }
 
 /**
- * report the number of threads should be used for fast tree estimation
+ * restrict the number of threads should be used for fast tree estimation
  * and for the final step after modelFinder
  */
 int numThresFastTree(int nPart, int nptn, SeqType seqType, int numThres) {
-    if (nptn == 1)
+    if (nptn == 1 || numThres == 0)
         return numThres;
     int thres = nPart;
     switch(seqType) {
@@ -271,6 +275,8 @@ int numThresFastTree(int nPart, int nptn, SeqType seqType, int numThres) {
         default:
             break;
     }
+    if (thres > numThres)
+        thres = numThres;
     return thres;
 }
 
@@ -950,7 +956,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             iqtree.saveCheckpoint();
         }
     }
-    
+    cout << "# of threads for computing initial tree: " << fasttree_nthreads << endl << endl;
+
     if (!autoThread)
         params.num_threads = orig_nthreads;
     
@@ -1037,6 +1044,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     // change the number of threads
     if (!autoThread)
         params.num_threads = fasttree_nthreads;
+    
+    cout << endl;
+    cout << "# of threads for the following: " << params.num_threads << endl;
+    cout << endl;
 }
 
 /**
@@ -2151,6 +2162,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         brlen_type = BRLEN_OPTIMIZE;
     }
     bool test_merge = (params.partition_merge != MERGE_NONE) && params.partition_type != TOPO_UNLINKED && (in_tree->size() > 1);
+    // record the number of threads being used
+    int nthreads_used = num_threads;
 
     if (params.partfinder_threading_method == 1) {
         // using an updated threading method, which uses one thread to analyse a partition under one model
@@ -2180,9 +2193,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             std::sort(partitionID.begin(), partitionID.end(), comparePartition);
         }
         bool parallel_over_partitions = false;
-
+        
 #ifdef _OPENMP
         parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads || params.partfinder_threading_method == 2);
+        if (parallel_over_partitions && in_tree->size() < num_threads) {
+            // record the number of threads being used
+            nthreads_used = in_tree->size();
+        }
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
         for (int j = 0; j < in_tree->size(); j++) {
@@ -2201,6 +2218,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     nthreads = numThresSinglePart(this_tree->aln->getNPattern(), this_tree->aln->seq_type, num_threads);
                 else
                     nthreads = num_threads;
+                
+                // record the number of threads being used
+                if (j == 0)
+                    nthreads_used = nthreads;
+                else if (nthreads_used < nthreads)
+                    nthreads_used = nthreads;
             }
             CandidateModel best_model;
             best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
@@ -2250,6 +2273,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
 	cout << "Full partition model " << criterionName(params.model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+#ifdef _OPENMP
+    cout << "# of threads: " << nthreads_used << endl << endl;
+#endif
 
     pre_inf_score = inf_score;
 
@@ -2330,6 +2356,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         // progress_display progress(num_pairs, "Calculating subsets");
         // progress.setProgressDisplay(true);
 
+        // record the number of threads actually being used
+        nthreads_used = num_threads;
+        if (!params.model_test_and_tree && num_pairs < nthreads_used)
+            nthreads_used = num_pairs;
+        
 #ifdef _OPENMP
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
 #endif
@@ -2491,6 +2522,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout << part_algo << "\t";
         cout << "Step " << ++step << "\t" << compute_pairs << " Subsets\t" << criterionName(params.model_test_criterion) << " " << inf_score;
         cout << "\tdeltaBIC " << inf_score - pre_inf_score;
+#ifdef _OPENMP
+        cout << "\t# of Threads " << nthreads_used;
+#endif
         cout << endl;
         pre_inf_score = inf_score;
 
@@ -2573,6 +2607,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             bool parallel_over_partitions = false;
 #ifdef _OPENMP
             parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads || params.partfinder_threading_method == 2);
+            nthreads_used = num_threads;
+            if (parallel_over_partitions && in_tree->size() < num_threads) {
+                // record the number of threads being used
+                nthreads_used = in_tree->size();
+            }
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
             for (int j = 0; j < in_tree->size(); j++) {
@@ -2591,6 +2630,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                         nthreads = numThresSinglePart(this_tree->aln->getNPattern(), this_tree->aln->seq_type, num_threads);
                     else
                         nthreads = num_threads;
+                    // record the number of threads being used
+                    if (j == 0)
+                        nthreads_used = nthreads;
+                    else if (nthreads_used < nthreads)
+                        nthreads_used = nthreads;
                 }
                 CandidateModel best_model;
                 best_model = CandidateModelSet().test(params, this_tree, part_model_info, models_block,
@@ -2632,6 +2676,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
     inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
     cout << "Best partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
+#ifdef _OPENMP
+    cout << "# of threads: " << nthreads_used << endl << endl;
+#endif
 
     ((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
