@@ -701,7 +701,7 @@ Alignment *Alignment::removeAndFillUpGappySites() {
     Alignment *aln = new Alignment;
     aln->extractPatterns(this, keep_patterns);
 
-    for (size_t idx = 0; idx < boost::size(keep_patterns); idx++) {
+    for (size_t idx = 0; idx < aln->size(); idx++) {
         vector<size_t> freqs = aln->at(idx).freqs;
         uint32_t most_frequent_base = std::max_element(freqs.begin(), freqs.end()) - freqs.begin();
         for (size_t i = 0; i < getNSeq(); i++) {

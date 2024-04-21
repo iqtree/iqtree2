@@ -80,15 +80,13 @@ if(Boost_FOUND)
 endif()
 
 # Find onnxruntime library for machine learning
-#if (NOT onnxruntime_INCLUDE_DIRS)
-#    message("Search for onnxruntime...")
-#    find_package(onnxruntime)
-#    message(${onnxruntime_INCLUDE_DIRS})
-#    if(NOT onnxruntime_FOUND)
-#        message(FATAL_ERROR "onnxruntime library not found. Either install it or rerun cmake with -Donnxruntime_INCLUDE_DIRS=<installed_onnxruntime_dir>")
-#    endif()
-#endif()
-#add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+find_package(onnxruntime)
+if(onnxruntime_FOUND)
+    add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+endif()
+if (Donnxruntime_INCLUDE_DIRS)
+    add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+endif()
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
@@ -325,6 +323,13 @@ if(NOT ONNXRUNTIME_ROOTDIR)
         include_directories("/usr/local/include")
     endif()
 endif()
+
+
+# for mac arm boost compilation issue
+if (__ARM_NEON AND APPLE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=")
+endif()
+
 
 ##################################################################
 # detect 32 or 64 bit binary
@@ -822,14 +827,16 @@ target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vec
     gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 # onnxruntime library
-# target_link_libraries(iqtree2 ${onnxruntime_LIBRARIES})
-
-if (APPLE)
-    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
-elseif(UNIX)
-    target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
+if (onnxruntime_LIBRARIES)
+    target_link_libraries(iqtree2 ${onnxruntime_LIBRARIES})
 else()
-    target_link_libraries(iqtree2 onnxruntime)
+    if (APPLE)
+        target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
+    elseif(UNIX)
+        target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
+    else()
+        target_link_libraries(iqtree2 onnxruntime)
+    endif()
 endif()
 
 if (USE_TERRAPHAST)
