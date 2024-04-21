@@ -49,6 +49,11 @@
 # Compile static version: cmake -DIQTREE_FLAGS=static ....
 # Compile static OpenMP version: cmake -DIQTREE_FLAGS="static" ....
 #
+#
+#
+# Compile IQ-TREE with CMAPLE integrated: cmake -DUSE_CMAPLE=ON ....
+#
+#
 
 #NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
 # C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
@@ -170,6 +175,21 @@ elseif (UNIX AND NOT APPLE)  # Unix and Linux
 		set (NEON 1)
 	endif()
 endif()
+
+##################################################################
+# Include the CMAPLE library
+##################################################################
+option(USE_CMAPLE "Integrate CMAPLE" OFF)
+
+if (USE_CMAPLE STREQUAL "ON")
+	message("Integrate CMAPLE: ON")
+    add_definitions(-DUSE_CMAPLE)
+    set(TARGET_CMAPLE "maple")
+else()
+	message("Integrate CMAPLE: OFF")
+	set(TARGET_CMAPLE "")
+endif()
+
 
 ##################################################################
 # Detect target platforms
@@ -669,7 +689,9 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 # add the binary tree to the search path for include files
 # so that we will find cmaple/cmaple_config.h
-include_directories("${PROJECT_BINARY_DIR}/cmaple")
+if (USE_CMAPLE STREQUAL "ON")
+	include_directories("${PROJECT_BINARY_DIR}/cmaple")
+endif()
 
 #zlib will be detected for appearance
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
@@ -691,7 +713,6 @@ endif(ZLIB_FOUND)
 ##################################################################
 # subdirectories containing necessary libraries for the build
 ##################################################################
-SET(INSTALL_CMAPLE OFF CACHE BOOL "Disable installation of googletest" FORCE)
 option(USE_BOOSTER "Use Booster for transfer bootstrap expectation" ON)
 if (USE_BOOSTER)
     add_subdirectory(booster)
@@ -715,7 +736,12 @@ add_subdirectory(alignment)
 add_subdirectory(tree)
 add_subdirectory(terrace)
 add_subdirectory(simulator)
-add_subdirectory(cmaple)
+
+if (USE_CMAPLE STREQUAL "ON")
+	SET(INSTALL_CMAPLE OFF CACHE BOOL "Disable installation of googletest" FORCE)
+	add_subdirectory(cmaple)
+endif()
+
 add_subdirectory(main)
 
 # YAML library
@@ -762,26 +788,34 @@ else()
     )
 endif()
 
-add_executable(iqtree2-aa
-obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h
-)
+if (USE_CMAPLE STREQUAL "ON")
+	add_executable(iqtree2-aa
+	obsolete/parsmultistate.cpp
+	obsolete/parsmultistate.h
+	)
+endif()
 
 if(Backtrace_FOUND)
   include_directories(${Backtrace_INCLUDE_DIR})
   target_link_libraries(iqtree2 ${Backtrace_LIBRARY})
-  target_link_libraries(iqtree2-aa ${Backtrace_LIBRARY})
+  if (USE_CMAPLE STREQUAL "ON")
+  	target_link_libraries(iqtree2-aa ${Backtrace_LIBRARY})
+  endif()
 endif(Backtrace_FOUND)
 
 if (USE_BOOSTER)
     target_link_libraries(iqtree2 booster)
-    target_link_libraries(iqtree2-aa booster)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa booster)
+    endif()
 endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main maple PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-        set_target_properties(iqtree2-aa ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main maple-aa PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main ${TARGET_CMAPLE} PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        if (USE_CMAPLE STREQUAL "ON")
+        	set_target_properties(iqtree2-aa ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main maple-aa PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        endif()
         if (USE_TERRAPHAST)
             set_target_properties(terracetphast terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
@@ -830,10 +864,14 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     elseif(CLANG AND WIN32)
         if (BINARY32)
             target_link_libraries(iqtree2 ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
-            target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+            if (USE_CMAPLE STREQUAL "ON")
+            	target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+            endif()
         else()
             target_link_libraries(iqtree2 ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
-            target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+            if (USE_CMAPLE STREQUAL "ON")
+            	target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+            endif()
         endif()
 #        set(THREAD_LIB "ompstatic")
     endif()
@@ -846,56 +884,77 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
-target_link_libraries(iqtree2-aa pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple-aa ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+
+if (USE_CMAPLE STREQUAL "ON")
+	target_link_libraries(iqtree2-aa pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+    	gsl alignment tree simulator terrace yaml-cpp phyloYAML main maple-aa ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+endif()
 	
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)
-   target_link_libraries(iqtree2-aa terracetphast)
+   if (USE_CMAPLE STREQUAL "ON")
+		target_link_libraries(iqtree2-aa terracetphast)
+   endif()
 endif()
 
 if (USE_LSD2)
     target_link_libraries(iqtree2 lsd2)
-    target_link_libraries(iqtree2-aa lsd2)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa lsd2)
+    endif()
 endif()
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree2 kernelsse)
-    target_link_libraries(iqtree2-aa kernelsse)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa kernelsse)
+    endif()
 endif()
 
 # MPI libraries
 if (IQTREE_FLAGS MATCHES "mpi")
     if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
         target_link_libraries(iqtree2 ${MPI_CXX_LIBRARIES})
-        target_link_libraries(iqtree2-aa ${MPI_CXX_LIBRARIES})
+        if (USE_CMAPLE STREQUAL "ON")
+        	target_link_libraries(iqtree2-aa ${MPI_CXX_LIBRARIES})
+        endif()
     endif()
 endif()
 
 # SSE, AVX etc. libraries
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree2 pllavx kernelavx kernelfma)
-    target_link_libraries(iqtree2-aa pllavx kernelavx kernelfma)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa pllavx kernelavx kernelfma)
+    endif()
     if (IQTREE_FLAGS MATCHES "KNL")
         target_link_libraries(iqtree2 kernelavx512)
-        target_link_libraries(iqtree2-aa kernelavx512)
+        if (USE_CMAPLE STREQUAL "ON")
+        	target_link_libraries(iqtree2-aa kernelavx512)
+        endif()
     endif()
 endif()
 
 # setup the executable name
 ##################################################################
 set_target_properties(iqtree2 PROPERTIES OUTPUT_NAME "iqtree2${EXE_SUFFIX}")
-set_target_properties(iqtree2-aa PROPERTIES OUTPUT_NAME "iqtree2-aa${EXE_SUFFIX}")
+if (USE_CMAPLE STREQUAL "ON")
+	set_target_properties(iqtree2-aa PROPERTIES OUTPUT_NAME "iqtree2-aa${EXE_SUFFIX}")
+endif()
 
 # strip the release build
 if (NOT IQTREE_FLAGS MATCHES "nostrip" AND CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG) AND NOT APPLE) # strip is not necessary for MSVC
     if (WIN32)
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2>)
-        ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2-aa>)
+        if (USE_CMAPLE STREQUAL "ON")
+        	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2-aa>)
+        endif()
     elseif (NOT APPLE)
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2>)
-        ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2-aa>)
+        if (USE_CMAPLE STREQUAL "ON")
+        	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2-aa>)
+        endif()
     endif()
 endif()
 
@@ -909,14 +968,20 @@ if (WIN32)
     if (MSVC)
         if (CLANG_UNDER_VS)
             ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
-            ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
+            if (USE_CMAPLE STREQUAL "ON")
+            	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
+            endif()
         else()
             ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "Release\\iqtree2${EXE_SUFFIX}.exe" "Release\\iqtree2${EXE_SUFFIX}-click.exe")
-            ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "Release\\iqtree2-aa${EXE_SUFFIX}.exe" "Release\\iqtree2-aa${EXE_SUFFIX}-click.exe")
+            if (USE_CMAPLE STREQUAL "ON")
+            	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "Release\\iqtree2-aa${EXE_SUFFIX}.exe" "Release\\iqtree2-aa${EXE_SUFFIX}-click.exe")
+            endif()
         endif()
     else()
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
-        ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
+        if (USE_CMAPLE STREQUAL "ON")
+        	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
+        endif()
     endif()
 endif()
 
@@ -924,7 +989,9 @@ endif()
 # add the install targets
 ##############################################################
 install (TARGETS iqtree2 DESTINATION bin)
-install (TARGETS iqtree2-aa DESTINATION bin)
+if (USE_CMAPLE STREQUAL "ON")
+	install (TARGETS iqtree2-aa DESTINATION bin)
+endif()
 install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
@@ -932,7 +999,9 @@ install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
 
 if (WIN32)
     install (FILES "${BINARY_DIR}/iqtree2${EXE_SUFFIX}-click.exe" DESTINATION bin)
-    install (FILES "${BINARY_DIR}/iqtree2-aa${EXE_SUFFIX}-click.exe" DESTINATION bin)
+    if (USE_CMAPLE STREQUAL "ON")
+    	install (FILES "${BINARY_DIR}/iqtree2-aa${EXE_SUFFIX}-click.exe" DESTINATION bin)
+    endif()
     if (NOT IQTREE_FLAGS MATCHES "single" AND MSVC)
         if (BINARY32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/pthreadVC2.dll" DESTINATION bin)

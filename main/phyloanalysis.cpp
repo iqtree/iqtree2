@@ -4598,6 +4598,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
 bool runCMaple(Params &params)
 {
+#if !defined(USE_CMAPLE)
+    outWarning("This version was not compiled with CMAPLE integrated. Running IQ-TREE algorithm...");
+    return false;
+#else
     // Validate the input aln
     if (!params.aln_file) outError("Please supply an input alignment via '-s <alignment_file>");
     
@@ -4757,6 +4761,7 @@ bool runCMaple(Params &params)
     
     // return true, by default
     return true;
+#endif
 }
 
 /**

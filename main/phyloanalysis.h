@@ -29,7 +29,10 @@
 #include "treetesting.h"
 #include "tree/upperbounds.h" // Olga: functions for Upper Bounds analysis
 #include "utils/pllnni.h"
-#include "cmaple/maple/cmaple.h"
+
+#if defined(USE_CMAPLE)
+    #include "cmaple/maple/cmaple.h"
+#endif
 
 class PhyloTree;
 class IQTree;
