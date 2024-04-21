@@ -80,12 +80,13 @@ if(Boost_FOUND)
 endif()
 
 # Find onnxruntime library for machine learning
-find_package(onnxruntime)
-if(onnxruntime_FOUND)
-    add_definitions(-I${onnxruntime_INCLUDE_DIRS})
-endif()
 if (Donnxruntime_INCLUDE_DIRS)
     add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+else()
+    find_package(onnxruntime)
+    if(onnxruntime_FOUND)
+        add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+    endif()
 endif()
 
 # The version number.
