@@ -81,8 +81,8 @@ endif()
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
-set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH ".7-cmaple")
+set (iqtree_VERSION_MINOR 4)
+set (iqtree_VERSION_PATCH ".0")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -98,6 +98,12 @@ endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Build mode   : Release")
+endif()
+
+if (BUILD_LIB STREQUAL "ON")
+    message("Build lib    : ON")
+else()
+    message("Build lib    : OFF")
 endif()
 
 if (CMAKE_GENERATOR MATCHES "Xcode")
@@ -147,8 +153,20 @@ if (APPLE)
       OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-		message("APPLE SILICON (M1) DETECTED!")
-		set (__ARM_NEON "TRUE")
+		message("APPLE SILICON (M1/M2/M3) DETECTED!")
+        set (__ARM_NEON "TRUE")
+        set (NEON 1)
+    endif()
+elseif (UNIX AND NOT APPLE)  # Unix and Linux
+    execute_process(
+      COMMAND uname -m
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE OS_NATIVE_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(OS_NATIVE_ARCHITECTURE STREQUAL "aarch64")
+        message("Unix/Linux ARM64 DETECTED!")
+	    set (__ARM_NEON "TRUE")
 		set (NEON 1)
 	endif()
 endif()
@@ -303,6 +321,11 @@ if (IQTREE_FLAGS MATCHES "lto")
     #endif()
 endif()
 
+# for mac arm boost compilation issue
+if (__ARM_NEON AND APPLE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=")
+endif()
+
 ##################################################################
 # detect 32 or 64 bit binary
 ##################################################################
@@ -398,7 +421,13 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     	else()
         	link_directories(${PROJECT_SOURCE_DIR}/libmac)
         endif()	
-    elseif (WIN32 OR UNIX)
+    elseif (UNIX)
+	if (__ARM_NEON)
+		link_directories(${PROJECT_SOURCE_DIR}/liblinux_arm)
+	else()
+		link_directories(${PROJECT_SOURCE_DIR}/lib)
+	endif()
+    elseif (WIN32)
         if (BINARY32)
             link_directories(${PROJECT_SOURCE_DIR}/lib32)
         else()
@@ -576,7 +605,8 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inlin
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
 
 if(CLANG AND IQTREE_FLAGS MATCHES "static")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 endif()
 
 if (IQTREE_FLAGS MATCHES "libcxx")
@@ -705,10 +735,6 @@ if (USE_LSD2)
     add_subdirectory(lsd2)
 endif()
 
-##################################################################
-# the main executable
-##################################################################
-
 add_library(kernelsse tree/phylokernelsse.cpp)
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -719,10 +745,22 @@ add_library(kernelfma tree/phylokernelfma.cpp)
     endif()
 endif()
 
-add_executable(iqtree2
-obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h
-)
+##################################################################
+# build lib file or main executable
+##################################################################
+option(BUILD_LIB "Build IQ-TREE2 library" OFF)
+
+if (BUILD_LIB STREQUAL "ON")
+    add_library(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+else()
+    add_executable(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+endif()
 
 add_executable(iqtree2-aa
 obsolete/parsmultistate.cpp
@@ -942,9 +980,19 @@ set(CPACK_SOURCE_IGNORE_FILES
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     if (IQTREE_FLAGS MATCHES "oldmac")
-        set (SYSTEM_NAME "MacOS10.5")
+        set (SYSTEM_NAME "macOS10.5")
+    elseif (OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
+        set (SYSTEM_NAME "macOS-arm")
     else()
-        set (SYSTEM_NAME "MacOSX")
+        set (SYSTEM_NAME "macOS-intel")
+    endif()
+endif()
+
+if (NOT APPLE AND UNIX)
+    if (__ARM_NEON)
+        set (SYSTEM_NAME "Linux-arm")
+    else()
+        set (SYSTEM_NAME "Linux-intel")
     endif()
 endif()
 

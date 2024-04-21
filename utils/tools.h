@@ -384,6 +384,7 @@ const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for bra
 const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
+const double ONE_THIRD = 1.0 / 3.0;
 
 /**
  *  Specify different ways of doing an NNI.
@@ -552,7 +553,7 @@ enum LhMemSave {
 };
 
 enum SiteLoglType {
-    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT, WSL_TMIXTURE
 };
 
 enum SiteFreqType {
@@ -599,6 +600,8 @@ const double MIN_GAMMA_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
+// change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
 
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -764,7 +767,17 @@ public:
      */
     double modelfinder_eps;
 
-	/**
+    /**
+     logl epsilon for Tree Mixture
+     */
+    double treemix_eps;
+
+    /**
+     logl epsilon for HMM Tree Mixture
+     */
+    double treemixhmm_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
@@ -1648,7 +1661,7 @@ public:
     int num_rate_cats;
 
     /**
-            maximum number of rate categories
+            minimum number of rate categories
      */
     int min_rate_cats;
 
@@ -1656,6 +1669,61 @@ public:
             maximum number of rate categories
      */
     int max_rate_cats;
+
+    /**
+            minimum number of classes in mixture model
+     */
+    int min_mix_cats;
+
+    /**
+            maximum number of classes in mixture model
+     */
+    int max_mix_cats;
+    
+    /**
+            the starting model (i.e. substitution model + freq) for each class of Q-mixture model
+     */
+    string start_subst;
+
+    /**
+            whether to optimize the RHAS again after the number of classes is estimated for the mixture model
+     */
+    bool opt_rhas_again;
+
+    /**
+            The method to optimize (and estimating the number of classes in) the Q-mixture model
+            Method 1 (Old method)
+                a. Estimate the RHAS model with the GTR+FO model.
+                b. Do a tree search for this single-class model.
+                c. Estimate the optimal number of classes inside the model mixture.
+                d. Estimate the RHAS model again with the optimal number of classes.
+                e. Estimate the optimal combination of substitution matrices in Q-Mixture model
+                f. Do a final tree search for this Q-mixture model with the optimal combination.
+            Method 2 (Default method)
+                a. Use modelfinder (for single class) to find the best Q1 + RHAS + Tree. Set k = 1
+                b. Fixing RHAS, Tree and the models Q1, Q2, ..., Qk, then find the best Qk+1 to add
+                c. If the mixture with k+1 classes pass the likelihood ratio test or better AIC/BIC value (depending on opt_qmix_criteria),
+                  then k=k+1 and repeat the step c. Otherwise the mixture with k classes is the best model.
+                d. Re-estimate the RHAS model again for the k-class Q-mixture model .
+                e. Do a final tree search.
+     */
+    int opt_qmix_method;
+    
+    /**
+            The criteria to identify the best number of classes in the Q-mixture model.
+            1: likelihood-ratio test (default); 2: information criteria, like AIC, BIC, etc.
+     */
+    int opt_qmix_criteria;
+    
+    /**
+        The p-value threshold used to optimize the Q-Mixture model when likelihood-ratio test is applied (i.e. opt_qmix_criteria = 1). Default = 0.05
+     */
+    double opt_qmix_pthres;
+
+    /**
+            whether to compute the optmal combination of subtitution matrix for the mixture model
+     */
+    bool check_combin_q_mat;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates
@@ -1702,6 +1770,28 @@ public:
     string optimize_alg_treeweight;
 
     /**
+     *  Optimization algorithm for q-mixture model
+     */
+    string optimize_alg_qmix;
+    
+    /**
+     * non-zero if want to estimate the initial frequency vectors for q-mixture model
+     */
+    int estimate_init_freq;
+
+    //new params added -JD
+    /** TRUE if you want to exchange the rate matrix for an optimized GTR matrix */
+    bool optimize_linked_gtr;
+    /** Starting matrix to be used for GTR20 optimization */
+    string gtr20_model;
+    /** Matrix multiplier factor */
+    double guess_multiplier;
+    /** TRUE if you want to print out a .ratemat file during GTR optimization */
+    // bool rates_file;
+    /** How the program should reset the values during Optimization::resetParameters */
+    string reset_method;
+
+    /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
      * treat these as fixed model parameters (if false), or treat them as 
      * starting point for optimization search (if true)?
@@ -1721,7 +1811,30 @@ public:
 
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
+    
+    /** optimize the parameters according to the HMM model (HMMSTER) */
+    bool optimize_params_use_hmm;
 
+    /** optimize the parameters according to the HMM model (HMMSTER) using simple transition model*/
+    bool optimize_params_use_hmm_sm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
+    bool optimize_params_use_hmm_gm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using type-dependent transition model*/
+    bool optimize_params_use_hmm_tm;
+
+    /** proceed to MAST model after HMMSTER , default true */
+    // bool proceed_MAST_after_HMMSTER;
+
+    /** no averaging the branch length during the initialization of the HMM model */
+    bool HMM_no_avg_brlen;
+
+    /** minimum value allowed for HMM transition probability between the same tree (category) */
+    double HMM_min_stran;
+    
+    /** optimization methods: hmm / hmm2mast / mast2hmm / mast */
+    string treemix_optimize_methods;
 
     /**
             criterion to assess important quartet
@@ -1872,6 +1985,9 @@ public:
 
     /** TRUE to print partition log-likelihood, default: FALSE */
     bool print_partition_lh;
+    
+    /** TRUE to print the marginal probability for HMM model, default: FALSE */
+    bool print_marginal_prob;
 
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories
@@ -2607,6 +2723,11 @@ public:
     bool no_merge;
     
     /**
+    *  TRUE to include predefined mutations
+    */
+    bool include_pre_mutations;
+    
+    /**
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
     */
     int alignment_id;
@@ -2650,6 +2771,16 @@ public:
      * TRUE to make the processes of outputting->re-inputting a tree consistent
      */
     bool make_consistent;
+
+    /**
+    *  Mutation file that specifies pre-defined mutations occurs at nodes
+    */
+    std::string mutation_file;
+    
+    /**
+    *  site starting index (for predefined mutations in AliSim)
+    */
+    int site_starting_index;
 };
 
 /**

@@ -1351,6 +1351,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
     map[(unsigned char)'-'] = STATE_UNKNOWN;
     map[(unsigned char)'~'] = STATE_UNKNOWN;
     map[(unsigned char)'.'] = STATE_UNKNOWN;
+    map[(unsigned char)'!'] = STATE_UNKNOWN; // frame shift
     int len;
     switch (seq_type) {
     case SEQ_BINARY:
@@ -1389,7 +1390,6 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
         map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
         map[(unsigned char)'O'] = STATE_UNKNOWN; // 22nd amino acid
-
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -1927,10 +1927,18 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 }
 
 void processSeq(string &sequence, string &line, int line_num) {
+    int exclam_found = false;
     for (string::iterator it = line.begin(); it != line.end(); it++) {
         if ((*it) <= ' ') continue;
         if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
             sequence.append(1, toupper(*it));
+        else if ((*it) == '!') {
+            sequence.append(1, *it);
+            if (!exclam_found) {
+                exclam_found = true;
+                cout << "Warning: Line " + convertIntToString(line_num) + ": '!' was found in the alignment, which will be interpreted as a gap" << endl;
+            }
+        }
         else if (*it == '(' || *it == '{') {
             auto start_it = it;
             while (*it != ')' && *it != '}' && it != line.end())

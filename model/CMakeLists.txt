@@ -30,6 +30,9 @@ modelliemarkov.cpp modelliemarkov.h
 modelpomo.cpp modelpomo.h
 modelpomomixture.cpp modelpomomixture.h
 modelfactorymixlen.cpp modelfactorymixlen.h
+modelhmm.cpp modelhmm.h
+modelhmmgm.cpp modelhmmgm.h
+modelhmmtm.cpp modelhmmtm.h
 )
 
 target_link_libraries(model utils)

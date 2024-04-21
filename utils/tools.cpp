@@ -1127,7 +1127,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
     params.partition_type = BRLEN_OPTIMIZE;
-    params.partfinder_rcluster = 100;
+    params.partfinder_rcluster = 10; // change the default from 100 to 10
     params.partfinder_rcluster_max = 0;
     params.partition_merge = MERGE_NONE;
     params.merge_models = "1";
@@ -1194,6 +1194,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
+    params.min_mix_cats = 1;
+    params.max_mix_cats = 10;
+    params.start_subst = "GTR+FO";
+    params.opt_rhas_again = true;
+    params.opt_qmix_method = 2;
+    params.opt_qmix_criteria = 1; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
+    params.opt_qmix_pthres = 0.05;
+    params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -1205,6 +1213,24 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
+    params.optimize_alg_qmix = "BFGS";
+    params.estimate_init_freq = 0;
+
+    // defaults for new options -JD
+    params.optimize_linked_gtr = false;
+    params.gtr20_model = "POISSON";
+    params.guess_multiplier = 0.75; // change from 0.5
+    // params.rates_file = false;
+    params.reset_method = "random"; // change from const
+
+    params.optimize_params_use_hmm = false;
+    params.optimize_params_use_hmm_sm = false;
+    params.optimize_params_use_hmm_gm = false;
+    params.optimize_params_use_hmm_tm = false;
+    params.HMM_no_avg_brlen = false;
+    params.HMM_min_stran = 0.0;
+    params.treemix_optimize_methods = "mast"; // default is MAST
+
     params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -1237,6 +1263,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.kernel_nonrev = false;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
+    params.print_marginal_prob = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = 0;
@@ -1312,6 +1339,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     params.modelEps = 0.01;
     params.modelfinder_eps = 0.1;
+    params.treemix_eps = 0.001;
+    params.treemixhmm_eps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -1492,6 +1521,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.allow_replace_input_tree = false;
     params.tree_format_str = "BIN";
     params.make_consistent = false;
+    params.include_pre_mutations = false;
+    params.mutation_file = "";
+    params.site_starting_index = 0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -1619,6 +1651,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_gammai = argv[cnt];
                 continue;
             }
+
             if (strcmp(argv[cnt], "-optalg_treeweight") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -1626,6 +1659,61 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_treeweight = argv[cnt];
                 continue;
             }
+
+            if (strcmp(argv[cnt], "-optalg_qmix") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -optalg_qmix <BFGS|EM>";
+                if(strcmp(argv[cnt], "BFGS") != 0 && strcmp(argv[cnt], "EM") != 0)
+                    throw "Invalid option for -optalg_qmix : use 'BFGS' or 'EM'";
+                params.optimize_alg_qmix = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-init_nucl_freq") == 0 || strcmp(argv[cnt], "--init_nucl_freq") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -init_nucl_freq <0|1|2>";
+                params.estimate_init_freq = convert_int(argv[cnt]);
+                if (params.estimate_init_freq > 2)
+                    throw "Use -init_nucl_freq <0|1|2>";
+                continue;
+            }
+
+            //new options added -JD
+            if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
+                params.optimize_linked_gtr = true;
+                params.reset_method = "const";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--gtr20-model") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --gtr20-model <POISSON/LG>";
+                params.gtr20_model = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "--guess-multiplier") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --guess-multiplier <value>";
+                params.guess_multiplier = convert_double(argv[cnt]);
+                continue;
+            } 
+//            if (strcmp(argv[cnt], "--rates-file") == 0) {
+//                params.rates_file = true;
+//                continue;
+//            }
+            if (strcmp(argv[cnt], "--reset-method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --reset-method <const/random>";
+                if(strcmp(argv[cnt], "const") != 0 && strcmp(argv[cnt], "random") != 0) 
+                    throw "Invalid option for --reset-method : use 'const' or 'random'";
+                params.reset_method = argv[cnt];
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
 				params.is_rooted = true;
 				continue;
@@ -2028,6 +2116,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (strcmp(argv[cnt], "--bscf") == 0 || strcmp(argv[cnt], "--scfl") == 0) {
+                // UPDATE: sCFL now ignore subtrees with all gaps for a particular site
                 if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
                     throw "Do not specify --scf or --gcf with --scfl";
                 params.ancestral_site_concordance = 2;
@@ -2037,6 +2126,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --scfl please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--scflg") == 0) {
+                // OUTDATED: with gaps for historical reason
+                if (params.consensus_type == CT_ASSIGN_SUPPORT_EXTENDED)
+                    throw "Do not specify --scf or --gcf with --scflg";
+                params.ancestral_site_concordance = 3;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --scflg NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --scflg please";
                 continue;
             }
             if (strcmp(argv[cnt], "--scf1") == 0) {
@@ -2502,7 +2604,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     if (params.partfinder_rcluster == 100)
                         params.partfinder_rcluster = 99.9999;
                     params.partition_merge = MERGE_RCLUSTERF;
-                } else if (strcmp(argv[cnt], "rcluster") == 0)
+                } else if (strcmp(argv[cnt], "kmeans") == 0)
                     params.partition_merge = MERGE_KMEANS;
                 else
                     throw "Use --merge [none|greedy|rcluster|rclusterf|kmeans]";
@@ -3438,6 +3540,48 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
+            if (strcmp(argv[cnt], "-start_subst") == 0 || strcmp(argv[cnt], "--start_subst") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -start_subst <substitution matrix + freq>";
+                params.start_subst = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-skip-opt-combin-subst") == 0 || strcmp(argv[cnt], "--skip-opt-combin-subst") == 0) {
+                params.check_combin_q_mat = false;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-qmax") == 0 || strcmp(argv[cnt], "--qmax") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -qmax <#max_mix_classes>";
+                params.max_mix_cats = convert_int(argv[cnt]);
+                if (params.max_mix_cats < 2)
+                    throw "Wrong number of classes in mixture for -qmax. Must be at least 2";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-mrate-twice") == 0 || strcmp(argv[cnt], "--mrate-twice") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mrate-twice <0|1>";
+                int in_option = convert_int(argv[cnt]);
+                if (in_option < 0 || in_option > 1)
+                    throw "Wrong option for -mrate-twice. Only 0 or 1 is allowed.";
+                if (in_option == 0)
+                    params.opt_rhas_again = false;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-lrt") == 0 || strcmp(argv[cnt], "--lrt") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -lrt <p-value threshold>";
+                params.opt_qmix_pthres = convert_double(argv[cnt]);
+                if (params.opt_qmix_pthres < 0.0 || params.opt_qmix_pthres > 1.0)
+                    throw "Wrong p-value threshold for -opt_qmix_pthres. Must be between 0.0 and 1.0";
+                if (params.opt_qmix_pthres == 0)
+                    params.opt_qmix_criteria = 2; // using information critera instead of likelihood-ratio test for estimation of number of classes for Q-Mixture model
+                continue;
+            }
 			if (strcmp(argv[cnt], "-a") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3479,6 +3623,64 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_from_given_params = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-hmmster") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = true;
+                params.optimize_params_use_hmm_gm = false;
+                params.optimize_params_use_hmm_tm = false;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{sm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = true;
+                params.optimize_params_use_hmm_gm = false;
+                params.optimize_params_use_hmm_tm = false;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{gm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = false;
+                params.optimize_params_use_hmm_gm = true;
+                params.optimize_params_use_hmm_tm = false;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmmster{tm}") == 0) {
+                params.optimize_params_use_hmm = true;
+                params.optimize_params_use_hmm_sm = false;
+                params.optimize_params_use_hmm_gm = false;
+                params.optimize_params_use_hmm_tm = true;
+                params.treemix_optimize_methods = "hmm";
+                continue;
+            }
+//            if (strcmp(argv[cnt], "-hmmonly") == 0) {
+//                params.proceed_MAST_after_HMMSTER = false;
+//                continue;
+//            }
+            if (strcmp(argv[cnt], "-hmm_min_stran") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -hmm_min_stran <minimum HMM same-category transition probability>";
+                params.HMM_min_stran = convert_double(argv[cnt]);
+                if (params.HMM_min_stran >= 1.0 || params.HMM_min_stran < 0.0)
+                    throw "Wrong probability for -hmm_min_stran";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-hmm_no_avg_brlen") == 0) {
+                params.HMM_no_avg_brlen = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-tmix_opt_method") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -tmix_opt_method <hmm/hmm2mast/mast2hmm/mast>";
+                params.treemix_optimize_methods = argv[cnt];
+                if (strcmp(argv[cnt], "hmm") != 0 && strcmp(argv[cnt], "hmm2mast") != 0 && strcmp(argv[cnt], "mast") != 0 && strcmp(argv[cnt], "mast2hmm") != 0 && strcmp(argv[cnt], "hmast") != 0)
+                    throw "Wrong value for -tmix_opt_method";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-brent") == 0) {
 				params.optimize_by_newton = false;
 				continue;
@@ -3814,6 +4016,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_partition_lh = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-wmp") == 0) {
+                params.print_marginal_prob = true;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
 				params.print_site_lh = WSL_RATECAT;
@@ -4308,6 +4515,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.suppress_duplicate_sequence_warnings = true;
                 params.optimize_alg_freerate = "1-BFGS";
                 params.opt_gammai = false;
+                params.treemix_eps = 0.01;
+                params.treemixhmm_eps = 0.05;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -4442,6 +4651,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Model epsilon must be positive";
 				if (params.modelEps > 1.0)
 					throw "Model epsilon must not be larger than 1.0";
+                params.treemix_eps = params.modelEps;
+                params.treemixhmm_eps = params.modelEps;
 				continue;
 			}
 
@@ -5272,6 +5483,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--index-from-one") == 0) {
+                params.site_starting_index = 1;
+                
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "--distribution") == 0) {
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
@@ -5390,7 +5607,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 
                 continue;
             }
-            
             if (strcmp(argv[cnt], "-aln-format") == 0 || strcmp(argv[cnt], "--aln-format") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5402,7 +5618,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--tree-search") == 0 || strcmp(argv[cnt], "-tree-search") == 0) {
                 ++cnt;
                 if (cnt >= argc || argv[cnt][0] == '-')
-                    outError("Use -tree-search <FAST|NORMAL|MORE_ACCURATE>");
+                    outError("Use -tree-search <FAST|NORMAL|EXHAUSTIVE>");
                 
                 params.tree_search_type_str = argv[cnt];
                 continue;
@@ -5410,6 +5626,15 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--shallow-tree-search") == 0 || strcmp(argv[cnt], "-shallow-search") == 0) {
                 
                 params.shallow_tree_search = true;
+                
+            if (strcmp(argv[cnt], "--mutation") == 0 || strcmp(argv[cnt], "-mut") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mutation <MUTATION_FILE>";
+                params.mutation_file = argv[cnt];
+                params.include_pre_mutations = true;
+                continue;
+            }
 
                 continue;
             }
@@ -5472,6 +5697,13 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     }
+    
+    if (params.treemix_optimize_methods.find("hmm")!=string::npos &&
+        params.model_name.find("+T") != string::npos) {
+        params.optimize_params_use_hmm = true;
+    } else {
+        params.optimize_params_use_hmm = false;
+    }
 
 //    if (params.do_au_test)
 //        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
@@ -5508,6 +5740,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
         outError("-b bootstrap option does not work with -S yet.");
+
+    //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos) 
+        outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
 
     if (params.dating_method != "") {
     #ifndef USE_LSD2

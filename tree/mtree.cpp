@@ -31,6 +31,9 @@ using namespace std;
 	class MTree
 *********************************************/
 
+// constant variables for annotations on branches
+const string MTree::ANTT_MUT = "mutations";
+
 MTree::MTree() {
     root = NULL;
     leafNum = 0;
@@ -819,6 +822,7 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     string KEYWORD="&";
     bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
                                           && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+    bool in_comment_for_ghost_model = (!in_comment_contains_key_value) && (in_comment.find('/') != string::npos);
     
     double len;
     // randomly generate branch length based on a user-defined distribution
@@ -828,13 +832,13 @@ void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
     else
         len = convert_double_with_distribution(lenstr.c_str(), true);
     
-    if (in_comment.empty() || in_comment_contains_key_value) {
+    if (in_comment.empty() || (!in_comment_for_ghost_model)) {
         branch_len.push_back(len);
         return;
     }
     
     // don't try to parse multiple lengths if in_comment starts with "&" (input key=value)
-    if (!in_comment_contains_key_value)
+    if (in_comment_for_ghost_model)
     {
         // randomly generate a set of branch lengths based on a user-defined distribution
         if (Params::getInstance().branch_distribution)
@@ -1008,12 +1012,28 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
     string KEYWORD="&";
     string tmp_comment = in_comment;
     
-    // remove "&"
-    tmp_comment.erase(0, KEYWORD.length());
-    
     // split tmp_comment into multiple key_value_pairs by ","
     while (tmp_comment.length() > 0) {
-        size_t pos_comma = tmp_comment.find(',');
+        // remove "&" (if any)
+        if (tmp_comment[0] == KEYWORD[0])
+            tmp_comment.erase(0, KEYWORD.length());
+        
+        size_t pos_comma = 0;
+        // find the first comma ',' that is not inside a pair of brackets '{}'
+        int num_open_brackets = 0;
+        // browse the characters one by one
+        for (pos_comma = 0; pos_comma < tmp_comment.length(); ++pos_comma)
+        {
+            // record the number of open brackets
+            if (tmp_comment[pos_comma] == '{')
+                ++num_open_brackets;
+            // reduce the number of open brackets if a close bracket is found
+            else if (tmp_comment[pos_comma] == '}')
+                --num_open_brackets;
+            // return the position where we found a comma outside of pairs of open and close brackets
+            else if (tmp_comment[pos_comma] == ',' && !num_open_brackets)
+                break;
+        }
         string key_value_pair = tmp_comment.substr(0, pos_comma);
         
         // parse key/value
@@ -1023,6 +1043,20 @@ void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node
             // extract key, value
             string key = key_value_pair.substr(0, pos_equal);
             string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
+            
+            // detect key = mutations (to include pre-defined mutations for AliSim
+            // convert key to lowercase
+            std::string key_lower = key;
+            transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+            if (key_lower == ANTT_MUT)
+            {
+                // Make sure we store key "mutations" in the lowercase
+                key = key_lower;
+                
+                // update flag include_pre_mutations (if it's still false)
+                if (!Params::getInstance().include_pre_mutations)
+                    Params::getInstance().include_pre_mutations = true;
+            }
             
             // add key/value to attributes
             node1->findNeighbor(node2)->putAttr(key, value);

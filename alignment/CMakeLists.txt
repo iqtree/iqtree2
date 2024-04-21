@@ -1,4 +1,6 @@
 add_library(alignment
+substitution.h
+substitution.cpp
 pattern.cpp
 pattern.h
 alignment.cpp
