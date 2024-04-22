@@ -8,6 +8,8 @@
 #include <chrono>
 #include <vector>
 
+#define ONNX_NEW
+
 NeuralNetwork::NeuralNetwork(Alignment *alignment) {
     this->alignment = alignment;
 }
@@ -32,19 +34,21 @@ double NeuralNetwork::doAlphaInference() {
     //std::vector<int64_t> input_node_dims;
 
     //printf("Number of inputs = %zu\n", num_input_nodes);
+#ifdef ONNX_NEW
     std::vector<Ort::AllocatedStringPtr> inputNodeNameAllocatedStrings;
-
+#endif
+    
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
         // print input node names
-        // changed session.GetInputName(i, allocator) --> session.GetInputNameAllocated(i, allocator).get()
-//        char *input_name = session.GetInputNameAllocated(i, allocator).get();
-//        //printf("Input %d : name=%s\n", i, input_name);
-//        input_node_names[i] = input_name;
+#ifdef ONNX_NEW
         auto input_name = session.GetInputNameAllocated(i, allocator);
         inputNodeNameAllocatedStrings.push_back(std::move(input_name));
-        //printf("Input %d : name=%s\n", i, input_name);
         input_node_names[i] = inputNodeNameAllocatedStrings.back().get();
+#else
+        char *input_name = session.GetInputName(i, allocator);
+        input_node_names[i] = input_name;
+#endif
 
     /*
         // print input node types
@@ -136,13 +140,14 @@ string NeuralNetwork::doModelInference() {
 
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
-        // print input node names
-//        char *input_name = session.GetInputName(i, allocator);
+#ifdef ONNX_NEW
         auto input_name = session.GetInputNameAllocated(i, allocator);
         inputNodeNameAllocatedStrings.push_back(std::move(input_name));
-
-        //printf("Input %d : name=%s\n", i, input_name);
         input_node_names[i] = inputNodeNameAllocatedStrings.back().get();
+#else
+        char *input_name = session.GetInputName(i, allocator);
+        input_node_names[i] = input_name;
+#endif
     /*
         // print input node types
         Ort::TypeInfo type_info = session.GetInputTypeInfo(i);
