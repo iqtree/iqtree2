@@ -423,7 +423,7 @@ private:
      * else
      *    return -1
      */
-    int computeBestModelforOnePartitionMPI(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt);
+    int computeBestModelforOnePartitionMPI(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt, double& tot_time, double& wait_time);
 
     /**
      * Process the computation of the best model for a merge with MPI
@@ -441,7 +441,7 @@ private:
 	/**
 	 * compute and process the best model for partitions (for MPI)
 	 */
-	void getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs);
+	void getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double& tot_time, double& wait_time, double& fstep_time);
 
 	/**
 	 * compute and process the best model for merges (for MPI)
