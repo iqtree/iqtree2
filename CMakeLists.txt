@@ -80,7 +80,7 @@ if(Boost_FOUND)
 endif()
 
 # Find onnxruntime library for machine learning
-if (Donnxruntime_INCLUDE_DIRS)
+if (onnxruntime_INCLUDE_DIRS)
     add_definitions(-I${onnxruntime_INCLUDE_DIRS})
 else()
     find_package(onnxruntime)
