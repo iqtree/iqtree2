@@ -151,7 +151,7 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     /**
             compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length

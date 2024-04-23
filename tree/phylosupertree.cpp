@@ -698,7 +698,8 @@ void PhyloSuperTree::computePartitionOrder() {
 #endif // OPENMP
 }
 
-double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
+double PhyloSuperTree::computeLikelihood(double *pattern_lh, bool save_log_value) {
+    // TODO: the case for save_log_value = false
 	double tree_lh = 0.0;
 	int ntrees = size();
 	if (pattern_lh) {
