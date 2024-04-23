@@ -10,6 +10,10 @@ jobs:
   build:
     name: Linux x86_64
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc-version: [10, 12]
 
     steps:
     - name: Checkout
@@ -18,13 +22,16 @@ jobs:
         submodules: "recursive"
 
     - name: Install dependencies
-      run: sudo apt-get update -q -y && sudo apt-get install -q -y cmake libeigen3-dev libboost-dev
+      run: |
+        sudo apt-get update -q -y
+        sudo apt-get install -q -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version}} cmake libeigen3-dev libboost-dev
 
     - name: Build
       run: |
         mkdir build
         cd build
-        cmake ..
+        export CXXFLAGS="-std=c++14" # this is important to be able to build with g++ newer than v10
+        cmake .. -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
         make -j
         file iqtree2 | grep x86-64
 
