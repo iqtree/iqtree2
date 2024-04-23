@@ -91,14 +91,8 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
     #elif defined(__clang__)
         // libc++ detected:     _LIBCPP_VERSION
         // libstdc++ detected:  __GLIBCXX__
-        #if __has_include(<unordered_map>) // defines _LIBCPP_VERSION
-            #include <unordered_map>
-            #include <unordered_set>
-        #else
-            #include <tr1/unordered_map>
-            #include <tr1/unordered_set>
-            using namespace std::tr1;    
-        #endif
+        #include <unordered_map>
+        #include <unordered_set>
 	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -110,9 +104,8 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 		#define unordered_map hash_map
 		#define unordered_set hash_set
 	#else
-		#include <tr1/unordered_map>
-		#include <tr1/unordered_set>
-		using namespace std::tr1;
+		#include <unordered_map>
+		#include <unordered_set>
 	#endif
 
 #else
