@@ -47,8 +47,8 @@
 #include "nn/neuralnetwork.h"
 
 // *********for MPI communication*********
-// #define ONESIDE_COMM
-#define SYN_COMM
+#define ONESIDE_COMM
+// #define SYN_COMM
 
 // the ratio of the total jobs first distributed to the processors
 #define DIST_RATIO 0.0
@@ -3655,7 +3655,7 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
 /**
  * compute and process the best model for partitions (for MPI)
  */
-void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double& tot_time, double& wait_time, double& fstep_time) {
+void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double& tot_time, double& wait_time, double& fstep_time, int& partNum) {
 
     if (jobs.empty())
         return;
@@ -3665,6 +3665,7 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<i
     tot_time = 0;
     wait_time = 0;
     fstep_time = 0;
+    partNum = 0;
 
 #ifdef _OPENMP
     parallel_job = (jobs.size() > 1);
@@ -3680,6 +3681,7 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<i
             computeBestModelforOnePartitionMPI(curr_jobs->at(j), (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_tot_time, sub_wait_time);
             tot_time += sub_tot_time;
             wait_time += sub_wait_time;
+            partNum++;
         }
         need_next_jobID = true;
         int next_job_id = curr_jobs->at(curr_jobs->size()-1); // the last job in the list
@@ -3687,6 +3689,7 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<i
             next_job_id = computeBestModelforOnePartitionMPI(next_job_id, (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_tot_time, sub_wait_time);
             tot_time += sub_tot_time;
             wait_time += sub_wait_time;
+            partNum++;
         }
     }
 
@@ -4017,7 +4020,7 @@ void PartitionFinder::getBestModel(int job_type) {
         }
 #endif
 */
-        // sort partition by computational cost for OpenMP effciency
+        // sort partition by computational cost for OpenMP/MPI effciency
         for (i = 0; i < closest_pairs.size(); i++) {
             // computation cost is proportional to #sequences, #patterns, and #states
             Alignment *this_aln = in_tree->at(closest_pairs[i].first)->aln;
@@ -4080,13 +4083,15 @@ void PartitionFinder::getBestModel(int job_type) {
         
         // for timing
         double tot_time, wait_time, fstep_time;
+        // to check the number of partitions each processor handle
+        int num_part;
 
         // initialize the checkpoint for the whole processor
         process_model_info.clear();
 
         // compute the best model
         if (job_type == 1) {
-            getBestModelforPartitionsMPI(num_threads, currJobs, tot_time, wait_time, fstep_time);
+            getBestModelforPartitionsMPI(num_threads, currJobs, tot_time, wait_time, fstep_time, num_part);
         } else {
             getBestModelforMergesMPI(num_threads, currJobs);
         }
@@ -4102,20 +4107,23 @@ void PartitionFinder::getBestModel(int job_type) {
             // show the timing for Master
             if (MPIHelper::getInstance().isMaster()) {
                 cout << endl;
-                cout << "proc\ttotal time\twait time\tfinal-step time" << endl;
-                cout << "0\t" << timing[0] << "\t" << timing[1] << "\t" << timing[2] << endl;
+                cout << "proc\ttotal time\twait time\tfinal-step time\tnumber-parts" << endl;
+                cout << "0\t" << timing[0] << "\t" << timing[1] << "\t" << timing[2] << "\t" << num_part<< endl;
             }
+            
             if (MPIHelper::getInstance().isMaster()) {
                 // for master
                 // reset the array
                 for (int j=0; j<3; j++)
                     timing[j] = 0.0;
+                num_part = 0;
                 // receive the timing statistics from each worker
                 for (int w=1; w<num_processes; w++) {
                     for (int j=0; j<3; j++)
                         MPI_Recv(&timing[j], 1, MPI_DOUBLE, w, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    MPI_Recv(&num_part, 1, MPI_INT, w, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     // show the timing for the worker
-                    cout << w << "\t" << timing[0] << "\t" << timing[1] << "\t" << timing[2] << endl;
+                    cout << w << "\t" << timing[0] << "\t" << timing[1] << "\t" << timing[2] << "\t" << num_part << endl;
                 }
             } else {
                 // for worker
@@ -4123,6 +4131,7 @@ void PartitionFinder::getBestModel(int job_type) {
                 for (int j = 0; j < 3; j++) {
                     MPI_Send(&(timing[j]), 1, MPI_DOUBLE, 0, j, MPI_COMM_WORLD);
                 }
+                MPI_Send(&num_part, 1, MPI_INT, 0, 3, MPI_COMM_WORLD);
             }
         }
 
