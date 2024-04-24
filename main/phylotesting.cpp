@@ -852,6 +852,21 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name)
 {
+    
+    // if it is an alignment with partitions and the number of threads is more than the number of alignments,
+    // then set the number of threads = the number of alignments (for most of the cases)
+    bool autoThread = (params.num_threads == 0);
+    int orig_nthreads = params.num_threads;
+    int updated_nthreads = params.num_threads;
+    if (!autoThread && iqtree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        updated_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
+        params.num_threads = updated_nthreads;
+    }
+    if (updated_nthreads != orig_nthreads) {
+        cout << "The number of threads is changed to: " << updated_nthreads << endl;
+    }
+
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
         return;
@@ -925,16 +940,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     //    for DNA/BINARY
     //    max # of threads = number of partitions
     
-    bool autoThread = (params.num_threads == 0);
-    int orig_nthreads = params.num_threads;
-    int fasttree_nthreads = params.num_threads;
-    
-    if (!autoThread && iqtree.isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        fasttree_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
-        params.num_threads = fasttree_nthreads;
-    }
-    
     // compute initial tree
     if (params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
@@ -956,7 +961,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             iqtree.saveCheckpoint();
         }
     }
-    cout << "# of threads for computing initial tree: " << fasttree_nthreads << endl << endl;
 
     if (!autoThread)
         params.num_threads = orig_nthreads;
@@ -1046,14 +1050,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             // change the number of threads to the number of partitions for alignment with partitions
             PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
             params.num_threads = stree->size();
+            cout << "The number of threads is changed to: " << params.num_threads << endl;
         } else {
-            params.num_threads = fasttree_nthreads;
+            params.num_threads = updated_nthreads;
         }
     }
-    
-    cout << endl;
-    cout << "# of threads for the following: " << params.num_threads << endl;
-    cout << endl;
 }
 
 /**
