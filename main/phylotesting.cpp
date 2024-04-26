@@ -3554,7 +3554,7 @@ void PartitionFinder::showPartitionResults(ModelCheckpoint& part_model_info, vec
  * else
  *    return -1
  */
-int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt, double& tot_time, double& wait_time) {
+int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt, double& run_time, double& wait_time) {
     
     CandidateModel best_model;
     PhyloTree *this_tree;
@@ -3570,7 +3570,7 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
     double t_begin;
     double t_wait_begin;
     
-    t_begin = getCPUTime();
+    t_begin = getRealTime();
     wait_time = 0;
     this_tree = in_tree->at(tree_id);
 
@@ -3602,9 +3602,9 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
 
         showPartitionResult(part_model_info, tree_id, best_model.tree_len, best_model.getName(), score, syncChkPt.mytag);
         if (need_next_treeID) {
-            t_wait_begin = getCPUTime();
+            t_wait_begin = getRealTime();
             next_tree_id = syncChkPt.getNextJobID();
-            wait_time += (getCPUTime() - t_wait_begin);
+            wait_time += (getRealTime() - t_wait_begin);
         }
 
     } else {
@@ -3618,9 +3618,9 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
             key = "pf_score"; part_model_info.put(key, score);
         
             // send the part_model_info to master if time is long enough
-            t_wait_begin = getCPUTime();
+            t_wait_begin = getRealTime();
             next_tree_id = syncChkPt.sendChkptToMaster(part_model_info, need_next_treeID, job_type);
-            wait_time += (getCPUTime() - t_wait_begin);
+            wait_time += (getRealTime() - t_wait_begin);
 
         #endif
 
@@ -3641,13 +3641,13 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
             }
             
             // send the process_model_info to master if time is long enough
-            t_wait_begin = getCPUTime();
+            t_wait_begin = getRealTime();
             next_tree_id = syncChkPt.sendChkptToMaster(process_model_info, need_next_treeID, job_type);
-            wait_time += (getCPUTime() - t_wait_begin);
+            wait_time += (getRealTime() - t_wait_begin);
         
         #endif
     }
-    tot_time = (getCPUTime() - t_begin);
+    run_time = (getRealTime() - t_begin) - wait_time;
     
     return next_tree_id;
 }
@@ -3655,55 +3655,68 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
 /**
  * compute and process the best model for partitions (for MPI)
  */
-void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double& tot_time, double& wait_time, double& fstep_time, int& partNum) {
+void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, vector<double>& run_time, vector<double>& wait_time, vector<double>& fstep_time, vector<int>& partNum) {
 
     if (jobs.empty())
         return;
 
     bool parallel_job = false;
     
-    tot_time = 0;
-    wait_time = 0;
-    fstep_time = 0;
-    partNum = 0;
+    if (run_time.size() != jobs.size())
+        run_time.resize(jobs.size());
+    if (wait_time.size() != jobs.size())
+        wait_time.resize(jobs.size());
+    if (fstep_time.size() != jobs.size())
+        fstep_time.resize(jobs.size());
+    if (partNum.size() != jobs.size())
+        partNum.resize(jobs.size());
+    
+    // reset the arrays
+    for (size_t i = 0; i < jobs.size(); i++) {
+        run_time[i] = wait_time[i] = fstep_time[i] = 0.0;
+        partNum[i] = 0;
+    }
 
 #ifdef _OPENMP
     parallel_job = (jobs.size() > 1);
-#pragma omp parallel for schedule(dynamic) reduction(+: tot_time, wait_time) if(parallel_job)
+#pragma omp parallel for schedule(dynamic) if(parallel_job)
 #endif
     for (int i=0; i<jobs.size(); i++) {
         SyncChkPoint syncChkPt(this, i);
         vector<int>* curr_jobs = jobs[i];
         bool need_next_jobID = false;
-        double sub_tot_time;
+        double sub_run_time;
         double sub_wait_time;
         for (int j=0; j < curr_jobs->size()-1; j++) {
-            computeBestModelforOnePartitionMPI(curr_jobs->at(j), (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_tot_time, sub_wait_time);
-            tot_time += sub_tot_time;
-            wait_time += sub_wait_time;
-            partNum++;
+            computeBestModelforOnePartitionMPI(curr_jobs->at(j), (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_run_time, sub_wait_time);
+            run_time[i] += sub_run_time;
+            wait_time[i] += sub_wait_time;
+            partNum[i]++;
         }
         need_next_jobID = true;
         int next_job_id = curr_jobs->at(curr_jobs->size()-1); // the last job in the list
         while (next_job_id != -1) {
-            next_job_id = computeBestModelforOnePartitionMPI(next_job_id, (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_tot_time, sub_wait_time);
-            tot_time += sub_tot_time;
-            wait_time += sub_wait_time;
-            partNum++;
+            next_job_id = computeBestModelforOnePartitionMPI(next_job_id, (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_run_time, sub_wait_time);
+            run_time[i] += sub_run_time;
+            wait_time[i] += sub_wait_time;
+            partNum[i]++;
+        }
+        // for Master and thres ID = 0, need to collect all the answers from workers
+        if (MPIHelper::getInstance().isMaster() && i==0) {
+            double t_start = getRealTime();
+            SyncChkPoint syncChkPt(this, 0);
+            while (jobdone < tot_job_num) {
+                syncChkPt.masterSyncOtherChkpts(false);
+            }
+            double sub_fstep_time = (getRealTime() - t_start);
+            fstep_time[i] += sub_fstep_time;
         }
     }
 
-    double t_start = getCPUTime();
-    // collect all the answers from workers
-    if (MPIHelper::getInstance().isMaster()) {
-        SyncChkPoint syncChkPt(this, 0);
-        while (jobdone < tot_job_num) {
-            syncChkPt.masterSyncOtherChkpts(false);
-        }
-    } else {
-
 #ifdef ONESIDE_COMM
-        // worker sends the final process_model_info to master
+    // worker sends the final process_model_info to master
+    if (MPIHelper::getInstance().isWorker()) {
+        double t_start = getRealTime();
         bool need_nextJobID = false;
         bool forceToSyn = true;
         int job_type = 1; // partition
@@ -3711,10 +3724,12 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<i
             SyncChkPoint syncChkPt(this, 0);
             syncChkPt.sendChkptToMaster(process_model_info, need_nextJobID, job_type, forceToSyn);
         }
-#endif
-
+        double sub_fstep_time = (getRealTime() - t_start);
+        for (size_t i = 0; i < jobs.size(); i++) {
+            fstep_time[i] += sub_fstep_time;
+        }
     }
-    fstep_time = (getCPUTime() - t_start);
+#endif
 }
 
 /**
@@ -3743,18 +3758,17 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<vector<int>*
         while (next_job_id != -1) {
             next_job_id = getBestModelForOneMergeMPI(next_job_id, (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt);
         }
+        // for master, the thread 0 needs to wait and collect all the answers from workers
+        if (MPIHelper::getInstance().isMaster() && i==0) {
+            while (jobdone < tot_job_num) {
+                syncChkPt.masterSyncOtherChkpts(false);
+            }
+        }
     }
 
-    // collect all the answers from workers
-
-    if (MPIHelper::getInstance().isMaster()) {
-        SyncChkPoint syncChkPt(this, 0);
-        while (jobdone < tot_job_num) {
-            syncChkPt.masterSyncOtherChkpts(false);
-        }
-    } else {
-
 #ifdef ONESIDE_COMM
+    // worker sends the final process_model_info to master for ONESIDE_COMM
+    if (MPIHelper::getInstance().isWorker()) {
         // worker sends the final process_model_info to master
         bool need_nextJobID = false;
         bool forceToSyn = true;
@@ -3763,9 +3777,8 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<vector<int>*
             SyncChkPoint syncChkPt(this, 0);
             syncChkPt.sendChkptToMaster(process_model_info, need_nextJobID, job_type, forceToSyn);
         }
-#endif
-
     }
+#endif
 
 }
 
@@ -4082,16 +4095,16 @@ void PartitionFinder::getBestModel(int job_type) {
         tot_jobs_done = 0;
         
         // for timing
-        double tot_time, wait_time, fstep_time;
+        vector<double> run_time, wait_time, fstep_time;
         // to check the number of partitions each processor handle
-        int num_part;
+        vector<int> num_part;
 
         // initialize the checkpoint for the whole processor
         process_model_info.clear();
 
         // compute the best model
         if (job_type == 1) {
-            getBestModelforPartitionsMPI(num_threads, currJobs, tot_time, wait_time, fstep_time, num_part);
+            getBestModelforPartitionsMPI(num_threads, currJobs, run_time, wait_time, fstep_time, num_part);
         } else {
             getBestModelforMergesMPI(num_threads, currJobs);
         }
@@ -4099,44 +4112,72 @@ void PartitionFinder::getBestModel(int job_type) {
         MPI_Barrier(MPI_COMM_WORLD);
         
         if (job_type == 1) {
-            // collect and display all the timing information from workers
-            vector<double> timing;
-            timing.push_back(tot_time);
-            timing.push_back(wait_time);
-            timing.push_back(fstep_time);
             // show the timing for Master
             if (MPIHelper::getInstance().isMaster()) {
                 cout << endl;
-                cout << "proc\ttotal time\twait time\tfinal-step time\tnumber-parts" << endl;
-                cout << "0\t" << timing[0] << "\t" << timing[1] << "\t" << timing[2] << "\t" << num_part<< endl;
+                cout << "proc\tthres\trun time\twait time\tfinal-step time\tnumber-parts" << endl;
+                for (size_t t = 0; t < currJobs.size(); t++) {
+                    cout << "0\t" << t << "\t" << run_time[t] << "\t" << wait_time[t] << "\t" << fstep_time[t] << "\t" << num_part[t]<< endl;
+                }
             }
-            
+            // collect and display all the timing information from workers
             if (MPIHelper::getInstance().isMaster()) {
                 // for master
-                // reset the array
-                for (int j=0; j<3; j++)
-                    timing[j] = 0.0;
-                num_part = 0;
                 // receive the timing statistics from each worker
                 for (int w=1; w<num_processes; w++) {
-                    for (int j=0; j<3; j++)
-                        MPI_Recv(&timing[j], 1, MPI_DOUBLE, w, j, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    MPI_Recv(&num_part, 1, MPI_INT, w, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    // get the number of threads of the worker
+                    int nthres = 0;
+                    int j;
+                    int k = 0;
+                    MPI_Recv(&nthres, 1, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    if (nthres == 0)
+                        continue;
+                    // get the run time
+                    run_time.resize(nthres);
+                    for (j=0; j<nthres; j++)
+                        MPI_Recv(&run_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    // get the wait time
+                    wait_time.resize(nthres);
+                    for (j=0; j<nthres; j++)
+                        MPI_Recv(&wait_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    // get the final-step time
+                    fstep_time.resize(nthres);
+                    for (j=0; j<nthres; j++)
+                        MPI_Recv(&fstep_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    // get the number of partitions
+                    num_part.resize(nthres);
+                    for (j=0; j<nthres; j++)
+                        MPI_Recv(&num_part[j], 1, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                     // show the timing for the worker
-                    cout << w << "\t" << timing[0] << "\t" << timing[1] << "\t" << timing[2] << "\t" << num_part << endl;
+                    for (j=0; j<nthres; j++)
+                        cout << w << "\t" << j << "\t" << run_time[j] << "\t" << wait_time[j] << "\t" << fstep_time[j] << "\t" << num_part[j] << endl;
                 }
             } else {
                 // for worker
-                // send the timing statistics to the master
-                for (int j = 0; j < 3; j++) {
-                    MPI_Send(&(timing[j]), 1, MPI_DOUBLE, 0, j, MPI_COMM_WORLD);
+                // send the number of threads
+                int nthres = currJobs.size();
+                int j;
+                int k = 0;
+                MPI_Send(&nthres, 1, MPI_INT, 0, k++, MPI_COMM_WORLD);
+                if (nthres > 0) {
+                    // send the run time to the master
+                    for (j=0; j<nthres; j++)
+                        MPI_Send(&run_time[j], 1, MPI_DOUBLE, 0, k++, MPI_COMM_WORLD);
+                    // send the wait time to the master
+                    for (j=0; j<nthres; j++)
+                        MPI_Send(&wait_time[j], 1, MPI_DOUBLE, 0, k++, MPI_COMM_WORLD);
+                    // send the final-step time to the master
+                    for (j=0; j<nthres; j++)
+                        MPI_Send(&fstep_time[j], 1, MPI_DOUBLE, 0, k++, MPI_COMM_WORLD);
+                    // send the number of partitions to the master
+                    for (j=0; j<nthres; j++)
+                        MPI_Send(&num_part[j], 1, MPI_INT, 0, k++, MPI_COMM_WORLD);
                 }
-                MPI_Send(&num_part, 1, MPI_INT, 0, 3, MPI_COMM_WORLD);
             }
         }
 
         // distribute the checkpoints from Master to Workers
-        double time_start = getCPUTime();
+        double time_start = getRealTime();
         if (MPIHelper::getInstance().isMaster()) {
             // Master processor broadcast model_info to other processors
             for (i = 1; i < num_processes; i++) {
@@ -4145,7 +4186,7 @@ void PartitionFinder::getBestModel(int job_type) {
         } else {
             MPIHelper::getInstance().recvCheckpoint(model_info, PROC_MASTER);
         }
-        cout << "Time used for distributing the checkpoints from Master to Workers: " << getCPUTime() - time_start << endl;
+        cout << "Time used for distributing the checkpoints from Master to Workers: " << getRealTime() - time_start << endl;
         cout << endl;
 
         // consolidate the results
