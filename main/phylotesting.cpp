@@ -44,7 +44,9 @@
 #include "utils/MPIHelper.h"
 //#include "vectorclass/vectorclass.h"
 
+#if defined(_NN) || defined(_OLD_NN)
 #include "nn/neuralnetwork.h"
+#endif
 
 // *********for MPI communication*********
 #define ONESIDE_COMM
@@ -971,6 +973,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         CandidateModel best_model;
         Checkpoint *checkpoint = &model_info;
         // neural network model selection (added by TD)
+#if defined(_NN) || defined(_OLD_NN)
         if (params.use_nn_model) {
             cout << "We are using the neural network to select the model of sequence evolution because "
                     "option --use-nn-model is set to " << params.use_nn_model << endl;
@@ -986,8 +989,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             delete alignment;
 
             cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to neural network" << endl;
-        }
-        else {
+        } else {
+#endif
             if (params.openmp_by_model)
                 best_model = CandidateModelSet().evaluateAll(params, &iqtree,
                                                              model_info, models_block, params.num_threads,
@@ -997,7 +1000,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
                                                       model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
             iqtree.aln->model_name = best_model.getName();
 
-            Checkpoint *checkpoint = &model_info;
+            // Checkpoint *checkpoint = &model_info;
             string best_model_AIC, best_model_AICc, best_model_BIC;
             CKP_RESTORE(best_model_AIC);
             CKP_RESTORE(best_model_AICc);
@@ -1008,7 +1011,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 
             cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
                  << criterionName(params.model_test_criterion) << endl;
+#if defined(_NN) || defined(_OLD_NN)
         }
+#endif
     }
 
     delete models_block;
@@ -2594,6 +2599,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (in_model_name.empty()) {
+#if defined(_NN) || defined(_OLD_NN)
         if (params.use_nn_model && in_tree->aln->seq_type == SEQ_DNA) {
             cout << "Using NN" << endl;
             // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
@@ -2611,8 +2617,10 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             delete alignment;
             push_back(CandidateModel(model_name, rate_name, in_tree->aln));
         } else {
+#endif
             // generate all models the normal way
             generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+#if defined(_NN) || defined(_OLD_NN)
         }
         if (do_modelomatic) {
             ASSERT(!params.use_nn_model);
@@ -2639,6 +2647,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
             }
         }
+#endif
     } else {
         push_back(CandidateModel(in_model_name, "", in_tree->aln));
     }

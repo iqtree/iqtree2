@@ -8,8 +8,6 @@
 #include <chrono>
 #include <vector>
 
-#define ONNX_NEW
-
 NeuralNetwork::NeuralNetwork(Alignment *alignment) {
     this->alignment = alignment;
 }
@@ -34,14 +32,14 @@ double NeuralNetwork::doAlphaInference() {
     //std::vector<int64_t> input_node_dims;
 
     //printf("Number of inputs = %zu\n", num_input_nodes);
-#ifdef ONNX_NEW
+#ifndef _OLD_NN
     std::vector<Ort::AllocatedStringPtr> inputNodeNameAllocatedStrings;
 #endif
     
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
         // print input node names
-#ifdef ONNX_NEW
+#ifndef _OLD_NN
         auto input_name = session.GetInputNameAllocated(i, allocator);
         inputNodeNameAllocatedStrings.push_back(std::move(input_name));
         input_node_names[i] = inputNodeNameAllocatedStrings.back().get();
@@ -140,7 +138,7 @@ string NeuralNetwork::doModelInference() {
 
     // iterate over all input nodes
     for (int i = 0; i < num_input_nodes; i++) {
-#ifdef ONNX_NEW
+#ifndef _OLD_NN
         auto input_name = session.GetInputNameAllocated(i, allocator);
         inputNodeNameAllocatedStrings.push_back(std::move(input_name));
         input_node_names[i] = inputNodeNameAllocatedStrings.back().get();

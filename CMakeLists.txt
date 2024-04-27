@@ -314,14 +314,24 @@ if (IQTREE_FLAGS MATCHES "lto")
 endif()
 
 ##################################################################
-# onnxruntime (added by TD)
+# onnxruntime
 ##################################################################
+option(USE_NN "Use neutual network (nn) with version 1.13 or later onnxruntime" OFF)
+option(USE_OLD_NN "Use neutual network (nn) with version 1.12 or before onnxruntime" OFF)
 
-if(NOT ONNXRUNTIME_ROOTDIR)
-    if(WIN32)
-        set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
-    else()
-        include_directories("/usr/local/include")
+if(USE_NN)
+    add_definitions(-D_NN)
+elseif(USE_OLD_NN)
+    add_definitions(-D_OLD_NN)
+endif()
+
+if(USE_NN OR USE_OLD_NN)
+    if(NOT ONNXRUNTIME_ROOTDIR)
+        if(WIN32)
+            set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
+        else()
+            include_directories("/usr/local/include")
+        endif()
     endif()
 endif()
 
@@ -712,7 +722,10 @@ add_subdirectory(alignment)
 add_subdirectory(tree)
 add_subdirectory(terrace)
 add_subdirectory(simulator)
+
+if (USE_NN OR USE_OLD_NN)
 add_subdirectory(nn)
+endif()
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -781,7 +794,9 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     endif()
 endif()
 
+if(USE_NN OR USE_OLD_NN)
 target_link_libraries(iqtree2 nn)
+endif()
 
 ##################################################################
 # setup linking flags
@@ -828,15 +843,17 @@ target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vec
     gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 # onnxruntime library
-if (onnxruntime_LIBRARIES)
-    target_link_libraries(iqtree2 ${onnxruntime_LIBRARIES})
-else()
-    if (APPLE)
-        target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
-    elseif(UNIX)
-        target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
+if (USE_NN OR USE_OLD_NN)
+    if (onnxruntime_LIBRARIES)
+        target_link_libraries(iqtree2 ${onnxruntime_LIBRARIES})
     else()
-        target_link_libraries(iqtree2 onnxruntime)
+        if (APPLE)
+            target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.dylib)
+        elseif(UNIX)
+            target_link_libraries(iqtree2 /usr/local/lib/libonnxruntime.so)
+        else()
+            target_link_libraries(iqtree2 onnxruntime)
+        endif()
     endif()
 endif()
 
