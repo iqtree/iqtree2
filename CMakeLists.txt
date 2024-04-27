@@ -335,6 +335,10 @@ if(USE_NN OR USE_OLD_NN)
     endif()
 endif()
 
+##################################################################
+# Whether to build the decenttree executable file (default: ON)
+##################################################################
+option(BUILD_DECENTTREE "build decenttree" ON)
 
 # for mac arm boost compilation issue
 if (__ARM_NEON AND APPLE)
@@ -782,6 +786,9 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
         endif()
         if (USE_BOOSTER)
             set_target_properties(booster PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        endif()
+        if (NOT BUILD_DECENTTREE)
+            set_target_properties(utils PROPERTIES BUILD_DECENTTREE "OFF")
         endif()
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
