@@ -79,16 +79,6 @@ if(Boost_FOUND)
     add_definitions(-DUSE_BOOST)
 endif()
 
-# Find onnxruntime library for machine learning
-if (onnxruntime_INCLUDE_DIRS)
-    add_definitions(-I${onnxruntime_INCLUDE_DIRS})
-else()
-    find_package(onnxruntime)
-    if(onnxruntime_FOUND)
-        add_definitions(-I${onnxruntime_INCLUDE_DIRS})
-    endif()
-endif()
-
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 3)
@@ -120,6 +110,38 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/yaml-cpp/include")
 include_directories(after system "/usr/local/include")
+
+##################################################################
+# onnxruntime
+##################################################################
+option(USE_NN "Use neutual network (nn) with version 1.13 or later onnxruntime" OFF)
+option(USE_OLD_NN "Use neutual network (nn) with version 1.12 or before onnxruntime" OFF)
+
+if(USE_NN)
+    add_definitions(-D_NN)
+elseif(USE_OLD_NN)
+    add_definitions(-D_OLD_NN)
+endif()
+
+# Find onnxruntime library for machine learning
+if (USE_NN OR USE_OLD_NN)
+    if (onnxruntime_INCLUDE_DIRS)
+        add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+    else()
+        find_package(onnxruntime)
+        if(onnxruntime_FOUND)
+            add_definitions(-I${onnxruntime_INCLUDE_DIRS})
+        endif()
+    endif()
+endif()
+
+if(USE_NN OR USE_OLD_NN)
+    if(NOT ONNXRUNTIME_ROOTDIR)
+        if(WIN32)
+            set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
+        endif()
+    endif()
+endif()
 
 ##################################################################
 # Include the Terraphast library
@@ -311,28 +333,6 @@ if (IQTREE_FLAGS MATCHES "lto")
     #else()
         set(COMBINED_FLAGS "${COMBINED_FLAGS} -flto")
     #endif()
-endif()
-
-##################################################################
-# onnxruntime
-##################################################################
-option(USE_NN "Use neutual network (nn) with version 1.13 or later onnxruntime" OFF)
-option(USE_OLD_NN "Use neutual network (nn) with version 1.12 or before onnxruntime" OFF)
-
-if(USE_NN)
-    add_definitions(-D_NN)
-elseif(USE_OLD_NN)
-    add_definitions(-D_OLD_NN)
-endif()
-
-if(USE_NN OR USE_OLD_NN)
-    if(NOT ONNXRUNTIME_ROOTDIR)
-        if(WIN32)
-            set(ONNXRUNTIME_ROOTDIR "C:/Program Files (x86)/onnxruntime")
-        else()
-            include_directories("/usr/local/include")
-        endif()
-    endif()
 endif()
 
 ##################################################################
