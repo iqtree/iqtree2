@@ -12,6 +12,8 @@
 #include "terracetree.hpp"
 #include "terracenode.hpp"
 #include "presenceabsencematrix.hpp"
+#include "ParallelContext.hpp"
+
 
 class Terrace: public TerraceTree
 {
@@ -20,16 +22,16 @@ public:
      * constructor
      */
     Terrace();
-    
+
     /*
      * constructor
      */
-    Terrace(TerraceTree tree, PresenceAbsenceMatrix *m);
-    
+    Terrace(TerraceTree &tree, std::shared_ptr<PresenceAbsenceMatrix> &m);
+
     /*
      * constructor
      */
-    Terrace(TerraceTree tree, PresenceAbsenceMatrix *m, vector<TerraceTree*> input_induced_trees);
+    Terrace(TerraceTree &tree, vector<TerraceTree*> input_induced_trees);
     
     /*
      *  constructor
@@ -52,12 +54,12 @@ public:
     void init();
     
     vector<TerraceTree*> induced_trees;
-    PresenceAbsenceMatrix *matrix;
+    std::shared_ptr<PresenceAbsenceMatrix> matrix;
     StrVector terrace_trees;
     
     int taxa_num;
     int part_num;
-    
+
     /**
      to track, if the initial tree was generate using backward approach: remove m leaves instead of take induced partition tree
      */
@@ -66,7 +68,7 @@ public:
     /**
         Master terrace. The pointer to a terrace, which is beeing explored using current agile terrace. (this) is derrived from master.
      */
-    Terrace *master_terrace{nullptr};
+    Terrace* master_terrace{nullptr};
     
     /*
      * Original taxon names
@@ -77,16 +79,23 @@ public:
      *  Number of trees on terrace
      */
     unsigned int terrace_trees_num;
+    unsigned int cur_terrace_trees;
     
     /*
      *  Number of intermediate trees visited
      */
-    unsigned int intermediated_trees_num;
+    int intermediated_trees_num;
+    int cur_intermediate_trees;
     
     /*
      *  Number of dead ends encountered
      */
     unsigned int dead_ends_num;
+
+    double start_real_time;
+    double terrace_trees_time;
+    double intermediate_trees_time;
+    double dead_ends_time;
     
     // file to output all generated terrace trees
     string out_file;
@@ -98,11 +107,36 @@ public:
     unsigned int terrace_max_trees;
     unsigned int intermediate_max_trees;
     int seconds_max;
+
+    // for parallelization
+    shared_ptr<ParallelContext> pContext;  // have to modify that
+    
+    int remaining_threads_to_assign;
+    int parallel_case;
+    
+    int artificial_thread_num;
+    int real_thread_num;
+
+    bool initial_split_done = true;
+    bool parallel_exec = false;
+    bool stop = false;
+    double threshold;
+    int taskThreshold;
+    int initial_split_done_index;
+
+    int **path_up_to_now;
+    int path_size;
+    
+    char** inserted_taxa;
+    int max_string_size;
+
+    /*
+    * Adds/substracts one to global variables - locks and unlocks the mutex
+    */
     
     /*
      *  Print terrace info: a representative tree, induced trees and presence-absence matrix
      */
-
     void printInfo(ostream &out=cout);
     
     /*
@@ -126,7 +160,7 @@ public:
      * link parent tree and a single induced partition tree
      */
     void linkTree(int part, NodeVector &part_taxa, bool back_branch_map, bool back_taxon_map, TerraceNode *node = nullptr, TerraceNode *dad = nullptr);
-    
+
     /*
      *  link one branch of parent tree on partition tree part (for internal branches only, oder?)
      */
@@ -163,7 +197,7 @@ public:
     /*
      *  Insert a new taxon to the parent tree, update induced partition trees, update mapping (locally)
      */
-    void extendNewTaxon(string node_name, TerraceNode *node_1_branch, TerraceNode *node_2_branch, vector<Terrace*> aux_terrace);
+    void extendNewTaxon(string node_name, TerraceNode *node_1_branch, TerraceNode *node_2_branch, vector<Terrace*> aux_terrace, bool constructing_thread = false);
     
     /*
      *  Clean all link neighbours and taxa on parent tree and on induced partition trees
@@ -176,25 +210,44 @@ public:
      */
     
     void create_Top_Low_Part_Tree_Pairs(vector<Terrace*> &part_tree_pairs, Terrace *terrace);
-    
+
     /*
      *  The main function to generate trees by recursive taxon insertion
      */
+
+
+    void generateTerraceTrees(Terrace *terrace, 
+                            vector<Terrace*> &part_tree_pairs, 
+                            vector<string> &list_taxa_to_insert, 
+                            int taxon_to_insert = -1, 
+                            bool use_dynamic_order = true, 
+                            bool thread_call = false,
+                            string _taxon_name = "",
+                            vector<int>* ids1 = nullptr,
+                            vector<int>* ids2 = nullptr);
     
-    void generateTerraceTrees(Terrace *terrace, vector<Terrace*> &part_tree_pairs, vector<string> &list_taxa_to_insert, int taxon_to_insert = -1,vector<string> *ordered_taxa_to_insert = nullptr);
+    /*
+     *  Parallel version
+     */
     
+    void print_debug(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch, int taxon_to_insert, bool give_birth = false, int thread_num = 0);
+
+    void sorting_vector(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch);
+    void keepIndicesAssignedToThread(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch); 
+    void keepIndicesAssignedToThread_initial(NodeVector &node1_vec_branch, NodeVector &node2_vec_branch, int parallel_case, int thread_num, int nun_threads_remaining);
     /*
      *  Get next taxon to be inserted - a taxon with the least number of allowed branches
      */
-    string getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *ordered_taxa_to_insert,NodeVector &node1_vec_main, NodeVector &node2_vec_main);
+    string getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *list_taxa_to_insert, int taxon_to_insert, NodeVector &node1_vec_main, NodeVector &node2_vec_main);
     
+
     /*
      *  Remove one taxon from the terrace tree, from induced partition trees, update the mapping
      *  Here the update is local update: only involved branches and maps of trees are beeing updated.
      */
     
     void remove_one_taxon(string taxon_name, vector<Terrace*> part_tree_pairs);
-    
+
     /*
      *  Re-link
      */

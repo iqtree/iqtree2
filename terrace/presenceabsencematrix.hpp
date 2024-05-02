@@ -100,7 +100,7 @@ public:
      *  list_taxa_to_insert - taxa in the order to be inserted
      */
     
-    int getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m);
+    int getINFO_init_tree_taxon_order(vector<string> &taxa_names_sub, vector<string> &list_taxa_to_insert,const int m, int thread_num = 0);
     
     /*
      *  Order partitions by their overlap
