@@ -135,7 +135,7 @@ jobs:
         run: choco install llvm --version=14.0.6 --allow-downgrade
               
       - name: Install Boost
-        uses: MarkusJx/install-boost@v2
+        uses: MarkusJx/install-boost@v2.4.5
         id: install-boost
         with:
             boost_version: 1.84.0
