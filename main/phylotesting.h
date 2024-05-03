@@ -436,7 +436,7 @@ private:
      * else
      *    return -1
      */
-    int getBestModelForOneMergeMPI(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt);
+    int getBestModelForOneMergeMPI(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt, double& run_time, double& wait_time);
     
 	/**
 	 * compute and process the best model for partitions (for MPI)
@@ -446,7 +446,7 @@ private:
 	/**
 	 * compute and process the best model for merges (for MPI)
 	 */
-	void getBestModelforMergesMPI(int nthreads, vector<vector<int>* >& jobs);
+	void getBestModelforMergesMPI(int nthreads, vector<vector<int>* >& jobs, vector<double>& run_time, vector<double>& wait_time, vector<double>& fstep_time, vector<int>& partNum);
 
     /**
      * compute and process the best model for partitions (without MPI)
