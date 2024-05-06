@@ -3352,6 +3352,7 @@ int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool n
     
     t_begin = getRealTime();
     wait_time = 0;
+    part_model_info.clear();
 
     // information of current partitions pair
     cur_pair.part1 = closest_pairs[job_id].first;
@@ -3432,6 +3433,8 @@ int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool n
             next_job_id = syncChkPt.getNextJobID();
             wait_time += (getRealTime() - t_wait_begin);
         }
+        // collect the answers from workers
+        syncChkPt.masterSyncOtherChkpts(true);
     } else {
     
         // for Worker -- SYN communication
@@ -4243,7 +4246,7 @@ void PartitionFinder::getBestModel(int job_type) {
         double time_start = getRealTime();
         if (MPIHelper::getInstance().isMaster()) {
             // Master processor broadcast model_info to other processors
-            cout << "distributing the checkpoints from Master to Workers...." << endl;
+            cout << "\tDistributing the checkpoints from Master to Workers...." << endl;
             for (i = 1; i < num_processes; i++) {
                 MPIHelper::getInstance().sendCheckpoint(model_info, i);
             }
@@ -4371,10 +4374,37 @@ void PartitionFinder::test_PartitionModel() {
     // initialize the shared memory space
     initialMPIShareMemory();
 
+    // get the name of the algorithm
+    string part_algo = "";
+    if (params->partition_merge == MERGE_GREEDY)
+        part_algo = "Greedy Algorithm";
+    else if (params->partition_merge == MERGE_RCLUSTER)
+        part_algo = "Relaxed Algorithm";
+    else if (params->partition_merge == MERGE_RCLUSTERF)
+        part_algo = "Fast Relaxed Algorithm";
+    else if (params->partition_merge == MERGE_KMEANS)
+        part_algo = "Kmean Algorithm";
+
+    // for greedy algorithm
+    if (params->partition_merge == MERGE_GREEDY) {
+        params->partfinder_rcluster_max = in_tree->size() * (in_tree->size()-1) / 2;
+        params->partfinder_log_rate = false;
+        params->partfinder_rcluster = 100.0;
+    }
+    
     // 2017-06-07: -rcluster-max for max absolute number of pairs
     if (params->partfinder_rcluster_max == 0) {
-        params->partfinder_rcluster_max = max((size_t)1000, 10 * in_tree->size());
+        // params->partfinder_rcluster_max = max((size_t)1000, 10 * in_tree->size());
+        params->partfinder_rcluster_max = 10 * in_tree->size();
     }
+
+    // show the parameters for partition finder
+    cout << endl;
+    cout << "PartitionFinder's parameters:" << endl;
+    cout << part_algo << endl;
+    cout << "Percentage: " << params->partfinder_rcluster << endl;
+    cout << "Maximum pairs: " << params->partfinder_rcluster_max << endl;
+    cout << endl;
 
     if (params->partition_merge != MERGE_NONE) {
         double p = params->partfinder_rcluster/100.0;
