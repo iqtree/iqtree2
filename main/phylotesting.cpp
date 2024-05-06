@@ -49,8 +49,8 @@
 #endif
 
 // *********for MPI communication*********
-#define ONESIDE_COMM
-// #define SYN_COMM
+// #define ONESIDE_COMM
+#define SYN_COMM
 
 // the ratio of the total jobs first distributed to the processors
 #define DIST_RATIO 0.0
@@ -4191,27 +4191,27 @@ void PartitionFinder::getBestModel(int job_type) {
                     int j;
                     int k = 0;
                     MPI_Recv(&nthres, 1, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    if (nthres == 0)
-                        continue;
-                    // get the run time
-                    run_time.resize(nthres);
-                    for (j=0; j<nthres; j++)
-                        MPI_Recv(&run_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // get the wait time
-                    wait_time.resize(nthres);
-                    for (j=0; j<nthres; j++)
-                        MPI_Recv(&wait_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // get the final-step time
-                    fstep_time.resize(nthres);
-                    for (j=0; j<nthres; j++)
-                        MPI_Recv(&fstep_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // get the number of partitions
-                    num_part.resize(nthres);
-                    for (j=0; j<nthres; j++)
-                        MPI_Recv(&num_part[j], 1, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // show the timing for the worker
-                    for (j=0; j<nthres; j++)
-                        cout << "\t" << w << "\t" << j << "\t" << run_time[j] << "\t" << wait_time[j] << "\t" << fstep_time[j] << "\t" << num_part[j] << endl;
+                    if (nthres > 0) {
+                        // get the run time
+                        run_time.resize(nthres);
+                        for (j=0; j<nthres; j++)
+                            MPI_Recv(&run_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        // get the wait time
+                        wait_time.resize(nthres);
+                        for (j=0; j<nthres; j++)
+                            MPI_Recv(&wait_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        // get the final-step time
+                        fstep_time.resize(nthres);
+                        for (j=0; j<nthres; j++)
+                            MPI_Recv(&fstep_time[j], 1, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        // get the number of partitions
+                        num_part.resize(nthres);
+                        for (j=0; j<nthres; j++)
+                            MPI_Recv(&num_part[j], 1, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        // show the timing for the worker
+                        for (j=0; j<nthres; j++)
+                            cout << "\t" << w << "\t" << j << "\t" << run_time[j] << "\t" << wait_time[j] << "\t" << fstep_time[j] << "\t" << num_part[j] << endl;
+                    }
                 }
             } else {
                 // for worker
@@ -4237,10 +4237,13 @@ void PartitionFinder::getBestModel(int job_type) {
             }
         // }
 
+        MPI_Barrier(MPI_COMM_WORLD);
+
         // distribute the checkpoints from Master to Workers
         double time_start = getRealTime();
         if (MPIHelper::getInstance().isMaster()) {
             // Master processor broadcast model_info to other processors
+            cout << "distributing the checkpoints from Master to Workers...." << endl;
             for (i = 1; i < num_processes; i++) {
                 MPIHelper::getInstance().sendCheckpoint(model_info, i);
             }
@@ -4256,6 +4259,8 @@ void PartitionFinder::getBestModel(int job_type) {
         } else {
             consolidMergeResults();
         }
+        
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 #endif
 
