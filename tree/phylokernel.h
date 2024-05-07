@@ -1412,7 +1412,7 @@ inline UINT fast_popcount(Vec4ui &x) {
 }
 
 inline UINT fast_popcount(Vec8ui &x) {
-#if (defined (__GNUC__) || defined(__clang__)) && !defined(CLANG_UNDER_VS)
+#if (defined (__GNUC__) || defined(__clang__)) && !defined(__ARM_NEON)
     MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
     MEM_ALIGN_BEGIN uint64_t res[4] MEM_ALIGN_END;
     Vec8ui y;
@@ -1996,7 +1996,7 @@ void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, Ph
 
 template<class VectorClass>
 int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    
+
     if ((tip_partial_lh_computed & 2) == 0)
         computeTipPartialParsimony();
     
@@ -2090,6 +2090,5 @@ int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, Phyl
     //    cout << endl;
     return horizontal_add(tree_pars);
 }
-
 
 #endif /* PHYLOKERNEL_H_ */

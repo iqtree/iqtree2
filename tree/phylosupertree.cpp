@@ -197,6 +197,17 @@ void PhyloSuperTree::initSettings(Params &params) {
     }
 }
 
+void PhyloSuperTree::initSequences(Node* node, Node* dad)
+{
+    // init sequences for the primary/super tree first
+    PhyloTree::initSequences();
+    
+    // init sequences for each partition trees
+    for (iterator it = begin(); it != end(); it++) {
+        (*it)->PhyloTree::initSequences();
+    }
+}
+
 void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
     PhyloTree::setLikelihoodKernel(lk);
     for (iterator it = begin(); it != end(); it++)
@@ -687,7 +698,8 @@ void PhyloSuperTree::computePartitionOrder() {
 #endif // OPENMP
 }
 
-double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
+double PhyloSuperTree::computeLikelihood(double *pattern_lh, bool save_log_value) {
+    // TODO: the case for save_log_value = false
 	double tree_lh = 0.0;
 	int ntrees = size();
 	if (pattern_lh) {
@@ -1376,6 +1388,33 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
     }
 }
 
+void PhyloSuperTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq)
+{
+    SuperNeighbor *snei = (SuperNeighbor*)dad_branch;
+    SuperNeighbor *snei_back = (SuperNeighbor*)dad_branch->node->findNeighbor(dad);
+    int part = 0;
+    for (auto it = begin(); it != end(); it++, part++) {
+        size_t nptn = (*it)->getAlnNPattern();
+        size_t nstates = (*it)->model->num_states;
+        if (snei->link_neighbors[part]) {
+            (*it)->computeSubtreeAncestralState(snei->link_neighbors[part], (PhyloNode*)snei_back->link_neighbors[part]->node,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+        } else {
+            // branch does not exist in partition tree
+            double eqprob = 1.0/nstates;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                for (size_t i = 0; i < nstates; i++)
+                    ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+                ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
+            }
+        }
+        ptn_ancestral_prob += nptn*nstates;
+        ptn_ancestral_seq += nptn;
+    }
+
+}
+
 void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
     int part = 1;
@@ -1494,8 +1533,9 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             replace(name.begin(), name.end(), '+', '_');
             out << "  charset " << name << " = ";
             if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-            if (saln->partitions[part]->seq_type == SEQ_CODON)
-                out << "CODON, ";
+            /*if (saln->partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";*/
+            out << saln->partitions[part]->sequence_type << ", ";
             string pos = saln->partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');
             out << pos << ";" << endl;
@@ -1505,7 +1545,7 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;
-            out << "    " << at(part)->getModelNameParams() << ": " << name << "{" << at(part)->treeLength() << "}";
+            out << "    " << at(part)->getModelNameParams(true) << ": " << name << "{" << at(part)->treeLength() << "}";
         }
         out << ";" << endl;
         out << "end;" << endl;

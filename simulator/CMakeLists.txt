@@ -1,0 +1,7 @@
+add_library(simulator
+alisimulator.cpp alisimulator.h
+alisimulatorinvar.cpp alisimulatorinvar.h
+alisimulatorheterogeneity.cpp alisimulatorheterogeneity.h
+alisimulatorheterogeneityinvar.cpp alisimulatorheterogeneityinvar.h
+)
+target_link_libraries(simulator alignment ncl gsl model)

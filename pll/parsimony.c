@@ -56,9 +56,13 @@
 
 #elif defined(__AVX)
 
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <immintrin.h>
 #include <pmmintrin.h>
+#endif
 
 #define ULINT_SIZE 64
 #define INTS_PER_VECTOR 8
@@ -75,8 +79,12 @@
 
 #elif (defined(__SSE3))
 
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <pmmintrin.h>
+#endif
   
 #define INTS_PER_VECTOR 4
 #ifdef __i386__

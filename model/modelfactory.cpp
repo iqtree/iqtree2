@@ -171,6 +171,14 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
     }
+    // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
+    if (model_str.find("+GC") != std::string::npos) {
+        std::string tmp_model_str(1, model_str[0]);
+        for (int c_index = 1; c_index < model_str.length(); c_index++)
+            if (!(model_str[c_index-1]=='G' && model_str[c_index]=='C'))
+                tmp_model_str = tmp_model_str + model_str[c_index];
+        model_name = tmp_model_str;
+    }
 
     /********* preprocessing model string ****************/
     NxsModel *nxsmodel  = NULL;
@@ -383,8 +391,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     /******************** initialize state frequency ****************************/
 
     StateFreqType freq_type = params.freq_type;
-
-    if (freq_type == FREQ_UNKNOWN) {
+    if (model_str.substr(0, 3) != "MIX" && freq_type == FREQ_UNKNOWN) {
         switch (tree->aln->seq_type) {
         case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
         case SEQ_PROTEIN: break; // let ModelProtein decide by itself
@@ -430,6 +437,10 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         posfreq = freq_str.find("+Fo");
     else
         posfreq = freq_str.find("+F");
+        
+    // AliSim: manually handle cases when users specify +FO{...} or +FU{...}
+    if (freq_str.find("+FO{") != string::npos || freq_str.find("+FU{") != string::npos)
+        freq_str = "+F" + freq_str.substr(3, freq_str.length() - 3);
 
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
@@ -481,6 +492,23 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_1x4;
+        } // handle "+F1X4{<freq_0>,...,<freq_3>}"
+        else if (fstr.length() > 5
+                   && (!fstr.substr(0, 5).compare("+F1X4")
+                       || !fstr.substr(0, 5).compare("+F1x4")))
+        {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + fstr + " is not allowed");
+            else
+                freq_type = FREQ_CODON_1x4;
+            
+            // validate the input
+            if ((fstr[5]!='{')
+                ||(fstr[fstr.length()-1]!='}'))
+                throw "To use F1X4, please specify 4 frequencies by +F1X4{<freq_0>,...,<freq_3>} or let AliSim randomly generate the frequencies by +F1X4.";
+            else
+                freq_params = fstr.substr(6, fstr.length()-6-1);
+            
         } else if (fstr == "+F3x4" || fstr == "+F3X4") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + fstr + " is not allowed");
@@ -491,6 +519,23 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_3x4C;
+        } // handle "+F3X4{<freq_0>,...,<freq_11>}"
+        else if (fstr.length() > 5
+                   && (!fstr.substr(0, 5).compare("+F3X4")
+                       || !fstr.substr(0, 5).compare("+F3x4")))
+        {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + fstr + " is not allowed");
+            else
+                freq_type = FREQ_CODON_3x4;
+            
+            // validate the input
+            if ((fstr[5]!='{')
+                ||(fstr[fstr.length()-1]!='}'))
+                throw "To use F3X4, please specify 12 frequencies by +F3X4{<freq_0>,...,<freq_11>} or let AliSim randomly generate the frequencies by +F3X4.";
+            else
+                freq_params = fstr.substr(6, fstr.length()-6-1);
+            
         } else if (fstr == "+FRY") {
         // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
         // so as nearly everything else treats it as an error, I do too.
@@ -523,16 +568,15 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     /******************** initialize model ****************************/
 
     if (tree->aln->site_state_freq.empty()) {
-        if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
+        if (model_str.length() >= 4 && model_str.substr(0, 4) == "MIX{") {
             string model_list;
-            if (model_str.substr(0, 3) == "MIX") {
-                if (model_str[3] != OPEN_BRACKET)
-                    outError("Mixture model name must start with 'MIX{'");
-                if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
-                    outError("Close bracket not found at the end of ", model_str);
-                model_list = model_str.substr(4, model_str.length()-5);
-                model_str = model_str.substr(0, 3);
-            }
+            if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
+                outError("Close bracket not found at the end of ", model_str);
+            model_list = model_str.substr(4, model_str.length()-5);
+            model_str = model_str.substr(0, 3);
+            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+        } else if (freq_type == FREQ_MIXTURE) {
+            string model_list;
             model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         } else {
             //            string model_desc;
@@ -666,17 +710,49 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     /******************** initialize site rate heterogeneity ****************************/
-
     string::size_type posI = rate_str.find("+I");
     string::size_type posG = rate_str.find("+G");
     string::size_type posG2 = rate_str.find("*G");
-    if (posG != string::npos && posG2 != string::npos) {
-        cout << "NOTE: both +G and *G were specified, continue with "
-            << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
+    string::size_type posGC = rate_str.find("+GC");
+        
+    // avoid wrong detection of +G of users specify +GC
+       if (posG != string::npos && posG == posGC)
+           posG = rate_str.find("+G", posG + 2);
+    
+    // choose discrete/continuous gamma
+    if (posG != string::npos && posGC != string::npos) {
+        cout << "NOTE: both +G and +GC were specified, continue with "
+            << ((posG < posGC)? rate_str.substr(posG,2) : rate_str.substr(posGC,3)) << endl;
+            
+        is_continuous_gamma = posGC < posG;
     }
-    if (posG2 != string::npos && posG2 < posG) {
-        posG = posG2;
-        fused_mix_rate = true;
+    if (posG2 != string::npos && posGC != string::npos) {
+        cout << "NOTE: both *G and +GC were specified, continue with "
+            << ((posG2 < posGC)? rate_str.substr(posG2,2) : rate_str.substr(posGC,3)) << endl;
+        
+        is_continuous_gamma = posGC < posG2;
+    }
+        
+    // only GC
+    if (posGC != string::npos && posG == string::npos && posG2 == string::npos)
+        is_continuous_gamma = true;
+    
+    // if using continuous Gamma
+    if (is_continuous_gamma)
+    {
+        posG = posGC;
+    }
+    // if using discrete Gamma
+    else
+    {
+        if (posG != string::npos && posG2 != string::npos) {
+            cout << "NOTE: both +G and *G were specified, continue with "
+                << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
+        }
+        if (posG2 != string::npos && posG2 < posG) {
+            posG = posG2;
+            fused_mix_rate = true;
+        }
     }
 
     string::size_type posR = rate_str.find("+R"); // FreeRate model
@@ -735,7 +811,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             close_bracket = rate_str.find(CLOSE_BRACKET, posI);
             if (close_bracket == string::npos)
                 outError("Close bracket not found in ", rate_str);
-            p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
+            p_invar_sites = convert_double_with_distribution(rate_str.substr(posI+3, close_bracket-posI-3).c_str(), true);
             if (p_invar_sites < 0 || p_invar_sites >= 1)
                 outError("p_invar must be in [0,1)");
         } else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+' && rate_str[posI+2] != '*')
@@ -748,11 +824,16 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             num_rate_cats = convert_int(rate_str.substr(posG+2).c_str(), end_pos);
             if (num_rate_cats < 1) outError("Wrong number of rate categories");
         }
+        // add padding postition if using +GC
+        end_pos = is_continuous_gamma ? 1 : end_pos;
+        // avoid using continuous Gamma without AliSim
+        if (is_continuous_gamma && !params.alisim_active)
+            outError("Sorry! Currently, continuous Gamma model is only supported to simulate alignments with AliSim.");
         if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] == OPEN_BRACKET) {
             close_bracket = rate_str.find(CLOSE_BRACKET, posG);
             if (close_bracket == string::npos)
                 outError("Close bracket not found in ", rate_str);
-            gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
+            gamma_shape = convert_double_with_distribution(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str(), false);
 //            if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
 //                stringstream str;
 //                str << "Gamma shape parameter " << gamma_shape << "out of range ["
@@ -762,6 +843,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         } else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
             outError("Wrong model name ", rate_str);
     }
+    // if not using Gamma, make sure is_continuous_gamma = false;
+    else
+        is_continuous_gamma = false;
     if (posR != string::npos) {
         // FreeRate model
         int end_pos = 0;
@@ -1293,6 +1377,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     int i;
     //bool optimize_rate = true;
 //    double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
+    
+    // for mixture model, increase the maximum number of iterations
+    if (model->isMixture()) {
+        tree->params->num_param_iterations = model->getNMixtures() * 100;
+        // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
+    }
+
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
@@ -1422,9 +1513,9 @@ double ModelFactory::computeTrans(double time, int state1, int state2, double &d
     return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
-void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
     if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-        model->computeTransMatrix(time, trans_matrix, mixture);
+        model->computeTransMatrix(time, trans_matrix, mixture, selected_row);
         return;
     }
     int mat_size = model->num_states * model->num_states;
@@ -1433,7 +1524,7 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mix
         // allocate memory for 3 matricies
         double *trans_entry = new double[mat_size * 3];
         trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-        model->computeTransMatrix(time, trans_entry, mixture);
+        model->computeTransMatrix(time, trans_entry, mixture, selected_row);
         ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
     } else {
         //if (verbose_mode >= VB_MAX)

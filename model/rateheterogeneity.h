@@ -45,6 +45,7 @@ class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
 	friend class ModelPoMoMixture;
+    friend class IQTreeMix;
 
 public:
 	/**
@@ -236,7 +237,14 @@ public:
         return false;
     }
 
-	/**
+    /**
+     *  check whether +R is used
+     */
+    virtual bool isFreeRate() const {
+        return false;
+    }
+
+    /**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x

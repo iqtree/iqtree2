@@ -160,7 +160,9 @@ void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_
 		tree_weights.push_back(1);
 		count++;
 	}
-	cout << count << " tree(s) converted" << endl;
+    
+    //cout << count << " tree(s) converted" << endl;
+
 }
 
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
@@ -542,11 +544,13 @@ void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) 
 	// exit if less than 2 trees
 	if (size() < 2)
 		return;
+    if (verbose_mode >= VB_MED) {
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
 #else
 	cout << "Using map" << endl;
 #endif
+    }
 	cout << "Computing Robinson-Foulds distance..." << endl;
 
 	vector<string> taxname(front()->leafNum);
@@ -606,13 +610,14 @@ void MTreeSet::computeRFDist(double *rfdist, int mode, double weight_threshold) 
 void MTreeSet::computeRFDist(double *rfdist, MTreeSet *treeset2, bool k_by_k,
 	const char *info_file, const char *tree_file, double *incomp_splits)
 {
+    if (verbose_mode >= VB_MED) {
 	// exit if less than 2 trees
 #ifdef USE_HASH_MAP
 	cout << "Using hash_map" << endl;
 #else
 	cout << "Using map" << endl;
 #endif
-
+    }
 	ofstream oinfo;
 	ofstream otree;
 	if (info_file) oinfo.open(info_file);

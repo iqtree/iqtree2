@@ -58,9 +58,13 @@
 
 #elif defined(__AVX)
 
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <immintrin.h>
 #include <pmmintrin.h>
+#endif
 
 #define INTS_PER_VECTOR 8
 //#define LONG_INTS_PER_VECTOR 4
@@ -79,8 +83,12 @@
 
 #elif (defined(__SSE3))
 
+#if defined(__ARM_NEON)
+#include "sse2neon.h"
+#else
 #include <xmmintrin.h>
 #include <pmmintrin.h>
+#endif
   
 #define INTS_PER_VECTOR 4
 #ifdef __i386__
@@ -108,7 +116,11 @@
 
 #if defined (_MSC_VER)
 #	if defined ( __SSE4_2__ ) || defined (__AVX__)
-#		include <nmmintrin.h>
+#if defined(__ARM_NEON)
+#        include "sse2neon.h"
+#else
+#include <nmmintrin.h>
+#endif
 #		define __builtin_popcount _mm_popcnt_u32
 #		define __builtin_popcountl _mm_popcnt_u64
 #	else

@@ -17,64 +17,68 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef TERRACE_H
-#define TERRACE_H
+#include "terracetphast.h"
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+TerraceTP::TerraceTP(PhyloTree &tree, SuperAlignment* saln) :
+    coverage(tree.aln->getSeqNames().size(), saln->taxa_index[0].size())
+{
+    stringstream nwk;
+    tree.printTree(nwk, 0);
+    
+    terraces::index cols{};
+    terraces::index rows{};
 
-#include "tree/phylotree.h"
-#include "alignment/superalignment.h"
-#include "utils/tools.h"
+    terraces::bitmatrix coverage_matrix{rows, cols};
 
-#include "terraphast/include/terraces/errors.hpp"
-#include "terraphast/include/terraces/parser.hpp"
-#include "terraphast/include/terraces/simple.hpp"
-#include "terraphast/include/terraces/advanced.hpp"
-#include "terraphast/include/terraces/bitmatrix.hpp"
+    vector<string> labels = tree.aln->getSeqNames();
 
-/**
-    A phylogenetic terrace
-    @author Lukasz Reszczynski <lukasz.reszczynski@univie.ac.at>
-*/
-class Terrace {
+    names.resize(labels.size());
 
-public:
-	/**
-	 *  Constructor
-	 *  @param tree tree
-	 *  @param saln superalignment
-	 */
-    Terrace(PhyloTree &tree, SuperAlignment* saln);
+    for (int i=0; i<labels.size(); i++) {
+        string label = labels[i];
 
-    /**
-     *  @return The terrace size
-     */
-    uint64_t getSize();
+        names[i] = label;
+        indices[label] = i;
+    }
 
-    /**
-     *  Print trees from the terrace in the newick format.
-     *  @param out the output stream
-     */
-    void printTrees(ostream &out);    
+    auto terraphast_nwk = terraces::parse_nwk(nwk.str(), indices);
 
-    /**
-     *  Print trees from the terrace in the compressed newick format.
-     *  @param out the output stream 
-     */
-    void printTreesCompressed(ostream &out);
+    int n_partitions = saln->taxa_index[0].size();
 
-	void init();
+    for (int i=0; i<labels.size(); i++) {
+        for (int j=0; j<n_partitions; j++) {
+            bool value = (saln->taxa_index[i][j] != -1);
+            coverage.set(i, j, value);
+        }
+    }
 
-    ~Terrace();
+    supertree = terraces::create_supertree_data(terraphast_nwk, coverage);
 
-private:
-  	terraces::bitmatrix coverage;
-  	terraces::name_map names;
-  	terraces::index_map indices;
-  	terraces::supertree_data supertree;
-};
+    init();  
+}
+
+void TerraceTP::init()
+{
+
+}
+
+uint64_t TerraceTP::getSize()
+{
+    return terraces::count_terrace(supertree);
+}
+
+void TerraceTP::printTrees(ostream &out)
+{
+    terraces::print_terrace(supertree, names, out);
+}
+
+void TerraceTP::printTreesCompressed(ostream &out)
+{
+    terraces::print_terrace_compressed(supertree, names, out);
+}
+
+TerraceTP::~TerraceTP()
+{
+}
 
 
-#endif

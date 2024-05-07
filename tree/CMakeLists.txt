@@ -4,6 +4,10 @@ constrainttree.h
 candidateset.cpp candidateset.h
 iqtree.cpp
 iqtree.h
+iqtreemix.cpp
+iqtreemix.h
+iqtreemixhmm.cpp
+iqtreemixhmm.h
 matree.cpp
 matree.h
 memslot.cpp memslot.h
@@ -17,6 +21,10 @@ ncbitree.cpp
 ncbitree.h
 node.cpp
 node.h
+genomenode.h
+genomenode.cpp
+genometree.h
+genometree.cpp
 phylokernel.h
 phylokernelnew.h
 phylokernelnonrev.h
@@ -44,6 +52,8 @@ tinatree.h
 parstree.cpp
 parstree.h
 discordance.cpp
+phylohmm.cpp
+phylohmm.h
 )
 
 target_link_libraries(tree pll model alignment)

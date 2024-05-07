@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <sstream>
+#include <random>
 
 //#include <sys/time.h>
 //#include <time.h>
@@ -143,6 +144,71 @@ namespace __gnu_cxx {
 } // namespace
 #endif // USE_HASH_MAP
 
+struct Distribution {
+  string random_numbers_str;
+  int pool_size;
+} ;
+
+/**
+ *  Specify 5 distributions for indel-size generation.
+ */
+enum INDEL_DIS_TYPE {
+    NEG_BIN,
+    ZIPF,
+    LAV,
+    GEO,
+    USER_DEFINED
+};
+
+/**
+ *  Specify 3 options for assigning site freqs, substitution rate to sites
+ */
+enum ASSIGNMENT_TYPE {
+    POSTERIOR_MEAN,
+    POSTERIOR_DIS,
+    UNSPECIFIED
+};
+
+/**
+ *  Specify 2 simulation approaches.
+ */
+enum SIMULATION_METHOD {
+    TRANS_PROB_MATRIX,
+    RATE_MATRIX
+};
+
+/**
+ *  Specify 2 AliSim-OpenMP algorithms.
+ */
+enum ALI_OPENMP_ALG {
+    IM,
+    EM
+};
+
+/**
+ *  Specify 2 simulation approaches.
+ */
+enum SEQ_CHUNK_STATUS {
+    EMPTY,
+    OCCUPIED,
+    WRITING,
+    READING
+};
+
+struct IndelDistribution {
+    INDEL_DIS_TYPE indel_dis_type;
+    double param_1 = -1, param_2 = -1;
+    string user_defined_dis = "";
+    // constructor
+    IndelDistribution(){}
+    IndelDistribution(INDEL_DIS_TYPE new_indel_dis_type, double new_param_1 = -1, double new_param_2 = -1, string new_user_defined_dis = "")
+    {
+        indel_dis_type = new_indel_dis_type;
+        param_1 = new_param_1;
+        param_2 = new_param_2;
+        user_defined_dis = new_user_defined_dis;
+    }
+} ;
 
 class Linear {
 public:
@@ -267,7 +333,7 @@ enum RunMode {
         type of generating trees or splits graphs
  */
 enum TreeGenType {
-    NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED,
+    NONE, YULE_HARDING, UNIFORM, CATERPILLAR, BALANCED, BIRTH_DEATH,
     CIRCULAR_SPLIT_GRAPH, TAXA_SET, STAR_TREE
 };
 
@@ -298,6 +364,7 @@ const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for bra
 const int WT_BR_ATTR = 4096; // print branch attributes
 const int TRUE = 1;
 const int FALSE = 0;
+const double ONE_THIRD = 1.0 / 3.0;
 
 /**
  *  Specify different ways of doing an NNI.
@@ -338,7 +405,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_MAPLE, IN_OTHER
 };
 
   // TODO DS: SAMPLING_SAMPLED is DEPRECATED and it is not possible to run PoMo with SAMPLING_SAMPLED.
@@ -363,7 +430,8 @@ extern VerboseMode verbose_mode;
  */
 enum ConsensusType {
     CT_NONE, CT_CONSENSUS_TREE, CT_CONSENSUS_NETWORK,
-    CT_ASSIGN_SUPPORT, CT_ASSIGN_SUPPORT_EXTENDED, COMPARE
+    CT_ASSIGN_SUPPORT, CT_ASSIGN_SUPPORT_EXTENDED, COMPARE,
+    CT_ROOTSTRAP
 };
 
 enum TestType {
@@ -465,7 +533,7 @@ enum LhMemSave {
 };
 
 enum SiteLoglType {
-    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT, WSL_TMIXTURE
 };
 
 enum SiteFreqType {
@@ -512,6 +580,8 @@ const double MIN_GAMMA_RATE = 1e-6;
 const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
+// change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
 
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -677,7 +747,17 @@ public:
      */
     double modelfinder_eps;
 
-	/**
+    /**
+     logl epsilon for Tree Mixture
+     */
+    double treemix_eps;
+
+    /**
+     logl epsilon for HMM Tree Mixture
+     */
+    double treemixhmm_eps;
+
+    /**
 	 *  New search heuristics (DEFAULT: ON)
 	 */
 	bool snni;
@@ -917,15 +997,68 @@ public:
     /** use logarithm of rates for clustering algorithm */
     bool partfinder_log_rate;
     
+    /************************************************/
+    /******* variables for Terrace analysis *********/
+    
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
     /** use terrace aware data structure for partition models, default: TRUE */
     bool terrace_aware;
 
-    /** check if the tree lies on a terrace */
+    /** check if the tree lies on a terrace using terraphast lib*/
+    bool terrace_analysis_tphast;
+    
+    /**
+        following partition model analysis, check if the inferred tree lies on a terrace
+     */
+    bool terrace_check;
+    
+    /*
+       Variables below are used for terrace analysis using general algorithm (TerraGen)
+     */
     bool terrace_analysis;
+    const char *pr_ab_matrix;
+    bool print_terrace_trees;
+    bool print_induced_trees;
+    bool print_pr_ab_matrix;
+    bool print_m_overlap;
+    
+    /** file with tree set to be tested, whether from the same terrace with the representative tree */
+    char *terrace_query_set;
+    
+    /**
+     *  Options to set different stopping rules for generation of terrace trees
+     */
+    
+    int terrace_stop_intermediate_num;
+    int terrace_stop_terrace_trees_num;
+    double terrace_stop_time;
+    
+    bool terrace_non_stop;
+    
+    /**
+        Start generation process from a larger initial tree, i.e. remove m leaves and start generation process as in the typical analysis. This does not guarantee generating all trees, but can help investigate complicated datasets, if there are more than 1 tree on a terrace.
+     */
+    int terrace_remove_m_leaves;
+    
+    /**
+        number of terrace trees to be output to the file: default 100K
+     */
+    int terrace_print_lim;
+    
+    /**
+        flag: only order pr_ab_matrix
+     */
+    bool matrix_order;
+    
+    /*
+        generate all NNI neighbours for the input tree and output them (not terrace-specific variable)
+     */
+    bool gen_all_NNI;
 
+    /************************************************/
+    
     /**
             B, D, or P for Binary, DNA, or Protein sequences
      */
@@ -1263,6 +1396,13 @@ public:
         number of quartets for site concordance factor
      */
     int site_concordance;
+    
+    /**
+        0 (default): do the published sCF (Minh, Matt, Rob 2020)
+        1 to compute site concordance using ancestral states at four surrounding nodes
+        2 to use ancestral state based on separate subtrees
+    */
+    int ancestral_site_concordance;
 
     /**
      TRUE to print concordant sites per partition
@@ -1501,7 +1641,7 @@ public:
     int num_rate_cats;
 
     /**
-            maximum number of rate categories
+            minimum number of rate categories
      */
     int min_rate_cats;
 
@@ -1509,6 +1649,61 @@ public:
             maximum number of rate categories
      */
     int max_rate_cats;
+
+    /**
+            minimum number of classes in mixture model
+     */
+    int min_mix_cats;
+
+    /**
+            maximum number of classes in mixture model
+     */
+    int max_mix_cats;
+    
+    /**
+            the starting model (i.e. substitution model + freq) for each class of Q-mixture model
+     */
+    string start_subst;
+
+    /**
+            whether to optimize the RHAS again after the number of classes is estimated for the mixture model
+     */
+    bool opt_rhas_again;
+
+    /**
+            The method to optimize (and estimating the number of classes in) the Q-mixture model
+            Method 1 (Old method)
+                a. Estimate the RHAS model with the GTR+FO model.
+                b. Do a tree search for this single-class model.
+                c. Estimate the optimal number of classes inside the model mixture.
+                d. Estimate the RHAS model again with the optimal number of classes.
+                e. Estimate the optimal combination of substitution matrices in Q-Mixture model
+                f. Do a final tree search for this Q-mixture model with the optimal combination.
+            Method 2 (Default method)
+                a. Use modelfinder (for single class) to find the best Q1 + RHAS + Tree. Set k = 1
+                b. Fixing RHAS, Tree and the models Q1, Q2, ..., Qk, then find the best Qk+1 to add
+                c. If the mixture with k+1 classes pass the likelihood ratio test or better AIC/BIC value (depending on opt_qmix_criteria),
+                  then k=k+1 and repeat the step c. Otherwise the mixture with k classes is the best model.
+                d. Re-estimate the RHAS model again for the k-class Q-mixture model .
+                e. Do a final tree search.
+     */
+    int opt_qmix_method;
+    
+    /**
+            The criteria to identify the best number of classes in the Q-mixture model.
+            1: likelihood-ratio test (default); 2: information criteria, like AIC, BIC, etc.
+     */
+    int opt_qmix_criteria;
+    
+    /**
+        The p-value threshold used to optimize the Q-Mixture model when likelihood-ratio test is applied (i.e. opt_qmix_criteria = 1). Default = 0.05
+     */
+    double opt_qmix_pthres;
+
+    /**
+            whether to compute the optmal combination of subtitution matrix for the mixture model
+     */
+    bool check_combin_q_mat;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates
@@ -1548,6 +1743,33 @@ public:
      *  Optimization algorithm for +I+G
      */
     string optimize_alg_gammai;
+    
+    /**
+     *  Optimization algorithm for tree weights in tree-mixture model
+     */
+    string optimize_alg_treeweight;
+
+    /**
+     *  Optimization algorithm for q-mixture model
+     */
+    string optimize_alg_qmix;
+    
+    /**
+     * non-zero if want to estimate the initial frequency vectors for q-mixture model
+     */
+    int estimate_init_freq;
+
+    //new params added -JD
+    /** TRUE if you want to exchange the rate matrix for an optimized GTR matrix */
+    bool optimize_linked_gtr;
+    /** Starting matrix to be used for GTR20 optimization */
+    string gtr20_model;
+    /** Matrix multiplier factor */
+    double guess_multiplier;
+    /** TRUE if you want to print out a .ratemat file during GTR optimization */
+    // bool rates_file;
+    /** How the program should reset the values during Optimization::resetParameters */
+    string reset_method;
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
@@ -1569,7 +1791,30 @@ public:
 
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
+    
+    /** optimize the parameters according to the HMM model (HMMSTER) */
+    bool optimize_params_use_hmm;
 
+    /** optimize the parameters according to the HMM model (HMMSTER) using simple transition model*/
+    bool optimize_params_use_hmm_sm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using general transition model*/
+    bool optimize_params_use_hmm_gm;
+
+    /** optimize the parameters according to the HMM model (HMMSTER) using type-dependent transition model*/
+    bool optimize_params_use_hmm_tm;
+
+    /** proceed to MAST model after HMMSTER , default true */
+    // bool proceed_MAST_after_HMMSTER;
+
+    /** no averaging the branch length during the initialization of the HMM model */
+    bool HMM_no_avg_brlen;
+
+    /** minimum value allowed for HMM transition probability between the same tree (category) */
+    double HMM_min_stran;
+    
+    /** optimization methods: hmm / hmm2mast / mast2hmm / mast */
+    string treemix_optimize_methods;
 
     /**
             criterion to assess important quartet
@@ -1720,6 +1965,9 @@ public:
 
     /** TRUE to print partition log-likelihood, default: FALSE */
     bool print_partition_lh;
+    
+    /** TRUE to print the marginal probability for HMM model, default: FALSE */
+    bool print_marginal_prob;
 
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories
@@ -2167,6 +2415,9 @@ public:
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
+    
+    /** TRUE to print checkpoints to 1.ckp.gz, 2.ckp.gz,... */
+    bool print_all_checkpoints;
 
     /** control output files to be written
      * OUT_LOG
@@ -2228,6 +2479,248 @@ public:
     /** supress notes about duplicate sequences */
     double suppress_duplicate_sequence_warnings;
     
+    /**
+    *  TRUE to execute alisim
+    */
+    bool alisim_active;
+    
+    /**
+    *  TRUE if AliSim is running with inference mode
+    */
+    bool alisim_inference_mode;
+    
+    /**
+    *  TRUE to disable copying gaps from input sequences
+    */
+    bool alisim_no_copy_gaps;
+    
+    /**
+    *  original parameters
+    */
+    string original_params;
+    
+    /**
+    *  output filename
+    */
+    string alisim_output_filename;
+    
+    /**
+    *  length of output sequences of alisim
+    */
+    int alisim_sequence_length;
+    
+    /**
+    *  number of output datasets of alisim
+    */
+    int alisim_dataset_num;
+    
+    /**
+    *  alignment_filepath containing the ancestral sequence of alisim
+    */
+    char * alisim_ancestral_sequence_aln_filepath;
+    
+    /**
+    *  the sequence name of the ancestral sequence of alisim
+    */
+    string alisim_ancestral_sequence_name;
+    
+    /**
+    *  the maximum number of rate_categories that cached_trans_matrix could be applied
+    */
+    int alisim_max_rate_categories_for_applying_caching;
+    
+    /**
+    *  number of states (SEQ_MORPH)
+    */
+    int alisim_num_states_morph;
+    
+    /**
+    *  number of taxa
+    */
+    int alisim_num_taxa_uniform_start;
+    int alisim_num_taxa_uniform_end;
+    IntVector alisim_num_taxa_list;
+    
+    /**
+    *  birth_rate (Birth_Death model)
+    */
+    double birth_rate;
+    
+    /**
+    *  death_rate (Birth_Death model)
+    */
+    double death_rate;
+    
+    /**
+    *  rate to generate abundant states (with +ASC)
+    *  default is 2.0;
+    */
+    double alisim_length_ratio;
+    
+    /**
+    *  fundi model - set of taxa
+    */
+    vector<string> alisim_fundi_taxon_set;
+    
+    /**
+    *  fundi model - proportion
+    */
+    double alisim_fundi_proportion;
+    
+    /**
+    *  distribution_definition_file
+    */
+    char* alisim_distribution_definitions;
+    
+    /**
+    *  TRUE to skip checking the memory capacity for large mixture models
+    */
+    bool alisim_skip_checking_memory;
+    
+    /**
+    *  TRUE to write sequences of internal nodes
+    */
+    bool alisim_write_internal_sequences;
+    
+    /**
+    *  list of distributions to generate random numbers
+    */
+    map<string, Distribution> distributions;
+    
+    /**
+    *  TRUE to convert tree from rooted to unrooted and stop
+    */
+    bool alisim_only_unroot_tree;
+    
+    /**
+    *  distribution to randomly generate branch lengths
+    */
+    char* branch_distribution;
+    
+    /**
+    *  the ratio of insertion rate to substitution rate
+    */
+    double alisim_insertion_ratio;
+    
+    /**
+    *  the ratio of deletion rate to substitution rate
+    */
+    double alisim_deletion_ratio;
+    
+    /**
+    *  the insertion-distribution for drawing the number of inserted sites
+    */
+    IndelDistribution alisim_insertion_distribution;
+    
+    /**
+    *  the deletion-distribution for drawing the number of deleted sites
+    */
+    IndelDistribution alisim_deletion_distribution;
+    
+    /**
+    *  mean of deletion-size
+    */
+    double alisim_mean_deletion_size;
+    
+    /**
+    *  threshold to switch between two simulation methods: Rate_Matrix and Trans_Prob_Matrix
+    */
+    double alisim_simulation_thresh;
+    
+    /**
+    *  messages which are delayed to show
+    */
+    string delay_msgs;
+    
+    /**
+    *  TRUE to disable outputing sequences without gaps (when using Indels)
+    */
+    bool alisim_no_export_sequence_wo_gaps;
+    
+    /**
+    *  TRUE to enable mixture model at substitution level
+    */
+    bool alisim_mixture_at_sub_level;
+    
+    /**
+    *  branch-scale factor
+    */
+    double alisim_branch_scale;
+    
+    /**
+    *  TRUE to output all replicate alignments into a single file
+    */
+    bool alisim_single_output;
+    
+    /**
+    *  Type to assign rate heterogeneity to sites (default: posterior mean)
+    */
+    ASSIGNMENT_TYPE alisim_rate_heterogeneity;
+    
+    /**
+    *  Type to assign site freqs (in mixture) (default: posterior mean)
+    */
+    ASSIGNMENT_TYPE alisim_stationarity_heterogeneity;
+    
+    /**
+    *  path to the tmp_data file to temporarily output sequences at tips when using Indels
+    */
+    string tmp_data_filename;
+    
+    /**
+    *  TRUE to keep the order of output sequences
+    */
+    bool keep_seq_order;
+    
+    /**
+    *  TRUE to delete output file (for testing only)
+    */
+    bool delete_output;
+    
+    /**
+    *  param to rebuild the indel history when using indel
+    */
+    double rebuild_indel_history_param;
+    
+    /**
+    *  factor to limit memory usage
+    */
+    double mem_limit_factor;
+    
+    /**
+    *  TRUE to allow indel-rate variation
+    */
+    bool indel_rate_variation;
+    
+    /**
+    *  AliSim-OpenMP algorithm
+    */
+    ALI_OPENMP_ALG alisim_openmp_alg;
+    
+    /**
+    *  TRUE to skip concatenate sequence chunks from intermediate files in AliSim-OpenMP-EM algorithm
+    */
+    bool no_merge;
+    
+    /**
+    *  TRUE to include predefined mutations
+    */
+    bool include_pre_mutations;
+    
+    /**
+    *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
+    */
+    int alignment_id;
+    
+    /**
+    *  Mutation file that specifies pre-defined mutations occurs at nodes
+    */
+    std::string mutation_file;
+    
+    /**
+    *  site starting index (for predefined mutations in AliSim)
+    */
+    int site_starting_index;
 };
 
 /**
@@ -2357,6 +2850,11 @@ std::istream& safeGetline(std::istream& is, std::string& t);
         @return the random branch length
  */
 double randomLen(Params &params);
+
+/**
+    Try to generate a branch length but it could be out of the range (params.min_len, params.max_len)
+ */
+double tryGeneratingBlength(Params &params);
 
 /**
         Compute the logarithm of the factorial of an integer number
@@ -2510,12 +3008,57 @@ double convert_double(const char *str);
 double convert_double(const char *str, int &end_pos);
 
 /**
+        convert string to double, or generate it from a distribution
+        @param str original string
+        @param end_pos end position
+        @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
+        @return the double
+ */
+double convert_double_with_distribution(const char *str, int &end_pos, bool non_negative, char separator = ',');
+
+/**
         convert comma-separated string to integer vector, with error checking
         @param str original string with integers separated by comma
         @param vec (OUT) integer vector
         @param separator char separating elements
  */
 void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',');
+
+/**
+        convert comma-separated string to double vector or generate double vector from distributions
+        @param str original string with doubles separated by comma
+        @param vec (OUT) double vector
+        @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
+ */
+void convert_double_vec_with_distributions(const char *str, DoubleVector &vec, bool non_negative, char separator = ',');
+
+/**
+        convert separated string to an array of double number (double*) or generate them from distributions
+        @param tmp_str original string with doubles separated by separator
+        @param array an array of double number (double*)
+        @param num_items the number of items in the array
+        @param separator char separating elements
+        @param non_negative TRUE to only return non-negative number
+ */
+void convert_double_array_with_distributions(string tmp_str, double* array, int num_items, bool non_negative, char separator);
+
+/**
+        normalize state frequencies so that sum of them is equal to 1
+        @param freqs original state frequencies
+        @param num_states the number of states
+        @param total_freq sum of all original state frequencies
+ */
+void normalize_frequencies_from_index(double* freqs, int num_states, int starting_index);
+
+/**
+        normalize state frequencies so that sum of them is equal to 1
+        @param freqs original state frequencies
+        @param num_states the number of states
+        @param total_freq sum of all original state frequencies
+ */
+void normalize_frequencies(double* freqs, int num_states, double total_freqs = -1, bool show_warning = false);
 
 /**
  * Convert seconds to hour, minute, second
@@ -2544,6 +3087,56 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size);
 void convert_range(const char *str, double &lower, double &upper, double &step_size);
 
 void convert_string_vec(const char *str, StrVector &str_vec, char separator = ',');
+
+/**
+        read distributions from built-in string or user-specified file
+ */
+
+void read_distributions(char* filepath = NULL);
+
+/**
+        randomly select a number from the pool of random numbers of a distribution
+        @param distribution_name storing name of distribution
+        @param non_negative TRUE to only return non-negative number
+ */
+double random_number_from_distribution(string distribution_name, bool non_negative);
+
+/**
+        initialize a number by converting string to double (if the user supplies a number) or randomly generating it from a distribution (if the user supplies a distribution name)
+        @param input storing a number or a distribution name
+        @param non_negative TRUE to only return non-negative number
+ */
+double convert_double_with_distribution(const char *str, bool non_negative);
+
+/**
+        initialize a number (with an upper bound constraint) by converting string to double (if the user supplies a number) or randomly generating it (with up to 1000 attempts) from a distribution (if the user supplies a distribution name)
+        @param input storing a number or a distribution name
+        @param upper_bound storing the upper bound value
+        @param non_negative TRUE to only return non-negative number
+ */
+double convert_double_with_distribution_and_upperbound(string input, double upper_bound, bool non_negative);
+
+/**
+        randomly generating a double (with up to 1000 attempts) from a distribution with an upper bound constraint
+        @param input storing a distribution name
+        @param upper_bound storing the upper bound value, lower_bound is 0 (implicitly)
+        @param non_negative TRUE to only return non-negative number
+ */
+double random_number_from_distribution_with_upperbound(string distribution_name, double upper_bound, bool non_negative);
+
+/**
+       check whether a string is a number
+        @param s storing a string
+ */
+bool is_number(const string& s);
+
+/**
+        randomly generate the (nucleotide) frequencies from empirical (built-in) distributions
+        @param freqs storing the output base frequencies
+        @param list_distribution_names specifying a list of distributions corresponding for each state
+        @param num_states the number of states
+ */
+void random_frequencies_from_distributions(double *freqs, int num_states = 4, string list_distribution_names = "Generalized_logistic,Exponential_normal,Power_log_normal,Exponential_Weibull");
 
 /**
     change unusual character in names into underscore (_)
@@ -2641,6 +3234,11 @@ bool overwriteFile(char *filename);
 void usage(char* argv[]);
 
 /**
+        print usage information of AliSim
+ */
+void usage_alisim();
+
+/**
  *   Print a string into a file
  */
 void printString2File(string myString, string filename);
@@ -2728,6 +3326,48 @@ int random_int(int n, int *rstream = NULL);
  * returns a random floating-point nuber in the range [0; 1)
  */
 double random_double(int *rstream = NULL);
+
+/**
+ * returns a random double based on an exponential distribution
+ * @param mean the mean of exponential distribution
+ */
+double random_double_exponential_distribution(double mean, int *rstream = NULL);
+
+/**
+ * geometric random number generation
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param p
+ */
+int random_int_geometric(double p);
+
+/**
+ * negative binomial distribution
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param r, q
+ */
+int random_int_nebin(int r, double q);
+
+/**
+ * Zipfian distribution
+ * algorithm from DAWG (Cartwright, 2005).
+ * Draw from Zipf distribution, with parameter a > 1.0
+ * Devroye Luc (1986) Non-uniform random variate generation.
+ * Springer-Verlag: Berlin. p551
+ * @param a, m
+ */
+int random_int_zipf(double a, int m = -1);
+
+/**
+ * Lavalette distribution
+ * Modified from W. Fletcher and Z. Yang, “INDELible: A flexible simulator of biological sequence evolution,” Mol. Biol. Evol., vol. 26, no. 8, pp. 1879–1888, 2009.
+ * @param a, m
+ */
+int random_int_lav(double a, int m);
+
+/**
+ * Parse indel-size distribution
+ */
+IndelDistribution parseIndelDis(string input, string event_name);
 
 template <class T>
 void my_random_shuffle (T first, T last, int *rstream = NULL)
@@ -2832,7 +3472,8 @@ void print_stacktrace(ostream &out, unsigned int max_frames = 63);
 */
 template<class T1, class T2>
 void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
-      ASSERT(left <= right);
+    if (left > right) return;
+    ASSERT(left <= right);
       int i = left, j = right;
       T1 pivot = arr[(left + right) / 2];
 
@@ -3021,6 +3662,11 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
 // Calculate the Frobenius norm of an N x N matrix M (flattened, rows
 // concatenated) and linearly scaled by SCALE.
 double frob_norm (double m[], int n, double scale=1.0);
+
+/**
+    concatenate the output file name with corresponding extension (for AliSim)
+*/
+string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
 
 #endif

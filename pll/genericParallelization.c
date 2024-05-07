@@ -42,8 +42,11 @@
 #include "genericParallelization.h"
 #include "pllInternal.h"
 #include "pll.h"
-#include <mpi.h>
-
+// BQM: this causes compiling error when MPI was not installed
+// GMJB: Fixed as per below
+#if defined(_FINE_GRAIN_MPI) || defined(_IQTREE_MPI)
+  #include <mpi.h>
+#endif
 /** @file genericParallelization.c
     
     @brief Generic master-worker parallelization with either pthreads or MPI. 

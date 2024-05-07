@@ -15,7 +15,31 @@
 void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
     BranchVector branches;
     getInnerBranches(branches);
+
+    bool orig_kernel_nonrev;
+    double *marginal_ancestral_prob;
+    int *marginal_ancestral_seq;
+    if (params->ancestral_site_concordance) {
+        initMarginalAncestralState(cout, orig_kernel_nonrev, marginal_ancestral_prob, marginal_ancestral_seq);
+        if (verbose_mode >= VB_MED) {
+            cout << "Node\tSite\tState";
+            for (size_t i = 0; i < aln->num_states; i++)
+                cout << "\tp_" << aln->convertStateBackStr(i);
+            cout << endl;
+        }
+    }
+
+    bool do_openmp = (params->ancestral_site_concordance == 0);
+    
 #ifdef _OPENMP
+    if (params->ancestral_site_concordance) {
+        if (omp_get_num_threads() != 1) {
+            outWarning("--scfl works but does not yet support multi-threading");
+        }
+    }
+#endif
+
+#if defined(_OPENMP) && (do_openmp == true)
 #pragma omp parallel
     {
         int *rstream;
@@ -26,7 +50,11 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
 #endif
     for (auto ii = 0; ii < branches.size(); ii++) {
         BranchVector::iterator it = branches.begin()+ii;
-        computeSiteConcordance((*it), params->site_concordance, rstream);
+        if (params->ancestral_site_concordance)
+            computeAncestralSiteConcordance((*it), params->site_concordance, rstream,
+                marginal_ancestral_prob, marginal_ancestral_seq);
+        else
+            computeSiteConcordance((*it), params->site_concordance, rstream);
         Neighbor *nei = it->second->findNeighbor(it->first);
         double sCF = 0.0;
         if (!GET_ATTR(nei, sCF))
@@ -48,11 +76,14 @@ void PhyloTree::computeSiteConcordance(map<string,string> &meanings) {
             node->name += sup_str;
         }
     }
-#ifdef _OPENMP
+#if defined(_OPENMP) && (do_openmp == true)
         finish_random(rstream);
     }
 #endif
 
+    if (params->ancestral_site_concordance)
+        endMarginalAncestralState(orig_kernel_nonrev, marginal_ancestral_prob, marginal_ancestral_seq);
+    
     PUT_MEANING(sCF, "Site concordance factor averaged over " + convertIntToString(params->site_concordance) +  " quartets (=sCF_N/sN %)");
     PUT_MEANING(sN, "Number of informative sites averaged over " + convertIntToString(params->site_concordance) +  " quartets");
     PUT_MEANING(sDF1, "Site discordance factor for alternative quartet 1 (=sDF1_N/sN %)");
@@ -282,6 +313,389 @@ void PhyloTree::computeSiteConcordance(Branch &branch, int nquartets, int *rstre
         else
             nei->putAttr(keys[i%3] + convertIntToString(i/3), "NA");
     }
+}
+
+int random_int_multinomial(int n, double *prob, int most_likely, int *rstream) {
+    double r = random_double();
+    // accumulative probability
+    double accum = prob[most_likely];
+    if (r < accum)
+        return most_likely;
+    for (int k = 0; k < n; k++)
+        if (k != most_likely) {
+            accum += prob[k];
+            if (r < accum)
+                return k;
+        }
+    // reaching here, return the most likely
+    return most_likely;
+}
+
+int random_int_multinomial(int n, double *prob, int *rstream) {
+    double r = random_double();
+    // accumulative probability
+    double accum = 0.0;
+    for (int k = 0; k < n; k++) {
+        accum += prob[k];
+        if (r < accum)
+            return k;
+    }
+    // reaching here, return the last one
+    return n-1;
+}
+
+void PhyloTree::computeSubtreeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq)
+{
+    size_t nptn = getAlnNPattern();
+    size_t nstates = model->num_states;
+    size_t nstates_vector = nstates * vector_size;
+    size_t ncat_mix = (model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures();
+    //double state_freq[nstates];
+    //model->getStateFrequency(state_freq);
+
+    // compute _pattern_lh_cat_state using NONREV kernel
+    computeLikelihoodBranch(dad_branch, dad);
+
+    //double *lh_state = _pattern_lh_cat_state;
+    double *lh_state = dad_branch->partial_lh;
+    memset(ptn_ancestral_prob, 0, sizeof(double)*nptn*nstates);
+
+    
+    if (dad_branch->node->isLeaf()) {
+        // external node
+        
+        for (size_t ptn = 0; ptn < nptn; ptn++) {
+            int state;
+            if (isRootLeaf(dad_branch->node)) {
+                state = aln->STATE_UNKNOWN;
+            } else {
+                state = (aln->at(ptn))[dad_branch->node->id];
+            }
+            double *state_lh = &tip_partial_lh[state*nstates];
+            memcpy(&ptn_ancestral_prob[ptn*nstates], state_lh, sizeof(double)*nstates);
+
+        }
+    } else {
+        // internal node
+        // convert vector_size into continuous pattern
+        for (size_t ptn = 0; ptn < nptn; ptn += vector_size) {
+            double *state_prob = ptn_ancestral_prob + ptn*nstates;
+            for (size_t c = 0; c < ncat_mix; c++) {
+                for (size_t i = 0; i < nstates; i++) {
+                    for (size_t v = 0; v < vector_size; v++) if (ptn+v < nptn)
+                    {
+                        state_prob[v*nstates+i] += lh_state[i*vector_size + v];
+                    }
+                }
+                lh_state += nstates_vector;
+            }
+        }
+    }
+
+    // now normalize to probability
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        double *state_prob = ptn_ancestral_prob + ptn*nstates;
+        double sum = 0.0;
+        int state_best = 0;
+        for (size_t i = 0; i < nstates; i++) {
+            sum += state_prob[i];
+            if (state_prob[i] > state_prob[state_best])
+                state_best = i;
+        }
+        if (params->ancestral_site_concordance == 2 && sum > 1.0) {
+            // UPDATE for sCLF: ignoring sites where one subtree shows just gap/ambiguity
+            state_best = aln->STATE_UNKNOWN;
+        }
+        sum = 1.0/sum;
+        for (size_t i = 0; i < nstates; i++) {
+            state_prob[i] *= sum;
+        }
+
+        // best state must exceed its equilibrium frequency!
+        //if (state_prob[state_best] < params->min_ancestral_prob ||
+        //    state_prob[state_best] <= state_freq[state_best]+MIN_FREQUENCY_DIFF)
+        //    state_best = aln->STATE_UNKNOWN;
+        ptn_ancestral_seq[ptn] = state_best;
+    }
+}
+
+double* PhyloTree::newAncestralProb() {
+    if (isSuperTree()) {
+        PhyloSuperTree* stree = (PhyloSuperTree*)(this);
+        size_t total_size = 0;
+        for (auto it = stree->begin(); it != stree->end(); it++) {
+            size_t nptn = (*it)->getAlnNPattern();
+            size_t nstates = (*it)->model->num_states;
+            total_size += nptn*nstates;
+        }
+        return aligned_alloc<double>(total_size);
+    } else {
+        size_t nptn = getAlnNPattern();
+        size_t nstates = model->num_states;
+        return aligned_alloc<double>(nptn*nstates);
+    }
+}
+
+void PhyloTree::computeAncestralSiteConcordance(Branch &branch, int nquartets, int *rstream,
+        double *marginal_ancestral_prob, int* marginal_ancestral_seq)
+{
+    
+//    vector<Neighbor*> first_nei;
+//    vector<Neighbor*> second_nei;
+    vector<double*> first_ancestral_prob;
+    vector<double*> second_ancestral_prob;
+    vector<int*> first_ancestral_seq;
+    vector<int*> second_ancestral_seq;
+
+    // extract two nodes adjecent to branch.first
+    FOR_NEIGHBOR_DECLARE(branch.first, branch.second, it) {
+        // do not consider internal branch at the root
+        if (rooted && (*it)->node == root)
+            return;
+//        first_nei.push_back(*it);
+        double *ptn_ancestral_prob = newAncestralProb();
+        int *ptn_ancestral_seq = aligned_alloc<int>(getAlnNPattern());
+        if (params->ancestral_site_concordance == 1)
+            computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.first,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+        else
+            computeSubtreeAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.first,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+//        PhyloNeighbor* nei = (PhyloNeighbor*)(*it)->node->findNeighbor(branch.first);
+//        computeMarginalAncestralState(nei, (PhyloNode*)(*it)->node,
+//            ptn_ancestral_prob, marginal_ancestral_seq);
+        if (verbose_mode >= VB_MED)
+            writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, ptn_ancestral_seq);
+        first_ancestral_prob.push_back(ptn_ancestral_prob);
+        first_ancestral_seq.push_back(ptn_ancestral_seq);
+    }
+
+    // extract the taxa from the two right subtrees
+    FOR_NEIGHBOR(branch.second, branch.first, it) {
+        // do not consider internal branch at the root
+        if (rooted && (*it)->node == root)
+            return;
+//        second_nei.push_back(*it);
+        double *ptn_ancestral_prob = newAncestralProb();
+        int *ptn_ancestral_seq = aligned_alloc<int>(getAlnNPattern());
+        if (params->ancestral_site_concordance == 1)
+            computeMarginalAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.second,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+        else
+            computeSubtreeAncestralState((PhyloNeighbor*)(*it), (PhyloNode*)branch.second,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+//        PhyloNeighbor* nei = (PhyloNeighbor*)(*it)->node->findNeighbor(branch.second);
+//        computeMarginalAncestralState(nei, (PhyloNode*)(*it)->node,
+//            ptn_ancestral_prob, marginal_ancestral_seq);
+        if (verbose_mode >= VB_MED)
+            writeMarginalAncestralState(cout, (PhyloNode*)((*it)->node), ptn_ancestral_prob, ptn_ancestral_seq);
+        second_ancestral_prob.push_back(ptn_ancestral_prob);
+        second_ancestral_seq.push_back(ptn_ancestral_seq);
+    }
+    
+    ASSERT(first_ancestral_prob.size() >= 2);
+    ASSERT(second_ancestral_prob.size() >= 2);
+    
+    uint64_t sum_sites = 0;
+    double sCF = 0.0; // concordance factor
+    double sDF1 = 0.0;
+    double sDF2 = 0.0;
+    double sN = 0.0;
+    double sCF_N = 0, sDF1_N = 0, sDF2_N = 0;
+    Neighbor *nei = branch.second->findNeighbor(branch.first);
+
+    // main loop to compute ancestral sCF
+    for (size_t i = 0; i < nquartets; ++i) {
+        int first_id0 = 0, first_id1 = 1, second_id0 = 0, second_id1 = 1;
+        if (first_ancestral_prob.size() > 2) {
+            first_id0 = random_int(first_ancestral_prob.size(), rstream);
+            do {
+                first_id1 = random_int(first_ancestral_prob.size(), rstream);
+            } while (first_id0 == first_id1);
+        }
+        if (second_ancestral_prob.size() > 2) {
+            second_id0 = random_int(second_ancestral_prob.size(), rstream);
+            do {
+                second_id1 = random_int(second_ancestral_prob.size(), rstream);
+            } while (second_id0 == second_id1);
+            
+        }
+
+        size_t support[3] = {0, 0, 0};
+
+        if (isSuperTree()) {
+            PhyloSuperTree* stree = (PhyloSuperTree*)this;
+            size_t start_pos = 0;
+            size_t start_pos_seq = 0;
+            for (auto it = stree->begin(); it != stree->end(); it++) {
+                size_t nptn = (*it)->getAlnNPattern();
+                size_t nstates = (*it)->model->num_states;
+                for (size_t ptn = 0; ptn < nptn; ptn++) {
+                    // FIX sCFL: ignore sites if at least one subtree shows all gap/ambiguitity
+                    if (first_ancestral_seq[first_id0][start_pos_seq + ptn] >= nstates ||
+                        first_ancestral_seq[first_id1][start_pos_seq + ptn] >= nstates ||
+                        second_ancestral_seq[second_id0][start_pos_seq + ptn] >= nstates ||
+                        second_ancestral_seq[second_id1][start_pos_seq + ptn] >= nstates) {
+                        continue;
+                    }
+                    StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+ptn*nstates+start_pos, rstream);
+                    StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+ptn*nstates+start_pos, rstream);
+                    StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+ptn*nstates+start_pos, rstream);
+                    StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+ptn*nstates+start_pos, rstream);
+                    if (first_state0 == first_state1 && second_state0 == second_state1 && first_state0 != second_state0)
+                        support[0] += (*it)->aln->at(ptn).frequency;
+                    else if (first_state0 == second_state0 && first_state1 == second_state1 && first_state0 != first_state1)
+                        support[1] += (*it)->aln->at(ptn).frequency;
+                    else if (first_state0 == second_state1 && first_state1 == second_state0 && first_state0 != first_state1)
+                        support[2] += (*it)->aln->at(ptn).frequency;
+                }
+                start_pos += nptn*nstates;
+                start_pos_seq += nptn;
+            }
+        } else {
+            size_t nptn = getAlnNPattern();
+            size_t nstates = model->num_states;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                if (first_ancestral_seq[first_id0][ptn] >= nstates ||
+                    first_ancestral_seq[first_id1][ptn] >= nstates ||
+                    second_ancestral_seq[second_id0][ptn] >= nstates ||
+                    second_ancestral_seq[second_id1][ptn] >= nstates) {
+                    continue;
+                }
+                StateType first_state0 = random_int_multinomial(nstates, first_ancestral_prob[first_id0]+ptn*nstates, rstream);
+                StateType first_state1 = random_int_multinomial(nstates, first_ancestral_prob[first_id1]+ptn*nstates, rstream);
+                StateType second_state0 = random_int_multinomial(nstates, second_ancestral_prob[second_id0]+ptn*nstates, rstream);
+                StateType second_state1 = random_int_multinomial(nstates, second_ancestral_prob[second_id1]+ptn*nstates, rstream);
+                if (first_state0 == first_state1 && second_state0 == second_state1 && first_state0 != second_state0)
+                    support[0] += aln->at(ptn).frequency;
+                else if (first_state0 == second_state0 && first_state1 == second_state1 && first_state0 != first_state1)
+                    support[1] += aln->at(ptn).frequency;
+                else if (first_state0 == second_state1 && first_state1 == second_state0 && first_state0 != first_state1)
+                    support[2] += aln->at(ptn).frequency;
+            }
+        }
+        size_t sum = support[0] + support[1] + support[2];
+        sum_sites += sum;
+        if (sum > 0) {
+            sCF += ((double)support[0]) / sum;
+            sDF1 += ((double)support[1]) / sum;
+            sDF2 += ((double)support[2]) / sum;
+            sCF_N += support[0];
+            sDF1_N += support[1];
+            sDF2_N += support[2];
+        }
+    }
+    sN = (double)sum_sites / nquartets;
+    // rounding
+    sCF = round(sCF / nquartets * 10000)/100;
+    sDF1 = round(sDF1 / nquartets * 10000)/100;
+    sDF2 = round(sDF2 / nquartets * 10000)/100;
+    sCF_N = round(sCF_N / nquartets * 100)/100;
+    sDF1_N = round(sDF1_N / nquartets * 100)/100;
+    sDF2_N = round(sDF2_N / nquartets * 100)/100;
+    PUT_ATTR(nei, sCF);
+    PUT_ATTR(nei, sN);
+    PUT_ATTR(nei, sDF1);
+    PUT_ATTR(nei, sDF2);
+    PUT_ATTR(nei, sCF_N);
+    PUT_ATTR(nei, sDF1_N);
+    PUT_ATTR(nei, sDF2_N);
+    stringstream s_factors;
+    s_factors << sCF << "/" << sDF1 << "/" << sDF2;
+    nei->putAttr("sCF/sDF1/sDF2", s_factors.str());
+    stringstream s_factors_N;
+    s_factors_N << sCF_N << "/" << sDF1_N << "/" << sDF2_N;
+    nei->putAttr("sCF_N/sDF1_N/sDF2_N", s_factors_N.str());
+    // insert key-value for partition-wise con/discordant sites
+//    string keys[] = {"sC", "sD1", "sD2"};
+//    for (size_t i = 3; i < support.size(); ++i) {
+//        if (support[i] >= 0)
+//            nei->putAttr(keys[i%3] + convertIntToString(i/3), (double)support[i]/nquartets);
+//        else
+//            nei->putAttr(keys[i%3] + convertIntToString(i/3), "NA");
+//    }
+    for (auto it2 = second_ancestral_prob.rbegin(); it2 != second_ancestral_prob.rend(); it2++)
+        aligned_free(*it2);
+    for (auto it1 = first_ancestral_prob.rbegin(); it1 != first_ancestral_prob.rend(); it1++)
+        aligned_free(*it1);
+    for (auto it3 = second_ancestral_seq.rbegin(); it3 != second_ancestral_seq.rend(); it3++)
+        aligned_free(*it3);
+    for (auto it4 = first_ancestral_seq.rbegin(); it4 != first_ancestral_seq.rend(); it4++)
+        aligned_free(*it4);
+}
+
+
+void PhyloTree::computeAllAncestralSiteConcordance() {
+    BranchVector branches;
+    getInnerBranches(branches);
+    BranchVector::iterator brit;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        string label = brit->second->name;
+        if (!label.empty())
+            PUT_ATTR(branch, label);
+    }
+    map<string,string> meanings;
+    cout << "Computing site concordance factor using likelihood..." << endl;
+    double start_time = getRealTime();
+    computeSiteConcordance(meanings);
+    cout << getRealTime() - start_time << " sec" << endl;
+    string prefix = params->out_prefix;
+    string str = prefix + ".cf.tree";
+    printTree(str.c_str(), WT_BR_LEN + WT_NEWLINE);
+    cout << "Tree with site concordance factors written to " << str << endl;
+    str = prefix + ".cf.tree.nex";
+    string filename = prefix + ".cf.stat";
+    printNexus(str, WT_BR_LEN, "See " + filename + " for branch annotation meanings." +
+                     " This file is best viewed in FigTree.");
+    cout << "Annotated tree (best viewed in FigTree) written to " << str << endl;
+    str = prefix + ".cf.branch";
+    printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
+    cout << "Tree with branch IDs written to " << str << endl;
+    ofstream out;
+    out.open(filename.c_str());
+    out << "# Concordance factor statistics" << endl
+        << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#   tab=read.table('" <<  filename << "',header=TRUE)" << endl
+        << "# Columns are tab-separated with following meaning:" << endl
+        << "#   ID: Branch ID" << endl;
+    map<string,string>::iterator mit;
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] != '*')
+            out << "#   " << mit->first << ": " << mit->second << endl;
+    out << "#   Label: Existing branch label" << endl;
+    out << "#   Length: Branch length" << endl;
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] == '*')
+            out << "# " << mit->first << ": " << mit->second << endl;
+    out << "ID";
+    for (mit = meanings.begin(); mit != meanings.end(); mit++)
+        if (mit->first[0] != '*')
+            out << "\t" << mit->first;
+    out << "\tLabel\tLength" << endl;
+    for (brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        int ID = brit->second->id;
+        out << ID;
+        for (mit = meanings.begin(); mit != meanings.end(); mit++) {
+            if (mit->first[0] == '*')
+                continue; // ignore NOTES
+            out << '\t';
+            string val;
+            if (branch->getAttr(mit->first, val))
+                out << val;
+            else
+                out << "NA";
+        }
+        double length = branch->length;
+        string label;
+        GET_ATTR(branch, label);
+        out << '\t' << label << '\t' << length << endl;
+    }
+    out.close();
+    cout << "Concordance factors per branch printed to " << filename << endl;
+
 }
 
 /**

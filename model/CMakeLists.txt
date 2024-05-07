@@ -11,6 +11,8 @@ partitionmodel.cpp partitionmodel.h
 partitionmodelplen.cpp partitionmodelplen.h
 rategamma.cpp rategamma.h
 rategammainvar.cpp rategammainvar.h
+ratecontinuousgamma.cpp ratecontinuousgamma.h
+ratecontinuousgammainvar.cpp ratecontinuousgammainvar.h
 rateheterogeneity.cpp rateheterogeneity.h
 rateinvar.cpp rateinvar.h
 ratemeyerdiscrete.cpp ratemeyerdiscrete.h
@@ -28,6 +30,9 @@ modelliemarkov.cpp modelliemarkov.h
 modelpomo.cpp modelpomo.h
 modelpomomixture.cpp modelpomomixture.h
 modelfactorymixlen.cpp modelfactorymixlen.h
+modelhmm.cpp modelhmm.h
+modelhmmgm.cpp modelhmmgm.h
+modelhmmtm.cpp modelhmmtm.h
 )
 
 target_link_libraries(model utils)

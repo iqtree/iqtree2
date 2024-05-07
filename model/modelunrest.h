@@ -14,7 +14,7 @@ class ModelUnrest: public ModelMarkov {
 public:
 
     /** constructor */
-	ModelUnrest(PhyloTree *tree, string model_params);
+	ModelUnrest(PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params);
 
     /**
      * true if model_name is the name of some known non-reversible model
@@ -49,6 +49,7 @@ public:
 
 protected:
 	void writeInfo(ostream &out);
+    virtual void setRates();
 };
 
 #endif /* MODELUNREST_H_ */

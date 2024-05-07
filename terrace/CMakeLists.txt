@@ -1,6 +1,12 @@
 add_library(terrace
+terracenode.cpp
+terracenode.hpp
+terracetree.cpp
+terracetree.hpp
+presenceabsencematrix.cpp
+presenceabsencematrix.hpp
+terrace.hpp
 terrace.cpp
-terrace.h
 )
 
-target_link_libraries(terrace tree alignment terraphast)
+target_link_libraries(terrace tree)

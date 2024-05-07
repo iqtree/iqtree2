@@ -41,6 +41,20 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
 		bool append = false, const char *linename = NULL);
 
 /**
+ * print HMM results to a fileExists
+ * @param filename output file name
+ * @param tree IQTreeMixHmm
+ */
+void printHMMResult(const char*filename, PhyloTree *tree, int cat_assign_method = 0);
+
+/**
+ * print marginal probabilities to a fileExists
+ * @param filename output file name
+ * @param tree IQTreeMixHmm
+ */
+void printMarginalProb(const char* filename, PhyloTree *tree);
+
+/**
  * print partition log likelihoods to a file
  * @param filename output file name
  * @param tree phylogenetic tree
@@ -94,9 +108,11 @@ void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqT
  * @param info (OUT) output information
  * @param distinct_ids IDs of distinct trees
  */
+void evaluateTrees(istream &in, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
+
 void evaluateTrees(string treeset_file, Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
 
-void evaluateTrees(string treeset_file, Params &params, IQTree *tree);
 
+void printTreeTestResults(vector<TreeInfo> &info, IntVector &distinct_ids, IntVector &branch_ids, string out_file);
 
 #endif // TREETESTING_H_

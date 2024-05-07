@@ -124,6 +124,13 @@ public:
      */
     virtual void report(ostream &out);
 
+    /** compute the tip likelihood vector of a state for Felsenstein's pruning algorithm
+     @param state character state
+     @param[out] state_lk state likehood vector of size num_states
+     */
+    virtual void computeTipLikelihood(PML::StateType state, double *state_lk) {
+        ModelPoMo::computeTipLikelihood(state, state_lk);
+    }
 
     /**
         rate heterogeneity among sites, TODO: redesign this as separate
@@ -154,10 +161,11 @@ public:
      compute the transition probability matrix.
      @param time time between two events
      @param mixture (optional) class for mixture model
+     @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
      @param trans_matrix (OUT) the transition matrix between all pairs of states.
      Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
 
 protected:
 

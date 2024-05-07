@@ -37,6 +37,8 @@
 #include "ncl/ncl.h"
 #include "utils/tools.h"
 #include "pda/split.h"
+#include "model/modelsubst.h"
+#include "alignment/sequence.h"
 
 using namespace std;
 
@@ -266,6 +268,11 @@ public:
         node name
      */
     string name;
+    
+    /**
+        sequence
+     */
+    Sequence* sequence = NULL;
 
     /**
         list of neighbors
@@ -294,6 +301,7 @@ public:
     Node() {
         id = -1;
         height = -1;
+        sequence = NULL;
     };
 
 

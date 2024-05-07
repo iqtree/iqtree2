@@ -79,6 +79,7 @@ void readDateFile(string date_file, set<string> &node_names, TaxonDateMap &dates
             // error checking, make sure is date is valid
             if (date.empty())
                 throw line_out + "date is empty";
+            if (date.substr(0,2) != "NA")
             try {
                 int end_pos;
                 convert_double(date.c_str(), end_pos);
@@ -272,7 +273,7 @@ void runLSD2(PhyloTree *tree) {
         arg.push_back(convertDate(Params::getInstance().date_tip));
     }
 
-    lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "", "");
+    lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "", "", "");
 
     if (Params::getInstance().dating_options != "") {
         // extra options for LSD

@@ -60,8 +60,26 @@ public:
 		@return TRUE if model is time-reversible, FALSE otherwise
 	*/
 	virtual bool isReversible();
+    
+    /**
+     * @return TRUE if this is a liemarkov model, FALSE otherwise
+     */
+    virtual bool isLieMarkov() { return true; }
 
-
+    /**
+         initialize random state frequencies when running AliSim without inference mode
+    */
+    void initStateFreqsAliSim(StateFreqType expected_freq_type);
+    
+    /**
+         read user-specified state frequencies
+    */
+    void readFreqs(StateFreqType expected_freq_type, string freq_params);
+    
+    /**
+         mapping state frequencies from user-specified/random frequencies
+    */
+    void mappingFreqs(StateFreqType expected_freq_type, double *freqs);
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
@@ -81,10 +99,11 @@ public:
 		compute the transition probability matrix.
 		@param time time between two events
         @param mixture (optional) class for mixture model
+        @param selected_row (optional) only compute the entries of one selected row. By default, compute all rows
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0, int selected_row = -1);
 	// overrides Optimization::restartParameters
 	bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
 

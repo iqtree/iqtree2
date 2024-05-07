@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
+ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false)
 {
 	num_params = getNumRateEntries() - 1;
@@ -17,32 +17,40 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
 	for (int i=0; i< num_params; i++) rates[i] = 1.0;
 	//setRates();
 	if (model_params != "") {
-		int end_pos = 0;
-		cout << __func__ << " " << model_params << endl;
-		for (int i = 0; i < 12; i++) {
-			int new_end_pos;
-			try {
-				rates[i] = convert_double(model_params.substr(end_pos).c_str(), new_end_pos);
-			} catch (string &model_params) {
-				outError(model_params);
-			}
-		
-			end_pos += new_end_pos;
-			if (rates[i] <= 0.0)
-				outError("Non-positive rates found");
-			if (i == 11 && end_pos < model_params.length())
-				outError("String too long ", model_params);
-			if (i < 11 && end_pos >= model_params.length())
-				outError("Unexpected end of string ", model_params);
-			if (end_pos < model_params.length() && model_params[end_pos] != ',')
-				outError("Comma to separate rates not found in ", model_params);
-			end_pos++;
-		}
-		num_params = 0;
-		writeInfo(cout);
+		//cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
+		// TODO: parse model_params into model_parameters, then call setRates().
+        // detect the seperator
+        char separator = ',';
+        if (model_params.find('/') != std::string::npos)
+            separator = '/';
+        
+        // parse input into vector
+        DoubleVector tmp_rates;
+        convert_double_vec_with_distributions(model_params.c_str(), tmp_rates, false, separator);
+        
+        // validate the number of params (11 or 12)
+        if (tmp_rates.size() != num_params && tmp_rates.size() != num_params + 1)
+            outError("Model UNREST requires "+convertIntToString(num_params)+" parameters. Please check and try again!");
+        
+        // set rates from input params
+        for (int i = 0; i < tmp_rates.size(); i++) {
+            rates[i] = tmp_rates[i];
+            
+            // check to fix parameters
+            fixed_parameters = !Params::getInstance().optimize_from_given_params;
+        }
+        
+        // if the user supplies 11 params -> set the last rate at 1.0
+        if (tmp_rates.size() == num_params)
+            setRates();
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
+    
+    // parse state_freqs if specified
+    if (freq_params != "")
+        outWarning("In the UNREST model, state frequencies should be embedded into the substitution rates. Thus, AliSim skips the user-specified state frequencies.");
+    
     ModelMarkov::init(FREQ_ESTIMATE);
 }
 
@@ -87,6 +95,13 @@ void ModelUnrest::setRates() {
 	rates[num_params]=1;
 }
 */
+
+void ModelUnrest::setRates() {
+    // For UNREST, parameters are simply the off-diagonal rate matrix entries
+    // (except [4,3] = rates[11], which is constrained to be 1)
+    rates[num_params] = 1;
+    return;
+}
 
 void ModelUnrest::setStateFrequency(double* freq) {
     // DOES NOTHING

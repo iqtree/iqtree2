@@ -66,8 +66,8 @@ string ModelDNAError::getName() {
     return retname;
 }
 
-string ModelDNAError::getNameParams() {
-    string retname = ModelDNA::getNameParams();
+string ModelDNAError::getNameParams(bool show_fixed_params) {
+    string retname = ModelDNA::getNameParams(show_fixed_params);
     retname += seqerr_name + "{" + convertDoubleToString(epsilon) + "}";
     return retname;
 }

@@ -31,6 +31,9 @@ using namespace std;
 	class MTree
 *********************************************/
 
+// constant variables for annotations on branches
+const string MTree::ANTT_MUT = "mutations";
+
 MTree::MTree() {
     root = NULL;
     leafNum = 0;
@@ -463,11 +466,25 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
     if (length_nei->length == -1.0)
         return; // NA branch length
     int prec = 10;
+    if (Params::getInstance().numeric_precision > 0)
+        prec = Params::getInstance().numeric_precision;
 	double length = length_nei->length;
     if (brtype & WT_BR_SCALE) length *= len_scale;
     if (brtype & WT_BR_LEN_SHORT) prec = 6;
     if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
     out.precision(prec);
+    
+    if (brtype & WT_BR_LEN) {
+        if (brtype & WT_BR_LEN_FIXED_WIDTH)
+            out << ":" << fixed << length;
+        else
+            out << ":" << length;
+    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
+    	if (print_slash)
+    		out << "/";
+        out << length;
+    }
+
     if ((brtype & WT_BR_ATTR) && !length_nei->attributes.empty()) {
         // print branch attributes
         out << "[&";
@@ -479,17 +496,6 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
             first = false;
         }
         out << "]";
-    }
-    
-    if (brtype & WT_BR_LEN) {
-        if (brtype & WT_BR_LEN_FIXED_WIDTH)
-            out << ":" << fixed << length;
-        else
-            out << ":" << length;
-    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
-    	if (print_slash)
-    		out << "/";
-        out << length;
     }
 }
 
@@ -677,11 +683,20 @@ void MTree::printTaxa(ostream &out, NodeVector &subtree) {
         }
 }
 
-void MTree::readTree(const char *infile, bool &is_rooted) {
+void MTree::readTree(const char *infile, bool &is_rooted, int tree_line_index) {
     ifstream in;
     try {
         in.exceptions(ios::failbit | ios::badbit);
         in.open(infile);
+        // move to the correct line to read the tree (in case with multiple trees *.parttrees)
+        for (int i = 0; i < tree_line_index; i++)
+        {
+            in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            
+            // make sure the current line is not empty
+            if (in.peek() == EOF )
+                outError("Could not found a tree for the partition " + convertIntToString(tree_line_index) + " at line " + convertIntToString(tree_line_index+1)+" in the input tree file. To use Edge-unlinked partition model, please specify a super tree (combining all taxa in all partitions) in the first line. Following that, each tree for each partition should be specified in a single line one by one in the input (multiple)-tree file.");
+        }
         readTree(in, is_rooted);
         in.close();
     } catch (ios::failure) {
@@ -737,6 +752,15 @@ void MTree::readTree(istream &in, bool &is_rooted)
             node->addNeighbor(root, branch_len);
             leafNum++;
             rooted = true;
+            
+            // parse key/value from comment
+            string KEYWORD="&";
+            bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
+                                                  && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+            if (in_comment_contains_key_value)
+                parseKeyValueFromComment(in_comment, root, node);
+            
+            
         } else { // assign root to one of the neighbor of node, if any
             FOR_NEIGHBOR_IT(node, NULL, it)
             if ((*it)->node->isLeaf()) {
@@ -795,12 +819,40 @@ void MTree::initializeTree(Node *node, Node* dad)
 
 void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
 //    branch_len.push_back(convert_double(lenstr.c_str()));
-    double len = convert_double(lenstr.c_str());
-    if (in_comment.empty()) {
+    string KEYWORD="&";
+    bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
+                                          && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+    bool in_comment_for_ghost_model = (!in_comment_contains_key_value) && (in_comment.find('/') != string::npos);
+    
+    double len;
+    // randomly generate branch length based on a user-defined distribution
+    if (Params::getInstance().branch_distribution)
+        len = random_number_from_distribution(Params::getInstance().branch_distribution, true);
+    // or parse it from tree file
+    else
+        len = convert_double_with_distribution(lenstr.c_str(), true);
+    
+    if (in_comment.empty() || (!in_comment_for_ghost_model)) {
         branch_len.push_back(len);
         return;
     }
-    convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+    
+    // don't try to parse multiple lengths if in_comment starts with "&" (input key=value)
+    if (in_comment_for_ghost_model)
+    {
+        // randomly generate a set of branch lengths based on a user-defined distribution
+        if (Params::getInstance().branch_distribution)
+        {
+            size_t num_separators = std::count(in_comment.begin(), in_comment.end(), BRANCH_LENGTH_SEPARATOR);
+            
+            branch_len.clear();
+            for (int i = 0; i < (num_separators + 1); i++)
+                branch_len.push_back(random_number_from_distribution(Params::getInstance().branch_distribution, true));
+        }
+        // or parse them from tree file
+        else
+            convert_double_vec_with_distributions(in_comment.c_str(), branch_len, true, BRANCH_LENGTH_SEPARATOR);
+    }
 //    char* str = (char*)in_comment.c_str() + 1;
 //    int pos;
 //    for (int i = 1; str[0] == 'L'; i++) {
@@ -844,8 +896,21 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             //throw "Found branch with no length.";
             //if (brlen < 0.0)
             //throw ERR_NEG_BRANCH;
+            
+            // randomly generate branch lengths if users supply a distribution name and a tree topology without branch lengths.
+            if (Params::getInstance().branch_distribution && brlen.size() == 0)
+                brlen.push_back(random_number_from_distribution(Params::getInstance().branch_distribution, true));
+            
             root->addNeighbor(node, brlen);
             node->addNeighbor(root, brlen);
+            
+            // handle [&model=GTR+G]
+            string KEYWORD="&";
+            bool in_comment_contains_key_value = in_comment.length() > KEYWORD.length()
+                                                  && !in_comment.substr(0, KEYWORD.length()).compare(KEYWORD);
+            if (in_comment_contains_key_value)
+                parseKeyValueFromComment(in_comment, root, node);
+            
             if (infile.eof())
                 throw "Expecting ')', but end of file instead";
             if (ch == ',')
@@ -884,6 +949,19 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
     }
     if ((controlchar(ch) || ch == '[' || ch == end_ch) && !infile.eof())
         ch = readNextChar(infile, ch);
+    
+    // if ch == '/' then continue to add to the seqname
+    if (ch == '/') {
+        while (!infile.eof() && seqlen < maxlen)
+        {
+            if (is_newick_token(ch) || controlchar(ch)) break;
+            seqname += ch;
+            seqlen++;
+            ch = infile.get();
+            in_column++;
+        }
+    }
+    
     if (seqlen == maxlen)
         throw "Too long name ( > 1000)";
     if (root->isLeaf())
@@ -927,9 +1005,89 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         parseBranchLength(seqname, branch_len);
 //        convert_double_vec(seqname.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
     }
+    // handle the case of multiple-length branches but lack of the average branch length
+    // e.g A[0.1/0.2/0.3/0.4] instead of A[0.1/0.2/0.3/0.4]:0.25
+    else if (in_comment.length() > 0)
+    {
+        // set default average branch length at 0
+        string default_avg_length = "0";
+        parseBranchLength(default_avg_length, branch_len);
+    }
 }
 
-
+/**
+        parse the [&<key_1>=<value_1>,...,<key_n>=<value_n>] in the tree file
+        @param in_comment the input comment extract from tree file
+        @param node1, node2 the nodes that the branch connects to
+ */
+void MTree::parseKeyValueFromComment(string &in_comment, Node* node1, Node* node2)
+{
+    string KEYWORD="&";
+    string tmp_comment = in_comment;
+    
+    // split tmp_comment into multiple key_value_pairs by ","
+    while (tmp_comment.length() > 0) {
+        // remove "&" (if any)
+        if (tmp_comment[0] == KEYWORD[0])
+            tmp_comment.erase(0, KEYWORD.length());
+        
+        size_t pos_comma = 0;
+        // find the first comma ',' that is not inside a pair of brackets '{}'
+        int num_open_brackets = 0;
+        // browse the characters one by one
+        for (pos_comma = 0; pos_comma < tmp_comment.length(); ++pos_comma)
+        {
+            // record the number of open brackets
+            if (tmp_comment[pos_comma] == '{')
+                ++num_open_brackets;
+            // reduce the number of open brackets if a close bracket is found
+            else if (tmp_comment[pos_comma] == '}')
+                --num_open_brackets;
+            // return the position where we found a comma outside of pairs of open and close brackets
+            else if (tmp_comment[pos_comma] == ',' && !num_open_brackets)
+                break;
+        }
+        string key_value_pair = tmp_comment.substr(0, pos_comma);
+        
+        // parse key/value
+        size_t pos_equal = key_value_pair.find('=');
+        if (pos_equal != std::string::npos)
+        {
+            // extract key, value
+            string key = key_value_pair.substr(0, pos_equal);
+            string value = key_value_pair.substr(pos_equal + 1, key_value_pair.length() - pos_equal -1);
+            
+            // detect key = mutations (to include pre-defined mutations for AliSim
+            // convert key to lowercase
+            std::string key_lower = key;
+            transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+            if (key_lower == ANTT_MUT)
+            {
+                // Make sure we store key "mutations" in the lowercase
+                key = key_lower;
+                
+                // update flag include_pre_mutations (if it's still false)
+                if (!Params::getInstance().include_pre_mutations)
+                    Params::getInstance().include_pre_mutations = true;
+            }
+            
+            // add key/value to attributes
+            node1->findNeighbor(node2)->putAttr(key, value);
+            node2->findNeighbor(node1)->putAttr(key, value);
+        }
+        else
+            outError("Error in reading the newick tree. Please use `[&<key_1>=<value_1>,...,<key_n>=<value_n>]` to specify custom attributes (e.g., `[&model=GTR]`)");
+        
+        // remove the current key_value_pair from tmp_comment
+        if (pos_comma != std::string::npos)
+            tmp_comment.erase(0, pos_comma + 1);
+        else
+            tmp_comment = "";
+    }
+    
+    // clear the comment
+    in_comment = "";
+}
 
 /**
 	check tree is bifurcating tree (every leaf with level 1 or 3)
@@ -1169,6 +1327,36 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
     }
 }
 
+// output both nodes and also the node ids
+void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, IntVector &nodeids, Node *node, Node *dad, bool post_traversal) {
+    if (!node) node = root;
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)   {
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (!post_traversal) {
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+            nodeids.push_back((*it)->id);
+        }
+        getBranches(nodes, nodes2, nodeids, (*it)->node, node, post_traversal);
+        if (post_traversal) {
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+            nodeids.push_back((*it)->id);
+        }
+    }
+}
+
 void MTree::getBranches(int max_dist, NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
@@ -1390,6 +1578,32 @@ void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *
         resp->addTaxon(node->id);
 }
 
+void MTree::convertSplits(SplitGraph &sg, Split *resp, BranchVector *branches, Node *node, Node *dad) {
+    if (!node) node = root;
+    ASSERT(resp->getNTaxa() == leafNum);
+    bool has_child = false;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        //vector<int> taxa;
+        //getTaxaID((*it)->node, node, taxa);
+
+        Split *sp = new Split(leafNum, (*it)->length);
+        convertSplits(sg, sp, branches, (*it)->node, node);
+        *resp += *sp;
+        if (sp->shouldInvert())
+            sp->invert();
+         /* ignore nodes with degree of 2 because such split will be added before */
+        if (node->degree() != 2) {
+            sg.push_back(sp);
+            if (branches) {
+                branches->push_back(make_pair(node, (*it)->node));
+            }
+        }
+        has_child = true;
+    }
+    if (!has_child)
+        resp->addTaxon(node->id);
+}
+
 void MTree::convertSplits(vector<string> &taxname, SplitGraph &sg, NodeVector *nodes, Node *node, Node *dad) {
     if (!sg.taxa) {
         sg.taxa = new NxsTaxaBlock();
@@ -1519,10 +1733,10 @@ Node *MTree::findNodeName(string &name, Node *node, Node *dad) {
     }
     return NULL;
 }
-
+/* WRONG IMPLEMENTATION
 bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res, Node *node, Node *dad) {
     int presence = 0;
-    Neighbor *target = NULL;
+    Neighbor *target = nullptr;
     FOR_NEIGHBOR_IT(node, dad, it) {
         if ((*it)->node->isLeaf()) {
             if (taxa_set.find((*it)->node->name) != taxa_set.end()) {
@@ -1533,29 +1747,69 @@ bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*>
                 presence++;
             else
                 target = *it;
-            if (res.first)
-                return false;
+            //if (res.first)
+              //  return false;
         }
     }
     // all presence or absence
-    if (presence == node->neighbors.size()-1)
-        return true;
     if (presence == 0)
         return false;
     // inbetween: detect it!
-    res.first = node;
-    res.second = target;
-    if (target != node->neighbors[0]) {
-        // move target into the first neighbor
-        FOR_NEIGHBOR_IT(node, NULL, it)
-        if ((*it) == target) {
-            (*it) = node->neighbors[0];
-            node->neighbors[0] = target;
-            break;
+    if (presence == node->neighbors.size()-1) {
+        res.first = node;
+        if (target == nullptr)
+            target = node->findNeighbor(dad);
+        res.second = target;
+        if (target != node->neighbors[0]) {
+            // move target into the first neighbor
+            FOR_NEIGHBOR_IT(node, NULL, it)
+            if ((*it) == target) {
+                (*it) = node->neighbors[0];
+                node->neighbors[0] = target;
+                break;
+            }
         }
+    }
+
+    if (presence == node->neighbors.size()-1) {
+        return true;
     }
     return false;
 }
+*/
+
+// slow version but correct
+bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res, Node *node, Node *dad) {
+    BranchVector branches;
+    SplitGraph sg;
+    Split sp(leafNum);
+    convertSplits(sg, &sp, &branches);
+    // iterator over all branch and compute rootstrap supports
+    ASSERT(branches.size() == sg.getNSplits());
+    int i;
+    Split this_split(leafNum);
+    for (auto it = taxa_set.begin(); it != taxa_set.end(); it++) {
+        string name = *it;
+        Node *taxon = findLeafName(name);
+        if (taxon == nullptr) {
+            cout << "Taxon " << *it << " not found in tree" << endl;
+            return false;
+        }
+        this_split.addTaxon(taxon->id);
+    }
+    if (this_split.shouldInvert())
+        this_split.invert();
+    for (i = 0; i < branches.size(); i++)
+        if (*sg[i] == this_split) {
+            // FOUND!
+            res.first = branches[i].first;
+            res.second = branches[i].first->findNeighbor(branches[i].second);
+            return true;
+        }
+    return false;
+}
+
+
 
 Node *MTree::findLeafName(string &name, Node *node, Node *dad) {
     if (!node) node = root;

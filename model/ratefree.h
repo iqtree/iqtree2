@@ -11,6 +11,7 @@
 #include "rategamma.h"
 
 class RateFree: public RateGamma {
+    friend class IQTreeMix;
 public:
 	/**
 		constructor
@@ -42,6 +43,13 @@ public:
 	*/	
     virtual int isGammaRate() { return 0; }
 
+    /**
+     *  @return true as this is a Free Rate model (default: false)
+     */
+    virtual bool isFreeRate() const {
+        return true;
+    }
+
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
@@ -53,6 +61,13 @@ public:
 		@return the proportion of the specified category
 	*/
 	virtual double getProp(int category) { return prop[category]; }
+    
+    /**
+        set the proportion of a specified category.
+        @param category category ID from 0 to #category-1
+        @return the proportion of the specified category
+    */
+    virtual void setProp(int category, double value) {prop[category] = value;}
 
 	/**
 		the target function which needs to be optimized

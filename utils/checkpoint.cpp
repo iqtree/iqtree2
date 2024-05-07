@@ -18,6 +18,7 @@ Checkpoint::Checkpoint() {
 	filename = "";
     prev_dump_time = 0;
     dump_interval = 60; // dumping at most once per 60 seconds
+    dump_count = 0;
     struct_name = "";
     compression = true;
     header = CKP_HEADER;
@@ -181,12 +182,36 @@ void Checkpoint::dump(bool force) {
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
     }
-    // check that the dumping time is too long and increase dump_interval if necessary
-    double dump_time = getRealTime() - prev_dump_time;
-    if (dump_time*20 > dump_interval) {
-        dump_interval = ceil(dump_time*20);
-        cout << "NOTE: " << dump_time << " seconds to dump checkpoint file, increase to "
-        << dump_interval << endl;
+    if (Params::getInstance().print_all_checkpoints) {
+        // Feature request by Nick Goldman
+        dump_count++;
+        filename_tmp = (string)Params::getInstance().out_prefix + "." + convertIntToString(dump_count) + ".ckp.gz";
+        try {
+            ostream *out;
+            if (compression)
+                out = new ogzstream(filename_tmp.c_str());
+            else
+                out = new ofstream(filename_tmp.c_str());
+            out->exceptions(ios::failbit | ios::badbit);
+            *out << header << endl;
+            // call dump stream
+            dump(*out);
+            if (compression)
+                ((ogzstream*)out)->close();
+            else
+                ((ofstream*)out)->close();
+            delete out;
+        } catch (ios::failure &) {
+            outError(ERR_WRITE_OUTPUT, filename_tmp.c_str());
+        }
+    } else {
+        // check that the dumping time is too long and increase dump_interval if necessary
+        double dump_time = getRealTime() - prev_dump_time;
+        if (dump_time*20 > dump_interval) {
+            dump_interval = ceil(dump_time*20);
+            cout << "NOTE: " << dump_time << " seconds to dump checkpoint file, increase to "
+            << dump_interval << endl;
+        }
     }
 }
 

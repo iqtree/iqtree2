@@ -30,7 +30,7 @@ static __inline void cpuid(unsigned int op, int count,
 	*ebx = regs[1];
 	*ecx = regs[2];
 	*edx = regs[3];
-#else
+#elif !defined (__ARM_NEON)
 	*eax = op;
   *ecx = count;
   asm volatile("cpuid"
@@ -109,6 +109,21 @@ static int pll_probe_cpu (pllHardwareInfo * hw)
 
 static void pll_probe_hardware (pllHardwareInfo * hw)
 {
+#if defined ( __ARM_NEON )               // SSE4.2 for "sse2neon.h"
+  hw->vendor[12] = 0;
+  hw->has_mmx    = 1;
+  hw->has_sse    = 1;
+  hw->has_sse2   = 1;
+  hw->has_sse3   = 1;
+  hw->has_ssse3  = 1;
+  hw->has_fma    = 1;
+  hw->has_sse41  = 1;
+  hw->has_sse42  = 1;
+  hw->has_avx    = 0;
+  hw->has_avx2   = 0;
+  hw->has_sse4a  = 0;
+  hw->has_fma    = 0;
+#else
   unsigned int a, b, c, d;
   c = 0;
 
@@ -142,6 +157,7 @@ static void pll_probe_hardware (pllHardwareInfo * hw)
 
   hw->has_sse4a = PLL_FEAT_AVAIL(c,PLL_HAS_SSE4A);
   hw->has_fma4  = PLL_FEAT_AVAIL(c,PLL_HAS_FMA4);
+#endif
 }
 
 int pllGetHardwareInfo (pllHardwareInfo * hw)
