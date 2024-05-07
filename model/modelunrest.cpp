@@ -12,10 +12,13 @@
 ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false)
 {
-	num_params = getNumRateEntries() - 1;
-	//model_parameters = new double [num_params];
-	for (int i=0; i< num_params; i++) rates[i] = 1.0;
-	//setRates();
+    num_params = getNumRateEntries() - 1;
+    //ModelMarkov::setReversible in the ModelMarkov
+    //constructor sets all the rates to 0.0.  But...
+    for (int i=0; i <= num_params; i++) {
+        rates[i] = 1.0;
+    }
+	
 	if (model_params != "") {
 		//cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
