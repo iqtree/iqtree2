@@ -437,6 +437,10 @@ private:
      *    return -1
      */
     int getBestModelForOneMergeMPI(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt, double& run_time, double& wait_time);
+
+    // retreive the answers from checkpoint (for merging)
+    // and remove those jobs from the array jobIDs
+    void retreiveAnsFrChkpt(vector<pair<int,double> >& jobs);
     
 	/**
 	 * compute and process the best model for partitions (for MPI)

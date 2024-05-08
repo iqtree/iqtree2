@@ -1066,11 +1066,20 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         } else {
             steps = 1;
         }
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
             double model_lh = 0.0;
             // only optimized if model is not linked
             model_lh = model->optimizeParameters(gradient_epsilon);
+
+            // synchronize the checkpoints of the other processors
+            if (syncChkPoint != nullptr) {
+                syncChkPoint->masterSyncOtherChkpts();
+            }
 
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 
@@ -1081,6 +1090,11 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
             if (logl <= prev_logl + gradient_epsilon)
                 break;
             prev_logl = logl;
+
+            // synchronize the checkpoints of the other processors
+            if (syncChkPoint != nullptr) {
+                syncChkPoint->masterSyncOtherChkpts();
+            }
         }
     } else {
         /* Optimize substitution and heterogeneity rates jointly using BFGS */
@@ -1386,14 +1400,14 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         tree->params->num_param_iterations = model->getNMixtures() * 100;
         // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
     }
+    
+    // synchronize the checkpoints of the other processors
+    if (syncChkPoint != nullptr) {
+        syncChkPoint->masterSyncOtherChkpts();
+    }
 
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
-
-        // synchronize the checkpoints of the other processors
-        if (syncChkPoint != nullptr) {
-            syncChkPoint->masterSyncOtherChkpts();
-        }
 
         // changed to opimise edge length first, and then Q,W,R inside the loop
         if (fixed_len == BRLEN_OPTIMIZE)
@@ -1425,6 +1439,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             }
             break;
         }
+
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+
         if (verbose_mode >= VB_MED) {
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
@@ -1452,6 +1472,11 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             }
             break;
         }
+
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
     }
 
     // normalize rates s.t. branch lengths are #subst per site
@@ -1464,6 +1489,11 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             tree->scaleLength(mean_rate);
             tree->clearAllPartialLH();
         }
+    }
+
+    // synchronize the checkpoints of the other processors
+    if (syncChkPoint != nullptr) {
+        syncChkPoint->masterSyncOtherChkpts();
     }
 
     if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
@@ -1496,6 +1526,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // ---------------------------
 
     tree->setCurScore(cur_lh);
+
     return cur_lh;
 }
 
