@@ -6,6 +6,8 @@
  */
 
 #include "modelunrest.h"
+#include <stdlib.h>
+#include <string.h>
 
 ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false)
@@ -16,6 +18,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
     for (int i=0; i <= num_params; i++) {
         rates[i] = 1.0;
     }
+	
 	if (model_params != "") {
 		//cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
@@ -54,6 +57,23 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
     ModelMarkov::init(FREQ_ESTIMATE);
 }
 
+void ModelUnrest::writeInfo(ostream &out) {
+		out << "UNREST rate values:";
+		out << "  A-C: " << rates[0];
+		out << "  A-G: " << rates[1];
+		out << "  A-T: " << rates[2];
+		out << "  C-A: " << rates[3];
+		out << "  C-G: " << rates[4];
+		out << "  C-T: " << rates[5];
+		out << "  G-A: " << rates[6];
+		out << "  G-C: " << rates[7];
+		out << "  G-T: " << rates[8];
+		out << "  T-A: " << rates[9];
+		out << "  T-C: " << rates[10];
+		out << "  T-G: " << rates[11];
+		out << endl;
+}
+
 /* static */ bool ModelUnrest::validModelName(string model_name) {
 	return (model_name == "UNREST");
 }
@@ -67,6 +87,8 @@ void ModelUnrest::setBounds(double *lower_bound, double *upper_bound, bool *boun
 		bound_check[i] = false;
 	}
 }
+
+
 
 /*
 void ModelUnrest::setRates() {
