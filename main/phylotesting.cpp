@@ -3255,7 +3255,7 @@ PartitionFinder::PartitionFinder(Params *inparams, PhyloSuperTree* intree, Model
 /*
  * Show the the other worker's result of best model for the merge
  */
-void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double tree_len, const string& model_name, double score, string& set_name, bool done_before, int tag) {
+void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double tree_len, const string& model_name, string& set_name, bool done_before, int tag) {
 
     double remain_time;
 
@@ -3274,8 +3274,8 @@ void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double t
                 cout << tag << " ";
             cout.width(12);
             cout << left << model_name << " ";
-            cout.width(11);
-            cout << score << " ";
+            // cout.width(11);
+            // cout << score << " ";
             cout.width(11);
             cout << tree_len << " " << set_name;
             if (num_model >= 10) {
@@ -3294,7 +3294,7 @@ void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double t
 /*
  * Show the the other worker's result of best model for the merge
  */
-void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag, int tot_jobs_done) {
+void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<string>& set_name, vector<int>& tag, int tot_jobs_done) {
 
     double remain_time;
     int i;
@@ -3314,8 +3314,8 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
                 cout << tag[i] << " ";
             cout.width(12);
             cout << left << model_name[i] << " ";
-            cout.width(11);
-            cout << score[i] << " ";
+            // cout.width(11);
+            // cout << score[i] << " ";
             cout.width(11);
             cout << tree_len[i] << " " << set_name[i];
             if (num_model >= 10) {
@@ -3428,13 +3428,10 @@ int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool n
     cur_pair.df = best_model.df;
     cur_pair.model_name = best_model.getName();
     cur_pair.tree_len = best_model.tree_len;
-    lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
-    dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
-    cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
 
     if (MPIHelper::getInstance().isMaster()) {
         // for Master
-        showMergeResult(part_model_info, cur_pair.tree_len, cur_pair.model_name, cur_pair.score, cur_pair.set_name, done_before, syncChkPt.mytag);
+        showMergeResult(part_model_info, cur_pair.tree_len, cur_pair.model_name, cur_pair.set_name, done_before, syncChkPt.mytag);
         if (need_next_jobID) {
             t_wait_begin = getRealTime();
             next_job_id = syncChkPt.getNextJobID();
@@ -3450,7 +3447,6 @@ int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool n
             key = "pf_tree_id"; part_model_info.put(key, job_id);
             key = "pf_tree_len"; part_model_info.put(key, cur_pair.tree_len);
             key = "pf_model_name"; part_model_info.put(key, cur_pair.model_name);
-            key = "pf_score"; part_model_info.put(key, cur_pair.score);
             key = "pf_set_name"; part_model_info.put(key, cur_pair.set_name);
             key = "pf_done_before"; part_model_info.putBool(key, done_before);
 
@@ -3475,7 +3471,6 @@ int PartitionFinder::getBestModelForOneMergeMPI(int job_id, int nthreads, bool n
                     tree_id_vec.push_back(job_id);
                     tree_len_vec.push_back(cur_pair.tree_len);
                     model_name_vec.push_back(cur_pair.model_name);
-                    score_vec.push_back(cur_pair.score);
                     set_name_vec.push_back(cur_pair.set_name);
                     tag_vec.push_back(syncChkPt.mytag);
                 }
@@ -4805,13 +4800,13 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
         ASSERT(part_model_info.get(key, tree_len));
         key = "pf_model_name";
         ASSERT(part_model_info.get(key, model_name));
-        key = "pf_score";
-        ASSERT(part_model_info.get(key, score));
 
         if (job_type == 1) {
             // partition
             key = "pf_tree_id";
             ASSERT(part_model_info.get(key, tree_id));
+            key = "pf_score";
+            ASSERT(part_model_info.get(key, score));
             pfinder->showPartitionResult(part_model_info, tree_id, tree_len, model_name, score, work_tag);
         } else {
             // merge
@@ -4819,7 +4814,7 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
             ASSERT(part_model_info.get(key, set_name));
             key = "pf_done_before";
             ASSERT(part_model_info.getBool(key, done_before));
-            pfinder->showMergeResult(part_model_info, tree_len, model_name, score, set_name, done_before, work_tag);
+            pfinder->showMergeResult(part_model_info, tree_len, model_name, set_name, done_before, work_tag);
         }
 
     } else {
@@ -4834,8 +4829,6 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
         ASSERT(part_model_info.getVector(key, tree_len_vec));
         key = "pf_model_name";
         ASSERT(part_model_info.getVector(key, model_name_vec));
-        key = "pf_score";
-        ASSERT(part_model_info.getVector(key, score_vec));
         key = "pf_tag";
         ASSERT(part_model_info.getVector(key, tag_vec));
 
@@ -4843,6 +4836,8 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
             // partition
             key = "pf_tree_id";
             ASSERT(part_model_info.getVector(key, tree_id_vec));
+            key = "pf_score";
+            ASSERT(part_model_info.getVector(key, score_vec));
             pfinder->showPartitionResults(part_model_info, tree_id_vec, tree_len_vec, model_name_vec, score_vec, tag_vec);
         } else {
             // merge
@@ -4850,7 +4845,7 @@ void SyncChkPoint::showResult(ModelCheckpoint& part_model_info, int work_tag) {
             ASSERT(part_model_info.getVector(key, set_name_vec));
             key = "pf_tot_jobs_done";
             ASSERT(part_model_info.get(key, tot_jobsdone));
-            pfinder->showMergeResults(part_model_info, tree_len_vec, model_name_vec, score_vec, set_name_vec, tag_vec, tot_jobsdone);
+            pfinder->showMergeResults(part_model_info, tree_len_vec, model_name_vec, set_name_vec, tag_vec, tot_jobsdone);
         }
     }
 }

@@ -569,12 +569,12 @@ public:
     /*
      * Show the the other worker's result of best model for the merge
      */
-    void showMergeResult(ModelCheckpoint& part_model_info, double tree_len, const string& model_name, double score, string& set_name, bool done_before, int tag);
+    void showMergeResult(ModelCheckpoint& part_model_info, double tree_len, const string& model_name, string& set_name, bool done_before, int tag);
 
     /*
      * Show the the other worker's result of best model for the merge
      */
-    void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<double>& score, vector<string>& set_name, vector<int>& tag, int tot_jobs_done);
+    void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<string>& set_name, vector<int>& tag, int tot_jobs_done);
 };
 
 
