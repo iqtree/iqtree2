@@ -400,6 +400,25 @@ public:
 };
 
 /*
+ * This class is designed for a job to perform merging between two partitions
+ */
+class MergeJob {
+public:
+    int id1;
+    int id2;
+    set<int> geneset1;
+    set<int> geneset2;
+    double treelen1;
+    double treelen2;
+    // constructors
+    MergeJob();
+    MergeJob(int id_1, int id_2, set<int>& geneset_1, set<int>& geneset_2, double treelen_1, double treelen_2);
+    bool isEmpty();
+    void copyFrom(MergeJob* anotherMergeJob);
+    void setEmpty();
+};
+
+/*
  * This class is designed for partition finder
  */
 class PartitionFinder {
@@ -429,14 +448,12 @@ private:
      * Process the computation of the best model for a merge with MPI
      *
      * nthreads : number of threads available for this job
-     * need_next_treeID : whether it is needed to get the next tree ID
+     * need_next_job : whether it is needed to get the next job
      *
-     * if need_next_treeID and (MASTER or IS_ASYN_COMM = 0)
-     *    return the next Job ID from master
-     * else
-     *    return -1
+     * if need_next_job
+     *    job will be updated to the next job
      */
-    int getBestModelForOneMergeMPI(int job_id, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt, double& run_time, double& wait_time);
+    void getBestModelForOneMergeMPI(MergeJob* job, int nthreads, bool need_next_job, SyncChkPoint& syncChkPt, double& run_time, double& wait_time);
 
     // retreive the answers from checkpoint (for merging)
     // and remove those jobs from the array jobIDs
@@ -445,12 +462,12 @@ private:
 	/**
 	 * compute and process the best model for partitions (for MPI)
 	 */
-	void getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, vector<double>& run_time, vector<double>& wait_time, vector<double>& fstep_time, vector<int>& partNum);
+	void getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
 
 	/**
 	 * compute and process the best model for merges (for MPI)
 	 */
-	void getBestModelforMergesMPI(int nthreads, vector<vector<int>* >& jobs, vector<double>& run_time, vector<double>& wait_time, vector<double>& fstep_time, vector<int>& partNum);
+	void getBestModelforMergesMPI(int nthreads, vector<MergeJob* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
 
     /**
      * compute and process the best model for partitions (without MPI)
@@ -507,6 +524,7 @@ public:
     int jobdone;
     int tot_job_num;
     vector<int> remain_job_list;
+    vector<MergeJob*> remain_mergejobs;
     
     int base;
     
@@ -549,13 +567,22 @@ public:
 
     /*
      * For MPI
-     * assign initial jobs to processors
-     * input: a set of jobs ordered by the estimated computational costs
+     * assign initial partition jobs to processors
+     * input: a set of partition jobs ordered by the estimated computational costs
+     * output: number of items in currJobs
      *
      * DIST_RATIO: the ratio of the total jobs distributed to the processors
      */
-    void jobAssignment(vector<pair<int,double> > &job_ids, vector<vector<int>* >&currJobs);
-
+    int partjobAssignment(vector<pair<int,double> > &job_ids, vector<vector<int>* >&currJobs);
+    
+    /*
+     * For MPI
+     * assign initial merge jobs to processors
+     * input: a set of merge jobs ordered by the estimated computational costs
+     * output: number of items in currJobs
+     */
+    int mergejobAssignment(vector<pair<int,double> > &job_ids, vector<MergeJob* >&currJobs);
+    
     /*
      * Show the result of best model for the partition
      */
@@ -576,7 +603,6 @@ public:
      */
     void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<string>& set_name, vector<int>& tag, int tot_jobs_done);
 };
-
 
 /*
  * This class is designed for synchronization of checkpoints for partition finder
@@ -617,7 +643,7 @@ public:
      * return the next Job ID from master
      * else -1
      */
-    int sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJobID, int job_type, bool forceToSyn = false);
+    int sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJobID, int job_type, MergeJob* mergeJob = nullptr, bool forceToSyn = false);
 
     /*
      * receive an integer from the master (for synchronous communication)
@@ -625,10 +651,15 @@ public:
     int recvInt(int tag);
 
     /*
-     * get the next Job ID by accessing the shared memory in the master process
+     * get the next Job ID
      */
     int getNextJobID();
-   
+
+    /*
+     * get the next Merge Job
+     */
+    void getNextMergeJob(MergeJob* mergejob);
+
 #ifdef _IQTREE_MPI
 
     void sendCheckpoint(Checkpoint *ckp, int dest, int tag);
@@ -644,6 +675,10 @@ public:
      * if there is a message, collect the tag value and the source
      */
     bool gotMessage(int& tag, int& source);
+    
+    void sendMergeJob(MergeJob& mergeJob, int dest, int tag);
+    
+    void recMergeJob(MergeJob& mergeJob, int src, int tag);
     
 #endif
     
