@@ -416,6 +416,8 @@ public:
     bool isEmpty();
     void copyFrom(MergeJob* anotherMergeJob);
     void setEmpty();
+    void toString(string& str);
+    void loadFrString(string& str);
 };
 
 /*
@@ -648,7 +650,7 @@ public:
     /*
      * receive an integer from the master (for synchronous communication)
      */
-    int recvInt(int tag);
+    // int recvInt(int tag);
 
     /*
      * get the next Job ID
@@ -664,7 +666,7 @@ public:
 
     void sendCheckpoint(Checkpoint *ckp, int dest, int tag);
     
-    void recvCheckpoint(Checkpoint *ckp, int src, int tag);
+    // void recvCheckpoint(Checkpoint *ckp, int src, int tag);
     
     void recvAnyCheckpoint(Checkpoint *ckp, int& src, int& tag);
     
@@ -676,9 +678,21 @@ public:
      */
     bool gotMessage(int& tag, int& source);
     
-    void sendMergeJob(MergeJob& mergeJob, int dest, int tag);
+    void sendMergeJobToWorker(MergeJob& mergeJob, int dest, int tag);
     
-    void recMergeJob(MergeJob& mergeJob, int src, int tag);
+    void recMergeJobFrMaster(MergeJob& mergeJob, int tag);
+    
+    void broadcastVecSetInt(vector<set<int> >& gene_sets);
+    
+    void broadcastVecStr(vector<string>& model_names);
+    
+    int* toIntArr(vector<set<int> >& gene_sets, int& buffsize);
+    
+    void loadFrIntArr(vector<set<int> >& gene_sets, int* buff, int buffsize);
+    
+    char* toCharArr(vector<string>& model_names, int& buffsize);
+    
+    void loadFrCharArr(vector<string>& model_names, char* buff);
     
 #endif
     

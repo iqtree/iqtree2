@@ -111,7 +111,8 @@ bool MPIHelper::gotMessage() {
 #ifdef _IQTREE_MPI
 void MPIHelper::sendString(string &str, int dest, int tag) {
     char *buf = (char*)str.c_str();
-    MPI_Send(buf, str.length()+1, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
+    int len = str.length()+1;
+    MPI_Send(buf, len, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
 }
 
 void MPIHelper::sendCheckpoint(Checkpoint *ckp, int dest) {

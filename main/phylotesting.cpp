@@ -4036,7 +4036,7 @@ void PartitionFinder::getBestModel(int job_type) {
             // computation cost is proportional to #sequences, #patterns, and #states
             jobIDs.push_back({i, ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states});
         }
-    } else {
+    } else if (num_processes == 1 || MPIHelper::getInstance().isMaster()) {
         // for merges
         ASSERT(gene_sets.size() == lenvec.size());
         better_pairs.clear();
@@ -4185,25 +4185,23 @@ void PartitionFinder::getBestModel(int job_type) {
         
         MPI_Barrier(MPI_COMM_WORLD);
         
-        // distribute the checkpoints from Master to Workers
-        double time_start = getRealTime();
-        if (MPIHelper::getInstance().isMaster()) {
-            // Master processor broadcast model_info to other processors
-            cout << "\tDistributing the checkpoints from Master to Workers...." << endl;
-            for (i = 1; i < num_processes; i++) {
-                MPIHelper::getInstance().sendCheckpoint(model_info, i);
+        if (job_type == 1) {
+            // distribute the checkpoints from Master to Workers
+            // for merging, the checkpoints will be distributed to workers after the merging finishes.
+            double time_start = getRealTime();
+            MPIHelper::getInstance().broadcastCheckpoint(model_info);
+            if (MPIHelper::getInstance().isMaster()) {
+                cout << "\tTime used for distributing the checkpoints from Master to Workers: " << getRealTime() - time_start << endl;
+                cout << endl;
             }
-        } else {
-            MPIHelper::getInstance().recvCheckpoint(model_info, PROC_MASTER);
         }
-        cout << "\tTime used for distributing the checkpoints from Master to Workers: " << getRealTime() - time_start << endl;
-        cout << endl;
-            
-        cout << "consolidating the results ... " << endl;
+        
         // consolidate the results
         if (job_type == 1) {
             consolidPartitionResults();
-        } else {
+        } else if (MPIHelper::getInstance().isMaster()) {
+            // for merging, only Master needs consolidation.
+            // the workers will do so after the merging finishes.
             consolidMergeResults();
         }
         
@@ -4461,6 +4459,7 @@ void PartitionFinder::test_PartitionModel() {
     }
 
     /* following implements the greedy algorithm of Lanfear et al. (2012) */
+    bool perform_merge = (params->partition_merge != MERGE_KMEANS && gene_sets.size() >= 2);
     while (params->partition_merge != MERGE_KMEANS && gene_sets.size() >= 2) {
         // stepwise merging charsets
 
@@ -4468,74 +4467,102 @@ void PartitionFinder::test_PartitionModel() {
         // compute the best model for each pair
         job_type = 2; // for all merges
         getBestModel(job_type);
+        
+        bool is_pairs_empty = better_pairs.empty();
+        MPI_Bcast(&is_pairs_empty, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
 
-        if (better_pairs.empty()) break;
-        ModelPairSet compatible_pairs;
-
-        int num_comp_pairs = params->partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
-        better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
-        if (compatible_pairs.size() > 1)
-            cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
-
-        // 2017-12-21: simultaneously merging better pairs
-        for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
-            ModelPair opt_pair = it_pair->second;
-
-            lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
-            dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
-            inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
-            ASSERT(inf_score <= opt_pair.score + 0.1);
-
-            cout << "Merging " << opt_pair.set_name << " with " << criterionName(params->model_test_criterion)
-                 << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
-            // change entry opt_part1 to merged one
-            gene_sets[opt_pair.part1] = opt_pair.merged_set;
-            lhvec[opt_pair.part1] = opt_pair.logl;
-            dfvec[opt_pair.part1] = opt_pair.df;
-            lenvec[opt_pair.part1] = opt_pair.tree_len;
-            model_names[opt_pair.part1] = opt_pair.model_name;
-            greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
-                                                 greedy_model_trees[opt_pair.part2] + ")" +
-                                                 convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" +
-                                                 convertDoubleToString(inf_score);
-
-            // delete entry opt_part2
-            lhvec.erase(lhvec.begin() + opt_pair.part2);
-            dfvec.erase(dfvec.begin() + opt_pair.part2);
-            lenvec.erase(lenvec.begin() + opt_pair.part2);
-            gene_sets.erase(gene_sets.begin() + opt_pair.part2);
-            model_names.erase(model_names.begin() + opt_pair.part2);
-            greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
-
-            // decrease part ID for all pairs beyond opt_pair.part2
-            auto next_pair = it_pair;
-            for (next_pair++; next_pair != compatible_pairs.end(); next_pair++) {
-                if (next_pair->second.part1 > opt_pair.part2)
-                    next_pair->second.part1--;
-                if (next_pair->second.part2 > opt_pair.part2)
-                    next_pair->second.part2--;
+        if (is_pairs_empty) break;
+        
+        if (MPIHelper::getInstance().isMaster()) {
+            
+            ModelPairSet compatible_pairs;
+            
+            int num_comp_pairs = params->partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
+            better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
+            if (compatible_pairs.size() > 1)
+                cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
+            
+            // 2017-12-21: simultaneously merging better pairs
+            for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
+                ModelPair opt_pair = it_pair->second;
+                
+                lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
+                dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
+                inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
+                ASSERT(inf_score <= opt_pair.score + 0.1);
+                
+                cout << "Merging " << opt_pair.set_name << " with " << criterionName(params->model_test_criterion)
+                << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
+                // change entry opt_part1 to merged one
+                gene_sets[opt_pair.part1] = opt_pair.merged_set;
+                lhvec[opt_pair.part1] = opt_pair.logl;
+                dfvec[opt_pair.part1] = opt_pair.df;
+                lenvec[opt_pair.part1] = opt_pair.tree_len;
+                model_names[opt_pair.part1] = opt_pair.model_name;
+                greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
+                greedy_model_trees[opt_pair.part2] + ")" +
+                convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" +
+                convertDoubleToString(inf_score);
+                
+                // delete entry opt_part2
+                lhvec.erase(lhvec.begin() + opt_pair.part2);
+                dfvec.erase(dfvec.begin() + opt_pair.part2);
+                lenvec.erase(lenvec.begin() + opt_pair.part2);
+                gene_sets.erase(gene_sets.begin() + opt_pair.part2);
+                model_names.erase(model_names.begin() + opt_pair.part2);
+                greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
+                
+                // decrease part ID for all pairs beyond opt_pair.part2
+                auto next_pair = it_pair;
+                for (next_pair++; next_pair != compatible_pairs.end(); next_pair++) {
+                    if (next_pair->second.part1 > opt_pair.part2)
+                        next_pair->second.part1--;
+                    if (next_pair->second.part2 > opt_pair.part2)
+                        next_pair->second.part2--;
+                }
             }
         }
     }
 
-    string final_model_tree;
-    if (greedy_model_trees.size() == 1)
-        final_model_tree = greedy_model_trees[0];
-    else {
-        final_model_tree = "(";
-        for (i = 0; i < greedy_model_trees.size(); i++) {
-            if (i>0)
-                final_model_tree += ",";
-            final_model_tree += greedy_model_trees[i];
+    if (perform_merge) {
+        // distribute the checkpoints from Master to Workers
+        double time_start = getRealTime();
+        MPIHelper::getInstance().broadcastCheckpoint(model_info);
+        if (MPIHelper::getInstance().isMaster()) {
+            cout << "\tTime used for distributing the checkpoints from Master to Workers: " << getRealTime() - time_start << endl;
+            cout << endl;
         }
-        final_model_tree += ")";
     }
 
-    cout << "Agglomerative model selection: " << final_model_tree << endl;
+    if (MPIHelper::getInstance().isMaster()) {
+        string final_model_tree;
+        if (greedy_model_trees.size() == 1)
+            final_model_tree = greedy_model_trees[0];
+        else {
+            final_model_tree = "(";
+            for (i = 0; i < greedy_model_trees.size(); i++) {
+                if (i>0)
+                    final_model_tree += ",";
+                final_model_tree += greedy_model_trees[i];
+            }
+            final_model_tree += ")";
+        }
+        cout << "Agglomerative model selection: " << final_model_tree << endl;
+    }
+
+#ifdef _IQTREE_MPI
+    if (perform_merge && num_processes > 1) {
+        SyncChkPoint syncChkPoint(this,0);
+        // broadcast gene_sets from Master to Workers
+        syncChkPoint.broadcastVecSetInt(gene_sets);
+        // broadcast model_names from Master to Workers
+        syncChkPoint.broadcastVecStr(model_names);
+    }
+#endif
 
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
-
+    
     if (!iEquals(params->merge_models, "all")) {
         // test all candidate models again
         lhsum = 0.0;
@@ -4737,16 +4764,17 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
         for (j=1; j<num_processes; j++) {
             for (k=0; k<num_threads; k++) {
                 int n = 0;
+                int tag = j * num_threads + k;
                 if (i < job_ids.size()) {
                     w = job_ids[i].first;
                     id1 = closest_pairs[w].first;
                     id2 = closest_pairs[w].second;
                     MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
-                    syncChkPoint.sendMergeJob(mergejob,j,k);
+                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
                     i++;
                 } else {
                     MergeJob mergejob;
-                    syncChkPoint.sendMergeJob(mergejob,j,k); // send the empty job to the worker
+                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
                 }
             }
         }
@@ -4782,10 +4810,13 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
 #ifdef _IQTREE_MPI
         // WORKER: receive jobs from the master
         int n;
+        int src, tag;
         SyncChkPoint syncChkPoint(this, 0);
+        int proc_id = MPIHelper::getInstance().getProcessID();
         for (i=0; i<num_threads; i++) {
             MergeJob* mergeJob = new MergeJob();
-            syncChkPoint.recMergeJob(*mergeJob, 0, i);
+            tag = proc_id * num_threads + i;
+            syncChkPoint.recMergeJobFrMaster(*mergeJob, tag);
             if (mergeJob->id1 == -1) {
                 // empty job
                 delete(mergeJob);
@@ -4931,7 +4962,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
         while (gotMessage(work_tag, worker)) {
 
             // receive checkpoint from the WORKER
-            recvCheckpoint(&proc_model_info, worker, work_tag);
+            recvAnyCheckpoint(&proc_model_info, worker, work_tag);
             
             key = "pf_job_type";
             ASSERT(proc_model_info.get(key, job_type));
@@ -4955,7 +4986,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
                     // send the next mergejob to the WORKER
                     MergeJob mergeJob;
                     getNextMergeJob(&mergeJob);
-                    sendMergeJob(mergeJob, worker, work_tag);
+                    sendMergeJobToWorker(mergeJob, worker, work_tag);
                 }
             }
 
@@ -4991,7 +5022,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
                 // send the next mergejob to the WORKER
                 MergeJob mergeJob;
                 getNextMergeJob(&mergeJob);
-                sendMergeJob(mergeJob, worker, work_tag);
+                sendMergeJobToWorker(mergeJob, worker, work_tag);
             }
         }
 
@@ -5043,7 +5074,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
                 } else {
                     ASSERT(mergeJob != nullptr);
                     // receive the next merge job from MASTER synchronously
-                    recMergeJob(*mergeJob, 0, mytag);
+                    recMergeJobFrMaster(*mergeJob, mytag);
                 }
             }
         }
@@ -5106,6 +5137,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
 /*
  * receive an integer from the master (for synchronous communication)
  */
+/*
 int SyncChkPoint::recvInt(int tag) {
     int mesg = -1;
 #ifdef _IQTREE_MPI
@@ -5113,6 +5145,7 @@ int SyncChkPoint::recvInt(int tag) {
 #endif
     return mesg;
 }
+*/
 
 /*
  * get the next Job ID
@@ -5190,12 +5223,15 @@ void SyncChkPoint::sendCheckpoint(Checkpoint *ckp, int dest, int tag) {
     MPIHelper::getInstance().sendString(str, dest, tag);
 }
 
+/*
+// this may create an error, because the actual src may not be the sender if there is another sender using the same tag and sending the chkpt at the same time.
 void SyncChkPoint::recvCheckpoint(Checkpoint *ckp, int src, int tag) {
     string str;
     MPIHelper::getInstance().recvString(str, src, tag);
     stringstream ss(str);
     ckp->load(ss);
 }
+*/
 
 void SyncChkPoint::recvAnyCheckpoint(Checkpoint *ckp, int& src, int& tag) {
     string str;
@@ -5236,105 +5272,154 @@ bool SyncChkPoint::gotMessage(int& tag, int& source) {
         return false;
 }
 
-void SyncChkPoint::sendMergeJob(MergeJob& mergeJob, int dest, int tag) {
-    int k = tag * 10;
-    int i, n1, n2;
-    set<int>::iterator itr;
+void SyncChkPoint::sendMergeJobToWorker(MergeJob& mergeJob, int dest, int tag) {
+    string str;
+    mergeJob.toString(str);
+    MPIHelper::getInstance().sendString(str, dest, tag);
+}
 
-    // send number of items in gene_set1
-    n1 = mergeJob.geneset1.size();
-    MPI_Send(&n1, 1, MPI_INT, dest, k++, MPI_COMM_WORLD);
+void SyncChkPoint::recMergeJobFrMaster(MergeJob& mergeJob, int tag) {
+    string str;
+    int src = 0;
+    MPIHelper::getInstance().recvString(str, src, tag);
+    mergeJob.loadFrString(str);
+}
+
+int* SyncChkPoint::toIntArr(vector<set<int> >& gene_sets, int& buffsize) {
+    set<int>::iterator itr;
+    int i,k;
+
+    buffsize = gene_sets.size();
+    for (int i=0; i<gene_sets.size(); i++)
+        buffsize += gene_sets[i].size();
+
+    int* buff = new int[buffsize];
     
-    if (n1 > 0) {
-        // the job is not empty
-        
-        // send number of items in gene_set2
-        n2 = mergeJob.geneset2.size();
-        ASSERT(n2 > 0);
-        MPI_Send(&n2, 1, MPI_INT, dest, k++, MPI_COMM_WORLD);
-        
-        // send the id1
-        MPI_Send(&mergeJob.id1, 1, MPI_INT, dest, k++, MPI_COMM_WORLD);
-        // send the id2
-        MPI_Send(&mergeJob.id2, 1, MPI_INT, dest, k++, MPI_COMM_WORLD);
-        
-        // send treelen1
-        MPI_Send(&mergeJob.treelen1, 1, MPI_DOUBLE, dest, k++, MPI_COMM_WORLD);
-        // send treelen2
-        MPI_Send(&mergeJob.treelen2, 1, MPI_DOUBLE, dest, k++, MPI_COMM_WORLD);
-        
-        // send the gene_set1
-        i = 0;
-        int* genes1 = new int[n1];
-        for (itr = mergeJob.geneset1.begin(); itr != mergeJob.geneset1.end(); itr++) {
-            genes1[i] = *itr;
-            i++;
+    k = 0;
+    for (i=0; i<gene_sets.size() && k<buffsize; i++) {
+        for (itr=gene_sets[i].begin(); itr!=gene_sets[i].end() && k<buffsize; itr++) {
+            buff[k] = *itr;
+            k++;
         }
-        MPI_Send(genes1, n1, MPI_INT, dest, k++, MPI_COMM_WORLD);
-        delete[] genes1;
-        
-        // send the gene_set2
-        i = 0;
-        int* genes2 = new int[n2];
-        for (itr = mergeJob.geneset2.begin(); itr != mergeJob.geneset2.end(); itr++) {
-            genes2[i] = *itr;
-            i++;
+        if (k < buffsize) {
+            buff[k] = -1;
+            k++;
         }
-        MPI_Send(genes2, n2, MPI_INT, dest, k++, MPI_COMM_WORLD);
-        delete[] genes2;
+    }
+    return buff;
+}
+
+void SyncChkPoint::loadFrIntArr(vector<set<int> >& gene_sets, int* buff, int buffsize) {
+    int j = 0;
+    int k = 0; // size of gene_sets
+    bool set_end = true;
+    gene_sets.clear();
+    while (j < buffsize) {
+        if (buff[j] == -1) {
+            // end of the current set
+            set_end = true;
+        } else {
+            if (set_end) {
+                // create a new set
+                set_end = false;
+                k++;
+                gene_sets.resize(k);
+                gene_sets[k-1].clear();
+            }
+            gene_sets[k-1].insert(buff[j]);
+        }
+        j++;
     }
 }
 
-void SyncChkPoint::recMergeJob(MergeJob& mergeJob, int src, int tag) {
-    int k = tag * 10;
-    int n1, n2;
-    int i, geneid;
-    set<int>::iterator itr;
-
-    // reset
-    mergeJob.geneset1.clear();
-    mergeJob.geneset2.clear();
-    mergeJob.id1 = -1;
-    mergeJob.id2 = -1;
-    mergeJob.treelen1 = 0.0;
-    mergeJob.treelen2 = 0.0;
-    
-    // receive number of items in gene_set1
-    MPI_Recv(&n1, 1, MPI_INT, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    
-    if (n1 > 0) {
-        // the job is not empty
-        
-        // receive number of items in gene_set2
-        MPI_Recv(&n2, 1, MPI_INT, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        ASSERT(n2 > 0);
-
-        // receive the id1
-        MPI_Recv(&(mergeJob.id1), 1, MPI_INT, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // receive the id2
-        MPI_Recv(&(mergeJob.id2), 1, MPI_INT, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        
-        // receive treelen1
-        MPI_Recv(&(mergeJob.treelen1), 1, MPI_DOUBLE, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        // receive treelen2
-        MPI_Recv(&(mergeJob.treelen2), 1, MPI_DOUBLE, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        
-        // receive the gene_set1
-        int* genes1 = new int[n1];
-        MPI_Recv(genes1, n1, MPI_INT, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        for (i = 0; i < n1; i++) {
-            mergeJob.geneset1.insert(genes1[i]);
-        }
-        delete[] genes1;
-        
-        // receive the gene_set2
-        int* genes2 = new int[n2];
-        MPI_Recv(genes2, n2, MPI_INT, src, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        for (i = 0; i < n2; i++) {
-            mergeJob.geneset2.insert(genes2[i]);
-        }
-        delete[] genes2;
+char* SyncChkPoint::toCharArr(vector<string>& model_names, int& buffsize) {
+    string buff_str = "";
+    char* buff = NULL;
+    int i;
+    for (i = 0; i < model_names.size(); i++) {
+        buff_str.append(model_names[i]);
+        buff_str.append(" ");
     }
+    buffsize = buff_str.length() + 1;
+    if (buffsize > 0) {
+        buff = new char[buffsize];
+        strcpy(buff,buff_str.c_str());
+        buff[buff_str.length()] = '\0';
+    }
+    return buff;
+}
+
+void SyncChkPoint::loadFrCharArr(vector<string>& model_names, char* buff) {
+    model_names.clear();
+    if (buff == NULL)
+        return;
+    string buff_str = string(buff);
+    int start_pos = 0;
+    for (int j=0; j<buff_str.length(); j++) {
+        if (buff_str[j] == ' ') {
+            if (start_pos < j)
+                model_names.push_back(buff_str.substr(start_pos, j - start_pos));
+            else
+                model_names.push_back("");
+            start_pos = j+1;
+        }
+    }
+}
+
+void SyncChkPoint::broadcastVecSetInt(vector<set<int> >& gene_sets) {
+    // broadcast vector<set<int> > object to all workers
+    set<int>::iterator itr;
+    int buffsize;
+    int* buff = NULL;
+
+    // broadcast the buffsize to workers
+    if (MPIHelper::getInstance().isMaster())
+        buff = toIntArr(gene_sets, buffsize);
+
+    MPI_Bcast(&buffsize, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    
+    if (buffsize > 0) {
+        if (MPIHelper::getInstance().isWorker())
+            buff = new int[buffsize];
+        
+        // broadcast buff to workers
+        MPI_Bcast(buff, buffsize, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+        
+        // for workers, rebuild the gene_sets
+        if (MPIHelper::getInstance().isWorker())
+            loadFrIntArr(gene_sets, buff, buffsize);
+    }
+    
+    if (buff != NULL)
+        delete[] buff;
+}
+
+void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
+    int buffsize;
+    char* buff = NULL;
+
+    // for Master, build the long string
+    if (MPIHelper::getInstance().isMaster()) {
+        buff = toCharArr(model_names, buffsize);
+    }
+    
+    // broadcast buffsize to workers
+    MPI_Bcast(&buffsize, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+
+    if (buffsize > 0) {
+        if (MPIHelper::getInstance().isWorker()) {
+            buff = new char[buffsize];
+        }
+        // broadcast buff to workers
+        MPI_Bcast(buff, buffsize, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
+        // for workers, rebuid the model_names
+        if (MPIHelper::getInstance().isWorker()) {
+            loadFrCharArr(model_names, buff);
+        }
+    }
+    
+    if (buff != NULL)
+        delete[] buff;
 }
 
 MergeJob::MergeJob() {
@@ -5373,6 +5458,94 @@ void MergeJob::setEmpty() {
     geneset2.clear();
     treelen1 = 0.0;
     treelen2 = 0.0;
+}
+
+void MergeJob::toString(string& str) {
+    set<int>::iterator itr;
+    str.clear();
+    str.append(convertIntToString(id1) + ";");
+    str.append(convertIntToString(id2) + ";");
+    str.append(convertDoubleToString(treelen1)+";");
+    str.append(convertDoubleToString(treelen2)+";");
+    for (itr=geneset1.begin(); itr!=geneset1.end(); itr++) {
+        if (itr!=geneset1.begin())
+            str.append(",");
+        str.append(convertIntToString(*itr));
+    }
+    str.append(";");
+    for (itr=geneset2.begin(); itr!=geneset2.end(); itr++) {
+        if (itr!=geneset2.begin())
+            str.append(",");
+        str.append(convertIntToString(*itr));
+    }
+    str.append(";");
+}
+
+void MergeJob::loadFrString(string& str) {
+    
+    int start_pos = 0;
+    int pos = 0;
+    
+    // reset all variables
+    setEmpty();
+    
+    // read id1
+    while (pos < str.length() && str[pos] != ';')
+        pos++;
+    if (start_pos < pos && start_pos < str.length())
+        id1 = atoi(str.substr(start_pos, pos - start_pos).c_str());
+    pos++;
+    start_pos = pos;
+    
+    // read id2
+    while (pos < str.length() && str[pos] != ';')
+        pos++;
+    if (start_pos < pos && start_pos < str.length())
+        id2 = atoi(str.substr(start_pos, pos - start_pos).c_str());
+    pos++;
+    start_pos = pos;
+    
+    // read treelen1
+    while (pos < str.length() && str[pos] != ';')
+        pos++;
+    if (start_pos < pos && start_pos < str.length())
+        treelen1 = atof(str.substr(start_pos, pos - start_pos).c_str());
+    pos++;
+    start_pos = pos;
+
+    // read treelen2
+    while (pos < str.length() && str[pos] != ';')
+        pos++;
+    if (start_pos < pos && start_pos < str.length())
+        treelen2 = atof(str.substr(start_pos, pos - start_pos).c_str());
+    pos++;
+    start_pos = pos;
+    
+    // read geneset1
+    while (pos < str.length() && str[pos] != ';') {
+        if (str[pos] == ',') {
+            if (start_pos < pos && start_pos < str.length())
+                geneset1.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
+            start_pos = pos+1;
+        }
+        pos++;
+    }
+    if (start_pos < pos && start_pos < str.length())
+        geneset1.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
+    pos++;
+    start_pos = pos;
+
+    // read geneset2
+    while (pos < str.length() && str[pos] != ';') {
+        if (str[pos] == ',') {
+            if (start_pos < pos && start_pos < str.length())
+                geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
+            start_pos = pos+1;
+        }
+        pos++;
+    }
+    if (start_pos < pos && start_pos < str.length())
+        geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
 }
 
 #endif
