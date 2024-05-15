@@ -54,9 +54,6 @@
 // #define ONESIDE_COMM
 #define SYN_COMM
 
-// the ratio of the total jobs first distributed to the processors
-#define DIST_RATIO 0.0
-
 // for one-side communication, how often perform synchronization between the master and the workers
 #define TIME_SYN 10 // in seconds
 
@@ -4611,9 +4608,6 @@ void PartitionFinder::freeMPIShareMemory() {
  */
 int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vector<vector<int>* >&currJobs) {
 
-    int num_job_to_dist = (int) (DIST_RATIO * job_ids.size()); // the number of jobs (at least) going to distribe
-    if (num_job_to_dist > job_ids.size())
-        num_job_to_dist = job_ids.size();
     int num_job_assigned = 0;
     int n = num_processes * num_threads;
     multimap<double,vector<int>*,jobcomp> assignJobs;
@@ -4632,20 +4626,7 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
             assignJobs.insert(pair<double, vector<int>* > (job_ids[i].second, job));
             num_job_assigned++;
         }
-        while (num_job_assigned < num_job_to_dist) {
-            itr = assignJobs.begin();
-            itr->second->push_back(job_ids[num_job_assigned].first);
-            assignJobs.insert(pair<double, vector<int>* > (itr->first + job_ids[num_job_assigned].second, itr->second));
-            assignJobs.erase(itr);
-            num_job_assigned++;
-        }
-        /*
-        cout << "!! assignment of the jobs:" << endl;
-        i=0;
-        for (itr=assignJobs.begin(); itr!=assignJobs.end(); itr++) {
-            cout << "!! job list " << ++i << " has " << itr->second->size() << " jobs with estimated cost " << itr->first << endl;
-        }
-        */
+
         // place all the unassigned jobs to the array remain_job_list
         for (i=num_job_assigned; i<job_ids.size(); i++) {
             remain_job_list.push_back(job_ids[i].first);
