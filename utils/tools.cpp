@@ -5892,10 +5892,10 @@ void usage(char* argv[]) {
     //	cout << "  -noout              Print no output file." << endl;
     cout << endl;
     cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
-    cout << "  --pathogen           Let IQ-TREE select the appropriate algorithm" << endl;
-    cout << "                       for tree reconstruction" << endl;
-    cout << "  --pathogen-force     Force IQ-TREE running CMAPLE, a tree reconstruction" << endl;
-    cout << "                       algorithm specially designed for pathogen data" << endl;
+    cout << "  --pathogen           Apply CMAPLE tree search algorithm if sequence" << endl;
+    cout << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl;
+    cout << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl;
+    cout << "                       of sequence divergence." << endl;
     cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
@@ -6210,10 +6210,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
     
     << endl << "GENOMIC EPIDEMIOLOGICAL ANALYSIS:" << endl
-    << "  --pathogen           Let IQ-TREE select the appropriate algorithm" << endl
-    << "                       for tree reconstruction" << endl
-    << "  --pathogen-force     Force IQ-TREE running CMAPLE, a tree reconstruction" << endl
-    << "                       algorithm specially designed for pathogen data" << endl
+    << "  --pathogen           Apply CMAPLE tree search algorithm if sequence" << endl
+    << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl
+    << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl
+    << "                       of sequence divergence." << endl
     
     
     
