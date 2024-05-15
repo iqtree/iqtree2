@@ -4653,7 +4653,7 @@ bool runCMaple(Params &params)
             if (params.inference_alg == ALG_CMAPLE)
             {
                 std::cout << "We highly recommend to use the IQ-TREE inference algorithm for this analysis."
-                << " Please stop and re-try with `-search-alg auto`!" << std::endl;
+                << " Please stop and re-run WITHOUT `--pathogen-force`!" << std::endl;
             }
             // otherwise, users allow us to choose the inference algorithm -> choose IQ-TREE
             else

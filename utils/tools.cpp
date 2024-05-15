@@ -3113,20 +3113,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
-            if (strcmp(argv[cnt], "-search-alg") == 0 || strcmp(argv[cnt], "--search-alg") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -search-alg auto|iqtree|cmaple";
-                string alg = argv[cnt];
-                transform(alg.begin(), alg.end(), alg.begin(), ::toupper);
-                if (strcmp(alg.c_str(), "AUTO") == 0)
-                    params.inference_alg = ALG_AUTO;
-                else if (strcmp(alg.c_str(), "IQTREE") == 0)
-                    params.inference_alg = ALG_IQ_TREE;
-                else if (strcmp(alg.c_str(), "CMAPLE") == 0)
-                    params.inference_alg = ALG_CMAPLE;
-                else
-                    throw "Use -search-alg auto|iqtree|cmaple";
+            if (strcmp(argv[cnt], "-pathogen") == 0 || strcmp(argv[cnt], "--pathogen") == 0) {
+                params.inference_alg = ALG_AUTO;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-pathogen-force") == 0 || strcmp(argv[cnt], "--pathogen-force") == 0) {
+                params.inference_alg = ALG_CMAPLE;
                 continue;
             }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
@@ -5900,8 +5892,10 @@ void usage(char* argv[]) {
     //	cout << "  -noout              Print no output file." << endl;
     cout << endl;
     cout << "OPTIONS FOR GENOMIC EPIDEMIOLOGICAL ANALYSES:" << endl;
-    cout << "  -search-alg <ALG>     Choose the inference algorithm." << endl;
-    cout << "                       <ALGORITHM> could be `iqtree`, `cmaple`, or `auto`." << endl;
+    cout << "  --pathogen           Let IQ-TREE select the appropriate algorithm" << endl;
+    cout << "                       for tree reconstruction" << endl;
+    cout << "  --pathogen-force     Force IQ-TREE running CMAPLE, a tree reconstruction" << endl;
+    cout << "                       algorithm specially designed for pathogen data" << endl;
     cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
@@ -6216,8 +6210,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -g_rm_leaves NUM     Invoke reverse analysis for complex datasets." << endl
     
     << endl << "GENOMIC EPIDEMIOLOGICAL ANALYSIS:" << endl
-    << "  -search-alg <ALG>     Choose the inference algorithm." << endl
-    << "                       <ALG> could be `iqtree`, `cmaple`, or `auto`." << endl
+    << "  --pathogen           Let IQ-TREE select the appropriate algorithm" << endl
+    << "                       for tree reconstruction" << endl
+    << "  --pathogen-force     Force IQ-TREE running CMAPLE, a tree reconstruction" << endl
+    << "                       algorithm specially designed for pathogen data" << endl
     
     
     
