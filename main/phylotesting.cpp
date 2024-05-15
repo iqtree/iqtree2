@@ -4132,58 +4132,29 @@ void PartitionFinder::getBestModel(int job_type) {
         
         MPI_Barrier(MPI_COMM_WORLD);
         
-        // show the timing for Master
+        // gather all timing information
+        int* num_job_arrays = new int[num_processes];
+        int* num_part_arrays = new int[num_processes * num_threads];
+        double* run_time_arrays = new double[num_processes * num_threads];
+        double* wait_time_arrays = new double[num_processes * num_threads];
+        double* fstep_time_arrays = new double[num_processes * num_threads];
+        MPI_Gather(&num_job_array, 1, MPI_INT, num_job_arrays, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+        MPI_Gather(num_part, num_threads, MPI_INT, num_part_arrays, num_threads, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+        MPI_Gather(run_time, num_threads, MPI_DOUBLE, run_time_arrays, num_threads, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+        MPI_Gather(wait_time, num_threads, MPI_DOUBLE, wait_time_arrays, num_threads, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+        MPI_Gather(fstep_time, num_threads, MPI_DOUBLE, fstep_time_arrays, num_threads, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+        
+        // show all timing information
         if (MPIHelper::getInstance().isMaster() && tot_job_num > 0) {
             cout << endl;
             cout << "\tproc\tthres\trun time\twait time\tfinal-step time\tnumber-parts" << endl;
-            for (size_t t = 0; t < num_job_array; t++) {
-                cout << "\t0\t" << t << "\t" << run_time[t] << "\t" << wait_time[t] << "\t" << fstep_time[t] << "\t" << num_part[t]<< endl;
-            }
-        }
-        // collect and display all the timing information from workers
-        if (MPIHelper::getInstance().isMaster()) {
-            // for master
-            // receive the timing statistics from each worker
-            for (int w=1; w<num_processes; w++) {
-                // get the number of threads of the worker
-                int nthres = 0;
-                int j;
-                int k = 0;
-                MPI_Recv(&nthres, 1, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                if (nthres > 0) {
-                    // get the run time
-                    MPI_Recv(run_time, nthres, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // get the wait time
-                    MPI_Recv(wait_time, nthres, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // get the final-step time
-                    MPI_Recv(fstep_time, nthres, MPI_DOUBLE, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // get the number of partitions
-                    MPI_Recv(num_part, nthres, MPI_INT, w, k++, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                    // show the timing for the worker
-                    for (j=0; j<nthres; j++)
-                        cout << "\t" << w << "\t" << j << "\t" << run_time[j] << "\t" << wait_time[j] << "\t" << fstep_time[j] << "\t" << num_part[j] << endl;
+            for (int w=0; w<num_processes; w++) {
+                for (int t=0; t<num_job_arrays[w]; t++) {
+                    cout << "\t" << w << "\t" << t << "\t" << run_time_arrays[w*num_threads+t] << "\t" << wait_time_arrays[w*num_threads+t] << "\t" << fstep_time_arrays[w*num_threads+t] << "\t" << num_part_arrays[w*num_threads+t]<< endl;
                 }
             }
-        } else {
-            // for worker
-            // send the number of threads
-            int nthres = num_job_array;
-            int j;
-            int k = 0;
-            MPI_Send(&nthres, 1, MPI_INT, 0, k++, MPI_COMM_WORLD);
-            if (nthres > 0) {
-                // send the run time to the master
-                MPI_Send(run_time, nthres, MPI_DOUBLE, 0, k++, MPI_COMM_WORLD);
-                // send the wait time to the master
-                MPI_Send(wait_time, nthres, MPI_DOUBLE, 0, k++, MPI_COMM_WORLD);
-                // send the final-step time to the master
-                MPI_Send(fstep_time, nthres, MPI_DOUBLE, 0, k++, MPI_COMM_WORLD);
-                // send the number of partitions to the master
-                MPI_Send(num_part, nthres, MPI_INT, 0, k++, MPI_COMM_WORLD);
-            }
+            cout << endl;
         }
-        
-        MPI_Barrier(MPI_COMM_WORLD);
         
         if (job_type == 1) {
             // distribute the checkpoints from Master to Workers
@@ -4224,7 +4195,12 @@ void PartitionFinder::getBestModel(int job_type) {
         delete[] wait_time;
         delete[] fstep_time;
         delete[] num_part;
-        
+        delete[] num_job_arrays;
+        delete[] num_part_arrays;
+        delete[] run_time_arrays;
+        delete[] wait_time_arrays;
+        delete[] fstep_time_arrays;
+
     }
 #endif
 
