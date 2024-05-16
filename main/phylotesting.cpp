@@ -3205,34 +3205,6 @@ void sendVector(vector<int>& data, int worker) {
 #endif
 }
 
-/*
- * receive an integer vector from the master
- */
-void recVector(vector<int>& data) {
-
-    if (MPIHelper::getInstance().isMaster())
-        return;
-
-#ifdef _IQTREE_MPI
-    int n;
-    data.clear();
-
-    // receive the number of elements from the master
-    MPI_Recv(&n, 1, MPI_INT, PROC_MASTER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    if (n == 0)
-        return;
-
-    int* buff = new int[n];
-    // receive the number array from the master
-    MPI_Recv(buff, n, MPI_INT, PROC_MASTER, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    int i;
-    for (i=0; i<n; i++) {
-        data.push_back(buff[i]);
-    }
-    delete[] buff;
-#endif
-}
-
 struct jobcomp {
     // for sorting the jobs
     bool operator() (const int& i1, const int& i2) const {return i1<i2;}
