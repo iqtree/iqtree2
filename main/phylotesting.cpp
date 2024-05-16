@@ -3786,7 +3786,8 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
     memset(partNum, 0, sizeof(int)*nthreads);
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
+    parallel_job = (jobs.size() > 1);
+#pragma omp parallel for schedule(dynamic) if(parallel_job)
 #endif
     for (int i=0; i<jobs.size(); i++) {
         SyncChkPoint syncChkPt(this, i);
