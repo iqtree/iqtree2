@@ -1066,20 +1066,24 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         } else {
             steps = 1;
         }
+#ifdef _IQTREE_MPI
         // synchronize the checkpoints of the other processors
         if (syncChkPoint != nullptr) {
             syncChkPoint->masterSyncOtherChkpts();
         }
+#endif
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
             double model_lh = 0.0;
             // only optimized if model is not linked
             model_lh = model->optimizeParameters(gradient_epsilon);
 
+#ifdef _IQTREE_MPI
             // synchronize the checkpoints of the other processors
             if (syncChkPoint != nullptr) {
                 syncChkPoint->masterSyncOtherChkpts();
             }
+#endif
 
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 
@@ -1091,10 +1095,12 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
                 break;
             prev_logl = logl;
 
+#ifdef _IQTREE_MPI
             // synchronize the checkpoints of the other processors
             if (syncChkPoint != nullptr) {
                 syncChkPoint->masterSyncOtherChkpts();
             }
+#endif
         }
     } else {
         /* Optimize substitution and heterogeneity rates jointly using BFGS */
@@ -1401,11 +1407,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
     }
     
+#ifdef _IQTREE_MPI
     // synchronize the checkpoints of the other processors
     if (syncChkPoint != nullptr) {
         syncChkPoint->masterSyncOtherChkpts();
     }
-
+#endif
+    
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
@@ -1418,18 +1426,20 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         } else
             new_lh = cur_lh;
 
+#ifdef _IQTREE_MPI
         // synchronize the checkpoints of the other processors
         if (syncChkPoint != nullptr) {
             syncChkPoint->masterSyncOtherChkpts();
         }
-
+#endif
         new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
 
+#ifdef _IQTREE_MPI
         // synchronize the checkpoints of the other processors
         if (syncChkPoint != nullptr) {
             syncChkPoint->masterSyncOtherChkpts();
         }
-
+#endif
         if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE)
                 cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
@@ -1440,11 +1450,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             break;
         }
 
+#ifdef _IQTREE_MPI
         // synchronize the checkpoints of the other processors
         if (syncChkPoint != nullptr) {
             syncChkPoint->masterSyncOtherChkpts();
         }
-
+#endif
         if (verbose_mode >= VB_MED) {
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
@@ -1473,10 +1484,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             break;
         }
 
+#ifdef _IQTREE_MPI
         // synchronize the checkpoints of the other processors
         if (syncChkPoint != nullptr) {
             syncChkPoint->masterSyncOtherChkpts();
         }
+#endif
     }
 
     // normalize rates s.t. branch lengths are #subst per site
@@ -1491,11 +1504,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
     }
 
+#ifdef _IQTREE_MPI
     // synchronize the checkpoints of the other processors
     if (syncChkPoint != nullptr) {
         syncChkPoint->masterSyncOtherChkpts();
     }
-
+#endif
+    
     if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
         cur_lh = tree->optimizeRootPosition(Params::getInstance().root_move_dist, write_info, logl_epsilon);
         if (verbose_mode >= VB_MED || write_info)

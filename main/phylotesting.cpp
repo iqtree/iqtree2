@@ -3177,34 +3177,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     partitionFinder.test_PartitionModel();
 }
 
-
-/*
- * send an integer vector from the master to a worker
- */
-void sendVector(vector<int>& data, int worker) {
-
-    if (MPIHelper::getInstance().isWorker())
-        return;
-
-#ifdef _IQTREE_MPI
-    int n = data.size();
-
-    // send the number of elements to the worker
-    MPI_Send(&n, 1, MPI_INT, worker, 0, MPI_COMM_WORLD);
-    if (n == 0)
-        return;
-
-    int* buff = new int[n];
-    int i;
-    for (i=0; i<data.size(); i++) {
-        buff[i] = data[i];
-    }
-    // send the number array to the worker
-    MPI_Send(buff, n, MPI_INT, worker, 1, MPI_COMM_WORLD);
-    delete[] buff;
-#endif
-}
-
 struct jobcomp {
     // for sorting the jobs
     bool operator() (const int& i1, const int& i2) const {return i1<i2;}
@@ -3301,6 +3273,8 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
     }
 
 }
+
+#ifdef _IQTREE_MPI
 
 /**
  * Process the computation of the best model for a merge with MPI
@@ -3426,6 +3400,9 @@ void PartitionFinder::getBestModelForOneMergeMPI(MergeJob* job, int nthreads, bo
     run_time = (getRealTime() - t_begin) - wait_time;
 }
 
+#endif
+
+
 /*
  * Show the result of best model for the partition
  */
@@ -3507,6 +3484,7 @@ void PartitionFinder::showPartitionResults(ModelCheckpoint& part_model_info, vec
     }
 }
 
+#ifdef _IQTREE_MPI
 
 /**
  * Process the computation of the best model for a single partition with MPI
@@ -3587,7 +3565,7 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
             next_tree_id = syncChkPt.sendChkptToMaster(part_model_info, need_next_treeID, job_type);
             wait_time += (getRealTime() - t_wait_begin);
 
-        #endif
+        #endif // SYN_COMM
 
         // for Worker -- ONESIDE communication
         #ifdef ONESIDE_COMM
@@ -3610,12 +3588,14 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
             next_tree_id = syncChkPt.sendChkptToMaster(process_model_info, need_next_treeID, job_type);
             wait_time += (getRealTime() - t_wait_begin);
         
-        #endif
+        #endif // ONESIDE_COMM
     }
     run_time = (getRealTime() - t_begin) - wait_time;
     
     return next_tree_id;
 }
+
+#endif // _IQTREE_MPI
 
 // retreive the answers from checkpoint (for merging)
 // and remove those jobs from the array jobIDs
@@ -3675,6 +3655,8 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs) {
     else if (k < jobs.size())
         jobs.resize(k);
 }
+
+#ifdef _IQTREE_MPI
 
 /**
  * compute and process the best model for partitions (for MPI)
@@ -3738,7 +3720,7 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jo
             fstep_time[i] += sub_fstep_time;
         }
     }
-#endif
+#endif // ONESIDE_COMM
 }
 
 /**
@@ -3788,6 +3770,8 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
         }
     }
 }
+
+#endif // _IQTREE_MPI
 
 /**
  * compute and process the best model for partitions (without MPI)
@@ -3984,7 +3968,9 @@ void PartitionFinder::getBestModel(int job_type) {
 
     vector<pair<int,double> > jobIDs;
     vector<int> currPartJobs; // for partition jobs
+#ifdef _IQTREE_MPI
     vector<MergeJob* > currMergeJobs; // for merge jobs
+#endif
     vector<int>* jobs;
     vector<int> closest_p_vector;
     bool run_parallel;
@@ -4164,13 +4150,14 @@ void PartitionFinder::getBestModel(int job_type) {
 
 }
 
+#ifdef _IQTREE_MPI
+
 /*
  * Consolidate the partition results (for MPI)
  */
 void PartitionFinder::consolidPartitionResults() {
     int i;
 
-#ifdef _IQTREE_MPI
     for (i = 0; i < in_tree->size(); i++) {
         PhyloTree *this_tree = in_tree->at(i);
 
@@ -4202,15 +4189,13 @@ void PartitionFinder::consolidPartitionResults() {
         dfsum += (dfvec[i] = df);
         lenvec[i] = treeLen;
     }
-#endif
 }
 
 /*
  * Consolidate the merge results (for MPI)
  */
 void PartitionFinder::consolidMergeResults() {
-
-#ifdef _IQTREE_MPI
+    
     better_pairs.clear();
     for (size_t pair = 0; pair < closest_pairs.size(); pair++) {
         // information of current partitions pair
@@ -4228,28 +4213,28 @@ void PartitionFinder::consolidMergeResults() {
         weight1 *= sum;
         weight2 *= sum;
         CandidateModel best_model;
-
+        
         model_info->startStruct(cur_pair.set_name);
         ASSERT(model_info->getBestModel(best_model.subst_name));
         best_model.restoreCheckpoint(model_info);
         model_info->endStruct();
-
+        
         cur_pair.logl = best_model.logl;
         cur_pair.df = best_model.df;
         cur_pair.model_name = best_model.getName();
         cur_pair.tree_len = best_model.tree_len;
-
+        
         double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
         int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
         cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
-
+        
         if (cur_pair.score < inf_score) {
             better_pairs.insertPair(cur_pair);
         }
     }
+}
 
 #endif
-}
 
 void PartitionFinder::test_PartitionModel() {
 
@@ -4266,8 +4251,10 @@ void PartitionFinder::test_PartitionModel() {
     num_model = 0;
     total_num_model = in_tree->size();
 
+#ifdef _IQTREE_MPI
     // initialize the shared memory space
     initialMPIShareMemory();
+#endif
 
     // get the name of the algorithm
     string part_algo = "";
@@ -4311,7 +4298,6 @@ void PartitionFinder::test_PartitionModel() {
             total_num_model += max(round(i*p), 1.0);
     }
 
-#ifdef _OPENMP
     if (num_threads <= 0) {
         // partition selection scales well with many cores
         num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
@@ -4319,7 +4305,6 @@ void PartitionFinder::test_PartitionModel() {
         omp_set_num_threads(num_threads);
         cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
     }
-#endif
 
     start_time = getRealTime();
 
@@ -4403,12 +4388,15 @@ void PartitionFinder::test_PartitionModel() {
         getBestModel(job_type);
         
         bool is_pairs_empty = better_pairs.empty();
+        
+#ifdef _IQTREE_MPI
         MPI_Bcast(&is_pairs_empty, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
+#endif
 
         if (is_pairs_empty) break;
         
         if (MPIHelper::getInstance().isMaster()) {
-            
+
             ModelPairSet compatible_pairs;
             
             int num_comp_pairs = params->partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
@@ -4458,6 +4446,7 @@ void PartitionFinder::test_PartitionModel() {
         }
     }
 
+#ifdef _IQTREE_MPI
     if (perform_merge) {
         // distribute the checkpoints from Master to Workers
         double time_start = getRealTime();
@@ -4467,7 +4456,8 @@ void PartitionFinder::test_PartitionModel() {
             cout << endl;
         }
     }
-
+#endif
+    
     if (MPIHelper::getInstance().isMaster()) {
         string final_model_tree;
         if (greedy_model_trees.size() == 1)
@@ -4520,15 +4510,23 @@ void PartitionFinder::test_PartitionModel() {
     ((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params->out_prefix) + ".best_scheme").c_str());
     model_info->dump();
 
+#ifdef _IQTREE_MPI
     // free the MPI share memory
     freeMPIShareMemory();
+#endif
 }
+
+// -----------------------------------------------------------------------------
+// The following functions and the classes SyncChkPoint and MergeJob are for MPI
+// -----------------------------------------------------------------------------
+
+#ifdef _IQTREE_MPI
+
 
 /*
  *  initialize the shared memory space to be accessed by the other processors
  */
 void PartitionFinder::initialMPIShareMemory() {
-#ifdef _IQTREE_MPI
 #ifdef ONESIDE_COMM
     if (MPIHelper::getInstance().getProcessID()==PROC_MASTER) {
         val_ptr = (int*) malloc(sizeof(int));
@@ -4539,16 +4537,14 @@ void PartitionFinder::initialMPIShareMemory() {
     }
 #else
     win = NULL;
-        val_ptr = NULL;
-#endif
-#endif
+    val_ptr = NULL;
+#endif // ONESIDE_COMM
 }
 
 /*
  *  free the shared memory space
  */
 void PartitionFinder::freeMPIShareMemory() {
-#ifdef _IQTREE_MPI
 #ifdef ONESIDE_COMM
     MPI_Win_free(&win);
 #endif
@@ -4556,11 +4552,9 @@ void PartitionFinder::freeMPIShareMemory() {
         delete[] val_ptr;
         val_ptr = nullptr;
     }
-#endif
 }
 
 /*
- * For MPI
  * assign initial partition jobs to processors
  * input: a set of partition jobs ordered by the estimated computational costs
  * output: the set of jobs in currJobs, number of jobs assigned <= number of threads
@@ -4609,7 +4603,6 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
 }
 
 /*
- * For MPI
  * assign initial merge jobs to processors
  * input: a set of merge jobs ordered by the estimated computational costs
  * output: number of items in currJobs
@@ -4812,8 +4805,6 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
     job_finished = false;
     is_old_result = false;
 
-#ifdef _IQTREE_MPI
-
     if (chk_gotMessage) {
         // only proceed if there is a message
         while (gotMessage(work_tag, worker)) {
@@ -4834,7 +4825,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
                     // send the next job ID to the WORKER
                     MPI_Send(&next_jobID, 1, MPI_INT, worker, work_tag, MPI_COMM_WORLD);
                 }
-#endif
+#endif  // SYN_COMM
             } else {
                 // for merge job
                 key = "need_nextJobID";
@@ -4870,7 +4861,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
                 // send the next job ID to the WORKER
                 MPI_Send(&next_jobID, 1, MPI_INT, worker, work_tag, MPI_COMM_WORLD);
             }
-#endif
+#endif // SYN_COMM
         } else {
             // for merge job
             key = "need_nextJobID";
@@ -4885,8 +4876,6 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
 
         showResult(proc_model_info, work_tag);
     }
-
-#endif
 }
 
 /*
@@ -4909,9 +4898,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
     if (job_type == 1) {
         syn_comm = false;
     }
-#endif
-
-#ifdef _IQTREE_MPI
+#endif // ONESIDE_COMM
 
     if (syn_comm) {
         // workers: send checkpoint to MASTER synchronously
@@ -4986,8 +4973,6 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
         }
     }
 
-#endif
-
     return next_jobID;
 }
 
@@ -5010,8 +4995,6 @@ int SyncChkPoint::recvInt(int tag) {
 int SyncChkPoint::getNextJobID() {
     int one = 1, indx = -1, nxtJobID = -1;
 
-#ifdef _IQTREE_MPI
-
 #ifdef SYN_COMM
     if (MPIHelper::getInstance().isMaster()) {
             // get the next Job ID
@@ -5025,7 +5008,7 @@ int SyncChkPoint::getNextJobID() {
                 }
             }
         }
-#endif
+#endif // SYN_COMM
 
 #ifdef ONESIDE_COMM
 
@@ -5041,9 +5024,7 @@ int SyncChkPoint::getNextJobID() {
         }
     }
 
-#endif
-
-#endif
+#endif // ONESIDE_COMM
 
     return nxtJobID;
 }
@@ -5053,7 +5034,6 @@ int SyncChkPoint::getNextJobID() {
  */
 void SyncChkPoint::getNextMergeJob(MergeJob* mergejob) {
 
-#ifdef _IQTREE_MPI
     if (MPIHelper::getInstance().isMaster()) {
         // get the next Job ID
         #ifdef _OPENMP
@@ -5068,27 +5048,15 @@ void SyncChkPoint::getNextMergeJob(MergeJob* mergejob) {
             }
         }
     }
-#endif
 }
 
 
-#ifdef _IQTREE_MPI
 void SyncChkPoint::sendCheckpoint(Checkpoint *ckp, int dest, int tag) {
     stringstream ss;
     ckp->dump(ss);
     string str = ss.str();
     MPIHelper::getInstance().sendString(str, dest, tag);
 }
-
-/*
-// this may create an error, because the actual src may not be the sender if there is another sender using the same tag and sending the chkpt at the same time.
-void SyncChkPoint::recvCheckpoint(Checkpoint *ckp, int src, int tag) {
-    string str;
-    MPIHelper::getInstance().recvString(str, src, tag);
-    stringstream ss(str);
-    ckp->load(ss);
-}
-*/
 
 void SyncChkPoint::recvAnyCheckpoint(Checkpoint *ckp, int& src, int& tag) {
     string str;
@@ -5405,4 +5373,4 @@ void MergeJob::loadFrString(string& str) {
         geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
 }
 
-#endif
+#endif // _IQTREE_MPI

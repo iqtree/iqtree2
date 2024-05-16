@@ -399,8 +399,10 @@ public:
 
 };
 
+#ifdef _IQTREE_MPI
+
 /*
- * This class is designed for a job to perform merging between two partitions
+ * This class is designed for a job to perform merging between two partitions (for MPI)
  */
 class MergeJob {
 public:
@@ -420,6 +422,8 @@ public:
     void loadFrString(string& str);
 };
 
+#endif
+
 /*
  * This class is designed for partition finder
  */
@@ -429,6 +433,34 @@ private:
     int brlen_type;
     bool test_merge;
     SuperAlignment *super_aln;
+
+
+    // retreive the answers from checkpoint (for merging)
+    // and remove those jobs from the array jobIDs
+    void retreiveAnsFrChkpt(vector<pair<int,double> >& jobs);
+
+    /**
+     * compute and process the best model for partitions (without MPI)
+     * nthreads : the number of threads available for these jobs
+     */
+    void getBestModelforPartitionsNoMPI(int nthreads, vector<pair<int,double> >& jobs);
+
+    /**
+     * compute and process the best model for merges (without MPI)
+     * nthreads : the number of threads available for these jobs
+     */
+    void getBestModelforMergesNoMPI(int nthreads, vector<pair<int,double> >& jobs);
+
+    /**
+     * compute the best model
+     * job_type = 1 : for all partitions
+     * job_type = 2 : for all merges
+     */
+    void getBestModel(int job_type);
+
+#ifdef _IQTREE_MPI
+    
+    // The following functions are for MPI
 
     /**
      * Process the computation of the best model for a single partition with MPI
@@ -457,11 +489,7 @@ private:
      */
     void getBestModelForOneMergeMPI(MergeJob* job, int nthreads, bool need_next_job, SyncChkPoint& syncChkPt, double& run_time, double& wait_time);
 
-    // retreive the answers from checkpoint (for merging)
-    // and remove those jobs from the array jobIDs
-    void retreiveAnsFrChkpt(vector<pair<int,double> >& jobs);
-    
-	/**
+    /**
 	 * compute and process the best model for partitions (for MPI)
 	 */
 	void getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
@@ -470,26 +498,7 @@ private:
 	 * compute and process the best model for merges (for MPI)
 	 */
 	void getBestModelforMergesMPI(int nthreads, vector<MergeJob* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
-
-    /**
-     * compute and process the best model for partitions (without MPI)
-     * nthreads : the number of threads available for these jobs
-     */
-    void getBestModelforPartitionsNoMPI(int nthreads, vector<pair<int,double> >& jobs);
-
-    /**
-     * compute and process the best model for merges (without MPI)
-     * nthreads : the number of threads available for these jobs
-     */
-    void getBestModelforMergesNoMPI(int nthreads, vector<pair<int,double> >& jobs);
-
-    /**
-     * compute the best model
-     * job_type = 1 : for all partitions
-     * job_type = 2 : for all merges
-     */
-    void getBestModel(int job_type);
-
+    
     /*
      * Consolidate the partition results (for MPI)
      */
@@ -499,7 +508,9 @@ private:
      * Consolidate the merge results (for MPI)
      */
     void consolidMergeResults();
-    
+
+#endif
+
 public:
     ModelCheckpoint *model_info;
     DoubleVector lhvec; // log-likelihood for each partition
@@ -526,7 +537,10 @@ public:
     int jobdone;
     int tot_job_num;
     vector<int> remain_job_list;
+    
+#ifdef _IQTREE_MPI
     vector<MergeJob*> remain_mergejobs;
+#endif
     
     int base;
     
@@ -557,6 +571,7 @@ public:
      */
     void test_PartitionModel();
 
+#ifdef _IQTREE_MPI
     /*
      *  initialize the shared memory space to be accessed by the other processors
      */
@@ -566,9 +581,8 @@ public:
      *  free the shared memory space
      */
     void freeMPIShareMemory();
-
+    
     /*
-     * For MPI
      * assign initial partition jobs to processors
      * input: a set of partition jobs ordered by the estimated computational costs
      * output: number of items in currJobs
@@ -576,13 +590,14 @@ public:
     int partjobAssignment(vector<pair<int,double> > &job_ids, vector<int> &currJobs);
     
     /*
-     * For MPI
      * assign initial merge jobs to processors
      * input: a set of merge jobs ordered by the estimated computational costs
      * output: number of items in currJobs
      */
     int mergejobAssignment(vector<pair<int,double> > &job_ids, vector<MergeJob* >&currJobs);
-    
+
+#endif // _IQTREE_MPI
+
     /*
      * Show the result of best model for the partition
      */
@@ -604,8 +619,10 @@ public:
     void showMergeResults(ModelCheckpoint& part_model_info, vector<double>& tree_len, vector<string>& model_name, vector<string>& set_name, vector<int>& tag, int tot_jobs_done);
 };
 
+#ifdef _IQTREE_MPI
+
 /*
- * This class is designed for synchronization of checkpoints for partition finder
+ * This class is designed for synchronization of checkpoints for partition finder (for MPI)
  */
 class SyncChkPoint {
 
@@ -660,8 +677,6 @@ public:
      */
     void getNextMergeJob(MergeJob* mergejob);
 
-#ifdef _IQTREE_MPI
-
     void sendCheckpoint(Checkpoint *ckp, int dest, int tag);
     
     // void recvCheckpoint(Checkpoint *ckp, int src, int tag);
@@ -691,10 +706,9 @@ public:
     char* toCharArr(vector<string>& model_names, int& buffsize);
     
     void loadFrCharArr(vector<string>& model_names, char* buff);
-    
-#endif
-    
 };
+
+#endif
 
 /**
  * computing AIC, AICc, and BIC scores
