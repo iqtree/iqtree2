@@ -4615,9 +4615,8 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
  * output: number of items in currJobs
  */
 int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vector<MergeJob*>&currJobs) {
-
     int i,j,k;
-    int w,id1,id2;
+    int w,id1,id2,accum_len,len;
 
     nextjob = 0;
     // clear any existing jobs
@@ -4630,38 +4629,49 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
         delete(remain_mergejobs[k]);
     }
     remain_mergejobs.clear();
-
+    
+    int n = num_processes * num_threads;
+    int* scounts = new int[num_processes];
+    int* displs = new int[num_processes];
+    int* alljoblens = NULL;
+    int* joblens = new int[num_threads];
+    int pid;
+    char* sendbuf = NULL;
+    char* recvbuf = NULL;
+    int recvlen;
     if (MPIHelper::getInstance().isMaster()) {
-        // MASTER: assign one job to its every thread
-        i=0;
-        while (i<num_threads && i<job_ids.size()) {
-            w = job_ids[i].first;
-            id1 = closest_pairs[w].first;
-            id2 = closest_pairs[w].second;
-            currJobs.push_back(new MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]));
-            i++;
-        }
-#ifdef _IQTREE_MPI
-        // MASTER: send one job to every thread of the processors
-        SyncChkPoint syncChkPoint(this, 0);
-        for (j=1; j<num_processes; j++) {
+        // assign one job to every thread
+        i = 0;
+        accum_len = 0;
+        string data_str = "";
+        alljoblens = new int[n];
+        for (j=0; j<num_processes; j++) {
+            len = 0;
             for (k=0; k<num_threads; k++) {
-                int n = 0;
-                int tag = j * num_threads + k;
+                string str;
                 if (i < job_ids.size()) {
                     w = job_ids[i].first;
                     id1 = closest_pairs[w].first;
                     id2 = closest_pairs[w].second;
-                    MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
-                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
-                    i++;
+                    MergeJob mjob = MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
+                    mjob.toString(str);
                 } else {
-                    MergeJob mergejob;
-                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
+                    // empty job
+                    MergeJob mjob;
+                    mjob.toString(str);
                 }
+                len += str.length();
+                alljoblens[i] = str.length();
+                data_str.append(str);
+                i++;
             }
+            displs[j] = accum_len;
+            scounts[j] = len;
+            accum_len += len;
         }
-#endif
+        sendbuf = new char[accum_len];
+        strcpy(sendbuf, data_str.c_str());
+
         // place all the unassigned jobs to the array remain_mergejobs
         while (i<job_ids.size()) {
             w = job_ids[i].first;
@@ -4670,71 +4680,35 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
             remain_mergejobs.push_back(new MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]));
             i++;
         }
-
-/*
-#ifdef ONESIZE_COMM
-        // send the array remain_mergejobs to all workers
-        int tag, n;
-        int num = remain_mergejobs.size();
-        for (j = 1; j < num_processes; j++) {
-            tag = 0;
-            // send the number of remaining jobs
-            MPI_Send(&num, 1, MPI_INT, j, tag, MPI_COMM_WORLD);
-            tag++;
-            for (i = 0; i < remain_mergejobs.size(); i++) {
-                syncChkPoint.sendMergeJob(*(remain_mergejobs[i]),j,tag);
-                tag ++;
-            }
-        }
-#endif
-*/
-    } else {
-
-#ifdef _IQTREE_MPI
-        // WORKER: receive jobs from the master
-        int n;
-        int src, tag;
-        SyncChkPoint syncChkPoint(this, 0);
-        int proc_id = MPIHelper::getInstance().getProcessID();
-        for (i=0; i<num_threads; i++) {
-            MergeJob* mergeJob = new MergeJob();
-            tag = proc_id * num_threads + i;
-            syncChkPoint.recMergeJobFrMaster(*mergeJob, tag);
-            if (mergeJob->id1 == -1) {
-                // empty job
-                delete(mergeJob);
-            } else {
-                currJobs.push_back(mergeJob);
-            }
-        }
-/*
-#ifdef ONESIZE_COMM
-        // receive the array remain_mergejobs from master
-        int tag, n, num;
-        tag = 0;
-        // send the number of remaining jobs
-        MPI_Recv(&num, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        tag++;
-        for (i = 0; i < remain_mergejobs.size(); i++) {
-            MergeJob* mergeJob = new MergeJob();
-            n = syncChkPoint.recMergeJob(*mergeJob,0,tag);
-            tag += n;
-            if (mergeJob.id1 == -1) {
-                // empty job
-                delete(mergeJob);
-            } else {
-                remain_mergejobs.push_back(mergeJob);
-            }
-        }
-#endif
-*/
-
-#endif
     }
+    MPI_Scatter(alljoblens, num_threads, MPI_INT, joblens, num_threads, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    recvlen = 0;
+    for (k = 0; k < num_threads; k++)
+        recvlen += joblens[k];
+    recvbuf = new char[recvlen];
+    MPI_Scatterv(sendbuf, scounts, displs, MPI_CHAR, recvbuf, recvlen, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
+
+    // add the merge jobs to currJobs
+    k = 0;
+    for (j = 0; j < num_threads; j++) {
+        string str = string(recvbuf, k, joblens[j]);
+        MergeJob* mjob = new MergeJob();
+        mjob->loadFrString(str);
+        currJobs.push_back(mjob);
+        k += joblens[j];
+    }
+    
+    // release the memory
+    delete[] scounts;
+    delete[] displs;
+    delete[] joblens;
+    delete[] recvbuf;
+    if (sendbuf != NULL)
+        delete[] sendbuf;
+    if (alljoblens != NULL)
+        delete[] alljoblens;
     return currJobs.size();
 }
-
-
 
 /*  constructor
  */
