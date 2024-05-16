@@ -4607,6 +4607,7 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
  * input: a set of merge jobs ordered by the estimated computational costs
  * output: number of items in currJobs
  */
+/*
 int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vector<MergeJob*>&currJobs) {
     int i,j,k;
     int w,id1,id2,accum_len,len;
@@ -4700,6 +4701,88 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
         delete[] sendbuf;
     if (alljoblens != NULL)
         delete[] alljoblens;
+    return currJobs.size();
+}
+*/
+
+/*
+ * assign initial merge jobs to processors
+ * input: a set of merge jobs ordered by the estimated computational costs
+ * output: number of items in currJobs
+ */
+int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vector<MergeJob*>&currJobs) {
+
+    int i,j,k;
+    int w,id1,id2;
+
+    nextjob = 0;
+    // clear any existing jobs
+    for (k=0; k<currJobs.size(); k++) {
+        delete(currJobs[k]);
+    }
+    currJobs.clear();
+    // clear any remaining jobs
+    for (k=0; k<remain_mergejobs.size(); k++) {
+        delete(remain_mergejobs[k]);
+    }
+    remain_mergejobs.clear();
+
+    if (MPIHelper::getInstance().isMaster()) {
+        // MASTER: assign one job to its every thread
+        i=0;
+        while (i<num_threads && i<job_ids.size()) {
+            w = job_ids[i].first;
+            id1 = closest_pairs[w].first;
+            id2 = closest_pairs[w].second;
+            currJobs.push_back(new MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]));
+            i++;
+        }
+        // MASTER: send one job to every thread of the processors
+        SyncChkPoint syncChkPoint(this, 0);
+        for (j=1; j<num_processes; j++) {
+            for (k=0; k<num_threads; k++) {
+                int n = 0;
+                int tag = j * num_threads + k;
+                if (i < job_ids.size()) {
+                    w = job_ids[i].first;
+                    id1 = closest_pairs[w].first;
+                    id2 = closest_pairs[w].second;
+                    MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
+                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
+                    i++;
+                } else {
+                    MergeJob mergejob;
+                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
+                }
+            }
+        }
+        // place all the unassigned jobs to the array remain_mergejobs
+        while (i<job_ids.size()) {
+            w = job_ids[i].first;
+            id1 = closest_pairs[w].first;
+            id2 = closest_pairs[w].second;
+            remain_mergejobs.push_back(new MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]));
+            i++;
+        }
+    } else {
+
+        // WORKER: receive jobs from the master
+        int n;
+        int src, tag;
+        SyncChkPoint syncChkPoint(this, 0);
+        int proc_id = MPIHelper::getInstance().getProcessID();
+        for (i=0; i<num_threads; i++) {
+            MergeJob* mergeJob = new MergeJob();
+            tag = proc_id * num_threads + i;
+            syncChkPoint.recMergeJobFrMaster(*mergeJob, tag);
+            if (mergeJob->id1 == -1) {
+                // empty job
+                delete(mergeJob);
+            } else {
+                currJobs.push_back(mergeJob);
+            }
+        }
+    }
     return currJobs.size();
 }
 

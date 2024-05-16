@@ -82,7 +82,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH ".4.1.mpi")
+set (iqtree_VERSION_PATCH ".4.2.mpi")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
