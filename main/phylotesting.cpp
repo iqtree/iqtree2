@@ -3707,7 +3707,7 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs) {
 /**
  * compute and process the best model for partitions (for MPI)
  */
-void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum) {
+void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum) {
 
     if (jobs.empty())
         return;
@@ -3726,18 +3726,10 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<vector<i
 #endif
     for (int i=0; i<jobs.size(); i++) {
         SyncChkPoint syncChkPt(this, i);
-        vector<int>* curr_jobs = jobs[i];
-        bool need_next_jobID = false;
+        int next_job_id = jobs[i];
+        bool need_next_jobID = true;
         double sub_run_time;
         double sub_wait_time;
-        for (int j=0; j < curr_jobs->size()-1; j++) {
-            computeBestModelforOnePartitionMPI(curr_jobs->at(j), (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_run_time, sub_wait_time);
-            run_time[i] += sub_run_time;
-            wait_time[i] += sub_wait_time;
-            partNum[i]++;
-        }
-        need_next_jobID = true;
-        int next_job_id = curr_jobs->at(curr_jobs->size()-1); // the last job in the list
         while (next_job_id != -1) {
             next_job_id = computeBestModelforOnePartitionMPI(next_job_id, (parallel_job ? 1 : nthreads), need_next_jobID, syncChkPt, sub_run_time, sub_wait_time);
             run_time[i] += sub_run_time;
@@ -4018,7 +4010,7 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
 void PartitionFinder::getBestModel(int job_type) {
 
     vector<pair<int,double> > jobIDs;
-    vector<vector<int>* > currPartJobs; // for partition jobs
+    vector<int> currPartJobs; // for partition jobs
     vector<MergeJob* > currMergeJobs; // for merge jobs
     vector<int>* jobs;
     vector<int> closest_p_vector;
@@ -4172,14 +4164,10 @@ void PartitionFinder::getBestModel(int job_type) {
             // the workers will do so after the merging finishes.
             consolidMergeResults();
         }
-        
+    
         if (job_type == 1) {
-            // clear the memory for currPartJobs
-            for (i = 0; i < currPartJobs.size(); i++) {
-                delete (currPartJobs[i]);
-            }
             currPartJobs.clear();
-        } else {
+        } else if (job_type == 2) {
             // clear the memory for currMergeJobs
             for (i = 0; i < currMergeJobs.size(); i++) {
                 delete (currMergeJobs[i]);
@@ -4602,83 +4590,48 @@ void PartitionFinder::freeMPIShareMemory() {
  * For MPI
  * assign initial partition jobs to processors
  * input: a set of partition jobs ordered by the estimated computational costs
- * output: number of items in currJobs
- *
- * DIST_RATIO: the ratio of the total jobs distributed to the processors
+ * output: the set of jobs in currJobs, number of jobs assigned <= number of threads
  */
-int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vector<vector<int>* >&currJobs) {
+int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vector<int> &currJobs) {
 
     int num_job_assigned = 0;
     int n = num_processes * num_threads;
-    multimap<double,vector<int>*,jobcomp> assignJobs;
-    multimap<double,vector<int>*,jobcomp>::iterator itr, itr2;
-    int i,w;
-
+    int* assignJobs = new int[n];
+    int remain_job_num;
     nextjob = 0;
-    currJobs.clear();
     remain_job_list.clear();
-
     if (MPIHelper::getInstance().isMaster()) {
-        // MASTER: assign one job to every thread of the processors
-        for (i=0; i<n && i<job_ids.size(); i++) {
-            auto* job = new vector<int>;
-            job->push_back(job_ids[i].first);
-            assignJobs.insert(pair<double, vector<int>* > (job_ids[i].second, job));
-            num_job_assigned++;
+        int k = 0;
+        while (k < n && k < job_ids.size()) {
+            assignJobs[k] = job_ids[k].first;
+            k++;
         }
-
-        // place all the unassigned jobs to the array remain_job_list
-        for (i=num_job_assigned; i<job_ids.size(); i++) {
-            remain_job_list.push_back(job_ids[i].first);
+        if (k < n) {
+            for (int i = k; i < n; i++)
+                assignJobs[i] = -1;
         }
-
-        itr = assignJobs.begin();
-        // MASTER: assign jobs to itself
-        for (i=0; i<num_threads; i++) {
-            if (itr != assignJobs.end()) {
-                currJobs.push_back(itr->second);
-                itr++;
-            }
+        while (k < job_ids.size()) {
+            remain_job_list.push_back(job_ids[k].first);
+            k++;
         }
-
-#ifdef _IQTREE_MPI
-        // MASTER: assign num_threads jobs to each worker
-        for (w=1; w<num_processes; w++) {
-            for (i=0; i<num_threads; i++) {
-                if (itr != assignJobs.end()) {
-                    sendVector(*(itr->second), w);
-                    delete (itr->second);
-                    itr++;
-                } else {
-                    vector<int> empty_array;
-                    sendVector(empty_array, w);
-                }
-            }
-            // send the remain job list to each worker
-            sendVector(remain_job_list, w);
-        }
-        if (val_ptr != nullptr) {
-            val_ptr[0] = 0;
-        }
-#endif
-
-    } else {
-
-#ifdef _IQTREE_MPI
-        // WORKER: receive jobs from the master
-        for (i=0; i<num_threads; i++) {
-            vector<int>* job_array = new vector<int>;
-            recVector(*job_array);
-            if (job_array->size() > 0)
-                currJobs.push_back(job_array);
-            else
-                delete(job_array);
-        }
-        // receive the remain job list from the master
-        recVector(remain_job_list);
-#endif
-
+        remain_job_num = remain_job_list.size();
     }
+    currJobs.resize(num_threads);
+    MPI_Scatter(assignJobs, num_threads, MPI_INT, &currJobs[0], num_threads, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(&remain_job_num, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    if (MPIHelper::getInstance().isWorker())
+        remain_job_list.resize(remain_job_num);
+    MPI_Bcast(&remain_job_list[0], remain_job_num, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    // resize the currJobs if there are some empty jobs
+    int i = 0;
+    while (i < currJobs.size() && currJobs[i] != -1)
+        i++;
+    if (i == 0)
+        currJobs.clear();
+    else if (i < currJobs.size())
+        currJobs.resize(i);
+    // clear the memory
+    delete[] assignJobs;
     return currJobs.size();
 }
 

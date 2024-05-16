@@ -464,7 +464,7 @@ private:
 	/**
 	 * compute and process the best model for partitions (for MPI)
 	 */
-	void getBestModelforPartitionsMPI(int nthreads, vector<vector<int>* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
+	void getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
 
 	/**
 	 * compute and process the best model for merges (for MPI)
@@ -572,10 +572,8 @@ public:
      * assign initial partition jobs to processors
      * input: a set of partition jobs ordered by the estimated computational costs
      * output: number of items in currJobs
-     *
-     * DIST_RATIO: the ratio of the total jobs distributed to the processors
      */
-    int partjobAssignment(vector<pair<int,double> > &job_ids, vector<vector<int>* >&currJobs);
+    int partjobAssignment(vector<pair<int,double> > &job_ids, vector<int> &currJobs);
     
     /*
      * For MPI
