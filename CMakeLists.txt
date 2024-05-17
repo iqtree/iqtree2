@@ -87,7 +87,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH ".4.cmaple")
+set (iqtree_VERSION_PATCH ".4.lib")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -778,8 +778,10 @@ option(BUILD_LIB "Build IQ-TREE2 library" OFF)
 
 if (BUILD_LIB STREQUAL "ON")
     add_library(iqtree2
-        obsolete/parsmultistate.cpp
-        obsolete/parsmultistate.h
+    	libfunc/libiqtree2_fun.cpp
+    	libfunc/libiqtree2_fun.h
+    	libfunc/suppFunc.cpp
+    	libfunc/suppFunc.h
     )
 else()
     add_executable(iqtree2

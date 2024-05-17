@@ -316,7 +316,7 @@ public:
             @param tree_string the tree string.
             @param is_rooted (IN/OUT) true if tree is rooted
      */
-    //virtual void readTreeString(string tree_string, bool is_rooted);
+    void read_TreeString(string tree_string, bool is_rooted);
 
     /**
             parse the tree from the input file in newick format

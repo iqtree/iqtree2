@@ -627,6 +627,11 @@ private:
 public:
 
     /**
+     * Assign the default values to the variables
+     */
+    void setDefault();
+    
+    /**
     *  Fast and accurate optimiation for alpha and p_invar
     */
     bool fai;
