@@ -4513,6 +4513,11 @@ void PartitionFinder::test_PartitionModel() {
 #ifdef _IQTREE_MPI
     // free the MPI share memory
     freeMPIShareMemory();
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    cout << "Finish the procedure test_PartitionModel()" << endl;
+    
 #endif
 }
 
@@ -4958,6 +4963,8 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
         }
 
         showResult(proc_model_info, work_tag);
+        
+        proc_model_info.clear();
     }
 }
 
