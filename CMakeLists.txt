@@ -742,8 +742,6 @@ if (USE_CMAPLE STREQUAL "ON")
 	add_subdirectory(cmaple)
 endif()
 
-add_subdirectory(main)
-
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
 option(YAML_CPP_BUILD_TOOLS "Enable parse tools" OFF)
@@ -782,8 +780,25 @@ if (BUILD_LIB STREQUAL "ON")
     	libfunc/libiqtree2_fun.h
     	libfunc/suppFunc.cpp
     	libfunc/suppFunc.h
+        main/alisim.cpp
+        main/alisim.h
+        main/phyloanalysis.cpp
+        main/phyloanalysis.h
+        main/phylotesting.cpp
+        main/phylotesting.h
+        main/terraceanalysis.cpp
+        main/terraceanalysis.h
+        main/timetree.cpp
+        main/timetree.h
+        main/treetesting.cpp
+        main/treetesting.h
     )
+    add_custom_command(
+        TARGET iqtree2 POST_BUILD
+        COMMAND libtool -static -o libiqtree2full.a libiqtree2.a libkernelsse.a alignment/libalignment.a booster/libbooster.a gsl/libgsl.a lbfgsb/liblbfgsb.a lsd2/liblsd2.a model/libmodel.a ncl/libncl.a nclextra/libnclextra.a pda/libpda.a phylo-yaml/libphyloYAML.a pll/libpll.a simulator/libsimulator.a sprng/libsprng.a terrace/libterrace.a terracetphast/libterracetphast.a terraphast/libterraphast.a tree/libtree.a utils/libutils.a vectorclass/libvectorclass.a whtest/libwhtest.a yaml-cpp/libyaml-cpp.a ${PROJECT_SOURCE_DIR}/libmac_m1/libomp.a ${PROJECT_SOURCE_DIR}/libmac_m1/libz.a
+        VERBATIM)
 else()
+    add_subdirectory(main)
     add_executable(iqtree2
         obsolete/parsmultistate.cpp
         obsolete/parsmultistate.h
@@ -814,7 +829,11 @@ endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main ${TARGET_CMAPLE} PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        if (BUILD_LIB STREQUAL "ON")
+            set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML ${TARGET_CMAPLE} PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        else()
+            set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main ${TARGET_CMAPLE} PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        endif()
         if (USE_CMAPLE STREQUAL "ON")
         	set_target_properties(iqtree2-aa ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main-aa maple-aa PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
@@ -885,8 +904,14 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+
+if (BUILD_LIB STREQUAL "ON")
+    target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+        gsl alignment tree simulator terrace yaml-cpp phyloYAML ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+else()
+    target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+        gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+endif()
 
 if (USE_CMAPLE STREQUAL "ON")
 	target_link_libraries(iqtree2-aa pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
