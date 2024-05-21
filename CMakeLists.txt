@@ -913,12 +913,10 @@ endif()
 
 # basic linking librararies
 
-if (BUILD_LIB STREQUAL "ON")
-    SET(STATIC_LIBS "${STATIC_LIBS}" "pll/libpll.a" "ncl/libncl.a" "nclextra/libnclextra.a" "utils/libutils.a" "pda/libpda.a" "lbfgsb/liblbfgsb.a" "whtest/libwhtest.a" "sprng/libsprng.a" "vectorclass/libvectorclass.a" "model/libmodel.a" "gsl/libgsl.a" "alignment/libalignment.a" "tree/libtree.a" "simulator/libsimulator.a" "terrace/libterrace.a" "yaml-cpp/libyaml-cpp.a" "phylo-yaml/libphyloYAML.a")
-else()
-    target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-        gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
-endif()
+target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+
+SET(STATIC_LIBS "${STATIC_LIBS}" "pll/libpll.a" "ncl/libncl.a" "nclextra/libnclextra.a" "utils/libutils.a" "pda/libpda.a" "lbfgsb/liblbfgsb.a" "whtest/libwhtest.a" "sprng/libsprng.a" "vectorclass/libvectorclass.a" "model/libmodel.a" "gsl/libgsl.a" "alignment/libalignment.a" "tree/libtree.a" "simulator/libsimulator.a" "terrace/libterrace.a" "yaml-cpp/libyaml-cpp.a" "phylo-yaml/libphyloYAML.a")
 
 if (USE_CMAPLE STREQUAL "ON")
 	target_link_libraries(iqtree2-aa pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
@@ -1038,8 +1036,9 @@ if (BUILD_LIB STREQUAL "ON")
     elseif(UNIX)
         add_custom_command(
             TARGET iqtree2 POST_BUILD
-            COMMAND libtool --mode=link cc -static -o libiqtree2full.a ${STATIC_LIBS}
-            COMMAND mv libiqtree2full.a libiqtree2.a
+            COMMAND mkdir all_libs
+            COMMAND cp ${STATIC_LIBS} all_libs
+            COMMAND ${PROJECT_SOURCE_DIR}/libfunc/unify-static-libs.sh libiqtree2.linux.a all_libs
             VERBATIM)
     endif()
 endif()
