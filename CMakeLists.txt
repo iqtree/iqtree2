@@ -346,6 +346,10 @@ if (__ARM_NEON AND APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=")
 endif()
 
+# for list of libraries to combine with for building IQTREE2 static library
+SET(STATIC_LIBS "libiqtree2.a")
+
+
 ##################################################################
 # detect 32 or 64 bit binary
 ##################################################################
@@ -438,14 +442,18 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     if(CLANG AND APPLE)
     	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
     		link_directories(${PROJECT_SOURCE_DIR}/libmac_m1)
+            SET(STATIC_LIBS "${STATIC_LIBS}" "${PROJECT_SOURCE_DIR}/libmac_m1/libomp.a" "${PROJECT_SOURCE_DIR}/libmac_m1/libz.a")
     	else()
-        link_directories(${PROJECT_SOURCE_DIR}/libmac)
-      endif()	
+            link_directories(${PROJECT_SOURCE_DIR}/libmac)
+            SET(STATIC_LIBS "${STATIC_LIBS}" "${PROJECT_SOURCE_DIR}/libmac/libomp.a" "${PROJECT_SOURCE_DIR}/libmac/libz.a")
+      endif()
     elseif (UNIX AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
       if (__ARM_NEON)
         link_directories(${PROJECT_SOURCE_DIR}/liblinux_arm)
+        SET(STATIC_LIBS "${STATIC_LIBS}" "${PROJECT_SOURCE_DIR}/liblinux_arm/libomp.a" "${PROJECT_SOURCE_DIR}/liblinux_arm/libz.a")
       else()
         link_directories(${PROJECT_SOURCE_DIR}/lib)
+        SET(STATIC_LIBS "${STATIC_LIBS}" "${PROJECT_SOURCE_DIR}/lib/libomp.a" "${PROJECT_SOURCE_DIR}/lib/libz.a")
       endif()
     elseif (WIN32)
         if (BINARY32)
@@ -762,8 +770,8 @@ endif()
 add_library(kernelsse tree/phylokernelsse.cpp)
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(kernelavx tree/phylotreeavx.cpp)
-add_library(kernelfma tree/phylokernelfma.cpp)
+    add_library(kernelavx tree/phylotreeavx.cpp)
+    add_library(kernelfma tree/phylokernelfma.cpp)
     if (IQTREE_FLAGS MATCHES "KNL")
         add_library(kernelavx512 tree/phylokernelavx512.cpp)
     endif()
@@ -793,10 +801,7 @@ if (BUILD_LIB STREQUAL "ON")
         main/treetesting.cpp
         main/treetesting.h
     )
-    add_custom_command(
-        TARGET iqtree2 POST_BUILD
-        COMMAND libtool -static -o libiqtree2full.a libiqtree2.a libkernelsse.a alignment/libalignment.a booster/libbooster.a gsl/libgsl.a lbfgsb/liblbfgsb.a lsd2/liblsd2.a model/libmodel.a ncl/libncl.a nclextra/libnclextra.a pda/libpda.a phylo-yaml/libphyloYAML.a pll/libpll.a simulator/libsimulator.a sprng/libsprng.a terrace/libterrace.a terracetphast/libterracetphast.a terraphast/libterraphast.a tree/libtree.a utils/libutils.a vectorclass/libvectorclass.a whtest/libwhtest.a yaml-cpp/libyaml-cpp.a ${PROJECT_SOURCE_DIR}/libmac_m1/libomp.a ${PROJECT_SOURCE_DIR}/libmac_m1/libz.a
-        VERBATIM)
+    
 else()
     add_subdirectory(main)
     add_executable(iqtree2
@@ -822,6 +827,7 @@ endif(Backtrace_FOUND)
 
 if (USE_BOOSTER)
     target_link_libraries(iqtree2 booster)
+    SET(STATIC_LIBS "${STATIC_LIBS}" "booster/libbooster.a")
     if (USE_CMAPLE STREQUAL "ON")
     	target_link_libraries(iqtree2-aa booster)
     endif()
@@ -885,11 +891,13 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     elseif(CLANG AND WIN32)
         if (BINARY32)
             target_link_libraries(iqtree2 ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+            SET(STATIC_LIBS "${STATIC_LIBS}" "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll")
             if (USE_CMAPLE STREQUAL "ON")
             	target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
             endif()
         else()
             target_link_libraries(iqtree2 ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+            SET(STATIC_LIBS "${STATIC_LIBS}" "${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll")
             if (USE_CMAPLE STREQUAL "ON")
             	target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
             endif()
@@ -906,8 +914,7 @@ endif()
 # basic linking librararies
 
 if (BUILD_LIB STREQUAL "ON")
-    target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-        gsl alignment tree simulator terrace yaml-cpp phyloYAML ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    SET(STATIC_LIBS "${STATIC_LIBS}" "pll/libpll.a" "ncl/libncl.a" "nclextra/libnclextra.a" "utils/libutils.a" "pda/libpda.a" "lbfgsb/liblbfgsb.a" "whtest/libwhtest.a" "sprng/libsprng.a" "vectorclass/libvectorclass.a" "model/libmodel.a" "gsl/libgsl.a" "alignment/libalignment.a" "tree/libtree.a" "simulator/libsimulator.a" "terrace/libterrace.a" "yaml-cpp/libyaml-cpp.a" "phylo-yaml/libphyloYAML.a")
 else()
     target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
         gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
@@ -920,6 +927,7 @@ endif()
 	
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)
+   SET(STATIC_LIBS "${STATIC_LIBS}" "terracetphast/libterracetphast.a" "terraphast/libterraphast.a")
    if (USE_CMAPLE STREQUAL "ON")
 		target_link_libraries(iqtree2-aa terracetphast)
    endif()
@@ -927,6 +935,7 @@ endif()
 
 if (USE_LSD2)
     target_link_libraries(iqtree2 lsd2)
+    SET(STATIC_LIBS "${STATIC_LIBS}" "lsd2/liblsd2.a")
     if (USE_CMAPLE STREQUAL "ON")
     	target_link_libraries(iqtree2-aa lsd2)
     endif()
@@ -934,6 +943,7 @@ endif()
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree2 kernelsse)
+    SET(STATIC_LIBS "${STATIC_LIBS}" "libkernelsse.a")
     if (USE_CMAPLE STREQUAL "ON")
     	target_link_libraries(iqtree2-aa kernelsse)
     endif()
@@ -952,11 +962,13 @@ endif()
 # SSE, AVX etc. libraries
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree2 pllavx kernelavx kernelfma)
+    SET(STATIC_LIBS "${STATIC_LIBS}" "libpllavx.a" "libkernelavx.a" "libkernelfma.a")
     if (USE_CMAPLE STREQUAL "ON")
     	target_link_libraries(iqtree2-aa pllavx kernelavx kernelfma)
     endif()
     if (IQTREE_FLAGS MATCHES "KNL")
         target_link_libraries(iqtree2 kernelavx512)
+        SET(STATIC_LIBS "${STATIC_LIBS}" "libkernelavx512.a")
         if (USE_CMAPLE STREQUAL "ON")
         	target_link_libraries(iqtree2-aa kernelavx512)
         endif()
@@ -1009,6 +1021,26 @@ if (WIN32)
         if (USE_CMAPLE STREQUAL "ON")
         	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
         endif()
+    endif()
+endif()
+
+##############################################################
+# CREATE A STATIC LIBRARY
+##############################################################
+
+if (BUILD_LIB STREQUAL "ON")
+    if(APPLE)
+        add_custom_command(
+            TARGET iqtree2 POST_BUILD
+            COMMAND libtool -static -o libiqtree2full.a ${STATIC_LIBS}
+            COMMAND mv libiqtree2full.a libiqtree2.a
+            VERBATIM)
+    elseif(UNIX)
+        add_custom_command(
+            TARGET iqtree2 POST_BUILD
+            COMMAND libtool --mode=link cc -static -o libiqtree2full.a ${STATIC_LIBS}
+            COMMAND mv libiqtree2full.a libiqtree2.a
+            VERBATIM)
     endif()
 endif()
 
