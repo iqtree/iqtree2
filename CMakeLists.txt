@@ -960,7 +960,7 @@ endif()
 # SSE, AVX etc. libraries
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree2 pllavx kernelavx kernelfma)
-    SET(STATIC_LIBS "${STATIC_LIBS}" "libpllavx.a" "libkernelavx.a" "libkernelfma.a")
+    SET(STATIC_LIBS "${STATIC_LIBS}" "pll/libpllavx.a" "libkernelavx.a" "libkernelfma.a")
     if (USE_CMAPLE STREQUAL "ON")
     	target_link_libraries(iqtree2-aa pllavx kernelavx kernelfma)
     endif()
