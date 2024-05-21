@@ -1030,7 +1030,7 @@ if (BUILD_LIB STREQUAL "ON")
             TARGET iqtree2 POST_BUILD
             COMMAND mkdir all_libs
             COMMAND cp ${STATIC_LIBS} all_libs
-            COMMAND ${PROJECT_SOURCE_DIR}/libfunc/unify-static-libs.sh libiqtree2.linux.a all_libs
+            COMMAND ${PROJECT_SOURCE_DIR}/main/unify-static-libs.sh libiqtree2.linux.a all_libs
             VERBATIM)
     endif()
 endif()
