@@ -26,7 +26,7 @@ do
     cmd="${cmd} ${OBJDIR}/$i/*.o"
 done
 # Link objects into a single lib
-echo "Creating $LIBNAME from objects..."
+# echo "Creating $LIBNAME from objects..."
 eval "$cmd"
 # Clean up
 rm -rf ${OBJDIR}
