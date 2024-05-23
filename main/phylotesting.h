@@ -492,12 +492,12 @@ private:
     /**
 	 * compute and process the best model for partitions (for MPI)
 	 */
-	void getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
+	void getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum, double& cpu_time, double& wall_time);
 
 	/**
 	 * compute and process the best model for merges (for MPI)
 	 */
-	void getBestModelforMergesMPI(int nthreads, vector<MergeJob* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum);
+	void getBestModelforMergesMPI(int nthreads, vector<MergeJob* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum, double& cpu_time, double& wall_time);
     
     /*
      * Consolidate the partition results (for MPI)

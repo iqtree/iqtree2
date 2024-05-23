@@ -3661,7 +3661,7 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs) {
 /**
  * compute and process the best model for partitions (for MPI)
  */
-void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum) {
+void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum,  double& cpu_time, double& wall_time) {
 
     if (jobs.empty())
         return;
@@ -3673,6 +3673,10 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jo
     memset(wait_time, 0, sizeof(double)*nthreads);
     memset(fstep_time, 0, sizeof(double)*nthreads);
     memset(partNum, 0, sizeof(int)*nthreads);
+
+    // wall time and cpu time
+    cpu_time = getCPUTime();
+    wall_time = getRealTime();
 
 #ifdef _OPENMP
     parallel_job = (jobs.size() > 1);
@@ -3721,12 +3725,14 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jo
         }
     }
 #endif // ONESIDE_COMM
+    cpu_time = getCPUTime() - cpu_time;
+    wall_time = getRealTime() - wall_time;
 }
 
 /**
  * compute and process the best model for merges (for MPI)
  */
-void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum) {
+void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >& jobs, double* run_time, double* wait_time, double* fstep_time, int* partNum, double& cpu_time, double& wall_time)  {
 
     if (jobs.empty())
         return;
@@ -3738,6 +3744,10 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
     memset(wait_time, 0, sizeof(double)*nthreads);
     memset(fstep_time, 0, sizeof(double)*nthreads);
     memset(partNum, 0, sizeof(int)*nthreads);
+
+    // wall time and cpu time
+    cpu_time = getCPUTime();
+    wall_time = getRealTime();
 
 #ifdef _OPENMP
     parallel_job = (jobs.size() > 1);
@@ -3769,6 +3779,8 @@ void PartitionFinder::getBestModelforMergesMPI(int nthreads, vector<MergeJob* >&
             fstep_time[i] += sub_fstep_time;
         }
     }
+    cpu_time = getCPUTime() - cpu_time;
+    wall_time = getRealTime() - wall_time;
 }
 
 #endif // _IQTREE_MPI
@@ -4067,15 +4079,17 @@ void PartitionFinder::getBestModel(int job_type) {
         double* fstep_time = new double[num_threads];
         // to check the number of partitions each processor handle
         int* num_part = new int[num_threads];
-        
+
+        double cpu_time;
+        double wall_time;
         // initialize the checkpoint for the whole processor
         process_model_info.clear();
         
         // compute the best model
         if (job_type == 1) {
-            getBestModelforPartitionsMPI(num_threads, currPartJobs, run_time, wait_time, fstep_time, num_part);
+            getBestModelforPartitionsMPI(num_threads, currPartJobs, run_time, wait_time, fstep_time, num_part, cpu_time, wall_time);
         } else {
-            getBestModelforMergesMPI(num_threads, currMergeJobs, run_time, wait_time, fstep_time, num_part);
+            getBestModelforMergesMPI(num_threads, currMergeJobs, run_time, wait_time, fstep_time, num_part, cpu_time, wall_time);
         }
         
         MPI_Barrier(MPI_COMM_WORLD);
@@ -4086,12 +4100,17 @@ void PartitionFinder::getBestModel(int job_type) {
         double* run_time_arrays = new double[num_processes * num_threads];
         double* wait_time_arrays = new double[num_processes * num_threads];
         double* fstep_time_arrays = new double[num_processes * num_threads];
+        double* cpu_time_array = new double[num_processes];
+        double* wall_time_array = new double[num_processes];
+
+        MPI_Gather(&wall_time, 1, MPI_DOUBLE, wall_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+        MPI_Gather(&cpu_time, 1, MPI_DOUBLE, cpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
         MPI_Gather(&num_job_array, 1, MPI_INT, num_job_arrays, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
         MPI_Gather(num_part, num_threads, MPI_INT, num_part_arrays, num_threads, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
         MPI_Gather(run_time, num_threads, MPI_DOUBLE, run_time_arrays, num_threads, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
         MPI_Gather(wait_time, num_threads, MPI_DOUBLE, wait_time_arrays, num_threads, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
         MPI_Gather(fstep_time, num_threads, MPI_DOUBLE, fstep_time_arrays, num_threads, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
-        
+
         // show all timing information
         if (MPIHelper::getInstance().isMaster() && tot_job_num > 0) {
             cout << endl;
@@ -4100,6 +4119,11 @@ void PartitionFinder::getBestModel(int job_type) {
                 for (int t=0; t<num_job_arrays[w]; t++) {
                     cout << "\t" << w << "\t" << t << "\t" << run_time_arrays[w*num_threads+t] << "\t" << wait_time_arrays[w*num_threads+t] << "\t" << fstep_time_arrays[w*num_threads+t] << "\t" << num_part_arrays[w*num_threads+t]<< endl;
                 }
+            }
+            cout << endl;
+            cout << "\tproc\tcpu_time\twall_time"<<endl;
+            for (int w=0; w<num_processes; w++) {
+                cout << "\t" << w << "\t" <<  cpu_time_array[w] << "\t" << wall_time_array[w] << endl;
             }
             cout << endl;
         }
@@ -4144,6 +4168,9 @@ void PartitionFinder::getBestModel(int job_type) {
         delete[] run_time_arrays;
         delete[] wait_time_arrays;
         delete[] fstep_time_arrays;
+        delete[] cpu_time_array;
+        delete[] wall_time_array;
+
 
     }
 #endif
