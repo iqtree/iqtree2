@@ -61,6 +61,11 @@ const char* dna_model_names[] = {"GTR", "SYM", "TVM",  "TVMe", "TIM3",
         "TIM3e", "TIM2", "TIM2e", "TIM", "TIMe", "TPM3u", "TPM3",
         "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC"};
 
+/******* DNA model set for modelFinder 1 ******/
+const char* dna_model_names_mf1[] = {"JC", "F81", "K80", "HKY", "TNe", "TN", "K81", "K81u",
+    "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM" "TIM2e", "TIM2", "TIM3e", "TIM3",
+    "TVMe", "TVM", "SYM", "GTR"};
+
 /* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"GTR",  "SYM", "TVM", "TVMe", "TIM", "TIMe",
          "K81u", "K81", "TN", "TNe", "HKY", "K80", "F81", "JC"};
@@ -126,6 +131,9 @@ const char *dna_model_names_lie_markov_strsym[] = {
 const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
         "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM", "FLAVI",
 		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
+
+/****** Protein model set ******/
+const char* aa_model_names_mf1[] = {"Dayhoff", "mtMAM", "JTT", "WAG", "cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB", "HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62", "mtMet", "mtVer", "mtInv", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast","FLAVI"};
 
 /****** Protein mixture model set ******/
 const char* aa_mixture_model_names[] = {"C10", "C20", "C30", "C40", "C50", "C60", "EX2", "EX3", "EHO", "UL2", "UL3", "EX_EHO", "LG4M", "LG4X", "CF4"};
@@ -974,6 +982,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     CandidateModelSet candidate_models;
     int max_cats = candidate_models.generate(params, iqtree.aln, params.model_test_separate_rate, false);
     
+    // If the option -m MF1 is used, consider ALL candidates
+    if (params.model_name == "MF1") {
+        params.score_diff_thres = -1.0;
+        cout << "ModelFinder 1 is activated" << endl;
+    }
+    
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
     if (mem_size >= getMemorySize()) {
@@ -1094,7 +1108,10 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         }
     } else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
         if (model_set.empty()) {
-            copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+            if (model_name == "MF1")
+                copyCString(dna_model_names_mf1, sizeof(dna_model_names_mf1) / sizeof(char*), model_names);
+            else
+                copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
             //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
         } else if (model_set == "partitionfinder" || model_set== "phyml") {
             copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
@@ -1156,7 +1173,10 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         }
     } else if (seq_type == SEQ_PROTEIN) {
         if (model_set.empty()) {
-            copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+            if (model_name == "MF1")
+                copyCString(aa_model_names_mf1, sizeof(aa_model_names_mf1) / sizeof(char*), model_names);
+            else
+                copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
         } else if (model_set == "partitionfinder" || model_set == "phyml") {
             copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
         } else if (model_set == "raxml") {
