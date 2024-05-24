@@ -777,7 +777,7 @@ void normalize_frequencies(double* freqs, int num_states, double total_freqs, bo
     if (fabs(total_freqs) < 1e-5)
         outError("Sum of state frequencies must be greater than zero!");
     
-    if (fabs(total_freqs-1.0) >= 1e-7)
+    if (fabs(total_freqs-1.0) >= 1e-3) // change from 1e-7 to 1e-3
     {
         total_freqs = 1/total_freqs;
         if (show_warning)
