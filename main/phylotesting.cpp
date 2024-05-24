@@ -220,6 +220,79 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
+/**
+ * restrict the number of threads should be used for a single partition
+ */
+/*
+int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
+    if (numThres == 0)
+        return numThres;
+    int thres = numThres;
+    switch(seqType) {
+        case SEQ_BINARY:
+            if (nptn <= 1000)
+                thres = 1;
+            else if (nptn <= 10000)
+                thres = 8;
+            break;
+        case SEQ_CODON:
+            if (nptn*3 <= 10)
+                thres = 1;
+            else if (nptn*3 <= 50)
+                thres = 4;
+            else if (nptn*3 <= 1000)
+                thres = 8;
+            else if (nptn*3 <= 10000)
+                thres = 16;
+            break;
+        case SEQ_PROTEIN:
+            if (nptn <= 100)
+                thres = 1;
+            else if (nptn <= 1000)
+                thres = 8;
+            else if (nptn <= 10000)
+                thres = 16;
+            break;
+        default: // DNA or others
+            if (nptn <= 1000)
+                thres = 1;
+            else if (nptn <= 10000)
+                thres = 4;
+            else if (nptn <= 50000)
+                thres = 16;
+            break;
+    }
+    if (thres > numThres)
+        thres = numThres;
+    return thres;
+}
+*/
+
+/**
+ * restrict the number of threads should be used for fast tree estimation
+ * and for the final step after modelFinder
+ */
+int numThresFastTree(int nPart, int nptn, SeqType seqType, int numThres) {
+    if (nptn == 1 || numThres == 0)
+        return numThres;
+    int thres = nPart;
+    switch(seqType) {
+        case SEQ_PROTEIN:
+            if (nptn >= 8000 && nPart < 8)
+                thres = 8;
+            break;
+        case SEQ_CODON:
+            if (nptn*3 >= 8000 && nPart < 8)
+                thres = 8;
+            break;
+        default:
+            break;
+    }
+    if (thres > numThres)
+        thres = numThres;
+    return thres;
+}
+
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -843,6 +916,20 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
+    // if it is an alignment with partitions and the number of threads is more than the number of alignments,
+    // then set the number of threads = the number of alignments (for most of the cases)
+    bool autoThread = (params.num_threads == 0);
+    int orig_nthreads = params.num_threads;
+    int updated_nthreads = params.num_threads;
+    if (!autoThread && iqtree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        updated_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
+        params.num_threads = updated_nthreads;
+    }
+    if (updated_nthreads != orig_nthreads) {
+        cout << "The number of threads is changed to: " << updated_nthreads << endl;
+    }
+    
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
         return;
@@ -850,10 +937,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     
     //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) ||
-        (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
-
+    (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
+    
     bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
-
+    
     if (params.model_name.empty() && iqtree.isSuperTree()) {
         // check whether any partition has empty model_name
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
@@ -863,10 +950,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
                 break;
             }
     }
-
+    
     if (params.model_joint)
         empty_model_found = false;
-
+    
     // Model already specifed, nothing to do here
     if (!empty_model_found && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF")
         return;
@@ -877,29 +964,29 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //            ((PhyloSuperTree*) &iqtree)->mapTrees();
     double cpu_time = getCPUTime();
     double real_time = getRealTime();
-
+    
     model_info.setFileName((string)params.out_prefix + ".model.gz");
     model_info.setDumpInterval(params.checkpoint_dump_interval);
-
+    
     bool ok_model_file = false;
     if (!params.model_test_again) {
         ok_model_file = model_info.load();
     }
-
+    
     cout << endl;
-
+    
     ok_model_file &= model_info.size() > 0;
     if (ok_model_file)
         cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
-
+    
     // after loading, workers are not allowed to write checkpoint anymore
     if (MPIHelper::getInstance().isWorker())
         model_info.setFileName("");
-
+    
     Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
     iqtree.setCheckpoint(&model_info);
     iqtree.restoreCheckpoint();
-
+    
     int partition_type;
     if (CKP_RESTORE2((&model_info), partition_type)) {
         if (partition_type != params.partition_type)
@@ -908,19 +995,19 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         partition_type = params.partition_type;
         CKP_SAVE2((&model_info), partition_type);
     }
-
+    
     ModelsBlock *models_block = readModelsDefinition(params);
-
+    
     // compute initial tree
     // cout << "params.modelfinder_ml_tree = " << params.modelfinder_ml_tree << endl << flush;
     if (!params.use_nn_model && params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
         string tree_str = computeFastMLTree(params, iqtree.aln, model_info,
-            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
+                                            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
         iqtree.restoreCheckpoint();
     } else {
         iqtree.computeInitialTree(params.SSE);
-
+        
         if (iqtree.isSuperTree()) {
             PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
             int part = 0;
@@ -933,17 +1020,26 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             iqtree.saveCheckpoint();
         }
     }
-
+    
+    if (!autoThread)
+        params.num_threads = orig_nthreads;
+    
     if (!params.use_nn_model) {
         // also save initial tree to the original .ckp.gz checkpoint
         //        string initTree = iqtree.getTreeString();
         //        CKP_SAVE(initTree);
         //        iqtree.saveCheckpoint();
         //        checkpoint->dump(true);
-
+        
         CandidateModelSet candidate_models;
         int max_cats = candidate_models.generate(params, iqtree.aln, params.model_test_separate_rate, false);
-
+        
+        // If the option -m MF1 is used, consider ALL candidates
+        if (params.model_name == "MF1") {
+            params.score_diff_thres = -1.0;
+            cout << "ModelFinder 1 is activated" << endl;
+        }
+        
         uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
         cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
         if (mem_size >= getMemorySize()) {
@@ -955,7 +1051,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         outError("Memory required exceeds 2GB limit of 32-bit executable");
     }
 #endif
-
+    
     if (iqtree.isSuperTree()) {
         // partition model selection
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
@@ -975,7 +1071,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 #if defined(_NN) || defined(_OLD_NN)
         if (params.use_nn_model) {
             cout << "We are using the neural network to select the model of sequence evolution because "
-                    "option --use-nn-model is set to " << params.use_nn_model << endl;
+            "option --use-nn-model is set to " << params.use_nn_model << endl;
             Alignment *alignment = (iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
             NeuralNetwork nn(alignment);
             iqtree.aln->model_name = nn.doModelInference();
@@ -986,7 +1082,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             string best_model_NN;
             CKP_RESTORE(best_model_NN);
             delete alignment;
-
+            
             cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to neural network" << endl;
         } else {
 #endif
@@ -998,7 +1094,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
                 best_model = CandidateModelSet().test(params, &iqtree,
                                                       model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
             iqtree.aln->model_name = best_model.getName();
-
+            
             // Checkpoint *checkpoint = &model_info;
             string best_model_AIC, best_model_AICc, best_model_BIC;
             CKP_RESTORE(best_model_AIC);
@@ -1007,23 +1103,23 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             cout << "Akaike Information Criterion:           " << best_model_AIC << endl;
             cout << "Corrected Akaike Information Criterion: " << best_model_AICc << endl;
             cout << "Bayesian Information Criterion:         " << best_model_BIC << endl;
-
+            
             cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
-                 << criterionName(params.model_test_criterion) << endl;
+            << criterionName(params.model_test_criterion) << endl;
 #if defined(_NN) || defined(_OLD_NN)
         }
 #endif
     }
-
+    
     delete models_block;
-
+    
     // force to dump all checkpointing information
     model_info.dump(true);
-
+    
     // transfer models parameters
     transferModelFinderParameters(&iqtree, orig_checkpoint);
     iqtree.setCheckpoint(orig_checkpoint);
-
+    
     params.startCPUTime = cpu_time;
     params.start_real_time = real_time;
     cpu_time = getCPUTime() - cpu_time;
@@ -1032,10 +1128,21 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     cout << "All model information printed to " << model_info.getFileName() << endl;
     cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
-
+    
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
+    }
+
+    if (!autoThread) {
+        if (iqtree.isSuperTree()) {
+            // change the number of threads to the number of partitions for alignment with partitions
+            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+            params.num_threads = stree->size();
+            cout << "The number of threads is changed to: " << params.num_threads << endl;
+        } else {
+            params.num_threads = updated_nthreads;
+        }
     }
 }
 
@@ -3797,7 +3904,8 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     bool parallel_job = false;
 
 #ifdef _OPENMP
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1);
 #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {
@@ -3868,7 +3976,8 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
     bool parallel_job = false;
 
 #ifdef _OPENMP
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1);
 #pragma omp parallel for schedule(dynamic) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {
