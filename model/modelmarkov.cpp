@@ -1746,7 +1746,7 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	}
 	double sum = 0.0;
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) >= 1e-7)
+	if (fabs(sum-1.0) >= 1e-3) // change from 1e-7 to 1e-3
     {
 		outWarning("Normalizing state frequencies so that sum of them equals to 1");
         sum = 1.0/sum;
@@ -1783,7 +1783,7 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
     if (fabs(sum) <= 1e-5)
         outError("Sum of all state frequencies must be greater than zero!");
-	if (fabs(sum-1.0) >= 1e-7)
+	if (fabs(sum-1.0) >= 1e-3) // change from 1e-7 to 1e-3
     {
         outWarning("Normalizing State frequencies so that sum of them equals to 1");
         sum = 1.0/sum;

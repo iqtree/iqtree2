@@ -2665,7 +2665,7 @@ void AliSimulator::regenerateRootSequenceBranchSpecificModel(string freqs, int s
         outError("The number of frequencies ("+convertIntToString(i)+") is different from the number of states ("+convertIntToString(max_num_states)+"). Please check and try again!");
     
     // make sure the sum of all frequencies is equal to 1
-    if (fabs(total_freq-1.0) >= 1e-7)
+    if (fabs(total_freq-1.0) >= 1e-3) // change from 1e-7 to 1e-3
     {
         outWarning("Normalizing state frequencies so that sum of them equals to 1.");
         normalize_frequencies(state_freqs, max_num_states, total_freq);

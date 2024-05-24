@@ -924,7 +924,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		double sum = 0.0;
 		for (i = 0; i < num_states; i++)
 			sum += (double) state_freq[i];
-		if (fabs(sum-1.0) > 1e-7) {
+		if (fabs(sum-1.0) > 1e-3) { // change from 1e-7 to 1e-3
 			cout.precision(7);
 			cout << "WARNING: " <<  name_upper << " state frequencies do not sum up to 1: " << sum << endl;
 		}
