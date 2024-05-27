@@ -4975,6 +4975,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 {
                     string ERR_MSG = "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively; <NUM_TAXA> could be a fixed number, a list (<NUM_1>,<NUM_2>,...,<NUM_N>), or a Uniform distribution U(<LOWER_BOUND>,<UPPER_BOUND>). <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
                     string t_params = argv[cnt];
+                    transform(t_params.begin(), t_params.end(), t_params.begin(), ::toupper);
                     string KEYWORD = "RANDOM";
                     if ((t_params.length() > KEYWORD.length())
                         && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
@@ -5014,7 +5015,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                         
                         // change the delimiter to "}," in case with birth-death model
                         if ((t_params.length() > 2)
-                            && (!t_params.substr(0, 2).compare("bd")))
+                            && (!t_params.substr(0, 2).compare("BD")))
                             delimiter = "}" + delimiter;
                         
                         string model_name = t_params;
