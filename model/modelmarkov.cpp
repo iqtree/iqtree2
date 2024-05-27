@@ -280,6 +280,9 @@ string ModelMarkov::getNameParams(bool show_fixed_params) {
 }
     
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
+    // don't specify freqs for UNREST
+    if (name == "UNREST")
+        return;
      // "+F..." but without {frequencies}
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
     if (fixed_parameters)
