@@ -1887,7 +1887,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     // if using partitions -> specify a partition file
     if (params.partition_file)
     {
-        string partition_file(params.partition_file);
+        string partition_file(params.out_prefix);
         partition_file += ".best_model.nex";
         switch (params.partition_type)
         {
