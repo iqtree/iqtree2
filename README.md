@@ -37,46 +37,69 @@ The strength of IQ-TREE is the availability of a wide variety of phylogenetic mo
 IQ-TREE web service
 -------------------
 
-For a quick start you can also try the IQ-TREE web server, which performs online computation using a dedicated computing cluster. It is very easy to use with as few as just 3 clicks! Try it out at
+For a quick start you can also try the IQ-TREE web server, which performs 
+online computation using a dedicated computing cluster. It is very easy to use 
+with as few as just 3 clicks! Try it out at:
 
-<http://iqtree.cibiv.univie.ac.at>
-
+* Vienna Bioinformatics Cluster: <http://iqtree.cibiv.univie.ac.at>
+* CIPRES Gateway: <https://www.phylo.org>
+* Los Alamos Laboratories: <https://www.hiv.lanl.gov/content/sequence/IQTREE/iqtree.html>
 
 User support
 ------------
 
-Please refer to the [user documentation](http://www.iqtree.org/doc/) and [frequently asked questions](http://www.iqtree.org/doc/Frequently-Asked-Questions). If you have further questions, feedback, feature requests, and bug reports, please sign up the following Google group (if not done yet) and post a topic to the 
-
-<https://groups.google.com/d/forum/iqtree>
-
-_The average response time is one working day._
+Please refer to the [user documentation](http://www.iqtree.org/doc/) and 
+[frequently asked questions](http://www.iqtree.org/doc/Frequently-Asked-Questions). 
+If you have further questions and feedback, please create a topic at 
+[Github discussions](https://github.com/iqtree/iqtree2/discussions).
+For feature requests bug reports please post a topic at
+[Github issues](https://github.com/iqtree/iqtree2/issues).
 
 Citations
 ---------
 
+When using AliSim to simulate alignments please cite:
+
+* N. Ly-Trong, S. Naser-Khdour, R. Lanfear, B.Q. Minh (2022)
+  AliSim: A Fast and Versatile Phylogenetic Sequence Simulator for the Genomic Era.
+  *Mol. Biol. Evol.*, 39:msac092. <https://doi.org/10.1093/molbev/msac092>
+
 When using ModelFinder please cite:
 
-* S. Kalyaanamoorthy, B.Q. Minh, T.K.F. Wong, A. von Haeseler, L.S. Jermiin (2017) ModelFinder: Fast model selection for accurate phylogenetic estimates. *Nat. Methods*, 14:587-589. <https://doi.org/10.1038/nmeth.4285>
+* S. Kalyaanamoorthy, B.Q. Minh, T.K.F. Wong, A. von Haeseler, L.S. Jermiin (2017) 
+  ModelFinder: Fast model selection for accurate phylogenetic estimates. 
+  *Nat. Methods*, 14:587-589. <https://doi.org/10.1038/nmeth.4285>
 
 When performing tree reconstruction please cite:
 
-* L.-T. Nguyen, H.A. Schmidt, A. von Haeseler, and B.Q. Minh (2015) IQ-TREE: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. *Mol. Biol. Evol.*, 32, 268-274. <https://doi.org/10.1093/molbev/msu300>
+* L.-T. Nguyen, H.A. Schmidt, A. von Haeseler, and B.Q. Minh (2015) 
+  IQ-TREE: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. 
+  *Mol. Biol. Evol.*, 32:268-274. <https://doi.org/10.1093/molbev/msu300>
 
 For the ultrafast bootstrap (UFBoot) please cite:
 
-* D.T. Hoang, O. Chernomor, A. von Haeseler, B.Q. Minh, and L.S. Vinh (2017) UFBoot2: Improving the ultrafast bootstrap approximation. *Mol. Biol. Evol.*, in press. <https://doi.org/10.1093/molbev/msx281>
+* D.T. Hoang, O. Chernomor, A. von Haeseler, B.Q. Minh, and L.S. Vinh (2018) 
+  UFBoot2: Improving the ultrafast bootstrap approximation. 
+  *Mol. Biol. Evol.*, 35:518–522. <https://doi.org/10.1093/molbev/msx281>
 
 When using posterior mean site frequency model (PMSF) please cite:
 
-* H.C. Wang, B.Q. Minh, S. Susko, A.J. Roger (in press) Modeling site heterogeneity with posterior mean site frequency profiles accelerates accurate phylogenomic estimation. *Syst. Biol.* <https://doi.org/10.1093/sysbio/syx068>
+* H.C. Wang, B.Q. Minh, S. Susko, A.J. Roger (2018) 
+  Modeling site heterogeneity with posterior mean site frequency profiles 
+  accelerates accurate phylogenomic estimation. 
+  *Syst. Biol.*, 67:216–235. <https://doi.org/10.1093/sysbio/syx068>
 
 When using partition models please cite:
 
-* O. Chernomor, A. von Haeseler, B.Q. Minh (2016) Terrace aware data structure for phylogenomic inference from supermatrices. *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
+* O. Chernomor, A. von Haeseler, B.Q. Minh (2016) 
+  Terrace aware data structure for phylogenomic inference from supermatrices. 
+  *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
 
 When using polymorphism-aware models please cite:
 
-* D. Schrempf, B.Q. Minh, N. De Maio, A. von Haeseler, C. Kosiol (2016) Reversible polymorphism-aware phylogenetic models and their application to tree inference. *J. Theor. Biol.*, 407:362-370. <https://doi.org/10.1016/j.jtbi.2016.07.042>
+* D. Schrempf, B.Q. Minh, N. De Maio, A. von Haeseler, C. Kosiol (2016) 
+  Reversible polymorphism-aware phylogenetic models and their application to tree inference. 
+  *J. Theor. Biol.*, 407:362-370. <https://doi.org/10.1016/j.jtbi.2016.07.042>
 
 #### Credits and Acknowledgements
 
@@ -85,7 +108,13 @@ Some parts of the code were taken from the following packages/libraries: [Phylog
 [SPRNG library](http://www.sprng.org), [Zlib library](http://www.zlib.net), [gzstream library](http://www.cs.unc.edu/Research/compgeom/gzstream/), [vectorclass library](http://www.agner.org/optimize/), [GNU scientific library](https://www.gnu.org/software/gsl/).
 
 
-IQ-TREE was partially funded by the [Austrian Science Fund - FWF](http://www.fwf.ac.at/) (grant no. I 760-B17 from 2012-2015 and and I 2508-B29 from 2016-2019) and the [University of Vienna](https://www.univie.ac.at/) (Initiativkolleg I059-N).
+IQ-TREE was funded by the [Austrian Science Fund - FWF](http://www.fwf.ac.at/) 
+(grant no. I 760-B17 from 2012-2015 and and I 2508-B29 from 2016-2019),
+the [University of Vienna](https://www.univie.ac.at/) (Initiativkolleg I059-N),
+the [Australian National University](https://www.anu.edu.au),
+[Chan-Zuckerberg Initiative](https://chanzuckerberg.com) (open source software for science grants),
+[Simons Foundation](https://www.simonsfoundation.org), [Moore Foundation](https://www.moore.org),
+and [Australian Research Council](https://www.arc.gov.au).
 
 
 [Anisimova et al., 2011]: http://dx.doi.org/10.1093/sysbio/syr041
