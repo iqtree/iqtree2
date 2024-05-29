@@ -114,13 +114,18 @@ include_directories(after system "/usr/local/include")
 ##################################################################
 # onnxruntime
 ##################################################################
-option(USE_NN "Use neutual network (nn) with version 1.13 or later onnxruntime" OFF)
-option(USE_OLD_NN "Use neutual network (nn) with version 1.12 or before onnxruntime" OFF)
+option(USE_NN "Use neural network (nn) with version 1.13 or later onnxruntime" OFF)
+option(USE_OLD_NN "Use neural network (nn) with version 1.12 or before onnxruntime" OFF)
+option(USE_CUDA "Use CUDA GPU acceleration for neural network (nn) with onnxruntime" OFF)
 
 if(USE_NN)
     add_definitions(-D_NN)
 elseif(USE_OLD_NN)
     add_definitions(-D_OLD_NN)
+endif()
+
+if (USE_CUDA)
+    add_definitions(-D_CUDA)
 endif()
 
 # Find onnxruntime library for machine learning
@@ -764,7 +769,8 @@ endif()
 
 add_executable(iqtree2
 obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h)
+obsolete/parsmultistate.h
+)
 
 if(Backtrace_FOUND)
   include_directories(${Backtrace_INCLUDE_DIR})
