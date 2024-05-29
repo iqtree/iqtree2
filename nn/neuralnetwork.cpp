@@ -22,6 +22,17 @@ double NeuralNetwork::doAlphaInference() {
 
     const char *model_path = Params::getInstance().nn_path_rates.c_str();
 
+#ifdef _CUDA
+    cout << "creating CUDA environment" << endl;
+    OrtCUDAProviderOptions cuda_options;
+    cuda_options.device_id = 0;  //GPU_ID
+    cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
+    cuda_options.arena_extend_strategy = 0;
+    // May cause data race in some condition
+    cuda_options.do_copy_in_default_stream = 0;
+    session_options.AppendExecutionProvider_CUDA(cuda_options); // Add CUDA options to session options
+#endif
+
     // printf("Using Onnxruntime C++ API\n");
     Ort::Session session(env, model_path, session_options);
 
@@ -122,8 +133,19 @@ string NeuralNetwork::doModelInference() {
 
     const char *model_path = Params::getInstance().nn_path_model.c_str();
 
-    // printf("Using Onnxruntime C++ API\n");
-    // cout << "model_path: " << model_path << endl;
+
+#ifdef _CUDA
+    session_options.SetLogSeverityLevel(1); // Enable detailed logs
+    cout << "creating CUDA environment" << endl;
+    OrtCUDAProviderOptions cuda_options;
+    cuda_options.device_id = 0;  //GPU_ID
+    cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
+    cuda_options.arena_extend_strategy = 0;
+    // May cause data race in some condition
+    cuda_options.do_copy_in_default_stream = 0;
+    session_options.AppendExecutionProvider_CUDA(cuda_options); // Add CUDA options to session options
+#endif
+
     Ort::Session session(env, model_path, session_options);
 
     size_t num_input_nodes = session.GetInputCount();
