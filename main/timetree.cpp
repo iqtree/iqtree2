@@ -285,9 +285,18 @@ void runLSD2(PhyloTree *tree) {
 		} 
 		else if (rate_file == "rateFileProvided") {
 		   rate_file = opt;
-		   ifstream in(rate_file);
-        	   in.exceptions(ios::failbit | ios::badbit);
-		   rate_stream << in.rdbuf();
+		   try {
+			   ifstream in(rate_file);
+			   in.exceptions(ios::failbit | ios::badbit);
+			   rate_stream << in.rdbuf();
+			   in.close();
+		   } catch (ios::failure) {
+        		outError(ERR_READ_INPUT, rate_file);
+		   } catch (string str) {
+        		outError(str);
+    		   } catch (...) {
+		        outError("Error reading rate file " + rate_file);
+		   }	
 		   rate_file = "";
 		} 
                 arg.push_back(opt);
