@@ -731,7 +731,13 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
-        outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
+    {
+        outWarning("OpenMP has not yet been supported in simulations with Indels. AliSim is now using a single thread for this simulation.");
+        super_alisimulator->params->num_threads = 1;
+#ifdef _OPENMP
+        omp_set_num_threads(super_alisimulator->params->num_threads);
+#endif
+    }
     
     // do not support compression when outputting multiple data sets into a same file
     if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
@@ -1135,7 +1141,13 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     
     // delete tmp_alisimulator
     if ((!rate_name.empty()) || is_mixture_model)
+    {
         delete tmp_alisimulator;
+        
+        // bug fixes: avoid accessing to deallocated pointer
+        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+            alisimulator->first_insertion = nullptr;
+    }
     
 }
 
