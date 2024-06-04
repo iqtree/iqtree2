@@ -286,9 +286,14 @@ void runLSD2(PhyloTree *tree) {
 		else if (rate_file == "rateFileProvided") {
 		   rate_file = opt;
 		   try {
-			   ifstream in(rate_file);
+			   cout << "Reading rate file " << rate_file << " ..." << endl;
+			   ifstream in;
 			   in.exceptions(ios::failbit | ios::badbit);
-			   rate_stream << in.rdbuf();
+			   in.open(rate_file);
+			   rate_stream << in.rdbuf(); // BQM: I'm not sure why rdbuf is needed
+			   in.clear();
+			   // set the failbit again
+			   in.exceptions(ios::failbit | ios::badbit);
 			   in.close();
 		   } catch (ios::failure) {
         		outError(ERR_READ_INPUT, rate_file);
