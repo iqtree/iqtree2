@@ -4985,7 +4985,23 @@ void parseArg(int argc, char *argv[], Params &params) {
                         // validate the input
                         if ((t_params[KEYWORD.length()]!='{')
                             ||(t_params[t_params.length()-1]!='}'))
-                            throw ERR_MSG;
+                        {
+                            // try to parse the number of taxa -> users may input RANDOM<NUM> here
+                            string num_taxa_str = t_params.substr(KEYWORD.length(), t_params.length() - KEYWORD.length());
+                            // check if num_taxa_str presents an integer
+                            if (std::all_of(num_taxa_str.begin(), num_taxa_str.end(), ::isdigit))
+                            {
+                                // set the default model is yule harding
+                                params.tree_gen = YULE_HARDING;
+                                
+                                // set the number of taxa
+                                params.sub_size = convert_int(num_taxa_str.c_str());
+                                
+                                continue;
+                            }
+                            else
+                                throw ERR_MSG;
+                        }
                         
                         // remove "RANDOM{"
                         t_params.erase(0, KEYWORD.length() + 1);
