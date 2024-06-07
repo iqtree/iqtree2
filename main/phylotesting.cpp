@@ -44,13 +44,8 @@
 #include "utils/MPIHelper.h"
 //#include "vectorclass/vectorclass.h"
 
-#if defined(_NN) || defined(_OLD_NN)
+#if defined(_NN) || defined(_OLD_NN) || defined(_CUDA)
 #include "nn/neuralnetwork.h"
-#endif
-
-
-#ifdef _CUDA
-#include "cuda_runtime.h"
 #endif
 
 // *********for MPI communication*********
@@ -884,11 +879,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     double real_time = getRealTime();
 
 #ifdef _CUDA
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
+    NeuralNetwork::gpu_time=  0.0f;
 #endif
 
     model_info.setFileName((string)params.out_prefix + ".model.gz");
@@ -1046,13 +1037,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
 
 #ifdef _CUDA
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    cout << "GPU time for ModelFinder: " << milliseconds/1000 << " seconds" << endl;
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    cout << "GPU time for ModelFinder: " << NeuralNetwork::gpu_time/1000 << " seconds (" << convert_time(NeuralNetwork::gpu_time/1000) << ")" << endl;
 #endif
 
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
