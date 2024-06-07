@@ -27,7 +27,7 @@ double NeuralNetwork::doAlphaInference() {
     const char *model_path = Params::getInstance().nn_path_rates.c_str();
 
 #ifdef _CUDA
-    cout << "creating CUDA environment" << endl;
+//    cout << "creating CUDA environment" << endl;
     OrtCUDAProviderOptions cuda_options;
     cuda_options.device_id = 0;  //GPU_ID
     cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
@@ -154,8 +154,8 @@ string NeuralNetwork::doModelInference() {
 
 
 #ifdef _CUDA
-    session_options.SetLogSeverityLevel(1); // Enable detailed logs
-    cout << "creating CUDA environment" << endl;
+//    session_options.SetLogSeverityLevel(1);
+//    cout << "creating CUDA environment" << endl;
     OrtCUDAProviderOptions cuda_options;
     cuda_options.device_id = 0;  //GPU_ID
     cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
