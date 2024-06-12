@@ -8,6 +8,10 @@
 #include <onnxruntime_cxx_api.h>
 #include <alignment/alignment.h>
 
+#ifdef _CUDA
+#include "cuda_runtime.h"
+#endif
+
 class NeuralNetwork {
 public:
     /** constructor */
@@ -21,7 +25,15 @@ public:
 
     Alignment *alignment;
 
+#ifdef _CUDA
+    static float gpu_time;
+
+private:
+    cudaEvent_t start, stop;
+#endif
+
 };
+
 
 
 #endif //IQTREE_NEURALNETWORK_H

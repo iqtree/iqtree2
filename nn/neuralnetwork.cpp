@@ -8,6 +8,10 @@
 #include <chrono>
 #include <vector>
 
+#ifdef _CUDA
+float NeuralNetwork::gpu_time=  0.0f;
+#endif
+
 NeuralNetwork::NeuralNetwork(Alignment *alignment) {
     this->alignment = alignment;
 }
@@ -23,7 +27,7 @@ double NeuralNetwork::doAlphaInference() {
     const char *model_path = Params::getInstance().nn_path_rates.c_str();
 
 #ifdef _CUDA
-    cout << "creating CUDA environment" << endl;
+//    cout << "creating CUDA environment" << endl;
     OrtCUDAProviderOptions cuda_options;
     cuda_options.device_id = 0;  //GPU_ID
     cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
@@ -105,11 +109,26 @@ double NeuralNetwork::doAlphaInference() {
                                                               input_shape_.data(), input_shape_.size());
     assert(input_tensor.IsTensor());
 
+#ifdef _CUDA
     // do inference
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+#endif
     auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tensor, 1,
                                       output_node_names.data(), 2);
     assert(output_tensors.size() == 2 && output_tensors.front().IsTensor());
 
+#ifdef _CUDA
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    gpu_time += milliseconds;
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+#endif
     // get pointer to output tensor float values
     //float *floatarr = output_tensors.front().GetTensorMutableData<float>();
     float *alpha = output_tensors[0].GetTensorMutableData<float>();
@@ -135,8 +154,8 @@ string NeuralNetwork::doModelInference() {
 
 
 #ifdef _CUDA
-    session_options.SetLogSeverityLevel(1); // Enable detailed logs
-    cout << "creating CUDA environment" << endl;
+//    session_options.SetLogSeverityLevel(1);
+//    cout << "creating CUDA environment" << endl;
     OrtCUDAProviderOptions cuda_options;
     cuda_options.device_id = 0;  //GPU_ID
     cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
@@ -220,10 +239,25 @@ string NeuralNetwork::doModelInference() {
     assert(input_tensor.IsTensor());
 
     // do inference
+#ifdef _CUDA
+    // do inference
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+#endif
     auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tensor, 1,
                                       output_node_names.data(), 1);
     assert(output_tensors.size() == 1 && output_tensors.front().IsTensor());
-
+#ifdef _CUDA
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    gpu_time += milliseconds;
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+#endif
     // get pointer to output tensor float values
     float *floatarr = output_tensors.front().GetTensorMutableData<float>();
 
