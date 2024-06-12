@@ -58,6 +58,17 @@ For feature requests bug reports please post a topic at
 Citations
 ---------
 
+General citation for IQ-TREE 2:
+
+* B.Q. Minh, H.A. Schmidt, O. Chernomor, D. Schrempf, M.D. Woodhams, A. von Haeseler, R. Lanfear (2020) 
+  IQ-TREE 2: New models and efficient methods for phylogenetic inference in the genomic era.
+  *Mol. Biol. Evol.*, 37:1530-1534. <https://doi.org/10.1093/molbev/msaa015>
+
+Moreover, there are other papers associated with notable features in IQ-TREE,
+which are normally mentioned in the corresponding documentation. We ask that you also
+cite these papers, which are important for us to obtain fundings to 
+continuously maintain the code of IQ-TREE. These papers are also listed below.
+
 When using tree mixture models (MAST) please cite:
 
 * T.K.F. Wong, C. Cherryh, A.G. Rodrigo, M.W. Hahn, B.Q. Minh, R. Lanfear (2024)
@@ -88,11 +99,17 @@ When using the heterotachy GHOST model "+H" please cite:
   GHOST: Recovering Historical Signal from Heterotachously Evolved Sequence Alignments.
   _Syst. Biol._, 69:249-264. <https://doi.org/10.1093/sysbio/syz051>
 
-When performing tree reconstruction please cite:
+When using the tests of symmetry please cite:
 
-* B.Q. Minh, H.A. Schmidt, O. Chernomor, D. Schrempf, M.D. Woodhams, A. von Haeseler, R. Lanfear (2020) 
-  IQ-TREE 2: New models and efficient methods for phylogenetic inference in the genomic era.
-  *Mol. Biol. Evol.*, 37:1530-1534. <https://doi.org/10.1093/molbev/msaa015>
+* S. Naser-Khdour, B.Q. Minh, W. Zhang, E.A. Stone, R. Lanfear (2019) 
+  The Prevalence and Impact of Model Violations in Phylogenetic Analysis. 
+  *Genome Biol. Evol.*, 11:3341-3352. <https://doi.org/10.1093/gbe/evz193>
+
+When using polymorphism-aware models please cite:
+
+* D. Schrempf, B.Q. Minh, A. von Haeseler, C. Kosiol (2019) 
+  Polymorphism-aware species trees with advanced mutation models, bootstrap, and rate heterogeneity. 
+  *Mol. Biol. Evol.*, 36:1294–1301. <https://doi.org/10.1093/molbev/msz043>
 
 For the ultrafast bootstrap (UFBoot) please cite:
 
@@ -119,11 +136,11 @@ When using partition models please cite:
   Terrace aware data structure for phylogenomic inference from supermatrices. 
   *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
 
-When using polymorphism-aware models please cite:
+When using IQ-TREE web server please cite:
 
-* D. Schrempf, B.Q. Minh, N. De Maio, A. von Haeseler, C. Kosiol (2016) 
-  Reversible polymorphism-aware phylogenetic models and their application to tree inference. 
-  *J. Theor. Biol.*, 407:362-370. <https://doi.org/10.1016/j.jtbi.2016.07.042>
+* J. Trifinopoulos, L.-T. Nguyen, A. von Haeseler, B.Q. Minh (2016) 
+  W-IQ-TREE: a fast online phylogenetic tool for maximum likelihood analysis.
+  *Nucleic Acids Res.*, 44:W232-W235. <https://doi.org/10.1093/nar/gkw256>
 
 When using IQ-TREE version 1 please cite:
 
