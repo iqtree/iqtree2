@@ -1595,7 +1595,8 @@ void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
 }
 
 void ModelMixture::startCheckpoint() {
-    checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()) + "_" + getName());
+    checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()));
+    // checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()) + "_" + getName());
 }
 
 void ModelMixture::saveCheckpoint() {
