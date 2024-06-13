@@ -5220,6 +5220,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -g <constraint_tree>";
                 params.constraint_tree_file = argv[cnt];
+                params.ignore_identical_seqs = false;
                 continue;
             }
             
