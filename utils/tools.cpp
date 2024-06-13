@@ -1681,12 +1681,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 
             //new options added -JD
-            if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
+            if (strcmp(argv[cnt], "--link-exchange-rates") == 0 || strcmp(argv[cnt], "--link-exchange") == 0) {
                 params.optimize_linked_gtr = true;
                 params.reset_method = "const";
                 continue;
             }
-            if (strcmp(argv[cnt], "--gtr20-model") == 0) {
+            if (strcmp(argv[cnt], "--gtr20-model") == 0 || strcmp(argv[cnt], "--init-exchange") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --gtr20-model <POISSON/LG>";
