@@ -740,9 +740,9 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     }
     
     // do not support compression when outputting multiple data sets into a same file
-    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
+    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || super_alisimulator->params->num_threads != 1))
     {
-        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or keeping the order of output sequences. AliSim will output file in normal format.");
+        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or using multithreading. AliSim will output file in normal format.");
 
         Params::getInstance().do_compression = false;
         super_alisimulator->params->do_compression = false;
