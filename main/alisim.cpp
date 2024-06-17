@@ -1190,15 +1190,16 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 
                 // get the position to write output
                 start_pos = first_line.length();
-                
-                // for Windows only, the line break is \r\n instead of only \n
-                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-                ++start_pos;
-                #endif
             }
             
             if (!alisimulator->params->do_compression)
                 start_pos = out->tellp();
+        
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            ++start_pos;
+            #endif
+        
             uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
         
             // for Windows only, the line break is \r\n instead of only \n
