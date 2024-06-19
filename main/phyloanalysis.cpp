@@ -4597,11 +4597,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 }
 
 bool runCMaple(Params &params)
-{
-#if defined(__ARM_NEON)
-    outError("Sorry! CMAPLE has not supported Apple Chip yet. We're working to make it work soon!");
-#endif
-    
+{    
 #if !defined(USE_CMAPLE)
     outWarning("This version was not compiled with CMAPLE integrated. Running IQ-TREE algorithm...");
     return false;
