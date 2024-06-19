@@ -265,13 +265,16 @@ string NeuralNetwork::doModelInference() {
     float max_val = 0.0;
     size_t chosen_model;
 
+    cout << "Model values =============================== " << endl;
     for (size_t i = 0; i < 6; i++) {
         if (floatarr[i] > max_val) {
             max_val = floatarr[i];
             chosen_model = i;
         }
         //printf("Model value [%zu] =  %f\n", i, floatarr[i]);
+        cout << "Model value [" << i << "] = " << floatarr[i] << endl;
     }
+    cout << "==============================================" << endl;
 
     // return chosen model
     switch(chosen_model) {
