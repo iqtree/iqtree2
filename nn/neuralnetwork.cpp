@@ -144,7 +144,7 @@ double NeuralNetwork::doAlphaInference() {
     return alpha[0] / 1000;
 }
 
-string NeuralNetwork::doModelInference() {
+string NeuralNetwork::doModelInference(bool with_mf, StrVector *model_names) {
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "model_find");
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
@@ -274,6 +274,31 @@ string NeuralNetwork::doModelInference() {
         //printf("Model value [%zu] =  %f\n", i, floatarr[i]);
         cout << "Model value [" << i << "] = " << floatarr[i] << endl;
     }
+
+    // if using MF with NN
+    if (with_mf) {
+
+        map<int,string> model_index_map = {
+                {0, "JC"},
+                {1, "K2P"},
+                {2, "F81"},
+                {3, "HKY"},
+                {4, "TN"},
+                {5, "GTR"}
+        };
+
+        if (floatarr[chosen_model] >= 0.95) {
+            model_names->push_back(model_index_map[chosen_model]);
+        }
+        else {
+            for (size_t i = 0; i < 6; i++) {
+                if (floatarr[i] > 0.0) {
+                    model_names->push_back(model_index_map[i]);
+                }
+            }
+        }
+    }
+
     cout << "==============================================" << endl;
 
     // return chosen model
@@ -289,3 +314,5 @@ string NeuralNetwork::doModelInference() {
     }
 
 }
+
+

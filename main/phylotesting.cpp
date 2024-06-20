@@ -1224,6 +1224,17 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
     }
 }
 
+/**
+ * get the list of substitution models
+ */
+void getModelSubstNN(SeqType seq_type, NeuralNetwork nn, StrVector &model_names){
+
+    if (seq_type == SEQ_DNA){
+        nn.doModelInference(true, &model_names);
+    }
+
+}
+
 void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names) {
     int j;
 
@@ -1364,8 +1375,17 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     bool auto_model = iEquals(model_set, "AUTO");
 
+// if use nn
+// need a new definations for use pure NN, NN + MF,MF
+#if defined(_NN) || defined(_OLD_NN) || defined(_NN_MF)
+    Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+    NeuralNetwork nn(alignment);
+    getModelSubstNN(seq_type, nn, model_names);
+// get posssible models from NNModelFi
+#else
     getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
                   model_set, params.model_subset, model_names);
+#endif
 
 	if (model_names.empty())
         return 1;
@@ -1407,9 +1427,17 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
         ratehet_set = params.ratehet_set;
 
     //bool auto_rate = iEquals(ratehet_set, "AUTO");
+// if use nn
 
+#if defined(_NN) || defined(_OLD_NN) || defined(_NN_MF)
+// if use nn, get alpha value and set innitial value to G
+    delete alignment;
+
+#endif
+//#else
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
-    
+//#endif
+
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
 
@@ -2757,6 +2785,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         ModelCheckpoint out_model_info;
 		//CandidateModel info;
 		//info.set_name = set_name;
+        // partition name
         at(model).set_name = set_name;
         string tree_string;
         /***** main call to estimate model parameters ******/
@@ -3854,6 +3883,7 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             cout.width(11);
             cout << best_model.tree_len << " ";
             cout << this_tree->aln->name;
+            // print the model details
             if (num_model >= 10) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " ("
