@@ -5354,7 +5354,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             // model revelator with MF
             if (strcmp(argv[cnt], "--model-revelator") == 0) {
-                params.use_model_revelator = true;
+                params.use_model_revelator_with_mf = true;
                 params.use_nn_model = true;
                 continue;
             }
