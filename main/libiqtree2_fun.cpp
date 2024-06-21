@@ -68,6 +68,30 @@ void generate_random_tree_file(int numtaxa, int seed, string tree_gen_mode, stri
     generateRandomTree(params);
 }
 
+// Generates a random phylogenetic tree
+string generate_random_tree(int num_taxa, TreeGenType tree_mode, int num_trees, int rand_seed) {
+    PhyloTree ptree;
+    int seed = rand_seed;
+    if (seed == 0)
+        seed = make_new_seed();
+    cout << "seed: " << seed << endl;
+    init_random(seed);
+    Params params = Params::getInstance();
+    params.setDefault();
+    params.sub_size = num_taxa;
+    params.tree_gen = tree_mode;
+    params.repeated_time = num_trees;
+    params.ignore_checkpoint = true; // overrid the output file if exists
+    params.user_file = "test";
+
+    ostringstream ostring;
+    generateRandomTree(params, ostring);
+    return ostring.str();
+    // generateRandomTree(params);
+    // return "done";
+}
+
+
 void phylogenetic_analysis(string& align_file, int ncpus) {
     // perform phylogenetic analysis on the input alignment file
 

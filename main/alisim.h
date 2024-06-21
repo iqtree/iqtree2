@@ -53,6 +53,7 @@ void inferInputParameters(Params &params, Checkpoint *checkpoint, IQTree *&tree,
 *  generate a random tree
 */
 void generateRandomTree(Params &params);
+void generateRandomTree(Params &params, ostream &out);
 
 /**
 *  show all input parameters for AliSim

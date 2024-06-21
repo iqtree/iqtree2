@@ -15,6 +15,9 @@ using namespace std;
 int calculate_RF_distance(const string& tree1, const string& tree2);
 
 // Generates a random phylogenetic tree
+string generate_random_tree(int num_taxa, TreeGenType tree_mode, int num_trees, int rand_seed = 0);
+
+// Generates a random phylogenetic tree
 void generate_random_tree_file(int numtaxa, int seed, string tree_gen_mode, string outfile);
 
 // perform phylogenetic analysis on the input alignment file
