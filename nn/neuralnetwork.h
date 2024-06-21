@@ -26,7 +26,9 @@ public:
      * @param with_mf: this will output the probabilities
      * */
 
-    string doModelInference(bool with_mf= false, StrVector* model_names = nullptr);
+    string doModelInference(StrVector* model_names = nullptr);
+
+    static void getModelsAboveThreshold(StrVector* model_names, float* floatarr);
 
     Alignment *alignment;
 

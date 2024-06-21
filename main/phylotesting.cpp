@@ -1338,7 +1338,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
 void getModelSubstNN(SeqType seq_type, NeuralNetwork nn, StrVector &model_names){
 
     if (seq_type == SEQ_DNA){
-        nn.doModelInference(true, &model_names);
+        nn.doModelInference(&model_names);
     }
 
 }

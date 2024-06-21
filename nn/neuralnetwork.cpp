@@ -144,7 +144,7 @@ double NeuralNetwork::doAlphaInference() {
     return alpha[0] / 1000;
 }
 
-string NeuralNetwork::doModelInference(bool with_mf, StrVector *model_names) {
+string NeuralNetwork::doModelInference(StrVector *model_names) {
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "model_find");
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
@@ -276,27 +276,8 @@ string NeuralNetwork::doModelInference(bool with_mf, StrVector *model_names) {
     }
 
     // if using MF with NN
-    if (with_mf) {
-
-        map<int,string> model_index_map = {
-                {0, "JC"},
-                {1, "K2P"},
-                {2, "F81"},
-                {3, "HKY"},
-                {4, "TN"},
-                {5, "GTR"}
-        };
-
-        if (floatarr[chosen_model] >= 0.95) {
-            model_names->push_back(model_index_map[chosen_model]);
-        }
-        else {
-            for (size_t i = 0; i < 6; i++) {
-                if (floatarr[i] > 0.0) {
-                    model_names->push_back(model_index_map[i]);
-                }
-            }
-        }
+    if (Params::getInstance().use_model_revelator_with_mf) {
+        getModelsAboveThreshold(model_names, floatarr); // get models above threshold
     }
 
     cout << "==============================================" << endl;
@@ -311,6 +292,43 @@ string NeuralNetwork::doModelInference(bool with_mf, StrVector *model_names) {
         case 5: return "GTR";
         default: throw "Model not known";
 
+    }
+
+}
+
+void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *floatarr) {
+
+    map<int,string> model_index_map = {
+            {0, "JC"},
+            {1, "K2P"},
+            {2, "F81"},
+            {3, "HKY"},
+            {4, "TN"},
+            {5, "GTR"}
+    };
+
+    std::vector<std::pair<int, float>> indexed_probabilities;
+
+    // Populate the vector with index-probability pairs
+    for (int i = 0; i < sizeof (model_index_map); ++i) {
+        indexed_probabilities.push_back({i, floatarr[i]});
+    }
+
+    // Sort the vector in descending order based on probabilities
+    std::sort(indexed_probabilities.begin(), indexed_probabilities.end(),
+              [](const std::pair<int, float>& a, const std::pair<int, float>& b) {
+                  return b.second < a.second;
+              });
+
+    float cumulative_sum = 0.0;
+
+    // Accumulate probabilities until the cumulative sum exceeds 0.95
+    for (const auto& pair : indexed_probabilities) {
+        cumulative_sum += pair.second;
+        model_names -> push_back(model_index_map[pair.first]);
+        if (cumulative_sum > Params::getInstance().model_revelator_confidence) {
+            break;
+        }
     }
 
 }
