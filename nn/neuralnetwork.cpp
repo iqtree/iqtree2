@@ -277,7 +277,8 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
 
     // if using MF with NN
     if (Params::getInstance().use_model_revelator_with_mf) {
-        getModelsAboveThreshold(model_names, floatarr); // get models above threshold
+        int element_count = 6;
+        getModelsAboveThreshold(model_names, floatarr, element_count); // get models above threshold
     }
 
     cout << "==============================================" << endl;
@@ -296,7 +297,7 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
 
 }
 
-void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *floatarr) {
+void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *floatarr, int element_count) {
 
     map<int,string> model_index_map = {
             {0, "JC"},
@@ -309,8 +310,7 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *float
 
     std::vector<std::pair<int, float>> indexed_probabilities;
 
-    // Populate the vector with index-probability pairs
-    for (int i = 0; i < sizeof (model_index_map); ++i) {
+    for (int i = 0; i < element_count ; ++i) {
         indexed_probabilities.push_back({i, floatarr[i]});
     }
 
@@ -326,6 +326,7 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *float
     for (const auto& pair : indexed_probabilities) {
         cumulative_sum += pair.second;
         model_names -> push_back(model_index_map[pair.first]);
+        cout << "model name " << model_index_map[pair.first] << " probability " << pair.second << endl;
         if (cumulative_sum > Params::getInstance().model_revelator_confidence) {
             break;
         }

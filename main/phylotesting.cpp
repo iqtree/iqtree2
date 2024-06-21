@@ -1486,8 +1486,9 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
 // if use nn
 // need a new definations for use pure NN, NN + MF,MF
-#if defined(_NN) || defined(_OLD_NN)
+
     if (params.use_model_revelator_with_mf){
+#if defined(_NN) || defined(_OLD_NN)
         Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
         NeuralNetwork nn(alignment);
         getModelSubstNN(seq_type, nn, model_names);
@@ -1495,11 +1496,15 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
         // todo: do alpha inference and get
         // do alpha inference and then delete the alignment
         delete alignment;
-    }
 #else
-    getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
-                  model_set, params.model_subset, model_names);
+        outError("Please recompile with NN support to use model revelator with model finder");
 #endif
+    }
+    else {
+        getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
+                      model_set, params.model_subset, model_names);
+    }
+
 
 	if (model_names.empty())
         return 1;
