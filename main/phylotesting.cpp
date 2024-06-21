@@ -1072,8 +1072,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         CandidateModel best_model;
         Checkpoint *checkpoint = &model_info;
         // neural network model selection (added by TD)
-#if ( defined(_NN) || defined(_OLD_NN) ) && !defined(_NN_MF)
-        if (params.use_nn_model) {
+#if defined(_NN) || defined(_OLD_NN)
+        if (params.use_nn_model && !params.use_model_revelator_with_mf) {
             cout << "We are using the neural network to select the model of sequence evolution because "
             "option --use-nn-model is set to " << params.use_nn_model << endl;
             Alignment *alignment = (iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
@@ -1110,7 +1110,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 
             cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
             << criterionName(params.model_test_criterion) << endl;
-#if ( defined(_NN) || defined(_OLD_NN) ) && !defined(_NN_MF)
+#if defined(_NN) || defined(_OLD_NN)
         }
 #endif
     }
@@ -1331,7 +1331,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
     }
 }
 
-#if (defined(_NN) || defined(_OLD_NN)) && defined(_NN_MF)
+#if (defined(_NN) || defined(_OLD_NN))
 /**
  * get the list of substitution models using NN
  */
@@ -1486,10 +1486,16 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
 // if use nn
 // need a new definations for use pure NN, NN + MF,MF
-#if (defined(_NN) || defined(_OLD_NN)) && defined(_NN_MF)
-    Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
-    NeuralNetwork nn(alignment);
-    getModelSubstNN(seq_type, nn, model_names);
+#if defined(_NN) || defined(_OLD_NN)
+    if (params.use_model_revelator_with_mf){
+        Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+        NeuralNetwork nn(alignment);
+        getModelSubstNN(seq_type, nn, model_names);
+
+        // todo: do alpha inference and get
+        // do alpha inference and then delete the alignment
+        delete alignment;
+    }
 #else
     getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
                   model_set, params.model_subset, model_names);
@@ -1537,11 +1543,9 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     //bool auto_rate = iEquals(ratehet_set, "AUTO");
 // if use nn
 
-#if (defined(_NN) || defined(_OLD_NN)) && defined(_NN_MF)
-// todo: if use nn, get alpha value and set innitial value to G
-    delete alignment;
-
-#endif
+//#if defined(_NN) || defined(_OLD_NN)
+//// todo: if use nn, get alpha value and set innitial value to G
+//#endif
 //#else
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
 //#endif
@@ -2749,8 +2753,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
     if (in_model_name.empty()) {
-#if (defined(_NN) || defined(_OLD_NN)) && !defined(_NN_MF)
-        if (params.use_nn_model && in_tree->aln->seq_type == SEQ_DNA) {
+#if defined(_NN) || defined(_OLD_NN)
+        if (params.use_nn_model && in_tree->aln->seq_type == SEQ_DNA && !params.use_model_revelator_with_mf) {
             cout << "Using NN" << endl;
             // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
             // determine substitution model using neural network
@@ -2770,7 +2774,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 #endif
             // generate all models the normal way
             generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
-#if (defined(_NN) || defined(_OLD_NN)) && !defined(_NN_MF)
+#if (defined(_NN) || defined(_OLD_NN))
         }
         if (do_modelomatic) {
             ASSERT(!params.use_nn_model);

@@ -5352,6 +5352,23 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            // model revelator with MF
+            if (strcmp(argv[cnt], "--model-revelator") == 0) {
+                params.use_model_revelator = true;
+                params.use_nn_model = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--confidence-level") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --confidence-level <confidence_level>";
+                params.model_revelator_confidence = convert_double(argv[cnt]);
+                if (params.model_revelator_confidence < 0 || params.model_revelator_confidence > 1)
+                    throw "Confidence level must be in the range [0,1]";
+                continue;
+            }
+
             if (arg=="-progress-bar" || arg=="--progress-bar" || arg=="-bar") {
                 progress_display::setProgressDisplay(true);
                 continue;

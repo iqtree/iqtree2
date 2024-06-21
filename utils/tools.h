@@ -2405,7 +2405,13 @@ public:
 
     /** neural network file that determines alpha rate (onnx format) */
     string nn_path_rates; // added by TD
-    
+
+    /** use neural network for model finder */
+    bool use_model_revelator_with_mf;
+
+    /** model revelator confidence threshold */
+    double model_revelator_confidence;
+
     /**
     *  TRUE to execute alisim
     */
