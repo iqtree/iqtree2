@@ -220,6 +220,79 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
+/**
+ * restrict the number of threads should be used for a single partition
+ */
+/*
+int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
+    if (numThres == 0)
+        return numThres;
+    int thres = numThres;
+    switch(seqType) {
+        case SEQ_BINARY:
+            if (nptn <= 1000)
+                thres = 1;
+            else if (nptn <= 10000)
+                thres = 8;
+            break;
+        case SEQ_CODON:
+            if (nptn*3 <= 10)
+                thres = 1;
+            else if (nptn*3 <= 50)
+                thres = 4;
+            else if (nptn*3 <= 1000)
+                thres = 8;
+            else if (nptn*3 <= 10000)
+                thres = 16;
+            break;
+        case SEQ_PROTEIN:
+            if (nptn <= 100)
+                thres = 1;
+            else if (nptn <= 1000)
+                thres = 8;
+            else if (nptn <= 10000)
+                thres = 16;
+            break;
+        default: // DNA or others
+            if (nptn <= 1000)
+                thres = 1;
+            else if (nptn <= 10000)
+                thres = 4;
+            else if (nptn <= 50000)
+                thres = 16;
+            break;
+    }
+    if (thres > numThres)
+        thres = numThres;
+    return thres;
+}
+*/
+
+/**
+ * restrict the number of threads should be used for fast tree estimation
+ * and for the final step after modelFinder
+ */
+int numThresFastTree(int nPart, int nptn, SeqType seqType, int numThres) {
+    if (nptn == 1 || numThres == 0)
+        return numThres;
+    int thres = nPart;
+    switch(seqType) {
+        case SEQ_PROTEIN:
+            if (nptn >= 8000 && nPart < 8)
+                thres = 8;
+            break;
+        case SEQ_CODON:
+            if (nptn*3 >= 8000 && nPart < 8)
+                thres = 8;
+            break;
+        default:
+            break;
+    }
+    if (thres > numThres)
+        thres = numThres;
+    return thres;
+}
+
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -733,7 +806,7 @@ string computeFastMLTree(Params &params, Alignment *aln,
                 }
             }
 #endif
-
+            
             initTree = iqtree->getTreeString();
         }
         params.opt_gammai = saved_opt_gammai;
@@ -843,14 +916,28 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
+    // if it is an alignment with partitions and the number of threads is more than the number of alignments,
+    // then set the number of threads = the number of alignments (for most of the cases)
+    bool autoThread = (params.num_threads == 0);
+    int orig_nthreads = params.num_threads;
+    int updated_nthreads = params.num_threads;
+    if (!autoThread && iqtree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        updated_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
+        params.num_threads = updated_nthreads;
+    }
+    if (updated_nthreads != orig_nthreads) {
+        cout << "The number of threads is changed to: " << updated_nthreads << endl;
+    }
+
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
         return;
     }
-
+    
     //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) ||
-        (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
+    (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
 
     bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
 
@@ -920,7 +1007,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     if (!params.use_nn_model && params.modelfinder_ml_tree) {
         // 2019-09-10: Now perform NNI on the initial tree
         string tree_str = computeFastMLTree(params, iqtree.aln, model_info,
-            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
+                                            models_block, params.num_threads, params.partition_type, iqtree.dist_file);
         iqtree.restoreCheckpoint();
     } else {
         iqtree.computeInitialTree(params.SSE);
@@ -938,6 +1025,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
         }
     }
 
+    if (!autoThread)
+        params.num_threads = orig_nthreads;
+
     if (!params.use_nn_model) {
         // also save initial tree to the original .ckp.gz checkpoint
         //        string initTree = iqtree.getTreeString();
@@ -947,6 +1037,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 
         CandidateModelSet candidate_models;
         int max_cats = candidate_models.generate(params, iqtree.aln, params.model_test_separate_rate, false);
+
+        // If the option -m MF1 is used, consider ALL candidates
+        if (params.model_name == "MF1") {
+            params.score_diff_thres = -1.0;
+            cout << "ModelFinder 1 is activated" << endl;
+        }
 
         uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
         cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -979,7 +1075,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 #if ( defined(_NN) || defined(_OLD_NN) ) && !defined(_NN_MF)
         if (params.use_nn_model) {
             cout << "We are using the neural network to select the model of sequence evolution because "
-                    "option --use-nn-model is set to " << params.use_nn_model << endl;
+            "option --use-nn-model is set to " << params.use_nn_model << endl;
             Alignment *alignment = (iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
             NeuralNetwork nn(alignment);
             iqtree.aln->model_name = nn.doModelInference();
@@ -1013,7 +1109,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             cout << "Bayesian Information Criterion:         " << best_model_BIC << endl;
 
             cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
-                 << criterionName(params.model_test_criterion) << endl;
+            << criterionName(params.model_test_criterion) << endl;
 #if ( defined(_NN) || defined(_OLD_NN) ) && !defined(_NN_MF)
         }
 #endif
@@ -1045,6 +1141,17 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
+    }
+
+    if (!autoThread) {
+        if (iqtree.isSuperTree()) {
+            // change the number of threads to the number of partitions for alignment with partitions
+            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+            params.num_threads = stree->size();
+            cout << "The number of threads is changed to: " << params.num_threads << endl;
+        } else {
+            params.num_threads = updated_nthreads;
+        }
     }
 }
 
@@ -1758,7 +1865,7 @@ string CandidateModel::evaluate(Params &params,
 
     if (syncChkPoint != nullptr)
         iqtree->getModelFactory()->syncChkPoint = this->syncChkPoint;
-
+    
     if (params.model_test_and_tree) {
         //--- PERFORM FULL TREE SEARCH PER MODEL ----//
         // BQM 2017-03-29: disable bootstrap
@@ -2587,7 +2694,7 @@ void CandidateModelSet::filterRates(int finished_model) {
                 return; // only works if all models done
             best_score = min(best_score, at(model).getScore());
         }
-
+    
     double ok_score = best_score + Params::getInstance().score_diff_thres;
     set<string> ok_rates;
     for (model = 0; model <= finished_model; model++)
@@ -2609,7 +2716,7 @@ void CandidateModelSet::filterSubst(int finished_model) {
     for (model = 0; model <= finished_model; model++)
         if (at(model).rate_name == at(0).rate_name)
             best_score = min(best_score, at(model).getScore());
-
+    
     double ok_score = best_score + Params::getInstance().score_diff_thres;
     set<string> ok_model;
     for (model = 0; model <= finished_model; model++) {
@@ -2635,7 +2742,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     ModelCheckpoint *checkpoint = &model_info;
 
 	    in_tree->params = &params;
-
+    
     // for ModelOMatic
     Alignment *prot_aln = NULL;
     Alignment *dna_aln = NULL;
@@ -2740,15 +2847,15 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
                 break;
     }
-
+    
     int subst_block = size();
     if (auto_subst) {
         for (subst_block = size()-1; subst_block >= 0; subst_block--)
             if (at(subst_block).rate_name == at(0).rate_name)
                 break;
     }
-
-
+    
+    
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
 	for (model = 0; model < size(); model++) {
@@ -2785,7 +2892,6 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         ModelCheckpoint out_model_info;
 		//CandidateModel info;
 		//info.set_name = set_name;
-        // partition name
         at(model).set_name = set_name;
         string tree_string;
         /***** main call to estimate model parameters ******/
@@ -2800,7 +2906,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         CandidateModel prev_info;
 
         bool skip_model = false;
-
+        
         bool check_condition = prev_info.restoreCheckpointRminus1(checkpoint, &at(model));
 
         if (check_condition) {
@@ -2885,7 +2991,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             cout << right << model+1 << "  ";
             cout.width(13);
             cout << left << at(model).getName() << " ";
-
+            
             cout.precision(3);
             cout << fixed;
             cout.width(12);
@@ -2955,7 +3061,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     checkpoint->dump();
 
 	delete [] model_rank;
-
+    
     // update alignment if best data type changed
     if (best_aln != in_tree->aln) {
         delete in_tree->aln;
@@ -2980,7 +3086,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 //	if (params.model_test_and_tree)
 		in_tree->readTreeString(best_tree);
 
-
+    
 	return at(best_model);
 }
 
@@ -3017,13 +3123,13 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
     //ModelCheckpoint *checkpoint = &model_info;
 
     in_tree->params = &params;
-
+    
     Alignment *prot_aln = NULL;
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
-
-
-
+    
+    
+    
     if (in_model_name.empty()) {
         generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
         if (do_modelomatic) {
@@ -3041,7 +3147,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
                 at(i).logl = adjusted_logl;
                 at(i).df = adjusted_df;
             }
-
+            
             // generate models for DNA
             dna_aln = in_tree->aln->convertCodonToDNA();
             start = size();
@@ -3075,7 +3181,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             if (rate_block+1 < size() && at(rate_block+1).subst_name != at(rate_block).subst_name)
                 break;
     }
-
+    
     int subst_block = size();
     if (auto_subst) {
         for (subst_block = size()-1; subst_block >= 0; subst_block--)
@@ -3100,13 +3206,13 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         ModelCheckpoint out_model_info;
         at(model).set_name = at(model).aln->name;
         string tree_string;
-
+        
         // main call to estimate model parameters
         tree_string = at(model).evaluate(params, model_info, out_model_info,
                                          models_block, num_threads, brlen_type);
         at(model).computeICScores();
         at(model).setFlag(MF_DONE);
-
+        
         int lower_model = getLowerKModel(model);
         if (lower_model >= 0 && at(lower_model).getScore() < at(model).getScore()) {
             // ignore all +R_k model with higher category
@@ -3114,7 +3220,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
                 higher_model = getHigherKModel(higher_model)) {
                 at(higher_model).setFlag(MF_IGNORED);
             }
-
+            
         }
 #ifdef _OPENMP
 #pragma omp critical
@@ -3134,7 +3240,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             cout << right << model+1 << "  ";
             cout.width(13);
             cout << left << at(model).getName() << " ";
-
+            
             cout.precision(3);
             cout << fixed;
             cout.width(12);
@@ -3157,7 +3263,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
 #endif
     } while (model != -1);
     }
-
+    
     // store the best model
     ModelTestCriterion criteria[] = {MTC_AIC, MTC_AICC, MTC_BIC};
     for (auto mtc : criteria) {
@@ -3165,8 +3271,8 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         model_info.put("best_score_" + criterionName(mtc), at(best_model).getScore(mtc));
         model_info.put("best_model_" + criterionName(mtc), at(best_model).getName());
     }
-
-
+    
+    
     /* sort models by their scores */
     multimap<double,int> model_sorted;
     for (int64_t model = 0; model < num_models; model++)
@@ -3179,7 +3285,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
             model_list += " ";
         model_list += at(it->second).getName();
     }
-
+    
     model_info.putBestModelList(model_list);
     model_info.dump();
 
@@ -3193,7 +3299,7 @@ CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree
         else
             dna_aln = NULL;
     }
-
+    
     if (dna_aln)
         delete dna_aln;
     if (prot_aln)
@@ -3224,7 +3330,7 @@ struct jobcomp {
  */
 PartitionFinder::PartitionFinder(Params *inparams, PhyloSuperTree* intree, ModelCheckpoint *modelinfo,
                                  ModelsBlock *modelsblock, int numthreads) {
-
+ 
     params = inparams;
     in_tree = intree;
     model_info = modelinfo;
@@ -3266,7 +3372,7 @@ void PartitionFinder::showMergeResult(ModelCheckpoint& part_model_info, double t
             }
             cout << endl;
         }
-
+        
         // update the number of jobs done
         jobdone++;
     }
@@ -3286,7 +3392,7 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
     {
         replaceModelInfo(model_info, part_model_info);
         model_info->dump();
-
+        
         for (i=0; i<tree_len.size(); i++) {
             num_model++;
             cout.width(4);
@@ -3324,7 +3430,7 @@ void PartitionFinder::showMergeResults(ModelCheckpoint& part_model_info, vector<
  * @return next job ID if need_next_treeID and (MASTER or IS_ASYN_COMM = 0), otherwise -1
  */
 void PartitionFinder::getBestModelForOneMergeMPI(MergeJob* job, int nthreads, bool need_next_jobID, SyncChkPoint& syncChkPt, double& run_time, double& wait_time) {
-
+    
     CandidateModel best_model;
     ModelPair cur_pair;
     ModelCheckpoint part_model_info;
@@ -3339,7 +3445,7 @@ void PartitionFinder::getBestModelForOneMergeMPI(MergeJob* job, int nthreads, bo
     int job_type = 2; // compute the best model for the merge
     double t_begin;
     double t_wait_begin;
-
+    
     t_begin = getRealTime();
     wait_time = 0;
     part_model_info.clear();
@@ -3536,7 +3642,7 @@ void PartitionFinder::showPartitionResults(ModelCheckpoint& part_model_info, vec
  *    return -1
  */
 int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthreads, bool need_next_treeID, SyncChkPoint& syncChkPt, double& run_time, double& wait_time) {
-
+    
     CandidateModel best_model;
     PhyloTree *this_tree;
     ModelCheckpoint part_model_info;
@@ -3550,7 +3656,7 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
     int job_type = 1; // compute the best model for partition
     double t_begin;
     double t_wait_begin;
-
+    
     t_begin = getRealTime();
     wait_time = 0;
     this_tree = in_tree->at(tree_id);
@@ -3565,14 +3671,14 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
     // do the computation
     if (params->model_name.empty())
         part_model_name = this_tree->aln->model_name;
-
+    
     candModelSet.syncChkPoint = &(syncChkPt);
-
+    
     best_model = candModelSet.test(*params, this_tree, part_model_info, models_block,
         nthreads, brlen_type, this_tree->aln->name, part_model_name, test_merge);
-
+    
     candModelSet.syncChkPoint = nullptr;
-
+    
     check = (best_model.restoreCheckpoint(&part_model_info));
     ASSERT(check);
     score = best_model.computeICScore(this_tree->getAlnNSite());
@@ -3589,15 +3695,15 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
         }
 
     } else {
-
+        
         // for Worker -- SYN communication
         #ifdef SYN_COMM
-
+        
             key = "pf_tree_id"; part_model_info.put(key, tree_id);
             key = "pf_tree_len"; part_model_info.put(key, best_model.tree_len);
             key = "pf_model_name"; part_model_info.put(key, best_model.getName());
             key = "pf_score"; part_model_info.put(key, score);
-
+        
             // send the part_model_info to master if time is long enough
             t_wait_begin = getRealTime();
             next_tree_id = syncChkPt.sendChkptToMaster(part_model_info, need_next_treeID, job_type);
@@ -3620,16 +3726,16 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
                 score_vec.push_back(score);
                 tag_vec.push_back(syncChkPt.mytag);
             }
-
+            
             // send the process_model_info to master if time is long enough
             t_wait_begin = getRealTime();
             next_tree_id = syncChkPt.sendChkptToMaster(process_model_info, need_next_treeID, job_type);
             wait_time += (getRealTime() - t_wait_begin);
-
+        
         #endif // ONESIDE_COMM
     }
     run_time = (getRealTime() - t_begin) - wait_time;
-
+    
     return next_tree_id;
 }
 
@@ -3659,7 +3765,7 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs) {
         cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
         cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
         cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
-
+        
         // check whether the pair was previously examined, reuse the information
         model_info->startStruct(cur_pair.set_name);
         if (model_info->getBestModel(best_model.subst_name)) {
@@ -3677,7 +3783,7 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs) {
         }
         model_info->endStruct();
     }
-
+    
     // remove the finished jobs from the list
     int k = 0;
     for (int j = 0; j < jobs.size(); j++) {
@@ -3705,7 +3811,7 @@ void PartitionFinder::getBestModelforPartitionsMPI(int nthreads, vector<int> &jo
         return;
 
     bool parallel_job = false;
-
+    
     // reset the arrays
     memset(run_time, 0, sizeof(double)*nthreads);
     memset(wait_time, 0, sizeof(double)*nthreads);
@@ -3835,7 +3941,8 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
     bool parallel_job = false;
 
 #ifdef _OPENMP
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1);
 #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {
@@ -3883,7 +3990,6 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
             cout.width(11);
             cout << best_model.tree_len << " ";
             cout << this_tree->aln->name;
-            // print the model details
             if (num_model >= 10) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " ("
@@ -3907,7 +4013,8 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
     bool parallel_job = false;
 
 #ifdef _OPENMP
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1);
 #pragma omp parallel for schedule(dynamic) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {
@@ -4048,7 +4155,7 @@ void PartitionFinder::getBestModel(int job_type) {
             findClosestPairs(super_aln, lenvec, gene_sets, true, log_closest_pairs);
             mergePairs(closest_pairs, log_closest_pairs);
         }
-
+        
         // sort partition by computational cost for OpenMP/MPI effciency
         for (i = 0; i < closest_pairs.size(); i++) {
             // computation cost is proportional to #sequences, #patterns, and #states
@@ -4090,7 +4197,7 @@ void PartitionFinder::getBestModel(int job_type) {
     } else {
 
         int num_job_array;
-
+        
         // assign the initial jobs to processors
         if (job_type == 1)
             num_job_array = partjobAssignment(jobIDs, currPartJobs);
@@ -4099,10 +4206,10 @@ void PartitionFinder::getBestModel(int job_type) {
 
         // initialize the value of base
         base = MPIHelper::getInstance().getProcessID() * num_threads;
-
+        
         // initialize the syn time
         last_syn_time = getRealTime();
-
+        
         // initialize the vectors
         tree_id_vec.clear();
         tree_len_vec.clear();
@@ -4111,7 +4218,7 @@ void PartitionFinder::getBestModel(int job_type) {
         set_name_vec.clear();
         tag_vec.clear();
         tot_jobs_done = 0;
-
+        
         // for timing
         double* run_time = new double[num_threads];
         double* wait_time = new double[num_threads];
@@ -4123,16 +4230,16 @@ void PartitionFinder::getBestModel(int job_type) {
         double wall_time;
         // initialize the checkpoint for the whole processor
         process_model_info.clear();
-
+        
         // compute the best model
         if (job_type == 1) {
             getBestModelforPartitionsMPI(num_threads, currPartJobs, run_time, wait_time, fstep_time, num_part, cpu_time, wall_time);
         } else {
             getBestModelforMergesMPI(num_threads, currMergeJobs, run_time, wait_time, fstep_time, num_part, cpu_time, wall_time);
         }
-
+        
         MPI_Barrier(MPI_COMM_WORLD);
-
+        
         // gather all timing information
         int* num_job_arrays = new int[num_processes];
         int* num_part_arrays = new int[num_processes * num_threads];
@@ -4166,7 +4273,7 @@ void PartitionFinder::getBestModel(int job_type) {
             }
             cout << endl;
         }
-
+        
         if (job_type == 1) {
             // distribute the checkpoints from Master to Workers
             // for merging, the checkpoints will be distributed to workers after the merging finishes.
@@ -4177,7 +4284,7 @@ void PartitionFinder::getBestModel(int job_type) {
                 cout << endl;
             }
         }
-
+        
         // consolidate the results
         if (job_type == 1) {
             consolidPartitionResults();
@@ -4186,7 +4293,7 @@ void PartitionFinder::getBestModel(int job_type) {
             // the workers will do so after the merging finishes.
             consolidMergeResults();
         }
-
+    
         if (job_type == 1) {
             currPartJobs.clear();
         } else if (job_type == 2) {
@@ -4196,7 +4303,7 @@ void PartitionFinder::getBestModel(int job_type) {
             }
             currMergeJobs.clear();
         }
-
+        
         // clear the memory for timing
         delete[] run_time;
         delete[] wait_time;
@@ -4261,7 +4368,7 @@ void PartitionFinder::consolidPartitionResults() {
  * Consolidate the merge results (for MPI)
  */
 void PartitionFinder::consolidMergeResults() {
-
+    
     better_pairs.clear();
     for (size_t pair = 0; pair < closest_pairs.size(); pair++) {
         // information of current partitions pair
@@ -4279,21 +4386,21 @@ void PartitionFinder::consolidMergeResults() {
         weight1 *= sum;
         weight2 *= sum;
         CandidateModel best_model;
-
+        
         model_info->startStruct(cur_pair.set_name);
         ASSERT(model_info->getBestModel(best_model.subst_name));
         best_model.restoreCheckpoint(model_info);
         model_info->endStruct();
-
+        
         cur_pair.logl = best_model.logl;
         cur_pair.df = best_model.df;
         cur_pair.model_name = best_model.getName();
         cur_pair.tree_len = best_model.tree_len;
-
+        
         double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
         int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
         cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
-
+        
         if (cur_pair.score < inf_score) {
             better_pairs.insertPair(cur_pair);
         }
@@ -4339,7 +4446,7 @@ void PartitionFinder::test_PartitionModel() {
         params->partfinder_log_rate = false;
         params->partfinder_rcluster = 100.0;
     }
-
+    
     // 2017-06-07: -rcluster-max for max absolute number of pairs
     if (params->partfinder_rcluster_max == 0) {
         // params->partfinder_rcluster_max = max((size_t)1000, 10 * in_tree->size());
@@ -4452,33 +4559,33 @@ void PartitionFinder::test_PartitionModel() {
         // compute the best model for each pair
         job_type = 2; // for all merges
         getBestModel(job_type);
-
+        
         bool is_pairs_empty = better_pairs.empty();
-
+        
 #ifdef _IQTREE_MPI
         MPI_Bcast(&is_pairs_empty, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
 #endif
 
         if (is_pairs_empty) break;
-
+        
         if (MPIHelper::getInstance().isMaster()) {
 
             ModelPairSet compatible_pairs;
-
+            
             int num_comp_pairs = params->partition_merge == MERGE_RCLUSTERF ? gene_sets.size()/2 : 1;
             better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
             if (compatible_pairs.size() > 1)
                 cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
-
+            
             // 2017-12-21: simultaneously merging better pairs
             for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
                 ModelPair opt_pair = it_pair->second;
-
+                
                 lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
                 dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
                 inf_score = computeInformationScore(lhsum, dfsum, ssize, params->model_test_criterion);
                 ASSERT(inf_score <= opt_pair.score + 0.1);
-
+                
                 cout << "Merging " << opt_pair.set_name << " with " << criterionName(params->model_test_criterion)
                 << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
                 // change entry opt_part1 to merged one
@@ -4491,7 +4598,7 @@ void PartitionFinder::test_PartitionModel() {
                 greedy_model_trees[opt_pair.part2] + ")" +
                 convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" +
                 convertDoubleToString(inf_score);
-
+                
                 // delete entry opt_part2
                 lhvec.erase(lhvec.begin() + opt_pair.part2);
                 dfvec.erase(dfvec.begin() + opt_pair.part2);
@@ -4499,7 +4606,7 @@ void PartitionFinder::test_PartitionModel() {
                 gene_sets.erase(gene_sets.begin() + opt_pair.part2);
                 model_names.erase(model_names.begin() + opt_pair.part2);
                 greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
-
+                
                 // decrease part ID for all pairs beyond opt_pair.part2
                 auto next_pair = it_pair;
                 for (next_pair++; next_pair != compatible_pairs.end(); next_pair++) {
@@ -4523,7 +4630,7 @@ void PartitionFinder::test_PartitionModel() {
         }
     }
 #endif
-
+    
     if (MPIHelper::getInstance().isMaster()) {
         string final_model_tree;
         if (greedy_model_trees.size() == 1)
@@ -4552,7 +4659,7 @@ void PartitionFinder::test_PartitionModel() {
 
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
-
+    
     if (!iEquals(params->merge_models, "all")) {
         // test all candidate models again
         lhsum = 0.0;
@@ -4579,11 +4686,11 @@ void PartitionFinder::test_PartitionModel() {
 #ifdef _IQTREE_MPI
     // free the MPI share memory
     freeMPIShareMemory();
-
+    
     MPI_Barrier(MPI_COMM_WORLD);
-
+    
     cout << "Finish the procedure test_PartitionModel()" << endl;
-
+    
 #endif
 }
 
@@ -4965,7 +5072,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
 
             // receive checkpoint from the WORKER
             recvAnyCheckpoint(&proc_model_info, worker, work_tag);
-
+            
             key = "pf_job_type";
             ASSERT(proc_model_info.get(key, job_type));
             if (job_type == 1) {
@@ -5029,7 +5136,7 @@ void SyncChkPoint::masterSyncOtherChkpts(bool chk_gotMessage) {
         }
 
         showResult(proc_model_info, work_tag);
-
+        
         proc_model_info.clear();
     }
 }
@@ -5061,7 +5168,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
         key = "need_nextJobID"; model_info.putBool(key, need_nextJobID);
         key = "pf_job_type"; model_info.put(key, job_type);
         key = "pf_data_num"; model_info.put(key, "single");
-
+        
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -5079,7 +5186,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
             }
         }
         model_info.clear();
-
+        
     } else {
         // using ONESIDE communication
         // and send the checkpoint to master when the time is long enough
@@ -5087,9 +5194,9 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
         if (need_nextJobID) {
             next_jobID = getNextJobID();
         }
-
+        
         string str = "";
-
+        
 #ifdef _OPENMP
 #pragma omp critical
 #endif
@@ -5107,14 +5214,14 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
                 key = "pf_data_num"; model_info.put(key, "multiple");
                 key = "pf_tot_jobs_done"; model_info.put(key, pfinder->tot_jobs_done);
                 key = "pf_set_name"; model_info.putVector(key, pfinder->set_name_vec);
-
+                
                 stringstream ss;
                 model_info.dump(ss);
                 str = ss.str();
-
+                
                 // do synchronization with Master
                 MPIHelper::getInstance().sendString(str, PROC_MASTER, mytag);
-
+                
                 // clear all vectors
                 pfinder->tree_id_vec.clear();
                 pfinder->tree_len_vec.clear();
@@ -5122,7 +5229,7 @@ int SyncChkPoint::sendChkptToMaster(ModelCheckpoint &model_info, bool need_nextJ
                 pfinder->score_vec.clear();
                 pfinder->tag_vec.clear();
                 pfinder->tot_jobs_done = 0;
-
+                
                 // clear the checkpoint for this process
                 model_info.clear();
             }
@@ -5275,7 +5382,7 @@ int* SyncChkPoint::toIntArr(vector<set<int> >& gene_sets, int& buffsize) {
         buffsize += gene_sets[i].size();
 
     int* buff = new int[buffsize];
-
+    
     k = 0;
     for (i=0; i<gene_sets.size() && k<buffsize; i++) {
         for (itr=gene_sets[i].begin(); itr!=gene_sets[i].end() && k<buffsize; itr++) {
@@ -5358,19 +5465,19 @@ void SyncChkPoint::broadcastVecSetInt(vector<set<int> >& gene_sets) {
         buff = toIntArr(gene_sets, buffsize);
 
     MPI_Bcast(&buffsize, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
-
+    
     if (buffsize > 0) {
         if (MPIHelper::getInstance().isWorker())
             buff = new int[buffsize];
-
+        
         // broadcast buff to workers
         MPI_Bcast(buff, buffsize, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
-
+        
         // for workers, rebuild the gene_sets
         if (MPIHelper::getInstance().isWorker())
             loadFrIntArr(gene_sets, buff, buffsize);
     }
-
+    
     if (buff != NULL)
         delete[] buff;
 }
@@ -5383,7 +5490,7 @@ void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
     if (MPIHelper::getInstance().isMaster()) {
         buff = toCharArr(model_names, buffsize);
     }
-
+    
     // broadcast buffsize to workers
     MPI_Bcast(&buffsize, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
 
@@ -5398,7 +5505,7 @@ void SyncChkPoint::broadcastVecStr(vector<string>& model_names) {
             loadFrCharArr(model_names, buff);
         }
     }
-
+    
     if (buff != NULL)
         delete[] buff;
 }
@@ -5463,13 +5570,13 @@ void MergeJob::toString(string& str) {
 }
 
 void MergeJob::loadFrString(string& str) {
-
+    
     int start_pos = 0;
     int pos = 0;
-
+    
     // reset all variables
     setEmpty();
-
+    
     // read id1
     while (pos < str.length() && str[pos] != ';')
         pos++;
@@ -5477,7 +5584,7 @@ void MergeJob::loadFrString(string& str) {
         id1 = atoi(str.substr(start_pos, pos - start_pos).c_str());
     pos++;
     start_pos = pos;
-
+    
     // read id2
     while (pos < str.length() && str[pos] != ';')
         pos++;
@@ -5485,7 +5592,7 @@ void MergeJob::loadFrString(string& str) {
         id2 = atoi(str.substr(start_pos, pos - start_pos).c_str());
     pos++;
     start_pos = pos;
-
+    
     // read treelen1
     while (pos < str.length() && str[pos] != ';')
         pos++;
@@ -5501,7 +5608,7 @@ void MergeJob::loadFrString(string& str) {
         treelen2 = atof(str.substr(start_pos, pos - start_pos).c_str());
     pos++;
     start_pos = pos;
-
+    
     // read geneset1
     while (pos < str.length() && str[pos] != ';') {
         if (str[pos] == ',') {

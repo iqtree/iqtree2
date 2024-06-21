@@ -22,7 +22,7 @@ if (USE_LSD2)
     target_link_libraries(main lsd2)
 endif()
 
-if (USE_NN)
+if (USE_NN OR USE_OLD_NN)
     target_link_libraries(main nn)
 endif()
 
