@@ -230,7 +230,7 @@ void generateRandomTree(Params &params)
 */
 void generateRandomTree(Params &params, ostream &out)
 {
-    if (params.sub_size < 3 && !params.aln_file) {
+    if (params.sub_size < 3) {
         outError(ERR_FEW_TAXA);
     }
 
@@ -242,7 +242,7 @@ void generateRandomTree(Params &params, ostream &out)
 
         if (params.tree_gen == YULE_HARDING || params.tree_gen == CATERPILLAR ||
             params.tree_gen == BALANCED || params.tree_gen == UNIFORM || params.tree_gen == STAR_TREE || params.tree_gen == BIRTH_DEATH) {
-            if (MPIHelper::getInstance().isMaster() && fileExists(params.user_file) && !params.ignore_checkpoint)
+            if (MPIHelper::getInstance().isMaster() && params.user_file!="" && fileExists(params.user_file) && !params.ignore_checkpoint)
             {
                 string tmp_str(params.user_file);
                 outError(tmp_str + " exists. Use `-redo` option if you want to overwrite it.");

@@ -4,29 +4,6 @@
 
 using namespace std;
 
-TreeGenType getTreeMode(string tree_gen_mode) {
-    if (tree_gen_mode == "YULE_HARDING") {
-        return YULE_HARDING;
-    } else if (tree_gen_mode == "UNIFORM") {
-        return UNIFORM;
-    } else if (tree_gen_mode == "CATERPILLAR") {
-        return CATERPILLAR;
-    } else if (tree_gen_mode == "BALANCED") {
-        return BALANCED;
-    } else if (tree_gen_mode == "BIRTH_DEATH") {
-        return BIRTH_DEATH;
-    } else if (tree_gen_mode == "STAR_TREE") {
-        return STAR_TREE;
-    } else if (tree_gen_mode == "CIRCULAR_SPLIT_GRAPH") {
-        return CIRCULAR_SPLIT_GRAPH;
-    } else if (tree_gen_mode == "TAXA_SET") {
-        return TAXA_SET;
-    } else {
-        cerr << "Unknown input tree mode: " << tree_gen_mode << endl;
-        exit(1);
-    }
-}
-
 int main(int argc, char** argv) {
 
     // ====================================================
@@ -61,12 +38,11 @@ int main(int argc, char** argv) {
                 return 0;
             }
             int num_taxa = atoi(argv[2]);
-            TreeGenType tree_mode = getTreeMode(argv[3]);
+            string tree_mode = argv[3];
             int num_tree = atoi(argv[4]);
             int seed = 0;
             if (argc > 5)
                 seed = atoi(argv[5]);
-            std::cout << "generate_random_tree(" << num_taxa << "," << tree_mode << "," << num_tree <<"," <<  seed << ")" << endl;
             std::cout << generate_random_tree(num_taxa, tree_mode, num_tree, seed) << endl;
             return 0;
         }

@@ -41,10 +41,6 @@ void generate_random_tree_file(int numtaxa, int seed, string tree_gen_mode, stri
         genMode = BIRTH_DEATH;
     } else if (tree_gen_mode == "STAR_TREE") {
         genMode = STAR_TREE;
-    } else if (tree_gen_mode == "CIRCULAR_SPLIT_GRAPH") {
-        genMode = CIRCULAR_SPLIT_GRAPH;
-    } else if (tree_gen_mode == "TAXA_SET") {
-        genMode = TAXA_SET;
     } else {
         cerr << "Unknown mode: " << tree_gen_mode << endl;
         return;
@@ -69,20 +65,39 @@ void generate_random_tree_file(int numtaxa, int seed, string tree_gen_mode, stri
 }
 
 // Generates a random phylogenetic tree
-string generate_random_tree(int num_taxa, TreeGenType tree_mode, int num_trees, int rand_seed) {
+string generate_random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_seed) {
     PhyloTree ptree;
     int seed = rand_seed;
     if (seed == 0)
         seed = make_new_seed();
     cout << "seed: " << seed << endl;
     init_random(seed);
+    
+    TreeGenType tree_mode;
+    if (tree_gen_mode == "YULE_HARDING") {
+        tree_mode = YULE_HARDING;
+    } else if (tree_gen_mode == "UNIFORM") {
+        tree_mode = UNIFORM;
+    } else if (tree_gen_mode == "CATERPILLAR") {
+        tree_mode = CATERPILLAR;
+    } else if (tree_gen_mode == "BALANCED") {
+        tree_mode = BALANCED;
+    } else if (tree_gen_mode == "BIRTH_DEATH") {
+        tree_mode = BIRTH_DEATH;
+    } else if (tree_gen_mode == "STAR_TREE") {
+        tree_mode = STAR_TREE;
+    } else {
+        cerr << "Unknown mode: " << tree_gen_mode << endl;
+        exit(1);
+    }
+    
     Params params = Params::getInstance();
     params.setDefault();
     params.sub_size = num_taxa;
     params.tree_gen = tree_mode;
     params.repeated_time = num_trees;
     params.ignore_checkpoint = true; // overrid the output file if exists
-    params.user_file = "test";
+    params.user_file = "";
 
     ostringstream ostring;
     generateRandomTree(params, ostring);
