@@ -119,7 +119,7 @@ public:
     /**
         initialize from checkpoint rates and prop from rate model with #category-1
     */
-    virtual void initFromCatMinusOne();
+    virtual void initFromCatMinusOne(Checkpoint &ckp);
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)

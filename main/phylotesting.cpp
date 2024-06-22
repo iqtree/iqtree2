@@ -1689,7 +1689,7 @@ string CandidateModel::evaluate(Params &params,
             if (!prev_info.restoreCheckpointRminus1(&in_model_info, this)) break;
             if (prev_info.logl < new_logl + params.modelfinder_eps) break;
             if (step == 0) {
-                iqtree->getRate()->initFromCatMinusOne();
+                iqtree->getRate()->initFromCatMinusOne(in_model_info);
             } else if (new_logl < prev_info.logl - params.modelfinder_eps*10.0) {
                 outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
                            getName() + " worse than " + prev_info.getName() + " " + convertDoubleToString(prev_info.logl));
