@@ -426,8 +426,9 @@ public:
      put a checkpoint where the key string contains a given substring
      @param source checkpoint
      @param sub_key key substring to search for
+     @param overwrite true to overwrite value even if key exists
      */
-    void putSubCheckpoint(Checkpoint *source, string sub_key);
+    void putSubCheckpoint(Checkpoint *source, string sub_key, bool overwrite = true);
 
     /**
      transfer a checkpoint where the key string contains a given substring

@@ -2765,6 +2765,9 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             }
         }
 
+        // BQM 2024-06-22: save checkpoint for starting values of next model
+        model_info.putSubCheckpoint(&out_model_info, "");
+
 		if (at(model).AIC_score < best_score_AIC) {
             best_model_AIC = model;
             best_score_AIC = at(model).AIC_score;
@@ -2772,7 +2775,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 best_tree_AIC = tree_string;
             // only update model_info with better model
             if (params.model_test_criterion == MTC_AIC) {
-                model_info.putSubCheckpoint(&out_model_info, "");
+                //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
             }
         }
@@ -2783,7 +2786,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 best_tree_AICc = tree_string;
             // only update model_info with better model
             if (params.model_test_criterion == MTC_AICC) {
-                model_info.putSubCheckpoint(&out_model_info, "");
+                //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
             }
         }
@@ -2795,7 +2798,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 best_tree_BIC = tree_string;
             // only update model_info with better model
             if (params.model_test_criterion == MTC_BIC) {
-                model_info.putSubCheckpoint(&out_model_info, "");
+                //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
             }
         }
