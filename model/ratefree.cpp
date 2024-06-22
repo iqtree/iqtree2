@@ -98,10 +98,23 @@ void RateFree::restoreCheckpoint() {
 //    CKP_RESTORE(fix_params);
 //    CKP_RESTORE(sorted_rates);
 //    CKP_RESTORE(optimize_alg);
-    CKP_ARRAY_RESTORE(ncategory, prop);
-    CKP_ARRAY_RESTORE(ncategory, rates);
+    bool got_prop = CKP_ARRAY_RESTORE(ncategory, prop);
+    bool got_rate = CKP_ARRAY_RESTORE(ncategory, rates);
     endCheckpoint();
 
+    if (!got_prop || !got_rate) {
+        // can't get anything from checkpoint, try to get something from Gamma
+        RateGamma::startCheckpoint();
+        bool got_alpha = CKP_RESTORE(gamma_shape);
+        RateGamma::endCheckpoint();
+        // necessary compute rates after restoring gamma_shape
+        if (got_alpha) {
+            computeRates();
+            if (verbose_mode >= VB_MED)
+                cout << "Initialised +R" << ncategory << " from Gamma " << gamma_shape << endl;
+        }
+    }
+    
 //	setNCategory(ncategory);
 }
 
