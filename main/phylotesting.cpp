@@ -2611,7 +2611,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             cout << "codon/AA/DNA";
         else
             cout << getSeqTypeName(in_tree->aln->seq_type);
-        cout << " models (sample size: " << ssize << ") ..." << endl;
+        cout << " models (sample size: " << ssize << " epsilon: " << params.modelfinder_eps << ") ..." << endl;
         if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
