@@ -239,17 +239,17 @@ set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
 set(CLANG_UNDER_VS "FALSE") #Clang compiler, used from inside Visual Studio
-# using C++11 standard
+# using C++17 standard
 # disable AVX for NEON
 if (__ARM_NEON)
     set(IQTREE_FLAGS "${IQTREE_FLAGS} novx")
 elseif (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
     set(CLANG_UNDER_VS "TRUE")
-    #it won't recognize the -std=c++11 parameter.
+    #it won't recognize the -std=c++17 parameter.
     #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
     include_directories("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\Llvm\\lib\\clang\\10.0.0\\include")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -288,7 +288,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (APPLE)
         SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
     endif()
 
     #remove -rdynamic for Clang under Linux
