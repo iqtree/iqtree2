@@ -361,7 +361,7 @@ inline NxsString &NxsString::operator+=(
   const int i)	/* the int to append */
 	{
 	char tmp[81];
-	sprintf(tmp, "%d", i);
+	snprintf(tmp, 80, "%d", i);
 	append(tmp);
 	return *this;
 	}
@@ -396,7 +396,7 @@ inline NxsString& NxsString::operator+=(
   unsigned i)	/* the integer to be appended */
 	{
 	char tmp[81];
-	sprintf(tmp, "%u", i);
+	snprintf(tmp, 80, "%u", i);
 	append(tmp);
 	return *this;
 	}
@@ -408,7 +408,7 @@ inline NxsString& NxsString::operator+=(
   const long l)	/* the long integer to be appended */
 	{
 	char tmp[81];
-	sprintf(tmp, "%ld", l);
+	snprintf(tmp, 80, "%ld", l);
 	append(tmp);
 	return *this;
 	}
@@ -420,7 +420,7 @@ inline NxsString& NxsString::operator+=(
   const unsigned long l)	/* the unsigned long integer to be appended */
 	{
 	char tmp[81];
-	sprintf(tmp, "%lu", l);
+	snprintf(tmp, 80, "%lu", l);
 	append(tmp);
 	return *this;
 	}

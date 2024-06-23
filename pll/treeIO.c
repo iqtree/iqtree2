@@ -160,9 +160,9 @@ static char *pllTreeToNewickREC(char *treestr, pllInstance *tr, partitionList *p
   if(p == tr->start->back) 
     {	      	 
       if(printBranchLengths && !rellTree)
-	sprintf(treestr, ":0.0;\n");
+	snprintf(treestr, 10, ":0.0;\n");
       else
-	sprintf(treestr, ";\n");	 	  	
+	snprintf(treestr, 10, ";\n");	 	  	
     }
   else 
     {                   

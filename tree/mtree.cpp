@@ -2746,9 +2746,9 @@ void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, Spl
 				//Split *sp = ass_it->first;
 				/*char tmp[100];
 				if ((*it)->node->name.empty()) {
-					sprintf(tmp, "%d", round(sp->getWeight()));
+					snprintf(tmp, 100, "%d", round(sp->getWeight()));
 				} else
-					sprintf(tmp, "/%d", round(sp->getWeight()));*/
+					snprintf(tmp, 100, "/%d", round(sp->getWeight()));*/
 				stringstream tmp;
 				if ((*it)->node->name.empty())
 				  tmp << sp->getWeight();
