@@ -38,6 +38,8 @@ using namespace std;
 #define CKP_ARRAY_RESTORE2(checkpoint, num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE2(checkpoint, arr) checkpoint->getVector(#arr, arr)
 
+#define CKP_HAS_KEY(var) checkpoint->hasKey(#var)
+
 const char CKP_SEP = '!';
 
 /** checkpoint stream */
@@ -517,6 +519,11 @@ public:
     */
     virtual void endCheckpoint();
 
+    /**
+        @return true of checkpoint is present, false otherwise
+     */
+    virtual bool hasCheckpoint() { return false; }
+    
 protected:
 
     Checkpoint *checkpoint;
