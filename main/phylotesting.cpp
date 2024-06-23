@@ -1686,7 +1686,7 @@ string CandidateModel::evaluate(Params &params,
         bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
         if (!rate_restored && prev_rate_present) {
             iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-            //if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MED)
                 cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
         }
 
