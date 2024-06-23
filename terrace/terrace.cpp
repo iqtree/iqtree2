@@ -1755,16 +1755,16 @@ string Terrace::getNextTaxon(vector<Terrace*> &part_tree_pairs, vector<string> *
             
             node1_vec_main.clear();
             node2_vec_main.clear();
-            node1_vec_main=move(node1_vec_branch);
-            node2_vec_main=move(node2_vec_branch);
+            node1_vec_main=std::move(node1_vec_branch);
+            node2_vec_main=std::move(node2_vec_branch);
         }else if(len==2*taxa_num-3 && node1_vec_branch.size()==len){
             taxon_name = (*it);
             it_NEO = it;
             
             node1_vec_main.clear();
             node2_vec_main.clear();
-            node1_vec_main=move(node1_vec_branch);
-            node2_vec_main=move(node2_vec_branch);
+            node1_vec_main=std::move(node1_vec_branch);
+            node2_vec_main=std::move(node2_vec_branch);
         }
     }
 
