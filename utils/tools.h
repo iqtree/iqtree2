@@ -2409,7 +2409,7 @@ public:
     /** use neural network for model finder */
     bool use_model_revelator_with_mf;
 
-    /** model revelator confidence threshold */
+    /** model revelator confidence threshold. default value = 0.95 */
     double model_revelator_confidence;
 
     /**

@@ -1408,6 +1408,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.use_nn_model = false;
     params.nn_path_model = "resnet_modelfinder.onnx";
     params.nn_path_rates = "lanfear_alpha_lstm.onnx";
+
+    // use model revelator with model finder
+    params.use_model_revelator_with_mf = false;
+    params.model_revelator_confidence = 0.95;
     
     // ------------ Terrace variables ------------
     params.terrace_check = false;
