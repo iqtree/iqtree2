@@ -3304,13 +3304,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         iqtree.saveCheckpoint();
     }
     
-    if (action == 1) {
-        max_cats = getClassNum(model_str) * params.max_rate_cats;
-    } else if (action == 2) {
-        max_cats = params.max_mix_cats * iqtree.getModelFactory()->site_rate->getNRate();
-    } else {
-        max_cats = getClassNum(model_str) * iqtree.getModelFactory()->site_rate->getNRate();
-    }
+    max_cats = getClassNum(model_str) * params.max_rate_cats;
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -3424,7 +3418,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
 
         skip_all_when_drop = false;
     } else {
-        params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
+        params.ratehet_set = best_rate_name;
         
         getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
                       params.model_set, params.model_subset, model_names);
@@ -3460,7 +3454,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         for (i=0; i<model_names.size(); i++) {
             string new_model_str;
             addModel(model_str, new_model_str, model_names[i]);
-            candidate_models.push_back(CandidateModel(new_model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
+            candidate_models.push_back(CandidateModel(new_model_str, best_rate_name, iqtree.aln, 0));
         }
 
         skip_all_when_drop = false;
@@ -3508,105 +3502,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
 }
 
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-// Method 1
-void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
-    
-    bool do_init_tree;
-    string best_subst_name;
-    string best_rate_name;
-    int action, best_class_num, i;
-    set<string> skip_models;
-    string model_str1, model_i;
-    bool better_model;
-    CandidateModel best_model;
-    int curr_df;
-    double curr_loglike;
-    double LR, df_diff, pvalue;
-    string criteria_str;
-
-    criteria_str = criterionName(params.model_test_criterion);
-
-    // Step 1: estimate the RHAS model using GTR+FO model
-    action = 1; // estimating the RHAS model
-    do_init_tree = true; // initization of the tree
-    model_str = params.start_subst;
-    runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
-    
-    // Step 2: do tree search for this single-class model
-    runTreeReconstruction(params, iqtree);
-    curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
-    curr_loglike = iqtree->getCurScore();
-
-    // Step 3: estimate the optimal number of classes inside the model mixture
-    if (params.opt_qmix_criteria == 1) {
-        cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;
-        action = 4;
-        string orig_model_set = params.model_set;
-        params.model_set = "GTR+FO"; // TODO: should depend on the sequence type
-        do_init_tree = false;
-        model_str = best_subst_name;
-        do {
-            best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
-            cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
-            LR = 2.0 * (best_model.logl - curr_loglike);
-            df_diff = best_model.df - curr_df;
-            pvalue = computePValueChiSquare(LR, df_diff);
-            better_model = (pvalue <= params.opt_qmix_pthres);
-            cout << " pvalue: " << pvalue << "; ";
-            cout << endl;
-            if (better_model) {
-                curr_df = best_model.df;
-                curr_loglike = best_model.logl;
-                model_str = best_subst_name;
-            }
-        } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
-        params.model_set = orig_model_set;
-        best_subst_name = model_str;
-    } else {
-        cout << endl << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl;
-        action = 2; // estimating the number of classes in a mixture model
-        do_init_tree = false;
-        model_str = best_subst_name;
-        runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
-    }
-    best_class_num = getClassNum(best_subst_name);
-    cout << endl << "Optimal number of classes in mixture model: " << best_class_num << endl;
-    
-    if (params.opt_rhas_again) {
-        // Step 4: estimate the RHAS model again
-        action = 1; // estimating the RHAS model
-        do_init_tree = false;
-        model_str = best_subst_name;
-        runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
-    }
-    
-    if (params.check_combin_q_mat) {
-        // Step 5: estimate the optimal combination of Q-matrices
-        action = 3; // estimating the combination of Q-matrices
-        do_init_tree = false;
-        skip_models.clear();
-        do {
-            model_str1 = best_subst_name;
-            for (i = 0; i < best_class_num; i++) {
-                model_i = classKModel(best_subst_name, i);
-                if (skip_models.find(model_i) == skip_models.end()) {
-                    model_str = best_subst_name;
-                    runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, i);
-                    if (best_subst_name == model_str) {
-                        skip_models.insert(model_i);
-                    } else {
-                        skip_models.clear();
-                    }
-                }
-            }
-        } while (model_str1 != best_subst_name);
-    }
-
-    model_str = best_subst_name+best_rate_name;
-}
-
-// Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
-// Method 2
+// Method updated
 void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
 
     bool do_init_tree;
@@ -3641,11 +3537,16 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     params.model_name = "";
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
 
-    // Step 2: do tree search for this single-class model
-    runTreeReconstruction(params, iqtree);
-    curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
-    curr_loglike = iqtree->getCurScore();
-    curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
+    // (cancel) Step 2: do tree search for this single-class model
+    // runTreeReconstruction(params, iqtree);
+    // curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+    // curr_loglike = iqtree->getCurScore();
+    // curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
+    string best_model_logl_df = model_info[best_subst_name+best_rate_name];
+    stringstream ss (best_model_logl_df);
+    ss >> curr_loglike >> curr_df;
+    string best_score = model_info["best_score_" + criteria_str];
+    curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
     
@@ -3729,10 +3630,7 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     params.consensus_type = CT_NONE;
     params.stop_condition = SC_UNSUCCESS_ITERATION;
 
-    if (params.opt_qmix_method==1)
-        optimiseQMixModel_method(params, iqtree, model_info, model_str);
-    else
-        optimiseQMixModel_method_update(params, iqtree, model_info, model_str);
+    optimiseQMixModel_method_update(params, iqtree, model_info, model_str);
     
     // restore the original values
     params.gbo_replicates = orig_gbo_replicates;
