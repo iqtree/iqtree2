@@ -311,7 +311,7 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *float
     std::vector<std::pair<int, float>> indexed_probabilities;
 
     for (int i = 0; i < element_count ; ++i) {
-        indexed_probabilities.push_back({i, floatarr[i]});
+        indexed_probabilities.emplace_back(i, floatarr[i]);
     }
 
     // Sort the vector in descending order based on probabilities
