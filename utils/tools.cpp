@@ -5360,6 +5360,20 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--model-revelator") == 0) {
                 params.use_model_revelator_with_mf = true;
                 params.use_nn_model = true;
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --model-revelator <model_revelator>";
+                string model_revelator_type = argv[cnt];
+                transform(model_revelator_type.begin(), model_revelator_type.end(), model_revelator_type.begin(), ::toupper);
+
+                if (model_revelator_type == "MODEL")
+                    params.model_revelator_option = MODEL;
+                else if (model_revelator_type == "ALPHA")
+                    params.model_revelator_option = ALPHA;
+                else if (model_revelator_type == "BOTH")
+                    params.model_revelator_option = BOTH;
+                else
+                    throw "Model revelator should be MODEL, ALPHA or BOTH.";
                 continue;
             }
 

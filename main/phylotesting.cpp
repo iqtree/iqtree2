@@ -1488,12 +1488,19 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     double alpha;
     if (params.use_model_revelator_with_mf){
 #if defined(_NN) || defined(_OLD_NN)
+
         Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
         NeuralNetwork nn(alignment);
-        getModelSubstNN(seq_type, nn, model_names);
+        if (params.model_revelator_option == MODEL || params.model_revelator_option == BOTH)
+            getModelSubstNN(seq_type, nn, model_names);
+        else
+            getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
+                          model_set, params.model_subset, model_names);
 
         // do alpha inference and then delete the alignment
-        alpha = nn.doAlphaInference();
+        if (params.model_revelator_option == ALPHA || params.model_revelator_option == BOTH)
+            alpha = nn.doAlphaInference();
+
         delete alignment;
 #else
         outError("Please recompile with NN support to use model revelator with model finder");
@@ -1549,7 +1556,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
 
 // if use nn, get alpha value and set innitial value to G and update the ratehet_set G parameters as G{alpha}
-  if (params.use_model_revelator_with_mf && alpha >= 0){
+  if (params.use_model_revelator_with_mf && alpha >= 0 && (params.model_revelator_option == ALPHA || params.model_revelator_option == BOTH)){
 #if defined(_NN) || defined(_OLD_NN)
         for (j = 0; j < ratehet.size(); j++) {
             if (ratehet[j].find("+G") != string::npos) {
