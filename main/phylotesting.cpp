@@ -1484,17 +1484,16 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
     bool auto_model = iEquals(model_set, "AUTO");
 
-// if use nn
-// need a new definations for use pure NN, NN + MF,MF
-
+// if use model revelator with model finder, get the model names from the neural network
+    double alpha;
     if (params.use_model_revelator_with_mf){
 #if defined(_NN) || defined(_OLD_NN)
         Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
         NeuralNetwork nn(alignment);
         getModelSubstNN(seq_type, nn, model_names);
 
-        // todo: do alpha inference and get
         // do alpha inference and then delete the alignment
+        alpha = nn.doAlphaInference();
         delete alignment;
 #else
         outError("Please recompile with NN support to use model revelator with model finder");
@@ -1546,14 +1545,20 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
         ratehet_set = params.ratehet_set;
 
     //bool auto_rate = iEquals(ratehet_set, "AUTO");
-// if use nn
 
-//#if defined(_NN) || defined(_OLD_NN)
-//// todo: if use nn, get alpha value and set innitial value to G
-//#endif
-//#else
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
-//#endif
+
+// if use nn, get alpha value and set innitial value to G and update the ratehet_set G parameters as G{alpha}
+  if (params.use_model_revelator_with_mf && alpha >= 0){
+#if defined(_NN) || defined(_OLD_NN)
+        for (j = 0; j < ratehet.size(); j++) {
+            if (ratehet[j].find("+G") != string::npos) {
+                ratehet[j] = ratehet[j] + "{" + to_string(alpha) + "}";
+            }
+        }
+#endif
+    }
+
 
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};

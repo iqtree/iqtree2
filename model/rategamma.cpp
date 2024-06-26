@@ -34,7 +34,8 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	gamma_shape = max(tree->params->min_gamma_shape, fabs(shape));
 	fix_gamma_shape = false;
 	rates = NULL;
-	if (shape > 0.0) {
+    // if use model revelator fix_gamma_shape = false even shape > 0.0
+	if (shape > 0.0 && !Params::getInstance().use_model_revelator_with_mf) {
 		// true unless -optfromgiven cmd line option
 		fix_gamma_shape = !(Params::getInstance().optimize_from_given_params);
 	} else if (shape == 0.0) {
