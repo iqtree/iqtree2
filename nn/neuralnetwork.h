@@ -28,7 +28,7 @@ public:
 
     string doModelInference(StrVector* model_names = nullptr);
 
-    static void getModelsAboveThreshold(StrVector* model_names, float* floatarr, int element_count);
+    static void getModelsAboveThreshold(StrVector* model_names, DoubleVector model_probabilities);
 
     Alignment *alignment;
 

@@ -261,6 +261,8 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
     // get pointer to output tensor float values
     float *floatarr = output_tensors.front().GetTensorMutableData<float>();
 
+    DoubleVector model_probabilities = DoubleVector(floatarr, floatarr + 6);
+
     // print values for JC,K2P,F81,HKY,Tn,GTR
     float max_val = 0.0;
     size_t chosen_model;
@@ -278,7 +280,7 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
     // if using MF with NN
     if (Params::getInstance().use_model_revelator_with_mf) {
         int element_count = 6;
-        getModelsAboveThreshold(model_names, floatarr, element_count); // get models above threshold
+        getModelsAboveThreshold(model_names, model_probabilities); // get models above threshold
     }
 
     cout << "==============================================" << endl;
@@ -297,7 +299,7 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
 
 }
 
-void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *floatarr, int element_count) {
+void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector model_probabilities) {
 
     map<int,string> model_index_map = {
             {0, "JC"},
@@ -310,8 +312,8 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, float *float
 
     std::vector<std::pair<int, float>> indexed_probabilities;
 
-    for (int i = 0; i < element_count ; ++i) {
-        indexed_probabilities.emplace_back(i, floatarr[i]);
+    for (int i = 0; i < model_probabilities.size() ; ++i) {
+        indexed_probabilities.emplace_back(i, model_probabilities[i]);
     }
 
     // Sort the vector in descending order based on probabilities
