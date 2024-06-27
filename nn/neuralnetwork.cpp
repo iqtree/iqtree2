@@ -267,14 +267,12 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
     float max_val = 0.0;
     size_t chosen_model;
 
-    cout << "Model values =============================== " << endl;
     for (size_t i = 0; i < 6; i++) {
         if (floatarr[i] > max_val) {
             max_val = floatarr[i];
             chosen_model = i;
         }
         //printf("Model value [%zu] =  %f\n", i, floatarr[i]);
-        cout << "Model value [" << i << "] = " << floatarr[i] << endl;
     }
 
     // if using MF with NN
@@ -282,8 +280,6 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
         int element_count = 6;
         getModelsAboveThreshold(model_names, model_probabilities); // get models above threshold
     }
-
-    cout << "==============================================" << endl;
 
     // return chosen model
     switch(chosen_model) {
@@ -328,7 +324,6 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector
     for (const auto& pair : indexed_probabilities) {
         cumulative_sum += pair.second;
         model_names -> push_back(model_index_map[pair.first]);
-        cout << "model name " << model_index_map[pair.first] << " probability " << pair.second << endl;
         if (cumulative_sum > Params::getInstance().model_revelator_confidence) {
             break;
         }
