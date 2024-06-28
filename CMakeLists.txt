@@ -68,6 +68,11 @@ set(GCC_MIN_VERSION "4.8")
 project(iqtree)
 add_definitions(-DIQ_TREE)
 
+# Require position independent code for IQ-TREE to be used as a library 
+if (BUILD_LIB STREQUAL "ON")
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
 # Find Eigen3 library
 if (NOT EIGEN3_INCLUDE_DIR)
     find_package(Eigen3)
