@@ -1486,7 +1486,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
 // if use model revelator with model finder, get the model names from the neural network
     double alpha;
-    if (params.use_model_revelator_with_mf){
+    if (params.use_model_revelator_with_mf && model_set != "1" && seq_type==SEQ_DNA){ // check seq == DNA and model_set is not 1
 #if defined(_NN) || defined(_OLD_NN)
 
         Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
