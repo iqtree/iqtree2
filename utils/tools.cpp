@@ -7109,6 +7109,7 @@ void Params::setDefault() {
     include_pre_mutations = false;
     mutation_file = "";
     site_starting_index = 0;
+    intree_str = "";
 }
 
 int countPhysicalCPUCores() {

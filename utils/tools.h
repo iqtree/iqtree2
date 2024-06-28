@@ -2786,6 +2786,11 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
+    
+    /**
+     *  input tree string (instead of a file)
+     */
+    string intree_str;
 };
 
 /**
