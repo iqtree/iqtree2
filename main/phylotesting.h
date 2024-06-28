@@ -41,17 +41,20 @@ public:
         AICc_score = DBL_MAX;
         BIC_score = DBL_MAX;
         this->flag = flag;
+        init_first_mix = false;
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->subst_name = orig_subst_name = subst_name;
         this->rate_name = orig_rate_name = rate_name;
         this->aln = aln;
+        init_first_mix = false;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->aln = aln;
         getUsualModel(aln);
+        init_first_mix = false;
     }
     
     string getName() {
@@ -166,6 +169,10 @@ public:
     double AIC_score, AICc_score, BIC_score;    // scores
     double AIC_weight, AICc_weight, BIC_weight; // weights
     bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
+    
+    // indicate whether it is the first k-class mixture model
+    // if so, then the parameters will be initialized from the previous (k-1)-class mixture model
+    bool init_first_mix;
 
     Alignment *aln; // associated alignment
     
@@ -183,6 +190,7 @@ public:
 
     CandidateModelSet() : vector<CandidateModel>() {
         current_model = -1;
+        under_mix_finder = false;
     }
     
     /** get ID of the best model */
@@ -286,6 +294,9 @@ public:
                      ModelsBlock *models_block, int num_threads, int brlen_type,
                      string in_model_name = "", bool merge_phase = false, bool write_info = true);
     
+    /** whether it is under the process of mixture finder */
+    bool under_mix_finder;
+    
 private:
     
     /** current model */
@@ -353,7 +364,7 @@ string criterionName(ModelTestCriterion mtc);
  @param best_subst_name (OUT) information for all models considered
  @param best_rate_name (OUT) information for all models considered
  */
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name);
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, bool underMixFinder = false);
 
 /**
  optimisation of Q-Mixture model, including estimation of best number of classes in the mixture

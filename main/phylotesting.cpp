@@ -779,7 +779,7 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name)
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, bool under_mix_finder)
 {
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
@@ -902,11 +902,13 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     } else {
         // single model selection
         CandidateModel best_model;
+        CandidateModelSet model_set;
+        model_set.under_mix_finder = true;
         if (params.openmp_by_model)
-            best_model = CandidateModelSet().evaluateAll(params, &iqtree,
+            best_model = model_set.evaluateAll(params, &iqtree,
                 model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
         else
-            best_model = CandidateModelSet().test(params, &iqtree,
+            best_model = model_set.test(params, &iqtree,
                 model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
         iqtree.aln->model_name = best_model.getName();
         best_subst_name = best_model.subst_name;
@@ -1679,35 +1681,81 @@ string CandidateModel::evaluate(Params &params,
         iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
         
-        // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
-        CandidateModel prev_info;
-        double weight_rescale = 1.0;
 
-        bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
-        if (!rate_restored && prev_rate_present) {
-            iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-            if (verbose_mode >= VB_MED)
-                cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
-        }
+        if (init_first_mix) {
 
-        for (int step = 0; step < 5; step++) {
-            new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+            // now switch to the input checkpoint
+            iqtree->getModelFactory()->setCheckpoint(&in_model_info);
+            iqtree->setCheckpoint(&in_model_info);
+
+            // get the model mixture object
+            ModelMixture* modelmix = dynamic_cast<ModelMixture*> (iqtree->getModelFactory()->model);
+            ASSERT(modelmix);
+            double init_weight = 1.0 / modelmix->getNMixtures();
+            
+            // obtain the likelihood value from the (k-1)-class mixture model
+            string criteria_str = criterionName(params.model_test_criterion);
+            string best_model = in_model_info["best_model_" + criteria_str];
+            string best_model_logl_df = in_model_info[best_model];
+            stringstream ss (best_model_logl_df);
+            double pre_logl;
+            ss >> pre_logl;
+            
+            for (int step = 0; step < 10; step++) {
+                
+                // initialize the parameters from the (k-1)-class mixture model
+                modelmix->initFromClassMinusOne(init_weight);
+                
+                new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+                                                                         params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+                
+                // check if new logl is worse than logl from the (k-1)-class mixture model
+                if (pre_logl < new_logl + params.modelfinder_eps) break;
+                init_weight *= 0.5;
+                cout << getName() << " reinitialized from the previous (k-1)-class mixture model with initial weight: " << init_weight << endl;
+            }
             tree_len = iqtree->treeLength();
+
+            // now switch to the output checkpoint
+            iqtree->getModelFactory()->setCheckpoint(&out_model_info);
+            iqtree->setCheckpoint(&out_model_info);
+
             iqtree->getModelFactory()->saveCheckpoint();
             iqtree->saveCheckpoint();
+            if (new_logl < pre_logl - params.modelfinder_eps*10.0) {
+                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                           getName() + " worse than the previous (k-1)-class mixture model " + convertDoubleToString(pre_logl));
+            }
+        } else {
+            // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
+            CandidateModel prev_info;
+            double weight_rescale = 1.0;
 
-            // check if logl(+R[k]) is worse than logl(+R[k-1])
-            if (!prev_rate_present) break;
-            if (prev_info.logl < new_logl + params.modelfinder_eps) break;
-            weight_rescale *= 0.5;
-            iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-            cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name 
-                 << " with factor " << weight_rescale << endl;
-        }
-        if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps*10.0) {
-            outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                       getName() + " worse than " + prev_info.getName() + " " + convertDoubleToString(prev_info.logl));
+            bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
+            if (!rate_restored && prev_rate_present) {
+                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                if (verbose_mode >= VB_MED)
+                    cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
+            }
+            for (int step = 0; step < 5; step++) {
+                new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+                                                                         params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+                tree_len = iqtree->treeLength();
+                iqtree->getModelFactory()->saveCheckpoint();
+                iqtree->saveCheckpoint();
+                
+                // check if logl(+R[k]) is worse than logl(+R[k-1])
+                if (!prev_rate_present) break;
+                if (prev_info.logl < new_logl + params.modelfinder_eps) break;
+                weight_rescale *= 0.5;
+                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
+                << " with factor " << weight_rescale << endl;
+            }
+            if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps*10.0) {
+                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                           getName() + " worse than " + prev_info.getName() + " " + convertDoubleToString(prev_info.logl));
+            }
         }
     }
 
@@ -1715,6 +1763,8 @@ string CandidateModel::evaluate(Params &params,
     df += iqtree->getModelFactory()->getNParameters(brlen_type);
     logl += new_logl;
     string tree_string = iqtree->getTreeString();
+    
+    cout << iqtree->getModelFactory()->model->getNameParams(false) << endl;
 
 #ifdef _OPENMP
 #pragma omp critical
@@ -2780,6 +2830,8 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 
         // BQM 2024-06-22: save checkpoint for starting values of next model
         model_info.putSubCheckpoint(&out_model_info, "");
+        
+        bool is_better_model = false;
 
 		if (at(model).AIC_score < best_score_AIC) {
             best_model_AIC = model;
@@ -2790,6 +2842,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             if (params.model_test_criterion == MTC_AIC) {
                 //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
+                is_better_model = true;
             }
         }
 		if (at(model).AICc_score < best_score_AICc) {
@@ -2801,6 +2854,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             if (params.model_test_criterion == MTC_AICC) {
                 //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
+                is_better_model = true;
             }
         }
 
@@ -2813,7 +2867,12 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             if (params.model_test_criterion == MTC_BIC) {
                 //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
+                is_better_model = true;
             }
+        }
+        
+        if (under_mix_finder && is_better_model) {
+            model_info.putSubCheckpoint(&out_model_info, "Best");
         }
 
         switch (params.model_test_criterion) {
@@ -3458,8 +3517,13 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         }
 
         skip_all_when_drop = false;
+
+        if (candidate_models.size() > 0) {
+            candidate_models.at(0).init_first_mix = true;
+        }
     }
     // model selection
+    candidate_models.under_mix_finder = true;
     best_model = candidate_models.test(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE,
                                        set_name, in_model_name, merge_phase, generate_candidates, skip_all_when_drop);
     
@@ -3535,7 +3599,8 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     
     // Step 1: run ModelFinder
     params.model_name = "";
-    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
+    bool under_mix_finder = true;
+    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, under_mix_finder);
 
     // (cancel) Step 2: do tree search for this single-class model
     // runTreeReconstruction(params, iqtree);

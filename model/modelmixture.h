@@ -77,6 +77,11 @@ public:
     virtual void saveCheckpoint();
 
     /**
+        initial the parameters from the (K-1)-class mixture model
+     */
+    void initFromClassMinusOne(double init_weight);
+    
+    /**
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
