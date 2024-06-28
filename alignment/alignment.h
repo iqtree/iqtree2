@@ -121,6 +121,14 @@ public:
     Alignment(NxsDataBlock *data_block, char *sequence_type, string model);
 
     /**
+     constructor
+     @param names names of sequences
+     @param seqs sequences
+     @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+     */
+    Alignment(StrVector& names, StrVector& seqs, char *sequence_type, string model);
+    
+    /**
             destructor
      */
     virtual ~Alignment();
@@ -232,6 +240,15 @@ public:
             @return 1 on success, 0 on failure
      */
     int readPhylipSequential(char *filename, char *sequence_type);
+
+    /**
+            read the alignment from vector of strings
+            @param seq_names a set of names
+            @param sequences a set of sequences
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readStrVec(StrVector &names, StrVector &sequences, char *sequence_type);
     
     /**
             do-read the alignment in FASTA format

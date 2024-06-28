@@ -633,6 +633,55 @@ Alignment::Alignment(NxsDataBlock *data_block, char *sequence_type, string model
     //cout << "Fraction of constant sites: " << frac_const_sites << endl;
     
 }
+
+Alignment::Alignment(StrVector& names, StrVector& seqs, char *sequence_type, string model) : vector<Pattern>() {
+    name = "Noname";
+    this->model_name = model;
+    if (sequence_type)
+        this->sequence_type = sequence_type;
+    num_states = 0;
+    frac_const_sites = 0.0;
+    frac_invariant_sites = 0.0;
+    codon_table = NULL;
+    genetic_code = NULL;
+    non_stop_codon = NULL;
+    seq_type = SEQ_UNKNOWN;
+    STATE_UNKNOWN = 126;
+    pars_lower_bound = NULL;
+    double readStart = getRealTime();
+
+    readStrVec(names, seqs, sequence_type);
+    
+    if (verbose_mode >= VB_MED) {
+        cout << "Time to read input file was " << (getRealTime() - readStart) << " sec." << endl;
+    }
+    if (getNSeq() < 3)
+    {
+        outError("Alignment must have at least 3 sequences");
+    }
+    double constCountStart = getRealTime();
+    countConstSite();
+    if (verbose_mode >= VB_MED) {
+        cout << "Time to count constant sites was " << (getRealTime() - constCountStart) << " sec." << endl;
+    }
+    if (Params::getInstance().compute_seq_composition)
+    {
+        cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
+             << " columns, " << getNPattern() << " distinct patterns" << endl
+             << num_informative_sites << " parsimony-informative, "
+             << num_variant_sites-num_informative_sites << " singleton sites, "
+             << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
+    }
+    //buildSeqStates();
+    checkSeqName();
+    // OBSOLETE: identical sequences are handled later
+//    checkIdenticalSeq();
+    //cout << "Number of character states is " << num_states << endl;
+    //cout << "Number of patterns = " << size() << endl;
+    //cout << "Fraction of constant sites: " << frac_const_sites << endl;
+
+}
+
 bool Alignment::isStopCodon(int state) {
     // 2017-05-27: all stop codon removed from Markov process
     return false;
@@ -2100,6 +2149,64 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     
     doReadPhylipSequential(filename, sequence_type, sequences, nseq, nsite);
 
+    return buildPattern(sequences, sequence_type, nseq, nsite);
+}
+
+int Alignment::readStrVec(StrVector &names, StrVector &sequences, char *sequence_type) {
+    int nseq = 0;
+    int nsite = 0;
+    
+    // process the sequences
+    for (int i = 0; i < sequences.size(); i++) {
+        string s = "";
+        processSeq(s, sequences[i], i+1);
+        sequences[i] = s;
+    }
+    
+    // now try to cut down sequence name if possible
+    int i, step = 0;
+    StrVector new_seq_names, remain_seq_names;
+    new_seq_names.resize(names.size());
+    remain_seq_names = names;
+
+    double startShorten = getRealTime();
+    for (step = 0; step < 4; step++) {
+        bool duplicated = false;
+        unordered_set<string> namesSeenThisTime;
+        //Set of shorted names seen so far, this iteration
+        for (i = 0; i < names.size(); i++) {
+            if (remain_seq_names[i].empty()) continue;
+            size_t pos = remain_seq_names[i].find_first_of(" \t");
+            if (pos == string::npos) {
+                new_seq_names[i] += remain_seq_names[i];
+                remain_seq_names[i] = "";
+            } else {
+                new_seq_names[i] += remain_seq_names[i].substr(0, pos);
+                remain_seq_names[i] = "_" + remain_seq_names[i].substr(pos+1);
+            }
+            if (!duplicated) {
+                //add the shortened name for sequence i to the
+                //set of shortened names seen so far, and set
+                //duplicated to true if it was already there.
+                duplicated = !namesSeenThisTime.insert(new_seq_names[i]).second;
+            }
+        }
+        if (!duplicated) break;
+    }
+    if (verbose_mode >= VB_MED) {
+        cout.precision(6);
+        cout << "Name shortening took " << (getRealTime() - startShorten) << " seconds." << endl;
+    }
+    if (step > 0) {
+        for (i = 0; i < names.size(); i++)
+            if (names[i] != new_seq_names[i]) {
+                cout << "NOTE: Change sequence name '" << names[i] << "' -> " << new_seq_names[i] << endl;
+            }
+    }
+    seq_names = new_seq_names;
+    nseq = seq_names.size();
+    nsite = sequences.front().length();
+    
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
