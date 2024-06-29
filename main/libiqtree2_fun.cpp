@@ -1,6 +1,6 @@
 #include "libiqtree2_fun.h"
 
-string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed);
+string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed, string prog);
 
 // Calculates the robinson fould distance between two trees
 int robinson_fould(const string& tree1, const string& tree2) {
@@ -70,13 +70,13 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 // With estimation of the best topology
 string build_tree(vector<string> names, vector<string> seqs, string model, int rand_seed) {
     string intree = "";
-    return build_phylogenetic(names, seqs, model, intree, rand_seed);
+    return build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree");
 }
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With restriction to the input toplogy
 string fit_tree(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed) {
-    return build_phylogenetic(names, seqs, model, intree, rand_seed);
+    return build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree");
 }
 
 
@@ -87,9 +87,11 @@ string fit_tree(vector<string> names, vector<string> seqs, string model, string 
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
-string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed) {
+string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed, string prog) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
+
+    int instruction_set;
     
     // checking whether all seqs are in the same length
     if (seqs.size() > 0) {
@@ -117,14 +119,14 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
         Params::getInstance().start_tree = STT_USER_TREE;
         Params::getInstance().intree_str = intree;
     }
-    
+
     if (rand_seed == 0)
         rand_seed = make_new_seed();
     Params::getInstance().ran_seed = rand_seed;
-    cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
+    cout << "Seed: " << Params::getInstance().ran_seed << endl << flush;
     init_random(Params::getInstance().ran_seed);
 
-    string out_prefix_str = "build_tree_" + convertIntToString(rand_seed);
+    string out_prefix_str = prog + "_" + convertIntToString(rand_seed);
     Params::getInstance().out_prefix = (char *) out_prefix_str.c_str();
 
     Checkpoint *checkpoint = new Checkpoint;
@@ -132,7 +134,6 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     checkpoint->setFileName(filename);
 
     bool append_log = false;
-    int instruction_set;
 
     if (!Params::getInstance().ignore_checkpoint && fileExists(filename)) {
         checkpoint->load();
@@ -177,7 +178,7 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     }
 
     MPIHelper::getInstance().syncRandomSeed();
-    
+
     signal(SIGABRT, &funcAbort);
     signal(SIGFPE, &funcAbort);
     signal(SIGILL, &funcAbort);
@@ -332,6 +333,7 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     }catch(int err_num){}
 
     finish_random();
+    funcExit();
     
     return ss.str();
 }

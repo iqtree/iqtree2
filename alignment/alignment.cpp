@@ -2152,29 +2152,34 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, nseq, nsite);
 }
 
-int Alignment::readStrVec(StrVector &names, StrVector &sequences, char *sequence_type) {
+int Alignment::readStrVec(StrVector &names, StrVector &seqs, char *sequence_type) {
     int nseq = 0;
     int nsite = 0;
+    StrVector sequences;
+    
+    seq_names.clear();
+    seq_names.insert(seq_names.begin(), names.begin(), names.end());
     
     // process the sequences
-    for (int i = 0; i < sequences.size(); i++) {
+    sequences.clear();
+    for (int i = 0; i < seqs.size(); i++) {
         string s = "";
-        processSeq(s, sequences[i], i+1);
-        sequences[i] = s;
+        processSeq(s, seqs[i], i+1);
+        sequences.push_back(s);
     }
     
     // now try to cut down sequence name if possible
     int i, step = 0;
     StrVector new_seq_names, remain_seq_names;
-    new_seq_names.resize(names.size());
-    remain_seq_names = names;
+    new_seq_names.resize(seq_names.size());
+    remain_seq_names = seq_names;
 
     double startShorten = getRealTime();
     for (step = 0; step < 4; step++) {
         bool duplicated = false;
         unordered_set<string> namesSeenThisTime;
         //Set of shorted names seen so far, this iteration
-        for (i = 0; i < names.size(); i++) {
+        for (i = 0; i < seq_names.size(); i++) {
             if (remain_seq_names[i].empty()) continue;
             size_t pos = remain_seq_names[i].find_first_of(" \t");
             if (pos == string::npos) {
@@ -2198,9 +2203,9 @@ int Alignment::readStrVec(StrVector &names, StrVector &sequences, char *sequence
         cout << "Name shortening took " << (getRealTime() - startShorten) << " seconds." << endl;
     }
     if (step > 0) {
-        for (i = 0; i < names.size(); i++)
-            if (names[i] != new_seq_names[i]) {
-                cout << "NOTE: Change sequence name '" << names[i] << "' -> " << new_seq_names[i] << endl;
+        for (i = 0; i < seq_names.size(); i++)
+            if (seq_names[i] != new_seq_names[i]) {
+                cout << "NOTE: Change sequence name '" << seq_names[i] << "' -> " << new_seq_names[i] << endl;
             }
     }
     seq_names = new_seq_names;
