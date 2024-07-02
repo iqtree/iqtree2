@@ -364,7 +364,7 @@ string criterionName(ModelTestCriterion mtc);
  @param best_subst_name (OUT) information for all models considered
  @param best_rate_name (OUT) information for all models considered
  */
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, bool underMixFinder = false);
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, bool under_mix_finder = false);
 
 /**
  optimisation of Q-Mixture model, including estimation of best number of classes in the mixture

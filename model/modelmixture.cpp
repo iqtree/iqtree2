@@ -1657,11 +1657,7 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
         at(nmix-1)->setStateFrequency(state_freq);
     }
     
-    cout << "[after init] " << getNameParams(false) << endl;
-    cout << "[after init] weights:";
-    for (int i = 0; i < nmix; i++)
-        cout << " " << prop[i];
-    cout << endl;
+    cout << "[init] " << getNameParams(false) << endl;
     
     decomposeRateMatrix();
     if (phylo_tree)
@@ -1685,11 +1681,7 @@ void ModelMixture::restoreCheckpoint() {
     }
     endCheckpoint();
 
-    cout << "[*after init] " << getNameParams(false) << endl;
-    cout << "[*after init] weights:";
-    for (int i = 0; i < getNMixtures(); i++)
-        cout << " " << prop[i];
-    cout << endl;
+    cout << "[*init] " << getNameParams(false) << endl;
 
     decomposeRateMatrix();
     if (phylo_tree)
