@@ -188,15 +188,6 @@ enum SEQ_CHUNK_STATUS {
     READING
 };
 
-/**
- *  Specify 3 modelRevelator options.
- */
-enum MODEL_REVELATOR_OPTION {
-    MODEL,
-    ALPHA,
-    BOTH
-};
-
 
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
@@ -2419,8 +2410,11 @@ public:
     /** use neural network for model finder */
     bool use_model_revelator_with_mf;
 
-    /** model revelator option */
-    MODEL_REVELATOR_OPTION model_revelator_option;
+    /** use neural network for model finder alpha*/
+    bool nnAlpha;
+
+    /** use neural network for model finder substitution model*/
+    bool nnSubModel;
 
     /** model revelator confidence threshold. default value = 0.95 */
     double model_revelator_confidence;

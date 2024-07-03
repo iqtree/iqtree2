@@ -1411,6 +1411,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     // use model revelator with model finder
     params.use_model_revelator_with_mf = false;
+    params.nnAlpha = false;
+    params.nnSubModel = false;
     params.model_revelator_confidence = 0.95;
     
     // ------------ Terrace variables ------------
@@ -3186,7 +3188,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
-				params.model_set = argv[cnt];
+
+                string mset = argv[cnt];
+                transform(mset.begin(), mset.end(), mset.begin(), ::toupper);
+
+                // using model revelator with MF
+                if (mset == "NN") {
+                    params.use_model_revelator_with_mf = true;
+                    params.nnSubModel = true;
+                }
+                else{
+                    params.model_set = argv[cnt];
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-madd") == 0 || strcmp(argv[cnt], "--madd") == 0) {
@@ -3214,7 +3227,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mrate <rate_set>";
-				params.ratehet_set = argv[cnt];
+                string mrate = argv[cnt];
+                transform(mrate.begin(), mrate.end(), mrate.begin(), ::toupper);
+
+                // using nnAlphaFInd for initialize the alpha valur of the gamma model
+                if (mrate == "NN") {
+                    params.use_model_revelator_with_mf = true;
+                    params.nnAlpha = true;
+                }
+                else{
+                    params.ratehet_set = argv[cnt];
+                }
 				continue;
 			}
             
@@ -5356,27 +5379,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            // model revelator with MF
-            if (strcmp(argv[cnt], "--model-revelator") == 0) {
-                params.use_model_revelator_with_mf = true;
-                params.use_nn_model = true;
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use --model-revelator <model_revelator>";
-                string model_revelator_type = argv[cnt];
-                transform(model_revelator_type.begin(), model_revelator_type.end(), model_revelator_type.begin(), ::toupper);
-
-                if (model_revelator_type == "MODEL")
-                    params.model_revelator_option = MODEL;
-                else if (model_revelator_type == "ALPHA")
-                    params.model_revelator_option = ALPHA;
-                else if (model_revelator_type == "BOTH")
-                    params.model_revelator_option = BOTH;
-                else
-                    throw "Model revelator should be MODEL, ALPHA or BOTH.";
-                continue;
-            }
-
+            // this is confidence level for the substitution models by th nnModelFind
             if (strcmp(argv[cnt], "--confidence-level") == 0) {
                 cnt++;
                 if (cnt >= argc)

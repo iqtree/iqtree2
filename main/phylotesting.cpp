@@ -1486,19 +1486,19 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
 // if use model revelator with model finder, get the model names from the neural network
     double alpha;
-    if (params.use_model_revelator_with_mf && model_set != "1" && seq_type==SEQ_DNA){ // check seq == DNA and model_set is not 1
+    if (params.use_model_revelator_with_mf && seq_type==SEQ_DNA){ // check seq == DNA and model_set is not 1
 #if defined(_NN) || defined(_OLD_NN)
 
         Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
         NeuralNetwork nn(alignment);
-        if (params.model_revelator_option == MODEL || params.model_revelator_option == BOTH)
+        if (params.nnSubModel && model_set != "1")
             getModelSubstNN(seq_type, nn, model_names);
         else
             getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
                           model_set, params.model_subset, model_names);
 
         // do alpha inference and then delete the alignment
-        if (params.model_revelator_option == ALPHA || params.model_revelator_option == BOTH)
+        if (params.nnAlpha)
             alpha = nn.doAlphaInference();
 
         delete alignment;
@@ -1556,7 +1556,7 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
 
 // if use nn, get alpha value and set innitial value to G and update the ratehet_set G parameters as G{alpha}
-  if (params.use_model_revelator_with_mf && alpha >= 0 && (params.model_revelator_option == ALPHA || params.model_revelator_option == BOTH)){
+  if (params.use_model_revelator_with_mf && alpha >= 0 && params.nnAlpha){
 #if defined(_NN) || defined(_OLD_NN)
         for (j = 0; j < ratehet.size(); j++) {
             if (ratehet[j].find("+G") != string::npos) {
