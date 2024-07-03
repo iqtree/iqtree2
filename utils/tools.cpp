@@ -73,7 +73,11 @@ void outError(const char *error, bool quit) {
 	}
 	cerr << error << endl;
     if (quit)
+#ifndef BUILD_LIB
     	exit(2);
+#else
+        throw runtime_error(error);
+#endif
 }
 
 /**

@@ -47,8 +47,7 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
     } else if (tree_gen_mode == "STAR_TREE") {
         tree_mode = STAR_TREE;
     } else {
-        cerr << "Unknown mode: " << tree_gen_mode << endl;
-        exit(1);
+        outError("Unknown mode: " + tree_gen_mode);
     }
     
     Params params = Params::getInstance();
@@ -99,7 +98,6 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
         for (int i=1; i<seqs.size(); i++) {
             if (seqs[i].length() != slen) {
                 outError("The input sequences are not in the same length");
-                exit(EXIT_FAILURE);
             }
         }
     }
