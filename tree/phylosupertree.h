@@ -475,12 +475,24 @@ public:
      */
     void printBestPartitionParams(const char *filename);
 
-    
+    /**
+        print mr bayes block with partition information and best model parameters
+        @param filename output file name
+        @param inclParams whether to include iqtree params
+      */
+    virtual void printMrBayesBlock(const char *filename, bool inclParams);
+
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
-    
+
     int totalNNIs, evalNNIs;
 
+private:
+    /**
+       print charset information of the best model into an ofstream
+       @param out output stream
+     */
+     void printCharsets(ofstream &out);
 };
 
 #endif

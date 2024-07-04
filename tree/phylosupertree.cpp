@@ -23,6 +23,7 @@
 #include "main/phylotesting.h"
 #include "model/partitionmodel.h"
 #include "utils/MPIHelper.h"
+#include "utils/tools.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -1519,29 +1520,20 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     }
 }
 
-void PhyloSuperTree::printBestPartitionParams(const char *filename) {
+void PhyloSuperTree::printBestPartitionParams(const char *filename)
+{
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
         out << "#nexus" << endl
         << "begin sets;" << endl;
-        int part;
-        SuperAlignment *saln = (SuperAlignment*)aln;
-        for (part = 0; part < size(); part++) {
-            string name = saln->partitions[part]->name;
-            replace(name.begin(), name.end(), '+', '_');
-            out << "  charset " << name << " = ";
-            if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-            /*if (saln->partitions[part]->seq_type == SEQ_CODON)
-                out << "CODON, ";*/
-            out << saln->partitions[part]->sequence_type << ", ";
-            string pos = saln->partitions[part]->position_spec;
-            replace(pos.begin(), pos.end(), ',' , ' ');
-            out << pos << ";" << endl;
-        }
+        auto *saln = (SuperAlignment*)aln;
+
+        printCharsets(out);
+
         out << "  charpartition mymodels =" << endl;
-        for (part = 0; part < size(); part++) {
+        for (int part = 0; part < size(); part++) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;
@@ -1554,4 +1546,53 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
+}
+
+void PhyloSuperTree::printCharsets(ofstream &out)
+{
+    auto *saln = (SuperAlignment*)aln;
+    for (int part = 0; part < size(); part++) {
+        string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        out << "  charset " << name << " = ";
+        if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
+        /*if (saln->partitions[part]->seq_type == SEQ_CODON)
+            out << "CODON, ";*/
+        out << saln->partitions[part]->sequence_type << ", ";
+        string pos = saln->partitions[part]->position_spec;
+        replace(pos.begin(), pos.end(), ',' , ' ');
+        out << pos << ";" << endl;
+    }
+}
+
+void PhyloSuperTree::printMrBayesBlock(const char *filename, bool inclParams)
+{
+    ofstream out = startMrBayesBlock(filename);
+    printCharsets(out);
+    out << endl;
+    auto *saln = (SuperAlignment*)aln;
+
+    // Create Partition
+    size_type listSize = size();
+    out << "  partition iqtree = " << listSize << ": ";
+    for (int part = 0; part < listSize; part++) {
+        string name = saln->partitions[part]->name;
+        out << name;
+        if (part != listSize - 1) out << ", ";
+        else out << ";" << endl;
+    }
+
+    // Set Partition for Use
+    out << "  set partition = iqtree;" << endl;
+
+    // Set Outgroup (if available)
+    if (!rooted) out << "  outgroup " << root << ";" << endl << endl;
+
+    // Partition-Specific Model Information
+    for (int part = 0; part < listSize; part++) {
+        // MrBayes Partitions are 1-indexed
+        at(part)->printMrBayesModelText(out, convertIntToString(part + 1), inclParams);
+    }
+    out << "end;" << endl;
+    out.close();
 }

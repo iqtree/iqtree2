@@ -2264,6 +2264,13 @@ public:
      */
     const string& getDistanceFileWritten() const;
 
+    /**
+        print mr bayes block with partition information and best model parameters
+        @param filename output file name
+        @param inclParams whether to include iqtree params
+      */
+    virtual void printMrBayesBlock(const char *filename, bool inclParams);
+
     
 protected:
 
@@ -2509,6 +2516,25 @@ protected:
     void hideProgress();
     void showProgress();
     void doneProgress();
+
+    /**
+     * print MrBayes formatted text, of model information (and parameters), to an ofstream.
+     * @param tree tree to print info from
+     * @param out stream to print to
+     * @param partition the partition to 'apply' to (all to apply to all partitions)
+     * @param inclParams whether to include the parameters of the model
+     */
+    void printMrBayesModelText(ofstream& out, string partition, bool inclParams);
+
+    /**
+     * Start a MrBayes Block, as well as printing a warning.
+     * @param filename output file name
+     * @return ofstream for other functions to print to
+     */
+    ofstream startMrBayesBlock(const char *filename);
+
+private:
+    void printMrBayesModelTextDNA(ofstream &out, string partition, bool inclParams);
 };
 
 #endif
