@@ -1558,7 +1558,8 @@ void PhyloSuperTree::printCharsets(ofstream &out)
         if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
         /*if (saln->partitions[part]->seq_type == SEQ_CODON)
             out << "CODON, ";*/
-        out << saln->partitions[part]->sequence_type << ", ";
+        if (!saln->partitions[part]->sequence_type.empty())
+            out << saln->partitions[part]->sequence_type << ", ";
         string pos = saln->partitions[part]->position_spec;
         replace(pos.begin(), pos.end(), ',' , ' ');
         out << pos << ";" << endl;
@@ -1577,6 +1578,7 @@ void PhyloSuperTree::printMrBayesBlock(const char *filename, bool inclParams)
     out << "  partition iqtree = " << listSize << ": ";
     for (int part = 0; part < listSize; part++) {
         string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
         out << name;
         if (part != listSize - 1) out << ", ";
         else out << ";" << endl;
@@ -1586,7 +1588,7 @@ void PhyloSuperTree::printMrBayesBlock(const char *filename, bool inclParams)
     out << "  set partition = iqtree;" << endl;
 
     // Set Outgroup (if available)
-    if (!rooted) out << "  outgroup " << root << ";" << endl << endl;
+    if (!rooted) out << "  outgroup " << root->name << ";" << endl << endl;
 
     // Partition-Specific Model Information
     for (int part = 0; part < listSize; part++) {

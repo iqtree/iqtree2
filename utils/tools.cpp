@@ -6079,7 +6079,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
     << "  --mset STRING        Restrict search to models supported by other programs" << endl
     << "                       (raxml, phyml, mrbayes, beast1 or beast2)" << endl
-    << "                       If 'mrbayes' is selected, will auto update a MrBayes" << endl
+    << "                       If 'mrbayes' is selected, will output a MrBayes" << endl
     << "                       Block File if Data Type is supported." << endl
     << "  --mset STR,...       Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
     << "  --msub STRING        Amino-acid model source" << endl
