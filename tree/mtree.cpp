@@ -2635,10 +2635,13 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 		// create the map from taxa between 2 trees
 		Split taxa_mask(leafNum);
 		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-            if (name_index.find(*it) == name_index.end())
-                outError("Taxon not found in full tree: ", *it);
-			taxid = name_index[*it];
-			taxa_mask.addTaxon(taxid);
+                    if (name_index.find(*it) == name_index.end()) {
+                        outError("Taxon not found in full tree: ", *it);
+                        if ( *it == "__root__" )
+                            outError( "By default, trees without a multifurcation at the root treated as rooted. You may need to change your tree structure." );
+                    }
+		    taxid = name_index[*it];
+		    taxa_mask.addTaxon(taxid);
 		}
 		// make the taxa ordering right before converting to split system
 		taxname.clear();
