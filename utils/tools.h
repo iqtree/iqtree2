@@ -2781,6 +2781,11 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
+
+    /**
+    * Whether to output a MrBayes Block File
+    */
+    bool mr_bayes_output;
 };
 
 /**
@@ -3727,6 +3732,5 @@ double frob_norm (double m[], int n, double scale=1.0);
     concatenate the output file name with corresponding extension (for AliSim)
 */
 string getOutputNameWithExt(const InputType& format, const string& output_filepath);
-
 
 #endif

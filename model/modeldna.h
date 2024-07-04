@@ -114,6 +114,12 @@ public:
      */
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
 
+    /**
+     * Get the Model DNA 'code', in form 'abcdef', used with ModelDNA model
+     * Returns empty string by default (this is not a dna specific model)
+     */
+    virtual string getModelDNACode();
+
 protected:
 
 	/**

@@ -14,6 +14,7 @@ tags
 test_scripts/iqtree_test_cmds.txt
 pllrepo/
 build/
+cmake-build-debug/
 /Default-clang
 .idea/
 .idea/codeStyleSettings.xml

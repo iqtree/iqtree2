@@ -1156,6 +1156,12 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     if (params.optimize_linked_gtr) {
         cout << "  GTRPMIX nex file:              " << params.out_prefix << ".GTRPMIX.nex" << endl;
     }
+
+    if (params.mr_bayes_output) {
+        cout << endl << "MrBayes block written to:" << endl;
+        cout << "  Base template file:            " << params.out_prefix << ".mr_bayes_scheme.nex" << endl;
+        cout << "  Template file with parameters: " << params.out_prefix << ".mr_bayes_model.nex" << endl;
+    }
     cout << endl;
 
 }
@@ -3100,8 +3106,13 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     }
     if (iqtree->isSuperTree()) {
-        ((PhyloSuperTree*) iqtree)->computeBranchLengths();
-        ((PhyloSuperTree*) iqtree)->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+        auto superTree = (PhyloSuperTree*) iqtree;
+        superTree->computeBranchLengths();
+        superTree->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+    }
+    if (params.mr_bayes_output) {
+        iqtree->printMrBayesBlock((string(params.out_prefix) + ".mr_bayes_scheme.nex").c_str(), false);
+        iqtree->printMrBayesBlock((string(params.out_prefix) + ".mr_bayes_model.nex").c_str(), true);
     }
 
     cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;

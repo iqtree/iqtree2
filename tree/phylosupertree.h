@@ -475,12 +475,25 @@ public:
      */
     void printBestPartitionParams(const char *filename);
 
-    
+    /**
+        print mr bayes block with partition information and best model parameters
+        @param filename output file name
+        @param inclParams whether to include iqtree params
+      */
+    virtual void printMrBayesBlock(const char *filename, bool inclParams);
+
+    /**
+     * Prints the replacement prior settings for +R or +R+I.
+     * @param rate the heterogeneity rate
+     * @param charset the (original) charset of the current partition. An empty string if not a partitioned tree
+     * @param out the ofstream to print to
+     */
+    virtual void printMrBayesFreeRateReplacement(RateHeterogeneity* rate, string &charset, ofstream &out);
+
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
-    
-    int totalNNIs, evalNNIs;
 
+    int totalNNIs, evalNNIs;
 };
 
 #endif
