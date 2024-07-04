@@ -564,3 +564,7 @@ void ModelDNA::setVariables(double *variables) {
 //                              j++;
 //                      }
 }
+
+string ModelDNA::getModelDNACode() {
+    return param_spec;
+}

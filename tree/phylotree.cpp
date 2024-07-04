@@ -6246,52 +6246,73 @@ void PhyloTree::doNNI_simple(NNIMove &move) {
     }
 }
 
-ofstream PhyloTree::startMrBayesBlock(const char *filename) {
-    ofstream out;
-    try {
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(filename);
+/* Private Supplementary Logic Functions */
 
-        // Write Warning
-        out << "#nexus" << endl << endl
-            <<"[This MrBayes Block Declaration provides the retrieved values from the IQTree Run.]" << endl
-            << "[Note that MrBayes does not support a large collection of models, so defaults of 'nst=6' for DNA and 'wag' for Protein will be used if a model that does not exist in MrBayes is selected.]" << endl
-            << "[Furthermore, the Model Parameter '+R' and its derivatives will be ignored.]" << endl
-            << "[This should be used as a Template Only.]" << endl << endl;
-
-        // Begin File, Print Charsets
-        out << "begin mrbayes;" << endl;
-        return out;
-    } catch (ios::failure &) {
-        outError(ERR_WRITE_OUTPUT, filename);
-        return out;
+/**
+ * Find Rate Value (propinv for +I, gamma for +G/+R, invgamma for +I+G/+I+R) <br>
+ * Default is Equal (+E)
+ */
+string getMrBayesRHASName(RateHeterogeneity* rate)
+{
+    bool hasGamma = rate->getGammaShape() != 0.0;
+    bool hasInvariable = rate->getPInvar() != 0.0;
+    if (hasGamma) {
+        if (hasInvariable)
+            return "invgamma";
+        return "gamma";
     }
+    if (hasInvariable)
+        return "propinv";
+    return "equal";
 }
 
-void PhyloTree::printMrBayesModelTextDNA(ofstream &out, string partition, bool inclParams)
+void printMrBayesRHASPrior(PhyloTree* originalTree, RateHeterogeneity* rate, string &charset, ofstream &out)
 {
-    string modelStr = model->getName();
-    string modifiers = site_rate->name;
-    bool fixedFreq = model->freq_type == FREQ_EQUAL;
+    bool hasI = rate->getPInvar() > 0.0;
 
+    // Freerate (+R)
+    // Get replacement gamma shape
+    if (rate->isFreeRate()) {
+        originalTree ->printMrBayesFreeRateReplacement(rate, charset, out);
+    }
+
+    // Gamma Distribution (+G/+R)
+    // Dirichlet is not available here, use fixed
+    if (rate->getGammaShape() > 0.0)
+        out << " shapepr=fixed(" << rate->getGammaShape() << ")";
+
+    // Invariable Sites (+I)
+    // Dirichlet is not available here, use fixed
+    if (hasI)
+        out << " pinvarpr=fixed(" << rate->getPInvar() << ")";
+}
+
+void printMrBayesModelTextDNA(PhyloTree* originalTree, PhyloTree* tree, ofstream &out, string &partition, string &charset, bool inclParams)
+{
+    ModelSubst* model = tree->getModel();
+    bool equalFreq = model->freq_type == FREQ_EQUAL;
     short nst = 6;
-    string rateMod = "equal";
+    string rateMod = getMrBayesRHASName(tree->getRate());
 
     // Find NST value (1 for JC/JC69/F81, 2 for K80/K2P/HKY/HKY85, 6 for SYM/GTR)
-    // NST is set to 6 by default (above), so check for JC/J69/F81 and K80/K2P/HKY/HKY85
-    if (strcmp(modelStr.c_str(), "JC") == 0 || strcmp(modelStr.c_str(), "JC69") == 0 || strcmp(modelStr.c_str(), "F81") == 0)
-        nst = 1;
-    else if (strcmp(modelStr.c_str(), "K80") == 0 || strcmp(modelStr.c_str(), "K2P") == 0 || strcmp(modelStr.c_str(), "HKY") == 0 || strcmp(modelStr.c_str(), "HKY85") == 0)
-        nst = 2;
-
-    // Find Rate Value (propinv for +I, gamma for +G, invgamma for +I+G)
-    // Default is Equal (+E)
-    if (modifiers.find("+G") != string::npos) {
-        if (modifiers.find("+I") != string::npos)
-            rateMod = "invgamma";
-        else rateMod = "gamma";
-    } else if (modifiers.find("+I") != string::npos)
-        rateMod = "propinv";
+    // NST is set to 6 by default (above), so check for JC/JC69/F81 and K80/K2P/HKY/HKY85
+    // If it returns a valid dna code, we can extract information from there (needed for user-defined models)
+    string dnaCode = model->getModelDNACode();
+    string modelStr = model->getName();
+    if (!dnaCode.empty()) {
+        // if all equal
+        if (dnaCode.find_first_not_of(dnaCode[0]) == string::npos)
+            nst = 1;
+        // if A-G=C-T and everything else is equal to first part of dna code
+        else if (dnaCode[1] == dnaCode[4] && dnaCode[0] == dnaCode[2] && dnaCode[0] == dnaCode[3] && dnaCode[0] == dnaCode[5])
+            nst = 2;
+    } else if (!modelStr.empty()) {
+        // Check the name of the model
+        if (strcmp(modelStr.c_str(), "JC") == 0 || strcmp(modelStr.c_str(), "JC69") == 0 || strcmp(modelStr.c_str(), "F81") == 0)
+            nst = 1;
+        else if (strcmp(modelStr.c_str(), "K80") == 0 || strcmp(modelStr.c_str(), "K2P") == 0 || strcmp(modelStr.c_str(), "HKY") == 0 || strcmp(modelStr.c_str(), "HKY85") == 0)
+            nst = 2;
+    }
 
     // NucModel = 4By4: DNA Nucleotides (4 Options, A, C, G, T)
     out << "  lset applyto=(" << partition << ") nucmodel=4by4 nst=" << nst << " rates=" << rateMod << ";" << endl;
@@ -6299,7 +6320,7 @@ void PhyloTree::printMrBayesModelTextDNA(ofstream &out, string partition, bool i
     // Priors (apart from Fixed Freq)
     if (!inclParams) {
         // If not include other params, simply set fixed frequency and return
-        if (!fixedFreq) return;
+        if (!equalFreq) return;
 
         out << "  prset applyto=(" << partition << ") statefreqpr=fixed(equal);" << endl;
         return;
@@ -6307,18 +6328,10 @@ void PhyloTree::printMrBayesModelTextDNA(ofstream &out, string partition, bool i
 
     out << "  prset applyto=(" << partition << ")";
 
-    // Gamma Distribution (+G)
-    // Dirichlet is not available here, use fixed
-    if (site_rate->getGammaShape() != 0.0)
-        out << " shapepr=fixed(" << site_rate->getGammaShape() << ")";
-
-    // Invariable Sites (+I)
-    // Dirichlet is not available here, use fixed
-    if (site_rate->getPInvar() != 0.0)
-        out << " pinvarpr=fixed(" << site_rate->getPInvar() << ")";
+    printMrBayesRHASPrior(originalTree, tree->getRate(), charset, out);
 
     // Frequency of Nucleotides (+F)
-    if (fixedFreq)
+    if (equalFreq)
         out << " statefreqpr=fixed(equal)";
     else {
         auto* freq = new double[model->num_states];
@@ -6329,6 +6342,8 @@ void PhyloTree::printMrBayesModelTextDNA(ofstream &out, string partition, bool i
             out << freq[i];
         }
         out << ")";
+
+        delete[] freq;
     }
 
     // Reversible Rate Matrix
@@ -6344,27 +6359,84 @@ void PhyloTree::printMrBayesModelTextDNA(ofstream &out, string partition, bool i
 
     // Close revmatpr + prset
     out << ");" << endl;
+
+    delete[] rateMat;
 }
 
-void PhyloTree::printMrBayesModelText(ofstream& out, string partition, bool inclParams)
+/* Public Supplementary Functions (Used by PhyloSuperTree) */
+ofstream startMrBayesBlock(const char *filename) {
+    ofstream out;
+    try {
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+
+        // Write Warning
+        out << "#nexus" << endl << endl
+            <<"[This MrBayes Block Declaration provides the retrieved values from the IQTree Run.]" << endl
+            << "[Note that MrBayes does not support a large collection of models, so defaults of 'nst=6' for DNA and 'wag' for Protein will be used if a model that does not exist in MrBayes is selected.]" << endl
+            << "[Furthermore, the Model Parameter '+R' will be replaced by '+G'.]" << endl
+            << "[This should be used as a Template Only.]" << endl << endl;
+
+        // Begin File, Print Charsets
+        out << "begin mrbayes;" << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+    return out;
+}
+
+void printMrBayesModelText(PhyloTree* originalTree, PhyloTree* tree, ofstream& out, string partition, string charset, bool inclParams)
 {
-    switch(aln->seq_type) {
+    switch(tree->aln->seq_type) {
         case SEQ_DNA:
-            printMrBayesModelTextDNA(out, partition, inclParams);
-            out << endl; // Add extra endline after model text for readability
+            printMrBayesModelTextDNA(originalTree, tree, out, partition, charset, inclParams);
+            break;
+        case SEQ_CODON:
+            break;
+        case SEQ_PROTEIN:
+            break;
+        case SEQ_BINARY:
+            break;
+        case SEQ_MORPH:
             break;
         default:
-            outWarning("MrBayes Block output not supported for sequence type " + getSeqTypeName(aln->seq_type));
-            break;
+            outWarning("MrBayes Block output not supported for sequence type " + getSeqTypeName(tree->aln->seq_type));
+            return;
     }
+    out << endl; // Add extra endline after model text for readability
 }
 
+/* Protected Overrided Function */
+void PhyloTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out) {
+    bool hasInvar = rate->getPInvar() > 0.0;
+    string key = hasInvar ? "RateGammaInvar" : "RateGamma";
+
+    double gamma_shape = 0.0;
+    double p_invar = 0.0;
+
+    checkpoint->startStruct(key);
+
+    CKP_RESTORE(gamma_shape);
+    if (hasInvar)
+        CKP_RESTORE(p_invar);
+
+    checkpoint->endStruct();
+
+    // Sanity Check
+    if (gamma_shape > 0.0)
+        out << " shapepr=fixed(" << gamma_shape << ")";
+
+    if (p_invar > 0.0)
+        out << " pinvarpr=fixed(" << p_invar << ")";
+}
+
+/* Main Function */
 void PhyloTree::printMrBayesBlock(const char *filename, bool inclParams) {
     ofstream out = startMrBayesBlock(filename);
     // Set Outgroup (if available)
-    if (!rooted) out << "  outgroup " << root << ";" << endl << endl;
+    if (!rooted) out << "  outgroup " << root->name << ";" << endl << endl;
 
-    printMrBayesModelText(out, "all", inclParams);
+    printMrBayesModelText(this, this, out, "all", "", inclParams);
     out << "end;" << endl;
     out.close();
 }

@@ -1520,6 +1520,23 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     }
 }
 
+void printCharsets(SuperAlignment* saln, size_t size, ofstream &out)
+{
+    for (int part = 0; part < size; part++) {
+        string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        out << "  charset " << name << " = ";
+        if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
+        /*if (saln->partitions[part]->seq_type == SEQ_CODON)
+            out << "CODON, ";*/
+        if (!saln->partitions[part]->sequence_type.empty())
+            out << saln->partitions[part]->sequence_type << ", ";
+        string pos = saln->partitions[part]->position_spec;
+        replace(pos.begin(), pos.end(), ',' , ' ');
+        out << pos << ";" << endl;
+    }
+}
+
 void PhyloSuperTree::printBestPartitionParams(const char *filename)
 {
     try {
@@ -1530,7 +1547,7 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename)
         << "begin sets;" << endl;
         auto *saln = (SuperAlignment*)aln;
 
-        printCharsets(out);
+        printCharsets(saln, size(), out);
 
         out << "  charpartition mymodels =" << endl;
         for (int part = 0; part < size(); part++) {
@@ -1548,30 +1565,21 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename)
     }
 }
 
-void PhyloSuperTree::printCharsets(ofstream &out)
-{
-    auto *saln = (SuperAlignment*)aln;
-    for (int part = 0; part < size(); part++) {
-        string name = saln->partitions[part]->name;
-        replace(name.begin(), name.end(), '+', '_');
-        out << "  charset " << name << " = ";
-        if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-        /*if (saln->partitions[part]->seq_type == SEQ_CODON)
-            out << "CODON, ";*/
-        if (!saln->partitions[part]->sequence_type.empty())
-            out << saln->partitions[part]->sequence_type << ", ";
-        string pos = saln->partitions[part]->position_spec;
-        replace(pos.begin(), pos.end(), ',' , ' ');
-        out << pos << ";" << endl;
-    }
+void PhyloSuperTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out) {
+    // Call PhyloTree's function inside the correct checkpoint struct
+    checkpoint->startStruct("PartitionModelPlen");
+    checkpoint->startStruct(charset);
+    PhyloTree::printMrBayesFreeRateReplacement(rate, charset, out);
+    checkpoint->endStruct();
+    checkpoint->endStruct();
 }
 
 void PhyloSuperTree::printMrBayesBlock(const char *filename, bool inclParams)
 {
     ofstream out = startMrBayesBlock(filename);
-    printCharsets(out);
-    out << endl;
     auto *saln = (SuperAlignment*)aln;
+    printCharsets(saln, size(), out);
+    out << endl;
 
     // Create Partition
     size_type listSize = size();
@@ -1593,7 +1601,7 @@ void PhyloSuperTree::printMrBayesBlock(const char *filename, bool inclParams)
     // Partition-Specific Model Information
     for (int part = 0; part < listSize; part++) {
         // MrBayes Partitions are 1-indexed
-        at(part)->printMrBayesModelText(out, convertIntToString(part + 1), inclParams);
+        printMrBayesModelText(this, at(part), out, convertIntToString(part + 1), saln->partitions[part]->name, inclParams);
     }
     out << "end;" << endl;
     out.close();
