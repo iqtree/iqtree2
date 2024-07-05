@@ -80,7 +80,7 @@ string ModelBIN::getNameParams(bool show_fixed_params) {
 void ModelBIN::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
     // MrBayes does not support Invariable Modifier for Binary data
     if (rate->isFreeRate() || rate->getPInvar() > 0.0) {
-        warnLogStream("MrBayes does not support Invariable Sites with Morphological Data! +I has been ignored!", out);
+        warnLogStream("MrBayes does not support Invariable Sites with Binary Data! +I has been ignored!", out);
     }
 
     // Lset Parameters
@@ -97,7 +97,7 @@ void ModelBIN::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, str
     out << ";" << endl;
 
     if (!inclParams) {
-        if (freq_type == FREQ_EQUAL) out << "  prset applyto(" << partition << ") statefreqpr=fixed(equal);" << endl;
+        if (freq_type == FREQ_EQUAL) out << "  prset applyto=(" << partition << ") statefreqpr=fixed(equal);" << endl;
         return;
     }
 
@@ -117,7 +117,7 @@ void ModelBIN::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, str
 
     // State Frequencies
     if (freq_type == FREQ_EQUAL)
-        out << " statefreqpr=fixed(equal);" << endl;
+        out << " statefreqpr=fixed(equal)";
     else {
         out << " statefreqpr=dirichlet(";
         for (int i = 0; i < num_states; ++i) {
