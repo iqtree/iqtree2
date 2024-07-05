@@ -210,6 +210,46 @@ double *ModelSubst::newTransMatrix() {
 	return new double[num_states * num_states];
 }
 
+void ModelSubst::printMrBayesFreeRateReplacement(bool isSuperTree, string &charset, ofstream &out, bool inclInvariable)
+{
+    double gamma_shape = 0.0;
+    double p_invar = 0.0;
+
+    if (isSuperTree) {
+        checkpoint->startStruct("PartitionModelPlen");
+        checkpoint->startStruct(charset);
+    }
+    checkpoint->startStruct("RateGammaInvar");
+
+    // Safety Check
+    if (!checkpoint->hasKey("gamma_shape") || !checkpoint->hasKey("p_invar")) {
+        outWarning("Could not find replacement for Freerate Distribution in MrBayes Block!");
+        checkpoint->endStruct();
+        return;
+    }
+
+    outWarning("FreeRate Distributions (+R) are not available in MrBayes. It will be replaced by +G+I.");
+
+    // Always replace +R with +G+I
+    CKP_RESTORE(gamma_shape);
+    if (inclInvariable)
+        CKP_RESTORE(p_invar);
+
+    checkpoint->endStruct();
+    if (isSuperTree) {
+        checkpoint->endStruct();
+        checkpoint->endStruct();
+    }
+
+    out << " shapepr=fixed(" << gamma_shape << ")";
+    if (inclInvariable)
+        out << " pinvarpr=fixed(" << p_invar << ")";
+}
+
+void ModelSubst::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+    warnLogStream("MrBayes Block Output is not supported by this model of name " + full_name + "!", out);
+}
+
 ModelSubst::~ModelSubst()
 {
     // mem space pointing to target model and thus avoid double free here

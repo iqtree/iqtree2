@@ -7911,6 +7911,11 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
     }
 }
 
+void warnLogStream(string warn, ofstream &out) {
+    outWarning(warn);
+    out << "[" << warn << "]" << endl;
+}
+
 // Cached Map
 unordered_map<string, string> iqTreeToMrBayesAAModels;
 
