@@ -37,7 +37,6 @@
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
-#include "main/phylotesting.h"
 
 const int LH_MIN_CONST = 1;
 

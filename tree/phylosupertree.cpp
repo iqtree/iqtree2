@@ -20,10 +20,8 @@
 #include "phylosupertree.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentpairwise.h"
-#include "main/phylotesting.h"
 #include "model/partitionmodel.h"
 #include "utils/MPIHelper.h"
-#include "utils/tools.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
