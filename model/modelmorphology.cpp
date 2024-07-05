@@ -197,7 +197,7 @@ void ModelMorphology::printMrBayesModelText(RateHeterogeneity* rate, ofstream& o
     // Gamma Distribution (+G/+R)
     // Dirichlet is not available here, use fixed
     if (rate->getGammaShape() > 0.0)
-        out << " shapepr=fixed(" << rate->getGammaShape() << ")";
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
 
     out << ";" << endl;
 }

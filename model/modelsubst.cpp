@@ -241,9 +241,9 @@ void ModelSubst::printMrBayesFreeRateReplacement(bool isSuperTree, string &chars
         checkpoint->endStruct();
     }
 
-    out << " shapepr=fixed(" << gamma_shape << ")";
+    out << " shapepr=fixed(" << minValueCheckMrBayes(gamma_shape) << ")";
     if (inclInvariable)
-        out << " pinvarpr=fixed(" << p_invar << ")";
+        out << " pinvarpr=fixed(" << minValueCheckMrBayes(p_invar) << ")";
 }
 
 void ModelSubst::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {

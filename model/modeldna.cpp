@@ -634,36 +634,30 @@ void ModelDNA::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, str
     // Gamma Distribution (+G/+R)
     // Dirichlet is not available here, use fixed
     if (rate->getGammaShape() > 0.0)
-        out << " shapepr=fixed(" << rate->getGammaShape() << ")";
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
 
     // Invariable Sites (+I)
     // Dirichlet is not available here, use fixed
     if (rate->getPInvar() > 0.0)
-        out << " pinvarpr=fixed(" << rate->getPInvar() << ")";
+        out << " pinvarpr=fixed(" << minValueCheckMrBayes(rate->getPInvar()) << ")";
 
     // Frequency of Nucleotides (+F)
     if (equalFreq)
         out << " statefreqpr=fixed(equal)";
     else {
-        // use getStateFrequency instead of state_freq to ensure they sum to 1
-        auto* freq = new double[num_states];
-        getStateFrequency(freq);
-
         out << " statefreqpr=dirichlet(";
         for (int i = 0; i < num_states; ++i) {
             if (i != 0) out << ", ";
-            out << freq[i];
+            out << minValueCheckMrBayes(state_freq[i]);
         }
         out << ")";
-
-        delete[] freq;
     }
 
     // Reversible Rate Matrix
     out << " revmatpr=dirichlet(";
     for (int i = 0; i < getNumRateEntries(); ++i) {
         if (i != 0) out << ", ";
-        out << rates[i];
+        out << minValueCheckMrBayes(rates[i]);
     }
 
     // Close revmatpr + prset

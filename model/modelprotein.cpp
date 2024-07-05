@@ -1213,24 +1213,18 @@ void ModelProtein::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out,
 
         for (int i = 0; i < getNumRateEntries(); ++i) {
             if (i != 0) out << ", ";
-            out << rates[i];
+            out << minValueCheckMrBayes(rates[i]);
         }
         out << ")";
 
         // Frequency type is never equal to FREQ_EQUAL, even with Poisson
         // Frequency is also auto-set if we use a model defined by MrBayes
-        // use getStateFrequency instead of state_freq to ensure they sum to 1
-        auto* freq = new double[num_states];
-        getStateFrequency(freq);
-
         out << " statefreqpr=dirichlet(";
         for (int i = 0; i < num_states; ++i) {
             if (i != 0) out << ", ";
-            out << freq[i];
+            out << minValueCheckMrBayes(state_freq[i]);
         }
         out << ")";
-
-        delete[] freq;
     }
 
     // if not to include the parameters (for Protein, simply +I, +G, +R)
@@ -1248,12 +1242,12 @@ void ModelProtein::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out,
     // Gamma Distribution (+G/+R)
     // Dirichlet is not available here, use fixed
     if (rate->getGammaShape() > 0.0)
-        out << " shapepr=fixed(" << rate->getGammaShape() << ")";
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
 
     // Invariable Sites (+I)
     // Dirichlet is not available here, use fixed
     if (rate->getPInvar() > 0.0)
-        out << " pinvarpr=fixed(" << rate->getPInvar() << ")";
+        out << " pinvarpr=fixed(" << minValueCheckMrBayes(rate->getPInvar()) << ")";
 
     out << ";" << endl;
 }

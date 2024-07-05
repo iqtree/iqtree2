@@ -114,24 +114,18 @@ void ModelBIN::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, str
     // Gamma Distribution (+G/+R)
     // Dirichlet is not available here, use fixed
     if (rate->getGammaShape() > 0.0)
-        out << " shapepr=fixed(" << rate->getGammaShape() << ")";
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
 
     // State Frequencies
     if (freq_type == FREQ_EQUAL)
         out << " statefreqpr=fixed(equal);" << endl;
     else {
-        // use getStateFrequency instead of state_freq to ensure they sum to 1
-        auto* freq = new double[num_states];
-        getStateFrequency(freq);
-
         out << " statefreqpr=dirichlet(";
         for (int i = 0; i < num_states; ++i) {
             if (i != 0) out << ", ";
-            out << freq[i];
+            out << minValueCheckMrBayes(state_freq[i]);
         }
         out << ")";
-
-        delete[] freq;
     }
 
     out << ";" << endl;

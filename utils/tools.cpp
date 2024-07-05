@@ -7917,6 +7917,14 @@ void warnLogStream(string warn, ofstream &out) {
     out << "[" << warn << "]" << endl;
 }
 
+double minValueCheckMrBayes(double origValue) {
+     if (origValue < 0.01) {
+         outWarning("MrBayes does not support values < 0.01! Using 0.01 instead...");
+         return 0.01;
+     }
+     return origValue;
+}
+
 // Cached Map
 unordered_map<string, string> iqTreeToMrBayesAAModels;
 

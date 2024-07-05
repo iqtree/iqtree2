@@ -3739,6 +3739,12 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
 void warnLogStream(string warn, ofstream &out);
 
 /**
+ * ensures a number, to be inputted into MrBayes, is larger than the minimum value for MrBayes (0.01)
+ */
+double minValueCheckMrBayes(double origValue);
+
+
+/**
  * get a map of iqtree amino acid/protein substitution models to MrBayes amino acid/protein substitution models.<br>
  * models which are not supported by mrbayes are not included. GTR20 is assumed as default.
  */
