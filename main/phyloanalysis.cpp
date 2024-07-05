@@ -2625,11 +2625,10 @@ void printMrBayesBlockFile(const char* filename, IQTree* &iqtree, bool inclParam
         // Set Outgroup (if available)
         if (!iqtree->rooted) out << "  outgroup " << iqtree->root->name << ";" << endl << endl;
 
-        out << endl;
+        out << "  [Using Model '" << iqtree->getModelName() << "']" << endl;
         iqtree->getModel()->printMrBayesModelText(iqtree->getRate(), out, "all", "", false, inclParams);
-        out << endl;
 
-        out << "end;" << endl;
+        out << endl << "end;" << endl;
         out.close();
         return;
     }
@@ -2674,9 +2673,9 @@ void printMrBayesBlockFile(const char* filename, IQTree* &iqtree, bool inclParam
         PhyloTree* currentTree = superTree->at(part);
 
         // MrBayes Partitions are 1-indexed
-        out << endl;
+        out << "  [Partition No. " << convertIntToString(part + 1) << ", Using Model '" << currentTree->getModelName() << "']" << endl;
         currentTree->getModel()->printMrBayesModelText(currentTree->getRate(), out,
-        convertIntToString(part + 1), saln->partitions[part]->name, true, inclParams);
+                convertIntToString(part + 1), saln->partitions[part]->name, true, inclParams);
         out << endl;
     }
     out << "end;" << endl;

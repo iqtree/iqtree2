@@ -247,7 +247,8 @@ void ModelSubst::printMrBayesFreeRateReplacement(bool isSuperTree, string &chars
 }
 
 void ModelSubst::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
-    warnLogStream("MrBayes Block Output is not supported by this model of name " + full_name + "!", out);
+    out << "  [MrBayes Block Output is not supported by this model!]" << endl;
+    outWarning("MrBayes Block Output is not supported by this model of name '" + name + "'!");
 }
 
 ModelSubst::~ModelSubst()
