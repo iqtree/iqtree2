@@ -648,6 +648,7 @@ void ModelDNA::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, str
         // use getStateFrequency instead of state_freq to ensure they sum to 1
         auto* freq = new double[num_states];
         getStateFrequency(freq);
+
         out << " statefreqpr=dirichlet(";
         for (int i = 0; i < num_states; ++i) {
             if (i != 0) out << ", ";

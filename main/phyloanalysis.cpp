@@ -2655,12 +2655,13 @@ void printMrBayesBlockFile(const char* filename, IQTree* &iqtree, bool inclParam
     // Create Partition
     out << endl << "  partition iqtree = " << size << ": ";
     for (int part = 0; part < size; part++) {
+        if (part != 0) out << ", ";
+
         string name = saln->partitions[part]->name;
         replace(name.begin(), name.end(), '+', '_');
         out << name;
-        if (part != size - 1) out << ", ";
-        else out << ";" << endl;
     }
+    out << ";" << endl;
 
     // Set Partition for Use
     out << "  set partition = iqtree;" << endl;

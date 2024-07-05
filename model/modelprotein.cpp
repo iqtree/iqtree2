@@ -1220,9 +1220,10 @@ void ModelProtein::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out,
         // Frequency type is never equal to FREQ_EQUAL, even with Poisson
         // Frequency is also auto-set if we use a model defined by MrBayes
         // use getStateFrequency instead of state_freq to ensure they sum to 1
-        out << " statefreqpr=dirichlet(";
         auto* freq = new double[num_states];
         getStateFrequency(freq);
+
+        out << " statefreqpr=dirichlet(";
         for (int i = 0; i < num_states; ++i) {
             if (i != 0) out << ", ";
             out << freq[i];
