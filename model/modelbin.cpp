@@ -76,3 +76,56 @@ string ModelBIN::getNameParams(bool show_fixed_params) {
     }
     return retname.str();
 }
+
+void ModelBIN::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+    // MrBayes does not support Invariable Modifier for Binary data
+    if (rate->isFreeRate() || rate->getPInvar() > 0.0) {
+        warnLogStream("MrBayes does not support Invariable Sites with Binary Data! +I has been ignored!", out);
+    }
+
+    // Lset Parameters
+    out << "  lset applyto=(" << partition << ") rates=";
+
+    // Free Rate should be substituted by +G (+I not supported)
+    bool hasGamma = rate->getGammaShape() != 0.0 || rate->isFreeRate();
+    if (hasGamma) {
+        // Rate Categories + Gamma
+        out << "gamma ngammacat=" << rate->getNRate();
+    } else
+        out << "equal";
+
+    out << ";" << endl;
+
+    if (!inclParams) {
+        if (freq_type == FREQ_EQUAL) out << "  prset applyto=(" << partition << ") statefreqpr=fixed(equal);" << endl;
+        return;
+    }
+
+    // Prset Parameters
+    out << "  prset applyto=(" << partition << ")";
+
+    // Freerate (+R)
+    // Get replacement Gamma Shape
+    if (rate->isFreeRate()) {
+        printMrBayesFreeRateReplacement(rate, charset, out, false);
+    }
+
+    // Gamma Distribution (+G/+R)
+    // Dirichlet is not available here, use fixed
+    if (rate->getGammaShape() > 0.0)
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
+
+    // State Frequencies
+    if (freq_type == FREQ_EQUAL)
+        out << " statefreqpr=fixed(equal)";
+    else {
+        out << " statefreqpr=dirichlet(";
+        for (int i = 0; i < num_states; ++i) {
+            if (i != 0) out << ", ";
+            out << minValueCheckMrBayes(state_freq[i]);
+        }
+        out << ")";
+    }
+
+    out << ";" << endl;
+}

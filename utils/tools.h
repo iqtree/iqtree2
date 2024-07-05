@@ -3733,4 +3733,21 @@ double frob_norm (double m[], int n, double scale=1.0);
 */
 string getOutputNameWithExt(const InputType& format, const string& output_filepath);
 
+/**
+ * Prints a warning message to the log and to the ofstream, in a NEXUS format.
+ */
+void warnLogStream(string warn, ofstream &out);
+
+/**
+ * ensures a number, to be inputted into MrBayes, is larger than the minimum value for MrBayes (0.01)
+ */
+double minValueCheckMrBayes(double origValue);
+
+
+/**
+ * get a map of iqtree amino acid/protein substitution models to MrBayes amino acid/protein substitution models.<br>
+ * models which are not supported by mrbayes are not included. GTR20 is assumed as default.
+ */
+unordered_map<string, string> getIqTreeToMrBayesAAModels();
+
 #endif

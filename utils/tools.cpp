@@ -6317,6 +6317,7 @@ void usage_iqtree(char* argv[], bool full_command) {
         << "  -mrbayes             Outputs a Mr Bayes block file, to use as a template for future analysis" << endl
         << "                       Will not output if incompatible data types are used" << endl
         << "                       (MrBayes only supports DNA, Codon, Protein, Binary and Morphological data)" << endl
+        << "                       There will be no substitution model data output for Lie Markov and Mixture models!" << endl
         << endl;
 
     if (full_command) {
@@ -7909,4 +7910,37 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
         default:
             return output_filepath + ".phy";
     }
+}
+
+void warnLogStream(string warn, ofstream &out) {
+    outWarning(warn);
+    out << "[" << warn << "]" << endl;
+}
+
+double minValueCheckMrBayes(double origValue) {
+     if (origValue < 0.01) {
+         outWarning("MrBayes does not support values < 0.01! Using 0.01 instead...");
+         return 0.01;
+     }
+     return origValue;
+}
+
+// Cached Map
+unordered_map<string, string> iqTreeToMrBayesAAModels;
+
+unordered_map<string, string> getIqTreeToMrBayesAAModels() {
+    if (!iqTreeToMrBayesAAModels.empty()) return iqTreeToMrBayesAAModels;
+
+    iqTreeToMrBayesAAModels["Poisson"] = "poisson";
+    iqTreeToMrBayesAAModels["JTT"] = "jones";
+    iqTreeToMrBayesAAModels["Dayhoff"] = "dayhoff";
+    iqTreeToMrBayesAAModels["mtREV"] = "mtrev";
+    iqTreeToMrBayesAAModels["mtMAM"] = "mtmam";
+    iqTreeToMrBayesAAModels["WAG"] = "wag";
+    iqTreeToMrBayesAAModels["rtREV"] = "rtrev";
+    iqTreeToMrBayesAAModels["cpREV"] = "cprev";
+    iqTreeToMrBayesAAModels["VT"] = "vt";
+    iqTreeToMrBayesAAModels["Blosum62"] = "blosum";
+    iqTreeToMrBayesAAModels["LG"] = "lg";
+    return iqTreeToMrBayesAAModels;
 }

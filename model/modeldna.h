@@ -115,10 +115,16 @@ public:
     virtual void computeTipLikelihood(PML::StateType state, double *state_lk);
 
     /**
-     * Get the Model DNA 'code', in form 'abcdef', used with ModelDNA model
-     * Returns empty string by default (this is not a dna specific model)
+     * Print the model information in a format that can be accepted by MrBayes, using lset and prset.<br>
+     * By default, it simply prints a warning to the log and to the stream, stating that this model is not supported by MrBayes.
+     * @param rate the rate information
+     * @param out the ofstream to print the result to
+     * @param partition the partition to apply lset and prset to
+     * @param charset the current partition's charset. Useful for getting information from the checkpoint file
+     * @param isSuperTree whether the tree is a super tree. Useful for retrieving information from the checkpoint file, which has different locations for PhyloTree and PhyloSuperTree
+     * @param inclParams whether to include IQTree optimized parameters for the model
      */
-    virtual string getModelDNACode();
+    virtual void printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams);
 
 protected:
 

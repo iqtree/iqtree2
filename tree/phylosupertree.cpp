@@ -23,7 +23,6 @@
 #include "main/phylotesting.h"
 #include "model/partitionmodel.h"
 #include "utils/MPIHelper.h"
-#include "utils/tools.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -1520,37 +1519,30 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     }
 }
 
-void printCharsets(SuperAlignment* saln, size_t size, ofstream &out)
-{
-    for (int part = 0; part < size; part++) {
-        string name = saln->partitions[part]->name;
-        replace(name.begin(), name.end(), '+', '_');
-        out << "  charset " << name << " = ";
-        if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
-        /*if (saln->partitions[part]->seq_type == SEQ_CODON)
-            out << "CODON, ";*/
-        if (!saln->partitions[part]->sequence_type.empty())
-            out << saln->partitions[part]->sequence_type << ", ";
-        string pos = saln->partitions[part]->position_spec;
-        replace(pos.begin(), pos.end(), ',' , ' ');
-        out << pos << ";" << endl;
-    }
-}
-
-void PhyloSuperTree::printBestPartitionParams(const char *filename)
-{
+void PhyloSuperTree::printBestPartitionParams(const char *filename) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
         out << "#nexus" << endl
         << "begin sets;" << endl;
-        auto *saln = (SuperAlignment*)aln;
-
-        printCharsets(saln, size(), out);
-
+        int part;
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            out << "  charset " << name << " = ";
+            if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
+            /*if (saln->partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";*/
+            if (!saln->partitions[part]->sequence_type.empty())
+                out << saln->partitions[part]->sequence_type << ", ";
+            string pos = saln->partitions[part]->position_spec;
+            replace(pos.begin(), pos.end(), ',' , ' ');
+            out << pos << ";" << endl;
+        }
         out << "  charpartition mymodels =" << endl;
-        for (int part = 0; part < size(); part++) {
+        for (part = 0; part < size(); part++) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;
@@ -1563,46 +1555,4 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename)
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
-}
-
-void PhyloSuperTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out) {
-    // Call PhyloTree's function inside the correct checkpoint struct
-    checkpoint->startStruct("PartitionModelPlen");
-    checkpoint->startStruct(charset);
-    PhyloTree::printMrBayesFreeRateReplacement(rate, charset, out);
-    checkpoint->endStruct();
-    checkpoint->endStruct();
-}
-
-void PhyloSuperTree::printMrBayesBlock(const char *filename, bool inclParams)
-{
-    ofstream out = startMrBayesBlock(filename);
-    auto *saln = (SuperAlignment*)aln;
-    printCharsets(saln, size(), out);
-    out << endl;
-
-    // Create Partition
-    size_type listSize = size();
-    out << "  partition iqtree = " << listSize << ": ";
-    for (int part = 0; part < listSize; part++) {
-        string name = saln->partitions[part]->name;
-        replace(name.begin(), name.end(), '+', '_');
-        out << name;
-        if (part != listSize - 1) out << ", ";
-        else out << ";" << endl;
-    }
-
-    // Set Partition for Use
-    out << "  set partition = iqtree;" << endl;
-
-    // Set Outgroup (if available)
-    if (!rooted) out << "  outgroup " << root->name << ";" << endl << endl;
-
-    // Partition-Specific Model Information
-    for (int part = 0; part < listSize; part++) {
-        // MrBayes Partitions are 1-indexed
-        printMrBayesModelText(this, at(part), out, convertIntToString(part + 1), saln->partitions[part]->name, inclParams);
-    }
-    out << "end;" << endl;
-    out.close();
 }

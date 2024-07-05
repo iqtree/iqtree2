@@ -2264,21 +2264,6 @@ public:
      */
     const string& getDistanceFileWritten() const;
 
-    /**
-        print MrBayes block with partition information, and best model parameters (if inclParams is true)
-        @param filename output file name
-        @param inclParams whether to include iqtree params
-      */
-    virtual void printMrBayesBlock(const char *filename, bool inclParams);
-
-    /**
-     * Prints the replacement prior settings for +R or +R+I.
-     * @param rate the heterogeneity rate
-     * @param charset the (original) charset of the current partition. An empty string if not a partitioned tree
-     * @param out the ofstream to print to
-     */
-    virtual void printMrBayesFreeRateReplacement(RateHeterogeneity* rate, string &charset, ofstream &out);
-
     
 protected:
 
@@ -2525,23 +2510,5 @@ protected:
     void showProgress();
     void doneProgress();
 };
-
-/**
- * print MrBayes formatted text, of model information (and parameters), to an ofstream.
- * @param originalTree the original tree, of which is called to retrieve values in checkpoint file (to allow for overriding)
- * @param tree tree to print info from
- * @param out stream to print to
- * @param partition the partition to 'apply' to (all to apply to all partitions)
- * @param charset the (original) charset of the current partition. Used to retrieve values in checkpoint file. Input an empty string if this is not a partitioned tree.
- * @param inclParams whether to include the parameters of the model
- */
-void printMrBayesModelText(PhyloTree* originalTree, PhyloTree* tree, ofstream& out, string partition, string charset, bool inclParams);
-
-/**
- * Start a MrBayes Block, as well as printing a warning.
- * @param filename output file name
- * @return ofstream for other functions to print to
- */
-ofstream startMrBayesBlock(const char *filename);
 
 #endif

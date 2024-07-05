@@ -565,6 +565,100 @@ void ModelDNA::setVariables(double *variables) {
 //                      }
 }
 
-string ModelDNA::getModelDNACode() {
-    return param_spec;
+void ModelDNA::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+    bool equalFreq = freq_type == FREQ_EQUAL;
+    short nst = 6;
+
+    // Find NST value (1 for JC/JC69/F81, 2 for K80/K2P/HKY/HKY85, 6 for SYM/GTR)
+    // NST is set to 6 by default (above), so check for JC/JC69/F81 and K80/K2P/HKY/HKY85
+    // If it returns a valid dna code, we can extract information from there (needed for user-defined models)
+    if (!param_spec.empty()) {
+        // if all equal
+        if (param_spec.find_first_not_of(param_spec[0]) == string::npos) {
+            nst = 1;
+            // if A-G=C-T and everything else is equal to first part of dna code
+        } else if (param_spec[1] == param_spec[4] &&
+                param_spec[0] == param_spec[2] && param_spec[0] == param_spec[3] && param_spec[0] == param_spec[5]) {
+            nst = 2;
+        }
+    } else if (!name.empty()) {
+        // Check the name of the model
+        if (strcmp(name.c_str(), "JC") == 0 || strcmp(name.c_str(), "JC69") == 0 || strcmp(name.c_str(), "F81") == 0) {
+            nst = 1;
+        } else if (strcmp(name.c_str(), "K80") == 0 || strcmp(name.c_str(), "K2P") == 0 || strcmp(name.c_str(), "HKY") == 0 || strcmp(name.c_str(), "HKY85") == 0) {
+            nst = 2;
+        }
+    }
+
+    // NucModel = 4By4: DNA Nucleotides (4 Options, A, C, G, T)
+    out << "  lset applyto=(" << partition << ") nucmodel=4by4 nst=" << nst << " rates=";
+
+    // RHAS Specification
+    // Free Rate should be substituted by +G+I
+    bool hasGamma = rate->getGammaShape() != 0.0 || rate->isFreeRate();
+    bool hasInvariable = rate->getPInvar() != 0.0 || rate->isFreeRate();
+    if (hasGamma) {
+        if (hasInvariable)
+            out << "invgamma";
+        else
+            out << "gamma";
+    } else if (hasInvariable)
+        out << "propinv";
+    else
+        out << "equal";
+
+    // Rate Categories
+    if (hasGamma)
+        out << " ngammacat=" << rate->getNRate();
+
+    out << ";" << endl;
+
+    // Priors (apart from Fixed Freq)
+    if (!inclParams) {
+        // If not include other params, simply set fixed frequency and return
+        if (!equalFreq) return;
+
+        out << "  prset applyto=(" << partition << ") statefreqpr=fixed(equal);" << endl;
+        return;
+    }
+
+    out << "  prset applyto=(" << partition << ")";
+
+    // Freerate (+R)
+    // Get replacement Gamma Shape + Invariable Sites
+    if (rate->isFreeRate()) {
+        printMrBayesFreeRateReplacement(isSuperTree, charset, out);
+    }
+
+    // Gamma Distribution (+G/+R)
+    // Dirichlet is not available here, use fixed
+    if (rate->getGammaShape() > 0.0)
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
+
+    // Invariable Sites (+I)
+    // Dirichlet is not available here, use fixed
+    if (rate->getPInvar() > 0.0)
+        out << " pinvarpr=fixed(" << minValueCheckMrBayes(rate->getPInvar()) << ")";
+
+    // Frequency of Nucleotides (+F)
+    if (equalFreq)
+        out << " statefreqpr=fixed(equal)";
+    else {
+        out << " statefreqpr=dirichlet(";
+        for (int i = 0; i < num_states; ++i) {
+            if (i != 0) out << ", ";
+            out << minValueCheckMrBayes(state_freq[i]);
+        }
+        out << ")";
+    }
+
+    // Reversible Rate Matrix
+    out << " revmatpr=dirichlet(";
+    for (int i = 0; i < getNumRateEntries(); ++i) {
+        if (i != 0) out << ", ";
+        out << minValueCheckMrBayes(rates[i]);
+    }
+
+    // Close revmatpr + prset
+    out << ");" << endl;
 }

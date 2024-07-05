@@ -1162,3 +1162,92 @@ void ModelProtein::computeTipLikelihood(PML::StateType state, double *state_lk) 
     state_lk[ambi_aa[cstate*2+1]] = 1.0;
 }
 
+void ModelProtein::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+    // Lset Parameters
+    out << "  lset applyto=(" << partition << ") nucmodel=protein rates=";
+
+    // RHAS Specification
+    // Free Rate should be substituted by +G+I
+    bool hasGamma = rate->getGammaShape() != 0.0 || rate->isFreeRate();
+    bool hasInvariable = rate->getPInvar() != 0.0 || rate->isFreeRate();
+    if (hasGamma) {
+        if (hasInvariable)
+            out << "invgamma";
+        else
+            out << "gamma";
+    } else if (hasInvariable)
+        out << "propinv";
+    else
+        out << "equal";
+
+    // Rate Categories
+    if (hasGamma)
+        out << " ngammacat=" << rate->getNRate();
+
+    out << ";" << endl;
+
+    out << "  prset applyto=(" << partition << ")";
+
+    // Get MrBayes Model
+    auto aaModelMap = getIqTreeToMrBayesAAModels();
+    auto iter = aaModelMap.find(name);
+    string mappedModel = "gtr";
+
+    // If model is in map, set mappedModel to the value
+    if (iter != aaModelMap.end())
+        mappedModel = iter->second;
+
+    out << " aamodelpr=fixed(" << mappedModel << ")";
+
+    // GTR Customization
+    if (strcmp(mappedModel.c_str(), "gtr") == 0) {
+        // add rate matrix and state frequencies (mandatory for setting gtr values)
+        out << " aarevmatpr=";
+
+        // if matrix is GTR20, use dirichlet, else use fixed
+        if (strcmp(name.c_str(), "GTR20") == 0)
+            out << "dirichlet(";
+        else
+            out << "fixed(";
+
+        for (int i = 0; i < getNumRateEntries(); ++i) {
+            if (i != 0) out << ", ";
+            out << minValueCheckMrBayes(rates[i]);
+        }
+        out << ")";
+
+        // Frequency type is never equal to FREQ_EQUAL, even with Poisson
+        // Frequency is also auto-set if we use a model defined by MrBayes
+        out << " statefreqpr=dirichlet(";
+        for (int i = 0; i < num_states; ++i) {
+            if (i != 0) out << ", ";
+            out << minValueCheckMrBayes(state_freq[i]);
+        }
+        out << ")";
+    }
+
+    // if not to include the parameters (for Protein, simply +I, +G, +R)
+    if (!inclParams) {
+        out << ";";
+        return;
+    }
+
+    // Freerate (+R)
+    // Get replacement Gamma Shape + Invariable Sites
+    if (rate->isFreeRate()) {
+        printMrBayesFreeRateReplacement(isSuperTree, charset, out);
+    }
+
+    // Gamma Distribution (+G/+R)
+    // Dirichlet is not available here, use fixed
+    if (rate->getGammaShape() > 0.0)
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
+
+    // Invariable Sites (+I)
+    // Dirichlet is not available here, use fixed
+    if (rate->getPInvar() > 0.0)
+        out << " pinvarpr=fixed(" << minValueCheckMrBayes(rate->getPInvar()) << ")";
+
+    out << ";" << endl;
+}
+
