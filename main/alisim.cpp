@@ -522,8 +522,6 @@ void showParameters(Params &params, bool is_partition_model)
             cout << " - Model: " << params.model_name <<"\n";
     }
     cout << " - Number of output datasets: " << params.alisim_dataset_num<<"\n";
-    if (params.alisim_ancestral_sequence_name.length() > 0)
-        cout << " - Ancestral sequence position: " << params.alisim_dataset_num <<"\n";
 }
 
 /**
@@ -532,8 +530,9 @@ void showParameters(Params &params, bool is_partition_model)
 void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, vector<short int> &sequence)
 {
     // get variables
-    char *aln_filepath = super_alisimulator->params->alisim_ancestral_sequence_aln_filepath;
-    string sequence_name = super_alisimulator->params->alisim_ancestral_sequence_name;
+    char* aln_filepath = new char[super_alisimulator->params->root_ref_seq_aln.length() + 1];
+    strcpy(aln_filepath, super_alisimulator->params->root_ref_seq_aln.c_str());
+    string sequence_name = super_alisimulator->params->root_ref_seq_name;
     
     // in normal case (without partition) -> using the current tree to load the ancestral sequence
     IQTree *src_tree = super_alisimulator->tree;
@@ -556,6 +555,7 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
     char *sequence_type = strcpy(new char[src_tree->aln->sequence_type.length() + 1], src_tree->aln->sequence_type.c_str());
     aln->extractSequences(aln_filepath, sequence_type, sequences, nseq, nsite);
     StrVector seq_names = aln->getSeqNames();
+    delete[] aln_filepath;
     
     // delete aln
     delete aln;
@@ -715,7 +715,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 {
     // Load ancestral sequence from the input file if user has specified it
     vector<short int> ancestral_sequence;
-    if (super_alisimulator->params->alisim_ancestral_sequence_name.length() > 0)
+    if (super_alisimulator->params->root_ref_seq_name.length() > 0)
         retrieveAncestralSequenceFromInputFile(super_alisimulator, ancestral_sequence);
     
     // terminate if users employ more MPI processes than the number of alignments
@@ -731,12 +731,18 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
-        outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
+    {
+        outWarning("OpenMP has not yet been supported in simulations with Indels. AliSim is now using a single thread for this simulation.");
+        super_alisimulator->params->num_threads = 1;
+#ifdef _OPENMP
+        omp_set_num_threads(super_alisimulator->params->num_threads);
+#endif
+    }
     
     // do not support compression when outputting multiple data sets into a same file
-    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
+    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || super_alisimulator->params->num_threads != 1))
     {
-        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or keeping the order of output sequences. AliSim will output file in normal format.");
+        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or using multithreading. AliSim will output file in normal format.");
 
         Params::getInstance().do_compression = false;
         super_alisimulator->params->do_compression = false;
@@ -1135,7 +1141,13 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     
     // delete tmp_alisimulator
     if ((!rate_name.empty()) || is_mixture_model)
+    {
         delete tmp_alisimulator;
+        
+        // bug fixes: avoid accessing to deallocated pointer
+        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+            alisimulator->first_insertion = nullptr;
+    }
     
 }
 
@@ -1178,15 +1190,16 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 
                 // get the position to write output
                 start_pos = first_line.length();
-                
-                // for Windows only, the line break is \r\n instead of only \n
-                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-                ++start_pos;
-                #endif
             }
             
             if (!alisimulator->params->do_compression)
                 start_pos = out->tellp();
+        
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            ++start_pos;
+            #endif
+        
             uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
         
             // for Windows only, the line break is \r\n instead of only \n

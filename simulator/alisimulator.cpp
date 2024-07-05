@@ -898,6 +898,11 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                     starting_pos = single_output->tellp();
                 else
                     starting_pos = first_line.length();
+                
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++starting_pos;
+                #endif
             }
             
             // dummy variables
@@ -1288,7 +1293,7 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     if (params->include_pre_mutations && site_locked_vec)
     {
         // show info
-        if (params->alisim_ancestral_sequence_aln_filepath)
+        if (params->root_ref_seq_aln.length())
             outWarning("Update states at the root sequence according to predefined mutations");
         
         // clone site_locked_vec
@@ -1411,6 +1416,11 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 starting_pos = out->tellp();
             else
                 starting_pos = first_line.length();
+            
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            ++starting_pos;
+            #endif
         }
     }
 }
@@ -2140,7 +2150,7 @@ void AliSimulator::validataSeqLengthCodon()
 {
     if (tree->aln->seq_type == SEQ_CODON && (!params->partition_file && params->alisim_sequence_length%3))
     {
-        if (params->aln_file || params->alisim_ancestral_sequence_aln_filepath || params->original_params.find("--length") != std::string::npos)
+        if (params->aln_file || params->root_ref_seq_aln.length() || params->original_params.find("--length") != std::string::npos)
             outError("Sequence length of Codon must be divisible by 3. Please check & try again!");
         else
             params->alisim_sequence_length = 999;

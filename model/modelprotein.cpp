@@ -1072,7 +1072,7 @@ void ModelProtein::restoreCheckpoint() {
     }
 }
 
-void ModelProtein::readRates(istream &in) throw(const char*, string) {
+void ModelProtein::readRates(istream &in) noexcept(false) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
     if (is_reversible) {

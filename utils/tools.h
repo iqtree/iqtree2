@@ -103,10 +103,22 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 		using namespace __gnu_cxx;
 		#define unordered_map hash_map
 		#define unordered_set hash_set
-	#else
-		#include <unordered_map>
-		#include <unordered_set>
-	#endif
+    /*
+    NHANLT: resolve ambiguous reference
+    std::tr1 is Technical Report 1, a proposal of extensions for C++0X when waiting
+    for C++11 to get approved. Most of features (including
+    std::tr1::unordered_map/set) in Technical Report 1 had been merged into C++11.
+    C++11 had been fully implemented since GCC 4.8.1 -> we only need to use std::tr1
+    in GCC older than 4.8.1
+    */
+    #elif GCC_VERSION < 40800
+        #include <tr1/unordered_map>
+        #include <tr1/unordered_set>
+        using namespace std::tr1;
+    #else
+        #include <unordered_map>
+        #include <unordered_set>
+    #endif
 
 #else
 	#include <map>
@@ -176,6 +188,15 @@ enum SIMULATION_METHOD {
 enum ALI_OPENMP_ALG {
     IM,
     EM
+};
+
+/**
+ *  Specify inference algorithms.
+ */
+enum INFERENCE_ALG {
+    ALG_IQ_TREE,
+    ALG_CMAPLE,
+    ALG_AUTO
 };
 
 /**
@@ -2444,12 +2465,12 @@ public:
     /**
     *  alignment_filepath containing the ancestral sequence of alisim
     */
-    char * alisim_ancestral_sequence_aln_filepath;
+    string root_ref_seq_aln;
     
     /**
     *  the sequence name of the ancestral sequence of alisim
     */
-    string alisim_ancestral_sequence_name;
+    string root_ref_seq_name;
     
     /**
     *  the maximum number of rate_categories that cached_trans_matrix could be applied
@@ -2639,6 +2660,46 @@ public:
     */
     int alignment_id;
     
+    /**
+    *  The inference algorithm
+    */
+    INFERENCE_ALG inference_alg;
+    
+    /**
+    *  Format of the input alignment
+    */
+    std::string in_aln_format_str;;
+    
+    /**
+     @private
+    *  type of tree search (for CMaple)
+    */
+    std::string tree_search_type_str;
+    
+    /**
+     @private
+    *  TRUE to run an additional short range search for tree topology improvement (for CMaple)
+    */
+    bool shallow_tree_search;
+    
+    /**
+     @private
+    *  TRUE to allow replace the input tree by its NNI neighbor (with a higher lh) when computing aLRT-SH
+    */
+    bool allow_replace_input_tree;
+    
+    /**
+     @private
+    *  format of the output tree
+    */
+    std::string tree_format_str;
+    
+    /**
+     * @private
+     * TRUE to make the processes of outputting->re-inputting a tree consistent
+     */
+    bool make_consistent;
+
     /**
     *  Mutation file that specifies pre-defined mutations occurs at nodes
     */

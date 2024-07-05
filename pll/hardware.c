@@ -85,7 +85,7 @@ static int pll_probe_cpu (pllHardwareInfo * hw)
   /* detect number of processors */
   for (i = 0; ; ++i)
    {
-     sprintf(cpu, "cpu%d", i);
+     snprintf(cpu, 30, "cpu%d", i);
      strcpy (cpupath, PLL_SYS_CPU_DIR_PATH);
      strcat (cpupath, cpu);
      if (stat(cpupath, &cpustat)) break;

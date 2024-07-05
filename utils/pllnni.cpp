@@ -1014,9 +1014,9 @@ char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodep
 	if(isTip(p->number, tr->mxtips)){
 		if(printNames){
 			nameptr = tr->nameList[p->number];
-			sprintf(treestr, "%s", nameptr);
+			snprintf(treestr, 1000, "%s", nameptr);
 		}else
-			sprintf(treestr, "%d", p->number - 1);
+			snprintf(treestr, 1000, "%d", p->number - 1);
 
 		while (*treestr) treestr++;
 	}else{
@@ -1036,9 +1036,9 @@ char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodep
 
 	if(p == tr->start->back){
 		if(printBranchLengths && !rellTree)
-			sprintf(treestr, ":0.0;\n");
+			snprintf(treestr, 1000, ":0.0;\n");
 		else
-			sprintf(treestr, ";\n");
+			snprintf(treestr, 1000, ";\n");
 	}else{
 		if(rellTree || branchLabelSupport || printSHSupport){
 			if(( !isTip(p->number, tr->mxtips)) &&
@@ -1046,22 +1046,22 @@ char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodep
 			{
 				ASSERT(p->bInf != (branchInfo *)NULL);
 				if(rellTree)
-					sprintf(treestr, "%d:%8.20f", p->bInf->support, p->z[0]);
+					snprintf(treestr, 1000, "%d:%8.20f", p->bInf->support, p->z[0]);
 				if(branchLabelSupport)
-					sprintf(treestr, ":%8.20f[%d]", p->z[0], p->bInf->support);
+					snprintf(treestr, 1000, ":%8.20f[%d]", p->z[0], p->bInf->support);
 				if(printSHSupport)
-					sprintf(treestr, ":%8.20f[%d]", pllGetBranchLength(tr, p, pr->numberOfPartitions), p->bInf->support);
+					snprintf(treestr, 1000, ":%8.20f[%d]", pllGetBranchLength(tr, p, pr->numberOfPartitions), p->bInf->support);
 			}else{
 				if(rellTree || branchLabelSupport)
-					sprintf(treestr, ":%8.20f", p->z[0]);
+					snprintf(treestr, 1000, ":%8.20f", p->z[0]);
 				if(printSHSupport)
-					sprintf(treestr, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
+					snprintf(treestr, 1000, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
 			}
 		}else{
 			if(printBranchLengths)
-				sprintf(treestr, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
+				snprintf(treestr, 1000, ":%8.20f", pllGetBranchLength(tr, p, pr->numberOfPartitions));
 			else
-				sprintf(treestr, "%s", "\0");
+				snprintf(treestr, 1000, "%s", "\0");
 		}
 	}
 
