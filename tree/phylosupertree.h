@@ -488,7 +488,7 @@ public:
      * @param charset the (original) charset of the current partition. An empty string if not a partitioned tree
      * @param out the ofstream to print to
      */
-    virtual void printMrBayesFreeRateReplacement(RateHeterogeneity* rate, string &charset, ofstream &out);
+    virtual void printMrBayesFreeRateReplacement(RateHeterogeneity* rate, string &charset, ofstream &out, bool inclInvariable = true);
 
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;

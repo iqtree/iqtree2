@@ -6249,28 +6249,34 @@ void PhyloTree::doNNI_simple(NNIMove &move) {
 /* Private Supplementary Logic Functions */
 
 /**
- * Find Rate Value (propinv for +I, gamma for +G/+R, invgamma for +I+G/+I+R) <br>
- * Default is Equal (+E)
+ * Find Gamma Rate Categories & Rate Value (propinv for +I, gamma for +G/+R, invgamma for +I+G/+I+R)<br>
+ * Default is Equal (+E)<br>
  */
-string getMrBayesRHASName(RateHeterogeneity* rate)
+void printMrBayesRHASInfo(RateHeterogeneity* rate, ofstream &out, bool inclInvariable = true)
 {
+    out << " rates=";
+
     // Free Rate should be substituted by +G+I
     bool hasGamma = rate->getGammaShape() != 0.0 || rate->isFreeRate();
     bool hasInvariable = rate->getPInvar() != 0.0 || rate->isFreeRate();
     if (hasGamma) {
-        if (hasInvariable)
-            return "invgamma";
-        return "gamma";
+        if (hasInvariable && inclInvariable)
+            out << "invgamma";
+        else
+            out << "gamma";
     }
-    if (hasInvariable)
-        return "propinv";
-    return "equal";
+    if (hasInvariable && inclInvariable)
+        out << "propinv";
+    else
+        out << "equal";
+
+    // Rate Categories
+    if (hasGamma)
+        out << " ngammacat=" << rate->getNRate();
 }
 
-void printMrBayesRHASPrior(PhyloTree* originalTree, RateHeterogeneity* rate, string &charset, ofstream &out)
+void printMrBayesRHASPrior(PhyloTree* originalTree, RateHeterogeneity* rate, string &charset, ofstream &out, bool inclInvariable = true)
 {
-    bool hasI = rate->getPInvar() > 0.0;
-
     // Freerate (+R)
     // Get replacement Gamma Shape + Invariable Sites
     if (rate->isFreeRate()) {
@@ -6284,7 +6290,7 @@ void printMrBayesRHASPrior(PhyloTree* originalTree, RateHeterogeneity* rate, str
 
     // Invariable Sites (+I)
     // Dirichlet is not available here, use fixed
-    if (hasI)
+    if (rate->getPInvar() > 0.0 && inclInvariable)
         out << " pinvarpr=fixed(" << rate->getPInvar() << ")";
 }
 
@@ -6293,7 +6299,6 @@ void printMrBayesModelTextDNA(PhyloTree* originalTree, PhyloTree* tree, ofstream
     ModelSubst* model = tree->getModel();
     bool equalFreq = model->freq_type == FREQ_EQUAL;
     short nst = 6;
-    string rateMod = getMrBayesRHASName(tree->getRate());
 
     // Find NST value (1 for JC/JC69/F81, 2 for K80/K2P/HKY/HKY85, 6 for SYM/GTR)
     // NST is set to 6 by default (above), so check for JC/JC69/F81 and K80/K2P/HKY/HKY85
@@ -6316,7 +6321,10 @@ void printMrBayesModelTextDNA(PhyloTree* originalTree, PhyloTree* tree, ofstream
     }
 
     // NucModel = 4By4: DNA Nucleotides (4 Options, A, C, G, T)
-    out << "  lset applyto=(" << partition << ") nucmodel=4by4 nst=" << nst << " rates=" << rateMod << ";" << endl;
+    out << "  lset applyto=(" << partition << ") nucmodel=4by4 nst=" << nst;
+
+    printMrBayesRHASInfo(tree->getRate(), out);
+    out << ";" << endl;
 
     // Priors (apart from Fixed Freq)
     if (!inclParams) {
@@ -6367,7 +6375,9 @@ void printMrBayesModelTextDNA(PhyloTree* originalTree, PhyloTree* tree, ofstream
 void printMrBayesModelTextProtein(PhyloTree* originalTree, PhyloTree* tree, ofstream &out, string &partition, string &charset, bool inclParams)
 {
     // Lset Parameters
-    out << "  lset applyto=(" << partition << ") nucmodel=protein rates=" << getMrBayesRHASName(tree->getRate()) << ";" << endl;
+    out << "  lset applyto=(" << partition << ") nucmodel=protein";
+    printMrBayesRHASInfo(tree->getRate(), out);
+    out << ";" << endl;
 
     out << "  prset applyto=(" << partition << ")";
 
@@ -6426,7 +6436,45 @@ void printMrBayesModelTextProtein(PhyloTree* originalTree, PhyloTree* tree, ofst
     }
 
     printMrBayesRHASPrior(originalTree, tree->getRate(), charset, out);
-    out << ";";
+    out << ";" << endl;
+}
+
+void printMrBayesModelTextMorphological(PhyloTree* originalTree, PhyloTree* tree, ofstream &out, string &partition, string &charset, bool inclParams)
+{
+    outWarning("MrBayes only supports Morphological Data with states from {0-9}!");
+    outWarning("Morphological Data with states {A-Z} may cause errors!");
+    outWarning("Use the Morphological Model in MrBayes with Caution!");
+
+    out << "[MrBayes only supports Morphological Data with states from {0-9}!]" << endl
+        << "[Morphological Data with states {A-Z} may cause errors!]" << endl
+        << "[Use the Morphological Model in MrBayes with Caution!]" << endl;
+
+    // MrBayes does not support Invariable Modifier for Morph data
+    if (tree->getRate()->isFreeRate() || tree->getRate()->getPInvar() > 0.0) {
+        outWarning("MrBayes does not support Invariable Sites with Morphological Data! +I has been ignored!");
+        out << "[MrBayes does not support Invariable Sites with Morphological Data! +I has been ignored!]" << endl;
+    }
+    // MrBayes does not support State Frequency for Morph data
+    if (tree->getModel()->getFreqType() != FREQ_EQUAL) {
+        outWarning("MrBayes does not support non-equal frequencies for Morphological Data! Frequencies are left as the default! (All equal)");
+        out << "[MrBayes does not support non-equal frequencies for Morphological Data! Frequencies are left as the default! (All equal)]" << endl;
+    }
+
+    // Lset Parameters
+    out << "  lset applyto=(" << partition << ")";
+    printMrBayesRHASInfo(tree->getRate(), out, false);
+    out << ";" << endl;
+
+    // ctype (ordered or not)
+    if (strcmp(tree->getModel()->name.c_str(), "ORDERED") == 0)
+        out << "  ctype ordered;" << endl;
+
+    if (!inclParams) return;
+
+    // Prset Parameters
+    out << "  prset applyto=(" << partition << ")";
+    printMrBayesRHASPrior(originalTree, tree->getRate(), charset, out, false);
+    out << ";" << endl;
 }
 
 /* Public Supplementary Functions (Used by PhyloSuperTree) */
@@ -6465,6 +6513,7 @@ void printMrBayesModelText(PhyloTree* originalTree, PhyloTree* tree, ofstream& o
         case SEQ_BINARY:
             break;
         case SEQ_MORPH:
+            printMrBayesModelTextMorphological(originalTree, tree, out, partition, charset, inclParams);
             break;
         default:
             outWarning("MrBayes Block output not supported for sequence type " + getSeqTypeName(tree->aln->seq_type));
@@ -6474,7 +6523,7 @@ void printMrBayesModelText(PhyloTree* originalTree, PhyloTree* tree, ofstream& o
 }
 
 /* Protected Overrided Function */
-void PhyloTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out) {
+void PhyloTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out, bool inclInvariable) {
     double gamma_shape = 0.0;
     double p_invar = 0.0;
 
@@ -6491,12 +6540,14 @@ void PhyloTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string 
 
     // Always replace +R with +G+I
     CKP_RESTORE(gamma_shape);
-    CKP_RESTORE(p_invar);
+    if (inclInvariable)
+        CKP_RESTORE(p_invar);
 
     checkpoint->endStruct();
 
     out << " shapepr=fixed(" << gamma_shape << ")";
-    out << " pinvarpr=fixed(" << p_invar << ")";
+    if (inclInvariable)
+        out << " pinvarpr=fixed(" << p_invar << ")";
 }
 
 /* Main Function */

@@ -1565,11 +1565,11 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename)
     }
 }
 
-void PhyloSuperTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out) {
+void PhyloSuperTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out, bool inclInvariable) {
     // Call PhyloTree's function inside the correct checkpoint struct
     checkpoint->startStruct("PartitionModelPlen");
     checkpoint->startStruct(charset);
-    PhyloTree::printMrBayesFreeRateReplacement(rate, charset, out);
+    PhyloTree::printMrBayesFreeRateReplacement(rate, charset, out, inclInvariable);
     checkpoint->endStruct();
     checkpoint->endStruct();
 }

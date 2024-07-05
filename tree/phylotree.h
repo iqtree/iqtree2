@@ -2276,8 +2276,9 @@ public:
      * @param rate the heterogeneity rate
      * @param charset the (original) charset of the current partition. An empty string if not a partitioned tree
      * @param out the ofstream to print to
+     * @param inclInvariable whether to include invariable sites. defaults to true
      */
-    virtual void printMrBayesFreeRateReplacement(RateHeterogeneity* rate, string &charset, ofstream &out);
+    virtual void printMrBayesFreeRateReplacement(RateHeterogeneity* rate, string &charset, ofstream &out, bool inclInvariable = true);
 
     
 protected:
