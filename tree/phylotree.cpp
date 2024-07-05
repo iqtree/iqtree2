@@ -6254,8 +6254,9 @@ void PhyloTree::doNNI_simple(NNIMove &move) {
  */
 string getMrBayesRHASName(RateHeterogeneity* rate)
 {
-    bool hasGamma = rate->getGammaShape() != 0.0;
-    bool hasInvariable = rate->getPInvar() != 0.0;
+    // Free Rate should be substituted by +G+I
+    bool hasGamma = rate->getGammaShape() != 0.0 || rate->isFreeRate();
+    bool hasInvariable = rate->getPInvar() != 0.0 || rate->isFreeRate();
     if (hasGamma) {
         if (hasInvariable)
             return "invgamma";
@@ -6271,9 +6272,9 @@ void printMrBayesRHASPrior(PhyloTree* originalTree, RateHeterogeneity* rate, str
     bool hasI = rate->getPInvar() > 0.0;
 
     // Freerate (+R)
-    // Get replacement gamma shape
+    // Get replacement Gamma Shape + Invariable Sites
     if (rate->isFreeRate()) {
-        originalTree ->printMrBayesFreeRateReplacement(rate, charset, out);
+        originalTree->printMrBayesFreeRateReplacement(rate, charset, out);
     }
 
     // Gamma Distribution (+G/+R)
@@ -6361,6 +6362,71 @@ void printMrBayesModelTextDNA(PhyloTree* originalTree, PhyloTree* tree, ofstream
     out << ");" << endl;
 
     delete[] rateMat;
+};
+
+void printMrBayesModelTextProtein(PhyloTree* originalTree, PhyloTree* tree, ofstream &out, string &partition, string &charset, bool inclParams)
+{
+    // Lset Parameters
+    out << "  lset applyto=(" << partition << ") nucmodel=protein rates=" << getMrBayesRHASName(tree->getRate()) << ";" << endl;
+
+    out << "  prset applyto=(" << partition << ")";
+
+    // Model
+    ModelSubst* model = tree->getModel();
+
+    // use this instead of getName, getName returns +F, +FU, etc.
+    string modelName = model->name;
+
+    auto aaModelMap = getIqTreeToMrBayesAAModels();
+    auto iter = aaModelMap.find(modelName);
+    string mappedModel = "gtr";
+
+    // If model is in map, set mappedModel to the value
+    if (iter != aaModelMap.end())
+        mappedModel = iter->second;
+
+    out << " aamodelpr=fixed(" << mappedModel << ")";
+
+    if (strcmp(mappedModel.c_str(), "gtr") == 0) {
+        // add rate matrix and state frequencies (mandatory for setting gtr values)
+        int numRateEntries = model->getNumRateEntries();
+        auto* rateMat = new double[numRateEntries];
+        model->getRateMatrix(rateMat);
+
+        out << " aarevmatpr=";
+
+        // if matrix is GTR20, use dirichlet, else use fixed
+        if (strcmp(modelName.c_str(), "GTR20") == 0)
+            out << "dirichlet(";
+        else
+            out << "fixed(";
+
+        for (int i = 0; i < numRateEntries; ++i) {
+            if (i != 0) out << ", ";
+            out << rateMat[i];
+        }
+        out << ")";
+
+        // Frequency type is never equal to FREQ_EQUAL, even with Poisson
+        // Frequency is also auto-set if we use a model defined by MrBayes
+        out << " statefreqpr=dirichlet(";
+        auto* freq = new double[model->num_states];
+        model->getStateFrequency(freq);
+        for (int i = 0; i < model->num_states; ++i) {
+            if (i != 0) out << ", ";
+            out << freq[i];
+        }
+        out << ")";
+    }
+
+    // if not to include the parameters (for Protein, simply +I, +G, +R)
+    if (!inclParams) {
+        out << ";";
+        return;
+    }
+
+    printMrBayesRHASPrior(originalTree, tree->getRate(), charset, out);
+    out << ";";
 }
 
 /* Public Supplementary Functions (Used by PhyloSuperTree) */
@@ -6394,6 +6460,7 @@ void printMrBayesModelText(PhyloTree* originalTree, PhyloTree* tree, ofstream& o
         case SEQ_CODON:
             break;
         case SEQ_PROTEIN:
+            printMrBayesModelTextProtein(originalTree, tree, out, partition, charset, inclParams);
             break;
         case SEQ_BINARY:
             break;
@@ -6408,26 +6475,28 @@ void printMrBayesModelText(PhyloTree* originalTree, PhyloTree* tree, ofstream& o
 
 /* Protected Overrided Function */
 void PhyloTree::printMrBayesFreeRateReplacement(RateHeterogeneity *rate, string &charset, ofstream &out) {
-    bool hasInvar = rate->getPInvar() > 0.0;
-    string key = hasInvar ? "RateGammaInvar" : "RateGamma";
-
     double gamma_shape = 0.0;
     double p_invar = 0.0;
 
-    checkpoint->startStruct(key);
+    checkpoint->startStruct("RateGammaInvar");
 
+    // Safety Check
+    if (!checkpoint->hasKey("gamma_shape") || !checkpoint->hasKey("p_invar")) {
+        outWarning("Could not find replacement for Freerate Distribution in MrBayes Block!");
+        checkpoint->endStruct();
+        return;
+    }
+
+    outWarning("FreeRate Distributions (+R) are not available in MrBayes. It will be replaced by +G+I.");
+
+    // Always replace +R with +G+I
     CKP_RESTORE(gamma_shape);
-    if (hasInvar)
-        CKP_RESTORE(p_invar);
+    CKP_RESTORE(p_invar);
 
     checkpoint->endStruct();
 
-    // Sanity Check
-    if (gamma_shape > 0.0)
-        out << " shapepr=fixed(" << gamma_shape << ")";
-
-    if (p_invar > 0.0)
-        out << " pinvarpr=fixed(" << p_invar << ")";
+    out << " shapepr=fixed(" << gamma_shape << ")";
+    out << " pinvarpr=fixed(" << p_invar << ")";
 }
 
 /* Main Function */

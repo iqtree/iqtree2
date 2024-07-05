@@ -7910,3 +7910,23 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
             return output_filepath + ".phy";
     }
 }
+
+// Cached Map
+unordered_map<string, string> iqTreeToMrBayesAAModels;
+
+unordered_map<string, string> getIqTreeToMrBayesAAModels() {
+    if (!iqTreeToMrBayesAAModels.empty()) return iqTreeToMrBayesAAModels;
+
+    iqTreeToMrBayesAAModels["Poisson"] = "poisson";
+    iqTreeToMrBayesAAModels["JTT"] = "jones";
+    iqTreeToMrBayesAAModels["Dayhoff"] = "dayhoff";
+    iqTreeToMrBayesAAModels["mtREV"] = "mtrev";
+    iqTreeToMrBayesAAModels["mtMAM"] = "mtmam";
+    iqTreeToMrBayesAAModels["WAG"] = "wag";
+    iqTreeToMrBayesAAModels["rtREV"] = "rtrev";
+    iqTreeToMrBayesAAModels["cpREV"] = "cprev";
+    iqTreeToMrBayesAAModels["VT"] = "vt";
+    iqTreeToMrBayesAAModels["Blosum62"] = "blosum";
+    iqTreeToMrBayesAAModels["LG"] = "lg";
+    return iqTreeToMrBayesAAModels;
+}

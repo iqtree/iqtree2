@@ -3111,8 +3111,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         superTree->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
     }
     if (params.mr_bayes_output) {
+        cout << endl << "Writing MrBayes Block Files..." << endl;
         iqtree->printMrBayesBlock((string(params.out_prefix) + ".mr_bayes_scheme.nex").c_str(), false);
         iqtree->printMrBayesBlock((string(params.out_prefix) + ".mr_bayes_model.nex").c_str(), true);
+        cout << endl;
     }
 
     cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
