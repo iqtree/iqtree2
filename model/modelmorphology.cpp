@@ -154,7 +154,7 @@ void ModelMorphology::writeInfo(ostream &out) {
 void ModelMorphology::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
     warnLogStream("MrBayes only supports Morphological Data with states from {0-9}!", out);
     warnLogStream("Morphological Data with states {A-Z} may cause errors!", out);
-    warnLogStream("Use the Morphological Model in MrBayes with Caution!", out);
+    warnLogStream("Use Morphological Models in MrBayes with Caution!", out);
 
     // MrBayes does not support Invariable Modifier for Morph data
     if (rate->isFreeRate() || rate->getPInvar() > 0.0) {
@@ -180,9 +180,10 @@ void ModelMorphology::printMrBayesModelText(RateHeterogeneity* rate, ofstream& o
 
     // ctype (ordered or not)
     if (strcmp(name.c_str(), "ORDERED") == 0)
-        out << "  ctype ordered;" << endl;
+        out << "  ctype ordered: " << charset << ";" << endl;
 
-    if (!inclParams) return;
+    // Since morphological doesn't have state frequencies, if there are no parameters to prset, return
+    if (!inclParams || !rate->isFreeRate() && rate->getGammaShape() <= 0.0) return;
 
     // Prset Parameters
     out << "  prset applyto=(" << partition << ")";
