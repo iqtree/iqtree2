@@ -602,8 +602,7 @@ void ModelDNA::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, str
             out << "invgamma";
         else
             out << "gamma";
-    }
-    if (hasInvariable)
+    } else if (hasInvariable)
         out << "propinv";
     else
         out << "equal";

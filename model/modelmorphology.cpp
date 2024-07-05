@@ -173,8 +173,7 @@ void ModelMorphology::printMrBayesModelText(RateHeterogeneity* rate, ofstream& o
     if (hasGamma) {
         // Rate Categories + Gamma
         out << "gamma ngammacat=" << rate->getNRate();
-    }
-    else
+    } else
         out << "equal";
 
     out << ";" << endl;

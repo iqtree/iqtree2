@@ -1175,8 +1175,7 @@ void ModelProtein::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out,
             out << "invgamma";
         else
             out << "gamma";
-    }
-    if (hasInvariable)
+    } else if (hasInvariable)
         out << "propinv";
     else
         out << "equal";
