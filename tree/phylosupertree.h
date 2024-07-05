@@ -475,10 +475,12 @@ public:
      */
     void printBestPartitionParams(const char *filename);
 
+    
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
-
+    
     int totalNNIs, evalNNIs;
+
 };
 
 #endif

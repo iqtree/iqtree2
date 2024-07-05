@@ -20,6 +20,7 @@
 #include "phylosupertree.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentpairwise.h"
+#include "main/phylotesting.h"
 #include "model/partitionmodel.h"
 #include "utils/MPIHelper.h"
 
@@ -1518,17 +1519,16 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     }
 }
 
-void PhyloSuperTree::printBestPartitionParams(const char *filename)
-{
+void PhyloSuperTree::printBestPartitionParams(const char *filename) {
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
         out << "#nexus" << endl
         << "begin sets;" << endl;
-        auto *saln = (SuperAlignment*)aln;
-
-        for (int part = 0; part < size(); part++) {
+        int part;
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        for (part = 0; part < size(); part++) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             out << "  charset " << name << " = ";
@@ -1541,9 +1541,8 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename)
             replace(pos.begin(), pos.end(), ',' , ' ');
             out << pos << ";" << endl;
         }
-
         out << "  charpartition mymodels =" << endl;
-        for (int part = 0; part < size(); part++) {
+        for (part = 0; part < size(); part++) {
             string name = saln->partitions[part]->name;
             replace(name.begin(), name.end(), '+', '_');
             if (part > 0) out << "," << endl;

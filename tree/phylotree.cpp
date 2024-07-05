@@ -38,6 +38,7 @@
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
 
+
 const int LH_MIN_CONST = 1;
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
@@ -6244,3 +6245,4 @@ void PhyloTree::doNNI_simple(NNIMove &move) {
                 *(nei21->split) += *((*it)->split);
     }
 }
+
