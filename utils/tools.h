@@ -3750,4 +3750,10 @@ double minValueCheckMrBayes(double origValue);
  */
 unordered_map<string, string> getIqTreeToMrBayesAAModels();
 
+/**
+ * get the MrBayes equivalent of a genetic code, given the id of the code. Returns and empty string if that code
+ * is not supported in MrBayes.
+ */
+string getMrBayesGeneticCode(int geneticCodeId);
+
 #endif

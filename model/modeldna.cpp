@@ -565,9 +565,10 @@ void ModelDNA::setVariables(double *variables) {
 //                      }
 }
 
-void ModelDNA::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+void ModelDNA::printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
     bool equalFreq = freq_type == FREQ_EQUAL;
     short nst = 6;
+    RateHeterogeneity* rate = phylo_tree->getRate();
 
     // Find NST value (1 for JC/JC69/F81, 2 for K80/K2P/HKY/HKY85, 6 for SYM/GTR)
     // NST is set to 6 by default (above), so check for JC/JC69/F81 and K80/K2P/HKY/HKY85

@@ -151,10 +151,12 @@ void ModelMorphology::writeInfo(ostream &out) {
     }
 }
 
-void ModelMorphology::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+void ModelMorphology::printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
     warnLogStream("MrBayes only supports Morphological Data with states from {0-9}!", out);
     warnLogStream("Morphological Data with states {A-Z} may cause errors!", out);
     warnLogStream("Use Morphological Models in MrBayes with Caution!", out);
+
+    RateHeterogeneity* rate = phylo_tree->getRate();
 
     // MrBayes does not support Invariable Modifier for Morph data
     if (rate->isFreeRate() || rate->getPInvar() > 0.0) {

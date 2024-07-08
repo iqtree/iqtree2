@@ -65,7 +65,7 @@ public:
      * @param isSuperTree whether the tree is a super tree. Useful for retrieving information from the checkpoint file, which has different locations for PhyloTree and PhyloSuperTree
      * @param inclParams whether to include IQTree optimized parameters for the model
      */
-    virtual void printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams);
+    virtual void printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams);
 
 };
 

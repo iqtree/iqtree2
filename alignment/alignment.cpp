@@ -23,6 +23,7 @@
 
 #include <Eigen/LU>
 #ifdef USE_BOOST
+#include <boost/bimap.hpp>
 #include <boost/math/distributions/binomial.hpp>
 #endif
 
@@ -61,6 +62,8 @@ char genetic_code22[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YLY*SS
 char genetic_code23[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWC*FLF"; // Thraustochytrium Mitochondrial
 char genetic_code24[] = "KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Pterobranchia mitochondrial
 char genetic_code25[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF"; // Candidate Division SR1 and Gracilibacteria
+
+boost::bimap<int, char*> genetic_code_map;
 
 Alignment::Alignment()
         : vector<Pattern>()
@@ -1603,7 +1606,32 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
         (*it) = convertState(*it, seq_type);
 }
 */
- 
+
+boost::bimap<int, char*> getGeneticCodeMap() {
+    if (!genetic_code_map.empty()) return genetic_code_map;
+
+    genetic_code_map.insert({1, genetic_code1});
+    genetic_code_map.insert({2, genetic_code2});
+    genetic_code_map.insert({3, genetic_code3});
+    genetic_code_map.insert({4, genetic_code4});
+    genetic_code_map.insert({5, genetic_code5});
+    genetic_code_map.insert({6, genetic_code6});
+    genetic_code_map.insert({9, genetic_code9});
+    genetic_code_map.insert({10, genetic_code10});
+    genetic_code_map.insert({11, genetic_code11});
+    genetic_code_map.insert({12, genetic_code12});
+    genetic_code_map.insert({13, genetic_code13});
+    genetic_code_map.insert({14, genetic_code14});
+    genetic_code_map.insert({16, genetic_code16});
+    genetic_code_map.insert({21, genetic_code21});
+    genetic_code_map.insert({22, genetic_code22});
+    genetic_code_map.insert({23, genetic_code23});
+    genetic_code_map.insert({24, genetic_code24});
+    genetic_code_map.insert({25, genetic_code25});
+
+    return genetic_code_map;
+}
+
 void Alignment::initCodon(char *gene_code_id) {
     // build index from 64 codons to non-stop codons
 	int transl_table = 1;
@@ -1613,30 +1641,13 @@ void Alignment::initCodon(char *gene_code_id) {
 		} catch (string &str) {
 			outError("Wrong genetic code ", gene_code_id);
 		}
-		switch (transl_table) {
-		case 1: genetic_code = genetic_code1; break;
-		case 2: genetic_code = genetic_code2; break;
-		case 3: genetic_code = genetic_code3; break;
-		case 4: genetic_code = genetic_code4; break;
-		case 5: genetic_code = genetic_code5; break;
-		case 6: genetic_code = genetic_code6; break;
-		case 9: genetic_code = genetic_code9; break;
-		case 10: genetic_code = genetic_code10; break;
-		case 11: genetic_code = genetic_code11; break;
-		case 12: genetic_code = genetic_code12; break;
-		case 13: genetic_code = genetic_code13; break;
-		case 14: genetic_code = genetic_code14; break;
-		case 15: genetic_code = genetic_code15; break;
-		case 16: genetic_code = genetic_code16; break;
-		case 21: genetic_code = genetic_code21; break;
-		case 22: genetic_code = genetic_code22; break;
-		case 23: genetic_code = genetic_code23; break;
-		case 24: genetic_code = genetic_code24; break;
-		case 25: genetic_code = genetic_code25; break;
-		default:
+        auto codeMap = getGeneticCodeMap();
+        auto found = codeMap.left.find(transl_table);
+		if (found == codeMap.left.end()) {
 			outError("Wrong genetic code ", gene_code_id);
-			break;
+            return;
 		}
+        genetic_code = found->second;
 	} else {
 		genetic_code = genetic_code1;
 	}
@@ -1667,6 +1678,15 @@ void Alignment::initCodon(char *gene_code_id) {
 //		codon_table[(int)non_stop_codon[codon]] = codon;
 //	}
 //	cout << "num_states = " << num_states << endl;
+}
+
+int Alignment::getGeneticCodeId() {
+    if (seq_type != SEQ_CODON || genetic_code == nullptr) return 0;
+
+    auto code_map = getGeneticCodeMap();
+    auto found = code_map.right.find(genetic_code);
+    if (found == code_map.right.end()) return 0;
+    return found->second;
 }
 
 int getMorphStates(StrVector &sequences) {
