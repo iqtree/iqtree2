@@ -3735,8 +3735,11 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
 
 /**
  * Prints a warning message to the log and to the ofstream, in a NEXUS format.
+ * @param warn the message to print
+ * @param out the ofstream to print to
+ * @param indentation optional indentation included only in ofstream. defaults to two spaces
  */
-void warnLogStream(string warn, ofstream &out);
+void warnLogStream(string warn, ofstream &out, string indentation = "  ");
 
 /**
  * ensures a number, to be inputted into MrBayes, is larger than the minimum value for MrBayes (0.01)
@@ -3749,5 +3752,11 @@ double minValueCheckMrBayes(double origValue);
  * models which are not supported by mrbayes are not included. GTR20 is assumed as default.
  */
 unordered_map<string, string> getIqTreeToMrBayesAAModels();
+
+/**
+ * get the MrBayes equivalent of a genetic code, given the id of the code. Returns and empty string if that code
+ * is not supported in MrBayes.
+ */
+string getMrBayesGeneticCode(int geneticCodeId);
 
 #endif

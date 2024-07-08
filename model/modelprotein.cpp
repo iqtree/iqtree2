@@ -1162,9 +1162,11 @@ void ModelProtein::computeTipLikelihood(PML::StateType state, double *state_lk) 
     state_lk[ambi_aa[cstate*2+1]] = 1.0;
 }
 
-void ModelProtein::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+void ModelProtein::printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
     // Lset Parameters
     out << "  lset applyto=(" << partition << ") nucmodel=protein rates=";
+
+    RateHeterogeneity* rate = phylo_tree->getRate();
 
     // RHAS Specification
     // Free Rate should be substituted by +G+I

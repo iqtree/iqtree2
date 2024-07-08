@@ -77,7 +77,9 @@ string ModelBIN::getNameParams(bool show_fixed_params) {
     return retname.str();
 }
 
-void ModelBIN::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+void ModelBIN::printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+    RateHeterogeneity* rate = phylo_tree->getRate();
+
     // MrBayes does not support Invariable Modifier for Binary data
     if (rate->isFreeRate() || rate->getPInvar() > 0.0) {
         warnLogStream("MrBayes does not support Invariable Sites with Binary Data! +I has been ignored!", out);

@@ -246,7 +246,7 @@ void ModelSubst::printMrBayesFreeRateReplacement(bool isSuperTree, string &chars
         out << " pinvarpr=fixed(" << minValueCheckMrBayes(p_invar) << ")";
 }
 
-void ModelSubst::printMrBayesModelText(RateHeterogeneity* rate, ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+void ModelSubst::printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
     out << "  [MrBayes Block Output is not supported by this model!]" << endl;
     outWarning("MrBayes Block Output is not supported by this model of name '" + name + "'!");
 }
