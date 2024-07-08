@@ -2608,11 +2608,21 @@ void printMrBayesBlockFile(const char* filename, IQTree* &iqtree, bool inclParam
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename);
 
+        string provide = "basic models";
+        if (inclParams) provide = "optimized values";
+        else if (iqtree->isSuperTree()) provide = "basic partition structure and models";
+
         // Write Warning
         out << "#nexus" << endl << endl
-            <<"[This MrBayes Block Declaration provides the retrieved values from the IQTree Run.]" << endl
-            << "[Note that MrBayes does not support a large collection of models, so defaults of 'nst=6' for DNA and 'wag' for Protein will be used if a model that does not exist in MrBayes is selected.]" << endl
-            << "[Furthermore, the Model Parameter '+R' will be replaced by '+G'.]" << endl
+            <<"[This MrBayes Block Declaration provides the " << provide << " from the IQTree Run.]" << endl
+            << "[Note that MrBayes does not support a large collection of models, so defaults of 'nst=6' for DNA and 'wag' for Protein will be used if a model that does not exist in MrBayes is used.]" << endl;
+
+        if (inclParams)
+            out << "[However, for those cases, there will still be a rate matrix provided.]" << endl
+                << "[For DNA, this will still mean the rates may vary outside the restrictions of the model.]" << endl
+                << "[For Protein, this is essentially a perfect replacement.]" << endl;
+
+        out << "[Furthermore, the Model Parameter '+R' will be replaced by '+G'.]" << endl
             << "[This should be used as a Template Only.]" << endl << endl;
 
         // Begin File, Print Charsets
