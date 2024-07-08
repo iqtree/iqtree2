@@ -1641,13 +1641,13 @@ void Alignment::initCodon(char *gene_code_id) {
 		} catch (string &str) {
 			outError("Wrong genetic code ", gene_code_id);
 		}
-        auto codeMap = getGeneticCodeMap();
-        auto found = codeMap.left.find(transl_table);
+		auto codeMap = getGeneticCodeMap();
+		auto found = codeMap.left.find(transl_table);
 		if (found == codeMap.left.end()) {
 			outError("Wrong genetic code ", gene_code_id);
-            return;
+			return;
 		}
-        genetic_code = found->second;
+		genetic_code = found->second;
 	} else {
 		genetic_code = genetic_code1;
 	}
