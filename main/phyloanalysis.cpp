@@ -1156,6 +1156,12 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     if (params.optimize_linked_gtr) {
         cout << "  GTRPMIX nex file:              " << params.out_prefix << ".GTRPMIX.nex" << endl;
     }
+
+    if (params.mr_bayes_output) {
+        cout << endl << "MrBayes block written to:" << endl;
+        cout << "  Base template file:            " << params.out_prefix << ".mr_bayes_scheme.nex" << endl;
+        cout << "  Template file with parameters: " << params.out_prefix << ".mr_bayes_model.nex" << endl;
+    }
     cout << endl;
 
 }
@@ -2596,6 +2602,92 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
     treesOut.close();
 }
 
+void printMrBayesBlockFile(const char* filename, IQTree* &iqtree, bool inclParams) {
+    ofstream out;
+    try {
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+
+        string provide = "basic models";
+        if (inclParams) provide = "optimized values";
+        else if (iqtree->isSuperTree()) provide = "basic partition structure and models";
+
+        // Write Warning
+        out << "#nexus" << endl << endl
+            <<"[This MrBayes Block Declaration provides the " << provide << " from the IQTree Run.]" << endl
+            << "[Note that MrBayes does not support a large collection of models, so defaults of 'nst=6' for DNA and 'wag' for Protein will be used if a model that does not exist in MrBayes is used.]" << endl;
+
+        if (inclParams)
+            out << "[However, for those cases, there will still be a rate matrix provided.]" << endl
+                << "[For DNA, this will still mean the rates may vary outside the restrictions of the model.]" << endl
+                << "[For Protein, this is essentially a perfect replacement.]" << endl;
+
+        out << "[Furthermore, the Model Parameter '+R' will be replaced by '+G'.]" << endl
+            << "[This should be used as a Template Only.]" << endl << endl;
+
+        // Begin File, Print Charsets
+        out << "begin mrbayes;" << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+
+    if (!iqtree->isSuperTree()) {
+        // Set Outgroup (if available)
+        if (!iqtree->rooted) out << "  outgroup " << iqtree->root->name << ";" << endl << endl;
+
+        out << "  [Using Model '" << iqtree->getModelName() << "']" << endl;
+        iqtree->getModel()->printMrBayesModelText(out, "all", "", false, inclParams);
+
+        out << endl << "end;" << endl;
+        out.close();
+        return;
+    }
+
+    auto superTree = (PhyloSuperTree*) iqtree;
+    auto saln = (SuperAlignment*) superTree->aln;
+    auto size = superTree->size();
+
+    for (int part = 0; part < size; part++) {
+        string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        out << "  charset " << name << " = ";
+
+        string pos = saln->partitions[part]->position_spec;
+        replace(pos.begin(), pos.end(), ',' , ' ');
+        out << pos << ";" << endl;
+    }
+
+    // Create Partition
+    out << endl << "  partition iqtree = " << size << ": ";
+    for (int part = 0; part < size; part++) {
+        if (part != 0) out << ", ";
+
+        string name = saln->partitions[part]->name;
+        replace(name.begin(), name.end(), '+', '_');
+        out << name;
+    }
+    out << ";" << endl;
+
+    // Set Partition for Use
+    out << "  set partition = iqtree;" << endl;
+
+    // Set Outgroup (if available)
+    if (!superTree->rooted) out << "  outgroup " << superTree->root->name << ";" << endl << endl;
+
+    // Partition-Specific Model Information
+    for (int part = 0; part < size; part++) {
+        PhyloTree* currentTree = superTree->at(part);
+
+        // MrBayes Partitions are 1-indexed
+        out << "  [Partition No. " << convertIntToString(part + 1) << ", Using Model '" << currentTree->getModelName() << "']" << endl;
+        currentTree->getModel()->printMrBayesModelText(out,
+                convertIntToString(part + 1), saln->partitions[part]->name, true, inclParams);
+        out << endl;
+    }
+    out << "end;" << endl;
+    out.close();
+}
+
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
  ***********************************************************/
@@ -3100,8 +3192,15 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     }
     if (iqtree->isSuperTree()) {
-        ((PhyloSuperTree*) iqtree)->computeBranchLengths();
-        ((PhyloSuperTree*) iqtree)->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+        auto superTree = (PhyloSuperTree*) iqtree;
+        superTree->computeBranchLengths();
+        superTree->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+    }
+    if (params.mr_bayes_output) {
+        cout << endl << "Writing MrBayes Block Files..." << endl;
+        printMrBayesBlockFile((string(params.out_prefix) + ".mr_bayes_scheme.nex").c_str(), iqtree, false);
+        printMrBayesBlockFile((string(params.out_prefix) + ".mr_bayes_model.nex").c_str(), iqtree, true);
+        cout << endl;
     }
 
     cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
