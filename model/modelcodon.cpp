@@ -1158,8 +1158,8 @@ void ModelCodon::printMrBayesModelText(ofstream& out, string partition, string c
         mrBayesCode = "universal";
     }
 
-    if (freq_type == FREQ_USER_DEFINED || name.find('_') != string::npos) { // If this model is a Empirical / Semi-Empirical Model
-        warnLogStream("MrBayes does not support Empirical Codon Models. State Frequency will still be set, but no rate matrix will be set.", out);
+    if (num_params == 0 || name.find('_') != string::npos) { // If this model is a Empirical / Semi-Empirical Model
+        warnLogStream("MrBayes does not support Empirical or Semi-Empirical Codon Models. State Frequency will still be set, but no rate matrix will be set.", out);
     }
 
     out << "  lset applyto=(" << partition << ") nucmodel=codon omegavar=equal nst=" << nst << " code=" << mrBayesCode << ";" << endl;

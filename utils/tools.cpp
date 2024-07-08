@@ -7912,9 +7912,9 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
     }
 }
 
-void warnLogStream(string warn, ofstream &out) {
+void warnLogStream(string warn, ofstream &out, string indentation) {
     outWarning(warn);
-    out << "[" << warn << "]" << endl;
+    out << indentation << "[" << warn << "]" << endl;
 }
 
 double minValueCheckMrBayes(double origValue) {
