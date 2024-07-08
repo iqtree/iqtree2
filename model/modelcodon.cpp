@@ -1162,7 +1162,7 @@ void ModelCodon::printMrBayesModelText(ofstream& out, string partition, string c
         warnLogStream("MrBayes does not support Empirical Codon Models. State Frequency will still be set, but no rate matrix will be set.", out);
     }
 
-    out << "  lset applyto=(" << partition << ") omegavar=equal nst=" << nst << " code=" << mrBayesCode << ";" << endl;
+    out << "  lset applyto=(" << partition << ") nucmodel=codon omegavar=equal nst=" << nst << " code=" << mrBayesCode << ";" << endl;
 
     if (!inclParams) return;
 
