@@ -12,13 +12,36 @@
 float NeuralNetwork::gpu_time=  0.0f;
 #endif
 
+// Define static variables
+#if defined(_OPENMP) && defined (_IQTREE_MPI)
+DoubleVector NeuralNetwork::run_time_array;
+DoubleVector NeuralNetwork::cpu_time_array;
+DoubleVector NeuralNetwork::wall_time_array;
+#elif defined(_OPENMP)
+DoubleVector NeuralNetwork::run_time_array;
+DoubleVector NeuralNetwork::cpu_time_array;
+DoubleVector NeuralNetwork::wall_time_array;
+#elif defined(_IQTREE_MPI)
+DoubleVector NeuralNetwork::cpu_time_array;
+DoubleVector NeuralNetwork::wall_time_array;
+#else
+double NeuralNetwork::cpu_time = 0.0;
+double NeuralNetwork::wall_time = 0.0;
+#endif
+
+
+bool NeuralNetwork::time_initialized = false;
+
+
 NeuralNetwork::NeuralNetwork(Alignment *alignment) {
     this->alignment = alignment;
+    initializeTimer();
 }
 
 NeuralNetwork::~NeuralNetwork() {}
 
 double NeuralNetwork::doAlphaInference() {
+    startTimer();
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "alpha_find");
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
@@ -139,12 +162,14 @@ double NeuralNetwork::doAlphaInference() {
     // print alpha value
     // printf("Alpha value =  %f\n", alpha[0] / 1000);
 
+    stopTimer();
     if (check[0] > 0.5)
         return -1;
     return alpha[0] / 1000;
 }
 
 string NeuralNetwork::doModelInference(StrVector *model_names) {
+    startTimer();
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "model_find");
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
@@ -281,6 +306,7 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
         getModelsAboveThreshold(model_names, model_probabilities); // get models above threshold
     }
 
+    stopTimer();
     // return chosen model
     switch(chosen_model) {
         case 0: return "JC";
@@ -330,5 +356,73 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector
     }
 
 }
+
+void NeuralNetwork::initializeTimer() {
+    if (time_initialized) {
+        return;
+    }
+    cout << "initialize timer in NN" << endl;
+    int num_threads = Params::getInstance().num_threads;
+    int num_processes = MPIHelper::getInstance().getNumProcesses();
+
+    cout << "num_threads: " << num_threads << " num_processes: " << num_processes << endl;
+
+
+#if defined(_OPENMP) && defined (_IQTREE_MPI)
+    run_time_array.resize(num_threads * num_processes, 0.0);
+    cpu_time_array.resize(num_processes, 0.0);
+    wall_time_array.resize(num_processes, 0.0);
+#elif defined(_OPENMP)
+    run_time_array.resize(num_threads, 0.0);
+    cpu_time_array.resize(1, 0.0);
+    wall_time_array.resize(1, 0.0);
+#elif defined(_IQTREE_MPI)
+    cpu_time_array.resize(num_processes, 0.0);
+    wall_time_array.resize(num_processes, 0.0);
+#else
+    cpu_time = 0.0;
+    wall_time = 0.0;
+#endif
+    time_initialized = true;
+}
+
+void NeuralNetwork::startTimer() {
+    cout << "start timer" << endl;
+    local_cpu_time = getCPUTime();
+    local_wall_time = getRealTime();
+}
+
+
+void NeuralNetwork::stopTimer() {
+    cout << "stop timer" << endl;
+    local_cpu_time = getCPUTime() - local_cpu_time;
+    local_wall_time = getRealTime() - local_wall_time;
+
+    int process_id = MPIHelper::getInstance().getProcessID();
+    int thread_id = omp_get_thread_num();
+
+#if defined(_OPENMP) && defined (_IQTREE_MPI)
+
+    (run_time_array)[( thread_id - 1 ) * process_id + thread_id ] += local_wall_time;
+    if (thread_id == 0) {
+        (cpu_time_array)[process_id] += local_cpu_time;
+        (wall_time_array)[process_id] += local_wall_time;
+    }
+#elif defined(_OPENMP)
+    run_time_array[thread_id] += local_cpu_time;
+    if (thread_id == 0) {
+        cpu_time_array[0] += local_cpu_time;
+        wall_time_array[0] += local_wall_time;
+    }
+#elif defined(_IQTREE_MPI)
+    cpu_time_array[process_id] += local_cpu_time;
+    wall_time_array[process_id] += local_wall_time;
+#else
+    cpu_time += local_cpu_time;
+    wall_time += local_wall_time;
+#endif
+
+}
+
 
 

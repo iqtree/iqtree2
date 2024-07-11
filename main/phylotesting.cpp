@@ -1138,6 +1138,33 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
 
+#if defined(_NN) || defined(_OLD_NN)
+
+    if (MPIHelper::getInstance().isMaster() && params.use_model_revelator_with_mf) {
+        int num_processes = MPIHelper::getInstance().getNumProcesses();
+        cout << endl;
+
+        cout << num_processes << " processes are used for NN model selection" << endl;
+        cout << "\tproc\twall_time\tcpu_time" << endl;
+
+        for (int p=0; p<num_processes; p++) {
+            cout << "\t" << p << "\t" << (NeuralNetwork::wall_time_array)[p] << "\t" << NeuralNetwork::cpu_time_array[p] << endl;
+        }
+
+#ifdef _OPENMP
+        int num_threads = params.num_threads;
+        cout << endl;
+        cout << "\tproc\tthreads\trun_time" << endl;
+
+        for (int p=0; p<num_processes; p++) {
+            for (int t=0; t < num_threads; t++){
+                cout << "\t" << p << "\t" << t << "\t"<< NeuralNetwork::run_time_array[p * (t-1) + t] << endl;
+            }
+        }
+#endif
+        cout << endl;
+    }
+#endif
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
