@@ -2426,8 +2426,8 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         // only consider the first class as this is a linked substitution matrix
         iterator it = begin();
         auto freq = (*it)->freq_type;
-        int ndim = (*it)->getNDim();
         (*it)->freq_type=FREQ_USER_DEFINED;
+        int ndim = (*it)->getNDim();
         (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
         (*it)->freq_type=freq;
         //manually set these params for the restartParameters method; TODO: properly fix this -JD

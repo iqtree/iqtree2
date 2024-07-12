@@ -1535,10 +1535,12 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
             if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
             /*if (saln->partitions[part]->seq_type == SEQ_CODON)
                 out << "CODON, ";*/
-            out << saln->partitions[part]->sequence_type << ", ";
+            out << saln->partitions[part]->sequence_type;
             string pos = saln->partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');
-            out << pos << ";" << endl;
+            if (!pos.empty())
+                out << ", " << pos;
+            out << ";" << endl;
         }
         out << "  charpartition mymodels =" << endl;
         for (part = 0; part < size(); part++) {

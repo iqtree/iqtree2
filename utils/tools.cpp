@@ -1693,8 +1693,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--gtr20-model") == 0 || strcmp(argv[cnt], "--init-exchange") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --gtr20-model <POISSON/LG>";
+                    throw "Use " + string(argv[cnt-1]) + " <protein model name>";
                 params.gtr20_model = argv[cnt];
+                transform(params.gtr20_model.begin(), params.gtr20_model.end(), params.gtr20_model.begin(), ::toupper);
                 continue;
             }
             if (strcmp(argv[cnt], "--guess-multiplier") == 0) {
