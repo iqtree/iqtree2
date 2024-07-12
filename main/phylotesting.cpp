@@ -321,7 +321,6 @@ size_t CandidateModel::getUsualModel(Alignment *aln) {
 }
 
 void CandidateModel::computeICScores(size_t sample_size) {
-
     computeInformationScores(logl, df, sample_size, AIC_score, AICc_score, BIC_score);
 }
 
@@ -370,23 +369,6 @@ int CandidateModelSet::getBestModelID(ModelTestCriterion mtc) {
             best_model = model;
         }
     return best_model;
-}
-
-/**
- restore model from checkpoint
- */
-bool CandidateModel::restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
-    size_t posR;
-    const char *rates[] = {"+R", "*R", "+H", "*H"};
-    for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
-        if ((posR = model->rate_name.find(rates[i])) != string::npos) {
-            int cat = convert_int(model->rate_name.substr(posR+2).c_str());
-            subst_name = model->subst_name;
-            rate_name = model->rate_name.substr(0, posR+2) + convertIntToString(cat-1);
-            return restoreCheckpoint(ckp);
-        }
-    }
-    return false;
 }
 
 bool ModelCheckpoint::getBestModel(string &best_model) {
@@ -720,6 +702,11 @@ string computeFastMLTree(Params &params, Alignment *aln,
     } else {
         iqtree = new IQTree(aln);
     }
+
+    if (params.constraint_tree_file) {
+        iqtree->constraintTree.readConstraint(params.constraint_tree_file, aln->getSeqNames());
+    }
+
     if ((params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) && !iqtree->isInitializedPLL()) {
         /* Initialized all data structure for PLL*/
         iqtree->initializePLL(params);
@@ -914,7 +901,7 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name)
 {
     // if it is an alignment with partitions and the number of threads is more than the number of alignments,
     // then set the number of threads = the number of alignments (for most of the cases)
@@ -964,7 +951,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //            ((PhyloSuperTree*) &iqtree)->mapTrees();
     double cpu_time = getCPUTime();
     double real_time = getRealTime();
-    
     model_info.setFileName((string)params.out_prefix + ".model.gz");
     model_info.setDumpInterval(params.checkpoint_dump_interval);
     
@@ -1075,10 +1061,13 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
             Alignment *alignment = (iqtree.aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
             NeuralNetwork nn(alignment);
             iqtree.aln->model_name = nn.doModelInference();
+            best_subst_name = iqtree.aln->model_name;
+            best_rate_name = "";
             double alpha = nn.doAlphaInference();
             if (alpha >= 0) { // +G
                 iqtree.aln->model_name += "+G{" + to_string(alpha) + "}";
-            }
+                best_rate_name = "G"; // to confirm, G or +G
+            } 
             string best_model_NN;
             CKP_RESTORE(best_model_NN);
             delete alignment;
@@ -1094,7 +1083,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
                 best_model = CandidateModelSet().test(params, &iqtree,
                                                       model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
             iqtree.aln->model_name = best_model.getName();
-            
+            best_subst_name = best_model.subst_name;
+            best_rate_name = best_model.rate_name;
             // Checkpoint *checkpoint = &model_info;
             string best_model_AIC, best_model_AICc, best_model_BIC;
             CKP_RESTORE(best_model_AIC);
@@ -2712,7 +2702,8 @@ void CandidateModelSet::filterSubst(int finished_model) {
 
 CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
     ModelsBlock *models_block, int num_threads, int brlen_type,
-    string set_name, string in_model_name, bool merge_phase)
+    string set_name, string in_model_name, bool merge_phase,
+    bool generate_candidates, bool skip_all_when_drop)
 {
 
     ModelCheckpoint *checkpoint = &model_info;
@@ -2723,58 +2714,60 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
     Alignment *prot_aln = NULL;
     Alignment *dna_aln = NULL;
     bool do_modelomatic = params.modelomatic && in_tree->aln->seq_type == SEQ_CODON;
-    if (in_model_name.empty()) {
+    if (generate_candidates) {
+        if (in_model_name.empty()) {
 #if defined(_NN) || defined(_OLD_NN)
-        if (params.use_nn_model && in_tree->aln->seq_type == SEQ_DNA) {
-            cout << "Using NN" << endl;
-            // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
-            // determine substitution model using neural network
-            Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars(); // todo: here
-            NeuralNetwork nn(alignment);
-            string model_name = nn.doModelInference(); // todo: here
-            string rate_name = "";
-            double alpha = nn.doAlphaInference(); // todo: here
-            if (alpha >= 0) { // +G
-                rate_name = "+G{" + to_string(alpha) + "}";
+            if (params.use_nn_model && in_tree->aln->seq_type == SEQ_DNA) {
+                cout << "Using NN" << endl;
+                // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
+                // determine substitution model using neural network
+                Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars(); // todo: here
+                NeuralNetwork nn(alignment);
+                string model_name = nn.doModelInference(); // todo: here
+                string rate_name = "";
+                double alpha = nn.doAlphaInference(); // todo: here
+                if (alpha >= 0) { // +G
+                    rate_name = "+G{" + to_string(alpha) + "}";
+                }
+                string best_model_NN;
+                CKP_RESTORE(best_model_NN);
+                delete alignment;
+                push_back(CandidateModel(model_name, rate_name, in_tree->aln));
+            } else {
+#endif
+                // generate all models the normal way
+                generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
+#if defined(_NN) || defined(_OLD_NN)
             }
-            string best_model_NN;
-            CKP_RESTORE(best_model_NN);
-            delete alignment;
-            push_back(CandidateModel(model_name, rate_name, in_tree->aln));
+            if (do_modelomatic) {
+                ASSERT(!params.use_nn_model);
+                // generate models for protein
+                // adapter coefficient according to Whelan et al. 2015
+                prot_aln = in_tree->aln->convertCodonToAA();
+                int adjusted_df;
+                double adjusted_logl = computeAdapter(in_tree->aln, prot_aln, adjusted_df);
+                if (set_name.empty())
+                    cout << "Adjusted LnL: " << adjusted_logl << "  df: " << adjusted_df << endl;
+                size_t start = size();
+                generate(params, prot_aln, params.model_test_separate_rate, merge_phase);
+                size_t i;
+                for (i = start; i < size(); i++) {
+                    at(i).logl = adjusted_logl;
+                    at(i).df = adjusted_df;
+                }
+                
+                // generate models for DNA
+                dna_aln = in_tree->aln->convertCodonToDNA();
+                start = size();
+                generate(params, dna_aln, params.model_test_separate_rate, merge_phase);
+                for (i = start; i < size(); i++) {
+                    at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
+                }
+            }
+#endif
         } else {
-#endif
-            // generate all models the normal way
-            generate(params, in_tree->aln, params.model_test_separate_rate, merge_phase);
-#if defined(_NN) || defined(_OLD_NN)
+            push_back(CandidateModel(in_model_name, "", in_tree->aln));
         }
-        if (do_modelomatic) {
-            ASSERT(!params.use_nn_model);
-            // generate models for protein
-            // adapter coefficient according to Whelan et al. 2015
-            prot_aln = in_tree->aln->convertCodonToAA();
-            int adjusted_df;
-            double adjusted_logl = computeAdapter(in_tree->aln, prot_aln, adjusted_df);
-            if (set_name.empty())
-                cout << "Adjusted LnL: " << adjusted_logl << "  df: " << adjusted_df << endl;
-            size_t start = size();
-            generate(params, prot_aln, params.model_test_separate_rate, merge_phase);
-            size_t i;
-            for (i = start; i < size(); i++) {
-                at(i).logl = adjusted_logl;
-                at(i).df = adjusted_df;
-            }
-
-            // generate models for DNA
-            dna_aln = in_tree->aln->convertCodonToDNA();
-            start = size();
-            generate(params, dna_aln, params.model_test_separate_rate, merge_phase);
-            for (i = start; i < size(); i++) {
-                at(i).setFlag(MF_SAMPLE_SIZE_TRIPLE);
-            }
-        }
-#endif
-    } else {
-        push_back(CandidateModel(in_model_name, "", in_tree->aln));
     }
 
     DoubleVector model_scores;
@@ -2882,6 +2875,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
         CandidateModel prev_info;
 
         bool skip_model = false;
+        bool skip_all_models = false;
         
         bool check_condition = prev_info.restoreCheckpointRminus1(checkpoint, &at(model));
 
@@ -3027,6 +3021,13 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 at(next).setFlag(MF_IGNORED);
             }
         }
+
+        if (skip_all_models) {
+            // skip over all the remaining models
+            for (int next = model+1; next < size(); next++) {
+                at(next).setFlag(MF_IGNORED);
+            }
+        }        
 	}
     ASSERT(model_scores.size() == size());
 
@@ -5647,3 +5648,609 @@ void MergeJob::loadFrString(string& str) {
 }
 
 #endif // _IQTREE_MPI
+
+// to check how many classes from the model string
+int getClassNum(string model_str) {
+    // the number of commas inside the model string + 1
+    size_t pos = 0;
+    int k = 0;
+    pos = model_str.find_first_of(',',pos);
+    while (pos != string::npos) {
+        k++;
+        pos++;
+        pos = model_str.find_first_of(',',pos);
+    }
+    return k+1;
+}
+
+// get the k-th class model
+// model_str should not contain the RHAS model
+string classKModel(string model_str, int k) {
+    int n = getClassNum(model_str);
+    if (k >= n)
+        return "";
+    if (n == 1) {
+        return model_str;
+    }
+    
+    int j = 0;
+    size_t pos = 0;
+    size_t pos_fr;
+    pos = model_str.find_first_of('{');
+    while (j < k) {
+        pos++;
+        pos = model_str.find_first_of(',',pos);
+        j++;
+    }
+    pos++;
+    pos_fr = pos;
+    pos = model_str.find_first_of("},",pos);
+    return model_str.substr(pos_fr,pos-pos_fr);
+}
+
+// assign new substitution to the k-th class
+// return false if there are less than k classes in the model
+bool changeModel(string model_str, string& new_model_str, string new_subst, int k) {
+    int n = getClassNum(model_str);
+    if (k >= n)
+        return false;
+    if (n == 1) {
+        new_model_str = new_subst;
+        return true;
+    }
+    
+    int j = 0;
+    size_t pos = 0;
+    string left_part, right_part;
+    pos = model_str.find_first_of('{');
+    while (j < k) {
+        pos++;
+        pos = model_str.find_first_of(',',pos);
+        j++;
+    }
+    left_part = model_str.substr(0, pos+1);
+    pos++;
+    pos = model_str.find_first_of("},",pos);
+    right_part = model_str.substr(pos);
+    new_model_str = left_part + new_subst + right_part;
+    return true;
+}
+
+// assign a new substitution into a q-mixture model
+void addModel(string model_str, string& new_model_str, string new_subst) {
+    size_t pos;
+    int n;
+    n = getClassNum(model_str);
+    if (n == 1) {
+        new_model_str = "MIX{" + model_str + "," + new_subst + "}";
+    } else {
+        pos = model_str.find_last_of('}');
+        new_model_str = model_str.substr(0, pos) + "," + new_subst + model_str.substr(pos);
+    }
+}
+
+// This function is similar to runModelFinder, but it is designed for optimisation of Q-Mixture model
+// action: 1 - estimate the RHAS model
+//         2 - estimate the number of classes in a mixture model
+//         3 - estimate the k-th substitution matrix
+//         4 - estimate an additional substitution matrix
+CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, int action, bool do_init_tree, string model_str, string& best_subst_name, string& best_rate_name, int class_k = 0)
+{
+    double cpu_time;
+    double real_time;
+    bool ok_model_file;
+    int partition_type;
+    Checkpoint *orig_checkpoint;
+    ModelsBlock *models_block;
+    CandidateModelSet candidate_models;
+    CandidateModel best_model;
+    string multi_class_str;
+    string single_class_str;
+    int max_cats;
+    string set_name = "";
+    string in_model_name = "";
+    bool merge_phase = false;
+    bool generate_candidates;
+    bool skip_all_when_drop;
+    string orig_model_set;
+    string orig_ratehet_set;
+    vector<string> model_names;
+    vector<string> ratehet;
+    vector<string> freq_names;
+    int i,j;
+    
+    // timing
+    cpu_time = getCPUTime();
+    real_time = getRealTime();
+    
+    // handling checkpoint file
+    model_info.setFileName((string)params.out_prefix + ".model.gz");
+    model_info.setDumpInterval(params.checkpoint_dump_interval);
+    ok_model_file = false;
+    if (!params.model_test_again) {
+        ok_model_file = model_info.load();
+    }
+    cout << endl;
+    ok_model_file &= model_info.size() > 0;
+    if (ok_model_file)
+        cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
+    orig_checkpoint = iqtree.getCheckpoint();
+    iqtree.setCheckpoint(&model_info);
+    iqtree.restoreCheckpoint();
+    if (CKP_RESTORE2((&model_info), partition_type)) {
+        if (partition_type != params.partition_type)
+            outError("Mismatch partition type between checkpoint and partition file command option\nRerun with -mredo to ignore .model.gz checkpoint file");
+    } else {
+        partition_type = params.partition_type;
+        CKP_SAVE2((&model_info), partition_type);
+    }
+    
+    models_block = readModelsDefinition(params);
+    
+    if (do_init_tree) {
+        // compute initial tree
+        iqtree.computeInitialTree(params.SSE);
+        iqtree.saveCheckpoint();
+    }
+    
+    if (action == 1) {
+        max_cats = getClassNum(model_str) * params.max_rate_cats;
+    } else if (action == 2) {
+        max_cats = params.max_mix_cats * iqtree.getModelFactory()->site_rate->getNRate();
+    } else {
+        max_cats = getClassNum(model_str) * iqtree.getModelFactory()->site_rate->getNRate();
+    }
+    
+    uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
+    cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
+    if (mem_size >= getMemorySize()) {
+        outError("Memory required exceeds your computer RAM size!");
+    }
+#ifdef BINARY32
+    if (mem_size >= 2000000000) {
+        outError("Memory required exceeds 2GB limit of 32-bit executable");
+    }
+#endif
+    
+    // generate candidate models
+    // setting the params
+    orig_ratehet_set = params.ratehet_set;
+    orig_model_set = params.model_set;
+    
+    // params.model_extra_set = NULL;
+    // params.model_subset = NULL;
+    // params.state_freq_set = NULL;
+    generate_candidates = false;
+
+    if (action == 1) {
+        params.model_set = model_str;
+        getRateHet(iqtree.aln->seq_type, params.model_name, iqtree.aln->frac_invariant_sites, params.ratehet_set, ratehet);
+
+        // add number of rate cateogories for special rate models
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+
+        size_t pos;
+
+        for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
+        for (j = 0; j < ratehet.size(); j++)
+            if ((pos = ratehet[j].find(rates[i])) != string::npos &&
+                (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
+            {
+                string str = ratehet[j];
+                ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
+                max_cats = max(max_cats, params.max_rate_cats);
+                for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
+                    int ins_pos = j+k-params.min_rate_cats;
+                    ratehet.insert(ratehet.begin() + ins_pos, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+                }
+            }
+        
+        for (i=0; i<ratehet.size(); i++) {
+            candidate_models.push_back(CandidateModel(model_str, ratehet[i], iqtree.aln, 0));
+        }
+
+        skip_all_when_drop = false;
+    } else if (action == 2) {
+        params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
+        // generate candidate models for the possible mixture models
+        multi_class_str = "";
+        single_class_str = model_str;
+        for (i = 1; i <= params.max_mix_cats; i++) {
+            if (!multi_class_str.empty())
+                multi_class_str.append(",");
+            multi_class_str.append(single_class_str);
+            if (i >= params.min_mix_cats) {
+                if (i > 1)
+                    model_str = "MIX{" + multi_class_str + "}";
+                else
+                    model_str = multi_class_str;
+                candidate_models.push_back(CandidateModel(model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
+            }
+        }
+        skip_all_when_drop = true;
+    } else if (action == 3) {
+        char init_state_freq_set[] = "FO";
+        if (!params.state_freq_set) {
+            params.state_freq_set = init_state_freq_set;
+        }
+        params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
+        getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
+                      params.model_set, params.model_subset, model_names);
+        
+        if (model_names.empty())
+            return best_model;
+        
+        getStateFreqs(iqtree.aln->seq_type, params.state_freq_set, freq_names);
+        
+        // combine model_names with freq_names
+        if (freq_names.size() > 0) {
+            StrVector orig_model_names = model_names;
+            model_names.clear();
+            for (j = 0; j < orig_model_names.size(); j++) {
+                if (iqtree.aln->seq_type == SEQ_CODON) {
+                    SeqType seq_type;
+                    int model_type = detectSeqType(orig_model_names[j].c_str(), seq_type);
+                    for (i = 0; i < freq_names.size(); i++) {
+                        // disallow MG+F
+                        if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
+                            continue;
+                        if (freq_names[i] != "" || (model_type == 2 && orig_model_names[j].find("MG") == string::npos))
+                            // empirical model also allow ""
+                            model_names.push_back(orig_model_names[j] + freq_names[i]);
+                    }
+                } else {
+                    for (i = 0; i < freq_names.size(); i++)
+                        model_names.push_back(orig_model_names[j] + freq_names[i]);
+                }
+            }
+        }
+
+        for (i=0; i<model_names.size(); i++) {
+            string new_model_str;
+            if (changeModel(model_str, new_model_str, model_names[i], class_k))
+                candidate_models.push_back(CandidateModel(new_model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
+        }
+
+        skip_all_when_drop = false;
+    } else {
+        params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
+        
+        getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
+                      params.model_set, params.model_subset, model_names);
+        
+        if (model_names.empty())
+            return best_model; // empty
+        
+        getStateFreqs(iqtree.aln->seq_type, params.state_freq_set, freq_names);
+        
+        // combine model_names with freq_names
+        if (freq_names.size() > 0) {
+            StrVector orig_model_names = model_names;
+            model_names.clear();
+            for (j = 0; j < orig_model_names.size(); j++) {
+                if (iqtree.aln->seq_type == SEQ_CODON) {
+                    SeqType seq_type;
+                    int model_type = detectSeqType(orig_model_names[j].c_str(), seq_type);
+                    for (i = 0; i < freq_names.size(); i++) {
+                        // disallow MG+F
+                        if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
+                            continue;
+                        if (freq_names[i] != "" || (model_type == 2 && orig_model_names[j].find("MG") == string::npos))
+                            // empirical model also allow ""
+                            model_names.push_back(orig_model_names[j] + freq_names[i]);
+                    }
+                } else {
+                    for (i = 0; i < freq_names.size(); i++)
+                        model_names.push_back(orig_model_names[j] + freq_names[i]);
+                }
+            }
+        }
+
+        for (i=0; i<model_names.size(); i++) {
+            string new_model_str;
+            addModel(model_str, new_model_str, model_names[i]);
+            candidate_models.push_back(CandidateModel(new_model_str, iqtree.getModelFactory()->site_rate->name, iqtree.aln, 0));
+        }
+
+        skip_all_when_drop = false;
+    }
+    // model selection
+    best_model = candidate_models.test(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE,
+                                       set_name, in_model_name, merge_phase, generate_candidates, skip_all_when_drop);
+    
+    iqtree.aln->model_name = best_model.getName();
+    best_subst_name = best_model.subst_name;
+    best_rate_name = best_model.rate_name;
+    
+    Checkpoint *checkpoint = &model_info;
+    string best_model_AIC, best_model_AICc, best_model_BIC;
+    CKP_RESTORE(best_model_AIC);
+    CKP_RESTORE(best_model_AICc);
+    CKP_RESTORE(best_model_BIC);
+    //cout << "Akaike Information Criterion:           " << best_model_AIC << endl;
+    //cout << "Corrected Akaike Information Criterion: " << best_model_AICc << endl;
+    //cout << "Bayesian Information Criterion:         " << best_model_BIC << endl;
+    cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
+        << criterionName(params.model_test_criterion) << endl;
+
+    delete models_block;
+    
+    // force to dump all checkpointing information
+    model_info.dump(true);
+    
+    // transfer models parameters
+    transferModelFinderParameters(&iqtree, orig_checkpoint);
+    iqtree.setCheckpoint(orig_checkpoint);
+
+    params.model_set = orig_model_set;
+    params.ratehet_set = orig_ratehet_set;
+    // params.startCPUTime = cpu_time;
+    // params.start_real_time = real_time;
+    cpu_time = getCPUTime() - cpu_time;
+    real_time = getRealTime() - real_time;
+    cout << endl;
+    cout << "All model information printed to " << model_info.getFileName() << endl;
+    cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
+    cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
+    
+    return best_model;
+}
+
+// Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
+// Method 1
+void optimiseQMixModel_method(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
+    
+    bool do_init_tree;
+    string best_subst_name;
+    string best_rate_name;
+    int action, best_class_num, i;
+    set<string> skip_models;
+    string model_str1, model_i;
+    bool better_model;
+    CandidateModel best_model;
+    int curr_df;
+    double curr_loglike;
+    double LR, df_diff, pvalue;
+    string criteria_str;
+
+    criteria_str = criterionName(params.model_test_criterion);
+
+    // Step 1: estimate the RHAS model using GTR+FO model
+    action = 1; // estimating the RHAS model
+    do_init_tree = true; // initization of the tree
+    model_str = params.start_subst;
+    runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+    
+    // Step 2: do tree search for this single-class model
+    runTreeReconstruction(params, iqtree);
+    curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+    curr_loglike = iqtree->getCurScore();
+
+    // Step 3: estimate the optimal number of classes inside the model mixture
+    if (params.opt_qmix_criteria == 1) {
+        cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;
+        action = 4;
+        string orig_model_set = params.model_set;
+        params.model_set = "GTR+FO"; // TODO: should depend on the sequence type
+        do_init_tree = false;
+        model_str = best_subst_name;
+        do {
+            best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+            cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
+            LR = 2.0 * (best_model.logl - curr_loglike);
+            df_diff = best_model.df - curr_df;
+            pvalue = computePValueChiSquare(LR, df_diff);
+            better_model = (pvalue <= params.opt_qmix_pthres);
+            cout << " pvalue: " << pvalue << "; ";
+            cout << endl;
+            if (better_model) {
+                curr_df = best_model.df;
+                curr_loglike = best_model.logl;
+                model_str = best_subst_name;
+            }
+        } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
+        params.model_set = orig_model_set;
+        best_subst_name = model_str;
+    } else {
+        cout << endl << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl;
+        action = 2; // estimating the number of classes in a mixture model
+        do_init_tree = false;
+        model_str = best_subst_name;
+        runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+    }
+    best_class_num = getClassNum(best_subst_name);
+    cout << endl << "Optimal number of classes in mixture model: " << best_class_num << endl;
+    
+    if (params.opt_rhas_again) {
+        // Step 4: estimate the RHAS model again
+        action = 1; // estimating the RHAS model
+        do_init_tree = false;
+        model_str = best_subst_name;
+        runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+    }
+    
+    if (params.check_combin_q_mat) {
+        // Step 5: estimate the optimal combination of Q-matrices
+        action = 3; // estimating the combination of Q-matrices
+        do_init_tree = false;
+        skip_models.clear();
+        do {
+            model_str1 = best_subst_name;
+            for (i = 0; i < best_class_num; i++) {
+                model_i = classKModel(best_subst_name, i);
+                if (skip_models.find(model_i) == skip_models.end()) {
+                    model_str = best_subst_name;
+                    runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, i);
+                    if (best_subst_name == model_str) {
+                        skip_models.insert(model_i);
+                    } else {
+                        skip_models.clear();
+                    }
+                }
+            }
+        } while (model_str1 != best_subst_name);
+    }
+
+    model_str = best_subst_name+best_rate_name;
+}
+
+// Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
+// Method 2
+void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info, string& model_str) {
+
+    bool do_init_tree;
+    string best_subst_name;
+    string best_rate_name;
+    int action, best_class_num, i;
+    set<string> skip_models;
+    string model_str1, model_i;
+    ModelsBlock *models_block;
+    CandidateModel best_model;
+    string best_model_AIC, best_model_AICc, best_model_BIC;
+    double best_score_AIC, best_score_AICc, best_score_BIC;
+    Checkpoint *checkpoint;
+    int ssize;
+    int curr_df;
+    double curr_loglike;
+    double curr_score;
+    bool better_model;
+    double LR, df_diff, pvalue;
+    string criteria_str;
+
+    char init_state_freq_set[] = "FO";
+    if (!params.state_freq_set) {
+        params.state_freq_set = init_state_freq_set;
+    }
+
+    models_block = readModelsDefinition(params);
+    ssize = iqtree->getAlnNSite();
+    criteria_str = criterionName(params.model_test_criterion);
+    
+    // Step 1: run ModelFinder
+    params.model_name = "";
+    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
+
+    // Step 2: do tree search for this single-class model
+    runTreeReconstruction(params, iqtree);
+    curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+    curr_loglike = iqtree->getCurScore();
+    curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
+
+    cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
+    
+    // Step 3: keep adding a new class until no further improvement
+    if (params.opt_qmix_criteria == 1) {
+        cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;
+    } else {
+        cout << endl << "Keep adding an additional class until there is no better " << criteria_str <<  " value" << endl;
+    }
+    action = 4;
+    do_init_tree = false;
+    model_str = best_subst_name;
+    do {
+        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+        cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
+        if (params.opt_qmix_criteria == 1) {
+            LR = 2.0 * (best_model.logl - curr_loglike);
+            df_diff = best_model.df - curr_df;
+            pvalue = computePValueChiSquare(LR, df_diff);
+            better_model = (pvalue <= params.opt_qmix_pthres);
+            cout << " pvalue: " << pvalue << "; ";
+        } else {
+            // compare the models based on IC score
+            better_model = (best_model.getScore() < curr_score);
+        }
+        cout << endl;
+        if (better_model) {
+            curr_df = best_model.df;
+            curr_loglike = best_model.logl;
+            curr_score = best_model.getScore();
+            model_str = best_subst_name;
+        }
+    } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
+    
+    best_subst_name = model_str;
+    
+    if (params.opt_rhas_again) {
+        // Step 4: estimate the RHAS model again
+        action = 1; // estimating the RHAS model
+        do_init_tree = false;
+        model_str = best_subst_name;
+        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+        curr_df = best_model.df;
+        curr_loglike = best_model.logl;
+        curr_score = best_model.getScore();
+    }
+
+    model_str = best_subst_name+best_rate_name;
+}
+
+// Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
+void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
+
+    IQTree* new_iqtree;
+    string model_str;
+
+    if (params.model_name.substr(0,6) != "MIX+MF")
+        return;
+    
+    bool test_only = (params.model_name == "MIX+MF");
+    params.model_name = "";
+    
+    if (MPIHelper::getInstance().getNumProcesses() > 1)
+        outError("Error! The option -m '" + params.model_name + "' does not support MPI parallelization");
+    
+    if (iqtree->isSuperTree())
+        outError("Error! The option -m '" + params.model_name + "' cannot work on data set with partitions");
+    
+    if (iqtree->aln->seq_type != SEQ_DNA)
+        outError("Error! The option -m '" + params.model_name + "' can only work on DNA data set");
+
+    cout << "--------------------------------------------------------------------" << endl;
+    cout << "|                Optimizing Q-mixture model                        |" << endl;
+    cout << "--------------------------------------------------------------------" << endl;
+
+    // disable the bootstrapping
+    int orig_gbo_replicates = params.gbo_replicates;
+    ConsensusType orig_consensus_type = params.consensus_type;
+    STOP_CONDITION orig_stop_condition = params.stop_condition;
+    params.gbo_replicates = 0;
+    params.consensus_type = CT_NONE;
+    params.stop_condition = SC_UNSUCCESS_ITERATION;
+
+    if (params.opt_qmix_method==1)
+        optimiseQMixModel_method(params, iqtree, model_info, model_str);
+    else
+        optimiseQMixModel_method_update(params, iqtree, model_info, model_str);
+    
+    // restore the original values
+    params.gbo_replicates = orig_gbo_replicates;
+    params.consensus_type = orig_consensus_type;
+    params.stop_condition = orig_stop_condition;
+
+    cout << "-------------------------------------------------------" << endl;
+    cout << "  Best-fit Q-Mixture model: " << model_str << endl;
+    cout << "-------------------------------------------------------" << endl;
+
+    params.model_name = model_str;
+    iqtree->aln->model_name = model_str;
+
+    // create a new IQTree object for this mixture model
+    // allocate heterotachy tree if neccessary
+    int pos = posRateHeterotachy(iqtree->aln->model_name);
+    if (params.num_mixlen > 1) {
+        new_iqtree = new PhyloTreeMixlen(iqtree->aln, params.num_mixlen);
+    } else if (pos != string::npos) {
+        new_iqtree = new PhyloTreeMixlen(iqtree->aln, 0);
+    } else {
+        new_iqtree = new IQTree(iqtree->aln);
+    }
+    new_iqtree->setCheckpoint(iqtree->getCheckpoint());
+    new_iqtree->setParams(&params);
+    delete(iqtree);
+    iqtree = new_iqtree;
+    
+    if (test_only) {
+        params.min_iterations = 0;
+    }
+}

@@ -1194,6 +1194,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
+    params.min_mix_cats = 1;
+    params.max_mix_cats = 10;
+    params.start_subst = "GTR+FO";
+    params.opt_rhas_again = true;
+    params.opt_qmix_method = 2;
+    params.opt_qmix_criteria = 1; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
+    params.opt_qmix_pthres = 0.05;
+    params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
     params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
@@ -1205,6 +1213,16 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.optimize_alg_treeweight = "EM";
     params.optimize_from_given_params = false;
+    params.optimize_alg_qmix = "BFGS";
+    params.estimate_init_freq = 0;
+
+    // defaults for new options -JD
+    params.optimize_linked_gtr = false;
+    params.gtr20_model = "POISSON";
+    params.guess_multiplier = 0.75; // change from 0.5
+    // params.rates_file = false;
+    params.reset_method = "random"; // change from const
+
     params.optimize_params_use_hmm = false;
     params.optimize_params_use_hmm_sm = false;
     params.optimize_params_use_hmm_gm = false;
@@ -3518,6 +3536,48 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
+            if (strcmp(argv[cnt], "-start_subst") == 0 || strcmp(argv[cnt], "--start_subst") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -start_subst <substitution matrix + freq>";
+                params.start_subst = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "-skip-opt-combin-subst") == 0 || strcmp(argv[cnt], "--skip-opt-combin-subst") == 0) {
+                params.check_combin_q_mat = false;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-qmax") == 0 || strcmp(argv[cnt], "--qmax") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -qmax <#max_mix_classes>";
+                params.max_mix_cats = convert_int(argv[cnt]);
+                if (params.max_mix_cats < 2)
+                    throw "Wrong number of classes in mixture for -qmax. Must be at least 2";
+                continue;
+            }
+            if (strcmp(argv[cnt], "-mrate-twice") == 0 || strcmp(argv[cnt], "--mrate-twice") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -mrate-twice <0|1>";
+                int in_option = convert_int(argv[cnt]);
+                if (in_option < 0 || in_option > 1)
+                    throw "Wrong option for -mrate-twice. Only 0 or 1 is allowed.";
+                if (in_option == 0)
+                    params.opt_rhas_again = false;
+                continue;
+            }
+            if (strcmp(argv[cnt], "-lrt") == 0 || strcmp(argv[cnt], "--lrt") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -lrt <p-value threshold>";
+                params.opt_qmix_pthres = convert_double(argv[cnt]);
+                if (params.opt_qmix_pthres < 0.0 || params.opt_qmix_pthres > 1.0)
+                    throw "Wrong p-value threshold for -opt_qmix_pthres. Must be between 0.0 and 1.0";
+                if (params.opt_qmix_pthres == 0)
+                    params.opt_qmix_criteria = 2; // using information critera instead of likelihood-ratio test for estimation of number of classes for Q-Mixture model
+                continue;
+            }
 			if (strcmp(argv[cnt], "-a") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -5718,6 +5778,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_bootstrap_samples && params.partition_type == TOPO_UNLINKED)
         outError("-b bootstrap option does not work with -S yet.");
+
+    //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos) 
+        outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
 
     if (params.use_nn_model && params.modelomatic)
         outError("--modelomatic option does not work with --use-nn-model.");

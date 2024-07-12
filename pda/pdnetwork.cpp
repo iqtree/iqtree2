@@ -1059,7 +1059,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 	ofstream scoreout;
 	ofstream out;
 	if (params.nr_output == 1) {
-		if (params.run_mode == PD_USER_SET || !isPDArea()) {
+		if (params.run_mode == RunMode::PD_USER_SET || !isPDArea()) {
 			snprintf(filename, 300, "%s.pdtaxa", params.out_prefix);
 			cout << "All taxa list(s) printed to " << filename << endl;
 		} else { 

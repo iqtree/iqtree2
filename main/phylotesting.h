@@ -17,6 +17,7 @@
 #include "nclextra/modelsblock.h"
 #include "alignment/superalignment.h"
 #include "utils/MPIHelper.h"
+#include <set>
 
 class PhyloTree;
 class IQTree;
@@ -141,8 +142,20 @@ public:
     /**
      restore model from checkpoint
      */
-    bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model);
-    
+    bool restoreCheckpointRminus1(Checkpoint *ckp, CandidateModel *model) {
+        size_t posR;
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = model->rate_name.find(rates[i])) != string::npos) {
+                int cat = convert_int(model->rate_name.substr(posR+2).c_str());
+                subst_name = model->subst_name;
+                rate_name = model->rate_name.substr(0, posR+2) + convertIntToString(cat-1);
+                return restoreCheckpoint(ckp);
+            }
+        }
+        return false;
+    }
+
     /** turn on some flag with OR operator */
     void setFlag(int flag) {
         this->flag |= flag;
@@ -225,12 +238,16 @@ public:
      @param in_model_name a specific model name if testing one model
      @param adjust model adjustment for modelomatic
      @param merge_phase true to consider models for merging phase
+     @param generate_candidates true to generate candidates in the beginning
+     @param skip_all_when_drop true to skip the testing of all the subsequent models when the current model becomes less favorable
      @return name of best-fit-model
      */
     CandidateModel test(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
                 ModelsBlock *models_block, int num_threads, int brlen_type,
                 string set_name = "", string in_model_name = "",
-                bool merge_phase = false);
+                bool merge_phase = false,
+                bool generate_candidates = true,
+                bool skip_all_when_drop = false);
 
     /**
      for a rate model XXX+R[k], return XXX+R[k-j] that finished
@@ -724,8 +741,18 @@ string criterionName(ModelTestCriterion mtc);
  @param params program parameters
  @param iqtree phylogenetic tree
  @param model_info (IN/OUT) information for all models considered
+ @param best_subst_name (OUT) information for all models considered
+ @param best_rate_name (OUT) information for all models considered
  */
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name);
+
+/**
+ optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
+ @param params program parameters
+ @param iqtree phylogenetic tree
+ @param model_info (IN/OUT) information for all models considered
+ */
+void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info);
 
 /**
  perform ModelFinderNN to find the best-fit model (uses neural network for model inference)

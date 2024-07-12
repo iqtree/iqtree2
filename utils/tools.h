@@ -1657,7 +1657,7 @@ public:
     int num_rate_cats;
 
     /**
-            maximum number of rate categories
+            minimum number of rate categories
      */
     int min_rate_cats;
 
@@ -1665,6 +1665,61 @@ public:
             maximum number of rate categories
      */
     int max_rate_cats;
+
+    /**
+            minimum number of classes in mixture model
+     */
+    int min_mix_cats;
+
+    /**
+            maximum number of classes in mixture model
+     */
+    int max_mix_cats;
+    
+    /**
+            the starting model (i.e. substitution model + freq) for each class of Q-mixture model
+     */
+    string start_subst;
+
+    /**
+            whether to optimize the RHAS again after the number of classes is estimated for the mixture model
+     */
+    bool opt_rhas_again;
+
+    /**
+            The method to optimize (and estimating the number of classes in) the Q-mixture model
+            Method 1 (Old method)
+                a. Estimate the RHAS model with the GTR+FO model.
+                b. Do a tree search for this single-class model.
+                c. Estimate the optimal number of classes inside the model mixture.
+                d. Estimate the RHAS model again with the optimal number of classes.
+                e. Estimate the optimal combination of substitution matrices in Q-Mixture model
+                f. Do a final tree search for this Q-mixture model with the optimal combination.
+            Method 2 (Default method)
+                a. Use modelfinder (for single class) to find the best Q1 + RHAS + Tree. Set k = 1
+                b. Fixing RHAS, Tree and the models Q1, Q2, ..., Qk, then find the best Qk+1 to add
+                c. If the mixture with k+1 classes pass the likelihood ratio test or better AIC/BIC value (depending on opt_qmix_criteria),
+                  then k=k+1 and repeat the step c. Otherwise the mixture with k classes is the best model.
+                d. Re-estimate the RHAS model again for the k-class Q-mixture model .
+                e. Do a final tree search.
+     */
+    int opt_qmix_method;
+    
+    /**
+            The criteria to identify the best number of classes in the Q-mixture model.
+            1: likelihood-ratio test (default); 2: information criteria, like AIC, BIC, etc.
+     */
+    int opt_qmix_criteria;
+    
+    /**
+        The p-value threshold used to optimize the Q-Mixture model when likelihood-ratio test is applied (i.e. opt_qmix_criteria = 1). Default = 0.05
+     */
+    double opt_qmix_pthres;
+
+    /**
+            whether to compute the optmal combination of subtitution matrix for the mixture model
+     */
+    bool check_combin_q_mat;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates
@@ -1709,6 +1764,28 @@ public:
      *  Optimization algorithm for tree weights in tree-mixture model
      */
     string optimize_alg_treeweight;
+
+    /**
+     *  Optimization algorithm for q-mixture model
+     */
+    string optimize_alg_qmix;
+    
+    /**
+     * non-zero if want to estimate the initial frequency vectors for q-mixture model
+     */
+    int estimate_init_freq;
+
+    //new params added -JD
+    /** TRUE if you want to exchange the rate matrix for an optimized GTR matrix */
+    bool optimize_linked_gtr;
+    /** Starting matrix to be used for GTR20 optimization */
+    string gtr20_model;
+    /** Matrix multiplier factor */
+    double guess_multiplier;
+    /** TRUE if you want to print out a .ratemat file during GTR optimization */
+    // bool rates_file;
+    /** How the program should reset the values during Optimization::resetParameters */
+    string reset_method;
 
     /**
      * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})

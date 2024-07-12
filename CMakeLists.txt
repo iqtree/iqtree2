@@ -105,6 +105,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Build mode   : Release")
 endif()
 
+if (BUILD_LIB STREQUAL "ON")
+    message("Build lib    : ON")
+else()
+    message("Build lib    : OFF")
+endif()
+
 if (CMAKE_GENERATOR MATCHES "Xcode")
     set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 #    if (NOT CMAKE_XCODE_ATTRIBUTE_COMPILER_INDEX_STORE_ENABLE)
@@ -184,8 +190,20 @@ if (APPLE)
       OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-		message("APPLE SILICON (M1) DETECTED!")
-		set (__ARM_NEON "TRUE")
+		message("APPLE SILICON (M1/M2/M3) DETECTED!")
+        set (__ARM_NEON "TRUE")
+        set (NEON 1)
+    endif()
+elseif (UNIX AND NOT APPLE)  # Unix and Linux
+    execute_process(
+      COMMAND uname -m
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE OS_NATIVE_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(OS_NATIVE_ARCHITECTURE STREQUAL "aarch64")
+        message("Unix/Linux ARM64 DETECTED!")
+	    set (__ARM_NEON "TRUE")
 		set (NEON 1)
 	endif()
 endif()
@@ -355,11 +373,6 @@ if (IQTREE_FLAGS MATCHES "lto")
     #endif()
 endif()
 
-##################################################################
-# Whether to build the decenttree executable file (default: ON)
-##################################################################
-option(BUILD_DECENTTREE "build decenttree" ON)
-
 # for mac arm boost compilation issue
 if (__ARM_NEON AND APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=")
@@ -459,9 +472,15 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
     		link_directories(${PROJECT_SOURCE_DIR}/libmac_m1)
     	else()
-        	link_directories(${PROJECT_SOURCE_DIR}/libmac)
-        endif()	
-    elseif (WIN32 OR UNIX)
+    		link_directories(${PROJECT_SOURCE_DIR}/libmac)
+    	endif()	
+    elseif (UNIX AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+    	if (__ARM_NEON)
+    		link_directories(${PROJECT_SOURCE_DIR}/liblinux_arm)
+    	else()
+    		link_directories(${PROJECT_SOURCE_DIR}/lib)
+    	endif()
+    elseif (WIN32)
         if (BINARY32)
             link_directories(${PROJECT_SOURCE_DIR}/lib32)
         else()
@@ -794,9 +813,22 @@ add_library(kernelfma tree/phylokernelfma.cpp)
     endif()
 endif()
 
-add_executable(iqtree2
-obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h)
+##################################################################
+# build lib file or main executable
+##################################################################
+option(BUILD_LIB "Build IQ-TREE2 library" OFF)
+
+if (BUILD_LIB STREQUAL "ON")
+    add_library(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+else()
+    add_executable(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+endif()
 
 if (USE_CMAPLE STREQUAL "ON")
 	add_executable(iqtree2-aa
@@ -834,9 +866,6 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
         endif()
         if (USE_BOOSTER)
             set_target_properties(booster PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-        endif()
-        if (NOT BUILD_DECENTTREE)
-            set_target_properties(utils PROPERTIES BUILD_DECENTTREE "OFF")
         endif()
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
@@ -1081,11 +1110,19 @@ set(CPACK_SOURCE_IGNORE_FILES
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     if (IQTREE_FLAGS MATCHES "oldmac")
-        set (SYSTEM_NAME "MacOS10.5")
+        set (SYSTEM_NAME "macOS10.5")
     elseif (OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-        set (SYSTEM_NAME "MacOSX-arm64")
+        set (SYSTEM_NAME "macOS-arm")
     else()
-        set (SYSTEM_NAME "MacOSX-intel")
+        set (SYSTEM_NAME "macOS-intel")
+    endif()
+endif()
+
+if (NOT APPLE AND UNIX)
+    if (__ARM_NEON)
+        set (SYSTEM_NAME "Linux-arm")
+    else()
+        set (SYSTEM_NAME "Linux-intel")
     endif()
 endif()
 
