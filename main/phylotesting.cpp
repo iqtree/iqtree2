@@ -1984,9 +1984,7 @@ string CandidateModel::evaluate(Params &params,
     logl += new_logl;
     string tree_string = iqtree->getTreeString();
 
-    if (verbose_mode >= VB_MED) {
-        cout << "[optimized] " << iqtree->getModelFactory()->model->getNameParams(false) << endl;
-    }
+    //cout << "[optimized] " << iqtree->getModelFactory()->model->getNameParams(false) << endl;
 
     if (syncChkPoint != nullptr)
         iqtree->getModelFactory()->syncChkPoint = nullptr;

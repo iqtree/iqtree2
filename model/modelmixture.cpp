@@ -1656,9 +1656,7 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
         at(nmix - 1)->setStateFrequency(state_freq);
     }
 
-    if (verbose_mode >= VB_MED) {
-        cout << "[init] " << getNameParams(false) << endl;
-    }
+    //cout << "[init] " << getNameParams(false) << endl;
 
     decomposeRateMatrix();
     if (phylo_tree)
@@ -1682,9 +1680,7 @@ void ModelMixture::restoreCheckpoint() {
     }
     endCheckpoint();
 
-    if (verbose_mode >= VB_MED) {
-        cout << "[*init] " << getNameParams(false) << endl;
-    }
+    //cout << "[*init] " << getNameParams(false) << endl;
 
     decomposeRateMatrix();
     if (phylo_tree)

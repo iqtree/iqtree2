@@ -1197,8 +1197,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_mix_cats = 1;
     params.max_mix_cats = 10;
     params.start_subst = "GTR+FO";
-    params.opt_rhas_again = true;
-    params.opt_qmix_criteria = 1; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
+    params.opt_rhas_again = false;
+    params.opt_qmix_criteria = 2; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
     params.opt_qmix_pthres = 0.05;
     params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
@@ -3563,8 +3563,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                 int in_option = convert_int(argv[cnt]);
                 if (in_option < 0 || in_option > 1)
                     throw "Wrong option for -mrate-twice. Only 0 or 1 is allowed.";
-                if (in_option == 0)
-                    params.opt_rhas_again = false;
+                if (in_option == 1)
+                    params.opt_rhas_again = true;
                 continue;
             }
             if (strcmp(argv[cnt], "-lrt") == 0 || strcmp(argv[cnt], "--lrt") == 0) {
@@ -3572,10 +3572,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -lrt <p-value threshold>";
                 params.opt_qmix_pthres = convert_double(argv[cnt]);
-                if (params.opt_qmix_pthres < 0.0 || params.opt_qmix_pthres > 1.0)
+                if (params.opt_qmix_pthres <= 0.0 || params.opt_qmix_pthres > 1.0) {
                     throw "Wrong p-value threshold for -opt_qmix_pthres. Must be between 0.0 and 1.0";
+                } else {
+                    params.opt_qmix_criteria = 1;
+                }
+                /*
                 if (params.opt_qmix_pthres == 0)
                     params.opt_qmix_criteria = 2; // using information critera instead of likelihood-ratio test for estimation of number of classes for Q-Mixture model
+                */
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
