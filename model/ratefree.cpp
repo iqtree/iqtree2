@@ -98,11 +98,33 @@ void RateFree::restoreCheckpoint() {
 //    CKP_RESTORE(fix_params);
 //    CKP_RESTORE(sorted_rates);
 //    CKP_RESTORE(optimize_alg);
-    CKP_ARRAY_RESTORE(ncategory, prop);
-    CKP_ARRAY_RESTORE(ncategory, rates);
+    bool got_prop = CKP_ARRAY_RESTORE(ncategory, prop);
+    bool got_rate = CKP_ARRAY_RESTORE(ncategory, rates);
     endCheckpoint();
 
+    if (!got_prop || !got_rate) {
+        // can't get anything from checkpoint, try to get something from Gamma
+        RateGamma::startCheckpoint();
+        bool got_alpha = CKP_RESTORE(gamma_shape);
+        RateGamma::endCheckpoint();
+        // necessary compute rates after restoring gamma_shape
+        if (got_alpha) {
+            computeRates();
+            if (verbose_mode >= VB_MED)
+                cout << "Initialised +R" << ncategory << " from Gamma " << gamma_shape << endl;
+        }
+    }
+    
 //	setNCategory(ncategory);
+}
+
+bool RateFree::hasCheckpoint() {
+    startCheckpoint();
+    bool got_prop = CKP_HAS_KEY(prop);
+    bool got_rate = CKP_HAS_KEY(rates);
+    endCheckpoint();
+    return (got_prop && got_rate);
+
 }
 
 void RateFree::setNCategory(int ncat) {
@@ -135,11 +157,53 @@ void RateFree::setNCategory(int ncat) {
 	full_name += " with " + convertIntToString(ncategory) + " categories";
 }
 
-void RateFree::initFromCatMinusOne() {
+void RateFree::initFromCatMinusOne(Checkpoint &ckp, double scale_factor) {
+    
+    Checkpoint *saved_ckp = getCheckpoint();
+    setCheckpoint(&ckp);
+    //checkpoint->dump(cout);
     ncategory--;
     restoreCheckpoint();
     ncategory++;
+    setCheckpoint(saved_ckp);
 
+    int i;
+    double pinv = min(getPInvar(), 0.95);
+
+    // sanity check that restoring works properly
+    double sum_prop = 0.0;
+    for (i = 0; i < ncategory-1; i++)
+        sum_prop += prop[i];
+    ASSERT(fabs(sum_prop + getPInvar() - 1.0) < 0.01);
+
+    double sum = 0.0;
+    for (i = 0; i < ncategory-1; i++)
+        sum += prop[i]*rates[i];
+    ASSERT(fabs(sum-1.0) < 0.01);
+
+    // BQM 2024-06-22: new strategy
+    double scale = (ncategory-scale_factor) / ncategory;
+    // down-scale previous categories
+    for (i = 0; i < ncategory-1; i++)
+        prop[i] = scale * prop[i];
+    // set last category
+    prop[ncategory-1] = (1.0-pinv) * scale_factor / ncategory;
+    rates[ncategory-1] = 1.0/(1.0-pinv);
+    if (verbose_mode >= VB_MED)
+        cout << "Initialised +R" << ncategory << " from +R" << ncategory-1 << endl;
+    
+    // sanity check that rescaling works properly
+    sum_prop = 0.0;
+    for (i = 0; i < ncategory; i++)
+        sum_prop += prop[i];
+    ASSERT(fabs(sum_prop + getPInvar() - 1.0) < 0.01);
+
+    sum = 0.0;
+    for (i = 0; i < ncategory; i++)
+        sum += prop[i]*rates[i];
+    ASSERT(fabs(sum-1.0) < 0.01);
+
+    /*
     int first = 0;
     // get the category k with largest proportion
     for (int i = 1; i < ncategory-1; i++) {
@@ -166,6 +230,7 @@ void RateFree::initFromCatMinusOne() {
     }
     prop[ncategory-1] = prop[first]/2;
     prop[first] = prop[first]/2;
+    */
 //    if (k < ncategory-2) {
 //        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
 //        memcpy(&prop[k+2], &input->prop[k+1], (ncategory-2-k)*sizeof(double));

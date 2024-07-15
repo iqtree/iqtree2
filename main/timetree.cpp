@@ -203,7 +203,7 @@ void writeDate(string date_file, ostream &out, set<string> &nodenames) {
 void runLSD2(PhyloTree *tree) {
     string basename = (string)Params::getInstance().out_prefix + ".timetree";
     string treefile = basename + ".subst";
-    stringstream tree_stream, outgroup_stream, date_stream;
+    stringstream tree_stream, outgroup_stream, date_stream, rate_stream;
     tree->printTree(tree_stream);
     StrVector arg = {"lsd", "-i", treefile, "-s", convertIntToString(tree->getAlnNSite()), "-o", basename};
     if (Params::getInstance().date_debug) {
@@ -273,17 +273,42 @@ void runLSD2(PhyloTree *tree) {
         arg.push_back(convertDate(Params::getInstance().date_tip));
     }
 
-    lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), "", "", "");
-
     if (Params::getInstance().dating_options != "") {
         // extra options for LSD
         StrVector options;
         convert_string_vec(Params::getInstance().dating_options.c_str(), options, ' ');
+	string rate_file = "";         	
         for (auto opt : options)
-            if (!opt.empty())
+            if (!opt.empty()){
+		if (rate_file == "" && opt == "-w"){
+		   rate_file = "rateFileProvided";
+		} 
+		else if (rate_file == "rateFileProvided") {
+		   rate_file = opt;
+		   try {
+			   cout << "Reading rate file " << rate_file << " ..." << endl;
+			   ifstream in;
+			   in.exceptions(ios::failbit | ios::badbit);
+			   in.open(rate_file);
+			   rate_stream << in.rdbuf(); // BQM: I'm not sure why rdbuf is needed
+			   in.clear();
+			   // set the failbit again
+			   in.exceptions(ios::failbit | ios::badbit);
+			   in.close();
+		   } catch (ios::failure) {
+        		outError(ERR_READ_INPUT, rate_file);
+		   } catch (string str) {
+        		outError(str);
+    		   } catch (...) {
+		        outError("Error reading rate file " + rate_file);
+		   }	
+		   rate_file = "";
+		} 
                 arg.push_back(opt);
+	    }
     }
-    
+    lsd::InputOutputStream io(tree_stream.str(), outgroup_stream.str(), date_stream.str(), rate_stream.str(), "", "");
+
     cout << "Building time tree by least-square dating (LSD) with command:" << endl;
     
     int argc = arg.size();

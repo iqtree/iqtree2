@@ -136,6 +136,16 @@ public:
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
 
+    // estimate the initial frequence vector for the class
+
+    // method 1: given a set of classes in the mixture model, randomly assign each alignment position to one of the classes.
+    // Then the nucleotide frequency array of each class is initialized according to the nucleotide frequencies among the positions assigned to the class.
+    void estimateInitFreq1();
+
+    // Method 2: evenly divide the alignment into K partitions where K = number of classes in the mixture
+    // The nucleotide frequency array of i-th class is initialized according to the nucleotide frequencies in the i-th partition
+    void estimateInitFreq2();
+
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
@@ -197,6 +207,12 @@ public:
     */
     double optimizeWithEM(double gradient_epsilon);
 
+	/**
+	    optimize GTR matrix for all classes
+	    @param gradient_epsilon 
+	    @return log-likelihood of optimized GTR matrix 
+	 */
+	double optimizeLinkedSubst(double gradient_epsilon);
 
     /** 
         set number of optimization steps
@@ -308,7 +324,7 @@ public:
 
 protected:
 
-	bool optimizing_submodels;
+	bool optimizing_gtr;
 
     /** number of optimization steps, default: ncategory*2 */
     int optimize_steps;    

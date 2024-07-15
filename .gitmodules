@@ -1,3 +1,7 @@
 [submodule "lsd2"]
 	path = lsd2
 	url = https://github.com/tothuhien/lsd2.git
+[submodule "cmaple"]
+	path = cmaple
+	url = https://github.com/trongnhanuit/cmaple.git
+	branch = dev2_2

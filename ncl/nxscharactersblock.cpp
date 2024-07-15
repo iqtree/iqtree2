@@ -1779,7 +1779,7 @@ unsigned NxsCharactersBlock::HandleTokenState(
 		cit = find(ci_begin, ci_end, t);
 	else
         cit = find_if (ci_begin, ci_end,
-                       [=] (const NxsString& s) { return NxsStringEqual()(s, t); } );
+                       [=] (const NxsString& s) { return s.EqualsCaseInsensitive(t); } );
 
 	if (cit == ci_end)
 		{

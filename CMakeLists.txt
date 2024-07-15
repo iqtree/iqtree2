@@ -49,6 +49,11 @@
 # Compile static version: cmake -DIQTREE_FLAGS=static ....
 # Compile static OpenMP version: cmake -DIQTREE_FLAGS="static" ....
 #
+#
+#
+# Compile IQ-TREE with CMAPLE integrated: cmake -DUSE_CMAPLE=ON ....
+#
+#
 
 #NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
 # C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
@@ -82,7 +87,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH ".4.3.mpi")
+set (iqtree_VERSION_PATCH ".5.onnxupdate")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -98,6 +103,12 @@ endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     message("Build mode   : Release")
+endif()
+
+if (BUILD_LIB STREQUAL "ON")
+    message("Build lib    : ON")
+else()
+    message("Build lib    : OFF")
 endif()
 
 if (CMAKE_GENERATOR MATCHES "Xcode")
@@ -193,11 +204,38 @@ if (APPLE)
       OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-		message("APPLE SILICON (M1) DETECTED!")
-		set (__ARM_NEON "TRUE")
+		message("APPLE SILICON (M1/M2/M3) DETECTED!")
+        set (__ARM_NEON "TRUE")
+        set (NEON 1)
+    endif()
+elseif (UNIX AND NOT APPLE)  # Unix and Linux
+    execute_process(
+      COMMAND uname -m
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE OS_NATIVE_ARCHITECTURE
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(OS_NATIVE_ARCHITECTURE STREQUAL "aarch64")
+        message("Unix/Linux ARM64 DETECTED!")
+	    set (__ARM_NEON "TRUE")
 		set (NEON 1)
 	endif()
 endif()
+
+##################################################################
+# Include the CMAPLE library
+##################################################################
+option(USE_CMAPLE "Integrate CMAPLE" OFF)
+
+if (USE_CMAPLE STREQUAL "ON")
+	message("Integrate CMAPLE: ON")
+    add_definitions(-DUSE_CMAPLE)
+    set(TARGET_CMAPLE "maple")
+else()
+	message("Integrate CMAPLE: OFF")
+	set(TARGET_CMAPLE "")
+endif()
+
 
 ##################################################################
 # Detect target platforms
@@ -247,17 +285,17 @@ set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
 set(CLANG_UNDER_VS "FALSE") #Clang compiler, used from inside Visual Studio
-# using C++11 standard
+# using C++17 standard
 # disable AVX for NEON
 if (__ARM_NEON)
     set(IQTREE_FLAGS "${IQTREE_FLAGS} novx")
 elseif (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
     set(CLANG_UNDER_VS "TRUE")
-    #it won't recognize the -std=c++11 parameter.
+    #it won't recognize the -std=c++17 parameter.
     #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
     include_directories("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\Llvm\\lib\\clang\\10.0.0\\include")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -296,7 +334,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (APPLE)
         SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
     endif()
 
     #remove -rdynamic for Clang under Linux
@@ -348,11 +386,6 @@ if (IQTREE_FLAGS MATCHES "lto")
         set(COMBINED_FLAGS "${COMBINED_FLAGS} -flto")
     #endif()
 endif()
-
-##################################################################
-# Whether to build the decenttree executable file (default: ON)
-##################################################################
-option(BUILD_DECENTTREE "build decenttree" ON)
 
 # for mac arm boost compilation issue
 if (__ARM_NEON AND APPLE)
@@ -453,9 +486,15 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     	if(OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
     		link_directories(${PROJECT_SOURCE_DIR}/libmac_m1)
     	else()
-        	link_directories(${PROJECT_SOURCE_DIR}/libmac)
-        endif()	
-    elseif (WIN32 OR UNIX)
+    		link_directories(${PROJECT_SOURCE_DIR}/libmac)
+    	endif()
+    elseif (UNIX AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+    	if (__ARM_NEON)
+    		link_directories(${PROJECT_SOURCE_DIR}/liblinux_arm)
+    	else()
+    		link_directories(${PROJECT_SOURCE_DIR}/lib)
+    	endif()
+    elseif (WIN32)
         if (BINARY32)
             link_directories(${PROJECT_SOURCE_DIR}/lib32)
         else()
@@ -681,7 +720,8 @@ check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
 check_function_exists (strndup HAVE_STRNDUP)
 check_function_exists (strtok_r HAVE_STRTOK_R)
-
+include (CheckIncludeFile)
+CHECK_INCLUDE_FILE("unistd.h" HAVE_UNISTDH)
 find_package(Backtrace)
 
 # configure a header file to pass some of the CMake settings
@@ -694,6 +734,12 @@ configure_file (
 # add the binary tree to the search path for include files
 # so that we will find iqtree_config.h
 include_directories("${PROJECT_BINARY_DIR}")
+
+# add the binary tree to the search path for include files
+# so that we will find cmaple/cmaple_config.h
+if (USE_CMAPLE STREQUAL "ON")
+	include_directories("${PROJECT_BINARY_DIR}/cmaple")
+endif()
 
 #zlib will be detected for appearance
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
@@ -715,14 +761,12 @@ endif(ZLIB_FOUND)
 ##################################################################
 # subdirectories containing necessary libraries for the build
 ##################################################################
-
 option(USE_BOOSTER "Use Booster for transfer bootstrap expectation" ON)
 if (USE_BOOSTER)
     add_subdirectory(booster)
     add_definitions(-DUSE_BOOSTER)
 endif()
 
-add_subdirectory(main)
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
@@ -744,6 +788,13 @@ add_subdirectory(simulator)
 if (USE_NN OR USE_OLD_NN)
 add_subdirectory(nn)
 endif()
+
+if (USE_CMAPLE STREQUAL "ON")
+	SET(INSTALL_CMAPLE OFF CACHE BOOL "Disable installation of googletest" FORCE)
+	add_subdirectory(cmaple)
+endif()
+
+add_subdirectory(main)
 
 # YAML library
 option(YAML_CPP_BUILD_TESTS "Enable testing" OFF)
@@ -776,23 +827,51 @@ add_library(kernelfma tree/phylokernelfma.cpp)
     endif()
 endif()
 
-add_executable(iqtree2
-obsolete/parsmultistate.cpp
-obsolete/parsmultistate.h
-)
+##################################################################
+# build lib file or main executable
+##################################################################
+option(BUILD_LIB "Build IQ-TREE2 library" OFF)
+
+if (BUILD_LIB STREQUAL "ON")
+    add_library(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+else()
+    add_executable(iqtree2
+        obsolete/parsmultistate.cpp
+        obsolete/parsmultistate.h
+    )
+endif()
+
+if (USE_CMAPLE STREQUAL "ON")
+	add_executable(iqtree2-aa
+	obsolete/parsmultistate.cpp
+	obsolete/parsmultistate.h
+	)
+endif()
 
 if(Backtrace_FOUND)
   include_directories(${Backtrace_INCLUDE_DIR})
   target_link_libraries(iqtree2 ${Backtrace_LIBRARY})
+  if (USE_CMAPLE STREQUAL "ON")
+  	target_link_libraries(iqtree2-aa ${Backtrace_LIBRARY})
+  endif()
 endif(Backtrace_FOUND)
 
 if (USE_BOOSTER)
     target_link_libraries(iqtree2 booster)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa booster)
+    endif()
 endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree2 ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main ${TARGET_CMAPLE} PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        if (USE_CMAPLE STREQUAL "ON")
+        	set_target_properties(iqtree2-aa ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree simulator yaml-cpp phyloYAML main-aa maple-aa PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        endif()
         if (USE_TERRAPHAST)
             set_target_properties(terracetphast terraphast PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
         endif()
@@ -801,9 +880,6 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
         endif()
         if (USE_BOOSTER)
             set_target_properties(booster PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-        endif()
-        if (NOT BUILD_DECENTTREE)
-            set_target_properties(utils PROPERTIES BUILD_DECENTTREE "OFF")
         endif()
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
@@ -848,8 +924,14 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     elseif(CLANG AND WIN32)
         if (BINARY32)
             target_link_libraries(iqtree2 ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+            if (USE_CMAPLE STREQUAL "ON")
+            	target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+            endif()
         else()
             target_link_libraries(iqtree2 ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+            if (USE_CMAPLE STREQUAL "ON")
+            	target_link_libraries(iqtree2-aa ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+            endif()
         endif()
 #        set(THREAD_LIB "ompstatic")
     endif()
@@ -862,7 +944,12 @@ endif()
 
 # basic linking librararies
 target_link_libraries(iqtree2 pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
-    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+    gsl alignment tree simulator terrace yaml-cpp phyloYAML main ${TARGET_CMAPLE} ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+
+if (USE_CMAPLE STREQUAL "ON")
+	target_link_libraries(iqtree2-aa pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model
+    	gsl alignment tree simulator terrace yaml-cpp phyloYAML main-aa maple-aa ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+endif()
 
 # onnxruntime library
 if (USE_NN OR USE_OLD_NN)
@@ -879,57 +966,70 @@ if (USE_NN OR USE_OLD_NN)
     endif()
 endif()
 
-if(USE_CUDA)
-    if (cuda_LIBRARIES)
-        target_link_libraries(iqtree2 ${cuda_LIBRARIES} -lcudart)
-    else()
-        if (APPLE)
-            target_link_libraries(iqtree2 /usr/local/cuda/lib/libcudart.dylib)
-        elseif(UNIX)
-            target_link_libraries(iqtree2 /usr/local/cuda/lib64/libcudart.so)
-        else()
-            target_link_libraries(iqtree2 cudart)
-        endif()
-    endif()
-endif()
-
 if (USE_TERRAPHAST)
    target_link_libraries(iqtree2 terracetphast)
+   if (USE_CMAPLE STREQUAL "ON")
+		target_link_libraries(iqtree2-aa terracetphast)
+   endif()
 endif()
 
 if (USE_LSD2)
     target_link_libraries(iqtree2 lsd2)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa lsd2)
+    endif()
 endif()
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree2 kernelsse)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa kernelsse)
+    endif()
 endif()
 
 # MPI libraries
 if (IQTREE_FLAGS MATCHES "mpi")
     if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
         target_link_libraries(iqtree2 ${MPI_CXX_LIBRARIES})
+        if (USE_CMAPLE STREQUAL "ON")
+        	target_link_libraries(iqtree2-aa ${MPI_CXX_LIBRARIES})
+        endif()
     endif()
 endif()
 
 # SSE, AVX etc. libraries
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree2 pllavx kernelavx kernelfma)
+    if (USE_CMAPLE STREQUAL "ON")
+    	target_link_libraries(iqtree2-aa pllavx kernelavx kernelfma)
+    endif()
     if (IQTREE_FLAGS MATCHES "KNL")
         target_link_libraries(iqtree2 kernelavx512)
+        if (USE_CMAPLE STREQUAL "ON")
+        	target_link_libraries(iqtree2-aa kernelavx512)
+        endif()
     endif()
 endif()
 
 # setup the executable name
 ##################################################################
 set_target_properties(iqtree2 PROPERTIES OUTPUT_NAME "iqtree2${EXE_SUFFIX}")
+if (USE_CMAPLE STREQUAL "ON")
+	set_target_properties(iqtree2-aa PROPERTIES OUTPUT_NAME "iqtree2-aa${EXE_SUFFIX}")
+endif()
 
 # strip the release build
 if (NOT IQTREE_FLAGS MATCHES "nostrip" AND CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG) AND NOT APPLE) # strip is not necessary for MSVC
     if (WIN32)
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2>)
+        if (USE_CMAPLE STREQUAL "ON")
+        	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2-aa>)
+        endif()
     elseif (NOT APPLE)
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2>)
+        if (USE_CMAPLE STREQUAL "ON")
+        	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND strip $<TARGET_FILE:iqtree2-aa>)
+        endif()
     endif()
 endif()
 
@@ -943,11 +1043,20 @@ if (WIN32)
     if (MSVC)
         if (CLANG_UNDER_VS)
             ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
+            if (USE_CMAPLE STREQUAL "ON")
+            	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
+            endif()
         else()
             ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "Release\\iqtree2${EXE_SUFFIX}.exe" "Release\\iqtree2${EXE_SUFFIX}-click.exe")
+            if (USE_CMAPLE STREQUAL "ON")
+            	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "Release\\iqtree2-aa${EXE_SUFFIX}.exe" "Release\\iqtree2-aa${EXE_SUFFIX}-click.exe")
+            endif()
         endif()
     else()
         ADD_CUSTOM_COMMAND(TARGET iqtree2 POST_BUILD COMMAND copy "iqtree2${EXE_SUFFIX}.exe" "iqtree2${EXE_SUFFIX}-click.exe")
+        if (USE_CMAPLE STREQUAL "ON")
+        	ADD_CUSTOM_COMMAND(TARGET iqtree2-aa POST_BUILD COMMAND copy "iqtree2-aa${EXE_SUFFIX}.exe" "iqtree2-aa${EXE_SUFFIX}-click.exe")
+        endif()
     endif()
 endif()
 
@@ -955,6 +1064,9 @@ endif()
 # add the install targets
 ##############################################################
 install (TARGETS iqtree2 DESTINATION bin)
+if (USE_CMAPLE STREQUAL "ON")
+	install (TARGETS iqtree2-aa DESTINATION bin)
+endif()
 install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
@@ -962,6 +1074,9 @@ install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
 
 if (WIN32)
     install (FILES "${BINARY_DIR}/iqtree2${EXE_SUFFIX}-click.exe" DESTINATION bin)
+    if (USE_CMAPLE STREQUAL "ON")
+    	install (FILES "${BINARY_DIR}/iqtree2-aa${EXE_SUFFIX}-click.exe" DESTINATION bin)
+    endif()
     if (NOT IQTREE_FLAGS MATCHES "single" AND MSVC)
         if (BINARY32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/pthreadVC2.dll" DESTINATION bin)
@@ -1009,11 +1124,19 @@ set(CPACK_SOURCE_IGNORE_FILES
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     if (IQTREE_FLAGS MATCHES "oldmac")
-        set (SYSTEM_NAME "MacOS10.5")
+        set (SYSTEM_NAME "macOS10.5")
     elseif (OSX_NATIVE_ARCHITECTURE STREQUAL "arm64")
-        set (SYSTEM_NAME "MacOSX-arm64")
+        set (SYSTEM_NAME "macOS-arm")
     else()
-        set (SYSTEM_NAME "MacOSX-intel")
+        set (SYSTEM_NAME "macOS-intel")
+    endif()
+endif()
+
+if (NOT APPLE AND UNIX)
+    if (__ARM_NEON)
+        set (SYSTEM_NAME "Linux-arm")
+    else()
+        set (SYSTEM_NAME "Linux-intel")
     endif()
 endif()
 

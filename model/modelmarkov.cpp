@@ -280,6 +280,9 @@ string ModelMarkov::getNameParams(bool show_fixed_params) {
 }
     
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
+    // don't specify freqs for UNREST
+    if (name == "UNREST")
+        return;
      // "+F..." but without {frequencies}
     retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
     if (fixed_parameters)
@@ -1631,7 +1634,7 @@ void ModelMarkov::decomposeRateMatrixRev() {
     delete [] rate_matrix;
 }
 
-void ModelMarkov::readRates(istream &in) throw(const char*, string) {
+void ModelMarkov::readRates(istream &in) noexcept(false) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -1696,7 +1699,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
     }
 }
 
-void ModelMarkov::readRates(string str) throw(const char*) {
+void ModelMarkov::readRates(string str) noexcept(false) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
     
@@ -1733,7 +1736,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 
 }
 
-void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
+void ModelMarkov::readStateFreq(istream &in) noexcept(false) {
 	int i;
 	for (i = 0; i < num_states; i++) {
         string tmp_value;
@@ -1755,7 +1758,7 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
     }
 }
 
-void ModelMarkov::readStateFreq(string str) throw(const char*) {
+void ModelMarkov::readStateFreq(string str) noexcept(false) {
 	int i;
 	int end_pos = 0;
     

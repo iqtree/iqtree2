@@ -676,7 +676,7 @@ void AliSimulatorHeterogeneity::initVariablesRateHeterogeneity(int sequence_leng
     intializeSiteSpecificModelIndex(sequence_length, site_specific_model_index, site_to_patternID);
     
     // only regenerate the ancestral sequence if mixture model is used and the ancestral sequence is not specified by the user.
-    if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->alisim_ancestral_sequence_aln_filepath)
+    if (regenerate_root_sequence && tree->getModel()->isMixture() && !tree->params->root_ref_seq_aln.length())
     {
         // re-generate sequence based on posterior mean/distribution state frequencies if users want to do so
         if (tree->getModel()->isMixtureSameQ() && tree->params->alisim_stationarity_heterogeneity == POSTERIOR_MEAN)

@@ -1998,7 +1998,7 @@ Tree * gen_rand_tree(int nbr_taxa, char **taxa_names){
     taxa_names = (char**) calloc(nbr_taxa, sizeof(char*));
     for(taxon = 0; taxon < nbr_taxa; taxon++) {
       taxa_names[taxon] = (char*) calloc((int)(log10(nbr_taxa)+2), sizeof(char));
-      sprintf(taxa_names[taxon],"%d",taxon+1); /* names taxa by a mere integer, starting with "1" */
+      snprintf(taxa_names[taxon],nbr_taxa,"%d",taxon+1); /* names taxa by a mere integer, starting with "1" */
     }
   }
   
