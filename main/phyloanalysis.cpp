@@ -291,15 +291,23 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
-void reportNexusFile(ostream &out, ModelSubst *m) {
+void reportNexusFile(ostream &out, ModelSubst *m, string part_name, bool out_header) {
     double full_mat[400];
     int i,j,k;
     double *rate_mat = new double[m->num_states * m->num_states];
     m->getRateMatrix(rate_mat);
-    out << "#nexus" << endl;
-    out << "begin models;" << endl;
-    out << "model GTRPMIX =" << endl;
     out.precision(6);
+
+    if (out_header) {
+        out << "#nexus" << endl;
+        out << "begin models;" << endl;
+    }
+    
+    out << "model GTRPMIX";
+    if (!part_name.empty())
+        out << "." << part_name;
+    out << " =" << endl;
+    
     if (m->isReversible()) {
         for (i = 0, k = 0; i < m->num_states - 1; i++)
             for (j = i + 1; j < m->num_states; j++, k++) {
@@ -325,7 +333,11 @@ void reportNexusFile(ostream &out, ModelSubst *m) {
         out << " " << f;
     out << endl;
     out.precision(4);
-    out << "end;" << endl;
+    
+    if (out_header)
+        out << "end;" << endl;
+    
+    delete[] rate_mat;
 }
 
 void reportLinkSubstMatrix(ostream &out, Alignment *aln, ModelSubst *m) {
@@ -1804,14 +1816,23 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         // for link-exchange-rates option
         // output the nexus file
         if (params.optimize_linked_gtr) {
-            ModelSubst *mmodel = tree.getModel();
-            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
             string outnexfile = params.out_prefix;
             outnexfile += ".GTRPMIX.nex";
             ofstream outnex;
             outnex.exceptions(ios::failbit | ios::badbit);
             outnex.open(outnexfile.c_str());
-            reportNexusFile(outnex, m);
+            if (tree.isSuperTree()) {
+               PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+               for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
+                   ModelSubst *mmodel = (*it)->getModel();
+                   ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+                   reportNexusFile(outnex, m, (*it)->aln->name, false);
+               }
+            } else {
+               ModelSubst *mmodel = tree.getModel();
+               ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+               reportNexusFile(outnex, m, "", true);
+            }
             outnex.close();
         }
 
