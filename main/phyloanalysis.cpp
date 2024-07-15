@@ -291,18 +291,13 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
-void reportNexusFile(ostream &out, ModelSubst *m, string part_name, bool out_header) {
+void reportNexusFile(ostream &out, ModelSubst *m, string part_name) {
     double full_mat[400];
     int i,j,k;
     double *rate_mat = new double[m->num_states * m->num_states];
     m->getRateMatrix(rate_mat);
     out.precision(6);
 
-    if (out_header) {
-        out << "#nexus" << endl;
-        out << "begin models;" << endl;
-    }
-    
     out << "model GTRPMIX";
     if (!part_name.empty())
         out << "." << part_name;
@@ -333,9 +328,6 @@ void reportNexusFile(ostream &out, ModelSubst *m, string part_name, bool out_hea
         out << " " << f;
     out << endl;
     out.precision(4);
-    
-    if (out_header)
-        out << "end;" << endl;
     
     delete[] rate_mat;
 }
@@ -1821,18 +1813,21 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             ofstream outnex;
             outnex.exceptions(ios::failbit | ios::badbit);
             outnex.open(outnexfile.c_str());
+            outnex << "#nexus" << endl;
+            outnex << "begin models;" << endl;
             if (tree.isSuperTree()) {
                PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
                for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
                    ModelSubst *mmodel = (*it)->getModel();
                    ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
-                   reportNexusFile(outnex, m, (*it)->aln->name, false);
+                   reportNexusFile(outnex, m, (*it)->aln->name);
                }
             } else {
                ModelSubst *mmodel = tree.getModel();
                ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
-               reportNexusFile(outnex, m, "", true);
+               reportNexusFile(outnex, m, "");
             }
+            outnex << "end;" << endl;
             outnex.close();
         }
 
