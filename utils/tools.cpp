@@ -1198,7 +1198,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.max_mix_cats = 10;
     params.start_subst = "GTR+FO";
     params.opt_rhas_again = true;
-    params.opt_qmix_method = 2;
     params.opt_qmix_criteria = 1; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
     params.opt_qmix_pthres = 0.05;
     params.check_combin_q_mat = true;
