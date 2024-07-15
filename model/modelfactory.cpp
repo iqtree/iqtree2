@@ -1031,6 +1031,147 @@ void ModelFactory::restoreCheckpoint() {
     endCheckpoint();
 }
 
+string getLastQ(string model_name) {
+    size_t last_comma_pos = model_name.find_last_of(',');
+    size_t right_brace_pos = model_name.find('}', last_comma_pos);
+    if (last_comma_pos == string::npos || right_brace_pos == string::npos)
+        return model_name;
+
+    return model_name.substr(last_comma_pos + 1, right_brace_pos - last_comma_pos - 1);
+}
+
+string replaceLastQ(string model_name, string nested_q_name) {
+    size_t last_comma_pos = model_name.find_last_of(',');
+    size_t right_brace_pos = model_name.find('}', last_comma_pos);
+    if (last_comma_pos == string::npos || right_brace_pos == string::npos)
+        return nested_q_name;
+
+    string nested_mix_model = model_name.substr(0, last_comma_pos + 1) + nested_q_name + model_name.substr(right_brace_pos);
+    return nested_mix_model;
+}
+
+void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network) {
+    string model_name, last_q_name, rate_name, nested_full_name, best_nested_model_name;
+    vector<string> nested_models;
+    int nmix, i;
+    double max_logl, cur_logl;
+
+    nmix = model->getNMixtures();
+    model_name = model->getName();
+    rate_name = site_rate->name;
+    if (nmix == 1) {
+        nested_models = nest_network[model_name];
+        if (nested_models.size() == 0) {
+            return;
+        }
+
+        if (verbose_mode >= VB_MED) {
+            cout << "nested models of " << model_name + rate_name << ": ";
+            for (auto nested_model_name: nested_models) {
+                cout << nested_model_name + rate_name << " ";
+            }
+            cout << endl;
+        }
+
+        for (i = 0; i < nested_models.size(); i++) {
+            map<string, string>::iterator itr = checkpoint->find(nested_models[i] + rate_name);
+            ASSERT(itr != checkpoint->end());
+
+            string best_model_logl_df = itr->second;
+            stringstream ss(best_model_logl_df);
+            ss >> cur_logl;
+
+            if (verbose_mode >= VB_MED) {
+                cout << " lnL of " << nested_models[i] + rate_name << ": " << cur_logl << endl;
+            }
+
+            if (i == 0) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_models[i];
+            } else if (cur_logl > max_logl) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_models[i];
+            }
+        }
+
+        nested_full_name = best_nested_model_name + rate_name;
+
+        checkpoint->startStruct("OptModel");
+        checkpoint->startStruct(nested_full_name);
+
+        model->restoreCheckpoint();
+        site_rate->restoreCheckpoint();
+
+        checkpoint->endStruct();
+        checkpoint->endStruct();
+
+        if (verbose_mode >= VB_MED) {
+            cout << "best full name: " << nested_full_name << endl;
+            cout << "[init model] " << model->getNameParams(true) << endl;
+            cout << "[init model] " << site_rate->getNameParams() << endl;
+        }
+
+    } else if (nmix > 1) {
+        last_q_name = getLastQ(model_name);
+        nested_models = nest_network[last_q_name];
+
+        if (nested_models.size() == 0) {
+            return;
+        }
+
+        string nested_mix_model;
+
+        if (verbose_mode >= VB_MED) {
+            cout << "nested model of " << model_name + rate_name << ": ";
+            for (auto nested_model_name: nested_models) {
+                nested_mix_model = replaceLastQ(model_name, nested_model_name);
+                cout << nested_mix_model + rate_name << " ";
+            }
+            cout << endl;
+        }
+
+        for (i = 0; i < nested_models.size(); i++) {
+            nested_mix_model = replaceLastQ(model_name, nested_models[i]);
+            map<string, string>::iterator itr = checkpoint->find(nested_mix_model + rate_name);
+            ASSERT(itr != checkpoint->end());
+
+            string best_model_logl_df = itr->second;
+            stringstream ss(best_model_logl_df);
+            ss >> cur_logl;
+
+            if (verbose_mode >= VB_MED) {
+                cout << " lnL of " << nested_mix_model + rate_name << ": " << cur_logl << endl;
+            }
+            if (i == 0) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_mix_model;
+            } else if (cur_logl > max_logl) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_mix_model;
+            }
+        }
+
+        nested_full_name = best_nested_model_name + rate_name;
+
+        checkpoint->startStruct("OptModel");
+        checkpoint->startStruct(nested_full_name);
+
+        model->restoreCheckpoint();
+        site_rate->restoreCheckpoint();
+
+        checkpoint->endStruct();
+        checkpoint->endStruct();
+
+        if (verbose_mode >= VB_MED) {
+            cout << "best full name: " << nested_full_name << endl;
+            cout << "[init model] " << model->getNameParams(true) << endl;
+            cout << "[init model] " << site_rate->getNameParams() << endl;
+        }
+
+    }
+
+}
+
 int ModelFactory::getNParameters(int brlen_type) {
     int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
         site_rate->getTree()->getNBranchParameters(brlen_type);

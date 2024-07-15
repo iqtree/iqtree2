@@ -68,9 +68,9 @@ const char* morph_model_names[] = {"MK"};
 
 
 /******* DNA model set ******/
-const char* dna_model_names[] = {"GTR", "SYM", "TVM",  "TVMe", "TIM3",
-        "TIM3e", "TIM2", "TIM2e", "TIM", "TIMe", "TPM3u", "TPM3",
-        "TPM2u",  "TPM2",  "K81u", "K81", "TN", "TNe",  "HKY",  "K80", "F81", "JC"};
+const char* dna_model_names[] = {"JC", "F81", "K80", "HKY", "TNe", "TN",
+                                 "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u",
+                                 "TIMe", "TIM", "TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR"};
 
 /* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"GTR",  "SYM", "TVM", "TVMe", "TIM", "TIMe",
@@ -901,7 +901,7 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, bool under_mix_finder)
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder)
 {
     // if it is an alignment with partitions and the number of threads is more than the number of alignments,
     // then set the number of threads = the number of alignments (for most of the cases)
@@ -1053,6 +1053,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         // single model selection
         CandidateModel best_model;
         CandidateModelSet model_set;
+        model_set.nest_network = nest_network;
         model_set.under_mix_finder = under_mix_finder;
         Checkpoint *checkpoint = &model_info;
         // neural network model selection (added by TD)
@@ -1102,7 +1103,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         }
 #endif
     }
-    
+
+    // remove key "OptModel" from the checkpoint file, which is only used for initialising models from the nested models.
+    iqtree.getCheckpoint()->eraseKeyPrefix("OptModel");
+
     delete models_block;
     
     // force to dump all checkpointing information
@@ -1216,6 +1220,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
+            model_names = reorderModelNames(model_names);
         }
 
         if (model_name.find("+LMRY") != string::npos) {
@@ -1333,6 +1338,13 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
         std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
         if (freq_names[j] != "" && freq_names[j][0] != '+')
             freq_names[j] = "+" + freq_names[j];
+    }
+
+    // put "FO" to the last
+    vector<string>::iterator itr = remove(freq_names.begin(), freq_names.end(), "+FO");
+    if (itr != freq_names.end()) {
+        freq_names.erase(itr, freq_names.end());
+        freq_names.push_back("+FO");
     }
 }
 
@@ -1917,34 +1929,53 @@ string CandidateModel::evaluate(Params &params,
                            getName() + " worse than the previous (k-1)-class mixture model " + convertDoubleToString(pre_logl));
             }
         } else {
-            // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
             CandidateModel prev_info;
-            double weight_rescale = 1.0;
-
             bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
-            if (!rate_restored && prev_rate_present) {
-                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                if (verbose_mode >= VB_MED)
-                    cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
-            }
-            for (int step = 0; step < 5; step++) {
+
+            if (!prev_rate_present){
+                iqtree->getModelFactory()->setCheckpoint(&in_model_info);
+                iqtree->getModelFactory()->initFromNestedModel(nest_network);
+
                 new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
                                                                          params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
                 tree_len = iqtree->treeLength();
+
+                // now switch to the output checkpoint
+                iqtree->getModelFactory()->setCheckpoint(&out_model_info);
+                iqtree->setCheckpoint(&out_model_info);
+
                 iqtree->getModelFactory()->saveCheckpoint();
                 iqtree->saveCheckpoint();
-                
-                // check if logl(+R[k]) is worse than logl(+R[k-1])
-                if (!prev_rate_present) break;
-                if (prev_info.logl < new_logl + params.modelfinder_eps) break;
-                weight_rescale *= 0.5;
-                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
-                << " with factor " << weight_rescale << endl;
-            }
-            if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps*10.0) {
-                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                           getName() + " worse than " + prev_info.getName() + " " + convertDoubleToString(prev_info.logl));
+
+            } else {
+                // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
+                double weight_rescale = 1.0;
+                if (!rate_restored) {
+                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                    if (verbose_mode >= VB_MED)
+                        cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
+                }
+                for (int step = 0; step < 5; step++) {
+                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+                                                                             params.modelfinder_eps,
+                                                                             TOL_GRADIENT_MODELTEST);
+                    tree_len = iqtree->treeLength();
+                    iqtree->getModelFactory()->saveCheckpoint();
+                    iqtree->saveCheckpoint();
+
+                    // check if logl(+R[k]) is worse than logl(+R[k-1])
+                    // if (!prev_rate_present) break;
+                    if (prev_info.logl < new_logl + params.modelfinder_eps) break;
+                    weight_rescale *= 0.5;
+                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                    cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
+                         << " with factor " << weight_rescale << endl;
+                }
+                if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
+                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                               getName() + " worse than " + prev_info.getName() + " " +
+                               convertDoubleToString(prev_info.logl));
+                }
             }
         }
     }
@@ -1952,8 +1983,10 @@ string CandidateModel::evaluate(Params &params,
     df += iqtree->getModelFactory()->getNParameters(brlen_type);
     logl += new_logl;
     string tree_string = iqtree->getTreeString();
-    
-    cout << "[optimized] " << iqtree->getModelFactory()->model->getNameParams(false) << endl;
+
+    if (verbose_mode >= VB_MED) {
+        cout << "[optimized] " << iqtree->getModelFactory()->model->getNameParams(false) << endl;
+    }
 
     if (syncChkPoint != nullptr)
         iqtree->getModelFactory()->syncChkPoint = nullptr;
@@ -2913,6 +2946,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 		//info.set_name = set_name;
         at(model).set_name = set_name;
         string tree_string;
+        at(model).nest_network = nest_network;
         /***** main call to estimate model parameters ******/
         at(model).syncChkPoint = this->syncChkPoint;
         tree_string = at(model).evaluate(params,
@@ -3035,9 +3069,13 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 is_better_model = true;
             }
         }
+
+        model_info.startStruct("OptModel");
+        model_info.putSubCheckpoint(&out_model_info, at(model).getName());
+        model_info.endStruct();
         
         if (under_mix_finder && is_better_model) {
-            model_info.putSubCheckpoint(&out_model_info, "Best");
+            model_info.putSubCheckpoint(&out_model_info, "BestOfTheKClass");
         }
 
         switch (params.model_test_criterion) {
@@ -5793,7 +5831,7 @@ void addModel(string model_str, string& new_model_str, string new_subst) {
 //         2 - estimate the number of classes in a mixture model
 //         3 - estimate the k-th substitution matrix
 //         4 - estimate an additional substitution matrix
-CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, int action, bool do_init_tree, string model_str, string& best_subst_name, string& best_rate_name, int class_k = 0)
+CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, int action, bool do_init_tree, string model_str, string& best_subst_name, string& best_rate_name, map<string, vector<string> > nest_network, int class_k = 0)
 {
     double cpu_time;
     double real_time;
@@ -5874,6 +5912,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     // params.model_subset = NULL;
     // params.state_freq_set = NULL;
     generate_candidates = false;
+    candidate_models.nest_network = nest_network;
 
     if (action == 1) {
         params.model_set = model_str;
@@ -6031,6 +6070,9 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     cout << "Best-fit model: " << iqtree.aln->model_name << " chosen according to "
         << criterionName(params.model_test_criterion) << endl;
 
+    // remove key "OptModel" from the checkpoint file, which is only used for initialising models from the nested models.
+    iqtree.getCheckpoint()->eraseKeyPrefix("OptModel");
+
     delete models_block;
     
     // force to dump all checkpointing information
@@ -6085,11 +6127,26 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     models_block = readModelsDefinition(params);
     ssize = iqtree->getAlnNSite();
     criteria_str = criterionName(params.model_test_criterion);
-    
+
+    // Step 0: (reorder candidate DNA models when -mset is used) build the nest-relationship network
+    SeqType seq_type = iqtree->aln->seq_type;
+    map<string, vector<string> > nest_network;
+    if (seq_type == SEQ_DNA) {
+        StrVector model_names, freq_names;
+        getModelSubst(iqtree->aln->seq_type, iqtree->aln->isStandardGeneticCode(), params.model_name,
+                      params.model_set, params.model_subset, model_names);
+        getStateFreqs(iqtree->aln->seq_type, params.state_freq_set, freq_names);
+
+        nest_network = generateNestNetwork(model_names, freq_names);
+    } else {
+        nest_network = {};
+    }
+
+
     // Step 1: run ModelFinder
     params.model_name = "";
     bool under_mix_finder = true;
-    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, under_mix_finder);
+    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, nest_network, under_mix_finder);
 
     // (cancel) Step 2: do tree search for this single-class model
     // runTreeReconstruction(params, iqtree);
@@ -6114,7 +6171,7 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     do_init_tree = false;
     model_str = best_subst_name;
     do {
-        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
         cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << best_model.df << "; loglike: " << best_model.logl << "; " << criteria_str << " score: " << best_model.getScore() << ";";
         if (params.opt_qmix_criteria == 1) {
             LR = 2.0 * (best_model.logl - curr_loglike);
@@ -6142,7 +6199,7 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
         action = 1; // estimating the RHAS model
         do_init_tree = false;
         model_str = best_subst_name;
-        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name);
+        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
         curr_df = best_model.df;
         curr_loglike = best_model.logl;
         curr_score = best_model.getScore();
@@ -6216,4 +6273,133 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     if (test_only) {
         params.min_iterations = 0;
     }
+}
+
+/****************************************************/
+/*    Q MATRICES NESTING CHECK                      */
+/****************************************************/
+
+int findModelIndex(const string& model) {
+    int i;
+    for (i = 0; i < sizeof(dna_model_names) / sizeof(dna_model_names[0]); i++) {
+        if (strcmp(dna_model_names[i], model.c_str()) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+StrVector reorderModelNames(StrVector model_names) {
+    int i;
+    struct model_index {
+        string name;
+        int index;
+        model_index(string a_name, int an_index):name(a_name),index(an_index){}
+    };
+    struct sort_by_ind {
+        bool operator() (const model_index& a, const model_index& b) const {return a.index < b.index;}
+    };
+    vector<model_index> mi;
+
+    for (i = 0; i < model_names.size(); i++) {
+        if (findModelIndex(model_names[i]) == -1) {
+            outError("Incorrect model name: " + model_names[i] + " is input");
+        }
+        mi.push_back(model_index(model_names[i], findModelIndex(model_names[i])));
+    }
+    sort(mi.begin(), mi.end(), sort_by_ind());
+    for (i = 0; i < model_names.size(); i++) {
+        model_names[i] = mi[i].name;
+    }
+    return model_names;
+}
+
+bool isRateTypeNested(string rate_type1, string rate_type2) {
+    if (rate_type1.length() != 6) {
+        outError("Incorrect DNA model rate type code: " + rate_type1);
+    }
+    if (rate_type2.length() != 6) {
+        outError("Incorrect DNA model rate type code: " + rate_type2);
+    }
+
+    for (int i = 0; i < 6; i++) {
+        for (int j = 0; j < 6; j++ ){
+            if (rate_type1[i] == rate_type1[j] && rate_type2[i] != rate_type2[j]){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVector freq_names) {
+    int i, j, k;
+    bool covered;
+    string full_name1, full_name2, rate_type1, rate_type2;
+    StateFreqType freq1, freq2;
+    vector<string> mfname_and_mname, nested_models, nested_models_all;
+    map<string, vector<string> > nest_network, nest_network_all;
+    vector<StrVector> model_freq_names;
+
+    model_freq_names = {};
+    for (i = 0; i < model_names.size(); i++) {
+        string new_model_name = getDNAModelInfo(model_names[i], full_name1, rate_type1, freq1);
+        if (model_names[i] != new_model_name)
+            model_names[i] = new_model_name;
+
+        if (freq1 == FREQ_EQUAL) {
+            mfname_and_mname = {};
+            mfname_and_mname.push_back(model_names[i]);
+            mfname_and_mname.push_back(model_names[i]);
+            mfname_and_mname.push_back("+FQ");
+            model_freq_names.push_back(mfname_and_mname);
+        } else if (freq1 == FREQ_ESTIMATE) {
+            for (j = 0; j < freq_names.size(); j++) {
+                mfname_and_mname = {};
+                if (freq_names[j] == "+FQ") {
+                    mfname_and_mname.push_back(model_names[i]);
+                } else {
+                    mfname_and_mname.push_back(model_names[i] + freq_names[j]);
+                }
+                mfname_and_mname.push_back(model_names[i]);
+                mfname_and_mname.push_back(freq_names[j]);
+                model_freq_names.push_back(mfname_and_mname);
+            }
+        }
+    }
+
+    nest_network[model_freq_names[0][0]] = {};
+    nest_network_all[model_freq_names[0][0]] = {};
+    for (i = 1; i < model_freq_names.size(); i++) {
+        nested_models = {};
+        nested_models_all = {};
+        for (j = nest_network.size()-1; j >= 0; j--) {
+            string result1 = getDNAModelInfo(model_freq_names[i][1], full_name1, rate_type1, freq1);
+            string result2 = getDNAModelInfo(model_freq_names[j][1], full_name2, rate_type2, freq2);
+            if (model_freq_names[i][2] != "+FO" && model_freq_names[j][2] != model_freq_names[i][2]) {
+                continue;
+            } else {
+                if (isRateTypeNested(rate_type1, rate_type2)) {
+                    nested_models_all.push_back(model_freq_names[j][0]);
+                    covered = false;
+                    if (!nested_models.empty()) {
+                        for (k = 0; k < nested_models.size(); k++) {
+                            vector<string> nested_nested_models = nest_network_all[nested_models[k]];
+
+                            auto it = find(nested_nested_models.begin(), nested_nested_models.end(), model_freq_names[j][0]);
+                            if (it != nested_nested_models.end()) {
+                                covered = true;
+                            }
+                        }
+                    }
+                    if (!covered) {
+                        nested_models.push_back(model_freq_names[j][0]);
+                    }
+                }
+            }
+        }
+        nest_network[model_freq_names[i][0]] = nested_models;
+        nest_network_all[model_freq_names[i][0]] = nested_models_all;
+    }
+    return nest_network;
 }

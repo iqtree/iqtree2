@@ -1622,7 +1622,7 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
         return;
     
     int nmix = getNMixtures();
-    checkpoint->startStruct("Best");
+    checkpoint->startStruct("BestOfTheKClass");
     if (nmix > 2) {
         checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()-1));
         if (!fix_prop) {
@@ -1647,17 +1647,19 @@ void ModelMixture::initFromClassMinusOne(double init_weight) {
     checkpoint->endStruct();
 
     // change the freq to even freq
-    if (at(nmix-1)->freq_type == FREQ_ESTIMATE) {
-        int nstate = at(nmix-1)->num_states;
+    if (at(nmix - 1)->freq_type == FREQ_ESTIMATE) {
+        int nstate = at(nmix - 1)->num_states;
         double state_freq[nstate];
         double f = 1.0 / (double) nstate;
         for (int i = 0; i < nstate; i++)
             state_freq[i] = f;
-        at(nmix-1)->setStateFrequency(state_freq);
+        at(nmix - 1)->setStateFrequency(state_freq);
     }
-    
-    cout << "[init] " << getNameParams(false) << endl;
-    
+
+    if (verbose_mode >= VB_MED) {
+        cout << "[init] " << getNameParams(false) << endl;
+    }
+
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();
@@ -1680,7 +1682,9 @@ void ModelMixture::restoreCheckpoint() {
     }
     endCheckpoint();
 
-    cout << "[*init] " << getNameParams(false) << endl;
+    if (verbose_mode >= VB_MED) {
+        cout << "[*init] " << getNameParams(false) << endl;
+    }
 
     decomposeRateMatrix();
     if (phylo_tree)
