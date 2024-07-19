@@ -103,6 +103,11 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+        restore object from the nested model in checkpoint
+    */
+    virtual void initFromNestedModel(map<string, vector<string> > nest_network);
+
 	/**
 		get the name of the model
 	*/
