@@ -73,23 +73,23 @@ const char* dna_model_names[] = {"JC", "F81", "K80", "HKY", "TNe", "TN",
                                  "TIMe", "TIM", "TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR"};
 
 /* DNA models supported by PhyML/PartitionFinder */
-const char* dna_model_names_old[] ={"GTR",  "SYM", "TVM", "TVMe", "TIM", "TIMe",
-         "K81u", "K81", "TN", "TNe", "HKY", "K80", "F81", "JC"};
+const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe", "TN",
+         "K81", "K81u", "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};
 
 /* DNA model supported by RAxML */
 const char* dna_model_names_rax[] ={"GTR"};
 
 /* DNA model supported by MrBayes */
-const char *dna_model_names_mrbayes[] = {"GTR", "SYM", "HKY", "K80", "F81", "JC"};
+const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
 
 /* DNA model supported by BEAST1 */
-const char *dna_model_names_beast1[] = {"GTR", "TN", "HKY"};
+const char *dna_model_names_beast1[] = {"HKY", "TN", "GTR"};
 
 /* DNA model supported by BEAST2 */
-const char *dna_model_names_beast2[] = {"GTR", "TN", "HKY", "JC"};
+const char *dna_model_names_beast2[] = {"JC", "HKY", "TN", "GTR"};
 
 /* DNA model supported by ModelOMatic */
-const char *dna_model_names_modelomatic[] = {"GTR", "HKY", "K80", "F81", "JC"};
+const char *dna_model_names_modelomatic[] = {"JC", "F81", "K80", "HKY", "GTR"};
 
 //const char* dna_freq_names[] = {"+FO"};
 
@@ -901,6 +901,212 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
     source->transferSubCheckpoint(target, "PhyloTree");
 }
 
+/**
+ * get the list of substitution models
+ */
+void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
+                   string model_set, char *model_subset, StrVector &model_names) {
+    int i, j;
+
+    if (model_set == "1") {
+        model_names.push_back(getUsualModelSubst(seq_type));
+        return;
+    }
+
+    if (iEquals(model_set, "ALL") || iEquals(model_set, "AUTO"))
+        model_set = "";
+
+    if (seq_type == SEQ_BINARY) {
+        if (model_set.empty()) {
+            copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
+    } else if (seq_type == SEQ_MORPH) {
+        if (model_set.empty()) {
+            copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
+    } else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
+        if (model_set.empty()) {
+            copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "partitionfinder" || model_set== "phyml") {
+            copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "raxml") {
+            copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "mrbayes") {
+            copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
+            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (model_set == "beast1") {
+            copyCString(dna_model_names_beast1, sizeof(dna_model_names_beast1) / sizeof(char*), model_names);
+        } else if (model_set == "beast2") {
+            copyCString(dna_model_names_beast2, sizeof(dna_model_names_beast2) / sizeof(char*), model_names);
+        } else if (model_set == "modelomatic") {
+            copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkov") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkovry") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkovws") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+        } else if (model_set == "liemarkovmk") {
+            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (model_set == "strandsymmetric") {
+            copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+            // IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
+            // you also need to change getPrototypeModel function.
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+            model_names = reorderModelNames(model_names);
+        }
+
+        if (model_name.find("+LMRY") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+        } else if (model_name.find("+LMWS") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+        } else if (model_name.find("+LMMK") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (model_name.find("+LMSS") != string::npos) {
+            appendCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+        } else if (model_name.find("+LM") != string::npos) {
+            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        }
+    } else if (seq_type == SEQ_PROTEIN) {
+        if (model_set.empty()) {
+            copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+        } else if (model_set == "partitionfinder" || model_set == "phyml") {
+            copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
+        } else if (model_set == "raxml") {
+            copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
+        } else if (model_set == "mrbayes") {
+            copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+        } else if (model_set == "beast1") {
+            copyCString(aa_model_names_beast1, sizeof(aa_model_names_beast1) / sizeof(char*), model_names);
+        } else if (model_set == "beast2") {
+            copyCString(aa_model_names_beast2, sizeof(aa_model_names_beast2) / sizeof(char*), model_names);
+        } else if (model_set == "modelomatic") {
+            copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            appendCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
+        } else {
+            convert_string_vec(model_set.c_str(), model_names);
+        }
+
+        if (model_subset) {
+            StrVector submodel_names;
+            if (strncmp(model_subset, "nuclear", 3) == 0) {
+                copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), submodel_names);
+            } else if (strncmp(model_subset, "mitochondrial", 3) == 0) {
+                copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), submodel_names);
+            } else if (strncmp(model_subset, "chloroplast", 3) == 0) {
+                copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), submodel_names);
+            } else if (strncmp(model_subset, "viral",3) == 0) {
+                copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), submodel_names);
+            } else {
+                outError("Wrong -msub option");
+            }
+            for (i = 0; i < model_names.size(); i++) {
+                bool appear = false;
+                for (j = 0; j < submodel_names.size(); j++)
+                    if (model_names[i] == submodel_names[j]) {
+                        appear = true;
+                        break;
+                    }
+                if (!appear) {
+                    model_names.erase(model_names.begin()+i);
+                    i--;
+                }
+            }
+        }
+
+    } else if (seq_type == SEQ_CODON) {
+        if (model_set.empty()) {
+            if (standard_code)
+                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+            else {
+                i = sizeof(codon_model_names) / sizeof(char*);
+                for (j = 0; j < i; j++)
+                    if (!std_genetic_code[j])
+                        model_names.push_back(codon_model_names[j]);
+                //                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
+            }
+        } else if (model_set == "modelomatic") {
+            copyCString(codon_model_names_modelomatic, sizeof(codon_model_names_modelomatic) / sizeof(char*), model_names);
+        } else if (model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(model_set.c_str()+1, model_names);
+            if (standard_code)
+                appendCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+            else {
+                i = sizeof(codon_model_names) / sizeof(char*);
+                for (j = 0; j < i; j++)
+                    if (!std_genetic_code[j])
+                        model_names.push_back(codon_model_names[j]);
+            }
+        } else
+            convert_string_vec(model_set.c_str(), model_names);
+    }
+}
+
+void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names) {
+    int j;
+
+    switch (seq_type) {
+        case SEQ_PROTEIN:
+            copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+            break;
+        case SEQ_CODON:
+            copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
+            break;
+        default:
+            break;
+    }
+    if (state_freq_set)
+        convert_string_vec(state_freq_set, freq_names);
+    for (j = 0; j < freq_names.size(); j++) {
+        std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
+        if (freq_names[j] != "" && freq_names[j][0] != '+')
+            freq_names[j] = "+" + freq_names[j];
+    }
+
+    // put "FO" to the last
+    vector<string>::iterator itr = remove(freq_names.begin(), freq_names.end(), "+FO");
+    if (itr != freq_names.end()) {
+        freq_names.erase(itr, freq_names.end());
+        freq_names.push_back("+FO");
+    }
+}
+
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder)
 {
     // if it is an alignment with partitions and the number of threads is more than the number of alignments,
@@ -920,6 +1126,15 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
         return;
+    }
+
+    if (nest_network.size() == 0 && iqtree.aln->seq_type == SEQ_DNA) {
+        StrVector model_names, freq_names;
+        getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
+                      params.model_set, params.model_subset, model_names);
+        getStateFreqs(iqtree.aln->seq_type, params.state_freq_set, freq_names);
+
+        nest_network = generateNestNetwork(model_names, freq_names);
     }
     
     //    iqtree.setCurScore(-DBL_MAX);
@@ -1139,212 +1354,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         } else {
             params.num_threads = updated_nthreads;
         }
-    }
-}
-
-/**
- * get the list of substitution models
- */
-void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
-                   string model_set, char *model_subset, StrVector &model_names) {
-    int i, j;
-
-    if (model_set == "1") {
-        model_names.push_back(getUsualModelSubst(seq_type));
-        return;
-    }
-
-    if (iEquals(model_set, "ALL") || iEquals(model_set, "AUTO"))
-        model_set = "";
-
-    if (seq_type == SEQ_BINARY) {
-        if (model_set.empty()) {
-            copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
-        } else if (model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
-        } else {
-            convert_string_vec(model_set.c_str(), model_names);
-        }
-    } else if (seq_type == SEQ_MORPH) {
-        if (model_set.empty()) {
-            copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
-        } else if (model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
-        } else {
-            convert_string_vec(model_set.c_str(), model_names);
-        }
-    } else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
-        if (model_set.empty()) {
-            copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-        } else if (model_set == "partitionfinder" || model_set== "phyml") {
-            copyCString(dna_model_names_old, sizeof(dna_model_names_old) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-        } else if (model_set == "raxml") {
-            copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-        } else if (model_set == "mrbayes") {
-            copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
-            //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
-        } else if (model_set == "beast1") {
-            copyCString(dna_model_names_beast1, sizeof(dna_model_names_beast1) / sizeof(char*), model_names);
-        } else if (model_set == "beast2") {
-            copyCString(dna_model_names_beast2, sizeof(dna_model_names_beast2) / sizeof(char*), model_names);
-        } else if (model_set == "modelomatic") {
-            copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
-        } else if (model_set == "liemarkov") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-        } else if (model_set == "liemarkovry") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-        } else if (model_set == "liemarkovws") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-        } else if (model_set == "liemarkovmk") {
-            copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-        } else if (model_set == "strandsymmetric") {
-            copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
-            // IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
-            // you also need to change getPrototypeModel function.
-        } else if (model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
-        } else {
-            convert_string_vec(model_set.c_str(), model_names);
-            model_names = reorderModelNames(model_names);
-        }
-
-        if (model_name.find("+LMRY") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-        } else if (model_name.find("+LMWS") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-        } else if (model_name.find("+LMMK") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-        } else if (model_name.find("+LMSS") != string::npos) {
-            appendCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
-        } else if (model_name.find("+LM") != string::npos) {
-            appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
-            appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
-        }
-    } else if (seq_type == SEQ_PROTEIN) {
-        if (model_set.empty()) {
-            copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
-        } else if (model_set == "partitionfinder" || model_set == "phyml") {
-            copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
-        } else if (model_set == "raxml") {
-            copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
-        } else if (model_set == "mrbayes") {
-            copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
-        } else if (model_set == "beast1") {
-            copyCString(aa_model_names_beast1, sizeof(aa_model_names_beast1) / sizeof(char*), model_names);
-        } else if (model_set == "beast2") {
-            copyCString(aa_model_names_beast2, sizeof(aa_model_names_beast2) / sizeof(char*), model_names);
-        } else if (model_set == "modelomatic") {
-            copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
-        } else if (model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(model_set.c_str()+1, model_names);
-            appendCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
-        } else {
-            convert_string_vec(model_set.c_str(), model_names);
-        }
-
-        if (model_subset) {
-            StrVector submodel_names;
-            if (strncmp(model_subset, "nuclear", 3) == 0) {
-                copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), submodel_names);
-            } else if (strncmp(model_subset, "mitochondrial", 3) == 0) {
-                copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), submodel_names);
-            } else if (strncmp(model_subset, "chloroplast", 3) == 0) {
-                copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), submodel_names);
-            } else if (strncmp(model_subset, "viral",3) == 0) {
-                copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), submodel_names);
-            } else {
-                outError("Wrong -msub option");
-            }
-            for (i = 0; i < model_names.size(); i++) {
-                bool appear = false;
-                for (j = 0; j < submodel_names.size(); j++)
-                    if (model_names[i] == submodel_names[j]) {
-                        appear = true;
-                        break;
-                    }
-                if (!appear) {
-                    model_names.erase(model_names.begin()+i);
-                    i--;
-                }
-            }
-        }
-
-    } else if (seq_type == SEQ_CODON) {
-        if (model_set.empty()) {
-            if (standard_code)
-                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
-            else {
-                i = sizeof(codon_model_names) / sizeof(char*);
-                for (j = 0; j < i; j++)
-                    if (!std_genetic_code[j])
-                        model_names.push_back(codon_model_names[j]);
-                //                copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
-            }
-        } else if (model_set == "modelomatic") {
-            copyCString(codon_model_names_modelomatic, sizeof(codon_model_names_modelomatic) / sizeof(char*), model_names);
-        } else if (model_set[0] == '+') {
-            // append model_set into existing models
-            convert_string_vec(model_set.c_str()+1, model_names);
-            if (standard_code)
-                appendCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
-            else {
-                i = sizeof(codon_model_names) / sizeof(char*);
-                for (j = 0; j < i; j++)
-                    if (!std_genetic_code[j])
-                        model_names.push_back(codon_model_names[j]);
-            }
-        } else
-            convert_string_vec(model_set.c_str(), model_names);
-    }
-}
-
-void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names) {
-    int j;
-
-    switch (seq_type) {
-        case SEQ_PROTEIN:
-            copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
-            break;
-        case SEQ_CODON:
-            copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
-            break;
-        default:
-            break;
-    }
-    if (state_freq_set)
-        convert_string_vec(state_freq_set, freq_names);
-    for (j = 0; j < freq_names.size(); j++) {
-        std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
-        if (freq_names[j] != "" && freq_names[j][0] != '+')
-            freq_names[j] = "+" + freq_names[j];
-    }
-
-    // put "FO" to the last
-    vector<string>::iterator itr = remove(freq_names.begin(), freq_names.end(), "+FO");
-    if (itr != freq_names.end()) {
-        freq_names.erase(itr, freq_names.end());
-        freq_names.push_back("+FO");
     }
 }
 
@@ -6127,9 +6136,8 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     criteria_str = criterionName(params.model_test_criterion);
 
     // Step 0: (reorder candidate DNA models when -mset is used) build the nest-relationship network
-    SeqType seq_type = iqtree->aln->seq_type;
     map<string, vector<string> > nest_network;
-    if (seq_type == SEQ_DNA) {
+    if (iqtree->aln->seq_type == SEQ_DNA) {
         StrVector model_names, freq_names;
         getModelSubst(iqtree->aln->seq_type, iqtree->aln->isStandardGeneticCode(), params.model_name,
                       params.model_set, params.model_subset, model_names);
@@ -6158,7 +6166,14 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
-    
+
+    string best_model_pre_AIC, best_model_pre_AICc, best_model_pre_BIC, best_model_pre_list;
+
+    model_info.getString("best_model_AIC", best_model_pre_AIC);
+    model_info.getString("best_model_AICc", best_model_pre_AICc);
+    model_info.getString("best_model_BIC", best_model_pre_BIC);
+    model_info.getString("best_model_list_" + criteria_str, best_model_pre_list);
+
     // Step 3: keep adding a new class until no further improvement
     if (params.opt_qmix_criteria == 1) {
         cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;
@@ -6187,6 +6202,12 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
             curr_loglike = best_model.logl;
             curr_score = best_model.getScore();
             model_str = best_subst_name;
+
+            model_info.getString("best_model_AIC", best_model_pre_AIC);
+            model_info.getString("best_model_AICc", best_model_pre_AICc);
+            model_info.getString("best_model_BIC", best_model_pre_BIC);
+            model_info.getString("best_model_list_" + criteria_str, best_model_pre_list);
+
         }
     } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
     
@@ -6202,6 +6223,11 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
         curr_loglike = best_model.logl;
         curr_score = best_model.getScore();
     }
+
+    model_info.put("best_model_list_" + criteria_str, best_model_pre_list);
+    model_info.put("best_model_AIC", best_model_pre_AIC);
+    model_info.put("best_model_AICc", best_model_pre_AICc);
+    model_info.put("best_model_BIC", best_model_pre_BIC);
 
     model_str = best_subst_name+best_rate_name;
 }
@@ -6301,7 +6327,7 @@ StrVector reorderModelNames(StrVector model_names) {
 
     for (i = 0; i < model_names.size(); i++) {
         if (findModelIndex(model_names[i]) == -1) {
-            outError("Incorrect model name: " + model_names[i] + " is input");
+            return model_names; // if there is a model out of the list, do not reorder.
         }
         mi.push_back(model_index(model_names[i], findModelIndex(model_names[i])));
     }
@@ -6341,6 +6367,9 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
 
     model_freq_names = {};
     for (i = 0; i < model_names.size(); i++) {
+        if (findModelIndex(model_names[i]) == -1) {
+            return {}; // if there is a model out of the list, do not build the nest relationship.
+        }
         string new_model_name = getDNAModelInfo(model_names[i], full_name1, rate_type1, freq1);
         if (model_names[i] != new_model_name)
             model_names[i] = new_model_name;
