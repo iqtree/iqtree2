@@ -6145,10 +6145,7 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
         getStateFreqs(iqtree->aln->seq_type, params.state_freq_set, freq_names);
 
         nest_network = generateNestNetwork(model_names, freq_names);
-    } else {
-        nest_network = {};
     }
-
 
     // Step 1: run ModelFinder
     params.model_name = "";
@@ -6369,21 +6366,20 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
     map<string, vector<string> > nest_network, nest_network_all;
     vector<StrVector> model_freq_names;
 
-    model_freq_names = {};
     for (i = 0; i < model_names.size(); i++) {
         string new_model_name = getDNAModelInfo(model_names[i], full_name1, rate_type1, freq1);
         if (model_names[i] != new_model_name)
             model_names[i] = new_model_name;
 
         if (freq1 == FREQ_EQUAL) {
-            mfname_and_mname = {};
+            mfname_and_mname.clear();
             mfname_and_mname.push_back(model_names[i]);
             mfname_and_mname.push_back(model_names[i]);
             mfname_and_mname.push_back("+FQ");
             model_freq_names.push_back(mfname_and_mname);
         } else if (freq1 == FREQ_ESTIMATE) {
             for (j = 0; j < freq_names.size(); j++) {
-                mfname_and_mname = {};
+                mfname_and_mname.clear();
                 if (freq_names[j] == "+FQ") {
                     mfname_and_mname.push_back(model_names[i]);
                 } else {
@@ -6396,16 +6392,16 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
         }
     }
 
-    nest_network[model_freq_names[0][0]] = {};
-    nest_network_all[model_freq_names[0][0]] = {};
+    nest_network[model_freq_names[0][0]] = vector<string>();
+    nest_network_all[model_freq_names[0][0]] = vector<string>();
     for (i = 1; i < model_freq_names.size(); i++) {
         if (findModelIndex(model_freq_names[i][1], dna_model_names, sizeof(dna_model_names) / sizeof(dna_model_names[0])) == -1) {
-            nest_network[model_freq_names[0][0]] = {};
-            nest_network_all[model_freq_names[0][0]] = {};
+            nest_network[model_freq_names[i][0]] = vector<string>();
+            nest_network_all[model_freq_names[i][0]] = vector<string>();
             continue; // if the model out of the reversible DNA model list, do not build the nest relationship for this model.
         }
-        nested_models = {};
-        nested_models_all = {};
+        nested_models = vector<string>();
+        nested_models_all = vector<string>();
         for (j = nest_network.size()-1; j >= 0; j--) {
             string result1 = getDNAModelInfo(model_freq_names[i][1], full_name1, rate_type1, freq1);
             string result2 = getDNAModelInfo(model_freq_names[j][1], full_name2, rate_type2, freq2);
