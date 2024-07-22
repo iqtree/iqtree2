@@ -979,7 +979,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
-            model_names = reorderModelNames(model_names);
+            model_names = reorderModelNames(model_names, dna_model_names, sizeof(dna_model_names) / sizeof(dna_model_names[0]));
         }
 
         if (model_name.find("+LMRY") != string::npos) {
@@ -1105,6 +1105,110 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
         freq_names.erase(itr, freq_names.end());
         freq_names.push_back("+FO");
     }
+}
+
+/**
+ get list of rate heterogeneity
+ */
+void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
+                string rate_set, StrVector &ratehet) {
+    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R", "+I+R"};
+    bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false, false};
+    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false, false};
+    bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false, false};
+    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false, false};
+    bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false, false};
+    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false, false};
+    bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false, false};
+    bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false, true};
+    bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true, false};
+    bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false, false};
+    bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true, false};
+    bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false, false};
+    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false, false};
+    bool *test_options = test_options_default;
+    //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
+    const int noptions = sizeof(rate_options) / sizeof(char*);
+    int i, j;
+
+    bool with_new = (model_name.find("NEW") != string::npos || model_name.substr(0,2) == "MF" || model_name.empty());
+    bool with_asc = model_name.find("ASC") != string::npos;
+
+    if (seq_type == SEQ_POMO) {
+        for (i = 0; i < noptions; i++)
+            test_options[i] = test_options_pomo[i];
+    }
+        // If not PoMo, go on with normal treatment.
+    else if (frac_invariant_sites == 0.0) {
+        // morphological or SNP data: activate +ASC
+        if (with_new && rate_set != "1") {
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
+                test_options = test_options_morph_new;
+            else
+                test_options = test_options_noASC_I_new;
+        } else if (with_asc)
+            test_options = test_options_asc;
+        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH) {
+            if (rate_set == "1")
+                test_options = test_options_morph_fast;
+            else
+                test_options = test_options_morph;
+        } else {
+            if (rate_set == "1")
+                test_options = test_options_noASC_I_fast;
+            else
+                test_options = test_options_noASC_I;
+        }
+    } else if (frac_invariant_sites >= 1.0) {
+        // 2018-06-12: alignment with only invariant sites, no rate variation added
+        test_options = test_options_norate;
+    } else {
+        // normal data, use +I instead
+        if (with_new && rate_set != "1") {
+            // change +I+G to +R
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else
+                test_options = test_options_new;
+        } else if (with_asc) {
+            test_options = test_options_asc;
+        } else if (rate_set == "1")
+            test_options = test_options_fast;
+        else
+            test_options = test_options_default;
+        if (frac_invariant_sites == 0.0) {
+            // deactivate +I
+            for (j = 0; j < noptions; j++)
+                if (strstr(rate_options[j], "+I"))
+                    test_options[j] = false;
+        }
+    }
+    if (!rate_set.empty() && rate_set != "1" && !iEquals(rate_set, "ALL") && !iEquals(rate_set, "AUTO")) {
+        // take the rate_options from user-specified models
+        convert_string_vec(rate_set.c_str(), ratehet);
+        if (!ratehet.empty() && iEquals(ratehet[0], "ALL")) {
+            ratehet.erase(ratehet.begin());
+            StrVector ratedef;
+            for (j = 0; j < noptions; j++)
+                if (test_options[j])
+                    ratedef.push_back(rate_options[j]);
+            ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
+        }
+        for (j = 0; j < ratehet.size(); j++) {
+            if (ratehet[j] != "" && ratehet[j][0] != '+' && ratehet[j][0] != '*')
+                ratehet[j] = "+" + ratehet[j];
+            if (ratehet[j] == "+E") // for equal rate model
+                ratehet[j] = "";
+        }
+    } else {
+        for (j = 0; j < noptions; j++) {
+            if (test_options[j])
+                ratehet.push_back(rate_options[j]);
+        }
+    }
+    ratehet = reorderModelNames(ratehet, rate_options, sizeof(rate_options) / sizeof(rate_options[0]));
 }
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder)
@@ -1354,109 +1458,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         } else {
             params.num_threads = updated_nthreads;
         }
-    }
-}
-
-/**
- get list of rate heterogeneity
- */
-void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
-                string rate_set, StrVector &ratehet) {
-    const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R", "+I+R"};
-    bool test_options_default[]   = {true,   true, false,  true,  true,   false, false,  false, false};
-    bool test_options_fast[]      = {false, false, false, false,  true,   false, false,  false, false};
-    bool test_options_morph[]     = {true,  false,  true,  true, false,    true, false,  false, false};
-    bool test_options_morph_fast[]= {false, false, false, false, false,    true, false,  false, false};
-    bool test_options_noASC_I[]   = {true,  false, false,  true, false,   false, false,  false, false};
-    bool test_options_noASC_I_fast[]={false,false, false,  true, false,   false, false,  false, false};
-    bool test_options_asc[]       ={false,  false,  true, false, false,    true, false,  false, false};
-    bool test_options_new[]       = {true,   true, false,  true,  true,   false,  true,  false, true};
-    bool test_options_morph_new[] = {true,  false,  true,  true, false,    true,  true,   true, false};
-    bool test_options_noASC_I_new[]= {true, false, false,  true, false,   false,  true,  false, false};
-    bool test_options_asc_new[]   = {false, false,  true, false, false,    true, false,   true, false};
-    bool test_options_pomo[]      = {true,  false, false,  true, false,   false, false,  false, false};
-    bool test_options_norate[]    = {true,  false, false, false, false,   false, false,  false, false};
-    bool *test_options = test_options_default;
-    //    bool test_options_codon[] =  {true,false,  false,false,  false,    false};
-    const int noptions = sizeof(rate_options) / sizeof(char*);
-    int i, j;
-
-    bool with_new = (model_name.find("NEW") != string::npos || model_name.substr(0,2) == "MF" || model_name.empty());
-    bool with_asc = model_name.find("ASC") != string::npos;
-
-    if (seq_type == SEQ_POMO) {
-        for (i = 0; i < noptions; i++)
-            test_options[i] = test_options_pomo[i];
-    }
-    // If not PoMo, go on with normal treatment.
-    else if (frac_invariant_sites == 0.0) {
-        // morphological or SNP data: activate +ASC
-        if (with_new && rate_set != "1") {
-            if (with_asc)
-                test_options = test_options_asc_new;
-            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
-                test_options = test_options_morph_new;
-            else
-                test_options = test_options_noASC_I_new;
-        } else if (with_asc)
-            test_options = test_options_asc;
-        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH) {
-            if (rate_set == "1")
-                test_options = test_options_morph_fast;
-            else
-                test_options = test_options_morph;
-        } else {
-            if (rate_set == "1")
-                test_options = test_options_noASC_I_fast;
-            else
-                test_options = test_options_noASC_I;
-        }
-    } else if (frac_invariant_sites >= 1.0) {
-        // 2018-06-12: alignment with only invariant sites, no rate variation added
-        test_options = test_options_norate;
-    } else {
-        // normal data, use +I instead
-        if (with_new && rate_set != "1") {
-            // change +I+G to +R
-            if (with_asc)
-                test_options = test_options_asc_new;
-            else
-                test_options = test_options_new;
-        } else if (with_asc) {
-            test_options = test_options_asc;
-        } else if (rate_set == "1")
-            test_options = test_options_fast;
-        else
-            test_options = test_options_default;
-        if (frac_invariant_sites == 0.0) {
-            // deactivate +I
-            for (j = 0; j < noptions; j++)
-                if (strstr(rate_options[j], "+I"))
-                    test_options[j] = false;
-        }
-    }
-    if (!rate_set.empty() && rate_set != "1" && !iEquals(rate_set, "ALL") && !iEquals(rate_set, "AUTO")) {
-        // take the rate_options from user-specified models
-        convert_string_vec(rate_set.c_str(), ratehet);
-        if (!ratehet.empty() && iEquals(ratehet[0], "ALL")) {
-            ratehet.erase(ratehet.begin());
-            StrVector ratedef;
-            for (j = 0; j < noptions; j++)
-                if (test_options[j])
-                    ratedef.push_back(rate_options[j]);
-            ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
-        }
-        for (j = 0; j < ratehet.size(); j++) {
-            if (ratehet[j] != "" && ratehet[j][0] != '+' && ratehet[j][0] != '*')
-                ratehet[j] = "+" + ratehet[j];
-            if (ratehet[j] == "+E") // for equal rate model
-                ratehet[j] = "";
-        }
-    } else {
-        for (j = 0; j < noptions; j++)
-            if (test_options[j])
-                ratehet.push_back(rate_options[j]);
-
     }
 }
 
@@ -6303,18 +6304,18 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
 /*    Q MATRICES NESTING CHECK                      */
 /****************************************************/
 
-int findModelIndex(const string& model) {
+int findModelIndex(const string& model, const char* model_set[], size_t size) {
     int i;
-    for (i = 0; i < sizeof(dna_model_names) / sizeof(dna_model_names[0]); i++) {
-        if (strcmp(dna_model_names[i], model.c_str()) == 0) {
+    for (i = 0; i < size; i++) {
+        if (strcmp(model_set[i], model.c_str()) == 0) {
             return i;
         }
     }
     return -1;
 }
 
-StrVector reorderModelNames(StrVector model_names) {
-    int i;
+StrVector reorderModelNames(StrVector model_names, const char* model_set[], size_t size) {
+    int i, j;
     struct model_index {
         string name;
         int index;
@@ -6325,11 +6326,14 @@ StrVector reorderModelNames(StrVector model_names) {
     };
     vector<model_index> mi;
 
+    j = 0;
     for (i = 0; i < model_names.size(); i++) {
-        if (findModelIndex(model_names[i]) == -1) {
-            return model_names; // if there is a model out of the list, do not reorder.
+        int index = findModelIndex(model_names[i], model_set, size);
+        if (index == -1) {
+            j++;
+            index = size + j; // for those models are out of the reversible DNA model list, put them at the end.
         }
-        mi.push_back(model_index(model_names[i], findModelIndex(model_names[i])));
+        mi.push_back(model_index(model_names[i], index));
     }
     sort(mi.begin(), mi.end(), sort_by_ind());
     for (i = 0; i < model_names.size(); i++) {
@@ -6367,9 +6371,6 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
 
     model_freq_names = {};
     for (i = 0; i < model_names.size(); i++) {
-        if (findModelIndex(model_names[i]) == -1) {
-            return {}; // if there is a model out of the list, do not build the nest relationship.
-        }
         string new_model_name = getDNAModelInfo(model_names[i], full_name1, rate_type1, freq1);
         if (model_names[i] != new_model_name)
             model_names[i] = new_model_name;
@@ -6398,6 +6399,11 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
     nest_network[model_freq_names[0][0]] = {};
     nest_network_all[model_freq_names[0][0]] = {};
     for (i = 1; i < model_freq_names.size(); i++) {
+        if (findModelIndex(model_freq_names[i][1], dna_model_names, sizeof(dna_model_names) / sizeof(dna_model_names[0])) == -1) {
+            nest_network[model_freq_names[0][0]] = {};
+            nest_network_all[model_freq_names[0][0]] = {};
+            continue; // if the model out of the reversible DNA model list, do not build the nest relationship for this model.
+        }
         nested_models = {};
         nested_models_all = {};
         for (j = nest_network.size()-1; j >= 0; j--) {

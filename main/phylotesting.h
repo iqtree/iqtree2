@@ -804,12 +804,12 @@ string detectSeqTypeName(string model_name);
 /**
  * get the index of a DNA model in dna_model_names
  */
-int findModelIndex(const string& model);
+int findModelIndex(const string& model, const char* model_set[], size_t size);
 
 /**
- * reorder the input dna models as default (from simple to flexible)
+ * reorder the input dna models or RHAS models as default (from simple to flexible)
  */
-StrVector reorderModelNames(StrVector model_names);
+StrVector reorderModelNames(StrVector model_names, const char* model_set[], size_t size);
 
 /**
  * check whether rate_type2 is nested in rate_type1
