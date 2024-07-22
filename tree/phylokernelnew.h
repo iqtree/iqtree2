@@ -3118,7 +3118,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         for (size_t ptn = 0; ptn < orig_nptn; ptn++) {
             double ptn_lh = _pattern_lh[ptn];
             if (!std::isfinite(_pattern_lh[ptn])) {
-                cout << "Pattern " << ptn << " likelihood is underflown" << endl;
+                // cout << "Pattern " << ptn << " likelihood is underflown" << endl;
                 if (save_log_value) {
                     _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
                 } else {
