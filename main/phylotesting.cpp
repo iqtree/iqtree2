@@ -979,7 +979,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
         } else {
             convert_string_vec(model_set.c_str(), model_names);
-            model_names = reorderModelNames(model_names, dna_model_names, sizeof(dna_model_names) / sizeof(dna_model_names[0]));
+            reorderModelNames(model_names, dna_model_names, sizeof(dna_model_names) / sizeof(dna_model_names[0]));
         }
 
         if (model_name.find("+LMRY") != string::npos) {
@@ -1208,7 +1208,7 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
                 ratehet.push_back(rate_options[j]);
         }
     }
-    ratehet = reorderModelNames(ratehet, rate_options, sizeof(rate_options) / sizeof(rate_options[0]));
+    reorderModelNames(ratehet, rate_options, sizeof(rate_options) / sizeof(rate_options[0]));
 }
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder)
@@ -6311,16 +6311,29 @@ int findModelIndex(const string& model, const char* model_set[], size_t size) {
     return -1;
 }
 
-StrVector reorderModelNames(StrVector model_names, const char* model_set[], size_t size) {
+struct model_index {
+    string name;
+    int index;
+    model_index(string a_name, int an_index):name(a_name),index(an_index){}
+};
+
+struct sort_by_ind {
+    bool operator() (const model_index& a, const model_index& b) const {return a.index < b.index;}
+};
+
+// every model_record consists of three items: model+freq name, model name and freq name.
+// For example, for JC model:
+struct model_record {
+    string model_freq;
+    string model;
+    string freq;
+    string rate_type;
+    model_record(string a_model_freq, string a_model, string a_freq, string a_rate_type):
+        model_freq(a_model_freq), model(a_model), freq(a_freq), rate_type(a_rate_type){}
+};
+
+void reorderModelNames(StrVector& model_names, const char* model_set[], size_t size) {
     int i, j;
-    struct model_index {
-        string name;
-        int index;
-        model_index(string a_name, int an_index):name(a_name),index(an_index){}
-    };
-    struct sort_by_ind {
-        bool operator() (const model_index& a, const model_index& b) const {return a.index < b.index;}
-    };
     vector<model_index> mi;
 
     j = 0;
@@ -6336,7 +6349,6 @@ StrVector reorderModelNames(StrVector model_names, const char* model_set[], size
     for (i = 0; i < model_names.size(); i++) {
         model_names[i] = mi[i].name;
     }
-    return model_names;
 }
 
 bool isRateTypeNested(string rate_type1, string rate_type2) {
@@ -6347,8 +6359,8 @@ bool isRateTypeNested(string rate_type1, string rate_type2) {
         outError("Incorrect DNA model rate type code: " + rate_type2);
     }
 
-    for (int i = 0; i < 6; i++) {
-        for (int j = 0; j < 6; j++ ){
+    for (int i = 0; i < 5; i++) {
+        for (int j = i; j < 6; j++ ){
             if (rate_type1[i] == rate_type1[j] && rate_type2[i] != rate_type2[j]){
                 return false;
             }
@@ -6358,77 +6370,53 @@ bool isRateTypeNested(string rate_type1, string rate_type2) {
 }
 
 map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVector freq_names) {
-    int i, j, k;
-    bool covered;
-    string full_name1, full_name2, rate_type1, rate_type2;
-    StateFreqType freq1, freq2;
-    vector<string> mfname_and_mname, nested_models, nested_models_all;
+    int i, j;
+    string full_name, rate_type;
+    StateFreqType freq;
     map<string, vector<string> > nest_network, nest_network_all;
-    vector<StrVector> model_freq_names;
+    vector<model_record> model_freq_names;
 
     for (i = 0; i < model_names.size(); i++) {
-        string new_model_name = getDNAModelInfo(model_names[i], full_name1, rate_type1, freq1);
+        string new_model_name = getDNAModelInfo(model_names[i], full_name, rate_type, freq);
+        // the resulting freq1 will be either FREQ_EQUAL or FREQ_ESTIMATE
         if (model_names[i] != new_model_name)
             model_names[i] = new_model_name;
 
-        if (freq1 == FREQ_EQUAL) {
-            mfname_and_mname.clear();
-            mfname_and_mname.push_back(model_names[i]);
-            mfname_and_mname.push_back(model_names[i]);
-            mfname_and_mname.push_back("+FQ");
-            model_freq_names.push_back(mfname_and_mname);
-        } else if (freq1 == FREQ_ESTIMATE) {
+        if (freq == FREQ_EQUAL) {
+            model_freq_names.push_back(model_record(model_names[i],model_names[i],"+FQ", rate_type));
+        } else {
             for (j = 0; j < freq_names.size(); j++) {
-                mfname_and_mname.clear();
                 if (freq_names[j] == "+FQ") {
-                    mfname_and_mname.push_back(model_names[i]);
+                    model_freq_names.push_back(model_record(model_names[i],model_names[i],freq_names[j], rate_type));
                 } else {
-                    mfname_and_mname.push_back(model_names[i] + freq_names[j]);
+                    model_freq_names.push_back(model_record(model_names[i]+freq_names[j],model_names[i],freq_names[j], rate_type));
                 }
-                mfname_and_mname.push_back(model_names[i]);
-                mfname_and_mname.push_back(freq_names[j]);
-                model_freq_names.push_back(mfname_and_mname);
             }
         }
     }
 
-    nest_network[model_freq_names[0][0]] = vector<string>();
-    nest_network_all[model_freq_names[0][0]] = vector<string>();
-    for (i = 1; i < model_freq_names.size(); i++) {
-        if (findModelIndex(model_freq_names[i][1], dna_model_names, sizeof(dna_model_names) / sizeof(dna_model_names[0])) == -1) {
-            nest_network[model_freq_names[i][0]] = vector<string>();
-            nest_network_all[model_freq_names[i][0]] = vector<string>();
-            continue; // if the model out of the reversible DNA model list, do not build the nest relationship for this model.
-        }
-        nested_models = vector<string>();
-        nested_models_all = vector<string>();
-        for (j = nest_network.size()-1; j >= 0; j--) {
-            string result1 = getDNAModelInfo(model_freq_names[i][1], full_name1, rate_type1, freq1);
-            string result2 = getDNAModelInfo(model_freq_names[j][1], full_name2, rate_type2, freq2);
-            if (model_freq_names[i][2] != "+FO" && model_freq_names[j][2] != model_freq_names[i][2]) {
-                continue;
-            } else {
-                if (isRateTypeNested(rate_type1, rate_type2)) {
-                    nested_models_all.push_back(model_freq_names[j][0]);
-                    covered = false;
-                    if (!nested_models.empty()) {
-                        for (k = 0; k < nested_models.size(); k++) {
-                            vector<string> nested_nested_models = nest_network_all[nested_models[k]];
-
-                            auto it = find(nested_nested_models.begin(), nested_nested_models.end(), model_freq_names[j][0]);
-                            if (it != nested_nested_models.end()) {
-                                covered = true;
-                            }
-                        }
-                    }
-                    if (!covered) {
-                        nested_models.push_back(model_freq_names[j][0]);
+    size_t nitem = sizeof(dna_model_names) / sizeof(dna_model_names[0]);
+    for (i = 0; i < model_freq_names.size(); i++) {
+        vector<string> nested_models, nested_models_all;
+        if (i > 0 && findModelIndex(model_freq_names[i].model, dna_model_names, nitem) != -1) {
+            // examine the relationship bewteen this model and every model that has been inside the net work from complex to simple
+            for (j = nest_network.size()-1; j >= 0; j--) {
+                if (model_freq_names[i].freq == "+FO" || model_freq_names[j].freq == model_freq_names[i].freq) {
+                    if (isRateTypeNested(model_freq_names[i].rate_type, model_freq_names[j].rate_type)) {
+                        // model j is nested by model i
+                        if (find(nested_models_all.begin(), nested_models_all.end(), model_freq_names[j].model_freq) == nested_models_all.end()) {
+                            // model j is not inside nested_model_all
+                            vector<string> arr = nest_network_all[model_freq_names[j].model_freq];
+                            nested_models_all.push_back(model_freq_names[j].model_freq);
+                            nested_models_all.insert(nested_models_all.end(), arr.begin(), arr.end());
+                            nested_models.push_back(model_freq_names[j].model_freq);
+                        };
                     }
                 }
             }
         }
-        nest_network[model_freq_names[i][0]] = nested_models;
-        nest_network_all[model_freq_names[i][0]] = nested_models_all;
+        nest_network[model_freq_names[i].model_freq] = nested_models;
+        nest_network_all[model_freq_names[i].model_freq] = nested_models_all;
     }
     return nest_network;
 }

@@ -1055,15 +1055,17 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
     vector<string> nested_models;
     int nmix, i;
     double max_logl, cur_logl;
+    map<string, vector<string> >::iterator itr;
 
     nmix = model->getNMixtures();
     model_name = model->getName();
     rate_name = site_rate->name;
     if (nmix == 1) {
-        nested_models = nest_network[model_name];
-        if (nested_models.size() == 0) {
+        itr = nest_network.find(model_name);
+        if (itr == nest_network.end() || itr->second.size() == 0) {
             return;
         }
+        nested_models = itr->second;
 
         /*
         cout << "nested models of " << model_name + rate_name << ": ";
@@ -1111,11 +1113,11 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
 
     } else if (nmix > 1) {
         last_q_name = getLastQ(model_name);
-        nested_models = nest_network[last_q_name];
-
-        if (nested_models.size() == 0) {
+        itr = nest_network.find(last_q_name);
+        if (itr == nest_network.end() || itr->second.size() == 0) {
             return;
         }
+        nested_models = itr->second;
 
         string nested_mix_model;
 

@@ -809,7 +809,7 @@ int findModelIndex(const string& model, const char* model_set[], size_t size);
 /**
  * reorder the input dna models or RHAS models as default (from simple to flexible)
  */
-StrVector reorderModelNames(StrVector model_names, const char* model_set[], size_t size);
+void reorderModelNames(StrVector& model_names, const char* model_set[], size_t size);
 
 /**
  * check whether rate_type2 is nested in rate_type1
