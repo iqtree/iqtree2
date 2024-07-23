@@ -686,6 +686,17 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         checkpoint->dump();
     }
 
+    if (params->dating_method == "mcmctree") {
+        string outFileName = ((string) Params::getInstance().out_prefix + ".rooted.mcmctree.tree");
+        ofstream outfile(outFileName);
+
+        stringstream treeStr;
+        this->printTree(treeStr, WT_SORT_TAXA + WT_BR_LEN);
+        outfile << this->aln->getNSeq() << ' ' << 1 << endl;
+        outfile << treeStr.str() << endl;
+        outfile.close();
+    }
+
     if (!constraintTree.isCompatible(this))
         outError("Initial tree is not compatible with constraint tree");
 

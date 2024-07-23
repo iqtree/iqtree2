@@ -2470,6 +2470,29 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
     treesOut.close();
 }
 
+void processDervMCMCTree(double *gradient_vector, size_t branchNum, size_t nPtn, double *G_matrix,
+                         const Map<RowVectorXd> &ptn_freq_diagonal, RowVectorXd &gradient_vector_eigen,
+                         MatrixXd &hessian, double *hessian_diagonal) {
+
+    Map<RowVectorXd> gradient_vector_eigen_mapped(gradient_vector, branchNum);
+    gradient_vector_eigen = gradient_vector_eigen_mapped;
+
+    Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(G_matrix, branchNum, nPtn);
+    MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+    hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+    hessian = (-1) * hessian;
+    hessian.diagonal() = Map<VectorXd>(hessian_diagonal, branchNum).array();
+
+}
+
+
+void saveTreeMCMCTree(DoubleVector branchLengths, RowVectorXd &branch_lengths_vector, PhyloTree *tree,
+                      stringstream &tree_stream) {
+    Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
+    branch_lengths_vector = branch_lengths_vector_mapped;
+    tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+}
+
 void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_stream,
                          RowVectorXd &branch_lengths_vector, RowVectorXd &gradient_vector_eigen,
                          PhyloSuperTree *superTree = nullptr, int part_id = 0) {
@@ -2480,24 +2503,28 @@ void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_
     size_t nBranches = tree->branchNum;
     Map<RowVectorXd> ptn_freq_diagonal(tree->ptn_freq, nPtn);
 
+    // Retrieve the branch lengths for MCMCTREE output file
+    DoubleVector branchLengths;
+    tree->saveBranchLengths(branchLengths);
 
-    if (superTree && superTree->params->partition_type != BRLEN_OPTIMIZE) {
-        vector<pair<int, int>> part_br_map;
-        BranchVector stree_branches;
-        superTree->getBranches(stree_branches);
+    if (superTree) {
+        vector<pair<int, int>> partBrMmap;
+        BranchVector streeBranches;
+        superTree->getBranches(streeBranches);
 
-        for (Branch branch: stree_branches) {
+        for (Branch branch: streeBranches) {
             auto nei = (SuperNeighbor *) branch.first->findNeighbor(branch.second);
             auto nei1 = (SuperNeighbor *) branch.second->findNeighbor(branch.first);
             if (nei->link_neighbors[part_id] && nei1->link_neighbors[part_id]) {
-                part_br_map.emplace_back(nei->id, nei->link_neighbors[part_id]->id);
+                partBrMmap.emplace_back(nei->id, nei->link_neighbors[part_id]->id);
             }
         }
         int numStates = tree->getModel()->num_states;
         size_t mem_size = get_safe_upper_limit(tree->getAlnNSite()) + max(get_safe_upper_limit(numStates),
                                                                           get_safe_upper_limit(
                                                                                   tree->getModelFactory()->unobserved_ptns.size()));
-        size_t branchNum = superTree->branchNum;
+        size_t branchNum = (superTree->params->partition_type != BRLEN_OPTIMIZE) ? superTree->branchNum
+                                                                                 : tree->branchNum;
         size_t g_matrix_size = branchNum * mem_size;
         auto *G_matrix_part = aligned_alloc<double>(g_matrix_size);
         memset(G_matrix_part, 0, g_matrix_size * sizeof(double));
@@ -2506,52 +2533,110 @@ void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_
         auto *hessian_diagonal_part = aligned_alloc<double>(branchNum);
         memset(hessian_diagonal_part, 0, branchNum * sizeof(double));
 
-        double *G_matrix_sub_tree = tree->G_matrix;
-
-        for (auto mapping: part_br_map) {
-            int stree_branch_id = mapping.first;
-            int part_branch_id = mapping.second;
-            for (int i = 0; i < nPtn; i++) {
-                G_matrix_part[stree_branch_id * nPtn + i] = tree->G_matrix[part_branch_id * nPtn + i];
+//        double *G_matrix_sub_tree = tree->G_matrix;
+        if (superTree->params->partition_type != BRLEN_OPTIMIZE) {
+            for (auto mapping: partBrMmap) {
+                int stree_branch_id = mapping.first;
+                int part_branch_id = mapping.second;
+                for (int i = 0; i < nPtn; i++) {
+                    G_matrix_part[stree_branch_id * nPtn + i] = tree->G_matrix[part_branch_id * nPtn + i];
+                }
+                //memcpy(G_matrix_part+(sizeof(double)*stree_branch_id*nPtn), G_matrix_sub_tree+sizeof(double)*(part_branch_id*nPtn), sizeof(double)*nPtn);
+                gradient_vector_part[stree_branch_id] = tree->gradient_vector[part_branch_id];
+                hessian_diagonal_part[stree_branch_id] = tree->hessian_diagonal[part_branch_id];
             }
-            //memcpy(G_matrix_part+(sizeof(double)*stree_branch_id*nPtn), G_matrix_sub_tree+sizeof(double)*(part_branch_id*nPtn), sizeof(double)*nPtn);
-            gradient_vector_part[stree_branch_id] = tree->gradient_vector[part_branch_id];
-            hessian_diagonal_part[stree_branch_id] = tree->hessian_diagonal[part_branch_id];
+
+//            Map<RowVectorXd> gradient_vector_eigen_mapped(gradient_vector_part, branchNum);
+//            Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(G_matrix_part, branchNum, nPtn);
+//            MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+//
+//            hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+//            hessian = (-1) * hessian;
+//            hessian.diagonal() = Map<VectorXd>(hessian_diagonal_part, branchNum).array();
+//
+//            gradient_vector_eigen = gradient_vector_eigen_mapped;
+//
+//            Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
+//            branch_lengths_vector = branch_lengths_vector_mapped;
+//            tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+
+//            processDervMCMCTree(gradient_vector_part, branchNum, nPtn, G_matrix_part, ptn_freq_diagonal,
+//                                gradient_vector_eigen, hessian, hessian_diagonal_part);
+            saveTreeMCMCTree(branchLengths, branch_lengths_vector, tree, tree_stream);
+        } else {
+
+            DoubleVector branchLengths2;
+            int branchCounter = 0;
+            std::unordered_map<int, int> brVisitedMap;
+            for (auto mapping: partBrMmap) {
+                int part_branch_id = mapping.second;
+                if (brVisitedMap[part_branch_id]) {
+                    continue;
+                }
+                brVisitedMap[part_branch_id] = 1;
+                for (int i = 0; i < nPtn; i++) {
+                    G_matrix_part[branchCounter * nPtn + i] = tree->G_matrix[part_branch_id * nPtn + i];
+                }
+                //memcpy(G_matrix_part+(sizeof(double)*stree_branch_id*nPtn), G_matrix_sub_tree+sizeof(double)*(part_branch_id*nPtn), sizeof(double)*nPtn);
+                gradient_vector_part[branchCounter] = tree->gradient_vector[part_branch_id];
+                hessian_diagonal_part[branchCounter] = tree->hessian_diagonal[part_branch_id];
+                branchLengths2.push_back(branchLengths[part_branch_id]);
+                branchCounter++;
+            }
+
+//            Map<RowVectorXd> gradient_vector_eigen_mapped(gradient_vector_part, branchNum);
+//            Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(G_matrix_part, branchNum, nPtn);
+//            MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+//
+//            hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+//            hessian = (-1) * hessian;
+//            hessian.diagonal() = Map<VectorXd>(hessian_diagonal_part, branchNum).array();
+//
+//            gradient_vector_eigen = gradient_vector_eigen_mapped;
+//
+//
+//
+//            Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths2.data(), branchLengths2.size());
+//            branch_lengths_vector = branch_lengths_vector_mapped;
+//            tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
+
+//            processDervMCMCTree(gradient_vector_part, branchNum, nPtn, G_matrix_part, ptn_freq_diagonal,
+//                                gradient_vector_eigen, hessian, hessian_diagonal_part);
+            saveTreeMCMCTree(branchLengths2, branch_lengths_vector, tree, tree_stream);
         }
 
-        Map<RowVectorXd> gradient_vector_eigen_mapped(gradient_vector_part, branchNum);
-        Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(G_matrix_part, branchNum, nPtn);
-        MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
-
-        hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
-        hessian = (-1) * hessian;
-        hessian.diagonal() = Map<VectorXd>(hessian_diagonal_part, branchNum).array();
-
-        gradient_vector_eigen = gradient_vector_eigen_mapped;
-
+        processDervMCMCTree(gradient_vector_part, branchNum, nPtn, G_matrix_part, ptn_freq_diagonal,
+                            gradient_vector_eigen, hessian, hessian_diagonal_part);
         aligned_free(G_matrix_part);
         aligned_free(gradient_vector_part);
         aligned_free(hessian_diagonal_part);
 
     } else {
-        Map<RowVectorXd> gradient_vector_eigen_mapped(tree->gradient_vector, nBranches);
-        Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
-        MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
 
-        hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
-        hessian = (-1) * hessian;
-        hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
+//        Map<RowVectorXd> gradient_vector_eigen_mapped(tree->gradient_vector, nBranches);
+//        Map<Matrix<double, Dynamic, Dynamic, RowMajor>> G_matrix_eigen(tree->G_matrix, nBranches, nPtn);
+//        MatrixXd G_matrix_eigen_t = G_matrix_eigen.transpose();
+//
+//        hessian = G_matrix_eigen * ptn_freq_diagonal.asDiagonal() * G_matrix_eigen_t;
+//        hessian = (-1) * hessian;
+//        hessian.diagonal() = Map<VectorXd>(tree->hessian_diagonal, nBranches).array();
+//
+//        gradient_vector_eigen = gradient_vector_eigen_mapped;
+//
+//
+//        Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
+//        branch_lengths_vector = branch_lengths_vector_mapped;
+//        tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
 
-        gradient_vector_eigen = gradient_vector_eigen_mapped;
+        processDervMCMCTree(tree->gradient_vector, nBranches, nPtn, tree->G_matrix, ptn_freq_diagonal,
+                            gradient_vector_eigen, hessian, tree->hessian_diagonal);
+        saveTreeMCMCTree(branchLengths, branch_lengths_vector, tree, tree_stream);
 
     }
-    DoubleVector branchLengths;
-    tree->saveBranchLengths(branchLengths);
-    Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
-    branch_lengths_vector = branch_lengths_vector_mapped;
-    tree->printTree(tree_stream, WT_BR_LEN + WT_SORT_TAXA);
 
 }
+
+
 
 void generateDummyAlignment(PhyloTree* tree, ofstream &dummyAlignment){
     NodeVector nodeVector;
@@ -2574,7 +2659,7 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
     }
     ctl << "seed = -1" << endl
         << "seqfile = " << (string) iqtree->params->out_prefix + ".dummyAln.txt" << endl
-        << "treefile = " << iqtree->params->user_file << endl
+        << "treefile = " << ((string) Params::getInstance().out_prefix + ".rooted.mcmctree.tree") << endl
         << "outfile = " << "out" << endl << endl
 
         << "ndata = " << ndata << endl
@@ -2668,7 +2753,6 @@ void printHessian(IQTree *iqtree, int partition_type) {
                                 partition_gradient_vector_eigen, stree, part_id);
 
             if (partition_type != BRLEN_OPTIMIZE) {
-
                 if (partition_type == BRLEN_SCALE) {
                     auto part_rate = part_info[part_id].part_rate;
                     auto hessian_scale = part_rate * part_rate;
@@ -2680,6 +2764,7 @@ void printHessian(IQTree *iqtree, int partition_type) {
                     global_gradient_vector += partition_gradient_vector_eigen;
                 }
             } else {
+                // write the branch lengths, gradients and the Hessian if the branch unlinked model
                 outfile << endl << it->aln->getNSeq() << endl << endl;
                 outfile << partition_tree_stream.str() << endl << endl;
                 outfile << partition_branch_lengths_vector << endl << endl;
@@ -2733,7 +2818,6 @@ void printHessian(IQTree *iqtree, int partition_type) {
     cout << endl << "Gradients and Hessians written to: " << outFileName << endl;
     cout << "Ctl file for MCMCTree written to: " << ctlFileName << endl;
     // cout << "Add time records calibrations to: " << iqtree->params->user_file << endl;
-
 }
 
 // method to check the existence of traversal starting node of species-tree on a gene-tree for hessian calculation
@@ -3395,10 +3479,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                     auto linked_super_nei = findRootedNeighbour(nei, part_id);
                     auto part_traversal_starting_nei = linked_super_nei->link_neighbors[part_id];
 
-                    if (part_traversal_starting_nei->node->neighbors.size() == 1) {
-                        part_traversal_starting_nei = (PhyloNeighbor *) ((part_traversal_starting_nei->node)->findNeighbor(
-                                (part_traversal_starting_nei->node->neighbors[0]->node)));
-                    }
+//                    if (part_traversal_starting_nei->node->neighbors.size() == 1) {
+//                        part_traversal_starting_nei = (PhyloNeighbor *) ((part_traversal_starting_nei->node)->findNeighbor(
+//                                (part_traversal_starting_nei->node->neighbors[0]->node)));
+//                    }
 
                     // change the partition tree so that its traversal starting node matches that of the super tree -> temporarily set the root at the first taxon in the alignment
                     partition_tree->root = partition_tree->findNodeID(0);
