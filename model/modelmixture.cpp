@@ -1041,7 +1041,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
                         PhyloTree* tree)
 {
 	ModelSubst *model = NULL;
-	//cout << "Numstates: " << tree->aln->num_states << endl;
 	string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
@@ -1959,6 +1958,7 @@ double ModelMixture::optimizeWeights() {
 }
 
 double ModelMixture::optimizeWithEM(double gradient_epsilon) {
+
     size_t ptn, c, k;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = size();
@@ -2176,9 +2176,17 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
+
+    /*
+    //  optimize a gtr matrix if specified (enters main routine) -JD
+    if (Params::getInstance().optimize_linked_gtr) {
+        score = optimizeLinkedSubst(gradient_epsilon);
+    }
+*/
     // Fused model can use EM algorithm
     // Non-Fused model can only use BFGS algorithm unless optimize_alg_qmix = "EM"
-    if (isFused() || Params::getInstance().optimize_linked_gtr || Params::getInstance().optimize_alg_qmix == "EM") {
+    // if (isFused() || Params::getInstance().optimize_linked_gtr || Params::getInstance().optimize_alg_qmix == "EM") {
+    if (isFused() || Params::getInstance().optimize_alg_qmix == "EM") {
 		if (dim > 0) {
 			// set num_params to 0 when linking exchange rates
 			if (Params::getInstance().optimize_linked_gtr) { // added routine for GTR optimization -JD
@@ -2210,15 +2218,14 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 		else if (!fix_prop) {
 			score = optimizeWeights();
 		}
+        //  optimize a gtr matrix if specified (enters main routine) -JD
+        if (Params::getInstance().optimize_linked_gtr) {
+            score = optimizeLinkedSubst(gradient_epsilon);
+        }
 	} else {
 		score = ModelMarkov::optimizeParameters(gradient_epsilon);
 	}
 
-//  optimize a gtr matrix if specified (enters main routine) -JD
-    if (Params::getInstance().optimize_linked_gtr) {
-        score = optimizeLinkedSubst(gradient_epsilon);
-    }
-	
     if (getNDim() == 0) {
         return score;
     }
@@ -2374,8 +2381,13 @@ void ModelMixture::setVariables(double *variables) {
         (*it)->freq_type = freq;
     } else {
         for (iterator it = begin(); it != end(); it++) {
+            int n = (*it)->num_params;
+            if (Params::getInstance().optimize_linked_gtr && it != begin())
+                (*it)->num_params = 0;
             (*it)->setVariables(&variables[dim]);
             dim += (*it)->getNDim();
+            if (Params::getInstance().optimize_linked_gtr && it != begin())
+                (*it)->num_params = n;
         }
         if (fix_prop) return;
         int i, ncategory = size();
@@ -2398,9 +2410,20 @@ bool ModelMixture::getVariables(double *variables) {
             (*it)->freq_type = freq;
         }
     } else {
-		for (iterator it = begin(); it != end(); it++) {
+        for (iterator it = begin(); it != end(); it++) {
+            int n = (*it)->num_params;
+            if (Params::getInstance().optimize_linked_gtr && it != begin())
+                (*it)->num_params = 0;
 			changed |= (*it)->getVariables(&variables[dim]);
 			dim += (*it)->getNDim();
+            if (Params::getInstance().optimize_linked_gtr && it != begin()) {
+                (*it)->num_params = n;
+                // assign exchange rates equal to the first class's
+                auto freq = (*it)->freq_type;
+                (*it)->freq_type = FREQ_USER_DEFINED;
+                changed |= (*it)->getVariables(&variables[0]);
+                (*it)->freq_type = freq;
+            }
 		}
 		if (fix_prop) return changed;
 		int i, ncategory = size();
@@ -2439,8 +2462,24 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
         }
     } else {
         for (iterator it = begin(); it != end(); it++) {
+            int n = (*it)->num_params;
+            if (Params::getInstance().optimize_linked_gtr && it != begin())
+                (*it)->num_params = 0;
             (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
             dim += (*it)->getNDim();
+            if (Params::getInstance().optimize_linked_gtr && it != begin())
+                (*it)->num_params = n;
+            if (Params::getInstance().optimize_linked_gtr && it == begin() && phylo_tree->aln->seq_type == SEQ_PROTEIN) {
+                //manually set these params for the restartParameters method for protein dataset
+                auto freq = (*it)->freq_type;
+                (*it)->freq_type=FREQ_USER_DEFINED;
+                int m = (*it)->getNDim();
+                (*it)->freq_type=freq;
+                for(int i=1; i<=m; i++){
+                    bound_check[i] = true;
+                    upper_bound[i] = 100;
+                }
+            }
         }
 		if (fix_prop) return;
 		int i, ncategory = size();
