@@ -50,6 +50,7 @@ public:
         BIC_score = DBL_MAX;
         this->flag = flag;
         syncChkPoint = nullptr;
+        init_first_mix = false;
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
@@ -57,12 +58,14 @@ public:
         this->rate_name = orig_rate_name = rate_name;
         this->aln = aln;
         syncChkPoint = nullptr;
+        init_first_mix = false;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->aln = aln;
         getUsualModel(aln);
         syncChkPoint = nullptr;
+        init_first_mix = false;
     }
     
     string getName() {
@@ -177,6 +180,13 @@ public:
     double AIC_score, AICc_score, BIC_score;    // scores
     double AIC_weight, AICc_weight, BIC_weight; // weights
     bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
+    
+    // indicate whether it is the first k-class mixture model
+    // if so, then the parameters will be initialized from the previous (k-1)-class mixture model
+    bool init_first_mix;
+
+    /** the nest relationships of all candidate Q matrices */
+    map<string, vector<string> > nest_network;
 
     Alignment *aln; // associated alignment
 
@@ -200,6 +210,7 @@ public:
     CandidateModelSet() : vector<CandidateModel>() {
         current_model = -1;
         syncChkPoint = nullptr;
+        under_mix_finder = false;
     }
     
     /** get ID of the best model */
@@ -302,12 +313,18 @@ public:
     CandidateModel evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
                      ModelsBlock *models_block, int num_threads, int brlen_type,
                      string in_model_name = "", bool merge_phase = false, bool write_info = true);
-    
+
     /**
      Synchronization of check point for MPI
      */
     SyncChkPoint* syncChkPoint;
 
+    /** the nest relationships of all candidate Q matrices */
+    map<string, vector<string> > nest_network;
+
+    /** whether it is under the process of mixture finder */
+    bool under_mix_finder;
+    
 private:
     
     /** current model */
@@ -743,8 +760,10 @@ string criterionName(ModelTestCriterion mtc);
  @param model_info (IN/OUT) information for all models considered
  @param best_subst_name (OUT) information for all models considered
  @param best_rate_name (OUT) information for all models considered
+ @param nest_network (IN) nest relationships of all DNA models considered
+ @param under_mix_finder (IN) whether MixtureFinder is being used
  */
-void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name);
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder = false);
 
 /**
  optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
@@ -777,5 +796,29 @@ int detectSeqType(const char *model_name, SeqType &seq_type);
 string convertSeqTypeToSeqTypeName(SeqType seq_type);
 
 string detectSeqTypeName(string model_name);
+
+/****************************************************/
+/*    Q MATRICES NESTING CHECK                      */
+/****************************************************/
+
+/**
+ * get the index of a DNA model in dna_model_names
+ */
+int findModelIndex(const string& model, const char* model_set[], size_t size);
+
+/**
+ * reorder the input dna models or RHAS models as default (from simple to flexible)
+ */
+void reorderModelNames(StrVector& model_names, const char* model_set[], size_t size);
+
+/**
+ * check whether rate_type2 is nested in rate_type1
+ */
+bool isRateTypeNested(string rate_type1, string rate_type2);
+
+/**
+ * build the nest relationships of all candidate Q matrices
+ */
+map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVector freq_names);
 
 #endif /* PHYLOTESTING_H_ */

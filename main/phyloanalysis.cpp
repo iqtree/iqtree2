@@ -2634,7 +2634,8 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
 //    iqtree.initSettings(params);
 
     string best_subst_name, best_rate_name;
-    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
+    map <string, vector<string> > nest_network;
+    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name, nest_network);
     
     optimiseQMixModel(params, iqtree, model_info);
 }
