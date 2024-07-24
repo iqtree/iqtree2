@@ -6118,6 +6118,8 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     CandidateModel best_model;
     string best_model_AIC, best_model_AICc, best_model_BIC;
     double best_score_AIC, best_score_AICc, best_score_BIC;
+    // Store the information of (k-1)-class models. Once (k-1)-class is better then k-class, the (k-1)-class models will be printed out as the global best.
+    string best_model_pre_AIC, best_model_pre_AICc, best_model_pre_BIC, best_model_pre_list;
     Checkpoint *checkpoint;
     int ssize;
     int curr_df;
@@ -6164,8 +6166,6 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
-
-    string best_model_pre_AIC, best_model_pre_AICc, best_model_pre_BIC, best_model_pre_list;
 
     model_info.getString("best_model_AIC", best_model_pre_AIC);
     model_info.getString("best_model_AICc", best_model_pre_AICc);
@@ -6321,8 +6321,8 @@ struct sort_by_ind {
     bool operator() (const model_index& a, const model_index& b) const {return a.index < b.index;}
 };
 
-// every model_record consists of three items: model+freq name, model name and freq name.
-// For example, for JC model:
+// every model_record consists of four items: model+freq name, model name, freq name and substitution rate code.
+// For example, for JC model: {JC, JC, FQ, 000000}; for GTR+FQ model: {GTR, GTR, FQ, 012345}; for GTR+FO model: {GTR+FO, GTR, FO, 012345}
 struct model_record {
     string model_freq;
     string model;
@@ -6378,7 +6378,7 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
 
     for (i = 0; i < model_names.size(); i++) {
         string new_model_name = getDNAModelInfo(model_names[i], full_name, rate_type, freq);
-        // the resulting freq1 will be either FREQ_EQUAL or FREQ_ESTIMATE
+        // the resulting freq will be either FREQ_EQUAL or FREQ_ESTIMATE
         if (model_names[i] != new_model_name)
             model_names[i] = new_model_name;
 
@@ -6399,7 +6399,7 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
     for (i = 0; i < model_freq_names.size(); i++) {
         vector<string> nested_models, nested_models_all;
         if (i > 0 && findModelIndex(model_freq_names[i].model, dna_model_names, nitem) != -1) {
-            // examine the relationship bewteen this model and every model that has been inside the net work from complex to simple
+            // examine the relationship bewteen this model and every model that has been inside the network from complex to simple
             for (j = nest_network.size()-1; j >= 0; j--) {
                 if (model_freq_names[i].freq == "+FO" || model_freq_names[j].freq == model_freq_names[i].freq) {
                     if (isRateTypeNested(model_freq_names[i].rate_type, model_freq_names[j].rate_type)) {
