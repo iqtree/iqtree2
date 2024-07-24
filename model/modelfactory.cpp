@@ -1055,22 +1055,24 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
     vector<string> nested_models;
     int nmix, i;
     double max_logl, cur_logl;
+    map<string, vector<string> >::iterator itr;
 
     nmix = model->getNMixtures();
     model_name = model->getName();
     rate_name = site_rate->name;
     if (nmix == 1) {
-        nested_models = nest_network[model_name];
-        if (nested_models.size() == 0) {
+        itr = nest_network.find(model_name);
+        if (itr == nest_network.end() || itr->second.size() == 0) {
             return;
         }
+        nested_models = itr->second;
 
         /*
-            cout << "nested models of " << model_name + rate_name << ": ";
-            for (auto nested_model_name: nested_models) {
-                cout << nested_model_name + rate_name << " ";
-            }
-            cout << endl;
+        cout << "nested models of " << model_name + rate_name << ": ";
+        for (auto nested_model_name: nested_models) {
+            cout << nested_model_name + rate_name << " ";
+        }
+        cout << endl;
         */
 
         for (i = 0; i < nested_models.size(); i++) {
@@ -1081,9 +1083,7 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
             stringstream ss(best_model_logl_df);
             ss >> cur_logl;
 
-
             //cout << " lnL of " << nested_models[i] + rate_name << ": " << cur_logl << endl;
-
 
             if (i == 0) {
                 max_logl = cur_logl;
@@ -1106,18 +1106,18 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
         checkpoint->endStruct();
 
         /*
-            cout << "best full name: " << nested_full_name << endl;
-            cout << "[init model] " << model->getNameParams(true) << endl;
-            cout << "[init model] " << site_rate->getNameParams() << endl;
+        cout << "best full name: " << nested_full_name << endl;
+        cout << "[init model] " << model->getNameParams(true) << endl;
+        cout << "[init model] " << site_rate->getNameParams() << endl;
         */
 
     } else if (nmix > 1) {
         last_q_name = getLastQ(model_name);
-        nested_models = nest_network[last_q_name];
-
-        if (nested_models.size() == 0) {
+        itr = nest_network.find(last_q_name);
+        if (itr == nest_network.end() || itr->second.size() == 0) {
             return;
         }
+        nested_models = itr->second;
 
         string nested_mix_model;
 
