@@ -1967,7 +1967,6 @@ string CandidateModel::evaluate(Params &params,
 #if defined(_NN) || defined(_OLD_NN)
         if (params.nnAlpha && iqtree->aln->seq_type == SEQ_DNA && !rate_restored) {
             if (rate_name.find("+G") != string::npos && rate_name.find("+I") == string::npos) { // to get +G models only
-                cout << rate_name << endl;
                 // check if checkpoint file have rate_gamma shape
                 Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
                 NeuralNetwork nn(alignment);
