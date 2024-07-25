@@ -1924,7 +1924,9 @@ string CandidateModel::evaluate(Params &params,
                 // check if new logl is worse than logl from the (k-1)-class mixture model
                 if (pre_logl < new_logl + params.modelfinder_eps) break;
                 init_weight *= 0.5;
-                cout << getName() << " reinitialized from the previous (k-1)-class mixture model with initial weight: " << init_weight << endl;
+                if (step == 9)
+                    init_weight = 0; //set the weight to 0 at last time
+                cout << getName() << " reinitialized from " + best_model + " with initial weight: " << init_weight << endl;
             }
             tree_len = iqtree->treeLength();
 
@@ -1936,7 +1938,7 @@ string CandidateModel::evaluate(Params &params,
             iqtree->saveCheckpoint();
             if (new_logl < pre_logl - params.modelfinder_eps*10.0) {
                 outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                           getName() + " worse than the previous (k-1)-class mixture model " + convertDoubleToString(pre_logl));
+                           getName() + " worse than " + best_model + " " + convertDoubleToString(pre_logl));
             }
         } else {
             CandidateModel prev_info;
