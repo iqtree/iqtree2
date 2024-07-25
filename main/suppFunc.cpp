@@ -1648,6 +1648,7 @@ extern "C" void startLogFile(bool append_log) {
 extern "C" void endLogFile() {
     if (_out_buf.is_open())
         _out_buf.close();
+    _err_buf.reset();
 }
 
 void funcExit(void) {

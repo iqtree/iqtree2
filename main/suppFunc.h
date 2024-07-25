@@ -180,6 +180,10 @@ public:
         new_line = true;
     }
     
+    void reset() {
+        cerr.rdbuf(cerr_buf);
+    }
+    
     ~errstreambuf() {
         cerr.rdbuf(cerr_buf);
     }
