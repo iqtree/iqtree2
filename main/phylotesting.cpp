@@ -1973,7 +1973,7 @@ string CandidateModel::evaluate(Params &params,
                 double alpha = nn.doAlphaInference();
 
                 if (alpha > 0){
-                    cout << "set initial gamma shape as " << alpha <<  " using neural network" << endl;
+//                    cout << "set initial gamma shape as " << alpha <<  " using neural network" << endl;
                     iqtree -> getRate() -> setGammaShape(alpha);
                 }
 

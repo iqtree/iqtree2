@@ -157,10 +157,7 @@ double NeuralNetwork::doAlphaInference() {
     float *alpha = output_tensors[0].GetTensorMutableData<float>();
     float *check = output_tensors[1].GetTensorMutableData<float>();
 
-    printf("Check whether heterogeneous (0) or homogeneous (1) = %f\n", check[0]);
-
-    // print alpha value
-    // printf("Alpha value =  %f\n", alpha[0] / 1000);
+//    printf("Check whether heterogeneous (0) or homogeneous (1) = %f\n", check[0]);
 
     stopTimer();
     if (check[0] > 0.5)
