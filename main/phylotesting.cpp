@@ -4668,7 +4668,12 @@ void PartitionFinder::test_PartitionModel() {
 
     /* following implements the greedy algorithm of Lanfear et al. (2012) */
     bool perform_merge = (params->partition_merge != MERGE_KMEANS && gene_sets.size() >= 2);
-    while (params->partition_merge != MERGE_KMEANS && gene_sets.size() >= 2) {
+#ifdef _IQTREE_MPI
+        MPI_Bcast(&perform_merge, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
+#endif
+
+    bool proceed_stepwise_merge = perform_merge;
+    while (proceed_stepwise_merge) {
         // stepwise merging charsets
 
         // get the closest partition pairs, and
@@ -4732,7 +4737,13 @@ void PartitionFinder::test_PartitionModel() {
                         next_pair->second.part2--;
                 }
             }
+            
+            // proceed to the next iteration if gene_sets.size() >= 2
+            proceed_stepwise_merge = (gene_sets.size() >= 2);
         }
+#ifdef _IQTREE_MPI
+        MPI_Bcast(&proceed_stepwise_merge, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
+#endif
     }
 
 #ifdef _IQTREE_MPI
