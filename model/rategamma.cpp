@@ -71,6 +71,13 @@ void RateGamma::restoreCheckpoint() {
 	computeRates();
 }
 
+bool RateGamma::hasCheckpoint() {
+    startCheckpoint();
+    bool got_gamma = CKP_HAS_KEY(gamma_shape);
+    endCheckpoint();
+    return got_gamma;
+}
+
 void RateGamma::setNCategory(int ncat) {
 	ncategory = ncat;
 	delete [] rates;

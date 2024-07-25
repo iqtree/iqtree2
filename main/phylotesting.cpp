@@ -1528,20 +1528,15 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
 
 // if use model revelator with model finder, get the model names from the neural network
     double alpha;
-    if (params.use_model_revelator_with_mf && seq_type==SEQ_DNA){ // check seq == DNA and model_set is not 1
+    if (params.nnSubModel && seq_type==SEQ_DNA){ // check seq == DNA and model_set is not 1
 #if defined(_NN) || defined(_OLD_NN)
-
         Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
         NeuralNetwork nn(alignment);
-        if (params.nnSubModel && model_set != "1")
+        if (model_set != "1")
             getModelSubstNN(seq_type, &nn, model_names);
         else
             getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
                           model_set, params.model_subset, model_names);
-
-        // do alpha inference and then delete the alignment
-        if (params.nnAlpha)
-            alpha = nn.doAlphaInference();
 
         delete alignment;
 #else
@@ -1596,18 +1591,6 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     //bool auto_rate = iEquals(ratehet_set, "AUTO");
 
     getRateHet(seq_type, params.model_name, aln->frac_invariant_sites, ratehet_set, ratehet);
-
-// if use nn, get alpha value and set innitial value to G and update the ratehet_set G parameters as G{alpha}
-  if (params.use_model_revelator_with_mf && alpha >= 0 && params.nnAlpha){
-#if defined(_NN) || defined(_OLD_NN)
-        for (j = 0; j < ratehet.size(); j++) {
-            if (ratehet[j].find("+G") != string::npos) {
-                ratehet[j] = ratehet[j] + "{" + to_string(alpha) + "}";
-            }
-        }
-#endif
-    }
-
 
     // add number of rate cateogories for special rate models
     const char *rates[] = {"+R", "*R", "+H", "*H"};
@@ -1979,6 +1962,24 @@ string CandidateModel::evaluate(Params &params,
 
         iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
+
+        //+G use NN
+#if defined(_NN) || defined(_OLD_NN)
+        if (params.nnAlpha && iqtree->aln->seq_type == SEQ_DNA && !rate_restored) {
+            if (rate_name.find("+G") != string::npos && rate_name.find("+I") == string::npos) { // to get +G models only
+                cout << rate_name << endl;
+                // check if checkpoint file have rate_gamma shape
+                Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+                NeuralNetwork nn(alignment);
+                double alpha = nn.doAlphaInference();
+
+                if (alpha > 0)
+                    params.gamma_shape = alpha;
+
+                delete alignment;
+            }
+        }
+#endif
 
         if (init_first_mix) {
 

@@ -65,6 +65,11 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+       @return true of checkpoint is present, false otherwise
+    */
+    virtual bool hasCheckpoint();
+
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
