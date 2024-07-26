@@ -1820,7 +1820,14 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
                    ModelSubst *mmodel = (*it)->getModel();
                    ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
-                   reportNexusFile(outnex, m, (*it)->aln->name);
+                   if (params.link_model) {
+                       // a single model linked across all the partitions
+                       // thus only need to output the subst matrix of the first partition
+                       reportNexusFile(outnex, m, "");
+                       break;
+                   } else {
+                       reportNexusFile(outnex, m, (*it)->aln->name);
+                   }
                }
             } else {
                ModelSubst *mmodel = tree.getModel();

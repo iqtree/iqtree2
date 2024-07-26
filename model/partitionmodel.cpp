@@ -409,9 +409,11 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     delete [] variables2;
     delete [] variables;
     
+    /*
     if (write_info) {
         cout << "Linked-model log-likelihood: " << score << endl;
     }
+    */
 
     return score;
 }
