@@ -436,7 +436,7 @@ void reportMixModel(ostream &out, Alignment *aln, ModelSubst *mmodel) {
     if (aln->seq_type != SEQ_POMO && aln->seq_type != SEQ_DNA && !Params::getInstance().optimize_linked_gtr) {
         for (i = 0; i < nmix; i++) {
             ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
-            if (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED)
+            if (aln->seq_type != SEQ_CODON && (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED))
                 continue;
             out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
             reportModel(out, aln, m);
@@ -452,6 +452,12 @@ void reportMixModel(ostream &out, Alignment *aln, ModelSubst *mmodel) {
 
 void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
+    
+    if (aln->seq_type == SEQ_CODON) {
+        m->writeInfo(out);
+        return;
+    }
+        
     ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
     if (!m->isSiteSpecificModel())
