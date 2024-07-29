@@ -346,17 +346,11 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector
 }
 
 void NeuralNetwork::initializeTimer() {
+    // this method initializes the timer
     if (time_initialized) {
         return;
     }
-//    cout << "initialize timer in NN" << endl;
     int num_threads = Params::getInstance().num_threads;
-    int num_processes;
-#if defined(_IQTREE_MPI)
-    num_processes = MPIHelper::getInstance().getNumProcesses();
-#else
-    num_processes = 1;
-#endif
 
     cpu_time = 0.0;
     wall_time = 0.0;
@@ -368,20 +362,17 @@ void NeuralNetwork::initializeTimer() {
 }
 
 void NeuralNetwork::startTimer() {
-//    cout << "start timer" << endl;
     local_cpu_time = getCPUTime();
     local_wall_time = getRealTime();
 }
 
 
 void NeuralNetwork::stopTimer() {
-//    cout << "stop timer" << endl;
     local_cpu_time = getCPUTime() - local_cpu_time;
     local_wall_time = getRealTime() - local_wall_time;
 
-    int thread_id = omp_get_thread_num();
-
 #if defined(_OPENMP)
+    int thread_id = omp_get_thread_num();
     run_time_array[thread_id] += local_wall_time;
     if (thread_id == 0) {
         cpu_time += local_cpu_time;
