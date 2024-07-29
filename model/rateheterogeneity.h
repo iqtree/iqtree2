@@ -114,7 +114,7 @@ public:
     /**
         initialize from checkpoint rates and prop from rate model with #category-1
     */
-    virtual void initFromCatMinusOne() {}
+    virtual void initFromCatMinusOne(Checkpoint &ckp, double scale_factor) {}
 
 	/**
 		get the number of rate categories for site-specific category model

@@ -38,6 +38,11 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+        @return true of checkpoint is present, false otherwise
+     */
+    virtual bool hasCheckpoint();
+
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
@@ -119,7 +124,7 @@ public:
     /**
         initialize from checkpoint rates and prop from rate model with #category-1
     */
-    virtual void initFromCatMinusOne();
+    virtual void initFromCatMinusOne(Checkpoint &ckp, double scale_factor);
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)

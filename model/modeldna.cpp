@@ -246,7 +246,7 @@ void ModelDNA::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
-void ModelDNA::readRates(string str) throw(const char*) {
+void ModelDNA::readRates(string str) noexcept(false) {
 	int nrates = *max_element(param_spec.begin(), param_spec.end());
 	int end_pos = 0;
 	int i, j;

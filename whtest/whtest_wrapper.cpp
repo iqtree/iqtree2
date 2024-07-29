@@ -42,7 +42,7 @@ int WHTest_old(Params &params, PhyloTree &tree) {
 	addArg(argc, argv, (char*)"WHTest");
 	addArg(argc, argv, params.aln_file);
 	addArg(argc, argv, (char*)"-a");
-	sprintf(tmp, "%f", tree.getModelFactory()->site_rate->getGammaShape());
+	snprintf(tmp, 100, "%f", tree.getModelFactory()->site_rate->getGammaShape());
 	addArg(argc, argv, tmp);
 	return WHTest_run(argc, argv);
 }

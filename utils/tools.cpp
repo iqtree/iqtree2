@@ -1178,12 +1178,12 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
 
             //new options added -JD
-            if (strcmp(argv[cnt], "--link-exchange-rates") == 0) {
+            if (strcmp(argv[cnt], "--link-exchange-rates") == 0 || strcmp(argv[cnt], "--link-exchange") == 0) {
                 params.optimize_linked_gtr = true;
                 params.reset_method = "const";
                 continue;
             }
-            if (strcmp(argv[cnt], "--gtr20-model") == 0) {
+            if (strcmp(argv[cnt], "--gtr20-model") == 0 || strcmp(argv[cnt], "--init-exchange") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --gtr20-model <POISSON/LG>";
@@ -4472,6 +4472,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 {
                     string ERR_MSG = "Use -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively; <NUM_TAXA> could be a fixed number, a list (<NUM_1>,<NUM_2>,...,<NUM_N>), or a Uniform distribution U(<LOWER_BOUND>,<UPPER_BOUND>). <NUM_TAXA> is only required if an alignment is not provided by -s <ALIGNMENT_FILE>.";
                     string t_params = argv[cnt];
+                    transform(t_params.begin(), t_params.end(), t_params.begin(), ::toupper);
                     string KEYWORD = "RANDOM";
                     if ((t_params.length() > KEYWORD.length())
                         && (!t_params.substr(0, KEYWORD.length()).compare(KEYWORD)))
@@ -4481,7 +4482,23 @@ void parseArg(int argc, char *argv[], Params &params) {
                         // validate the input
                         if ((t_params[KEYWORD.length()]!='{')
                             ||(t_params[t_params.length()-1]!='}'))
-                            throw ERR_MSG;
+                        {
+                            // try to parse the number of taxa -> users may input RANDOM<NUM> here
+                            string num_taxa_str = t_params.substr(KEYWORD.length(), t_params.length() - KEYWORD.length());
+                            // check if num_taxa_str presents an integer
+                            if (std::all_of(num_taxa_str.begin(), num_taxa_str.end(), ::isdigit))
+                            {
+                                // set the default model is yule harding
+                                params.tree_gen = YULE_HARDING;
+                                
+                                // set the number of taxa
+                                params.sub_size = convert_int(num_taxa_str.c_str());
+                                
+                                continue;
+                            }
+                            else
+                                throw ERR_MSG;
+                        }
                         
                         // remove "RANDOM{"
                         t_params.erase(0, KEYWORD.length() + 1);
@@ -4511,7 +4528,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                         
                         // change the delimiter to "}," in case with birth-death model
                         if ((t_params.length() > 2)
-                            && (!t_params.substr(0, 2).compare("bd")))
+                            && (!t_params.substr(0, 2).compare("BD")))
                             delimiter = "}" + delimiter;
                         
                         string model_name = t_params;
@@ -4700,6 +4717,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -g <constraint_tree>";
                 params.constraint_tree_file = argv[cnt];
+                params.ignore_identical_seqs = false;
                 continue;
             }
             

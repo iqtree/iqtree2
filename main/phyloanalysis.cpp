@@ -1265,7 +1265,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
         out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR
-            << iqtree_VERSION_PATCH << " COVID-edition built " << __DATE__ << endl
+            << iqtree_VERSION_PATCH << " built " << __DATE__ << endl
                 << endl;
         if (params.partition_file)
             out << "Partition file name: " << params.partition_file << endl;
@@ -1887,7 +1887,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     // if using partitions -> specify a partition file
     if (params.partition_file)
     {
-        string partition_file(params.partition_file);
+        string partition_file(params.out_prefix);
         partition_file += ".best_model.nex";
         switch (params.partition_type)
         {
@@ -4606,11 +4606,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 }
 
 bool runCMaple(Params &params)
-{
-#if defined(__ARM_NEON)
-    outError("Sorry! CMAPLE has not supported Apple Chip yet. We're working to make it work soon!");
-#endif
-    
+{    
 #if !defined(USE_CMAPLE)
     outWarning("This version was not compiled with CMAPLE integrated. Running IQ-TREE algorithm...");
     return false;
@@ -4717,9 +4713,9 @@ bool runCMaple(Params &params)
                 tree.computeBranchSupport(params.num_threads, params.aLRT_replicates, 0.1, allow_replacing_ML_tree, out_stream);
                 
                 // write the tree file with branch supports
-                ofstream out_tree_branch_supports = ofstream(prefix + ".aLRT_SH.treefile");
+                /*ofstream out_tree_branch_supports = ofstream(prefix + ".aLRT_SH.treefile");
                 out_tree_branch_supports << tree.exportNewick(tree_format, true);
-                out_tree_branch_supports.close();
+                out_tree_branch_supports.close();*/
             }
             
             // If needed, apply some minor changes (collapsing zero-branch leaves into less-info sequences, re-estimating model parameters) to make the processes of outputting then re-inputting a tree result in a consistent tree
@@ -4749,8 +4745,8 @@ bool runCMaple(Params &params)
             // Show information about output files
             std::cout << "Analysis results written to:" << std::endl;
             std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
-            if (params.aLRT_replicates)
-                std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;
+            /*if (params.aLRT_replicates)
+                std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;*/
             std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
             
             // show runtime

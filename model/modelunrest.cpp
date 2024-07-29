@@ -55,6 +55,10 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, StateFreqType fre
         outWarning("In the UNREST model, state frequencies should be embedded into the substitution rates. Thus, AliSim skips the user-specified state frequencies.");
     
     ModelMarkov::init(FREQ_ESTIMATE);
+    
+    // change the state freq type to user defined if users specify the model parameters
+    if (model_params != "")
+        this->freq_type = FREQ_USER_DEFINED;
 }
 
 void ModelUnrest::writeInfo(ostream &out) {

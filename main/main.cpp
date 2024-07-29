@@ -128,7 +128,7 @@ void printCopyright(ostream &out) {
 #else
      out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
+    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH; // << " COVID-edition";
     out << " for " << osname;
     out << " built " << __DATE__;
 #if defined DEBUG 

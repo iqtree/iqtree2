@@ -898,6 +898,11 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                     starting_pos = single_output->tellp();
                 else
                     starting_pos = first_line.length();
+                
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++starting_pos;
+                #endif
             }
             
             // dummy variables
@@ -1415,6 +1420,11 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 starting_pos = out->tellp();
             else
                 starting_pos = first_line.length();
+            
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            ++starting_pos;
+            #endif
         }
     }
 }

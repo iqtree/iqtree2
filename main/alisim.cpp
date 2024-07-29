@@ -750,12 +750,18 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
-        outError("OpenMP has not yet been supported in simulations with Indels. Please use a single thread for this simulation.");
+    {
+        outWarning("OpenMP has not yet been supported in simulations with Indels. AliSim is now using a single thread for this simulation.");
+        super_alisimulator->params->num_threads = 1;
+#ifdef _OPENMP
+        omp_set_num_threads(super_alisimulator->params->num_threads);
+#endif
+    }
     
     // do not support compression when outputting multiple data sets into a same file
-    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || Params::getInstance().keep_seq_order))
+    if (Params::getInstance().do_compression && (Params::getInstance().alisim_single_output || super_alisimulator->params->num_threads != 1))
     {
-        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or keeping the order of output sequences. AliSim will output file in normal format.");
+        outWarning("Compression is not supported when either outputting multiple alignments into a single output file or using multithreading. AliSim will output file in normal format.");
 
         Params::getInstance().do_compression = false;
         super_alisimulator->params->do_compression = false;
@@ -1154,7 +1160,13 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     
     // delete tmp_alisimulator
     if ((!rate_name.empty()) || is_mixture_model)
+    {
         delete tmp_alisimulator;
+        
+        // bug fixes: avoid accessing to deallocated pointer
+        if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+            alisimulator->first_insertion = nullptr;
+    }
     
 }
 
@@ -1197,15 +1209,16 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 
                 // get the position to write output
                 start_pos = first_line.length();
-                
-                // for Windows only, the line break is \r\n instead of only \n
-                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-                ++start_pos;
-                #endif
             }
             
             if (!alisimulator->params->do_compression)
                 start_pos = out->tellp();
+        
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            ++start_pos;
+            #endif
+        
             uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
         
             // for Windows only, the line break is \r\n instead of only \n
