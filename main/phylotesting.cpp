@@ -1472,6 +1472,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     if (Params::getInstance().use_model_revelator_with_mf) {
         cout << "NN time statics" << endl;
         int num_processes;
+        int num_threads = Params::getInstance().num_threads;
+
 #ifdef _IQTREE_MPI
         num_processes = MPIHelper::getInstance().getNumProcesses();
         double* nn_cpu_time_array = new double[num_processes];
@@ -1496,11 +1498,14 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         }
 #else
         num_processes = 1;
+        if (num_threads == 1){
+            cout << "single threaded execution" << endl;
+            cout << endl;
+            cout << "\tproc\twall_time\tcpu_time" << endl;
+            cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << endl;
+        }
 #endif
 #if defined(_OPENMP)
-
-
-        int num_threads = Params::getInstance().num_threads;
 #if defined(_IQTREE_MPI)
         if (num_threads > 1 && num_processes > 1) {
             cout << "openmp + mpi time statics" << endl;

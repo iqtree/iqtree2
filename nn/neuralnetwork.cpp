@@ -12,25 +12,12 @@
 float NeuralNetwork::gpu_time=  0.0f;
 #endif
 
+double NeuralNetwork::cpu_time = 0.0;
+double NeuralNetwork::wall_time = 0.0;
+
 // Define static variables
-#if defined(_OPENMP) && defined (_IQTREE_MPI)
+#if defined(_OPENMP)
 DoubleVector NeuralNetwork::run_time_array;
-double NeuralNetwork::cpu_time = 0.0;
-double NeuralNetwork::wall_time = 0.0;
-#elif defined(_OPENMP)
-DoubleVector NeuralNetwork::run_time_array;
-DoubleVector NeuralNetwork::cpu_time_array;
-DoubleVector NeuralNetwork::wall_time_array;
-double NeuralNetwork::cpu_time = 0.0;
-double NeuralNetwork::wall_time = 0.0;
-#elif defined(_IQTREE_MPI)
-DoubleVector NeuralNetwork::cpu_time_array;
-DoubleVector NeuralNetwork::wall_time_array;
-double NeuralNetwork::cpu_time = 0.0;
-double NeuralNetwork::wall_time = 0.0;
-#else
-double NeuralNetwork::cpu_time = 0.0;
-double NeuralNetwork::wall_time = 0.0;
 #endif
 
 
@@ -371,25 +358,11 @@ void NeuralNetwork::initializeTimer() {
     num_processes = 1;
 #endif
 
-//    cout << "num_threads: " << num_threads << " num_processes: " << num_processes << endl;
+    cpu_time = 0.0;
+    wall_time = 0.0;
 
-
-#if defined(_OPENMP) && defined (_IQTREE_MPI)
+#if defined(_OPENMP)
     run_time_array.resize(num_threads, 0.0);
-    cpu_time = 0.0;
-    wall_time = 0.0;
-#elif defined(_OPENMP)
-    run_time_array.resize(num_threads, 0.0);
-    cpu_time_array.resize(1, 0.0);
-    wall_time_array.resize(1, 0.0);
-    cpu_time = 0.0;
-    wall_time = 0.0;
-#elif defined(_IQTREE_MPI)
-    cpu_time = 0.0;
-    wall_time = 0.0;
-#else
-    cpu_time = 0.0;
-    wall_time = 0.0;
 #endif
     time_initialized = true;
 }
@@ -405,34 +378,15 @@ void NeuralNetwork::stopTimer() {
 //    cout << "stop timer" << endl;
     local_cpu_time = getCPUTime() - local_cpu_time;
     local_wall_time = getRealTime() - local_wall_time;
-    int process_id;
-
-#ifdef _IQTREE_MPI
-    process_id = MPIHelper::getInstance().getProcessID();
-#else
-    process_id = 0;
-#endif
 
     int thread_id = omp_get_thread_num();
 
-#if defined(_OPENMP) && defined (_IQTREE_MPI)
-
-    (run_time_array)[thread_id ] += local_wall_time;
-    if (thread_id == 0) {
-        cpu_time += local_cpu_time;
-        wall_time += local_wall_time;
-    }
-#elif defined(_OPENMP)
+#if defined(_OPENMP)
     run_time_array[thread_id] += local_wall_time;
     if (thread_id == 0) {
-        cpu_time_array[0] += local_cpu_time;
-        wall_time_array[0] += local_wall_time;
         cpu_time += local_cpu_time;
         wall_time += local_wall_time;
     }
-#elif defined(_IQTREE_MPI)
-    cpu_time += local_cpu_time;
-    wall_time += local_wall_time;
 #else
     cpu_time += local_cpu_time;
     wall_time += local_wall_time;
