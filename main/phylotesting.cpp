@@ -1469,26 +1469,73 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
 #if defined(_NN) || defined(_OLD_NN)
 
-    if (MPIHelper::getInstance().isMaster() && params.use_model_revelator_with_mf) {
+    if (Params::getInstance().use_model_revelator_with_mf) {
+        cout << "NN time statics" << endl;
+#ifdef _IQTREE_MPI
         int num_processes = MPIHelper::getInstance().getNumProcesses();
+        double* nn_cpu_time_array = new double[num_processes];
+        double* nn_wall_time_array = new double[num_processes];
+
+        double nn_wall_time = NeuralNetwork::wall_time;
+        double nn_cpu_time = NeuralNetwork::cpu_time;
+        // Gather static_var_value from all processes to the root process
+        MPI_Gather(&nn_wall_time, 1, MPI_DOUBLE, nn_wall_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+        MPI_Gather(&nn_cpu_time, 1, MPI_DOUBLE, nn_cpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+
+
         cout << endl;
 
         cout << num_processes << " processes are used for NN model selection" << endl;
         cout << "\tproc\twall_time\tcpu_time" << endl;
 
-        for (int p=0; p<num_processes; p++) {
-            cout << "\t" << p << "\t" << (NeuralNetwork::wall_time_array)[p] << "\t" << NeuralNetwork::cpu_time_array[p] << endl;
+        if (MPIHelper::getInstance().isMaster()){
+            for (int p=0; p<num_processes; p++) {
+                cout << "\t" << p << "\t" << (nn_wall_time_array)[p] << "\t" << nn_cpu_time_array[p] << endl;
+            }
         }
 
-#ifdef _OPENMP
-        int num_threads = params.num_threads;
-        cout << endl;
-        cout << "\tproc\tthreads\trun_time" << endl;
+#endif
+#if defined(_OPENMP)
 
-        for (int p=0; p<num_processes; p++) {
-            for (int t=0; t < num_threads; t++){
-                cout << "\t" << p << "\t" << t << "\t"<< NeuralNetwork::run_time_array[p * (t-1) + t] << endl;
+
+        int num_threads = Params::getInstance().num_threads;
+
+        if (num_threads > 1 && num_processes > 1) {
+            cout << "openmp + mpi time statics" << endl;
+
+            double* nn_run_time_array_array = new double[num_processes * num_threads];
+            DoubleVector run_time_array = NeuralNetwork::run_time_array;
+
+            // Gather static_var_value from all processes to the root process
+            MPI_Gather(run_time_array.data(), num_threads, MPI_DOUBLE, nn_run_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+
+            cout << endl;
+            cout << "\tproc\tthreads\trun_time" << endl;
+
+            if (MPIHelper::getInstance().isMaster()){
+                int n_threads = 0;
+                int n_processes = 0;
+                for (int i = 0; i < num_processes * num_threads; i++){
+                    cout << "\t" << n_processes << "\t" << n_threads << "\t"<< nn_run_time_array_array[i] << endl;
+                    n_threads++;
+                    if (n_threads == num_threads){
+                        n_processes++;
+                        n_threads = 0;
+                    }
+                }
             }
+        }
+        else if (num_threads > 1 && num_processes == 1){
+            cout << "openmp time statics and not mpi " << endl;
+            cout << endl;
+            cout << "\tproc\tthreads\trun_time" << endl;
+
+            int p = 0;
+
+            for (int t=0; t < num_threads; t++){
+                cout << "\t" << p << "\t" << t << "\t"<< NeuralNetwork::run_time_array[t] << endl;
+            }
+
         }
 #endif
         cout << endl;
@@ -4488,7 +4535,9 @@ void PartitionFinder::getBestModel(int job_type) {
                 cout << endl;
             }
         }
-        
+
+
+
         // consolidate the results
         if (job_type == 1) {
             consolidPartitionResults();

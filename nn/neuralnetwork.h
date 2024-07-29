@@ -56,15 +56,15 @@ public:
 
 #if defined(_OPENMP) && defined (_IQTREE_MPI)
     static DoubleVector run_time_array; // run time for each thread
-    static DoubleVector cpu_time_array;
-    static DoubleVector wall_time_array;
+    static double cpu_time;
+    static double wall_time;
 #elif defined(_OPENMP)
     static DoubleVector run_time_array; // run time for each thread
     static DoubleVector cpu_time_array;
     static DoubleVector wall_time_array;
 #elif defined(_IQTREE_MPI)
-    static DoubleVector cpu_time_array;
-    static DoubleVector wall_time_array;
+    static double cpu_time;
+    static double wall_time;
 #else
     static double cpu_time;
     static double wall_time;
