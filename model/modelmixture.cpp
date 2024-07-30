@@ -1511,6 +1511,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     }
 	decomposeRateMatrix();
 
+    // for codon mixture, change to use nni1
+    if (tree->aln->seq_type == SEQ_CODON) {
+        Params::getInstance().nni_type = NNI1;
+        Params::getInstance().nni5 = false;
+    }
+
     delete nxs_freq_optimize;
     delete nxs_freq_empirical;
 }
@@ -1523,15 +1529,18 @@ void ModelMixture::initMem() {
     // models may be a mixture model itself (PoMo rate heterogeneity).
     
     int num_states_total = 0;
+    int num_states_align_total = 0;
+    size_t malign_num = malign_byte_pos();
     for (iterator it = begin(); it != end(); it++) {
         num_states_total += (*it)->get_num_states_total();
+        num_states_align_total += roundUpToMultiple((*it)->get_num_states_total(), malign_num);
     }
     
     aligned_free(eigenvalues);
     aligned_free(eigenvectors);
     aligned_free(inv_eigenvectors);
     aligned_free(inv_eigenvectors_transposed);
-    unsigned long long int tmp_size = num_states_total*nmixtures;
+    unsigned long long int tmp_size = num_states_align_total*nmixtures;
     ensure_aligned_allocated(eigenvalues, tmp_size);
     tmp_size *= num_states_total;
     ensure_aligned_allocated(eigenvectors, tmp_size);
@@ -1545,6 +1554,8 @@ void ModelMixture::initMem() {
     for (iterator it = begin(); it != end(); it++, m++) {
         int num_states_this_model = (*it)->get_num_states_total();
         int num_states_this_model_2 = num_states_this_model * num_states_this_model;
+        int num_align_states_this_model = roundUpToMultiple((*it)->get_num_states_total(), malign_num);
+        int num_align_states_this_model_2 = num_align_states_this_model * num_states_this_model;
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[count_num_states], (*it)->eigenvalues,
                num_states_this_model*sizeof(double));
@@ -1571,8 +1582,8 @@ void ModelMixture::initMem() {
         
         // Update the state counters, so that the pointers are assigned correctly
         // for the next mixture component.
-        count_num_states += num_states_this_model;
-        count_num_states_2 += num_states_this_model_2;
+        count_num_states += num_align_states_this_model;
+        count_num_states_2 += num_align_states_this_model_2;
     }
 }
 

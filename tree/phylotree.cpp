@@ -2757,7 +2757,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
                 showProgress();
             }
-            ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+            // ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+            ASSERT(tree_lh-new_tree_lh < max_delta_lh);
             return new_tree_lh;
         }
 
