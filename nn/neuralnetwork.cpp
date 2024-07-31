@@ -42,13 +42,25 @@ double NeuralNetwork::doAlphaInference() {
 
 #ifdef _CUDA
 //    cout << "creating CUDA environment" << endl;
-    OrtCUDAProviderOptions cuda_options;
-    cuda_options.device_id = 0;  //GPU_ID
-    cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
-    cuda_options.arena_extend_strategy = 0;
-    // May cause data race in some condition
-    cuda_options.do_copy_in_default_stream = 0;
-    session_options.AppendExecutionProvider_CUDA(cuda_options); // Add CUDA options to session options
+    // Query number of gpus
+    int num_gpus = 0;
+    cudaError_t cuda_status = cudaGetDeviceCount(&num_gpus);
+    bool has_gpu = (cuda_status == cudaSuccess && num_gpus > 0);
+
+    if (!has_gpu) {
+        printf("No GPU found\n");
+    } else {
+        printf("Number of GPUs = %d\n", num_gpus);
+        // todo: add logic to select GPU from the rank if MPI or OpenMP
+        OrtCUDAProviderOptions cuda_options;
+        cuda_options.device_id = 0;  //GPU_ID
+        cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
+        cuda_options.arena_extend_strategy = 0;
+        // May cause data race in some condition
+        cuda_options.do_copy_in_default_stream = 0;
+        session_options.AppendExecutionProvider_CUDA(cuda_options); // Add CUDA options to session options
+    }
+
 #endif
 
     // printf("Using Onnxruntime C++ API\n");
@@ -125,23 +137,27 @@ double NeuralNetwork::doAlphaInference() {
 
 #ifdef _CUDA
     // do inference
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    if (has_gpu) {
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
 
-    cudaEventRecord(start);
+        cudaEventRecord(start);
+    }
 #endif
     auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tensor, 1,
                                       output_node_names.data(), 2);
     assert(output_tensors.size() == 2 && output_tensors.front().IsTensor());
 
 #ifdef _CUDA
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    gpu_time += milliseconds;
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    if (has_gpu) {
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        gpu_time += milliseconds;
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+    }
 #endif
     // get pointer to output tensor float values
     //float *floatarr = output_tensors.front().GetTensorMutableData<float>();
