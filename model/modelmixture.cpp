@@ -1511,12 +1511,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     }
 	decomposeRateMatrix();
 
-    // for codon mixture, change to use nni1
-    if (tree->aln->seq_type == SEQ_CODON) {
-        Params::getInstance().nni_type = NNI1;
-        Params::getInstance().nni5 = false;
-    }
-
     delete nxs_freq_optimize;
     delete nxs_freq_empirical;
 }
@@ -1530,10 +1524,9 @@ void ModelMixture::initMem() {
     
     int num_states_total = 0;
     int num_states_align_total = 0;
-    size_t malign_num = malign_byte_pos();
     for (iterator it = begin(); it != end(); it++) {
         num_states_total += (*it)->get_num_states_total();
-        num_states_align_total += roundUpToMultiple((*it)->get_num_states_total(), malign_num);
+        num_states_align_total += get_safe_upper_limit((*it)->get_num_states_total());
     }
     
     aligned_free(eigenvalues);
@@ -1554,7 +1547,7 @@ void ModelMixture::initMem() {
     for (iterator it = begin(); it != end(); it++, m++) {
         int num_states_this_model = (*it)->get_num_states_total();
         int num_states_this_model_2 = num_states_this_model * num_states_this_model;
-        int num_align_states_this_model = roundUpToMultiple((*it)->get_num_states_total(), malign_num);
+        int num_align_states_this_model = get_safe_upper_limit((*it)->get_num_states_total());
         int num_align_states_this_model_2 = num_align_states_this_model * num_states_this_model;
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[count_num_states], (*it)->eigenvalues,

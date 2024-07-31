@@ -83,11 +83,6 @@ const int SPR_DEPTH = 2;
 
 //using namespace Eigen;
 
-inline size_t malign_byte_pos() {
-    size_t malign = (Params::getInstance().SSE >= LK_AVX512) ? 64 : ((Params::getInstance().SSE >= LK_AVX) ? 32 : 16);
-    return malign / 8;
-}
-
 #ifndef ROUND_UP_TO_MULTIPLE
 #define ROUND_UP_TO_MULTIPLE
 template<class C, class G> C roundUpToMultiple(C count, G grain) {
