@@ -5,7 +5,7 @@ IQ-TREE
 [![Github IQ-TREE 2 Releases](https://img.shields.io/github/downloads/iqtree/iqtree2/total.svg?style=social&logo=github&label=iqtree2%20download)](https://github.com/iqtree/iqtree2/releases)
 [![BioConda downloads](https://img.shields.io/conda/dn/bioconda/iqtree.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/iqtree)
 [![BioConda platforms](https://img.shields.io/conda/pn/bioconda/iqtree?style=flag)](https://github.com/bioconda/bioconda-recipes/tree/master/recipes/iqtree)
-[![Build Status](https://travis-ci.org/bqminh/IQ-TREE.svg?branch=master)](https://travis-ci.org/bqminh/IQ-TREE)
+[![Build Status](https://github.com/iqtree/iqtree2/workflows/Build/badge.svg)](https://github.com/iqtree/iqtree2/actions)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 
 Efficient and versatile phylogenomic software by maximum likelihood <http://www.iqtree.org>
