@@ -5848,7 +5848,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     CandidateModel best_model;
     string multi_class_str;
     string single_class_str;
-    int max_cats;
+    int max_cats, n_class;
     string set_name = "";
     string in_model_name = "";
     bool merge_phase = false;
@@ -5898,7 +5898,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     max_cats = getClassNum(model_str) * params.max_rate_cats;
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
-    cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
+    cout << "NOTE: MixtureFinder " << n_class << "-class models requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
     if (mem_size >= getMemorySize()) {
         outError("Memory required exceeds your computer RAM size!");
     }
@@ -6095,8 +6095,8 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     real_time = getRealTime() - real_time;
     cout << endl;
     cout << "All model information printed to " << model_info.getFileName() << endl;
-    cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
-    cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
+    cout << "CPU time for MixtureFinder " << n_class << "-class models: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
+    cout << "Wall-clock time for MixtureFinder " << n_class << "-class models: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
     
     return best_model;
 }
