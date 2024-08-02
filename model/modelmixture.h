@@ -182,6 +182,8 @@ public:
 	virtual void computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
+    virtual void adaptStateFrequency(double* freq);
+    
 	/**
 		@return the number of dimensions
 	*/

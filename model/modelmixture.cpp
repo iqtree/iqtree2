@@ -1851,8 +1851,20 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
+void ModelMixture::adaptStateFrequency(double* freq)
+{
+    ASSERT(state_freq);
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it)->freq_type == FREQ_ESTIMATE || (*it)->freq_type == FREQ_EMPIRICAL)
+            (*it)->adaptStateFrequency(freq);
+    }
+}
+
 // added case for gtr optimization -JD
 int ModelMixture::getNDim() {
+    if (fixed_parameters) {
+        return 0;
+    }
     int dim = (fix_prop) ? 0: (size()-1);
     int dim_linked_subst = 0;
     
@@ -2219,6 +2231,8 @@ bool ModelMixture::isMixtureSameQ() {
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 
     int dim = getNDim();
+    if (dim == 0)
+        return 0.0;
     double score = 0.0;
     IntVector params;
     int i, j, ncategory = size();
@@ -2423,6 +2437,8 @@ void ModelMixture::decomposeRateMatrix() {
 
 // added case for gtr optimization -JD
 void ModelMixture::setVariables(double *variables) {
+    if (getNDim() == 0)
+        return;
 	int dim = 0;
     if (optimizing_gtr) {       
         // only need to get the variable from the first class
@@ -2452,6 +2468,8 @@ void ModelMixture::setVariables(double *variables) {
 
 //added case for gtr optimization -JD
 bool ModelMixture::getVariables(double *variables) {
+    if (getNDim() == 0)
+        return false;
 	int dim = 0;
     bool changed = false;
     if (optimizing_gtr) {
@@ -2497,6 +2515,8 @@ bool ModelMixture::getVariables(double *variables) {
 
 //added case for gtr optimization -JD
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+    if (getNDim() == 0)
+        return;
 	int dim = 0;
     if(optimizing_gtr) {
         // only consider the first class as this is a linked substitution matrix
