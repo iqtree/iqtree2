@@ -1892,41 +1892,60 @@ string CandidateModel::evaluate(Params &params,
 
         iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
-        
 
-        if (init_first_mix) {
+        CandidateModel prev_info;
+        bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
 
-            // now switch to the input checkpoint
+        if (!prev_rate_present){
             iqtree->getModelFactory()->setCheckpoint(&in_model_info);
-            iqtree->setCheckpoint(&in_model_info);
+            //iqtree->setCheckpoint(&in_model_info);
+            bool init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
 
-            // get the model mixture object
-            ModelMixture* modelmix = dynamic_cast<ModelMixture*> (iqtree->getModelFactory()->model);
-            ASSERT(modelmix);
-            double init_weight = 1.0 / modelmix->getNMixtures();
-            
-            // obtain the likelihood value from the (k-1)-class mixture model
-            string criteria_str = criterionName(params.model_test_criterion);
-            string best_model = in_model_info["best_model_" + criteria_str];
-            string best_model_logl_df = in_model_info[best_model];
-            stringstream ss (best_model_logl_df);
-            double pre_logl;
-            ss >> pre_logl;
-            
-            for (int step = 0; step < 10; step++) {
-                
-                // initialize the parameters from the (k-1)-class mixture model
-                modelmix->initFromClassMinusOne(init_weight);
-                
+            if (!init_success && iqtree->getModel()->isMixture()) {
+                // get the model mixture object
+                ModelMixture* modelmix = dynamic_cast<ModelMixture*> (iqtree->getModelFactory()->model);
+                ASSERT(modelmix);
+                double init_weight = 1.0 / modelmix->getNMixtures();
+
+                // obtain the likelihood value from the (k-1)-class mixture model
+                string criteria_str = criterionName(params.model_test_criterion);
+                string best_model = in_model_info["best_model_" + criteria_str];
+                string best_model_logl_df = in_model_info[best_model];
+                stringstream ss (best_model_logl_df);
+                double pre_logl;
+                ss >> pre_logl;
+
+                for (int step = 0; step < 10; step++) {
+                    if (step > 0) {
+                        init_weight *= 0.5;
+
+                        if (step == 9)
+                            init_weight = 1e-10; //set the weight to 0 at last time
+
+                        if (step == 7) { // the weight of last class is too small, this model should not be restored by next model
+                            in_model_info.startStruct("OptModel");
+                            in_model_info.putBool(getName()+".UnreliableParam",true);
+                            in_model_info.endStruct();
+                        }
+                        cout << getName() << " reinitialized from " + best_model + " with initial weight: " << init_weight << endl;
+                    }
+
+                    // initialize the parameters from the (k-1)-class mixture model
+                    modelmix->initFromClassMinusOne(init_weight);
+
+                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+                                                                             params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+
+                    // check if new logl is worse than logl from the (k-1)-class mixture model
+                    if (pre_logl < new_logl + params.modelfinder_eps) break;
+                }
+                if (new_logl < pre_logl - params.modelfinder_eps*10.0) {
+                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                               getName() + " worse than " + best_model + " " + convertDoubleToString(pre_logl));
+                }
+            } else {
                 new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
                                                                          params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
-                
-                // check if new logl is worse than logl from the (k-1)-class mixture model
-                if (pre_logl < new_logl + params.modelfinder_eps) break;
-                init_weight *= 0.5;
-                if (step == 9)
-                    init_weight = 0; //set the weight to 0 at last time
-                cout << getName() << " reinitialized from " + best_model + " with initial weight: " << init_weight << endl;
             }
             tree_len = iqtree->treeLength();
 
@@ -1936,58 +1955,34 @@ string CandidateModel::evaluate(Params &params,
 
             iqtree->getModelFactory()->saveCheckpoint();
             iqtree->saveCheckpoint();
-            if (new_logl < pre_logl - params.modelfinder_eps*10.0) {
-                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                           getName() + " worse than " + best_model + " " + convertDoubleToString(pre_logl));
-            }
         } else {
-            CandidateModel prev_info;
-            bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
-
-            if (!prev_rate_present){
-                iqtree->getModelFactory()->setCheckpoint(&in_model_info);
-                iqtree->getModelFactory()->initFromNestedModel(nest_network);
-
+            // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
+            double weight_rescale = 1.0;
+            if (!rate_restored) {
+                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                if (verbose_mode >= VB_MED)
+                    cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
+            }
+            for (int step = 0; step < 5; step++) {
                 new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                                                                         params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+                                                                         params.modelfinder_eps,
+                                                                         TOL_GRADIENT_MODELTEST);
                 tree_len = iqtree->treeLength();
-
-                // now switch to the output checkpoint
-                iqtree->getModelFactory()->setCheckpoint(&out_model_info);
-                iqtree->setCheckpoint(&out_model_info);
-
                 iqtree->getModelFactory()->saveCheckpoint();
                 iqtree->saveCheckpoint();
 
-            } else {
-                // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
-                double weight_rescale = 1.0;
-                if (!rate_restored) {
-                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                    if (verbose_mode >= VB_MED)
-                        cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
-                }
-                for (int step = 0; step < 5; step++) {
-                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                                                                             params.modelfinder_eps,
-                                                                             TOL_GRADIENT_MODELTEST);
-                    tree_len = iqtree->treeLength();
-                    iqtree->getModelFactory()->saveCheckpoint();
-                    iqtree->saveCheckpoint();
-
-                    // check if logl(+R[k]) is worse than logl(+R[k-1])
-                    // if (!prev_rate_present) break;
-                    if (prev_info.logl < new_logl + params.modelfinder_eps) break;
-                    weight_rescale *= 0.5;
-                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                    cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
-                         << " with factor " << weight_rescale << endl;
-                }
-                if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
-                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                               getName() + " worse than " + prev_info.getName() + " " +
-                               convertDoubleToString(prev_info.logl));
-                }
+                // check if logl(+R[k]) is worse than logl(+R[k-1])
+                // if (!prev_rate_present) break;
+                if (prev_info.logl < new_logl + params.modelfinder_eps) break;
+                weight_rescale *= 0.5;
+                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
+                     << " with factor " << weight_rescale << endl;
+            }
+            if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
+                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                           getName() + " worse than " + prev_info.getName() + " " +
+                           convertDoubleToString(prev_info.logl));
             }
         }
     }
@@ -6056,9 +6051,9 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
 
         skip_all_when_drop = false;
 
-        if (candidate_models.size() > 0) {
-            candidate_models.at(0).init_first_mix = true;
-        }
+        //if (candidate_models.size() > 0) {
+            //candidate_models.at(0).init_first_mix = true;
+        //}
     }
     // model selection
     candidate_models.under_mix_finder = true;
@@ -6310,6 +6305,9 @@ int findModelIndex(const string& model, const char* model_set[], size_t size) {
             return i;
         }
     }
+    if (model == "K2P") {
+
+    }
     return -1;
 }
 
@@ -6381,17 +6379,17 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
     for (i = 0; i < model_names.size(); i++) {
         string new_model_name = getDNAModelInfo(model_names[i], full_name, rate_type, freq);
         // the resulting freq will be either FREQ_EQUAL or FREQ_ESTIMATE
-        if (model_names[i] != new_model_name)
-            model_names[i] = new_model_name;
+        //if (model_names[i] != new_model_name)
+        //    model_names[i] = new_model_name;
 
         if (freq == FREQ_EQUAL) {
-            model_freq_names.push_back(model_record(model_names[i],model_names[i],"+FQ", rate_type));
+            model_freq_names.push_back(model_record(new_model_name,model_names[i],"+FQ", rate_type));
         } else {
             for (j = 0; j < freq_names.size(); j++) {
                 if (freq_names[j] == "+FQ") {
-                    model_freq_names.push_back(model_record(model_names[i],model_names[i],freq_names[j], rate_type));
+                    model_freq_names.push_back(model_record(new_model_name,model_names[i],freq_names[j], rate_type));
                 } else {
-                    model_freq_names.push_back(model_record(model_names[i]+freq_names[j],model_names[i],freq_names[j], rate_type));
+                    model_freq_names.push_back(model_record(new_model_name+freq_names[j],model_names[i],freq_names[j], rate_type));
                 }
             }
         }

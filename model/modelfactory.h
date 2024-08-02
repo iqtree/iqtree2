@@ -104,9 +104,10 @@ public:
     virtual void restoreCheckpoint();
 
     /**
-        restore object from the nested model in checkpoint
+        restore object from the nested k-class model in checkpoint
+        return false if the k-class model can't initialise from k-class model or the weight of last class of the nested model is close to 0
     */
-    virtual void initFromNestedModel(map<string, vector<string> > nest_network);
+    virtual bool initFromNestedModel(map<string, vector<string> > nest_network);
 
 	/**
 		get the name of the model

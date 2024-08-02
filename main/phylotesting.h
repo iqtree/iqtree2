@@ -50,7 +50,7 @@ public:
         BIC_score = DBL_MAX;
         this->flag = flag;
         syncChkPoint = nullptr;
-        init_first_mix = false;
+        //init_first_mix = false;
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
@@ -58,14 +58,14 @@ public:
         this->rate_name = orig_rate_name = rate_name;
         this->aln = aln;
         syncChkPoint = nullptr;
-        init_first_mix = false;
+        //init_first_mix = false;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
         this->aln = aln;
         getUsualModel(aln);
         syncChkPoint = nullptr;
-        init_first_mix = false;
+        //init_first_mix = false;
     }
     
     string getName() {
@@ -183,7 +183,7 @@ public:
     
     // indicate whether it is the first k-class mixture model
     // if so, then the parameters will be initialized from the previous (k-1)-class mixture model
-    bool init_first_mix;
+    //bool init_first_mix;
 
     /** the nest relationships of all candidate Q matrices */
     map<string, vector<string> > nest_network;

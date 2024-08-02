@@ -1050,7 +1050,7 @@ string replaceLastQ(string model_name, string nested_q_name) {
     return nested_mix_model;
 }
 
-void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network) {
+bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network) {
     string model_name, last_q_name, rate_name, nested_full_name, best_nested_model_name;
     vector<string> nested_models;
     int nmix, i;
@@ -1060,11 +1060,12 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
     nmix = model->getNMixtures();
     model_name = model->getName();
     rate_name = site_rate->name;
-    if (nmix == 1) {
+
+    if (nmix == 1){
         itr = nest_network.find(model_name);
-        if (itr == nest_network.end() || itr->second.size() == 0) {
-            return;
-        }
+        if (itr == nest_network.end() || itr->second.size() == 0)
+            return false;
+
         nested_models = itr->second;
 
         /*
@@ -1093,7 +1094,6 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
                 best_nested_model_name = nested_models[i];
             }
         }
-
         nested_full_name = best_nested_model_name + rate_name;
 
         checkpoint->startStruct("OptModel");
@@ -1105,18 +1105,15 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
         checkpoint->endStruct();
         checkpoint->endStruct();
 
-        /*
-        cout << "best full name: " << nested_full_name << endl;
-        cout << "[init model] " << model->getNameParams(true) << endl;
-        cout << "[init model] " << site_rate->getNameParams() << endl;
-        */
-
-    } else if (nmix > 1) {
+        //cout << "best full name: " << nested_full_name << endl;
+        //cout << "[init model] " << model->getNameParams(true) << endl;
+        //cout << "[init model] " << site_rate->getNameParams() << endl;
+    } else if (nmix>1) {
         last_q_name = getLastQ(model_name);
         itr = nest_network.find(last_q_name);
-        if (itr == nest_network.end() || itr->second.size() == 0) {
-            return;
-        }
+        if (itr == nest_network.end() || itr->second.size() == 0)
+            return false;
+
         nested_models = itr->second;
 
         string nested_mix_model;
@@ -1149,10 +1146,15 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
                 best_nested_model_name = nested_mix_model;
             }
         }
-
         nested_full_name = best_nested_model_name + rate_name;
 
         checkpoint->startStruct("OptModel");
+        bool unreliable_param = checkpoint->getBool(nested_full_name + ".UnreliableParam");
+        if (unreliable_param) {
+            checkpoint->endStruct();
+            return false;
+        }
+
         checkpoint->startStruct(nested_full_name);
 
         model->restoreCheckpoint();
@@ -1160,15 +1162,12 @@ void ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
 
         checkpoint->endStruct();
         checkpoint->endStruct();
-
-        /*
-            cout << "best full name: " << nested_full_name << endl;
-            cout << "[init model] " << model->getNameParams(true) << endl;
-            cout << "[init model] " << site_rate->getNameParams() << endl;
-        */
+        //cout << "best full name: " << nested_full_name << endl;
+        //cout << "[init model] " << model->getNameParams(true) << endl;
+        //cout << "[init model] " << site_rate->getNameParams() << endl;
 
     }
-
+    return true;
 }
 
 int ModelFactory::getNParameters(int brlen_type) {
