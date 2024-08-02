@@ -8,7 +8,9 @@
 #include <chrono>
 #include <vector>
 
-#ifdef _CUDA
+#if defined(_CUDA) && defined(_OPENMP)
+DoubleVector NeuralNetwork::gpu_time_array;
+#elif defined(_CUDA)
 float NeuralNetwork::gpu_time=  0.0f;
 #endif
 
@@ -51,9 +53,16 @@ double NeuralNetwork::doAlphaInference() {
         printf("No GPU found\n");
     } else {
         printf("Number of GPUs = %d\n", num_gpus);
+        int thread_id = 0;
+#ifdef _OPENMP
+        thread_id = omp_get_thread_num();
+#else
+        thread_id = 0;
+#endif
+
         // todo: add logic to select GPU from the rank if MPI or OpenMP
         OrtCUDAProviderOptions cuda_options;
-        cuda_options.device_id = 0;  //GPU_ID
+        cuda_options.device_id = thread_id;  //GPU_ID
         cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
         cuda_options.arena_extend_strategy = 0;
         // May cause data race in some condition
@@ -154,7 +163,11 @@ double NeuralNetwork::doAlphaInference() {
         cudaEventSynchronize(stop);
         float milliseconds = 0;
         cudaEventElapsedTime(&milliseconds, start, stop);
+#ifdef _OPENMP
+        gpu_time_array[omp_get_thread_num()] += milliseconds;
+#else
         gpu_time += milliseconds;
+#endif
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
     }
@@ -185,13 +198,30 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
 #ifdef _CUDA
 //    session_options.SetLogSeverityLevel(1);
 //    cout << "creating CUDA environment" << endl;
-    OrtCUDAProviderOptions cuda_options;
-    cuda_options.device_id = 0;  //GPU_ID
-    cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
-    cuda_options.arena_extend_strategy = 0;
-    // May cause data race in some condition
-    cuda_options.do_copy_in_default_stream = 0;
-    session_options.AppendExecutionProvider_CUDA(cuda_options); // Add CUDA options to session options
+int num_gpus = 0;
+    cudaError_t cuda_status = cudaGetDeviceCount(&num_gpus);
+    bool has_gpu = (cuda_status == cudaSuccess && num_gpus > 0);
+
+    if (!has_gpu) {
+        printf("No GPU found\n");
+    } else {
+        printf("Number of GPUs = %d\n", num_gpus);
+        int thread_id = 0;
+#ifdef _OPENMP
+        thread_id = omp_get_thread_num();
+#else
+        thread_id = 0;
+#endif
+
+        // add logic to select GPU from the rank if MPI or OpenMP
+        OrtCUDAProviderOptions cuda_options;
+        cuda_options.device_id = thread_id;  //GPU_ID
+        cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
+        cuda_options.arena_extend_strategy = 0;
+        // May cause data race in some condition
+        cuda_options.do_copy_in_default_stream = 0;
+        session_options.AppendExecutionProvider_CUDA(cuda_options); // Add CUDA options to session options
+    }
 #endif
 
     Ort::Session session(env, model_path, session_options);
@@ -283,7 +313,12 @@ string NeuralNetwork::doModelInference(StrVector *model_names) {
     cudaEventSynchronize(stop);
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
+
+#ifdef _OPENMP
+    gpu_time_array[omp_get_thread_num()] += milliseconds;
+#else
     gpu_time += milliseconds;
+#endif
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
 #endif
@@ -371,7 +406,10 @@ void NeuralNetwork::initializeTimer() {
     cpu_time = 0.0;
     wall_time = 0.0;
 
-#if defined(_OPENMP)
+#if defined(_CUDA) && defined(_OPENMP)
+    gpu_time_array.resize(num_threads, 0.0);
+    run_time_array.resize(num_threads, 0.0);
+#elif defined(_OPENMP)
     run_time_array.resize(num_threads, 0.0);
 #endif
     time_initialized = true;

@@ -1467,6 +1467,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
 
+    // following is the time statistics for the model selection
 #if defined(_NN) || defined(_OLD_NN)
 
     if (Params::getInstance().use_model_revelator_with_mf) {
@@ -1491,6 +1492,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
 
 #ifdef _CUDA
+
+#if !defined(_OPENMP)      // mpi + cuda
         double* nn_gpu_time_array = new double[num_processes];
         double nn_gpu_time = NeuralNetwork::gpu_time;
         // Gather static_var_value from all processes to the root process
@@ -1505,7 +1508,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 cout << "\t" << p << "\t" << (nn_wall_time_array)[p] << "\t" << nn_cpu_time_array[p] << "\t" << nn_gpu_time_array[p] << endl;
             }
         }
+#endif // openmp
 #else
+        // no CUDA
         cout << num_processes << " processes are used for NN model selection" << endl;
         cout << "\tproc\twall_time\tcpu_time" << endl;
 
@@ -1518,10 +1523,17 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 #else
         num_processes = 1;
         if (num_threads == 1){
+            // if single threaded execution is used
             cout << "single threaded execution" << endl;
             cout << endl;
+ #ifdef _CUDA                     // single threaded execution with CUDA
+            //  print the time statistics for the model selection including gpu time
+            cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
+            cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << "\t" << NeuralNetwork::gpu_time << endl;
+ #else // CUDA
             cout << "\tproc\twall_time\tcpu_time" << endl;
             cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << endl;
+ #endif // CUDA
         }
 #endif
 #if defined(_OPENMP)
@@ -1535,6 +1547,29 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             // Gather static_var_value from all processes to the root process
             MPI_Gather(run_time_array.data(), num_threads, MPI_DOUBLE, nn_run_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
 
+#if defined(_CUDA)         // openmp + mpi + cuda
+            double* nn_gpu_time_array_array = new double[num_processes * num_threads];
+            DoubleVector gpu_time_array = NeuralNetwork::gpu_time_array;
+
+            // Gather static_var_value from all processes to the root process
+            MPI_Gather(gpu_time_array.data(), num_threads, MPI_DOUBLE, nn_gpu_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+
+            cout << endl;
+            cout << "\tproc\tthreads\trun_time\tgpu_time" << endl;
+
+            if (MPIHelper::getInstance().isMaster()){
+                int n_threads = 0;
+                int n_processes = 0;
+                for (int i = 0; i < num_processes * num_threads; i++){
+                    cout << "\t" << n_processes << "\t" << n_threads << "\t"<< nn_run_time_array_array[i] << "\t" << nn_gpu_time_array_array << endl;
+                    n_threads++;
+                    if (n_threads == num_threads){
+                        n_processes++;
+                        n_threads = 0;
+                    }
+                }
+            }
+#else
             cout << endl;
             cout << "\tproc\tthreads\trun_time" << endl;
 
@@ -1551,6 +1586,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 }
             }
         }
+#endif// cuda
 #endif
         if (num_threads > 1 && num_processes == 1){
             cout << "openmp time statics and not mpi " << endl;
@@ -1563,11 +1599,21 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
             cout << "\t" << num_processes << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << endl;
 
+#ifdef _CUDA      // openmp + cuda
+            //  print the time statistics for the model selection including gpu time
+            cout << "\tproc\tthreads\trun_time\tgpu_time" << endl;
+            for (int t=0; t < num_threads; t++){
+                cout << "\t" << p << "\t" << t << "\t"<< NeuralNetwork::run_time_array[t] << "\t" << NeuralNetwork::gpu_time_array[t] << endl;
+            }
+#else
+
+
             // printing the time for each thread
             cout << "\tproc\tthreads\trun_time" << endl;
             for (int t=0; t < num_threads; t++){
                 cout << "\t" << p << "\t" << t << "\t"<< NeuralNetwork::run_time_array[t] << endl;
             }
+ #endif    // cuda
 
         }
 #endif
