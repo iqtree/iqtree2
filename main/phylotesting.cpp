@@ -1526,8 +1526,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             // if single threaded execution is used
             cout << "single threaded execution" << endl;
             cout << endl;
- #ifdef _CUDA                     // single threaded execution with CUDA
+ #if defined (_CUDA)  && defined(_OPENMP) // single threaded execution with CUDA
             //  print the time statistics for the model selection including gpu time
+            cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
+            cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << "\t" << NeuralNetwork::gpu_time_array[0] << endl;
+ #elif defined(_CUDA)
             cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
             cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << "\t" << NeuralNetwork::gpu_time << endl;
  #else // CUDA
