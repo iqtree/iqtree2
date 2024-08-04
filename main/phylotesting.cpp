@@ -1588,8 +1588,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                     }
                 }
             }
-        }
 #endif// cuda
+        }
+
 #endif
         if (num_threads > 1 && num_processes == 1){
             cout << "openmp time statics and not mpi " << endl;
