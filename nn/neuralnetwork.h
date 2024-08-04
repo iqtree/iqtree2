@@ -60,7 +60,9 @@ public:
 #endif
 
 
-#ifdef _CUDA
+#if defined(_CUDA) && defined(_OPENMP)
+    static DoubleVector gpu_time_array;
+#elif defined(_CUDA)
     static float gpu_time;
 #endif
 
