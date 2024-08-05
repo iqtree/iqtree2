@@ -999,6 +999,51 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
     }
 }
 
+// Parse the profile mixture model
+// R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+void parseProfileMix(Params &params) {
+    string modelstr = params.model_name;
+    // change to upper character
+    transform(modelstr.begin(), modelstr.end(), modelstr.begin(), ::toupper);
+    int pos_Mix = modelstr.find("MIX");
+    int pos_F = modelstr.find("+F");
+    if (pos_Mix == string::npos && pos_F != string::npos) {
+        // MIX is not inside but +F is
+        int endpos = pos_F+2;
+        // get the end pos of the integer followed by +F
+        while (endpos < modelstr.length() && isdigit(modelstr[endpos]) && modelstr[endpos] != '.')
+            endpos++;
+        if (endpos > pos_F+2) {
+            // +Fx appears, where x is an integer
+            int nclass = atoi(modelstr.substr(pos_F+2,endpos-pos_F-2).c_str());
+            if (nclass >= 1) {
+                // this is R+Fx where x is an integer
+                string s_model = modelstr.substr(0, pos_F);
+                string RHAS = "";
+                int pos_plus = modelstr.find("+",pos_F+2);
+                if (pos_plus != string::npos) {
+                    RHAS = modelstr.substr(pos_plus);
+                }
+                string mix_model = "";
+                if (nclass > 1)
+                    mix_model.append("MIX{");
+                for (int i = 0; i < nclass; i++) {
+                    if (i > 0)
+                        mix_model.append(",");
+                    mix_model.append(s_model + "+FO");
+                }
+                if (nclass > 1)
+                    mix_model.append("}");
+                mix_model.append(RHAS);
+                // update the model name to this mix model name
+                params.model_name = mix_model;
+                // set the parameters for linked exchangeabilities model
+                params.optimize_linked_gtr = true;
+            }
+        }
+    }
+}
+
 void get2RandNumb(const int size, int &first, int &second) {
     // pick a random element
     first = random_int(size);
@@ -5872,7 +5917,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     {
         std::string sequence_type(params.sequence_type);
     }
-    
+
+    // parse the profile mixture model
+    // R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+    parseProfileMix(params);
+
     //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
 //        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;
