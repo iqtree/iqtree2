@@ -1498,6 +1498,13 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         // Gather static_var_value from all processes to the root process
         MPI_Gather(gpu_time_array.data(), num_threads, MPI_DOUBLE, nn_gpu_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
 
+
+        double* nn_run_time_array_array = new double[num_processes * num_threads];
+        DoubleVector run_time_array = NeuralNetwork::run_time_array;
+
+        // Gather static_var_value from all processes to the root process
+        MPI_Gather(run_time_array.data(), num_threads, MPI_DOUBLE, nn_run_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+
         cout << endl;
         cout << "\tproc\tthreads\trun_time\tgpu_time" << endl;
 
@@ -1505,7 +1512,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             int n_threads = 0;
             int n_processes = 0;
             for (int i = 0; i < num_processes * num_threads; i++){
-                cout << "\t" << n_processes << "\t" << n_threads << "\t"<< nn_run_time_array_array[i] << "\t" << nn_gpu_time_array_array << endl;
+                cout << "\t" << n_processes << "\t" << n_threads << "\t"<< nn_run_time_array_array[i] << "\t" << nn_gpu_time_array_array[i] << endl;
                 n_threads++;
                 if (n_threads == num_threads){
                     n_processes++;
