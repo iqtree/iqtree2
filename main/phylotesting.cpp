@@ -1537,6 +1537,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
         }
 #endif
+        else{
+            cout << "unknown configuration" << endl;
+
+            cout << "number of threads: " << num_threads << endl;
+            cout << "number of processes: " << num_processes << endl;
+        }
     }
 #endif
 
