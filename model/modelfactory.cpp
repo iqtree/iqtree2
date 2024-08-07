@@ -252,14 +252,17 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     if (Params::getInstance().model_joint) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
-        while ((spec_pos = model_str.find("+F")) != string::npos) {
-            size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
-            if (end_pos == string::npos) {
-                freq_str += model_str.substr(spec_pos);
-                model_str = model_str.substr(0, spec_pos);
-            } else {
-                freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
-                model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+        // do not check the frequency string for a mixture model 
+        if (model_str.find("MIX{") == string::npos) {
+            while ((spec_pos = model_str.find("+F")) != string::npos) {
+                size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
+                if (end_pos == string::npos) {
+                    freq_str += model_str.substr(spec_pos);
+                    model_str = model_str.substr(0, spec_pos);
+                } else {
+                    freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
+                    model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+                }
             }
         }
     }

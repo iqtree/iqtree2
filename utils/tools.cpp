@@ -5831,7 +5831,10 @@ void parseArg(int argc, char *argv[], Params &params) {
         outError("-b bootstrap option does not work with -S yet.");
 
     //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
-    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos) 
+    string modeljoint = "";
+    if (params.model_joint)
+        modeljoint = params.model_joint;
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos && modeljoint.find("GTR") == string::npos)
         outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
 
     if (params.use_nn_model && params.modelomatic)
