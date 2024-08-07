@@ -1257,7 +1257,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             }
     }
     
-    if (params.model_joint)
+    // if (params.model_joint)
+    if (!params.model_joint.empty())
         empty_model_found = false;
     
     // Model already specifed, nothing to do here

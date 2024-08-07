@@ -1172,7 +1172,8 @@ void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
         else
             out << "Topology-unlinked partition model with ";
         
-        if (params.model_joint)
+        // if (params.model_joint)
+        if (!params.model_joint.empty())
             out << "joint substitution model ";
         else
             out << "separate substitution models ";
@@ -1367,7 +1368,8 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             else
                 out << "Topology-unlinked partition model with ";
             
-            if (params.model_joint)
+            // if (params.model_joint)
+            if (!params.model_joint.empty())
                 out << "joint substitution model ";
             else
                 out << "separate substitution models ";

@@ -1000,15 +1000,30 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 }
 
 // Parse the profile mixture model
-// R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
-void parseProfileMix(Params &params) {
-    string modelstr = params.model_name;
+// MIX{R+Fx} -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+// OR R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+// return true if it is a linked substitution matrix
+bool parseProfileMixModelStr(string& model_str) {
+    if (model_str.length() == 0)
+        return false;
+    
+    string modelstr = model_str;
     // change to upper character
     transform(modelstr.begin(), modelstr.end(), modelstr.begin(), ::toupper);
-    int pos_Mix = modelstr.find("MIX");
+    
+    int pos_mix = modelstr.find("MIX{");
+    if (pos_mix != string::npos) {
+        int pos_endBrac = modelstr.find_last_of('}');
+        if (pos_endBrac == string::npos || pos_endBrac < pos_mix+4) {
+            outError(modelstr + " is not in a correct format");
+        }
+        // get the substring inside MIX{....}
+        modelstr = modelstr.substr(pos_mix+4, pos_endBrac-pos_mix-4);
+    }
+
+    bool isLinkedSubst = false;
     int pos_F = modelstr.find("+F");
-    if (pos_Mix == string::npos && pos_F != string::npos) {
-        // MIX is not inside but +F is
+    if (pos_F != string::npos) {
         int endpos = pos_F+2;
         // get the end pos of the integer followed by +F
         while (endpos < modelstr.length() && isdigit(modelstr[endpos]) && modelstr[endpos] != '.')
@@ -1025,8 +1040,10 @@ void parseProfileMix(Params &params) {
                     RHAS = modelstr.substr(pos_plus);
                 }
                 string mix_model = "";
-                if (nclass > 1)
+                if (nclass > 1) {
                     mix_model.append("MIX{");
+                    isLinkedSubst = true;
+                }
                 for (int i = 0; i < nclass; i++) {
                     if (i > 0)
                         mix_model.append(",");
@@ -1036,14 +1053,24 @@ void parseProfileMix(Params &params) {
                     mix_model.append("}");
                 mix_model.append(RHAS);
                 // update the model name to this mix model name
-                params.model_name = mix_model;
+                model_str = mix_model;
+                // params.model_name = mix_model;
                 // set the parameters for linked exchangeabilities model
-                params.optimize_linked_gtr = true;
+                // params.optimize_linked_gtr = true;
             }
         }
     }
+    return isLinkedSubst;
 }
 
+// Parse the profile mixture model
+void parseProfileMix(Params& params) {
+    if (parseProfileMixModelStr(params.model_name))
+        params.optimize_linked_gtr = true;
+    if (parseProfileMixModelStr(params.model_joint))
+        params.optimize_linked_gtr = true;
+}
+ 
 void get2RandNumb(const int size, int &first, int &second) {
     // pick a random element
     first = random_int(size);
@@ -1452,7 +1479,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_mixlen = 1;
     params.link_alpha = false;
     params.link_model = false;
-    params.model_joint = NULL;
+    params.model_joint = "";
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
@@ -5831,10 +5858,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         outError("-b bootstrap option does not work with -S yet.");
 
     //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
-    string modeljoint = "";
-    if (params.model_joint)
-        modeljoint = params.model_joint;
-    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos && modeljoint.find("GTR") == string::npos)
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos && params.model_joint.find("GTR") == string::npos)
         outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
 
     if (params.use_nn_model && params.modelomatic)

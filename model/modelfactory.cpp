@@ -170,7 +170,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
         else model_str = "JC";
-        if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        // if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        if (tree->aln->seq_type != SEQ_POMO && params.model_joint.empty())
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
     }
     // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
@@ -249,7 +250,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     // set to model_joint if set
-    if (Params::getInstance().model_joint) {
+    // if (Params::getInstance().model_joint) {
+    if (!Params::getInstance().model_joint.empty()) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
         // do not check the frequency string for a mixture model 
