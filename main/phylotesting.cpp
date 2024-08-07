@@ -1482,16 +1482,14 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 #endif
 
 
-        if (num_threads == 1 && num_processes == 1){ // single threaded
+        if (num_threads == 1 && num_processes == 1) { // single threaded
             cout << "single threaded execution" << endl;
             cout << endl;
 
             // todo: later break down this to cuda and non-cuda
             cout << "\tproc\twall_time\tcpu_time" << endl;
             cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << endl;
-        }
-
-        else if (num_threads > 1 && num_processes == 1){ // OpenMP
+        } else if (num_threads > 1 && num_processes == 1) { // OpenMP
             cout << "openmp time statics and not mpi " << endl;
             cout << endl;
             int p = 0;
@@ -1499,12 +1497,13 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             // outputing the cpu time and wall time for the processer
             cout << num_processes << " processes are used for NN model selection" << endl;
             cout << "\tproc\twall_time\tcpu_time" << endl;
-            cout << "\t" << num_processes << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << endl;
+            cout << "\t" << num_processes << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time
+                 << endl;
 
             // printing the time for each thread
             cout << "\tproc\tthreads\trun_time" << endl;
-            for (int t=0; t < num_threads; t++){
-                cout << "\t" << p << "\t" << t << "\t"<< NeuralNetwork::run_time_array[t] << endl;
+            for (int t = 0; t < num_threads; t++) {
+                cout << "\t" << p << "\t" << t << "\t" << NeuralNetwork::run_time_array[t] << endl;
             }
         }
 #ifdef _IQTREE_MPI
@@ -1538,7 +1537,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
         }
 #endif
-
+    }
 
     //        alignment = iqtree.aln;
     if (test_only) {
