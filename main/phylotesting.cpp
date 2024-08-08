@@ -1915,14 +1915,14 @@ string CandidateModel::evaluate(Params &params,
                 double pre_logl;
                 ss >> pre_logl;
 
-                for (int step = 0; step < 10; step++) {
+                for (int step = 0; step < 5; step++) {
                     if (step > 0) {
                         init_weight *= 0.5;
 
-                        if (step == 9)
+                        if (step == 4 || init_weight <= 0.01)
                             init_weight = 1e-10; //set the weight to 0 at last time
 
-                        if (step == 7) { // the weight of last class is too small, this model should not be restored by next model
+                        if (step == 1) { // the weight of last class is too small, this model should not be restored by next model
                             in_model_info.startStruct("OptModel");
                             in_model_info.putBool(getName()+".UnreliableParam",true);
                             in_model_info.endStruct();
@@ -5896,6 +5896,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     }
     
     max_cats = getClassNum(model_str) * params.max_rate_cats;
+    n_class = getClassNum(model_str) + 1;
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: MixtureFinder " << n_class << "-class models requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
