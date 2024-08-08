@@ -1511,12 +1511,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
     }
 	decomposeRateMatrix();
 
-    // for codon mixture, change to use nni1
-    if (tree->aln->seq_type == SEQ_CODON) {
-        Params::getInstance().nni_type = NNI1;
-        Params::getInstance().nni5 = false;
-    }
-
     delete nxs_freq_optimize;
     delete nxs_freq_empirical;
 }
@@ -1530,10 +1524,9 @@ void ModelMixture::initMem() {
     
     int num_states_total = 0;
     int num_states_align_total = 0;
-    size_t malign_num = malign_byte_pos();
     for (iterator it = begin(); it != end(); it++) {
         num_states_total += (*it)->get_num_states_total();
-        num_states_align_total += roundUpToMultiple((*it)->get_num_states_total(), malign_num);
+        num_states_align_total += get_safe_upper_limit((*it)->get_num_states_total());
     }
     
     aligned_free(eigenvalues);
@@ -1554,7 +1547,7 @@ void ModelMixture::initMem() {
     for (iterator it = begin(); it != end(); it++, m++) {
         int num_states_this_model = (*it)->get_num_states_total();
         int num_states_this_model_2 = num_states_this_model * num_states_this_model;
-        int num_align_states_this_model = roundUpToMultiple((*it)->get_num_states_total(), malign_num);
+        int num_align_states_this_model = get_safe_upper_limit((*it)->get_num_states_total());
         int num_align_states_this_model_2 = num_align_states_this_model * num_states_this_model;
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[count_num_states], (*it)->eigenvalues,
@@ -1858,8 +1851,20 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
+void ModelMixture::adaptStateFrequency(double* freq)
+{
+    ASSERT(state_freq);
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it)->freq_type == FREQ_ESTIMATE || (*it)->freq_type == FREQ_EMPIRICAL)
+            (*it)->adaptStateFrequency(freq);
+    }
+}
+
 // added case for gtr optimization -JD
 int ModelMixture::getNDim() {
+    if (fixed_parameters) {
+        return 0;
+    }
     int dim = (fix_prop) ? 0: (size()-1);
     int dim_linked_subst = 0;
     
@@ -2226,6 +2231,8 @@ bool ModelMixture::isMixtureSameQ() {
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 
     int dim = getNDim();
+    if (dim == 0)
+        return 0.0;
     double score = 0.0;
     IntVector params;
     int i, j, ncategory = size();
@@ -2430,6 +2437,8 @@ void ModelMixture::decomposeRateMatrix() {
 
 // added case for gtr optimization -JD
 void ModelMixture::setVariables(double *variables) {
+    if (getNDim() == 0)
+        return;
 	int dim = 0;
     if (optimizing_gtr) {       
         // only need to get the variable from the first class
@@ -2459,6 +2468,8 @@ void ModelMixture::setVariables(double *variables) {
 
 //added case for gtr optimization -JD
 bool ModelMixture::getVariables(double *variables) {
+    if (getNDim() == 0)
+        return false;
 	int dim = 0;
     bool changed = false;
     if (optimizing_gtr) {
@@ -2504,6 +2515,8 @@ bool ModelMixture::getVariables(double *variables) {
 
 //added case for gtr optimization -JD
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+    if (getNDim() == 0)
+        return;
 	int dim = 0;
     if(optimizing_gtr) {
         // only consider the first class as this is a linked substitution matrix

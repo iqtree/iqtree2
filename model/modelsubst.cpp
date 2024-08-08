@@ -180,13 +180,14 @@ void ModelSubst::computeTransDerv(double time, double *trans_matrix,
 }
 
 void ModelSubst::multiplyWithInvEigenvector(double *state_lk) {
+    int mnstates = get_safe_upper_limit(num_states);
     int nmixtures = getNMixtures();
     double *inv_eigenvectors = getInverseEigenvectors();
     double saved_state_lk[num_states];
     memcpy(saved_state_lk, state_lk, sizeof(double)*num_states);
     memset(state_lk, 0, sizeof(double)*num_states*nmixtures);
     for (int m = 0; m < nmixtures; m++) {
-        double *inv_evec = &inv_eigenvectors[m*num_states*num_states];
+        double *inv_evec = &inv_eigenvectors[m * mnstates * num_states];
         double *this_state_lk = &state_lk[m*num_states];
         for (int i = 0; i < num_states; i++)
             for (int j = 0; j < num_states; j++, inv_evec++)

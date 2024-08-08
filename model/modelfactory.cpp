@@ -170,7 +170,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
         else model_str = "JC";
-        if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        // if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        if (tree->aln->seq_type != SEQ_POMO && params.model_joint.empty())
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
     }
     // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
@@ -249,17 +250,21 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     // set to model_joint if set
-    if (Params::getInstance().model_joint) {
+    // if (Params::getInstance().model_joint) {
+    if (!Params::getInstance().model_joint.empty()) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
-        while ((spec_pos = model_str.find("+F")) != string::npos) {
-            size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
-            if (end_pos == string::npos) {
-                freq_str += model_str.substr(spec_pos);
-                model_str = model_str.substr(0, spec_pos);
-            } else {
-                freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
-                model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+        // do not check the frequency string for a mixture model 
+        if (model_str.find("MIX{") == string::npos) {
+            while ((spec_pos = model_str.find("+F")) != string::npos) {
+                size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
+                if (end_pos == string::npos) {
+                    freq_str += model_str.substr(spec_pos);
+                    model_str = model_str.substr(0, spec_pos);
+                } else {
+                    freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
+                    model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+                }
             }
         }
     }

@@ -1269,8 +1269,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 break;
             }
     }
-
-    if (params.model_joint)
+    
+    // if (params.model_joint)
+    if (!params.model_joint.empty())
         empty_model_found = false;
 
     // Model already specifed, nothing to do here
@@ -1554,14 +1555,15 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     }
 
     if (!autoThread) {
+        /*
         if (iqtree.isSuperTree()) {
             // change the number of threads to the number of partitions for alignment with partitions
             PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
             params.num_threads = stree->size();
             cout << "The number of threads is changed to: " << params.num_threads << endl;
-        } else {
+        } else { */
             params.num_threads = updated_nthreads;
-        }
+        // }
     }
 }
 
@@ -4542,9 +4544,7 @@ void PartitionFinder::getBestModel(int job_type) {
                 cout << endl;
             }
         }
-
-
-
+        
         // consolidate the results
         if (job_type == 1) {
             consolidPartitionResults();
@@ -6018,11 +6018,11 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     vector<string> ratehet;
     vector<string> freq_names;
     int i,j;
-
+    
     // timing
     cpu_time = getCPUTime();
     real_time = getRealTime();
-
+    
     // handling checkpoint file
     model_info.setFileName((string)params.out_prefix + ".model.gz");
     model_info.setDumpInterval(params.checkpoint_dump_interval);
@@ -6044,9 +6044,9 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         partition_type = params.partition_type;
         CKP_SAVE2((&model_info), partition_type);
     }
-
+    
     models_block = readModelsDefinition(params);
-
+    
     if (do_init_tree) {
         // compute initial tree
         iqtree.computeInitialTree(params.SSE);
@@ -6065,12 +6065,12 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         outError("Memory required exceeds 2GB limit of 32-bit executable");
     }
 #endif
-
+    
     // generate candidate models
     // setting the params
     orig_ratehet_set = params.ratehet_set;
     orig_model_set = params.model_set;
-
+    
     // params.model_extra_set = NULL;
     // params.model_subset = NULL;
     // params.state_freq_set = NULL;
@@ -6099,7 +6099,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
                     ratehet.insert(ratehet.begin() + ins_pos, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
                 }
             }
-
+        
         for (i=0; i<ratehet.size(); i++) {
             candidate_models.push_back(CandidateModel(model_str, ratehet[i], iqtree.aln, 0));
         }
@@ -6131,12 +6131,12 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         params.ratehet_set = iqtree.getModelFactory()->site_rate->name;
         getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
                       params.model_set, params.model_subset, model_names);
-
+        
         if (model_names.empty())
             return best_model;
-
+        
         getStateFreqs(iqtree.aln->seq_type, params.state_freq_set, freq_names);
-
+        
         // combine model_names with freq_names
         if (freq_names.size() > 0) {
             StrVector orig_model_names = model_names;
@@ -6172,12 +6172,12 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
         
         getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
                       params.model_set, params.model_subset, model_names);
-
+        
         if (model_names.empty())
             return best_model; // empty
-
+        
         getStateFreqs(iqtree.aln->seq_type, params.state_freq_set, freq_names);
-
+        
         // combine model_names with freq_names
         if (freq_names.size() > 0) {
             StrVector orig_model_names = model_names;
@@ -6217,11 +6217,11 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     candidate_models.under_mix_finder = true;
     best_model = candidate_models.test(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE,
                                        set_name, in_model_name, merge_phase, generate_candidates, skip_all_when_drop);
-
+    
     iqtree.aln->model_name = best_model.getName();
     best_subst_name = best_model.subst_name;
     best_rate_name = best_model.rate_name;
-
+    
     Checkpoint *checkpoint = &model_info;
     string best_model_AIC, best_model_AICc, best_model_BIC;
     CKP_RESTORE(best_model_AIC);
@@ -6237,10 +6237,10 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     iqtree.getCheckpoint()->eraseKeyPrefix("OptModel");
 
     delete models_block;
-
+    
     // force to dump all checkpointing information
     model_info.dump(true);
-
+    
     // transfer models parameters
     transferModelFinderParameters(&iqtree, orig_checkpoint);
     iqtree.setCheckpoint(orig_checkpoint);
@@ -6255,7 +6255,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     cout << "All model information printed to " << model_info.getFileName() << endl;
     cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
-
+    
     return best_model;
 }
 
@@ -6363,9 +6363,9 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
 
         }
     } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
-
+    
     best_subst_name = model_str;
-
+    
     if (params.opt_rhas_again) {
         // Step 4: estimate the RHAS model again
         action = 1; // estimating the RHAS model
