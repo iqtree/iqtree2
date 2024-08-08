@@ -1470,7 +1470,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     // following is the time statistics for the model selection
 #if defined(_NN) || defined(_OLD_NN)
 
-    if (Params::getInstance().use_model_revelator_with_mf) {
+//    if (Params::getInstance().use_model_revelator_with_mf) {
         cout << "NN time statics" << endl;
         int num_processes;
         int num_threads = Params::getInstance().num_threads;
@@ -1511,6 +1511,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             double* nn_cpu_time_array = new double[num_processes];
             double* nn_wall_time_array = new double[num_processes];
 
+            MPI_Barrier(MPI_COMM_WORLD); // todo: check if this is necessary
+
             double nn_wall_time = NeuralNetwork::wall_time;
             double nn_cpu_time = NeuralNetwork::cpu_time;
             // Gather static_var_value from all processes to the root process
@@ -1518,7 +1520,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             MPI_Gather(&nn_cpu_time, 1, MPI_DOUBLE, nn_cpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
 
             cout << num_processes << " processes are used for NN model selection" << endl;
-                cout << "\tproc\twall_time\tcpu_time" << endl;
+            cout << "\tproc\twall_time\tcpu_time" << endl;
 
                 if (MPIHelper::getInstance().isMaster()){
                     for (int p=0; p<num_processes; p++) {
@@ -1543,7 +1545,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             cout << "number of threads: " << num_threads << endl;
             cout << "number of processes: " << num_processes << endl;
         }
-    }
+//    }
 #endif
 
     //        alignment = iqtree.aln;
