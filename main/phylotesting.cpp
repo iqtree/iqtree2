@@ -1562,7 +1562,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             params.num_threads = stree->size();
             cout << "The number of threads is changed to: " << params.num_threads << endl;
         } else { */
+        // todo: this  is for debuging
+            cout << "the number of prev threads: " << params.num_threads << endl;
+
             params.num_threads = updated_nthreads;
+            cout << "the number of threads: " << params.num_threads << endl;
         // }
     }
 }
