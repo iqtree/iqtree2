@@ -4,78 +4,112 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
 
 // Calculates the robinson fould distance between two trees
 int robinson_fould(const string& tree1, const string& tree2) {
-    // Placeholder implementation
-    MTree first_tree;
-    bool is_rooted = false;
-    std::vector<double> rfdist;
 
-    // read in the first tree
-    first_tree.read_TreeString(tree1, is_rooted);
-    
-    // second tree
-    stringstream second_tree_str;
-    second_tree_str << tree2;
-    second_tree_str.seekg(0, ios::beg);
+    int output;
 
-    // compute the RF distance
-    first_tree.computeRFDist(second_tree_str, rfdist);
+    try {
+        MTree first_tree;
+        bool is_rooted = false;
+        std::vector<double> rfdist;
 
-    return (int)rfdist[0];
+        // read in the first tree
+        first_tree.read_TreeString(tree1, is_rooted);
+        
+        // second tree
+        stringstream second_tree_str;
+        second_tree_str << tree2;
+        second_tree_str.seekg(0, ios::beg);
+        
+        // compute the RF distance
+        first_tree.computeRFDist(second_tree_str, rfdist);
+        
+        output = (int)rfdist[0];
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+
+    return output;
 }
 
 // Generates a set of random phylogenetic trees
 // tree_gen_mode allows:"YULE_HARDING", "UNIFORM", "CATERPILLAR", "BALANCED", "BIRTH_DEATH", "STAR_TREE"
 string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_seed) {
-    PhyloTree ptree;
-    int seed = rand_seed;
-    if (seed == 0)
-        seed = make_new_seed();
-    cout << "seed: " << seed << endl;
-    init_random(seed);
+    string output;
     
-    TreeGenType tree_mode;
-    if (tree_gen_mode == "YULE_HARDING") {
-        tree_mode = YULE_HARDING;
-    } else if (tree_gen_mode == "UNIFORM") {
-        tree_mode = UNIFORM;
-    } else if (tree_gen_mode == "CATERPILLAR") {
-        tree_mode = CATERPILLAR;
-    } else if (tree_gen_mode == "BALANCED") {
-        tree_mode = BALANCED;
-    } else if (tree_gen_mode == "BIRTH_DEATH") {
-        tree_mode = BIRTH_DEATH;
-    } else if (tree_gen_mode == "STAR_TREE") {
-        tree_mode = STAR_TREE;
-    } else {
-        outError("Unknown mode: " + tree_gen_mode);
+    try {
+        PhyloTree ptree;
+        int seed = rand_seed;
+        if (seed == 0)
+            seed = make_new_seed();
+        cout << "seed: " << seed << endl;
+        init_random(seed);
+        
+        TreeGenType tree_mode;
+        if (tree_gen_mode == "YULE_HARDING") {
+            tree_mode = YULE_HARDING;
+        } else if (tree_gen_mode == "UNIFORM") {
+            tree_mode = UNIFORM;
+        } else if (tree_gen_mode == "CATERPILLAR") {
+            tree_mode = CATERPILLAR;
+        } else if (tree_gen_mode == "BALANCED") {
+            tree_mode = BALANCED;
+        } else if (tree_gen_mode == "BIRTH_DEATH") {
+            tree_mode = BIRTH_DEATH;
+        } else if (tree_gen_mode == "STAR_TREE") {
+            tree_mode = STAR_TREE;
+        } else {
+            outError("Unknown mode: " + tree_gen_mode);
+        }
+        
+        Params params = Params::getInstance();
+        params.setDefault();
+        params.sub_size = num_taxa;
+        params.tree_gen = tree_mode;
+        params.repeated_time = num_trees;
+        params.ignore_checkpoint = true; // overrid the output file if exists
+        params.user_file = "";
+        
+        ostringstream ostring;
+        generateRandomTree(params, ostring);
+        output = ostring.str();
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
     }
-    
-    Params params = Params::getInstance();
-    params.setDefault();
-    params.sub_size = num_taxa;
-    params.tree_gen = tree_mode;
-    params.repeated_time = num_trees;
-    params.ignore_checkpoint = true; // overrid the output file if exists
-    params.user_file = "";
 
-    ostringstream ostring;
-    generateRandomTree(params, ostring);
-    return ostring.str();
-    // generateRandomTree(params);
-    // return "done";
+    return output;
 }
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
 string build_tree(vector<string> names, vector<string> seqs, string model, int rand_seed) {
     string intree = "";
-    return build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree");
+    string output;
+    try {
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree");
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+    return output;
 }
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With restriction to the input toplogy
 string fit_tree(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed) {
-    return build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree");
+    string output;
+    try {
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree");
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+    return output;
 }
 
 
