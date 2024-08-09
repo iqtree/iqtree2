@@ -1482,7 +1482,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         num_processes = 1;
 #endif
         bool is_openMp = false;
-#ifdef _IQTREE_MPI
+#ifdef _OPENMP
         is_openMp = true;
 #endif
 
