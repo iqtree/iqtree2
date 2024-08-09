@@ -2297,7 +2297,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
         return score;
     }
 
-	if (!Params::getInstance().optimize_linked_gtr) {
+	// if (!Params::getInstance().optimize_linked_gtr) {
 		// normalize state freq
 		for (i = 0; i < ncategory; i++) {
 			if (at(i)->is_reversible && at(i)->freq_type == FREQ_ESTIMATE) {
@@ -2316,7 +2316,7 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 				cout << endl;
 			}
 		}
-    }
+    // }
     
     // now rescale Q matrices to have proper interpretation of branch lengths
 
