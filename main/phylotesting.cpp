@@ -1521,15 +1521,15 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             for (int t = 0; t < num_threads; t++) {
                 cout << "\t" << p << "\t" << t << "\t" << NeuralNetwork::run_time_array[t] << "\t" << NeuralNetwork::gpu_time_array[t] << endl;
             }
-#else
+#else // no cuda
             // printing the time for each thread
             cout << "\tproc\tthreads\trun_time" << endl;
             for (int t = 0; t < num_threads; t++) {
                 cout << "\t" << p << "\t" << t << "\t" << NeuralNetwork::run_time_array[t] << endl;
             }
-#endif
+#endif // _CUDA
         }
-#ifdef _IQTREE_MPI
+#ifdef _IQTREE_MPI // MPI
         else if ( num_processes > 1) { // MPI
             double* nn_cpu_time_array = new double[num_processes];
             double* nn_wall_time_array = new double[num_processes];
@@ -1599,6 +1599,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                         }
                     }
                 }
+#endif // cuda
             } else { // MPI only
                 cout << num_processes << " processes are used for NN model selection" << endl;
                 cout << "\tproc\twall_time\tcpu_time" << endl;
