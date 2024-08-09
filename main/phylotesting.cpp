@@ -1544,7 +1544,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
 
 
-            if ( num_threads > 1 || is_openMP ) { //MPI + OPENMP
+            if ( num_threads > 1 || is_openMp ) { //MPI + OPENMP
 
                 cout << num_processes << " processes are used for NN model selection" << endl;
                 cout << "\tproc\twall_time\tcpu_time" << endl;
@@ -1563,7 +1563,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 // Gather static_var_value from all processes to the root process
                 MPI_Gather(run_time_array.data(), num_threads, MPI_DOUBLE, nn_run_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
 
-#ifdef (_CUDA) // CUDA + OPENMP + MPI
+#ifdef _CUDA // CUDA + OPENMP + MPI
                 double*  nn_gpu_time_array_array = new double[num_processes * num_threads];
                 DoubleVector gpu_time_array = NeuralNetwork::gpu_time_array;
 
