@@ -1529,13 +1529,26 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                     }
                 }
 
-            if (num_threads != 1 ) { //MPI + OPENMP
+            if (num_threads > 1 ) { //MPI + OPENMP
                 cout << "openmp + mpi time statics" << endl;
                 double* nn_run_time_array_array = new double[num_processes * num_threads];
                 DoubleVector run_time_array = NeuralNetwork::run_time_array;
 
                 // Gather static_var_value from all processes to the root process
                 MPI_Gather(run_time_array.data(), num_threads, MPI_DOUBLE, nn_run_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+
+                if (MPIHelper::getInstance().isMaster()){
+                    int n_threads = 0;
+                    int n_processes = 0;
+                    for (int i = 0; i < num_processes * num_threads; i++){
+                        cout << "\t" << n_processes << "\t" << n_threads << "\t"<< nn_run_time_array_array[i] << endl;
+                        n_threads++;
+                        if (n_threads == num_threads){
+                            n_processes++;
+                            n_threads = 0;
+                        }
+                    }
+                }
             }
 
         }
