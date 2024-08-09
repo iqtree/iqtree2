@@ -1494,11 +1494,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 #ifdef _CUDA
             cout << endl;
             cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
-            if (is_openMp) {
-                cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << "\t" << NeuralNetwork::gpu_time_array[0] << endl;
-            } else {
+
+#ifdef _OPENMP
+            cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << "\t" << NeuralNetwork::gpu_time_array[0] << endl;
+#else // not openmp
                 cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << "\t" << NeuralNetwork::gpu_time << endl;
-            }
+#endif // openmp
 
 #else // not _CUDA
             cout << "\tproc\twall_time\tcpu_time" << endl;
