@@ -1491,7 +1491,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             cout << "single threaded execution" << endl;
             cout << endl;
 
-            // todo: later break down this to cuda and non-cuda
 #ifdef _CUDA
             cout << endl;
             cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
