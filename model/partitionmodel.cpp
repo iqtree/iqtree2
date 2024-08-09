@@ -461,44 +461,45 @@ bool PartitionModel::isLinkedModel() {
 
 double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    double prev_tree_lh = -DBL_MAX, tree_lh = prev_tree_lh;
+    double prev_tree_lh = -DBL_MAX, tree_lh = 0.0;
     int ntrees = tree->size();
 
     for (int step = 0; step < Params::getInstance().model_opt_steps; step++) {
-        if (!isLinkedModel()) {
-            tree_lh = 0.0;
-            if (tree->part_order.empty()) tree->computePartitionOrder();
+        tree_lh = 0.0;
+        if (tree->part_order.empty()) tree->computePartitionOrder();
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
 #endif
-            for (int i = 0; i < ntrees; i++) {
-                int part = tree->part_order[i];
-                double score;
-                if (opt_gamma_invar)
-                    score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
-                                                                                            write_info && verbose_mode >= VB_MED,
-                                                                                            logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
-                else
-                    score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
-                                                                                  write_info && verbose_mode >= VB_MED,
-                                                                                  logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
-                tree_lh += score;
-                if (write_info)
+        for (int i = 0; i < ntrees; i++) {
+            int part = tree->part_order[i];
+            double score;
+            if (opt_gamma_invar)
+                score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
+                                                                                        write_info && verbose_mode >= VB_MED,
+                                                                                        logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            else
+                score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
+                                                                              write_info && verbose_mode >= VB_MED,
+                                                                              logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            tree_lh += score;
+            if (write_info)
 #ifdef _OPENMP
 #pragma omp critical
 #endif
-                {
-                    cout << "Partition " << tree->at(part)->aln->name
-                    << " / Model: " << tree->at(part)->getModelName()
-                    << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
-                    << " / LogL: " << score << endl;
-                }
+            {
+                cout << "Partition " << tree->at(part)->aln->name
+                << " / Model: " << tree->at(part)->getModelName()
+                << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
+                << " / LogL: " << score << endl;
             }
-            //return ModelFactory::optimizeParameters(fixed_len, write_info);
-            
-            // if (!isLinkedModel())
-            break;
         }
+        //return ModelFactory::optimizeParameters(fixed_len, write_info);
+        
+        if (!isLinkedModel())
+            break;
+
+        if (verbose_mode >= VB_MED || write_info)
+            cout << step+1 << ". Log-likelihood: " << tree_lh << endl;
 
         // optimize linked alpha
         if (tree->params->link_alpha) {
