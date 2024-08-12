@@ -14,12 +14,13 @@ concurrency:
 
 jobs:
   build-linux-x86-64:
-    name: Linux x86-64
+    name: Linux x86-64 gcc-${{ matrix.gcc-version }} cmake-${{ matrix.cmake-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        gcc-version: [10, 12]
+        gcc-version: [9, 12]
+        cmake-version: [2.8.12, latest]
 
     steps:
     - name: Checkout
@@ -30,7 +31,12 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update -q -y
-        sudo apt-get install -q -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version}} cmake libeigen3-dev libboost-dev
+        sudo apt-get install -q -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version}} libeigen3-dev libboost-dev
+    
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: ${{ matrix.cmake-version }}
 
     - name: Build
       run: |
