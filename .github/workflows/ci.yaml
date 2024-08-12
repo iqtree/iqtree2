@@ -47,7 +47,6 @@ jobs:
       run: |
         mkdir build
         cd build
-        export CXXFLAGS="-std=c++14" # this is important to be able to build with g++ newer than v10
         cmake .. -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
         make -j
         file iqtree2 | grep x86-64
@@ -171,56 +170,6 @@ jobs:
             -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include ^
             -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib ^
             -DIQTREE_FLAGS="cpp14" ..
-          make -j
-        env:
-          BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
-
-      - name: Check File Arch
-        shell: bash
-        run: |
-          cd build
-          file iqtree2.exe | grep x86-64
-
-  build-windows-x86-64-llvm18:
-    name: Windows x86-64
-    runs-on: windows-2022
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
-
-      - name: Install LLVM v18
-        shell: cmd
-        run: choco install llvm --version=18.1.8 --allow-downgrade
-              
-      - name: Install Boost
-        uses: MarkusJx/install-boost@v2.4.5
-        id: install-boost
-        with:
-            boost_version: 1.84.0
-            platform_version: 2022
-            toolset: mingw
-
-      - name: Install Eigen3
-        shell: cmd
-        run: choco install eigen
-
-      - name: Compile
-        shell: cmd
-        run: |
-          if exist build rd /s /q build
-          mkdir build
-          cd build
-          cmake -G "MinGW Makefiles" ^
-            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ^
-            -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu ^
-            -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu ^
-            -DCMAKE_MAKE_PROGRAM=mingw32-make ^
-            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include ^
-            -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib ^
-            ..
           make -j
         env:
           BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
