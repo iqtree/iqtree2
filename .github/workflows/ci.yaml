@@ -19,8 +19,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        gcc-version: [9, 12]
-        cmake-version: ["3.0.0", latest]
+        include:
+          # Oldest supported gcc and cmake versions
+          - gcc-version: 9
+            cmake-version: 3.10.2
+          # Latest supported gcc and cmake versions
+          - gcc-version: 12
+            cmake-version: latest
 
     steps:
     - name: Checkout
