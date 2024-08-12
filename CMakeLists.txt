@@ -26,7 +26,7 @@
 # nozlib: do not use zlib
 # libcxx
 #
-# c++14: use C++14 standard (default is C++17)
+# cpp14: use C++14 standard (default is C++17)
 
 # CMAPLE: Integrate CMAPLE library
 #---------------
@@ -260,7 +260,7 @@ elseif (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
     #it won't recognize the -std=c++17 parameter.
     #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
     include_directories("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\Llvm\\lib\\clang\\10.0.0\\include")
-elseif(IQTREE_FLAGS MATCHES "c++14")
+elseif(IQTREE_FLAGS MATCHES "cpp14")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
