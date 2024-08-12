@@ -64,17 +64,19 @@
 	#include <sys/types.h>
 	#include <winsock.h>
 
-	struct timezone {
-		char dummy;
-	};
+	#ifndef __MINGW32__
+		struct timezone {
+			char dummy;
+		};
 
-	__inline void gettimeofday(struct timeval* t, void* timezone)
-	{       
-		struct _timeb timebuffer;
-		_ftime( &timebuffer );
-		t->tv_sec=timebuffer.time;
-		t->tv_usec=1000*timebuffer.millitm;
-	}
+		__inline void gettimeofday(struct timeval* t, void* timezone)
+		{       
+			struct _timeb timebuffer;
+			_ftime( &timebuffer );
+			t->tv_sec=timebuffer.time;
+			t->tv_usec=1000*timebuffer.millitm;
+		}
+	#endif /* __MINGW32__ */
 	#else /* UNIX */
 	#include <sys/time.h>
 	__inline void gettimeofday(struct timeval* t, void* timezone) {
