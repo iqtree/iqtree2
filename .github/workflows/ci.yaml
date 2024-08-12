@@ -168,7 +168,7 @@ jobs:
             -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu ^
             -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu ^
             -DCMAKE_MAKE_PROGRAM=mingw32-make ^
-            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include\ ^
+            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include ^
             -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib ^
             -DIQTREE_FLAGS="cpp14" ..
           make -j
@@ -193,7 +193,7 @@ jobs:
 
       - name: Install LLVM v18
         shell: cmd
-        run: choco install llvm --version=18 --allow-downgrade
+        run: choco install llvm --version=18.1.8 --allow-downgrade
               
       - name: Install Boost
         uses: MarkusJx/install-boost@v2.4.5
@@ -218,7 +218,7 @@ jobs:
             -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu ^
             -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu ^
             -DCMAKE_MAKE_PROGRAM=mingw32-make ^
-            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include\ ^
+            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include ^
             -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib ^
             ..
           make -j
