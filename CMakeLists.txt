@@ -74,7 +74,7 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR) # Lowest version tested in CI (on linux x86_64)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
-set(GCC_MIN_VERSION "10") # minimum GCC version that is tested in CI
+set(GCC_MIN_VERSION "9") # minimum GCC version that is tested in CI
 
 project(iqtree)
 add_definitions(-DIQ_TREE)
