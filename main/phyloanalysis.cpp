@@ -2682,7 +2682,7 @@ void printHessian(IQTree *iqtree, int partition_type) {
             stree->root = (Node *) stree->traversal_starting_node;
 
         // sort the internal nodes according to their smallest taxon id
-        stree->sortTaxa();
+//        stree->sortTaxa();
         stree->clearBranchDirection();
         stree->initializeTree();
         stree->computeBranchDirection();

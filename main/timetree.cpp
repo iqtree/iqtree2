@@ -344,7 +344,7 @@ void computeHessian(PhyloTree *tree) {
     }
 
     // sort the internal nodes according to their smallest taxon id
-    tree->sortTaxa();
+//    tree->sortTaxa();
     tree->clearBranchDirection();
     tree->initializeTree();
     tree->computeBranchDirection();
