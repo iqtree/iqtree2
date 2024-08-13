@@ -204,11 +204,27 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     model_str = new_model_str;
 
-    //    nxsmodel = models_block->findModel(model_str);
-    //    if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-    //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-    //        model_str = nxsmodel->description;
-    //    }
+    // for model_joint if set
+    if (!Params::getInstance().model_joint.empty()) {
+        string curr_model_str = Params::getInstance().model_joint;
+        new_model_str = "";
+        for (mix_pos = 0; mix_pos < curr_model_str.length(); mix_pos++) {
+            size_t next_mix_pos = curr_model_str.find_first_of("+*", mix_pos);
+            string sub_model_str = curr_model_str.substr(mix_pos, next_mix_pos-mix_pos);
+            cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
+            nxsmodel = models_block->findMixModel(sub_model_str);
+            if (nxsmodel) sub_model_str = nxsmodel->description;
+            new_model_str += sub_model_str;
+            if (next_mix_pos != string::npos)
+                new_model_str += curr_model_str[next_mix_pos];
+            else
+                break;
+            mix_pos = next_mix_pos;
+        }
+        if (new_model_str != curr_model_str)
+            cout << "Model " << curr_model_str << " is alias for " << new_model_str << endl;
+        Params::getInstance().model_joint = new_model_str;
+    }
 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
@@ -254,8 +270,18 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     if (!Params::getInstance().model_joint.empty()) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
-        // do not check the frequency string for a mixture model 
-        if (model_str.find("MIX{") == string::npos) {
+        // for frequency mixture model
+        size_t fmix_pos = model_str.find("+FMIX{");
+        if (fmix_pos != string::npos) {
+            size_t fmix_end_pos = model_str.find_last_of("}");
+            size_t model_end_pos = model_str.find_first_of("+");
+            if (fmix_end_pos != string::npos && model_end_pos != string::npos) {
+                freq_str = model_str.substr(fmix_pos, fmix_end_pos - fmix_pos + 1);
+                model_str = model_str.substr(0, model_end_pos);
+            }
+        }
+        // otherwise, do not check the frequency string for a mixture model
+        else if (model_str.find("MIX{") == string::npos) {
             while ((spec_pos = model_str.find("+F")) != string::npos) {
                 size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
                 if (end_pos == string::npos) {
