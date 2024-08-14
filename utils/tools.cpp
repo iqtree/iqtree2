@@ -1028,35 +1028,38 @@ bool parseProfileMixModelStr(string& model_str) {
         // get the end pos of the integer followed by +F
         while (endpos < modelstr.length() && isdigit(modelstr[endpos]) && modelstr[endpos] != '.')
             endpos++;
-        if (endpos > pos_F+2) {
-            // +Fx appears, where x is an integer
-            int nclass = atoi(modelstr.substr(pos_F+2,endpos-pos_F-2).c_str());
-            if (nclass >= 1) {
-                // this is R+Fx where x is an integer
-                string s_model = modelstr.substr(0, pos_F);
-                string RHAS = "";
-                int pos_plus = modelstr.find("+",pos_F+2);
-                if (pos_plus != string::npos) {
-                    RHAS = modelstr.substr(pos_plus);
+        if (endpos >= modelstr.length() || (modelstr[endpos] == '+' || modelstr[endpos] == ',' || modelstr[endpos] == '}')) {
+            // Not an integer followed by a character like +F3X4
+            if (endpos > pos_F+2) {
+                // +Fx appears, where x is an integer
+                int nclass = atoi(modelstr.substr(pos_F+2,endpos-pos_F-2).c_str());
+                if (nclass >= 1) {
+                    // this is R+Fx where x is an integer
+                    string s_model = modelstr.substr(0, pos_F);
+                    string RHAS = "";
+                    int pos_plus = modelstr.find("+",pos_F+2);
+                    if (pos_plus != string::npos) {
+                        RHAS = modelstr.substr(pos_plus);
+                    }
+                    string mix_model = "";
+                    if (nclass > 1) {
+                        mix_model.append("MIX{");
+                        isLinkedSubst = true;
+                    }
+                    for (int i = 0; i < nclass; i++) {
+                        if (i > 0)
+                            mix_model.append(",");
+                        mix_model.append(s_model + "+FO");
+                    }
+                    if (nclass > 1)
+                        mix_model.append("}");
+                    mix_model.append(RHAS);
+                    // update the model name to this mix model name
+                    model_str = mix_model;
+                    // params.model_name = mix_model;
+                    // set the parameters for linked exchangeabilities model
+                    // params.optimize_linked_gtr = true;
                 }
-                string mix_model = "";
-                if (nclass > 1) {
-                    mix_model.append("MIX{");
-                    isLinkedSubst = true;
-                }
-                for (int i = 0; i < nclass; i++) {
-                    if (i > 0)
-                        mix_model.append(",");
-                    mix_model.append(s_model + "+FO");
-                }
-                if (nclass > 1)
-                    mix_model.append("}");
-                mix_model.append(RHAS);
-                // update the model name to this mix model name
-                model_str = mix_model;
-                // params.model_name = mix_model;
-                // set the parameters for linked exchangeabilities model
-                // params.optimize_linked_gtr = true;
             }
         }
     }

@@ -211,7 +211,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         for (mix_pos = 0; mix_pos < curr_model_str.length(); mix_pos++) {
             size_t next_mix_pos = curr_model_str.find_first_of("+*", mix_pos);
             string sub_model_str = curr_model_str.substr(mix_pos, next_mix_pos-mix_pos);
-            cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
+            // cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
             nxsmodel = models_block->findMixModel(sub_model_str);
             if (nxsmodel) sub_model_str = nxsmodel->description;
             new_model_str += sub_model_str;

@@ -1408,6 +1408,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     model_freq = FREQ_EQUAL;
                 } else if (fstr == "+F"){
                     model_freq = FREQ_EMPIRICAL;
+                } else if (fstr == "+F1X4"){ // for codon model
+                    model_freq = FREQ_CODON_1x4;
+                } else if (fstr == "+F3X4"){ // for codon model
+                    model_freq = FREQ_CODON_3x4;
+                } else if (fstr == "+F3X4C"){ // for codon model
+                    model_freq = FREQ_CODON_3x4C;
                 } else {
                     // others, for example, fstr == +FC10pi1
                     fstr = fstr.substr(2); // get rid of +F
