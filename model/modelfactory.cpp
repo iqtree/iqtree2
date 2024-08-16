@@ -270,18 +270,32 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     if (!Params::getInstance().model_joint.empty()) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
-        // for frequency mixture model
         size_t fmix_pos = model_str.find("+FMIX{");
         if (fmix_pos != string::npos) {
+            // for frequency mixture model
             size_t fmix_end_pos = model_str.find_last_of("}");
             size_t model_end_pos = model_str.find_first_of("+");
             if (fmix_end_pos != string::npos && model_end_pos != string::npos) {
                 freq_str = model_str.substr(fmix_pos, fmix_end_pos - fmix_pos + 1);
                 model_str = model_str.substr(0, model_end_pos);
             }
-        }
-        // otherwise, do not check the frequency string for a mixture model
-        else if (model_str.find("MIX{") == string::npos) {
+        } else if (model_str.find("MIX{") != string::npos) {
+            // for model mixture
+            size_t mx_start_pos = model_str.find("MIX{");
+            size_t mx_end_pos = model_str.find_last_of("}");
+            if (mx_end_pos != string::npos) {
+                string models_str = model_str.substr(mx_start_pos + 4, mx_end_pos - mx_start_pos - 4);
+                size_t end_pos = 0;
+                while ((spec_pos = models_str.find("+F", end_pos)) != string::npos) {
+                    end_pos = models_str.find_first_of("+,", spec_pos+1);
+                    if (end_pos == string::npos) {
+                        freq_str += models_str.substr(spec_pos);
+                    } else {
+                        freq_str += models_str.substr(spec_pos, end_pos - spec_pos);
+                    }
+                }
+            }
+        } else {
             while ((spec_pos = model_str.find("+F")) != string::npos) {
                 size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
                 if (end_pos == string::npos) {
