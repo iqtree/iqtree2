@@ -5358,10 +5358,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--model-joint") == 0) {
+            if (strcmp(argv[cnt], "--model-joint") == 0 || strcmp(argv[cnt], "--link-partition") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --model-joint MODEL_NAME";
+                    throw "Use " + string(argv[cnt-1]) + " MODEL_NAME";
                 params.model_joint = argv[cnt];
                 params.link_model = true;
                 continue;
