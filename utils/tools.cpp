@@ -1045,7 +1045,6 @@ bool parseProfileMixModelStr(string& model_str) {
                     string mix_model = "";
                     if (nclass > 1) {
                         mix_model.append("MIX{");
-                        isLinkedSubst = true;
                     }
                     for (int i = 0; i < nclass; i++) {
                         if (i > 0)
@@ -1055,11 +1054,8 @@ bool parseProfileMixModelStr(string& model_str) {
                     if (nclass > 1)
                         mix_model.append("}");
                     mix_model.append(RHAS);
-                    // update the model name to this mix model name
                     model_str = mix_model;
-                    // params.model_name = mix_model;
-                    // set the parameters for linked exchangeabilities model
-                    // params.optimize_linked_gtr = true;
+                    isLinkedSubst = true;
                 }
             }
         }
