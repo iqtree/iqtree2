@@ -1614,6 +1614,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 double*  nn_gpu_time_array_array = new double[num_processes * num_threads];
                 DoubleVector gpu_time_array = NeuralNetwork::gpu_time_array;
 
+                cout << "size of gpu_time_array: " << gpu_time_array.size() << endl; // todo: remove this afetr testing
+                cout << "size of nn_gpu_time_array_array: " << num_processes * num_threads << endl; // todo: remove this afetr testing
+
                 // Gather static_var_value from all processes to the root process
                 MPI_Gather(gpu_time_array.data(), num_threads, MPI_DOUBLE, nn_gpu_time_array_array, num_processes, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
 
