@@ -403,6 +403,8 @@ void NeuralNetwork::initializeTimer() {
     }
     int num_threads = Params::getInstance().num_threads;
 
+    cout << "number of threads = " << num_threads << endl; // todo: remove after testing
+
     cpu_time = 0.0;
     wall_time = 0.0;
 

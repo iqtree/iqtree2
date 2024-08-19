@@ -1636,6 +1636,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                         cout << "\t" << p << "\t" << (nn_wall_time_array)[p] << "\t" << nn_cpu_time_array[p] << "\t" << nn_gpu_time_array[p]<<  endl;
                     }
                 }
+
+                cout << "gpu-mpi" << endl; // todo: remove this afetr testing
 #endif // openmp
 #else // no cuda + mpi
                 cout << "\tproc\twall_time\tcpu_time" << endl;
