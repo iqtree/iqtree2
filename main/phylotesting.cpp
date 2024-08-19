@@ -1604,11 +1604,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 #endif // cuda
             } else { // MPI only
                 cout << num_processes << " processes are used for NN model selection" << endl;
-                cout << "\tproc\twall_time\tcpu_time" << endl;
+
 
 #ifdef _CUDA // cuda + mpi
-                double* nn_gpu_time_array = new double[num_processes];
-
+                cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
 // seprate openmp and no open mp
 
 #ifdef _OPENMP
@@ -1625,12 +1624,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 }
 
 #else // no openmp
+                double*  nn_gpu_time_array = new double[num_processes];
                 double nn_gpu_time = NeuralNetwork::gpu_time;
 
                 // Gather static_var_value from all processes to the root process
                 MPI_Gather(&nn_gpu_time, 1, MPI_DOUBLE, nn_gpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
-
-                cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
 
 
                 if (MPIHelper::getInstance().isMaster()){
