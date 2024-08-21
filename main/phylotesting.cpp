@@ -6286,7 +6286,17 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
         new_iqtree = new IQTree(iqtree->aln);
     }
     new_iqtree->setCheckpoint(iqtree->getCheckpoint());
+    if (!iqtree->constraintTree.empty())
+        new_iqtree->constraintTree.readConstraint(iqtree->constraintTree);
+    new_iqtree->removed_seqs = iqtree->removed_seqs;
+    new_iqtree->twin_seqs = iqtree->twin_seqs;
+    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
+        /* Initialized all data structure for PLL*/
+        new_iqtree->initializePLL(params);
+    }
     new_iqtree->setParams(&params);
+    new_iqtree->copyPhyloTree(iqtree, false);
+
     delete(iqtree);
     iqtree = new_iqtree;
     
