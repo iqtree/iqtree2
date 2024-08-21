@@ -1173,5 +1173,23 @@ void ModelCodon::writeInfo(ostream &out) {
     out << "Transition/transversion ratio (kappa): " << kappa << endl;
     if (codon_kappa_style == CK_TWO_KAPPA) 
         out << "Transition/transversion ratio 2 (kappa2): " << kappa2 << endl;
+
+    /*
+    // for debugging
+    // show the expected numbers of substitutions per site from the Q matrix
+    // and the value of total_num_subst
+    double nsub = 0.0;
+    for (int i = 0; i < num_states; i++) {
+        double* curr_rates = rates + i * num_states;
+        double row_sum = 0.0;
+        for (int j = 0; j < num_states; j++) {
+            if (i != j)
+                row_sum += curr_rates[j] * state_freq[j];
+        }
+        nsub += row_sum * state_freq[i];
+    }
+    out << "Expected numbers of substitutions per site (directly from Q): " << nsub << endl;
+    out << "Total_num_subst: " << total_num_subst << "; ratio: " << total_num_subst / nsub << endl;
+    */
 }
 

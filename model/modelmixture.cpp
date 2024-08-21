@@ -1480,12 +1480,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         estimateInitFreq2();
 
 	// rescale total_num_subst such that the global rate is 1
-    for (i = 0, sum = 0.0; i < nmixtures; i++) {
-        sum += prop[i] * at(i)->total_num_subst;
+    if (!rescale_codon_mix()) {
+        for (i = 0, sum = 0.0; i < nmixtures; i++) {
+            sum += prop[i] * at(i)->total_num_subst;
+        }
+        for (i = 0; i < nmixtures; i++) {
+            at(i)->total_num_subst /= sum;
+        }
     }
-    for (i = 0; i < nmixtures; i++) {
-        at(i)->total_num_subst /= sum;
-    }
+    
     if (optimize_steps == 0) {
         optimize_steps = (getNDim() + 1) * 100;
     }
@@ -1939,6 +1942,7 @@ double ModelMixture::targetFunk(double x[]) {
     }
 	getVariables(x);
     
+    rescale_codon_mix();
  
     //	decomposeRateMatrix();
     	int dim = 0;
@@ -2018,6 +2022,7 @@ double ModelMixture::optimizeWeights() {
 
         }
         */
+        
         if (converged) break;
 
     }
@@ -2140,7 +2145,6 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             }
             */
         }
-
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
 
@@ -2183,6 +2187,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
             // phylo_tree->clearAllPartialLH();
+            rescale_codon_mix();
 
         }
 
@@ -2325,17 +2330,18 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     // }
     
     // now rescale Q matrices to have proper interpretation of branch lengths
-
-	double sum;
-	for (i = 0, sum = 0.0; i < ncategory; i++) {
-		sum += prop[i]*at(i)->total_num_subst;
-    }
-//    sum += phylo_tree->getRate()->getPInvar();
-    if (fabs(sum-1.0) > 1e-6 && !isFused()) {
-        for (i = 0; i < ncategory; i++)
-            at(i)->total_num_subst /= sum;
-        decomposeRateMatrix();
-        phylo_tree->clearAllPartialLH();
+    if (!rescale_codon_mix()) {
+        double sum;
+        for (i = 0, sum = 0.0; i < ncategory; i++) {
+            sum += prop[i]*at(i)->total_num_subst;
+        }
+        //    sum += phylo_tree->getRate()->getPInvar();
+        if (fabs(sum-1.0) > 1e-6 && !isFused()) {
+            for (i = 0; i < ncategory; i++)
+                at(i)->total_num_subst /= sum;
+            decomposeRateMatrix();
+            phylo_tree->clearAllPartialLH();
+        }
     }
 	return score;
 }
@@ -2582,6 +2588,15 @@ void ModelMixture::writeInfo(ostream &out) {
 	for (i = 0; i < size(); i++)
 		cout << " " << prop[i];
 	cout << endl;
+    
+    /*
+    // for debugging
+    double overall_nsub = 0.0;
+    for (i = 0; i < size(); i++) {
+        overall_nsub += prop[i] * at(i)->total_num_subst;
+    }
+    cout << "Overall estimated number of substitutions per site: " << overall_nsub << endl;
+    */
 }
 
 void ModelMixture::writeParameters(ostream &out) {
@@ -2616,4 +2631,44 @@ string ModelMixture::getNameParams(bool show_fixed_params) {
     }
     retname += CLOSE_BRACKET;
     return retname;
+}
+
+// For codon mixture, rescale total_num_subst specifically
+// so that the global rate is 1
+// return true if the values of total_num_subst have been updated
+bool ModelMixture::rescale_codon_mix() {
+    if (phylo_tree->aln->seq_type == SEQ_CODON) {
+        vector<double> nsubs;
+        double overall_nsub = 0.0;
+        int i,j,k;
+        for (k = 0; k < size(); k++) {
+            int nstate = at(k)->num_states;
+            // calculate the estimated number of substitutions per site
+            // directly from the Q matrix and the frequency array
+            double nsub = 0.0;
+            double* curr_freqs = at(k)->state_freq;
+            double sum_freqs = 0.0;
+            for (i = 0; i < nstate; i++)
+                sum_freqs += curr_freqs[i];
+            for (i = 0; i < nstate; i++) {
+                double* curr_rates = at(k)->rates + i * nstate;
+                double row_sum = 0.0;
+                for (j = 0; j < nstate; j++) {
+                    if (i != j)
+                        row_sum += curr_rates[j] * curr_freqs[j] / sum_freqs;
+                }
+                nsub += row_sum * curr_freqs[i] / sum_freqs;
+            }
+            nsubs.push_back(nsub);
+            overall_nsub += prop[k] * nsub;
+        }
+        double ratio = 1.0 / overall_nsub;
+        for (k = 0; k < size(); k++) {
+            at(k)->total_num_subst = ratio * nsubs[k];
+        }
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+        return true;
+    }
+    return false;
 }
