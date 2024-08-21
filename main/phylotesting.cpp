@@ -1625,6 +1625,20 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                         cout << "\t" << p << "\t" << (nn_wall_time_array)[p] << "\t" << nn_cpu_time_array[p] << "\t" << nn_gpu_time_array_array[p]<<  endl;
                     }
                 }
+
+                cout << "new block" << endl;
+                if (MPIHelper::getInstance().isMaster() && num_threads == 1){
+                    int n_threads = 0;
+                    int n_processes = 0;
+                    for (int i = 0; i < num_processes * num_threads; i++){
+                        cout << "\t" << n_processes << "\t"<< nn_wall_time_array[i] << "\t" << nn_cpu_time_array[i] << "\t" << nn_gpu_time_array_array[i]<<  endl;
+                        n_threads++;
+                        if (n_threads == num_threads){
+                            n_processes++;
+                            n_threads = 0;
+                        }
+                    }
+                }
                 cout << "gpu+mpi+openmp(1 thread)" << endl; // todo: remove this afetr testing
 
 #else // no openmp
