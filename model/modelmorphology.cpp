@@ -109,6 +109,18 @@ void ModelMorphology::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
+/**
+ * @return model name
+ */
+string ModelMorphology::getName() {
+    size_t pos_plus = name.find('+');
+    if (pos_plus != string::npos) {
+        return name;
+    } else {
+        return ModelMarkov::getName();
+    }
+}
+
 string ModelMorphology::getNameParams(bool show_fixed_params) {
     if (num_params == 0) return name;
     ostringstream retname;
