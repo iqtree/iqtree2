@@ -1544,9 +1544,11 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             MPI_Gather(&nn_cpu_time, 1, MPI_DOUBLE, nn_cpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
 
 
-
+#ifdef _OPENMP
+            if (true) { // MPI + OPENMP
+#else
             if ( num_threads > 1) { //MPI + OPENMP
-
+#endif
                 cout << num_processes << " processes are used for NN model selection" << endl;
                 cout << "\tproc\twall_time\tcpu_time" << endl;
 
