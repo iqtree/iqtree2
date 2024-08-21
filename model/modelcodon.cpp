@@ -822,6 +822,28 @@ void ModelCodon::decomposeRateMatrix() {
     ModelMarkov::decomposeRateMatrix();
 }
 
+void ModelCodon::getQMatrix(double *q_mat, int mixture) {
+
+    double **rate_matrix = (double**) new double[num_states];
+    int i, j;
+
+    for (i = 0; i < num_states; i++)
+        rate_matrix[i] = new double[num_states];
+
+    for (i = 0; i < num_states; i++) {
+        memmove(rate_matrix[i], rates + (i*num_states), num_states * sizeof(double));
+    }
+
+    computeRateMatrix(rate_matrix, state_freq, num_states);
+    for (i = 0; i < num_states; i++)
+        memmove(q_mat + (i*num_states), rate_matrix[i], num_states * sizeof(double));
+
+    for (i = num_states-1; i >= 0; i--)
+        delete [] rate_matrix[i];
+    delete [] rate_matrix;
+
+}
+
 void ModelCodon::computeCodonRateMatrix() {
 //    if (num_params == 0) 
 //        return; // do nothing for empirical codon model
