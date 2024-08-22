@@ -1488,8 +1488,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
 
         if (num_threads == 1 && num_processes == 1) { // single threaded
-            cout << "single threaded execution" << endl;
-            cout << endl;
 
 #ifdef _CUDA
             cout << endl;
@@ -1506,7 +1504,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             cout << "\t" << 0 << "\t" << NeuralNetwork::wall_time << "\t" << NeuralNetwork::cpu_time << endl;
 #endif // _CUDA
         } else if (num_threads > 1 && num_processes == 1) { // OpenMP
-            cout << "openmp time statics and not mpi " << endl;
             cout << endl;
             int p = 0;
 
@@ -1518,12 +1515,14 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
 #ifdef _CUDA
             // printing the time for each thread
+            cout << endl;
             cout << "\tproc\tthreads\trun_time\tgpu_time" << endl;
             for (int t = 0; t < num_threads; t++) {
                 cout << "\t" << p << "\t" << t << "\t" << NeuralNetwork::run_time_array[t] << "\t" << NeuralNetwork::gpu_time_array[t] << endl;
             }
 #else // no cuda
             // printing the time for each thread
+            cout << endl;
             cout << "\tproc\tthreads\trun_time" << endl;
             for (int t = 0; t < num_threads; t++) {
                 cout << "\t" << p << "\t" << t << "\t" << NeuralNetwork::run_time_array[t] << endl;
@@ -1554,8 +1553,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                     }
                 }
 
-
-                cout << "openmp + mpi time statics" << endl;
                 double* nn_run_time_array_array = new double[num_processes * num_threads];
                 DoubleVector run_time_array = NeuralNetwork::run_time_array;
 
@@ -1586,6 +1583,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 }
 #else
  // no cuda + openmp + mpi
+
+                cout << endl;
+                cout << "\tproc\tthreads\trun_time" << endl;
 
                 if (MPIHelper::getInstance().isMaster() && num_threads > 1){
                     int n_threads = 0;
