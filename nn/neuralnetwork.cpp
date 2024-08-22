@@ -53,7 +53,7 @@ double NeuralNetwork::doAlphaInference() {
     if (!has_gpu) {
         printf("No GPU found\n");
     } else {
-        printf("Number of GPUs = %d\n", num_gpus);
+//        printf("Number of GPUs = %d\n", num_gpus);
         int thread_id = 0;
 #ifdef _OPENMP
         thread_id = omp_get_thread_num();
@@ -61,7 +61,6 @@ double NeuralNetwork::doAlphaInference() {
         thread_id = 0;
 #endif
 
-        // todo: add logic to select GPU from the rank if MPI or OpenMP
         OrtCUDAProviderOptions cuda_options;
         cuda_options.device_id = thread_id;  //GPU_ID
         cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearchExhaustive; // Algo to search for Cudnn
@@ -375,8 +374,6 @@ void NeuralNetwork::initializeTimer() {
         return;
     }
     int num_threads = Params::getInstance().num_threads;
-
-    cout << "number of threads = " << num_threads << endl; // todo: remove after testing
 
     cpu_time = 0.0;
     wall_time = 0.0;

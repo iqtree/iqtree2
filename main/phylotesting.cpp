@@ -1658,11 +1658,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             params.num_threads = stree->size();
             cout << "The number of threads is changed to: " << params.num_threads << endl;
         } else { */
-        // todo: this  is for debuging
-            cout << "the number of prev threads: " << params.num_threads << endl;
 
-            params.num_threads = updated_nthreads;
-            cout << "the number of threads: " << params.num_threads << endl;
+        params.num_threads = updated_nthreads;
+
         // }
     }
 }
@@ -3056,11 +3054,11 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 cout << "Using NN" << endl;
                 // todo: to work with multi-threading: pass along the random number streams to the rngs in the stochastic functions
                 // determine substitution model using neural network
-                Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars(); // todo: here
+                Alignment *alignment = (in_tree->aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
                 NeuralNetwork nn(alignment);
-                string model_name = nn.doModelInference(); // todo: here
+                string model_name = nn.doModelInference();
                 string rate_name = "";
-                double alpha = nn.doAlphaInference(); // todo: here
+                double alpha = nn.doAlphaInference();
                 if (alpha >= 0) { // +G
                     rate_name = "+G{" + to_string(alpha) + "}";
                 }
