@@ -10,7 +10,8 @@
 
 #if defined(_CUDA) && defined(_OPENMP)
 DoubleVector NeuralNetwork::gpu_time_array;
-#elif defined(_CUDA)
+#endif
+#if defined(_CUDA)
 float NeuralNetwork::gpu_time=  0.0f;
 #endif
 
@@ -147,10 +148,7 @@ double NeuralNetwork::doAlphaInference() {
 #ifdef _CUDA
     // do inference
     if (has_gpu) {
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-
-        cudaEventRecord(start);
+        startCudaTimer();
     }
 #endif
     auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tensor, 1,
@@ -159,17 +157,7 @@ double NeuralNetwork::doAlphaInference() {
 
 #ifdef _CUDA
     if (has_gpu) {
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
-#ifdef _OPENMP
-        gpu_time_array[omp_get_thread_num()] += milliseconds;
-#else
-        gpu_time += milliseconds;
-#endif
-        cudaEventDestroy(start);
-        cudaEventDestroy(stop);
+        stopCudaTimer();
     }
 #endif
     // get pointer to output tensor float values
@@ -299,28 +287,13 @@ int num_gpus = 0;
 
     // do inference
 #ifdef _CUDA
-    // do inference
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
+    startCudaTimer();
 #endif
     auto output_tensors = session.Run(Ort::RunOptions{nullptr}, input_node_names.data(), &input_tensor, 1,
                                       output_node_names.data(), 1);
     assert(output_tensors.size() == 1 && output_tensors.front().IsTensor());
 #ifdef _CUDA
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-
-#ifdef _OPENMP
-    gpu_time_array[omp_get_thread_num()] += milliseconds;
-#else
-    gpu_time += milliseconds;
-#endif
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    stopCudaTimer();
 #endif
     // get pointer to output tensor float values
     float *floatarr = output_tensors.front().GetTensorMutableData<float>();
@@ -440,6 +413,35 @@ void NeuralNetwork::stopTimer() {
 #endif
 
 }
+
+#ifdef _CUDA
+void NeuralNetwork::startCudaTimer() {
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+}
+
+void NeuralNetwork::stopCudaTimer() {
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+
+#ifdef _OPENMP
+    int thread_id = omp_get_thread_num();
+    gpu_time_array[thread_id] += milliseconds;
+    if (thread_id == 0) {
+        gpu_time += milliseconds;
+    }
+#else
+    gpu_time += milliseconds;
+#endif
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
+}
+
+#endif
 
 
 

@@ -62,8 +62,13 @@ public:
 
 #if defined(_CUDA) && defined(_OPENMP)
     static DoubleVector gpu_time_array;
-#elif defined(_CUDA)
+#endif
+#if defined(_CUDA)
     static float gpu_time;
+
+    void startCudaTimer();
+
+    void stopCudaTimer();
 #endif
 
 

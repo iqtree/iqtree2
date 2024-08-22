@@ -1625,18 +1625,21 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                 }
 
                 cout << "new block" << endl;
-                if (MPIHelper::getInstance().isMaster() && num_threads == 1){
-                    int n_threads = 0;
-                    int n_processes = 0;
-                    for (int i = 0; i < num_processes * num_threads; i++){
-                        cout << "\t" << n_processes << "\t"<< nn_wall_time_array[i] << "\t" << nn_cpu_time_array[i] << "\t" << nn_gpu_time_array_array[i]<<  endl;
-                        n_threads++;
-                        if (n_threads == num_threads){
-                            n_processes++;
-                            n_threads = 0;
-                        }
+
+
+                double*  nn_gpu_time_array = new double[num_processes];
+                double nn_gpu_time = NeuralNetwork::gpu_time;
+
+                // Gather static_var_value from all processes to the root process
+                MPI_Gather(&nn_gpu_time, 1, MPI_DOUBLE, nn_gpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
+
+
+                if (MPIHelper::getInstance().isMaster()){
+                    for (int p=0; p<num_processes; p++) {
+                        cout << "\t" << p << "\t" << (nn_wall_time_array)[p] << "\t" << nn_cpu_time_array[p] << "\t" << nn_gpu_time_array[p]<<  endl;
                     }
                 }
+
                 cout << "gpu+mpi+openmp(1 thread)" << endl; // todo: remove this afetr testing
 
 #else // no openmp
