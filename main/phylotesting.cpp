@@ -1606,9 +1606,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
 #ifdef _CUDA // cuda + mpi
                 cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;
-// seprate openmp and no open mp
 
-#ifdef _OPENMP
                 double*  nn_gpu_time_array = new double[num_processes];
                 double nn_gpu_time = NeuralNetwork::gpu_time;
 
@@ -1622,24 +1620,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
                     }
                 }
 
-                cout << "gpu+mpi+openmp(1 thread)" << endl; // todo: remove this afetr testing
-
-#else // no openmp
-                double*  nn_gpu_time_array = new double[num_processes];
-                double nn_gpu_time = NeuralNetwork::gpu_time;
-
-                // Gather static_var_value from all processes to the root process
-                MPI_Gather(&nn_gpu_time, 1, MPI_DOUBLE, nn_gpu_time_array, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
-
-
-                if (MPIHelper::getInstance().isMaster()){
-                    for (int p=0; p<num_processes; p++) {
-                        cout << "\t" << p << "\t" << (nn_wall_time_array)[p] << "\t" << nn_cpu_time_array[p] << "\t" << nn_gpu_time_array[p]<<  endl;
-                    }
-                }
-
-                cout << "gpu+mpi" << endl; // todo: remove this afetr testing
-#endif // openmp
 #else // no cuda + mpi
                 cout << "\tproc\twall_time\tcpu_time" << endl;
 
