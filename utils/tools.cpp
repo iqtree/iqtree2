@@ -1600,6 +1600,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.include_pre_mutations = false;
     params.mutation_file = "";
     params.site_starting_index = 0;
+    params.rescale_mix_scheme = 0;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5604,7 +5605,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                 
                 continue;
             }
-            
+
+            if (strcmp(argv[cnt], "--rescale-each-class") == 0) {
+                params.rescale_mix_scheme = 1;
+                
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--rescale-whole-mixture") == 0) {
+                params.rescale_mix_scheme = 2;
+                
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--distribution") == 0) {
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')

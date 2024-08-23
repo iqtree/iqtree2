@@ -279,10 +279,9 @@ public:
 	 */
 	virtual string getNameParams(bool show_fixed_params = false);
 
-    // For codon mixture, rescale total_num_subst specifically
-    // so that the global rate is 1
-    // return true if the values of total_num_subst have been updated
-    bool rescale_codon_mix();
+    // resale each total_num_subst according to the
+    // total_num_subst of the whole mixture model (not individually)
+    void rescale_whole_mix();
     
     /**
      * compute the memory size for the model, can be large for site-specific models
