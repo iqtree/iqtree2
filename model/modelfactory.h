@@ -109,6 +109,12 @@ public:
     */
     virtual bool initFromNestedModel(map<string, vector<string> > nest_network);
 
+    /**
+        initialize the parameters from the (k-1)-class mixture model
+        return false if the k-class model can't initialise from (k-1)-class model
+    */
+    virtual void initFromClassMinusOne(double init_weight);
+
 	/**
 		get the name of the model
 	*/

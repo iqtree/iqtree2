@@ -1170,6 +1170,26 @@ bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network
     return true;
 }
 
+/**
+    initialize the parameters from the (k-1)-class best mixture model
+*/
+void ModelFactory::initFromClassMinusOne(double init_weight) {
+    int nmix = model->getNMixtures();
+    if (nmix > 1) {
+        model->initFromClassMinusOne(init_weight);
+        checkpoint->startStruct("BestOfTheKClass");
+        if (nmix > 2) {
+            checkpoint->startStruct("ModelMixture" + convertIntToString(nmix-1));
+        }
+        site_rate->restoreCheckpoint();
+        site_rate->phylo_tree->restoreCheckpoint();
+        if (nmix > 2) {
+            checkpoint->endStruct();
+        }
+        checkpoint->endStruct();
+    }
+}
+
 int ModelFactory::getNParameters(int brlen_type) {
     int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
         site_rate->getTree()->getNBranchParameters(brlen_type);

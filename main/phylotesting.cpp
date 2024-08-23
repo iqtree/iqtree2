@@ -1902,10 +1902,7 @@ string CandidateModel::evaluate(Params &params,
             bool init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
 
             if (!init_success && iqtree->getModel()->isMixture()) {
-                // get the model mixture object
-                ModelMixture* modelmix = dynamic_cast<ModelMixture*> (iqtree->getModelFactory()->model);
-                ASSERT(modelmix);
-                double init_weight = 1.0 / modelmix->getNMixtures();
+                double init_weight = 1.0 / iqtree->getModel()->getNMixtures();
 
                 // obtain the likelihood value from the (k-1)-class mixture model
                 string criteria_str = criterionName(params.model_test_criterion);
@@ -1931,7 +1928,7 @@ string CandidateModel::evaluate(Params &params,
                     }
 
                     // initialize the parameters from the (k-1)-class mixture model
-                    modelmix->initFromClassMinusOne(init_weight);
+                    iqtree->getModelFactory()->initFromClassMinusOne(init_weight);
 
                     new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
                                                                              params.modelfinder_eps, TOL_GRADIENT_MODELTEST);

@@ -127,7 +127,10 @@ public:
 	 */
 	virtual int getNMixtures() { return 1; }
 
- 	/**
+	// initial the parameters from the (K-1)-class mixture model
+	virtual void initFromClassMinusOne(double init_weight) {}
+    
+	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
