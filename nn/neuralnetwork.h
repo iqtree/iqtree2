@@ -51,9 +51,15 @@ public:
 
     void stopTimer();
 
+    void startFeatureExtractionTimer(); //todo: remove later
+
+    void stopFeatureExtractionTimer(); //todo: remove later
+
     static bool time_initialized;
     static double cpu_time;
     static double wall_time;
+
+    static double feature_extraction_time; // todo: remove later
 
 #if defined(_OPENMP)
     static DoubleVector run_time_array; // run time for each thread
@@ -79,6 +85,8 @@ private:
 #endif
     double local_cpu_time;
     double local_wall_time;
+
+    double local_feature_extraction_time; // todo: remove later
 };
 
 

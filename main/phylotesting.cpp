@@ -1489,6 +1489,8 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 
         if (num_threads == 1 && num_processes == 1) { // single threaded
 
+            cout << "total feature extraction time: " << NeuralNetwork::feature_extraction_time << " seconds" << endl; // todo: remove later
+
 #ifdef _CUDA
             cout << endl;
             cout << "\tproc\twall_time\tcpu_time\tgpu_time" << endl;

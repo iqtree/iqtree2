@@ -18,6 +18,8 @@ float NeuralNetwork::gpu_time=  0.0f;
 double NeuralNetwork::cpu_time = 0.0;
 double NeuralNetwork::wall_time = 0.0;
 
+double NeuralNetwork::feature_extraction_time = 0.0;
+
 // Define static variables
 #if defined(_OPENMP)
 DoubleVector NeuralNetwork::run_time_array;
@@ -119,6 +121,8 @@ double NeuralNetwork::doAlphaInference() {
 
     std::vector<const char *> output_node_names = {"alpha", "ev_model"};
 
+    startFeatureExtractionTimer();
+    // feature extraction
     size_t num_sites = this->alignment->getNSite();
     size_t num_taxa = this->alignment->getNSeq();
 
@@ -137,6 +141,9 @@ double NeuralNetwork::doAlphaInference() {
         input_tensor_[i + 2] = (float) freqs[2] / num_taxa;
         input_tensor_[i + 3] = (float) freqs[3] / num_taxa;
     }
+
+    stopFeatureExtractionTimer();
+    // end of feature extraction
 
     // create input tensor object from data values
     auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
@@ -264,6 +271,9 @@ int num_gpus = 0;
 
     this->alignment->ungroupSitePattern();
 
+
+    // feature extraction
+    startFeatureExtractionTimer();
     for (size_t i = 0; i < 260000; i = i + 26) {
         size_t seq1_idx;
         size_t seq2_idx;
@@ -277,6 +287,9 @@ int num_gpus = 0;
         summary_stats = this->alignment->computeSummaryStats(seq1_idx, seq2_idx);
         std::copy(std::begin(summary_stats), std::end(summary_stats), std::begin(input_tensor_) + i); // replace part of the vector with this
     }
+
+    stopFeatureExtractionTimer();
+    // end of feature extraction
 
     // create input tensor object from data values
     auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
@@ -377,6 +390,7 @@ void NeuralNetwork::initializeTimer() {
 
     cpu_time = 0.0;
     wall_time = 0.0;
+    feature_extraction_time = 0.0; // todo: remove later
 
 #if defined(_CUDA) && defined(_OPENMP)
     gpu_time_array.resize(num_threads, 0.0);
@@ -409,6 +423,15 @@ void NeuralNetwork::stopTimer() {
     wall_time += local_wall_time;
 #endif
 
+}
+
+void NeuralNetwork::startFeatureExtractionTimer() {
+    local_feature_extraction_time = getRealTime();
+}
+
+void NeuralNetwork::stopFeatureExtractionTimer() {
+    local_feature_extraction_time = getRealTime() - local_feature_extraction_time;
+    feature_extraction_time += local_feature_extraction_time;
 }
 
 #ifdef _CUDA
