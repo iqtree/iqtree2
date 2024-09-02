@@ -1,6 +1,25 @@
 #include "libiqtree2_fun.h"
 
-string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed, string prog);
+class input_options {
+public:
+    vector<string> flags;
+    vector<string> values;
+
+    void insert(string flag, string value="") {
+        flags.push_back(flag);
+        values.push_back(value);
+    }
+    
+    // set Params according to the input options from PiQTREE
+    // only invoke this function after the default values of parameters are set
+    // this function defines which IQ-TREE options are availble for PiQTREE
+    void set_params();
+};
+
+string build_phylogenetic(vector<string> names, vector<string> seqs,
+                          string model, string intree, int rand_seed, string prog,
+                          input_options* in_options, int outformat,
+                          string& out_matrix);
 
 // Calculates the robinson fould distance between two trees
 int robinson_fould(const string& tree1, const string& tree2) {
@@ -89,7 +108,10 @@ string build_tree(vector<string> names, vector<string> seqs, string model, int r
     string intree = "";
     string output;
     try {
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree");
+        input_options* in_options = NULL;
+        int outformat = 0;
+        string dist_matrix;
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options, outformat, dist_matrix);
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
         funcExit();
@@ -103,7 +125,10 @@ string build_tree(vector<string> names, vector<string> seqs, string model, int r
 string fit_tree(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed) {
     string output;
     try {
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree");
+        input_options* in_options = NULL;
+        int outformat = 0;
+        string dist_matrix;
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree", in_options, outformat, dist_matrix);
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
         funcExit();
@@ -112,7 +137,28 @@ string fit_tree(vector<string> names, vector<string> seqs, string model, string 
     return output;
 }
 
-
+// Perform phylogenetic analysis on the input alignment (in string format)
+// With estimation of the best topology
+// And output the pairwise distance matrix
+string build_tree_n_distmat(vector<string> names, vector<string> seqs, string model,  string& dist_matrix, int rand_seed) {
+    
+    string intree = "";
+    string output;
+    try {
+        input_options* in_options = new input_options();
+        // need to output the ML distance matrix
+        int outformat = 1;
+        // also need to maintain all the identical sequences
+        in_options->insert("--keep-indent");
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options, outformat, dist_matrix);
+        delete in_options;
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+    return output;
+}
 
 // ----------------------------------------------
 // function for performing plylogenetic analysis
@@ -120,7 +166,12 @@ string fit_tree(vector<string> names, vector<string> seqs, string model, string 
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
-string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed, string prog) {
+// by default, outformat = 0.
+// If outformat = 1 and intree is empty, then also output the distance matrix to out_matrix
+string build_phylogenetic(vector<string> names, vector<string> seqs,
+                          string model, string intree, int rand_seed, string prog,
+                          input_options* in_options, int outformat,
+                          string& out_matrix) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
@@ -152,6 +203,11 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
         Params::getInstance().intree_str = intree;
     }
 
+    if (in_options != NULL) {
+        // assign the input options to Params
+        in_options->set_params();
+    }
+    
     if (rand_seed == 0)
         rand_seed = make_new_seed();
     Params::getInstance().ran_seed = rand_seed;
@@ -350,11 +406,20 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     bool align_is_given = true;
     
     runPhyloAnalysis(params, checkpoint, tree, alignment, align_is_given);
+    
     // output the checkpoint in YAML format
     stringstream ss;
     checkpoint->dump(ss);
-    
-    alignment = tree->aln;
+
+    if (outformat==1 && intree.empty()) {
+        // output the distance matrix
+        stringstream ss_mat;
+        alignment = tree->aln;
+        alignment->printDist(ss_mat, tree->dist_matrix);
+        out_matrix = ss_mat.str();
+    }
+
+    // delete memory allocation
     delete tree;
     delete alignment;
 
@@ -368,4 +433,19 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     funcExit();
     
     return ss.str();
+}
+
+// --------------------------------------------------
+// Handle the input options of PiQTREE
+// --------------------------------------------------
+
+void input_options::set_params() {
+    ASSERT(flags.size() == values.size());
+    int n = flags.size();
+    Params params = Params::getInstance();
+    for (int i = 0; i < n; i++) {
+        if (flags[i] == "--keep-indent" || flags[i] == "-keep-indent") {
+            params.ignore_identical_seqs = false;
+        }
+    }
 }
