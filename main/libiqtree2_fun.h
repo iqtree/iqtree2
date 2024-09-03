@@ -26,9 +26,4 @@ string build_tree(vector<string> names, vector<string> seqs, string model, int r
 // With restriction to the input toplogy
 string fit_tree(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed = 0);
 
-// Perform phylogenetic analysis on the input alignment (in string format)
-// With estimation of the best topology
-// And output the pairwise distance matrix
-string build_tree_n_distmat(vector<string> names, vector<string> seqs, string model, string& dist_matrix, int rand_seed = 0);
-
 #endif /* LIBIQTREE2_FUN */
