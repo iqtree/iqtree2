@@ -26,4 +26,12 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
 // With restriction to the input toplogy
 string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed = 0);
 
+// Perform phylogenetic analysis with ModelFinder
+// on the input alignment (in string format)
+// model_set -- a set of models to consider
+// freq_set -- a set of frequency types
+// rate_set -- a set of RHAS models
+string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 0,
+                   string model_set = "", string freq_set = "", string rate_set = "");
+
 #endif /* LIBIQTREE2_FUN */

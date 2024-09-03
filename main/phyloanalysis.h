@@ -47,7 +47,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
     carry out phylogenetic inference without deleting IQTree instance
     @param params program parameters
 */
-void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln, bool align_is_given = false);
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln, bool align_is_given = false, ModelCheckpoint *model_info = NULL);
 
 /*! \brief Run CMaple algorithm for phylogenetic inference (if suitable)
  *  @param params program parameters

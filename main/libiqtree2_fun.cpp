@@ -1,6 +1,30 @@
 #include "libiqtree2_fun.h"
 
-string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, string prog);
+class input_options {
+public:
+    vector<string> flags;
+    vector<string> values;
+
+    void insert(string flag, string value="") {
+        flags.push_back(flag);
+        values.push_back(value);
+    }
+    
+    // set Params according to the input options from PiQTREE
+    // only invoke this function after the default values of parameters are set
+    // this function defines which IQ-TREE options are availble for PiQTREE
+    void set_params(Params& params);
+};
+
+void cleanup(Params& params) {
+    if (params.state_freq_set != NULL) {
+        delete[] params.state_freq_set;
+        params.state_freq_set = NULL;
+    }
+}
+
+string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree,
+                          int rand_seed, string prog, input_options* in_options);
 
 // Calculates the robinson fould distance between two trees
 int robinson_fould(const string& tree1, const string& tree2) {
@@ -89,7 +113,8 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
     string intree = "";
     string output;
     try {
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree");
+        input_options* in_options = NULL;
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options);
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
         funcExit();
@@ -103,7 +128,42 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
 string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed) {
     string output;
     try {
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree");
+        input_options* in_options = NULL;
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree", in_options);
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+    return output;
+}
+
+// Perform phylogenetic analysis with ModelFinder
+// on the input alignment (in string format)
+// model_set -- a set of models to consider
+// freq_set -- a set of frequency types
+// rate_set -- a set of RHAS models
+string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, string model_set, string freq_set, string rate_set) {
+    
+    input_options* in_options = NULL;
+    string output;
+    string intree = "";
+    string model = "MF"; // modelfinder
+    int i;
+
+    try {
+        in_options = new input_options();
+        // handle model_set, freq_set, rate_set
+        if (!model_set.empty())
+            in_options->insert("-mset", model_set);
+        if (!freq_set.empty())
+            in_options->insert("-mfreq", freq_set);
+        if (!rate_set.empty())
+            in_options->insert("-mrate", rate_set);
+        
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "modelfinder", in_options);
+        
+        delete in_options;
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
         funcExit();
@@ -113,14 +173,14 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
 }
 
 
-
 // ----------------------------------------------
 // function for performing plylogenetic analysis
 // ----------------------------------------------
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
-string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, string prog) {
+string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree,
+                          int rand_seed, string prog, input_options* in_options) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
@@ -151,6 +211,11 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
         Params::getInstance().stop_condition = SC_FIXED_ITERATION;
         Params::getInstance().start_tree = STT_USER_TREE;
         Params::getInstance().intree_str = intree;
+    }
+
+    if (in_options != NULL) {
+        // assign the input options to Params
+        in_options->set_params(Params::getInstance());
     }
 
     if (rand_seed == 0)
@@ -350,24 +415,67 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
     IQTree *tree;
     Alignment *alignment = new Alignment(names, seqs, params.sequence_type, params.model_name);
     bool align_is_given = true;
+    ModelCheckpoint* model_info = NULL;
+    if (model == "MF") {
+        model_info = new ModelCheckpoint;
+    }
+
+    runPhyloAnalysis(params, checkpoint, tree, alignment, align_is_given, model_info);
     
-    runPhyloAnalysis(params, checkpoint, tree, alignment, align_is_given);
-    // output the checkpoint in YAML format
     stringstream ss;
-    checkpoint->dump(ss);
+    if (model_info != NULL) {
+        // output the modelfinder results in YAML format
+        model_info->dump(ss);
+    } else {
+        // output the checkpoint in YAML format
+        checkpoint->dump(ss);
+    }
     
     alignment = tree->aln;
     delete tree;
     delete alignment;
+    cleanup(params);
 
     time(&start_time);
     cout << "Date and Time: " << ctime(&start_time);
     try{
-    delete checkpoint;
+        delete checkpoint;
+        if (model_info != NULL)
+            delete model_info;
     }catch(int err_num){}
 
     finish_random();
     funcExit();
     
     return ss.str();
+}
+
+// --------------------------------------------------
+// Handle the input options of PiQTREE
+// --------------------------------------------------
+
+void input_options::set_params(Params& params) {
+    ASSERT(flags.size() == values.size());
+    int n = flags.size();
+    for (int i = 0; i < n; i++) {
+        if (flags[i] == "-keep-indent") {
+            params.ignore_identical_seqs = false;
+            cout << "params.ignore_identical_seqs = " << params.ignore_identical_seqs << endl;
+        }
+        else if (flags[i] == "-mset") {
+            params.model_set = values[i];
+            cout << "params.model_set = " << params.model_set << endl;
+        }
+        else if (flags[i] == "-mfreq") {
+            int clen = values[i].length();
+            if (clen > 0) {
+                params.state_freq_set = new char[clen + 1];
+                strcpy(params.state_freq_set, values[i].c_str());
+            }
+        }
+        else if (flags[i] == "-mrate") {
+            params.ratehet_set = values[i];
+            cout << "params.ratehet_set = " << params.ratehet_set << endl;
+        }
+    }
 }
