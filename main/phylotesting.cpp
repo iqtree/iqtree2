@@ -1534,7 +1534,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             double* nn_cpu_time_array = new double[num_processes];
             double* nn_wall_time_array = new double[num_processes];
 
-            MPI_Barrier(MPI_COMM_WORLD); // todo: check if this is necessary
+            MPI_Barrier(MPI_COMM_WORLD);
 
             double nn_wall_time = NeuralNetwork::wall_time;
             double nn_cpu_time = NeuralNetwork::cpu_time;
@@ -2182,14 +2182,17 @@ string CandidateModel::evaluate(Params &params,
             }
         } else {
             CandidateModel prev_info;
-            bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
+            bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this); // this is only for R models
 
             if (!prev_rate_present){
                 iqtree->getModelFactory()->setCheckpoint(&in_model_info);
                 iqtree->getModelFactory()->initFromNestedModel(nest_network);
 
-                new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                                                                         params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+//                new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+//                                                                         params.modelfinder_eps, TOL_GRADIENT_MODELTEST); // todo: here is the parameters are optimzed
+
+                new_logl = iqtree -> computeLikelihood(); // this will not optimize the params
+
                 tree_len = iqtree->treeLength();
 
                 // now switch to the output checkpoint
@@ -2207,27 +2210,36 @@ string CandidateModel::evaluate(Params &params,
                     if (verbose_mode >= VB_MED)
                         cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
                 }
-                for (int step = 0; step < 5; step++) {
-                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                                                                             params.modelfinder_eps,
-                                                                             TOL_GRADIENT_MODELTEST);
-                    tree_len = iqtree->treeLength();
-                    iqtree->getModelFactory()->saveCheckpoint();
-                    iqtree->saveCheckpoint();
+//                cout << "previous likelihood outside loop: " << prev_info.logl << endl;
 
-                    // check if logl(+R[k]) is worse than logl(+R[k-1])
-                    // if (!prev_rate_present) break;
-                    if (prev_info.logl < new_logl + params.modelfinder_eps) break;
-                    weight_rescale *= 0.5;
-                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                    cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
-                         << " with factor " << weight_rescale << endl;
-                }
-                if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
-                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                               getName() + " worse than " + prev_info.getName() + " " +
-                               convertDoubleToString(prev_info.logl));
-                }
+                new_logl = prev_info.logl;
+//                for (int step = 0; step < 5; step++) {
+////                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+//                                                                             params.modelfinder_eps,
+////                                                                             TOL_GRADIENT_MODELTEST); // todo: here is the parameters are optimzed
+//                    cout << "previous likelihood: " << prev_info.logl << endl;
+//
+//
+//                    new_logl = iqtree -> computeLikelihood(); // this will not optimize the params
+//
+//                    cout << "new likelihood: " << new_logl << endl;
+//                    tree_len = iqtree->treeLength();
+//                    iqtree->getModelFactory()->saveCheckpoint();
+//                    iqtree->saveCheckpoint();
+//
+//                    // check if logl(+R[k]) is worse than logl(+R[k-1])
+//                    // if (!prev_rate_present) break;
+//                    if (prev_info.logl < new_logl + params.modelfinder_eps) break;
+//                    weight_rescale *= 0.5;
+//                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+//                    cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
+//                         << " with factor " << weight_rescale << endl;
+//                }
+//                if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
+//                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+//                               getName() + " worse than " + prev_info.getName() + " " +
+//                               convertDoubleToString(prev_info.logl));
+//                }
             }
         }
     }
