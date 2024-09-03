@@ -138,7 +138,8 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
 
     extern VerboseMode verbose_mode;
     progress_display::setProgressDisplay(false);
-    verbose_mode = VB_MIN; // or VB_QUIET (quiet mode)
+    // verbose_mode = VB_MIN;
+    verbose_mode = VB_QUIET; // (quiet mode)
     Params::getInstance().setDefault();
     Params::getInstance().num_threads = 1; // only allow single thread at this moment
     Params::getInstance().aln_file = "";
@@ -155,7 +156,7 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     if (rand_seed == 0)
         rand_seed = make_new_seed();
     Params::getInstance().ran_seed = rand_seed;
-    cout << "Seed: " << Params::getInstance().ran_seed << endl << flush;
+    // cout << "Seed: " << Params::getInstance().ran_seed << endl << flush;
     init_random(Params::getInstance().ran_seed);
 
     string out_prefix_str = prog + "_" + convertIntToString(rand_seed);
@@ -311,7 +312,8 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
         cout << endl;
         outError("You have specified more threads than CPU cores available");
     }
-    omp_set_nested(false); // don't allow nested OpenMP parallelism
+    // omp_set_nested(false); // don't allow nested OpenMP parallelism
+    omp_set_max_active_levels(1);
 #else
     if (Params::getInstance().num_threads != 1) {
         cout << endl << endl;
