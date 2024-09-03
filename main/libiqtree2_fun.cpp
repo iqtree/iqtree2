@@ -1,6 +1,6 @@
 #include "libiqtree2_fun.h"
 
-string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed, string prog);
+string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, string prog);
 
 // Calculates the robinson fould distance between two trees
 int robinson_fould(const string& tree1, const string& tree2) {
@@ -69,7 +69,7 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
         params.tree_gen = tree_mode;
         params.repeated_time = num_trees;
         params.ignore_checkpoint = true; // overrid the output file if exists
-        params.user_file = "";
+        params.user_file = (char*) "";
         
         ostringstream ostring;
         generateRandomTree(params, ostring);
@@ -85,7 +85,7 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
-string build_tree(vector<string> names, vector<string> seqs, string model, int rand_seed) {
+string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed) {
     string intree = "";
     string output;
     try {
@@ -100,7 +100,7 @@ string build_tree(vector<string> names, vector<string> seqs, string model, int r
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With restriction to the input toplogy
-string fit_tree(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed) {
+string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed) {
     string output;
     try {
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree");
@@ -120,7 +120,7 @@ string fit_tree(vector<string> names, vector<string> seqs, string model, string 
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
-string build_phylogenetic(vector<string> names, vector<string> seqs, string model, string intree, int rand_seed, string prog) {
+string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, string prog) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
@@ -142,7 +142,7 @@ string build_phylogenetic(vector<string> names, vector<string> seqs, string mode
     verbose_mode = VB_QUIET; // (quiet mode)
     Params::getInstance().setDefault();
     Params::getInstance().num_threads = 1; // only allow single thread at this moment
-    Params::getInstance().aln_file = "";
+    Params::getInstance().aln_file = (char*) "";
     Params::getInstance().model_name = model;
     
     if (intree != "") {
