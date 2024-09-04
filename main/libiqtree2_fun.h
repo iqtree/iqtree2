@@ -34,4 +34,7 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
 string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 0,
                    string model_set = "", string freq_set = "", string rate_set = "");
 
+// Build pairwise JC distance matrix
+string build_distmatrix(vector<string>& names, vector<string>& seqs);
+
 #endif /* LIBIQTREE2_FUN */

@@ -172,6 +172,74 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
     return output;
 }
 
+// Build pairwise JC distance matrix
+string build_distmatrix(vector<string>& names, vector<string>& seqs) {
+    string output;
+    string prog = "build_matrix";
+    
+    try {
+        int n = names.size();
+        int n_sq = n * n;
+        if (n <= 1) {
+            output = "1\n" + names[0] + " 0";
+        } else {
+            double* distmat = new double[n_sq];
+            memset(distmat, 0, sizeof(double) * n_sq);
+            extern VerboseMode verbose_mode;
+            progress_display::setProgressDisplay(false);
+            verbose_mode = VB_QUIET; // (quiet mode)
+            Params params = Params::getInstance();
+            params.setDefault();
+
+            int rand_seed = make_new_seed();
+            string out_prefix_str = prog + "_" + convertIntToString(rand_seed);
+            _log_file = out_prefix_str + ".log";
+            bool append_log = false;
+            startLogFile(append_log);
+
+        #ifdef _OPENMP
+            if (Params::getInstance().num_threads >= 1) {
+                omp_set_num_threads(Params::getInstance().num_threads);
+                Params::getInstance().num_threads = omp_get_max_threads();
+            }
+            int max_procs = countPhysicalCPUCores();
+            cout << " - ";
+            if (Params::getInstance().num_threads > 0)
+                cout << Params::getInstance().num_threads  << " threads";
+            else
+                cout << "auto-detect threads";
+            cout << " (" << max_procs << " CPU cores detected)";
+            if (Params::getInstance().num_threads  > max_procs) {
+                cout << endl;
+                outError("You have specified more threads than CPU cores available");
+            }
+            omp_set_max_active_levels(1);
+        #else
+            if (Params::getInstance().num_threads != 1) {
+                cout << endl << endl;
+                outError("Number of threads must be 1 for sequential version.");
+            }
+        #endif
+            
+            PhyloTree ptree;
+            ptree.aln = new Alignment(names, seqs, params.sequence_type, params.model_name);
+            ptree.computeObsDist(distmat);
+            stringstream ss;
+            ptree.aln->printDist(ss, distmat);
+            output = ss.str();
+            delete[] distmat;
+            delete ptree.aln;
+
+            funcExit();
+        }
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+    return output;
+}
+
 
 // ----------------------------------------------
 // function for performing plylogenetic analysis

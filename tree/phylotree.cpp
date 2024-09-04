@@ -3668,17 +3668,28 @@ double PhyloTree::computeObsDist(double *dist_mat) {
     #pragma omp parallel for schedule(dynamic)
     #endif
     for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
-        size_t pos = seq1*nseqs;
-        for (size_t seq2 = 0; seq2 < nseqs; ++seq2, ++pos) {
+        size_t pos = seq1*nseqs + seq1;
+        for (size_t seq2 = seq1; seq2 < nseqs; ++seq2, ++pos) {
             if (seq1 == seq2)
                 dist_mat[pos] = 0.0;
-            else if (seq2 > seq1) {
+            else {
                 dist_mat[pos] = aln->computeObsDist(seq1, seq2);
-            } else
-                dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
-            if (dist_mat[pos] > longest_dist) {
-                longest_dist = dist_mat[pos];
             }
+            #pragma omp critical
+            {
+                if (dist_mat[pos] > longest_dist) {
+                    longest_dist = dist_mat[pos];
+                }
+            }
+        }
+    }
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic)
+    #endif
+    for (size_t seq1 = 0; seq1 < nseqs; ++seq1) {
+        size_t pos = seq1*nseqs;
+        for (size_t seq2 = 0; seq2 < seq1; ++seq2, ++pos) {
+            dist_mat[pos] = dist_mat[seq2 * nseqs + seq1];
         }
     }
     return longest_dist;
