@@ -223,7 +223,19 @@ string build_distmatrix(vector<string>& names, vector<string>& seqs) {
             
             PhyloTree ptree;
             ptree.aln = new Alignment(names, seqs, params.sequence_type, params.model_name);
-            ptree.computeObsDist(distmat);
+            
+            // compute the matrix
+            for (int i = 0; i < n; i++) {
+                double* dmat = distmat + i * n;
+                // j = i
+                dmat[i] = 0.0;
+                // j != i
+                for (int j = i+1; j < n; j++) {
+                    dmat[j] = ptree.aln->computeJCDist(i, j);
+                    distmat[j * n + i] = dmat[j];
+                }
+            }
+            
             stringstream ss;
             ptree.aln->printDist(ss, distmat);
             output = ss.str();
