@@ -32,13 +32,17 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
 // model_set -- a set of models to consider
 // freq_set -- a set of frequency types
 // rate_set -- a set of RHAS models
+// rand_seed -- random seed, if 0, then will generate a new random seed
 string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 0,
                    string model_set = "", string freq_set = "", string rate_set = "");
 
 // Build pairwise JC distance matrix
+// output: a phylip-formated distance matrix (in string format)
 string build_distmatrix(vector<string>& names, vector<string>& seqs);
 
 // Using Rapid-NJ to build tree from a distance matrix
+// input: a phylip-formated distance matrix (in string format)
+// output: a newick tree (in string format)
 string build_njtree(string dist_matrix);
 
 #endif /* LIBIQTREE2_FUN */
