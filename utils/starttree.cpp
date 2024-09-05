@@ -122,6 +122,16 @@ bool BenchmarkingTreeBuilder::constructTree
         return result;
     }
 
+bool BenchmarkingTreeBuilder::constructTree2
+    ( std::istream &distanceMatrix
+     , std::ostream & newickTree) {
+        bool result = (!builders.empty());
+        for (auto it=builders.begin(); it!=builders.end(); ++it) {
+            result &= (*it)->constructTree2(distanceMatrix, newickTree);
+        }
+        return result;
+    }
+
 void BenchmarkingTreeBuilder::setZippedOutput(bool zipIt) {
     isOutputToBeZipped = zipIt;
 }

@@ -193,6 +193,68 @@ public:
         cluster.countOfExteriorNodes += at(c).countOfExteriorNodes;
         return cluster;
     }
+
+    void writeTreeToStream(std::ostream& out) const {
+        struct Place
+        {
+            //
+            //Used for keep of tracking where we're up to when
+            //we are writing out the description of a Cluster.
+            //
+        public:
+            size_t clusterIndex;
+            size_t linkNumber;
+            Place(size_t ix, size_t num) {
+                clusterIndex = ix;
+                linkNumber = num;
+            }
+        };
+        
+        out.precision(8);
+        std::vector<Place> stack;
+        bool failed = false; //Becomes true if clusters
+        //defines cycles (should never happen)
+        //Indicates a fatal logic error
+        size_t maxLoop = 3 * size();
+        //More than this, and there must be
+        //a cycle.  Or something.
+        
+        stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
+        do {
+            --maxLoop;
+            if (maxLoop==0) {
+                failed = true;
+                break;
+            }
+            Place here = stack.back();
+            const Cluster<T>& cluster = at(here.clusterIndex);
+            stack.pop_back();
+            if (cluster.links.empty()) {
+                out << cluster.name;
+                continue;
+            }
+            if (here.linkNumber==0) {
+                out << "(";
+                stack.emplace_back(here.clusterIndex, 1);
+                stack.emplace_back(cluster.links[0].clusterIndex, 0);
+                continue;
+            }
+            size_t nextChildNum = here.linkNumber;
+            const Link<T> & linkPrev = cluster.links[nextChildNum-1];
+            out << ":" << linkPrev.linkDistance;
+            if (nextChildNum<cluster.links.size()) {
+                out << ",";
+                const Link<T> & linkNext = cluster.links[nextChildNum];
+                stack.emplace_back(here.clusterIndex, nextChildNum+1);
+                stack.emplace_back(linkNext.clusterIndex, 0);
+            } else {
+                out << ")";
+            }
+        } while (0 < stack.size());
+        out << ";" << std::endl;
+    }
+
+    
     template <class F> bool writeTreeToFile(const std::string &treeFilePath, F& out) const {
         struct Place
         {
@@ -212,49 +274,7 @@ public:
         out.exceptions(std::ios::failbit | std::ios::badbit);
         try {
             out.open(treeFilePath.c_str(), std::ios_base::out);
-            out.precision(8);
-            
-            std::vector<Place> stack;
-            bool failed = false; //Becomes true if clusters
-            //defines cycles (should never happen)
-            //Indicates a fatal logic error
-            size_t maxLoop = 3 * size();
-            //More than this, and there must be
-            //a cycle.  Or something.
-            
-            stack.emplace_back(size()-1, 0); //assumes: size is at least 1!
-            do {
-                --maxLoop;
-                if (maxLoop==0) {
-                    failed = true;
-                    break;
-                }
-                Place here = stack.back();
-                const Cluster<T>& cluster = at(here.clusterIndex);
-                stack.pop_back();
-                if (cluster.links.empty()) {
-                    out << cluster.name;
-                    continue;
-                }
-                if (here.linkNumber==0) {
-                    out << "(";
-                    stack.emplace_back(here.clusterIndex, 1);
-                    stack.emplace_back(cluster.links[0].clusterIndex, 0);
-                    continue;
-                }
-                size_t nextChildNum = here.linkNumber;
-                const Link<T> & linkPrev = cluster.links[nextChildNum-1];
-                out << ":" << linkPrev.linkDistance;
-                if (nextChildNum<cluster.links.size()) {
-                    out << ",";
-                    const Link<T> & linkNext = cluster.links[nextChildNum];
-                    stack.emplace_back(here.clusterIndex, nextChildNum+1);
-                    stack.emplace_back(linkNext.clusterIndex, 0);
-                } else {
-                    out << ")";
-                }
-            } while (0 < stack.size());
-            out << ";" << std::endl;
+            writeTreeToStream(out);
             out.close();
             return true;
         } catch (std::ios::failure &) {
@@ -520,31 +540,37 @@ public:
     virtual std::string getAlgorithmName() const {
         return "UPGMA";
     }
+    void loadMatrixFromStream(std::istream &in) {
+        size_t rank;
+        in >> rank;
+        setSize(rank);
+        progress_display progress(rank, "Loading distance matrix", "loaded", "row");
+        for (size_t r=0; r<n; ++r) {
+            std::string name;
+            in >> name;
+            clusters.addCluster(name);
+            for (size_t c=0; c<n; ++c) {
+                in >> rows[r][c];
+                //Ensure matrix is symmetric (as it is read!)
+                if (c<r && rows[r][c] != rows[c][r]) {
+                    T v = ( rows[r][c] + rows[c][r] ) * 0.5;
+                    rows[c][r] = v; //U-R
+                    rows[r][c] = v;
+                }
+            }
+            rowToCluster.emplace_back(r);
+            ++progress;
+        }
+        calculateRowTotals();
+    }
     bool loadMatrixFromFile(const std::string &distanceMatrixFilePath) {
         size_t rank;
         igzstream in;
+
         try {
             in.exceptions(std::ios::failbit | std::ios::badbit);
             in.open(distanceMatrixFilePath.c_str(), std::ios_base::in);
-            in >> rank;
-            setSize(rank);
-            progress_display progress(rank, "Loading distance matrix", "loaded", "row");
-            for (size_t r=0; r<n; ++r) {
-                std::string name;
-                in >> name;
-                clusters.addCluster(name);
-                for (size_t c=0; c<n; ++c) {
-                    in >> rows[r][c];
-                    //Ensure matrix is symmetric (as it is read!)
-                    if (c<r && rows[r][c] != rows[c][r]) {
-                        T v = ( rows[r][c] + rows[c][r] ) * 0.5;
-                        rows[c][r] = v; //U-R
-                        rows[r][c] = v;
-                    }
-                }
-                rowToCluster.emplace_back(r);
-                ++progress;
-            }
+            loadMatrixFromStream(in);
             in.close();
         } catch (std::ios::failure &) {
             std::cerr << "Load matrix failed: IO error"
@@ -557,7 +583,7 @@ public:
             std::cerr << "Load matrix failed: " << str << std::endl;
             return false;
         }
-        calculateRowTotals();
+
         //Note: The old code wrote a message to standard output,
         //      if the matrix was not symmetric.  This code doesn't.
         return true;
@@ -605,6 +631,9 @@ public:
     }
     bool writeTreeFile(const std::string &treeFilePath) const {
         return clusters.writeTreeFile(isOutputToBeZipped, treeFilePath);
+    }
+    void writeTreeStream(std::ostream &treestream) const {
+        clusters.writeTreeToStream(treestream);
     }
 protected:
     virtual void setSize(size_t rank) {

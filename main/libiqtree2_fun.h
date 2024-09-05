@@ -5,6 +5,7 @@
 #include "tree/phylotree.h"
 #include "utils/tools.h"
 #include "main/alisim.h"
+#include "utils/starttree.h"
 #include "suppFunc.h"
 #include <vector>
 #include <string>
@@ -36,5 +37,8 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 
 
 // Build pairwise JC distance matrix
 string build_distmatrix(vector<string>& names, vector<string>& seqs);
+
+// Using Rapid-NJ to build tree from a distance matrix
+string build_njtree(string dist_matrix);
 
 #endif /* LIBIQTREE2_FUN */

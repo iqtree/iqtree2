@@ -38,6 +38,9 @@ namespace StartTree
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath) = 0;
+        virtual bool constructTree2
+            ( std::istream &distanceMatrix
+             , std::ostream & newickTree) = 0;
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
              , double *distanceMatrix
@@ -131,6 +134,15 @@ namespace StartTree
                 builder.setZippedOutput(isOutputToBeZipped);
                 return builder.writeTreeFile(newickTreeFilePath);
             }
+        virtual bool constructTree2
+            ( std::istream &distanceMatrix
+             , std::ostream & newickTree) {
+                B builder;
+                builder.loadMatrixFromStream(distanceMatrix);
+                constructTreeWith(builder);
+                builder.writeTreeStream(newickTree);
+                return true;
+            }
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
             , double *distanceMatrix
@@ -160,6 +172,9 @@ namespace StartTree
         virtual bool constructTree
             ( const std::string &distanceMatrixFilePath
              , const std::string & newickTreeFilePath);
+        virtual bool constructTree2
+            ( std::istream &distanceMatrix
+             , std::ostream &newickTree);
         virtual bool constructTreeInMemory
             ( const std::vector<std::string> &sequenceNames
             , double *distanceMatrix

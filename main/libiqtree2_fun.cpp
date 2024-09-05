@@ -252,6 +252,40 @@ string build_distmatrix(vector<string>& names, vector<string>& seqs) {
     return output;
 }
 
+// Using Rapid-NJ to build tree from a distance matrix
+string build_njtree(string dist_matrix) {
+    string output;
+
+    try {
+        string prog = "build_njtree";
+        extern VerboseMode verbose_mode;
+        progress_display::setProgressDisplay(false);
+        verbose_mode = VB_QUIET; // (quiet mode)
+        Params params = Params::getInstance();
+        params.setDefault();
+        
+        int rand_seed = make_new_seed();
+        string out_prefix_str = prog + "_" + convertIntToString(rand_seed);
+        _log_file = out_prefix_str + ".log";
+        bool append_log = false;
+        startLogFile(append_log);
+        
+        string algn_name = "NJ-R"; // Rapid NJ
+        StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algn_name);
+        stringstream ss(dist_matrix);
+        stringstream stree;
+        if (!algorithm->constructTree2(ss, stree)) {
+            outError("Tree construction failed.");
+        }
+        output = stree.str();
+        funcExit();
+    } catch (std::runtime_error& e) {
+        // reset the output and error buffers
+        funcExit();
+        throw e;
+    }
+    return output;
+}
 
 // ----------------------------------------------
 // function for performing plylogenetic analysis
