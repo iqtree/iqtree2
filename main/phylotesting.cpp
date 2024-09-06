@@ -1681,18 +1681,19 @@ int CandidateModelSet::generate(Params &params, Alignment *aln, bool separate_ra
     bool auto_model = iEquals(model_set, "AUTO");
 
 // if use model revelator with model finder, get the model names from the neural network
-    double alpha;
     if (params.nnSubModel && seq_type==SEQ_DNA){ // check seq == DNA and model_set is not 1
 #if defined(_NN) || defined(_OLD_NN)
-        Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
-        NeuralNetwork nn(alignment);
-        if (model_set != "1")
+        if (model_set != "1") {
+            Alignment *alignment = (aln->removeAndFillUpGappySites())->replaceAmbiguousChars();
+            NeuralNetwork nn(alignment);
             getModelSubstNN(seq_type, &nn, model_names);
-        else
+            delete alignment;
+
+        } else {
             getModelSubst(seq_type, aln->isStandardGeneticCode(), params.model_name,
                           model_set, params.model_subset, model_names);
+        }
 
-        delete alignment;
 #else
         outError("Please recompile with NN support to use model revelator with model finder");
 #endif
