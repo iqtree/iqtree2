@@ -2719,10 +2719,11 @@ void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, str
             for (int i = 0; i < segment_length; i++){
                 // handle gaps
                 if (segment_start + (i + 1) - 1 < input_sequence.length()
-                    && input_sequence[segment_start + i] == '-')
+                    && (input_sequence[segment_start + i] == '-'
+                        || input_sequence[segment_start + i] == '.'))
                 {
                     // insert gaps
-                    output[i] = '-';
+                    output[i] = input_sequence[segment_start + i];
                 }
                 // if it's not a gap
                 else
@@ -2739,8 +2740,11 @@ void AliSimulator::exportSequenceWithGaps(vector<short int> &sequence_chunk, str
                 // handle gaps
                 if (segment_start_plus_index + 2 < input_sequence.length()
                     && (input_sequence[segment_start_plus_index] == '-'
-                            || input_sequence[segment_start_plus_index + 1] == '-'
-                            || input_sequence[segment_start_plus_index + 2] == '-')){
+                        || input_sequence[segment_start_plus_index + 1] == '-'
+                        || input_sequence[segment_start_plus_index + 2] == '-'
+                        || input_sequence[segment_start_plus_index] == '.'
+                        || input_sequence[segment_start_plus_index + 1] == '.'
+                        || input_sequence[segment_start_plus_index + 2] == '.')){
                     // insert gaps
                     output[index] =  input_sequence[segment_start_plus_index];
                     output[index + 1] =  input_sequence[segment_start_plus_index + 1];
