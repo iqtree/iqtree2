@@ -1622,6 +1622,8 @@ string CandidateModel::evaluate(Params &params,
 #endif
     iqtree->getModelFactory()->restoreCheckpoint();
     
+    bool rate_restored = iqtree->getRate()->hasCheckpoint();
+    
     // now switch to the output checkpoint
     iqtree->getModelFactory()->setCheckpoint(&out_model_info);
     iqtree->setCheckpoint(&out_model_info);
@@ -1676,8 +1678,19 @@ string CandidateModel::evaluate(Params &params,
 
         iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
+        
+        // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
+        CandidateModel prev_info;
+        double weight_rescale = 1.0;
 
-        for (int step = 0; step < 2; step++) {
+        bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
+        if (!rate_restored && prev_rate_present) {
+            iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+            if (verbose_mode >= VB_MED)
+                cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
+        }
+
+        for (int step = 0; step < 5; step++) {
             new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
                 params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
             tree_len = iqtree->treeLength();
@@ -1685,17 +1698,17 @@ string CandidateModel::evaluate(Params &params,
             iqtree->saveCheckpoint();
 
             // check if logl(+R[k]) is worse than logl(+R[k-1])
-            CandidateModel prev_info;
-            if (!prev_info.restoreCheckpointRminus1(&in_model_info, this)) break;
+            if (!prev_rate_present) break;
             if (prev_info.logl < new_logl + params.modelfinder_eps) break;
-            if (step == 0) {
-                iqtree->getRate()->initFromCatMinusOne();
-            } else if (new_logl < prev_info.logl - params.modelfinder_eps*10.0) {
-                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                           getName() + " worse than " + prev_info.getName() + " " + convertDoubleToString(prev_info.logl));
-            }
+            weight_rescale *= 0.5;
+            iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+            cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name 
+                 << " with factor " << weight_rescale << endl;
         }
-
+        if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps*10.0) {
+            outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                       getName() + " worse than " + prev_info.getName() + " " + convertDoubleToString(prev_info.logl));
+        }
     }
 
     // sum in case of adjusted df and logl already stored
@@ -2611,7 +2624,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             cout << "codon/AA/DNA";
         else
             cout << getSeqTypeName(in_tree->aln->seq_type);
-        cout << " models (sample size: " << ssize << ") ..." << endl;
+        cout << " models (sample size: " << ssize << " epsilon: " << params.modelfinder_eps << ") ..." << endl;
         if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
@@ -2765,6 +2778,9 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
             }
         }
 
+        // BQM 2024-06-22: save checkpoint for starting values of next model
+        model_info.putSubCheckpoint(&out_model_info, "");
+
 		if (at(model).AIC_score < best_score_AIC) {
             best_model_AIC = model;
             best_score_AIC = at(model).AIC_score;
@@ -2772,7 +2788,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 best_tree_AIC = tree_string;
             // only update model_info with better model
             if (params.model_test_criterion == MTC_AIC) {
-                model_info.putSubCheckpoint(&out_model_info, "");
+                //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
             }
         }
@@ -2783,7 +2799,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 best_tree_AICc = tree_string;
             // only update model_info with better model
             if (params.model_test_criterion == MTC_AICC) {
-                model_info.putSubCheckpoint(&out_model_info, "");
+                //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
             }
         }
@@ -2795,7 +2811,7 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
                 best_tree_BIC = tree_string;
             // only update model_info with better model
             if (params.model_test_criterion == MTC_BIC) {
-                model_info.putSubCheckpoint(&out_model_info, "");
+                //model_info.putSubCheckpoint(&out_model_info, "");
                 best_aln = at(model).aln;
             }
         }

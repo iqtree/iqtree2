@@ -323,7 +323,7 @@ void reportNexusFile(ostream &out, ModelSubst *m) {
     double f = 1.0 / m->num_states;
     for (i = 0; i < m->num_states; i++)
         out << " " << f;
-    out << endl;
+    out << ";" << endl;
     out.precision(4);
     out << "end;" << endl;
 }
@@ -1265,7 +1265,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
         out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR
-            << iqtree_VERSION_PATCH << " COVID-edition built " << __DATE__ << endl
+            << iqtree_VERSION_PATCH << " built " << __DATE__ << endl
                 << endl;
         if (params.partition_file)
             out << "Partition file name: " << params.partition_file << endl;
@@ -4597,11 +4597,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 }
 
 bool runCMaple(Params &params)
-{
-#if defined(__ARM_NEON)
-    outError("Sorry! CMAPLE has not supported Apple Chip yet. We're working to make it work soon!");
-#endif
-    
+{    
 #if !defined(USE_CMAPLE)
     outWarning("This version was not compiled with CMAPLE integrated. Running IQ-TREE algorithm...");
     return false;

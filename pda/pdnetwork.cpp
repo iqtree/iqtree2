@@ -1060,14 +1060,14 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 	ofstream out;
 	if (params.nr_output == 1) {
 		if (params.run_mode == PD_USER_SET || !isPDArea()) {
-			sprintf(filename, "%s.pdtaxa", params.out_prefix);
+			snprintf(filename, 300, "%s.pdtaxa", params.out_prefix);
 			cout << "All taxa list(s) printed to " << filename << endl;
 		} else { 
-			sprintf(filename, "%s.pdarea", params.out_prefix);
+			snprintf(filename, 300, "%s.pdarea", params.out_prefix);
 			cout << "All area list(s) printed to " << filename << endl;
 		}
 		out.open(filename);
-		sprintf(scorename, "%s.score", params.out_prefix);
+		snprintf(scorename, 300, "%s.score", params.out_prefix);
 		scoreout.open(scorename);
 	}
 	double total_weight = calcWeight();
@@ -1089,11 +1089,11 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 			//if (count != c_old) {
 			if (c_num == 0) {
 				//c_num = 0;
-				sprintf(filename, "%s.%d.pdtaxa", params.out_prefix, count);
+				snprintf(filename, 300, "%s.%d.pdtaxa", params.out_prefix, count);
 			}
 			else {
 				//c_num++;
-				sprintf(filename, "%s.%d.pdtaxa.%d", params.out_prefix, count, c_num);
+				snprintf(filename, 300, "%s.%d.pdtaxa.%d", params.out_prefix, count, c_num);
 			}
 			//if (fabs(w_old - this_set->getWeight()) > 1e-5 || (c_old != count))
 	//			if (params.nr_output == 1)

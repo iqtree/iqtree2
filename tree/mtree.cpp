@@ -2635,8 +2635,13 @@ void MTree::computeRFDist(istream &in, DoubleVector &dist, int assign_sup, bool 
 		// create the map from taxa between 2 trees
 		Split taxa_mask(leafNum);
 		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-            if (name_index.find(*it) == name_index.end())
-                outError("Taxon not found in full tree: ", *it);
+			if (name_index.find(*it) == name_index.end()) {
+                        	if (*it == "__root__") {
+					cout << "WARNING : By default, trees without a multifurcation at the root are treated as rooted." << endl;
+					cout << "          You may need to change your tree structure." << endl;
+				}
+                        outError("Taxon not found in full tree: ", *it);
+			} 
 			taxid = name_index[*it];
 			taxa_mask.addTaxon(taxid);
 		}
@@ -2746,9 +2751,9 @@ void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, Spl
 				//Split *sp = ass_it->first;
 				/*char tmp[100];
 				if ((*it)->node->name.empty()) {
-					sprintf(tmp, "%d", round(sp->getWeight()));
+					snprintf(tmp, 100, "%d", round(sp->getWeight()));
 				} else
-					sprintf(tmp, "/%d", round(sp->getWeight()));*/
+					snprintf(tmp, 100, "/%d", round(sp->getWeight()));*/
 				stringstream tmp;
 				if ((*it)->node->name.empty())
 				  tmp << sp->getWeight();

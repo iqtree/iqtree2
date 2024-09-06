@@ -42,6 +42,14 @@ if (USE_CMAPLE)
 	terraceanalysis.cpp
 	terraceanalysis.h
 	)
+
+	if (USE_BOOSTER)
+    		target_link_libraries(main-aa booster)
+	endif()
+
+	if (USE_LSD2)
+    		target_link_libraries(main-aa lsd2)
+	endif()
     
     target_link_libraries(main-aa pda whtest vectorclass terrace maple-aa)
 endif()

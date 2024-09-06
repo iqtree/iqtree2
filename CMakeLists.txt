@@ -87,7 +87,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH ".5.cmaple")
+set (iqtree_VERSION_PATCH ".6")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
@@ -239,17 +239,17 @@ set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
 set(CLANG_UNDER_VS "FALSE") #Clang compiler, used from inside Visual Studio
-# using C++11 standard
+# using C++17 standard
 # disable AVX for NEON
 if (__ARM_NEON)
     set(IQTREE_FLAGS "${IQTREE_FLAGS} novx")
 elseif (CMAKE_CXX_COMPILER MATCHES "VISUAL STUDIO")
     set(CLANG_UNDER_VS "TRUE")
-    #it won't recognize the -std=c++11 parameter.
+    #it won't recognize the -std=c++17 parameter.
     #Todo: don't hard-code this; figure out some way it can be passed in (though ideally, not the whole shebang).
     include_directories("C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\Llvm\\lib\\clang\\10.0.0\\include")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
@@ -288,7 +288,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (APPLE)
         SET(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
     endif()
 
     #remove -rdynamic for Clang under Linux
@@ -673,7 +673,8 @@ check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
 check_function_exists (strndup HAVE_STRNDUP)
 check_function_exists (strtok_r HAVE_STRTOK_R)
-
+include (CheckIncludeFile)
+CHECK_INCLUDE_FILE("unistd.h" HAVE_UNISTDH)
 find_package(Backtrace)
 
 # configure a header file to pass some of the CMake settings

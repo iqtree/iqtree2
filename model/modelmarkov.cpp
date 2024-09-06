@@ -1634,7 +1634,7 @@ void ModelMarkov::decomposeRateMatrixRev() {
     delete [] rate_matrix;
 }
 
-void ModelMarkov::readRates(istream &in) throw(const char*, string) {
+void ModelMarkov::readRates(istream &in) noexcept(false) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -1699,7 +1699,7 @@ void ModelMarkov::readRates(istream &in) throw(const char*, string) {
     }
 }
 
-void ModelMarkov::readRates(string str) throw(const char*) {
+void ModelMarkov::readRates(string str) noexcept(false) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
     
@@ -1736,7 +1736,7 @@ void ModelMarkov::readRates(string str) throw(const char*) {
 
 }
 
-void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
+void ModelMarkov::readStateFreq(istream &in) noexcept(false) {
 	int i;
 	for (i = 0; i < num_states; i++) {
         string tmp_value;
@@ -1758,7 +1758,7 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
     }
 }
 
-void ModelMarkov::readStateFreq(string str) throw(const char*) {
+void ModelMarkov::readStateFreq(string str) noexcept(false) {
 	int i;
 	int end_pos = 0;
     

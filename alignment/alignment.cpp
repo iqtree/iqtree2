@@ -3544,7 +3544,7 @@ Alignment *Alignment::convertCodonToDNA() {
     return res;
 }
 
-void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
+void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) noexcept(false) {
 
     // parse the lower bound of the range
     int d = strtol(str, &endptr, 10);

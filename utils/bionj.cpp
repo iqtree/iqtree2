@@ -769,7 +769,7 @@ public :
                 Concatenate(chain1, *a, trees, 0);     /* branch-lengths according */
                 strcpy(chain1,"");                     /* to the NEWICK format   */
                 strcat(chain1,":");
-                sprintf(chain1+strlen(chain1),"%10.8f",la);
+                snprintf(chain1+strlen(chain1),1000,"%10.8f",la);
                 strcat(chain1,",");
                 Concatenate(chain1,*a, trees, 1);
                 trees[*a].tail->suiv=trees[*b].head;
@@ -777,7 +777,7 @@ public :
                 strcpy(chain1,"");
                 strcat(chain1,":");
                 
-                sprintf(chain1+strlen(chain1),"%10.8f",lb);
+                snprintf(chain1+strlen(chain1),1000,"%10.8f",lb);
                 /* 	  gcvt(lb, PREC, chain2); */
                 /* 	  strcat(chain1, chain2); */
                 strcat(chain1,")");
