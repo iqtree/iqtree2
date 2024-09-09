@@ -2767,15 +2767,6 @@ public:
     *  site starting index (for predefined mutations in AliSim)
     */
     int site_starting_index;
-    
-    /**
-    *  scheme to rescale the substitution model in a mixture model
-    *  0 -- default mode: if codon-mixture model, use option 1; otherwise, use option 2
-    *  1 -- each class individually such that the expected number of substitutions = 1
-    *  2 -- same scaling on all the classes such that the expected number of substitutions of the whole mixture = 1
-    */
-    int rescale_mix_scheme;
-
 };
 
 /**
