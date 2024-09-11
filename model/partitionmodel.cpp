@@ -27,6 +27,7 @@ PartitionModel::PartitionModel()
 {
 	linked_alpha = -1.0;
     opt_gamma_invar = false;
+    partLike = NULL;
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
@@ -43,6 +44,9 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
 	model = new ModelSubst(tree->aln->num_states);
 	site_rate = new RateHeterogeneity();
 	site_rate->setTree(tree);
+    
+    // create an array to store the log-likelihood for each partition
+    partLike = new double[tree->size()];
 
 //    string model_name = params.model_name;
     PhyloSuperTree::iterator it;
@@ -292,18 +296,40 @@ double PartitionModel::targetFunk(double x[]) {
     double res = 0;
     int ntrees = tree->size();
     if (tree->part_order.empty()) tree->computePartitionOrder();
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)
-#endif
+    string modelname = model->getName();
+    
+    // reset the array to store the log-likelihoods for each partition
+    memset(partLike, 0, sizeof(double) * ntrees);
+    
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic) if(tree->num_threads > 1)
+    #endif
     for (int j = 0; j < ntrees; j++) {
+        
         int i = tree->part_order[j];
         ModelSubst *part_model = tree->at(i)->getModel();
-        if (part_model->getName() != model->getName())
+
+        if (part_model->getName() != modelname)
             continue;
+
         bool fixed = part_model->fixParameters(false);
-        res += part_model->targetFunk(x);
+        double ans = part_model->targetFunk(x);
         part_model->fixParameters(fixed);
+
+        #pragma omp critical
+        {
+            partLike[j] = ans;
+        }
     }
+    
+    // calculate the sum
+    // different order of the computation due to
+    // openmp will not affect the value
+    res = 0.0;
+    for (int j = 0; j < ntrees; j++) {
+        res += partLike[j];
+    }
+    
     if (res == 0.0)
         outError("No partition has model ", model->getName());
     return res;
@@ -542,6 +568,8 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
 
 PartitionModel::~PartitionModel()
 {
+    if (partLike != NULL)
+        delete[] partLike;
 }
 
 bool PartitionModel::isUnstableParameters() {
