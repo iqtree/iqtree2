@@ -1233,6 +1233,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     }
 
     if (nest_network.size() == 0 && iqtree.aln->seq_type == SEQ_DNA) {
+        // build the nest relationship between the models
+        // we will use the optimized parameters of the last model which is nested by this model
+        // as the initial parameters of this model
         StrVector model_names, freq_names;
         getModelSubst(iqtree.aln->seq_type, iqtree.aln->isStandardGeneticCode(), params.model_name,
                       params.model_set, params.model_subset, model_names);
@@ -3859,63 +3862,104 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
 
 #endif // _IQTREE_MPI
 
-// retreive the answers from checkpoint (for merging)
+// retreive the answers from checkpoint
 // and remove those jobs from the array jobIDs
-void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs) {
+void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int job_type) {
 
-    CandidateModel best_model;
     vector<char> to_delete;
 
-    // for merging partitions
-    for (int j = 0; j < jobs.size(); j++) {
-        ModelPair cur_pair;
-        double lhnew;
-        int dfnew;
-        int job_type = 2; // compute the best model for the merge
-        double t_begin;
-        double t_wait_begin;
-        int pair = jobs[j].first;
-
-        // information of current partitions pair
-        cur_pair.part1 = closest_pairs[pair].first;
-        cur_pair.part2 = closest_pairs[pair].second;
-        ASSERT(cur_pair.part1 < cur_pair.part2);
-        cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
-        cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
-        cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
-        
-        // check whether the pair was previously examined, reuse the information
-        model_info->startStruct(cur_pair.set_name);
-        if (model_info->getBestModel(best_model.subst_name)) {
-            best_model.restoreCheckpoint(model_info);
-            cur_pair.logl = best_model.logl;
-            cur_pair.df = best_model.df;
-            cur_pair.model_name = best_model.getName();
-            cur_pair.tree_len = best_model.tree_len;
-            lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
-            dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
-            cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
-            to_delete.push_back(1);
-        } else {
-            to_delete.push_back(0);
+    if (job_type == 1) {
+        // for partition
+        for (int j = 0; j < jobs.size(); j++) {
+            int tree_id = jobs[j].first;
+            PhyloTree *this_tree = in_tree->at(tree_id);
+            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterionName(params->model_test_criterion);
+            string bestModel;
+            string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterionName(params->model_test_criterion);
+            double bestScore;
+            if (model_info->getString(bestModel_key, bestModel) && model_info->get(bestScore_key, bestScore)) {
+                string val_key = this_tree->aln->name + CKP_SEP + bestModel;
+                string val;
+                if (model_info->getString(val_key, val)) {
+                    // this job has been done in the previous run
+                    stringstream str(val);
+                    double logl, df, tree_len;
+                    str >> logl >> df >> tree_len;
+                    // show the results
+                    num_model++;
+                    cout.width(4);
+                    cout << right << num_model << " ";
+                    cout.width(12);
+                    cout << left << bestModel << " ";
+                    cout.width(11);
+                    cout << bestScore << " ";
+                    cout.width(11);
+                    cout << tree_len << " ";
+                    cout << this_tree->aln->name;
+                    cout << endl;
+                    to_delete.push_back(1);
+                } else {
+                    to_delete.push_back(0);
+                }
+            } else {
+                to_delete.push_back(0);
+            }
         }
-        model_info->endStruct();
+    } else if (job_type == 2) {
+        // for merging partitions
+        for (int j = 0; j < jobs.size(); j++) {
+            CandidateModel best_model;
+            ModelPair cur_pair;
+            double lhnew;
+            int dfnew;
+            int job_type = 2; // compute the best model for the merge
+            double t_begin;
+            double t_wait_begin;
+            int pair = jobs[j].first;
+            
+            // information of current partitions pair
+            cur_pair.part1 = closest_pairs[pair].first;
+            cur_pair.part2 = closest_pairs[pair].second;
+            ASSERT(cur_pair.part1 < cur_pair.part2);
+            cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
+            cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
+            cur_pair.set_name = getSubsetName(in_tree, cur_pair.merged_set);
+            
+            // check whether the pair was previously examined, reuse the information
+            model_info->startStruct(cur_pair.set_name);
+            if (model_info->getBestModel(best_model.subst_name)) {
+                best_model.restoreCheckpoint(model_info);
+                cur_pair.logl = best_model.logl;
+                cur_pair.df = best_model.df;
+                cur_pair.model_name = best_model.getName();
+                cur_pair.tree_len = best_model.tree_len;
+                lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
+                dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
+                cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
+                to_delete.push_back(1);
+            } else {
+                to_delete.push_back(0);
+            }
+            model_info->endStruct();
+        }
     }
     
-    // remove the finished jobs from the list
-    int k = 0;
-    for (int j = 0; j < jobs.size(); j++) {
-        if (!to_delete[j]) {
-            if (j > k) {
-                jobs[k] = jobs[j];
+    if (to_delete.size() == jobs.size()) {
+        // remove the finished jobs from the list
+        int k = 0;
+        for (int j = 0; j < jobs.size(); j++) {
+            if (!to_delete[j]) {
+                if (j > k) {
+                    jobs[k] = jobs[j];
+                }
+                k++;
             }
-            k++;
         }
+        if (k == 0)
+            jobs.clear();
+        else if (k < jobs.size())
+            jobs.resize(k);
     }
-    if (k == 0)
-        jobs.clear();
-    else if (k < jobs.size())
-        jobs.resize(k);
 }
 
 #ifdef _IQTREE_MPI
@@ -4288,10 +4332,9 @@ void PartitionFinder::getBestModel(int job_type) {
     if (!params->model_test_and_tree && jobIDs.size() > 1) {
         if ((num_threads > 1 && num_processes == 1)|| (num_processes > 1 && MPIHelper::getInstance().isMaster())) {
 
-            // for merging partitions, retreive the answers from checkpoint
+            // retreive the answers from checkpoint
             // and remove those jobs from the array jobIDs
-            if (job_type == 2)
-                retreiveAnsFrChkpt(jobIDs);
+            retreiveAnsFrChkpt(jobIDs, job_type);
 
             // sort the jobs
             std::sort(jobIDs.begin(), jobIDs.end(), compareJob);
