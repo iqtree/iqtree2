@@ -192,7 +192,7 @@ int num_gpus = 0;
     if (!has_gpu) {
         printf("No GPU found\n");
     } else {
-        printf("Number of GPUs = %d\n", num_gpus);
+//        printf("Number of GPUs = %d\n", num_gpus);
         int thread_id = 0;
 #ifdef _OPENMP
         thread_id = omp_get_thread_num();
@@ -357,13 +357,22 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector
 
     float cumulative_sum = 0.0;
 
+    bool isGTR = false;
+
     // Accumulate probabilities until the cumulative sum exceeds 0.95
     for (const auto& pair : indexed_probabilities) {
         cumulative_sum += pair.second;
         model_names -> push_back(model_index_map[pair.first]);
+        if (pair.first == 5) {
+            isGTR = true;
+        }
         if (cumulative_sum > Params::getInstance().model_revelator_confidence) {
             break;
         }
+    }
+
+    if (!isGTR) {
+        model_names -> push_back("GTR");
     }
 
 }
