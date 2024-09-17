@@ -3936,6 +3936,16 @@ void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int jo
                 lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
                 dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
                 cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params->model_test_criterion);
+
+                num_model++;
+                cout.width(4);
+                cout << right << num_model << " ";
+                cout.width(12);
+                cout << left << cur_pair.model_name << " ";
+                cout.width(11);
+                cout << cur_pair.tree_len << " " << cur_pair.set_name;
+                cout << endl;
+
                 to_delete.push_back(1);
             } else {
                 to_delete.push_back(0);
