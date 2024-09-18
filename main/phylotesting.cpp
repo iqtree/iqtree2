@@ -185,6 +185,14 @@ short int std_genetic_code_modelomatic[]    = {   0};
 
 const char *codon_freq_names[] = {"+F3X4", "+F1X4", "+F", ""};
 
+// the set of substitution models to be used in the first round of the partition finder
+const char* dna_usual_model = "GTR";
+const char* aa_usual_model = "LG";
+const char* codon_usual_model = "GY+F3X4";
+const char* bin_usual_model = "GTR2";
+const char* morph_usual_model = "MK";
+const char* pomo_usual_model = "GTR+P";
+
 //const double TOL_LIKELIHOOD_MODELTEST = 0.1;
 const double TOL_GRADIENT_MODELTEST   = 0.0001;
 
@@ -207,12 +215,12 @@ string getSeqTypeName(SeqType seq_type) {
 
 string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_DNA: return dna_model_names[0];
-        case SEQ_PROTEIN: return aa_model_names[0];
-        case SEQ_CODON: return string(codon_model_names[0]) + codon_freq_names[0];
-        case SEQ_BINARY: return bin_model_names[0];
-        case SEQ_MORPH: return morph_model_names[0];
-        case SEQ_POMO: return string(dna_model_names[0]) + "+P";
+        case SEQ_DNA: return dna_usual_model;
+        case SEQ_PROTEIN: return aa_usual_model;
+        case SEQ_CODON: return codon_usual_model;
+        case SEQ_BINARY: return bin_usual_model;
+        case SEQ_MORPH: return morph_usual_model;
+        case SEQ_POMO: return pomo_usual_model;
         default: ASSERT(0 && "Unprocessed seq_type"); return "";
     }
 }
