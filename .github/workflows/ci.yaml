@@ -14,12 +14,18 @@ concurrency:
 
 jobs:
   build-linux-x86-64:
-    name: Linux x86-64
+    name: Linux x86-64 gcc-${{ matrix.gcc-version }} cmake-${{ matrix.cmake-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        gcc-version: [10, 12]
+        include:
+          # Oldest supported gcc and cmake versions
+          - gcc-version: 9
+            cmake-version: 3.10.2
+          # Latest supported gcc and cmake versions
+          - gcc-version: 12
+            cmake-version: latest
 
     steps:
     - name: Checkout
@@ -30,13 +36,17 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update -q -y
-        sudo apt-get install -q -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version}} cmake libeigen3-dev libboost-dev
+        sudo apt-get install -q -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version}} libeigen3-dev libboost-dev
+    
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: ${{ matrix.cmake-version }}
 
     - name: Build
       run: |
         mkdir build
         cd build
-        export CXXFLAGS="-std=c++14" # this is important to be able to build with g++ newer than v10
         cmake .. -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
         make -j
         file iqtree2 | grep x86-64
@@ -55,7 +65,7 @@ jobs:
         uses: uraimo/run-on-arch-action@v2
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu_latest
           githubToken: ${{ github.token }}
           dockerRunArgs: |
             --volume "${PWD}:/iqtree2"
@@ -152,9 +162,14 @@ jobs:
           if exist build rd /s /q build
           mkdir build
           cd build
-          -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include\
-          -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib
-          cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu -DCMAKE_MAKE_PROGRAM=mingw32-make ..
+          cmake -G "MinGW Makefiles" ^
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ^
+            -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu ^
+            -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu ^
+            -DCMAKE_MAKE_PROGRAM=mingw32-make ^
+            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include ^
+            -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib ^
+            -DIQTREE_FLAGS="cpp14" ..
           make -j
         env:
           BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
@@ -164,4 +179,3 @@ jobs:
         run: |
           cd build
           file iqtree2.exe | grep x86-64
-
