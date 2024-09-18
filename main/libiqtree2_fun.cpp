@@ -197,30 +197,6 @@ string build_distmatrix(vector<string>& names, vector<string>& seqs) {
             bool append_log = false;
             startLogFile(append_log);
 
-        #ifdef _OPENMP
-            if (Params::getInstance().num_threads >= 1) {
-                omp_set_num_threads(Params::getInstance().num_threads);
-                Params::getInstance().num_threads = omp_get_max_threads();
-            }
-            int max_procs = countPhysicalCPUCores();
-            cout << " - ";
-            if (Params::getInstance().num_threads > 0)
-                cout << Params::getInstance().num_threads  << " threads";
-            else
-                cout << "auto-detect threads";
-            cout << " (" << max_procs << " CPU cores detected)";
-            if (Params::getInstance().num_threads  > max_procs) {
-                cout << endl;
-                outError("You have specified more threads than CPU cores available");
-            }
-            omp_set_max_active_levels(1);
-        #else
-            if (Params::getInstance().num_threads != 1) {
-                cout << endl << endl;
-                outError("Number of threads must be 1 for sequential version.");
-            }
-        #endif
-            
             PhyloTree ptree;
             ptree.aln = new Alignment(names, seqs, params.sequence_type, params.model_name);
             
