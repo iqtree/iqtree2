@@ -4872,10 +4872,14 @@ void PartitionFinder::test_PartitionModel() {
     
     // transfer useful checkpoint records from Master to Workers
     Checkpoint mfchkpt;
+    string criterion_name = criterionName(params->model_test_criterion);
     if (MPIHelper::getInstance().isMaster()) {
         // transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
         SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
         for (auto aln : super_aln->partitions) {
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
@@ -4888,6 +4892,14 @@ void PartitionFinder::test_PartitionModel() {
         // transfer from mfchkpt to model_info
         string partial_key = "";
         model_info->putSubCheckpoint(&mfchkpt, partial_key);
+        // update the best model for each tree
+        for (int i = 0; i < in_tree->size(); i++) {
+            PhyloTree *this_tree = in_tree->at(i);
+            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
+            string bestModel;
+            ASSERT(model_info->getString(bestModel_key, bestModel));
+            this_tree->aln->model_name = bestModel;
+        }
     }
     
     // free the MPI share memory
