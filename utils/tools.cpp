@@ -1002,6 +1002,7 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 // Parse the profile mixture model
 // MIX{R+Fx} -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
 // OR R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+// and x < 1000
 // return true if it is a linked substitution matrix
 bool parseProfileMixModelStr(string& model_str) {
     if (model_str.length() == 0)
@@ -1028,35 +1029,34 @@ bool parseProfileMixModelStr(string& model_str) {
         // get the end pos of the integer followed by +F
         while (endpos < modelstr.length() && isdigit(modelstr[endpos]) && modelstr[endpos] != '.')
             endpos++;
-        if (endpos > pos_F+2) {
-            // +Fx appears, where x is an integer
-            int nclass = atoi(modelstr.substr(pos_F+2,endpos-pos_F-2).c_str());
-            if (nclass >= 1) {
-                // this is R+Fx where x is an integer
-                string s_model = modelstr.substr(0, pos_F);
-                string RHAS = "";
-                int pos_plus = modelstr.find("+",pos_F+2);
-                if (pos_plus != string::npos) {
-                    RHAS = modelstr.substr(pos_plus);
-                }
-                string mix_model = "";
-                if (nclass > 1) {
-                    mix_model.append("MIX{");
+        if (endpos >= modelstr.length() || (modelstr[endpos] == '+' || modelstr[endpos] == ',' || modelstr[endpos] == '}')) {
+            // Not an integer followed by a character like +F3X4
+            if (endpos > pos_F+2 && endpos-pos_F-2 < 4) {
+                // +Fx appears, where x is an integer, and x < 1000
+                int nclass = atoi(modelstr.substr(pos_F+2,endpos-pos_F-2).c_str());
+                if (nclass >= 1) {
+                    // this is R+Fx where x is an integer
+                    string s_model = modelstr.substr(0, pos_F);
+                    string RHAS = "";
+                    int pos_plus = modelstr.find("+",pos_F+2);
+                    if (pos_plus != string::npos) {
+                        RHAS = modelstr.substr(pos_plus);
+                    }
+                    string mix_model = "";
+                    if (nclass > 1) {
+                        mix_model.append("MIX{");
+                    }
+                    for (int i = 0; i < nclass; i++) {
+                        if (i > 0)
+                            mix_model.append(",");
+                        mix_model.append(s_model + "+FO");
+                    }
+                    if (nclass > 1)
+                        mix_model.append("}");
+                    mix_model.append(RHAS);
+                    model_str = mix_model;
                     isLinkedSubst = true;
                 }
-                for (int i = 0; i < nclass; i++) {
-                    if (i > 0)
-                        mix_model.append(",");
-                    mix_model.append(s_model + "+FO");
-                }
-                if (nclass > 1)
-                    mix_model.append("}");
-                mix_model.append(RHAS);
-                // update the model name to this mix model name
-                model_str = mix_model;
-                // params.model_name = mix_model;
-                // set the parameters for linked exchangeabilities model
-                // params.optimize_linked_gtr = true;
             }
         }
     }
@@ -5385,10 +5385,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--model-joint") == 0) {
+            if (strcmp(argv[cnt], "--model-joint") == 0 || strcmp(argv[cnt], "--link-partition") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --model-joint MODEL_NAME";
+                    throw "Use " + string(argv[cnt-1]) + " MODEL_NAME";
                 params.model_joint = argv[cnt];
                 params.link_model = true;
                 continue;
