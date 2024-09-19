@@ -2446,7 +2446,8 @@ int main(int argc, char *argv[]) {
         cout << endl;
         outError("You have specified more threads than CPU cores available");
     }
-    omp_set_nested(false); // don't allow nested OpenMP parallelism
+    // omp_set_nested(false); // don't allow nested OpenMP parallelism
+    omp_set_max_active_levels(1);
 #else
     if (Params::getInstance().num_threads != 1) {
         cout << endl << endl;

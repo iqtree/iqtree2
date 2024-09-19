@@ -4659,7 +4659,9 @@ void PartitionFinder::test_PartitionModel() {
         // partition selection scales well with many cores
         num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
         num_threads = min(num_threads, params->num_threads_max);
+        #ifdef _OPENMP
         omp_set_num_threads(num_threads);
+        #endif
         cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
     }
 
