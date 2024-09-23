@@ -192,7 +192,7 @@ int num_gpus = 0;
     if (!has_gpu) {
         printf("No GPU found\n");
     } else {
-        printf("Number of GPUs = %d\n", num_gpus);
+//        printf("Number of GPUs = %d\n", num_gpus);
         int thread_id = 0;
 #ifdef _OPENMP
         thread_id = omp_get_thread_num();
