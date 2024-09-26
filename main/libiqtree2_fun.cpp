@@ -173,18 +173,21 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
 }
 
 // Build pairwise JC distance matrix
-string build_distmatrix(vector<string>& names, vector<string>& seqs) {
-    string output;
+// output: set of distances
+// (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
+// where n is the number of sequences
+vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs) {
+    vector<double> output;
     string prog = "build_matrix";
     
     try {
         int n = names.size();
         int n_sq = n * n;
-        if (n <= 1) {
-            output = "1\n" + names[0] + " 0";
+        output.clear();
+        if (n == 1) {
+            output.push_back(0.0);
         } else {
-            double* distmat = new double[n_sq];
-            memset(distmat, 0, sizeof(double) * n_sq);
+            output.resize(n_sq);
             extern VerboseMode verbose_mode;
             progress_display::setProgressDisplay(false);
             verbose_mode = VB_QUIET; // (quiet mode)
@@ -202,22 +205,17 @@ string build_distmatrix(vector<string>& names, vector<string>& seqs) {
             
             // compute the matrix
             for (int i = 0; i < n; i++) {
-                double* dmat = distmat + i * n;
+                double* dmat = &output[i * n];
                 // j = i
                 dmat[i] = 0.0;
                 // j != i
                 for (int j = i+1; j < n; j++) {
                     dmat[j] = ptree.aln->computeJCDist(i, j);
-                    distmat[j * n + i] = dmat[j];
+                    output[j * n + i] = dmat[j];
                 }
             }
             
-            stringstream ss;
-            ptree.aln->printDist(ss, distmat);
-            output = ss.str();
-            delete[] distmat;
             delete ptree.aln;
-
             funcExit();
         }
     } catch (std::runtime_error& e) {
@@ -229,10 +227,18 @@ string build_distmatrix(vector<string>& names, vector<string>& seqs) {
 }
 
 // Using Rapid-NJ to build tree from a distance matrix
-string build_njtree(string dist_matrix) {
+string build_njtree(vector<string>& names, vector<double>& distances) {
     string output;
 
     try {
+        // check the size of names and distances
+        if (names.size() < 3)
+            outError("The size of names must be at least 3");
+        size_t n = names.size();
+        size_t sq_n = n * n;
+        if (distances.size() != sq_n)
+            outError("The size of distances must equal to the square of the size of names");
+        
         string prog = "build_njtree";
         extern VerboseMode verbose_mode;
         progress_display::setProgressDisplay(false);
@@ -248,9 +254,9 @@ string build_njtree(string dist_matrix) {
         
         string algn_name = "NJ-R"; // Rapid NJ
         StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algn_name);
-        stringstream ss(dist_matrix);
         stringstream stree;
-        if (!algorithm->constructTree2(ss, stree)) {
+        double* distMatrix = &distances[0];
+        if (!algorithm->constructTreeInMemory2(names, distMatrix, stree)) {
             outError("Tree construction failed.");
         }
         output = stree.str();

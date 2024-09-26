@@ -864,6 +864,12 @@ public:
          , const std::string & newickTreeFilePath) {
             return false;
     }
+    virtual bool constructTreeInMemory2
+        ( const std::vector<std::string> &sequenceNames
+         , double *distanceMatrix
+         , std::ostream & newickTree) {
+            return false;
+    }
     virtual void setZippedOutput(bool zipIt) {
         if (zipIt) {
             std::cerr << "Warning: BIONJ2009 does not support gzip output (or input)" << std::endl;

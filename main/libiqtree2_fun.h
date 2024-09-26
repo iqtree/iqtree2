@@ -41,12 +41,13 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 
                    string model_set = "", string freq_set = "", string rate_set = "");
 
 // Build pairwise JC distance matrix
-// output: a phylip-formated distance matrix (in string format)
-string build_distmatrix(vector<string>& names, vector<string>& seqs);
+// output: set of distances
+// (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
+// where n is the number of sequences
+vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs);
 
 // Using Rapid-NJ to build tree from a distance matrix
-// input: a phylip-formated distance matrix (in string format)
 // output: a newick tree (in string format)
-string build_njtree(string dist_matrix);
+string build_njtree(vector<string>& names, vector<double>& distances);
 
 #endif /* LIBIQTREE2_FUN */
