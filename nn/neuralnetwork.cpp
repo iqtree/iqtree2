@@ -357,13 +357,22 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector
 
     float cumulative_sum = 0.0;
 
+    bool isGTR = false;
+
     // Accumulate probabilities until the cumulative sum exceeds 0.95
     for (const auto& pair : indexed_probabilities) {
         cumulative_sum += pair.second;
         model_names -> push_back(model_index_map[pair.first]);
+        if (pair.first == 5) {
+            isGTR = true;
+        }
         if (cumulative_sum > Params::getInstance().model_revelator_confidence) {
             break;
         }
+    }
+
+    if (!isGTR) {
+        model_names -> push_back("GTR");
     }
 
 }
