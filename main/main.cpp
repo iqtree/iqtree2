@@ -25,7 +25,7 @@
 #include <iqtree_config.h>
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-//#include <winsock2.h>
+#include <winsock2.h>
 //#include <windows.h>
 //extern __declspec(dllexport) int gethostname(char *name, int namelen);
 #else
