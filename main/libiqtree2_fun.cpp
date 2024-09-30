@@ -1,5 +1,9 @@
 #include "libiqtree2_fun.h"
 
+#if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+#include <winsock2.h>
+#endif
+
 class input_options {
 public:
     vector<string> flags;
