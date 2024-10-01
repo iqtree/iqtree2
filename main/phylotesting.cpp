@@ -4637,15 +4637,14 @@ void PartitionFinder::test_PartitionModel() {
         params->partfinder_rcluster_max = 10 * in_tree->size();
     }
 
-    // show the parameters for partition finder
-    cout << endl;
-    cout << "PartitionFinder's parameters:" << endl;
-    cout << part_algo << endl;
-    cout << "Percentage: " << params->partfinder_rcluster << endl;
-    cout << "Maximum pairs: " << params->partfinder_rcluster_max << endl;
-    cout << endl;
-
     if (params->partition_merge != MERGE_NONE) {
+        // show the parameters for partition finder
+        cout << endl;
+        cout << "PartitionFinder's parameters:" << endl;
+        cout << part_algo << endl;
+        cout << "Percentage: " << params->partfinder_rcluster << endl;
+        cout << "Maximum pairs: " << params->partfinder_rcluster_max << endl;
+        cout << endl;
         double p = params->partfinder_rcluster/100.0;
         size_t num_pairs = round(in_tree->size()*(in_tree->size()-1)*p/2);
         if (p < 1.0)
@@ -4696,6 +4695,41 @@ void PartitionFinder::test_PartitionModel() {
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     if (!test_merge) {
+
+		#ifdef _IQTREE_MPI
+    	// transfer useful checkpoint records from Master to Workers
+    	Checkpoint mfchkpt;
+    	string criterion_name = criterionName(params->model_test_criterion);
+    	if (MPIHelper::getInstance().isMaster()) {
+        	// transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
+        	SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
+        	for (auto aln : super_aln->partitions) {
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
+        	}
+        	model_info->transferSubCheckpoint(&mfchkpt, "PhyloTree");
+        	model_info->transferSubCheckpoint(&mfchkpt, "stopRule");
+    	}
+    	MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+    	if (MPIHelper::getInstance().isWorker()) {
+        	// transfer from mfchkpt to model_info
+        	string partial_key = "";
+        	model_info->putSubCheckpoint(&mfchkpt, partial_key);
+        	// update the best model for each tree
+        	for (int i = 0; i < in_tree->size(); i++) {
+            	PhyloTree *this_tree = in_tree->at(i);
+            	string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
+            	string bestModel;
+            	ASSERT(model_info->getString(bestModel_key, bestModel));
+            	this_tree->aln->model_name = bestModel;
+        	}
+    	}
+		#endif
+
         super_aln->printBestPartition((string(params->out_prefix) + ".best_scheme.nex").c_str());
         super_aln->printBestPartitionRaxml((string(params->out_prefix) + ".best_scheme").c_str());
         model_info->dump();

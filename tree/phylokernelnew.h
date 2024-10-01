@@ -3111,6 +3111,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     } // else
 
     tree_lh += all_tree_lh;
+    /*
     if (!std::isfinite(tree_lh)) {
         if (SAFE_NUMERIC) {
             outWarning("Numerical underflow for lh-branch");
@@ -3118,7 +3119,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             outWarning("Numerical underflow for lh-branch, use `-safe` option to avoid this warning");
         }
     }
-
+    */
     // arbitrarily fix tree_lh if underflown for some sites
     if (!std::isfinite(tree_lh)) {
         tree_lh = 0.0;
