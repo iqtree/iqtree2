@@ -600,6 +600,10 @@ public:
     PartitionFinder(Params *inparams, PhyloSuperTree* intree, ModelCheckpoint *modelinfo,
                     ModelsBlock *modelsblock, int numthreads);
 
+    /* Destructor
+     */
+    ~PartitionFinder();
+        
     /*
      * Perform the computation
      */

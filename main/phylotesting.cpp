@@ -3468,6 +3468,18 @@ PartitionFinder::PartitionFinder(Params *inparams, PhyloSuperTree* intree, Model
     num_processes = MPIHelper::getInstance().getNumProcesses();
 }
 
+/* Destructor
+ */
+PartitionFinder::~PartitionFinder() {
+#ifdef _IQTREE_MPI
+    // clear any remaining jobs (for MPI)
+    for (int k=0; k<remain_mergejobs.size(); k++) {
+        delete(remain_mergejobs[k]);
+    }
+    remain_mergejobs.clear();
+#endif
+}
+
 /*
  * Show the the other worker's result of best model for the merge
  */
