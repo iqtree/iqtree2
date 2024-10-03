@@ -757,7 +757,10 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         cout << "INFO: Number of quartets is reduced to all unique quartets " << LMGroups.uniqueQuarts << endl; 
     }
 
-    cout << "Computing " << params->lmap_num_quartets << " quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
+    cout << "Computing " << params->lmap_num_quartets << " quartet likelihoods (one dot represents 100 quartets)." << endl;
+    int64_t mem_required = params->lmap_num_quartets * sizeof(QuartetInfo);
+    cout << "NOTE: " << (mem_required / 1048576) << " MB RAM (" << (mem_required / 1073741824) << " GB) is required." << endl;
+    cout << endl;
     
     lmap_quartet_info.resize(params->lmap_num_quartets);
     

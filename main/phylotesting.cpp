@@ -3709,6 +3709,18 @@ PartitionFinder::PartitionFinder(Params *inparams, PhyloSuperTree* intree, Model
     num_processes = MPIHelper::getInstance().getNumProcesses();
 }
 
+/* Destructor
+ */
+PartitionFinder::~PartitionFinder() {
+#ifdef _IQTREE_MPI
+    // clear any remaining jobs (for MPI)
+    for (int k=0; k<remain_mergejobs.size(); k++) {
+        delete(remain_mergejobs[k]);
+    }
+    remain_mergejobs.clear();
+#endif
+}
+
 /*
  * Show the the other worker's result of best model for the merge
  */
@@ -4115,46 +4127,11 @@ int PartitionFinder::computeBestModelforOnePartitionMPI(int tree_id, int nthread
 // and remove those jobs from the array jobIDs
 void PartitionFinder::retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int job_type) {
 
-    vector<char> to_delete;
+    if (job_type == 1)
+        return;
 
-    if (job_type == 1) {
-        // for partition
-        for (int j = 0; j < jobs.size(); j++) {
-            int tree_id = jobs[j].first;
-            PhyloTree *this_tree = in_tree->at(tree_id);
-            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterionName(params->model_test_criterion);
-            string bestModel;
-            string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterionName(params->model_test_criterion);
-            double bestScore;
-            if (model_info->getString(bestModel_key, bestModel) && model_info->get(bestScore_key, bestScore)) {
-                string val_key = this_tree->aln->name + CKP_SEP + bestModel;
-                string val;
-                if (model_info->getString(val_key, val)) {
-                    // this job has been done in the previous run
-                    stringstream str(val);
-                    double logl, df, tree_len;
-                    str >> logl >> df >> tree_len;
-                    // show the results
-                    num_model++;
-                    cout.width(4);
-                    cout << right << num_model << " ";
-                    cout.width(12);
-                    cout << left << bestModel << " ";
-                    cout.width(11);
-                    cout << bestScore << " ";
-                    cout.width(11);
-                    cout << tree_len << " ";
-                    cout << this_tree->aln->name;
-                    cout << endl;
-                    to_delete.push_back(1);
-                } else {
-                    to_delete.push_back(0);
-                }
-            } else {
-                to_delete.push_back(0);
-            }
-        }
-    } else if (job_type == 2) {
+    vector<char> to_delete;
+    if (job_type == 2) {
         // for merging partitions
         for (int j = 0; j < jobs.size(); j++) {
             CandidateModel best_model;
@@ -4878,15 +4855,14 @@ void PartitionFinder::test_PartitionModel() {
         params->partfinder_rcluster_max = 10 * in_tree->size();
     }
 
-    // show the parameters for partition finder
-    cout << endl;
-    cout << "PartitionFinder's parameters:" << endl;
-    cout << part_algo << endl;
-    cout << "Percentage: " << params->partfinder_rcluster << endl;
-    cout << "Maximum pairs: " << params->partfinder_rcluster_max << endl;
-    cout << endl;
-
     if (params->partition_merge != MERGE_NONE) {
+        // show the parameters for partition finder
+        cout << endl;
+        cout << "PartitionFinder's parameters:" << endl;
+        cout << part_algo << endl;
+        cout << "Percentage: " << params->partfinder_rcluster << endl;
+        cout << "Maximum pairs: " << params->partfinder_rcluster_max << endl;
+        cout << endl;
         double p = params->partfinder_rcluster/100.0;
         size_t num_pairs = round(in_tree->size()*(in_tree->size()-1)*p/2);
         if (p < 1.0)
@@ -4900,7 +4876,9 @@ void PartitionFinder::test_PartitionModel() {
         // partition selection scales well with many cores
         num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
         num_threads = min(num_threads, params->num_threads_max);
+        #ifdef _OPENMP
         omp_set_num_threads(num_threads);
+        #endif
         cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
     }
 
@@ -4935,6 +4913,41 @@ void PartitionFinder::test_PartitionModel() {
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
     if (!test_merge) {
+
+		#ifdef _IQTREE_MPI
+    	// transfer relevant checkpoint records from Master to Workers
+    	Checkpoint mfchkpt;
+    	string criterion_name = criterionName(params->model_test_criterion);
+    	if (MPIHelper::getInstance().isMaster()) {
+        	// transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
+        	SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
+        	for (auto aln : super_aln->partitions) {
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
+            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
+        	}
+        	model_info->transferSubCheckpoint(&mfchkpt, "PhyloTree");
+        	model_info->transferSubCheckpoint(&mfchkpt, "stopRule");
+    	}
+    	MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+    	if (MPIHelper::getInstance().isWorker()) {
+        	// transfer from mfchkpt to model_info
+        	string partial_key = "";
+        	model_info->putSubCheckpoint(&mfchkpt, partial_key);
+        	// update the best model for each tree
+        	for (int i = 0; i < in_tree->size(); i++) {
+            	PhyloTree *this_tree = in_tree->at(i);
+            	string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
+            	string bestModel;
+            	ASSERT(model_info->getString(bestModel_key, bestModel));
+            	this_tree->aln->model_name = bestModel;
+        	}
+    	}
+		#endif
+
         super_aln->printBestPartition((string(params->out_prefix) + ".best_scheme.nex").c_str());
         super_aln->printBestPartitionRaxml((string(params->out_prefix) + ".best_scheme").c_str());
         model_info->dump();
@@ -5088,14 +5101,36 @@ void PartitionFinder::test_PartitionModel() {
         dfvec.resize(in_tree->size());
         lenvec.resize(in_tree->size());
     }
-    
+
     bool proceed_test_model_again = (!iEquals(params->merge_models, "all"));
 #ifdef _IQTREE_MPI
         MPI_Bcast(&proceed_test_model_again, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
 #endif
-    
+
     if (proceed_test_model_again) {
         // test all candidate models again
+
+        #ifdef _IQTREE_MPI
+            // transfer relevant checkpoint records from Master to Workers
+            Checkpoint mfchkpt;
+            string criterion_name = criterionName(params->model_test_criterion);
+            if (MPIHelper::getInstance().isMaster()) {
+                // transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
+                SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
+                for (auto aln : super_aln->partitions) {
+                    model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP);
+                }
+                model_info->transferSubCheckpoint(&mfchkpt, "PhyloTree");
+            }
+            MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+            if (MPIHelper::getInstance().isWorker()) {
+                // transfer from mfchkpt to model_info
+                string partial_key = "";
+                model_info->putSubCheckpoint(&mfchkpt, partial_key);
+            }
+        #endif
+
+
         lhsum = 0.0;
         dfsum = 0;
         if (params->partition_type == BRLEN_FIX || params->partition_type == BRLEN_SCALE) {
@@ -5118,8 +5153,8 @@ void PartitionFinder::test_PartitionModel() {
     model_info->dump();
 
 #ifdef _IQTREE_MPI
-    
-    // transfer useful checkpoint records from Master to Workers
+
+    // transfer relevant checkpoint records from Master to Workers
     Checkpoint mfchkpt;
     string criterion_name = criterionName(params->model_test_criterion);
     if (MPIHelper::getInstance().isMaster()) {
