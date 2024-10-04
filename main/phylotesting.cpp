@@ -1357,6 +1357,20 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             cout << "ModelFinder 1 is activated" << endl;
         }
         
+        // since optimization of free-rate model (+R) does not support -q partition scheme
+        // for -q partition scheme and empty model name, set to "TEST"
+        if (params.partition_type == BRLEN_FIX) {
+            if (params.model_name == "MF") {
+                params.model_name = "TESTONLY";
+                cout << "NOTE: Since -q option does not support +R model, model option is changed from MF to TESTONLY." << endl;
+            } else if (params.model_name == "MFP") {
+                params.model_name = "TEST";
+                cout << "NOTE: Since -q option does not support +R model, model option is changed from MFP to TEST." << endl;
+            } else if (params.model_name.empty()) {
+                params.model_name = "TEST";
+            }
+        }
+        
         uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
         cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
         if (mem_size >= getMemorySize()) {
