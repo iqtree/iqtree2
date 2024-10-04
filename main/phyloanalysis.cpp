@@ -3134,6 +3134,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (params.write_candidate_trees) {
         printTrees(iqtree->getBestTrees(), params, ".imd_trees");
     }
+    
+    if (iqtree->isSuperTree()) {
+        // compute mAIC/mBIC/mAICc if it is a partition model
+        // @Huaiyan you may add your code to compute the mAIC/mBIC/mAICc score.
+    }
 
     if (params.pll)
         iqtree->inputModelPLL2IQTree();
