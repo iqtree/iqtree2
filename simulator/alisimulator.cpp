@@ -1748,7 +1748,9 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
             (*it)->node->sequence->num_threads_done_simulation++;
             
             // make sure only one thread is selected to write the output
+            #ifdef _OPENMP
             if ((*it)->node->sequence->num_threads_done_simulation == omp_get_num_threads())
+            #endif
                 this_thread_write_output = true;
         }
         

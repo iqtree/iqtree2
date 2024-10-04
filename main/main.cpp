@@ -25,7 +25,7 @@
 #include <iqtree_config.h>
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
-//#include <winsock2.h>
+#include <winsock2.h>
 //#include <windows.h>
 //extern __declspec(dllexport) int gethostname(char *name, int namelen);
 #else
@@ -2446,7 +2446,8 @@ int main(int argc, char *argv[]) {
         cout << endl;
         outError("You have specified more threads than CPU cores available");
     }
-    omp_set_nested(false); // don't allow nested OpenMP parallelism
+    // omp_set_nested(false); // don't allow nested OpenMP parallelism
+    omp_set_max_active_levels(1);
 #else
     if (Params::getInstance().num_threads != 1) {
         cout << endl << endl;

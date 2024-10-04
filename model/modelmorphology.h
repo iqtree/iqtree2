@@ -55,6 +55,11 @@ public:
     virtual void restoreCheckpoint();
 
     /**
+     * @return model name
+     */
+    virtual string getName();
+
+    /**
      * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
      */
     virtual string getNameParams(bool show_fixed_params = false);

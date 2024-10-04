@@ -999,6 +999,78 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
     }
 }
 
+// Parse the profile mixture model
+// MIX{R+Fx} -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+// OR R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+// and x < 1000
+// return true if it is a linked substitution matrix
+bool parseProfileMixModelStr(string& model_str) {
+    if (model_str.length() == 0)
+        return false;
+    
+    string modelstr = model_str;
+    // change to upper character
+    transform(modelstr.begin(), modelstr.end(), modelstr.begin(), ::toupper);
+    
+    int pos_mix = modelstr.find("MIX{");
+    if (pos_mix != string::npos) {
+        int pos_endBrac = modelstr.find_last_of('}');
+        if (pos_endBrac == string::npos || pos_endBrac < pos_mix+4) {
+            outError(modelstr + " is not in a correct format");
+        }
+        // get the substring inside MIX{....}
+        modelstr = modelstr.substr(pos_mix+4, pos_endBrac-pos_mix-4);
+    }
+
+    bool isLinkedSubst = false;
+    int pos_F = modelstr.find("+F");
+    if (pos_F != string::npos) {
+        int endpos = pos_F+2;
+        // get the end pos of the integer followed by +F
+        while (endpos < modelstr.length() && isdigit(modelstr[endpos]) && modelstr[endpos] != '.')
+            endpos++;
+        if (endpos >= modelstr.length() || (modelstr[endpos] == '+' || modelstr[endpos] == ',' || modelstr[endpos] == '}')) {
+            // Not an integer followed by a character like +F3X4
+            if (endpos > pos_F+2 && endpos-pos_F-2 < 4) {
+                // +Fx appears, where x is an integer, and x < 1000
+                int nclass = atoi(modelstr.substr(pos_F+2,endpos-pos_F-2).c_str());
+                if (nclass >= 1) {
+                    // this is R+Fx where x is an integer
+                    string s_model = modelstr.substr(0, pos_F);
+                    string RHAS = "";
+                    int pos_plus = modelstr.find("+",pos_F+2);
+                    if (pos_plus != string::npos) {
+                        RHAS = modelstr.substr(pos_plus);
+                    }
+                    string mix_model = "";
+                    if (nclass > 1) {
+                        mix_model.append("MIX{");
+                    }
+                    for (int i = 0; i < nclass; i++) {
+                        if (i > 0)
+                            mix_model.append(",");
+                        mix_model.append(s_model + "+FO");
+                    }
+                    if (nclass > 1)
+                        mix_model.append("}");
+                    mix_model.append(RHAS);
+                    model_str = mix_model;
+                    isLinkedSubst = true;
+                }
+            }
+        }
+    }
+    return isLinkedSubst;
+}
+
+// Parse the profile mixture model
+void parseProfileMix(Params& params) {
+    if (parseProfileMixModelStr(params.model_name))
+        params.optimize_linked_gtr = true;
+    if (parseProfileMixModelStr(params.model_joint))
+        params.optimize_linked_gtr = true;
+}
+ 
 void get2RandNumb(const int size, int &first, int &second) {
     // pick a random element
     first = random_int(size);
@@ -1407,7 +1479,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_mixlen = 1;
     params.link_alpha = false;
     params.link_model = false;
-    params.model_joint = NULL;
+    params.model_joint = "";
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
@@ -1687,6 +1759,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--link-exchange-rates") == 0 || strcmp(argv[cnt], "--link-exchange") == 0) {
                 params.optimize_linked_gtr = true;
                 params.reset_method = "const";
+                params.optimize_alg_qmix = "EM";
                 continue;
             }
             if (strcmp(argv[cnt], "--gtr20-model") == 0 || strcmp(argv[cnt], "--init-exchange") == 0) {
@@ -5285,10 +5358,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--model-joint") == 0) {
+            if (strcmp(argv[cnt], "--model-joint") == 0 || strcmp(argv[cnt], "--link-partition") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --model-joint MODEL_NAME";
+                    throw "Use " + string(argv[cnt-1]) + " MODEL_NAME";
                 params.model_joint = argv[cnt];
                 params.link_model = true;
                 continue;
@@ -5785,7 +5858,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         outError("-b bootstrap option does not work with -S yet.");
 
     //added to remove situations where we're optimizing a linked rate matrix when we really shouldn't be -JD
-    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos) 
+    if (params.optimize_linked_gtr && params.model_name.find("GTR") == string::npos && params.model_joint.find("GTR") == string::npos)
         outError("Must have either GTR or GTR20 as part of the model when using --link-exchange-rates.");
 
     if (params.use_nn_model && params.modelomatic)
@@ -5871,7 +5944,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     {
         std::string sequence_type(params.sequence_type);
     }
-    
+
+    // parse the profile mixture model
+    // R+Fx -> MIX{S+FO,S+FO,...,S+FO} with x classes and S is a linked substitution matrix (i.e. linked exchangeabilities)
+    parseProfileMix(params);
+
     //    if (MPIHelper::getInstance().isWorker()) {
     // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
 //        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;

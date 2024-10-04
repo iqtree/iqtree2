@@ -182,6 +182,8 @@ public:
 	virtual void computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
+    virtual void adaptStateFrequency(double* freq);
+    
 	/**
 		@return the number of dimensions
 	*/
@@ -277,6 +279,11 @@ public:
 	 */
 	virtual string getNameParams(bool show_fixed_params = false);
 
+    // For codon mixture, rescale total_num_subst specifically
+    // so that the global rate is 1
+    // return true if the values of total_num_subst have been updated
+    bool rescale_codon_mix();
+    
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes

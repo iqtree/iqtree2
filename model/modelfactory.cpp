@@ -170,7 +170,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
         else model_str = "JC";
-        if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        // if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        if (tree->aln->seq_type != SEQ_POMO && params.model_joint.empty())
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
     }
     // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
@@ -203,11 +204,27 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     model_str = new_model_str;
 
-    //    nxsmodel = models_block->findModel(model_str);
-    //    if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-    //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-    //        model_str = nxsmodel->description;
-    //    }
+    // for model_joint if set
+    if (!Params::getInstance().model_joint.empty()) {
+        string curr_model_str = Params::getInstance().model_joint;
+        new_model_str = "";
+        for (mix_pos = 0; mix_pos < curr_model_str.length(); mix_pos++) {
+            size_t next_mix_pos = curr_model_str.find_first_of("+*", mix_pos);
+            string sub_model_str = curr_model_str.substr(mix_pos, next_mix_pos-mix_pos);
+            // cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
+            nxsmodel = models_block->findMixModel(sub_model_str);
+            if (nxsmodel) sub_model_str = nxsmodel->description;
+            new_model_str += sub_model_str;
+            if (next_mix_pos != string::npos)
+                new_model_str += curr_model_str[next_mix_pos];
+            else
+                break;
+            mix_pos = next_mix_pos;
+        }
+        if (new_model_str != curr_model_str)
+            cout << "Model " << curr_model_str << " is alias for " << new_model_str << endl;
+        Params::getInstance().model_joint = new_model_str;
+    }
 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
@@ -249,17 +266,45 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     // set to model_joint if set
-    if (Params::getInstance().model_joint) {
+    // if (Params::getInstance().model_joint) {
+    if (!Params::getInstance().model_joint.empty()) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
-        while ((spec_pos = model_str.find("+F")) != string::npos) {
-            size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
-            if (end_pos == string::npos) {
-                freq_str += model_str.substr(spec_pos);
-                model_str = model_str.substr(0, spec_pos);
-            } else {
-                freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
-                model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+        size_t fmix_pos = model_str.find("+FMIX{");
+        if (fmix_pos != string::npos) {
+            // for frequency mixture model
+            size_t fmix_end_pos = model_str.find_last_of("}");
+            size_t model_end_pos = model_str.find_first_of("+");
+            if (fmix_end_pos != string::npos && model_end_pos != string::npos) {
+                freq_str = model_str.substr(fmix_pos, fmix_end_pos - fmix_pos + 1);
+                model_str = model_str.substr(0, model_end_pos);
+            }
+        } else if (model_str.find("MIX{") != string::npos) {
+            // for model mixture
+            size_t mx_start_pos = model_str.find("MIX{");
+            size_t mx_end_pos = model_str.find_last_of("}");
+            if (mx_end_pos != string::npos) {
+                string models_str = model_str.substr(mx_start_pos + 4, mx_end_pos - mx_start_pos - 4);
+                size_t end_pos = 0;
+                while ((spec_pos = models_str.find("+F", end_pos)) != string::npos) {
+                    end_pos = models_str.find_first_of("+,", spec_pos+1);
+                    if (end_pos == string::npos) {
+                        freq_str += models_str.substr(spec_pos);
+                    } else {
+                        freq_str += models_str.substr(spec_pos, end_pos - spec_pos);
+                    }
+                }
+            }
+        } else {
+            while ((spec_pos = model_str.find("+F")) != string::npos) {
+                size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
+                if (end_pos == string::npos) {
+                    freq_str += model_str.substr(spec_pos);
+                    model_str = model_str.substr(0, spec_pos);
+                } else {
+                    freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
+                    model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+                }
             }
         }
     }

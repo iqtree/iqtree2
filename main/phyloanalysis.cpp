@@ -326,7 +326,7 @@ void reportNexusFile(ostream &out, ModelSubst *m, string part_name) {
     double f = 1.0 / m->num_states;
     for (i = 0; i < m->num_states; i++)
         out << " " << f;
-    out << endl;
+    out << ";" << endl;
     out.precision(4);
     
     delete[] rate_mat;
@@ -402,8 +402,62 @@ void reportLinkSubstMatrix(ostream &out, Alignment *aln, ModelSubst *m) {
     }
 }
 
+void reportModel(ostream &out, Alignment *aln, ModelSubst *m);
+
+void reportMixModel(ostream &out, Alignment *aln, ModelSubst *mmodel) {
+    // report a mixture model
+    out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
+    int i = 0;
+    int nmix = mmodel->getNMixtures();
+    
+    // force showing full params if running AliSim
+    bool show_full_params = Params::getInstance().alisim_active;
+    
+    for (i = 0; i < nmix; i++) {
+        ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
+        if (m->isReversible() && m->freq_type == FREQ_ESTIMATE) {
+            // normalize the frequency array
+            m->scaleStateFreq(true);
+        }
+        out.width(4);
+        out << right << i+1 << "  ";
+        out.width(12);
+        out << left << (m)->name << "  ";
+        out.width(7);
+        out << (m)->total_num_subst << "  ";
+        out.width(7);
+        out << mmodel->getMixtureWeight(i) << "  " << (m)->getNameParams(show_full_params) << endl;
+
+        if (aln->seq_type == SEQ_POMO) {
+            out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
+            reportModel(out, aln, m);
+        }
+    }
+    if (aln->seq_type != SEQ_POMO && aln->seq_type != SEQ_DNA && !Params::getInstance().optimize_linked_gtr) {
+        for (i = 0; i < nmix; i++) {
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
+            if (aln->seq_type != SEQ_CODON && (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED))
+                continue;
+            out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
+            reportModel(out, aln, m);
+        }
+    }
+    out << endl;
+    if (Params::getInstance().optimize_linked_gtr) {
+        // linked substitution matrix
+        ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+        reportLinkSubstMatrix(out, aln, m);
+    }
+}
+
 void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
+    
+    if (aln->seq_type == SEQ_CODON) {
+        m->writeInfo(out);
+        return;
+    }
+        
     ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
     if (!m->isSiteSpecificModel())
@@ -473,6 +527,7 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
                 out << endl;
             }
         }
+        // report the frequencey array
         double state_freq[20];
         m->getStateFrequency(state_freq);
         for (i = 0; i < m->num_states; i++)
@@ -577,44 +632,7 @@ void reportModel(ostream &out, PhyloTree &tree) {
     } else if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
         out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //        out << "Full name: " << tree.getModelName() << endl;
-        ModelSubst *mmodel = tree.getModel();
-        out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
-        i = 0;
-        int nmix = mmodel->getNMixtures();
-        
-        // force showing full params if running AliSim
-        bool show_full_params = tree.params->alisim_active;
-        
-        for (i = 0; i < nmix; i++) {
-            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
-            out.width(4);
-            out << right << i+1 << "  ";
-            out.width(12);
-            out << left << (m)->name << "  ";
-            out.width(7);
-            out << (m)->total_num_subst << "  ";
-            out.width(7);
-            out << mmodel->getMixtureWeight(i) << "  " << (m)->getNameParams(show_full_params) << endl;
-
-            if (tree.aln->seq_type == SEQ_POMO) {
-                out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
-                reportModel(out, tree.aln, m);
-            }
-        }
-        if (tree.aln->seq_type != SEQ_POMO && tree.aln->seq_type != SEQ_DNA)
-        for (i = 0; i < nmix; i++) {
-            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
-            if (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED)
-                continue;
-            out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
-            reportModel(out, tree.aln, m);
-        }
-        out << endl;
-        if (Params::getInstance().optimize_linked_gtr) {
-            // linked substitution matrix
-            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
-            reportLinkSubstMatrix(out, tree.aln, m);
-        }
+        reportMixModel(out, tree.aln, tree.getModel());
     } else {
         // Update rate name if continuous gamma is used.
         if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)
@@ -1154,7 +1172,8 @@ void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
         else
             out << "Topology-unlinked partition model with ";
         
-        if (params.model_joint)
+        // if (params.model_joint)
+        if (!params.model_joint.empty())
             out << "joint substitution model ";
         else
             out << "separate substitution models ";
@@ -1196,9 +1215,12 @@ void reportSubstitutionProcess(ostream &out, Params &params, IQTree &tree)
             for (auto itm = part_model->linked_models.begin(); itm != part_model->linked_models.end(); itm++) {
                 for (it = stree->begin(); it != stree->end(); it++)
                     if ((*it)->getModel() == itm->second) {
-                        out << "Linked model of substitution: " << itm->second->getName() << endl << endl;
+                        out << "Linked model of substitution: " << itm->second->getName() << endl;
                         bool fixed = (*it)->getModel()->fixParameters(false);
-                        reportModel(out, (*it)->aln, (*it)->getModel());
+                        if ((*it)->getModel()->isMixture())
+                            reportMixModel(out, (*it)->aln, (*it)->getModel());
+                        else
+                            reportModel(out, (*it)->aln, (*it)->getModel());
                         (*it)->getModel()->fixParameters(fixed);
                         break;
                     }
@@ -1346,7 +1368,8 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             else
                 out << "Topology-unlinked partition model with ";
             
-            if (params.model_joint)
+            // if (params.model_joint)
+            if (!params.model_joint.empty())
                 out << "joint substitution model ";
             else
                 out << "separate substitution models ";
@@ -1819,12 +1842,27 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
                for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
                    ModelSubst *mmodel = (*it)->getModel();
-                   ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
-                   reportNexusFile(outnex, m, (*it)->aln->name);
+                   ModelMarkov *m;
+                   if (mmodel->isMixture())
+                       m = (ModelMarkov*)mmodel->getMixtureClass(0);
+                   else
+                       m = (ModelMarkov*)mmodel;
+                   if (params.link_model) {
+                       // a single model linked across all the partitions
+                       // thus only need to output the subst matrix of the first partition
+                       reportNexusFile(outnex, m, "");
+                       break;
+                   } else {
+                       reportNexusFile(outnex, m, (*it)->aln->name);
+                   }
                }
             } else {
                ModelSubst *mmodel = tree.getModel();
-               ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+               ModelMarkov *m;
+               if (mmodel->isMixture())
+                    m = (ModelMarkov*)mmodel->getMixtureClass(0);
+               else
+                    m = (ModelMarkov*)mmodel;
                reportNexusFile(outnex, m, "");
             }
             outnex << "end;" << endl;
@@ -3095,6 +3133,11 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.write_candidate_trees) {
         printTrees(iqtree->getBestTrees(), params, ".imd_trees");
+    }
+    
+    if (iqtree->isSuperTree()) {
+        // compute mAIC/mBIC/mAICc if it is a partition model
+        // @Huaiyan you may add your code to compute the mAIC/mBIC/mAICc score.
     }
 
     if (params.pll)

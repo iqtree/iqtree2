@@ -162,6 +162,11 @@ public:
     
     bool opt_gamma_invar;
     
+    /**
+        log-likelihoods for each partition
+     */
+    double* partLike;
+    
 protected:
     
     /**

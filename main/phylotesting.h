@@ -469,9 +469,9 @@ private:
     SuperAlignment *super_aln;
 
 
-    // retreive the answers from checkpoint (for merging)
+    // retreive the answers from checkpoint
     // and remove those jobs from the array jobIDs
-    void retreiveAnsFrChkpt(vector<pair<int,double> >& jobs);
+    void retreiveAnsFrChkpt(vector<pair<int,double> >& jobs, int job_type);
 
     /**
      * compute and process the best model for partitions (without MPI)
@@ -600,6 +600,10 @@ public:
     PartitionFinder(Params *inparams, PhyloSuperTree* intree, ModelCheckpoint *modelinfo,
                     ModelsBlock *modelsblock, int numthreads);
 
+    /* Destructor
+     */
+    ~PartitionFinder();
+        
     /*
      * Perform the computation
      */

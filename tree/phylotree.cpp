@@ -2757,7 +2757,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
                 showProgress();
             }
-            ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+            // ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+            ASSERT(tree_lh-new_tree_lh < max_delta_lh);
             return new_tree_lh;
         }
 
@@ -3713,7 +3714,8 @@ void PhyloTree::computeBioNJ(Params &params) {
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
 #ifdef _OPENMP
-    omp_set_nested(true);
+    // omp_set_nested(true);
+    omp_set_max_active_levels(2);
     #pragma omp parallel num_threads(2)
     {
         int thread = omp_get_thread_num();
@@ -3751,7 +3753,8 @@ void PhyloTree::computeBioNJ(Params &params) {
     }
     #ifdef _OPENMP
         #pragma omp barrier
-        omp_set_nested(false);
+        // omp_set_nested(false);
+        omp_set_max_active_levels(1);
     #endif
         
     if (!wasDoneInMemory) {
