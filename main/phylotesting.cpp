@@ -91,7 +91,9 @@ const char *dna_model_names_beast2[] = {"JC", "HKY", "TN", "GTR"};
 /* DNA model supported by ModelOMatic */
 const char *dna_model_names_modelomatic[] = {"JC", "F81", "K80", "HKY", "GTR"};
 
-//const char* dna_freq_names[] = {"+FO"};
+/* DNA frequency set */
+const char* dna_freq_names[] = {"FQ", "F"}; // default
+const char* dna_freq_names_full[] = {"FQ", "F", "FO"}; // full
 
 // Lie-Markov models without an RY, WS or MK prefix
 const char *dna_model_names_lie_markov_fullsym[] =
@@ -172,7 +174,10 @@ const char *aa_model_names_chloroplast[] = {"cpREV"};
 
 const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV", "FLAVI"};
 
-const char* aa_freq_names[] = {"", "+F"};
+/* Protein frequency set */
+const char* aa_freq_names[] = {"", "+F"}; // default
+const char* aa_freq_names_complete[] = {"", "+F", "C10", "C20", "C30", "C40", "C50", "C60"}; // complete
+const char* aa_freq_names_full[] = {"", "+F", "+FQ", "+FO", "C10", "C20", "C30", "C40", "C50", "C60"}; // full
 
 
 /****** Codon models ******/
@@ -1089,29 +1094,57 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
 void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names) {
     int j;
 
-    switch (seq_type) {
-        case SEQ_PROTEIN:
-            copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
-            break;
-        case SEQ_CODON:
-            copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
-            break;
-        default:
-            break;
+    freq_names.clear();
+    if (state_freq_set) {
+    	string in_freq_set(state_freq_set);
+    	std::transform(in_freq_set.begin(),in_freq_set.end(),in_freq_set.begin(),::toupper);
+        if (in_freq_set == "FULL") {
+			switch (seq_type) {
+				case SEQ_DNA:
+					copyCString(dna_freq_names_full, sizeof(dna_freq_names_full)/sizeof(char*), freq_names);
+					break;
+				case SEQ_PROTEIN:
+					copyCString(aa_freq_names_full, sizeof(aa_freq_names_full)/sizeof(char*), freq_names);
+					break;
+			}
+        } else if (in_freq_set == "COMPLETE") {
+			switch (seq_type) {
+				case SEQ_PROTEIN:
+					copyCString(aa_freq_names_complete, sizeof(aa_freq_names_complete)/sizeof(char*), freq_names);
+					break;
+			}
+        } else {
+        	convert_string_vec(state_freq_set, freq_names);
+        }
     }
-    if (state_freq_set)
-        convert_string_vec(state_freq_set, freq_names);
+    if (freq_names.empty()) {
+		switch (seq_type) {
+			case SEQ_DNA:
+				copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+				break;
+			case SEQ_PROTEIN:
+				copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+				break;
+			case SEQ_CODON:
+				copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
+				break;
+			default:
+				break;
+		}
+    }
     for (j = 0; j < freq_names.size(); j++) {
         std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
         if (freq_names[j] != "" && freq_names[j][0] != '+')
             freq_names[j] = "+" + freq_names[j];
     }
 
-    // put "FO" to the last
-    vector<string>::iterator itr = remove(freq_names.begin(), freq_names.end(), "+FO");
-    if (itr != freq_names.end()) {
-        freq_names.erase(itr, freq_names.end());
-        freq_names.push_back("+FO");
+    // for DNA, put "FO" to the last
+    if (seq_type == SEQ_DNA) {
+    	vector<string>::iterator itr = remove(freq_names.begin(), freq_names.end(), "+FO");
+		if (itr != freq_names.end()) {
+			freq_names.erase(itr, freq_names.end());
+			freq_names.push_back("+FO");
+		}
     }
 }
 
@@ -1352,7 +1385,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         int max_cats = candidate_models.generate(params, iqtree.aln, params.model_test_separate_rate, false);
         
         // If the option -m MF1 is used, consider ALL candidates
-        if (params.model_name == "MF1") {
+        if (params.model_name == "MF1" || params.model_name == "MF-all") {
             params.score_diff_thres = -1.0;
             cout << "ModelFinder 1 is activated" << endl;
         }
