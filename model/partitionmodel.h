@@ -125,6 +125,11 @@ public:
     virtual double targetFunk(double x[]);
 
     /**
+     compute the mixture-based log-likelihood for mAIC, mAICc, mBIC calculation.
+     */
+    double computeMixLh();
+
+    /**
      rescale the state frequencies
      @param sum_one TRUE to make frequencies sum to 1, FALSE to make last entry equal to 1
      */

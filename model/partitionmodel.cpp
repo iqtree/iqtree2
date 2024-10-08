@@ -335,6 +335,85 @@ double PartitionModel::targetFunk(double x[]) {
     return res;
 }
 
+double PartitionModel::computeMixLh() {
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    int ntrees = tree->size();
+
+    // go through the number of sites of each partition to compute the class weights
+    vector<double> weight_array;
+    double sum_sites = 0.0;
+
+    //if (tree->part_order.empty()) tree->computePartitionOrder();
+    for (int j = 0; j < ntrees; j++) {
+        //int i = tree->part_order[j];
+        int part_sites = tree->at(j)->getAlnNSite();
+        weight_array.push_back(part_sites);
+        sum_sites += part_sites;
+    }
+    for (int j = 0; j < ntrees; j++) {
+        weight_array[j] /= sum_sites;
+    }
+
+    // compute the mixture-based log-likelihood
+    double mix_lh = 0.0;
+    vector<Alignment*> aln_array;
+    for (int j = 0; j < ntrees; j++) {
+        aln_array.push_back(tree->at(j)->aln); //get the partitioned alignment
+    }
+
+    for (int j = 0; j < ntrees; j++) {
+        //int i = tree->part_order[j];
+        Alignment *part_aln = aln_array[j];
+        int part_sites = part_aln->getNSite();
+
+        // get the site-log-likelihood the the partition under each tree and the corresponding model
+        double *lh_array = new double [ntrees*part_sites];
+
+        for (int k = 0; k < ntrees; k++) {
+            PhyloTree *t = tree->at(k);
+            t->setAlignment(part_aln);
+
+            t->deleteAllPartialLh();
+            t->initializeAllPartialLh();
+
+            double *sub_lh_array = lh_array + k*part_sites;
+            t->computeLikelihood(sub_lh_array);
+        }
+
+        // compute
+        double mix_lh_partition = 0.0;
+        for (int l = 0; l < part_sites; l++) {
+            double weighted_lh, max_lh, mix_lh_site;
+
+            for (int k = 0; k < ntrees; k++) {
+                weighted_lh = log(weight_array[k])+lh_array[part_sites*k+l];
+                if (k = 0) {
+                    max_lh = weighted_lh;
+                } else if (weighted_lh > max_lh) {
+                    max_lh = weighted_lh;
+                }
+            }
+
+            double mix_lh_site_original = 0.0;
+            for (int k = 0; k < ntrees; k++) {
+                mix_lh_site_original += exp(log(weight_array[k])+lh_array[part_sites*k+l]-max_lh);
+            }
+            mix_lh_site = max_lh + log(mix_lh_site_original);
+            mix_lh_partition += mix_lh_site;
+        }
+        mix_lh += mix_lh_partition;
+        delete[] lh_array; //release array memery
+    }
+
+    // set the alignments back
+    for (int k = 0; k < ntrees; k++) {
+        PhyloTree *t = tree->at(k);
+        t->setAlignment(aln_array[k]);
+    }
+
+    return mix_lh;
+}
+
 void PartitionModel::setVariables(double *variables) {
     model->setVariables(variables);
 }

@@ -295,6 +295,11 @@ public:
      */
     SyncChkPoint* syncChkPoint;
 
+    /**
+     compute the mixture-based log-likelihood for mAIC, mAICc, mBIC calculation.
+     */
+    virtual double computeMixLh() {return 0.0;}
+
 protected:
 
 	/**
