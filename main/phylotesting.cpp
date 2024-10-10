@@ -529,6 +529,14 @@ bool mixRevNonrev(StrVector model_names, SeqType seq_type) {
                 if (model_list[i] == model_names[k])
                     hasNonRevModel = true;
     }
+    if (hasNonRevModel && !Params::getInstance().contain_nonrev) {
+        // show the error message if --nonrev-model is not set
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        outError("Add an option '--nonrev-model' when using non-reversible models in ModelFinder.");
+    }
+    
     return (hasRevModel && hasNonRevModel);
 }
 
