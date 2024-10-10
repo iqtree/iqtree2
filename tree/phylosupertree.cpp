@@ -1539,6 +1539,9 @@ void PhyloSuperTree::printBestPartitionParams(const char *filename) {
                 out << saln->partitions[part]->sequence_type << ",";
             string pos = saln->partitions[part]->position_spec;
             replace(pos.begin(), pos.end(), ',' , ' ');
+            if (!saln->partitions[part]->sequence_type.empty() && !pos.empty()) {
+                out << ", ";
+            }
             out << pos << ";" << endl;
         }
         out << "  charpartition mymodels =" << endl;
