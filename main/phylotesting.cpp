@@ -72,6 +72,13 @@ const char* dna_model_names[] = {"JC", "F81", "K80", "HKY", "TNe", "TN",
                                  "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u",
                                  "TIMe", "TIM", "TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR"};
 
+const char* dna_model_names_nonrev[] = {"3.3b","4.5a","4.5b","5.6a","5.6b",
+                                       "5.7a","5.7b","5.7c","5.11a","5.11b",
+                                       "5.11c","5.16","6.6","6.7a","6.7b","6.8a",
+                                       "6.8b","6.17a","6.17b","8.8","8.10a","8.10b",
+                                       "8.16","8.17","8.18","9.20a","9.20b","10.12",
+                                       "10.34","12.12"};
+
 /* DNA models supported by PhyML/PartitionFinder */
 const char* dna_model_names_old[] ={"JC", "F81", "K80", "HKY", "TNe", "TN",
          "K81", "K81u", "TIMe", "TIM", "TVMe", "TVM", "SYM", "GTR"};
@@ -139,6 +146,8 @@ const char *dna_model_names_lie_markov_strsym[] = {
 const char* aa_model_names[] = {"LG", "WAG", "JTT", "Q.pfam", "Q.bird", "Q.mammal", "Q.insect", "Q.plant", "Q.yeast", "JTTDCMut", "DCMut", "VT", "PMB", "Blosum62", "Dayhoff",
         "mtREV", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv", "mtMAM", "FLAVI",
 		"HIVb", "HIVw", "FLU", "rtREV", "cpREV"};
+
+const char* aa_model_names_nonrev[] = {"NQ.bird","NQ.insect","NQ.mammal","NQ.pfam","NQ.plant","NQ.yeast"};
 
 /****** Protein mixture model set ******/
 const char* aa_mixture_model_names[] = {"C10", "C20", "C30", "C40", "C50", "C60", "EX2", "EX3", "EHO", "UL2", "UL3", "EX_EHO", "LG4M", "LG4X", "CF4"};
@@ -475,6 +484,43 @@ void appendCString(const char **cvec, int n, StrVector &strvec, bool touppercase
         }
 }
 
+/**
+ * return true if the array of model names contain both reversible models and non-reversible models
+ */
+bool mixRevNonrev(StrVector model_names, SeqType seq_type) {
+    StrVector model_list;
+    bool hasRevModel = false;
+    bool hasNonRevModel = false;
+    int i,k;
+    if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
+        // check DNA reversible models
+        copyCString(dna_model_names, sizeof(dna_model_names)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size() && !hasRevModel; i++)
+            for (k = 0; k < model_names.size() && !hasRevModel; k++)
+                if (model_list[i] == model_names[k])
+                    hasRevModel = true;
+        // check DNA non-reversible models
+        copyCString(dna_model_names_nonrev, sizeof(dna_model_names_nonrev)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size() && !hasNonRevModel; i++)
+            for (k = 0; k < model_names.size() && !hasNonRevModel; k++)
+                if (model_list[i] == model_names[k])
+                    hasNonRevModel = true;
+    } else if (seq_type == SEQ_PROTEIN) {
+        // check protein reversible models
+        copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size() && !hasRevModel; i++)
+            for (k = 0; k < model_names.size() && !hasRevModel; k++)
+                if (model_list[i] == model_names[k])
+                    hasRevModel = true;
+        // check protein non-reversible models
+        copyCString(aa_model_names_nonrev, sizeof(aa_model_names_nonrev)/sizeof(char*), model_list, true);
+        for (i = 0; i < model_list.size() && !hasNonRevModel; i++)
+            for (k = 0; k < model_names.size() && !hasNonRevModel; k++)
+                if (model_list[i] == model_names[k])
+                    hasNonRevModel = true;
+    }
+    return (hasRevModel && hasNonRevModel);
+}
 
 int detectSeqType(const char *model_name, SeqType &seq_type) {
     bool empirical_model = false;
@@ -498,6 +544,12 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             break;
         }
     copyCString(dna_model_names, sizeof(dna_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(dna_model_names_nonrev, sizeof(dna_model_names_nonrev)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_DNA;
@@ -534,6 +586,13 @@ int detectSeqType(const char *model_name, SeqType &seq_type) {
             break;
         }
     copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_PROTEIN;
+            empirical_model = true;
+            break;
+        }
+    copyCString(aa_model_names_nonrev, sizeof(aa_model_names_nonrev)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
         if (model_str == model_list[i]) {
             seq_type = SEQ_PROTEIN;
@@ -926,7 +985,7 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
         return;
     }
 
-    if (iEquals(model_set, "ALL") || iEquals(model_set, "AUTO"))
+    if (iEquals(model_set, "ALL") || iEquals(model_set, "AUTO") || iEquals(model_set, "reversible"))
         model_set = "";
 
     if (seq_type == SEQ_BINARY) {
@@ -986,6 +1045,8 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
             // IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
             // you also need to change getPrototypeModel function.
+        } else if (model_set == "non-reversible") {
+            copyCString(dna_model_names_nonrev, sizeof(dna_model_names_nonrev) / sizeof(char*), model_names);
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
@@ -1027,6 +1088,8 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
             copyCString(aa_model_names_beast2, sizeof(aa_model_names_beast2) / sizeof(char*), model_names);
         } else if (model_set == "modelomatic") {
             copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
+        } else if (model_set == "non-reversible") {
+            copyCString(aa_model_names_nonrev, sizeof(aa_model_names_nonrev) / sizeof(char*), model_names);
         } else if (model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(model_set.c_str()+1, model_names);
@@ -1086,9 +1149,17 @@ void getModelSubst(SeqType seq_type, bool standard_code, string model_name,
                     if (!std_genetic_code[j])
                         model_names.push_back(codon_model_names[j]);
             }
-        } else
+        } else {
             convert_string_vec(model_set.c_str(), model_names);
+        }
     }
+    // change to upper character
+    for (i = 0; i < model_names.size(); i++) {
+        transform(model_names[i].begin(), model_names[i].end(), model_names[i].begin(), ::toupper);
+    }
+    // report error if the models contain both reversible models and non-reversible models
+    if (mixRevNonrev(model_names, seq_type))
+        outError("The input models cannot contain reversible and non-reversible models");
 }
 
 void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names) {
@@ -1115,6 +1186,10 @@ void getStateFreqs(SeqType seq_type, char *state_freq_set, StrVector &freq_names
 			}
         } else {
         	convert_string_vec(state_freq_set, freq_names);
+            for (j = 0; j < freq_names.size(); j++) {
+                // change to upper character
+                transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
+            }
         }
     }
     if (freq_names.empty()) {
@@ -1229,6 +1304,10 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
     if (!rate_set.empty() && rate_set != "1" && !iEquals(rate_set, "ALL") && !iEquals(rate_set, "AUTO")) {
         // take the rate_options from user-specified models
         convert_string_vec(rate_set.c_str(), ratehet);
+        for (j = 0; j < ratehet.size(); j++) {
+            // change to upper character
+            transform(ratehet[j].begin(), ratehet[j].end(), ratehet[j].begin(), ::toupper);
+        }
         if (!ratehet.empty() && iEquals(ratehet[0], "ALL")) {
             ratehet.erase(ratehet.begin());
             StrVector ratedef;
