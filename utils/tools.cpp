@@ -1243,6 +1243,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.num_runs = 1;
     params.model_name = "";
+    params.contain_nonrev = false;
     params.model_name_init = NULL;
     params.model_opt_steps = 10;
     params.model_set = "ALL";
@@ -3337,11 +3338,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
+            if (strcmp(argv[cnt], "--nonrev-model") == 0 || strcmp(argv[cnt], "-nonrev-model") == 0) {
+                params.contain_nonrev = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-mset") == 0 || strcmp(argv[cnt], "--mset") == 0 || strcmp(argv[cnt], "--models") == 0 || strcmp(argv[cnt], "-mexchange") == 0 || strcmp(argv[cnt], "--mexchange") == 0 ) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use " + string(argv[cnt-1]) + " <model_set>";
 				params.model_set = argv[cnt];
+                if (params.model_set == "non-reversible")
+                    params.contain_nonrev = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-madd") == 0 || strcmp(argv[cnt], "--madd") == 0) {

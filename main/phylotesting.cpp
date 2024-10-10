@@ -201,7 +201,9 @@ const char *codon_freq_names[] = {"+F3X4", "+F1X4", "+F", ""};
 
 // the set of substitution models to be used in the first round of the partition finder
 const char* dna_usual_model = "GTR";
+const char* dna_usual_nonrev_model = "12.12";
 const char* aa_usual_model = "LG";
+const char* aa_usual_nonrev_model = "NQ.pfam";
 const char* codon_usual_model = "GY+F3X4";
 const char* bin_usual_model = "GTR2";
 const char* morph_usual_model = "MK";
@@ -229,8 +231,16 @@ string getSeqTypeName(SeqType seq_type) {
 
 string getUsualModelSubst(SeqType seq_type) {
     switch (seq_type) {
-        case SEQ_DNA: return dna_usual_model;
-        case SEQ_PROTEIN: return aa_usual_model;
+        case SEQ_DNA:
+            if (Params::getInstance().contain_nonrev)
+                return dna_usual_nonrev_model;
+            else
+                return dna_usual_model;
+        case SEQ_PROTEIN:
+            if (Params::getInstance().contain_nonrev)
+                return aa_usual_nonrev_model;
+            else
+                return aa_usual_model;
         case SEQ_CODON: return codon_usual_model;
         case SEQ_BINARY: return bin_usual_model;
         case SEQ_MORPH: return morph_usual_model;

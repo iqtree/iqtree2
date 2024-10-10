@@ -1584,6 +1584,9 @@ public:
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */
     string model_name;
+    
+    /** contain non-reversible model */
+    bool contain_nonrev;
 
     /** model name to initialize GTR20 or NONREV protein model */
     char* model_name_init;
