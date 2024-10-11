@@ -368,12 +368,10 @@ double PartitionModel::computeMixLh() {
 
         // get the site-log-likelihood the the partition under each tree and the corresponding model
         double *lh_array = new double [ntrees*part_sites];
-
+        tree->deleteAllPartialLh();
         for (int k = 0; k < ntrees; k++) {
             PhyloTree *t = tree->at(k);
             t->setAlignment(part_aln);
-
-            t->deleteAllPartialLh();
             t->initializeAllPartialLh();
 
             double *sub_lh_array = lh_array + k*part_sites;
@@ -406,9 +404,11 @@ double PartitionModel::computeMixLh() {
     }
 
     // set the alignments back
+    tree->deleteAllPartialLh();
     for (int k = 0; k < ntrees; k++) {
         PhyloTree *t = tree->at(k);
         t->setAlignment(aln_array[k]);
+        t->initializeAllPartialLh();
     }
 
     return mix_lh;
