@@ -5332,7 +5332,7 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
 
     if (MPIHelper::getInstance().isMaster()) {
         // MASTER: assign one job to its every thread
-        i=0;
+       /* i=0; // old scheduling method
         while (i<num_threads && i<job_ids.size()) {
             w = job_ids[i].first;
             id1 = closest_pairs[w].first;
@@ -5345,6 +5345,38 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
         for (j=1; j<num_processes; j++) {
             for (k=0; k<num_threads; k++) {
                 int n = 0;
+                int tag = j * num_threads + k;
+                if (i < job_ids.size()) {
+                    w = job_ids[i].first;
+                    id1 = closest_pairs[w].first;
+                    id2 = closest_pairs[w].second;
+                    MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
+                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
+                    i++;
+                } else {
+                    MergeJob mergejob;
+                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
+                }
+            }
+        }*/
+
+       // new scheduling method
+        i=0;
+
+        SyncChkPoint syncChkPoint(this, 0);
+
+        for (k=0; k<num_threads; k++) {
+            for (j=0; j<num_processes; j++) {
+                if (j == 0 && i<job_ids.size()) { // MASTER: assign one job to self
+                    w = job_ids[i].first;
+                    id1 = closest_pairs[w].first;
+                    id2 = closest_pairs[w].second;
+                    currJobs.push_back(
+                            new MergeJob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]));
+                    i++;
+                    continue;
+                }
+                // MASTER: send one jobs to workers
                 int tag = j * num_threads + k;
                 if (i < job_ids.size()) {
                     w = job_ids[i].first;
