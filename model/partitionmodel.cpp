@@ -315,11 +315,7 @@ double PartitionModel::targetFunk(double x[]) {
         bool fixed = part_model->fixParameters(false);
         double ans = part_model->targetFunk(x);
         part_model->fixParameters(fixed);
-
-        #pragma omp critical
-        {
-            partLike[j] = ans;
-        }
+        partLike[j] = ans;
     }
     
     // calculate the sum
