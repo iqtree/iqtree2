@@ -252,79 +252,6 @@ string getUsualModelSubst(SeqType seq_type) {
 void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites,
                 string rate_set, StrVector &ratehet);
 
-/**
- * restrict the number of threads should be used for a single partition
- */
-/*
-int numThresSinglePart(int nptn, SeqType seqType, int numThres) {
-    if (numThres == 0)
-        return numThres;
-    int thres = numThres;
-    switch(seqType) {
-        case SEQ_BINARY:
-            if (nptn <= 1000)
-                thres = 1;
-            else if (nptn <= 10000)
-                thres = 8;
-            break;
-        case SEQ_CODON:
-            if (nptn*3 <= 10)
-                thres = 1;
-            else if (nptn*3 <= 50)
-                thres = 4;
-            else if (nptn*3 <= 1000)
-                thres = 8;
-            else if (nptn*3 <= 10000)
-                thres = 16;
-            break;
-        case SEQ_PROTEIN:
-            if (nptn <= 100)
-                thres = 1;
-            else if (nptn <= 1000)
-                thres = 8;
-            else if (nptn <= 10000)
-                thres = 16;
-            break;
-        default: // DNA or others
-            if (nptn <= 1000)
-                thres = 1;
-            else if (nptn <= 10000)
-                thres = 4;
-            else if (nptn <= 50000)
-                thres = 16;
-            break;
-    }
-    if (thres > numThres)
-        thres = numThres;
-    return thres;
-}
-*/
-
-/**
- * restrict the number of threads should be used for fast tree estimation
- * and for the final step after modelFinder
- */
-int numThresFastTree(int nPart, int nptn, SeqType seqType, int numThres) {
-    if (nptn == 1 || numThres == 0)
-        return numThres;
-    int thres = nPart;
-    switch(seqType) {
-        case SEQ_PROTEIN:
-            if (nptn >= 8000 && nPart < 8)
-                thres = 8;
-            break;
-        case SEQ_CODON:
-            if (nptn*3 >= 8000 && nPart < 8)
-                thres = 8;
-            break;
-        default:
-            break;
-    }
-    if (thres > numThres)
-        thres = numThres;
-    return thres;
-}
-
 size_t CandidateModel::getUsualModel(Alignment *aln) {
     size_t aln_len = 0;
     if (aln->isSuperAlignment()) {
@@ -1351,20 +1278,6 @@ void getRateHet(SeqType seq_type, string model_name, double frac_invariant_sites
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name, map<string, vector<string> > nest_network, bool under_mix_finder)
 {
-    // if it is an alignment with partitions and the number of threads is more than the number of alignments,
-    // then set the number of threads = the number of alignments (for most of the cases)
-    bool autoThread = (params.num_threads == 0);
-    int orig_nthreads = params.num_threads;
-    int updated_nthreads = params.num_threads;
-    if (!autoThread && iqtree.isSuperTree()) {
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        updated_nthreads = numThresFastTree(stree->size(), stree->at(0)->aln->getNPattern(), stree->at(0)->aln->seq_type, orig_nthreads);
-        params.num_threads = updated_nthreads;
-    }
-    if (updated_nthreads != orig_nthreads) {
-        cout << "The number of threads is changed to: " << updated_nthreads << endl;
-    }
-    
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
         return;
@@ -1467,9 +1380,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
             iqtree.saveCheckpoint();
         }
     }
-    
-    if (!autoThread)
-        params.num_threads = orig_nthreads;
     
     if (!params.use_nn_model) {
         // also save initial tree to the original .ckp.gz checkpoint
@@ -1603,18 +1513,6 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
-    }
-
-    if (!autoThread) {
-        /*
-        if (iqtree.isSuperTree()) {
-            // change the number of threads to the number of partitions for alignment with partitions
-            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-            params.num_threads = stree->size();
-            cout << "The number of threads is changed to: " << params.num_threads << endl;
-        } else { */
-            params.num_threads = updated_nthreads;
-        // }
     }
 }
 
@@ -4246,7 +4144,13 @@ void PartitionFinder::getBestModelforPartitionsNoMPI(int nthreads, vector<pair<i
 
 #ifdef _OPENMP
     // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
+    // show the message
+    if (parallel_job)
+        cout << "In ModelFinder: parallelization over partitions" << endl;
+    else if (nthreads > 1)
+        cout << "In ModelFinder: parallelization over sites" << endl;
+    
 #pragma omp parallel for schedule(dynamic) reduction(+: lhsum, dfsum) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {
@@ -4318,7 +4222,7 @@ void PartitionFinder::getBestModelforMergesNoMPI(int nthreads, vector<pair<int,d
 
 #ifdef _OPENMP
     // parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && jobs.size() > nthreads);
-    parallel_job = ((!params->model_test_and_tree) && nthreads > 1);
+    parallel_job = ((!params->model_test_and_tree) && nthreads > 1 && !params->parallel_over_sites);
 #pragma omp parallel for schedule(dynamic) if (parallel_job)
 #endif
     for (int j = 0; j < jobs.size(); j++) {

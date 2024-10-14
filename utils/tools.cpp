@@ -1260,6 +1260,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_mixmodel_weight = false;
     params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
+    params.parallel_over_sites = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
     params.keep_zero_freq = true;
@@ -3426,6 +3427,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_rate_matrix = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-parallel-over-sites") == 0 || strcmp(argv[cnt], "--parallel-over-sites") == 0) {
+                params.parallel_over_sites = true;
+                continue;
+            }
 //			if (strcmp(argv[cnt], "-mh") == 0) {
 //				params.mvh_site_rate = true;
 //				params.discard_saturated_site = false;

@@ -1630,6 +1630,9 @@ public:
 
     /** true to fist test equal rate model, then test rate heterogeneity (default: false) */
     bool model_test_separate_rate;
+    
+    /** force to parallelisation over sites */
+    bool parallel_over_sites;
 
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
