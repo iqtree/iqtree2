@@ -5151,15 +5151,33 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
     nextjob = 0;
     remain_job_list.clear();
     if (MPIHelper::getInstance().isMaster()) {
-        int k = 0;
-        while (k < n && k < job_ids.size()) {
+        int k = 0; // index for job_ids
+
+        // new scheduling method
+        int k_prime=0; // track the threads and process  position in the list
+
+        for (int n_thread = 0; n_thread < num_threads; ++n_thread) {
+            for (int n_processor = 0; n_processor < num_processes; ++n_processor) {
+                k_prime = n_processor * num_threads + n_thread;
+                if (k_prime < n && k < job_ids.size()) {
+                    assignJobs[k_prime] = job_ids[k].first;
+                    k++;
+                } else if (k_prime < n) {
+                    assignJobs[k_prime] = -1;
+                }
+//                remove the following line to see the new scheduling
+//                cout << "Assign job " << assignJobs[k_prime] << " to processor " << n_processor << " thread " << n_thread << " k prime" << k_prime << endl;
+            }
+        }
+
+/*        while (k < n && k < job_ids.size()) { // old scheduling method
             assignJobs[k] = job_ids[k].first;
             k++;
         }
         if (k < n) {
             for (int i = k; i < n; i++)
                 assignJobs[i] = -1;
-        }
+        }*/
         while (k < job_ids.size()) {
             remain_job_list.push_back(job_ids[k].first);
             k++;
