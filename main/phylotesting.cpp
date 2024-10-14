@@ -5367,16 +5367,18 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
 
         for (k=0; k<num_threads; k++) {
             for (j=0; j<num_processes; j++) {
-                if (j == 0 && i<job_ids.size()) { // MASTER: assign one job to self
-                    w = job_ids[i].first;
-                    id1 = closest_pairs[w].first;
-                    id2 = closest_pairs[w].second;
-                    currJobs.push_back(
-                            new MergeJob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]));
-                    i++;
+                if (j == 0 ){ // master assign a job for itself in kth thread
+                    if (i<job_ids.size()) {
+                        w = job_ids[i].first;
+                        id1 = closest_pairs[w].first;
+                        id2 = closest_pairs[w].second;
+                        currJobs.push_back(
+                                new MergeJob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]));
+                        i++;
+                    }
                     continue;
                 }
-                // MASTER: send one jobs to workers
+
                 int tag = j * num_threads + k;
                 if (i < job_ids.size()) {
                     w = job_ids[i].first;
