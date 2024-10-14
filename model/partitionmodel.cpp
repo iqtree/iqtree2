@@ -364,28 +364,30 @@ double PartitionModel::computeMixLh() {
     for (int j = 0; j < ntrees; j++) {
         //int i = tree->part_order[j];
         Alignment *part_aln = aln_array[j];
-        int part_sites = part_aln->getNSite();
+        int part_nptn = part_aln->getNPattern();
 
         // get the site-log-likelihood the the partition under each tree and the corresponding model
-        double *lh_array = new double [ntrees*part_sites];
+        double *lh_array = new double [ntrees*part_nptn];
         tree->deleteAllPartialLh();
         for (int k = 0; k < ntrees; k++) {
             PhyloTree *t = tree->at(k);
             t->setAlignment(part_aln);
             t->initializeAllPartialLh();
 
-            double *sub_lh_array = lh_array + k*part_sites;
+            double *sub_lh_array = lh_array + k*part_nptn;
             t->computeLikelihood(sub_lh_array);
         }
 
         // compute
         double mix_lh_partition = 0.0;
-        for (int l = 0; l < part_sites; l++) {
+        for (int l = 0; l < part_nptn; l++) {
             double weighted_lh, max_lh, mix_lh_site;
 
+            int ptn_freq = part_aln->at(l).frequency;
+
             for (int k = 0; k < ntrees; k++) {
-                weighted_lh = log(weight_array[k])+lh_array[part_sites*k+l];
-                if (k = 0) {
+                weighted_lh = log(weight_array[k])+lh_array[part_nptn*k+l];
+                if (k == 0) {
                     max_lh = weighted_lh;
                 } else if (weighted_lh > max_lh) {
                     max_lh = weighted_lh;
@@ -394,10 +396,10 @@ double PartitionModel::computeMixLh() {
 
             double mix_lh_site_original = 0.0;
             for (int k = 0; k < ntrees; k++) {
-                mix_lh_site_original += exp(log(weight_array[k])+lh_array[part_sites*k+l]-max_lh);
+                mix_lh_site_original += exp(log(weight_array[k])+lh_array[part_nptn*k+l]-max_lh);
             }
             mix_lh_site = max_lh + log(mix_lh_site_original);
-            mix_lh_partition += mix_lh_site;
+            mix_lh_partition += mix_lh_site*ptn_freq;
         }
         mix_lh += mix_lh_partition;
         delete[] lh_array; //release array memery
