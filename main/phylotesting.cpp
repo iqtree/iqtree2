@@ -5057,20 +5057,39 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
     if (MPIHelper::getInstance().isMaster()) {
         int k = 0; // index for job_ids
 
-        // new scheduling method
-        int k_prime=0; // track the threads and process  position in the list
+        if (params->parallel_over_sites){
+            // parallel over sites scheduling
+            int k_prime = 0;
 
-        for (int n_thread = 0; n_thread < num_threads; ++n_thread) {
             for (int n_processor = 0; n_processor < num_processes; ++n_processor) {
-                k_prime = n_processor * num_threads + n_thread;
+                k_prime = n_processor * num_threads;
                 if (k_prime < n && k < job_ids.size()) {
                     assignJobs[k_prime] = job_ids[k].first;
                     k++;
-                } else if (k_prime < n) {
+                }
+
+                for (int n_thread = 1; n_thread < num_threads; ++n_thread) {
+                    k_prime = n_processor * num_threads + n_thread;
                     assignJobs[k_prime] = -1;
                 }
+            }
+        }
+        else {
+            // new scheduling method
+            int k_prime = 0; // track the threads and process  position in the list
+
+            for (int n_thread = 0; n_thread < num_threads; ++n_thread) {
+                for (int n_processor = 0; n_processor < num_processes; ++n_processor) {
+                    k_prime = n_processor * num_threads + n_thread;
+                    if (k_prime < n && k < job_ids.size()) {
+                        assignJobs[k_prime] = job_ids[k].first;
+                        k++;
+                    } else if (k_prime < n) {
+                        assignJobs[k_prime] = -1;
+                    }
 //                remove the following line to see the new scheduling
 //                cout << "Assign job " << assignJobs[k_prime] << " to processor " << n_processor << " thread " << n_thread << " k prime" << k_prime << endl;
+                }
             }
         }
 
@@ -5269,31 +5288,69 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
 
         SyncChkPoint syncChkPoint(this, 0);
 
-        for (k=0; k<num_threads; k++) {
-            for (j=0; j<num_processes; j++) {
-                if (j == 0 ){ // master assign a job for itself in kth thread
-                    if (i<job_ids.size()) {
-                        w = job_ids[i].first;
-                        id1 = closest_pairs[w].first;
-                        id2 = closest_pairs[w].second;
-                        currJobs.push_back(
-                                new MergeJob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]));
-                        i++;
-                    }
-                    continue;
-                }
+        if (params->parallel_over_sites){
+            // MASTER: assign job to itself
+            if (i < job_ids.size()) {
+                w = job_ids[i].first;
+                id1 = closest_pairs[w].first;
+                id2 = closest_pairs[w].second;
+                currJobs.push_back(new MergeJob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]));
+                i++;
+            }
+
+            // MASTER send jobs to workers
+            for (j = 1; j < num_processes; j++) {
+                k = 0; // only the 0th thread of the worker will be assigned a job
 
                 int tag = j * num_threads + k;
                 if (i < job_ids.size()) {
                     w = job_ids[i].first;
                     id1 = closest_pairs[w].first;
                     id2 = closest_pairs[w].second;
-                    MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
-                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
+                    MergeJob mergejob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]);
+                    syncChkPoint.sendMergeJobToWorker(mergejob, j, tag);
                     i++;
                 } else {
                     MergeJob mergejob;
-                    syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
+                    syncChkPoint.sendMergeJobToWorker(mergejob, j, tag); // send the empty job to the worker
+                }
+
+                // for every threads send a empty job
+                for (k = 1; k < num_threads; k++) {
+                    tag = j * num_threads + k;
+                    MergeJob mergejob;
+                    syncChkPoint.sendMergeJobToWorker(mergejob, j, tag); // send the empty job to the worker
+                }
+
+            }
+        }
+        else {
+            for (k = 0; k < num_threads; k++) {
+                for (j = 0; j < num_processes; j++) {
+                    if (j == 0) { // master assign a job for itself in kth thread
+                        if (i < job_ids.size()) {
+                            w = job_ids[i].first;
+                            id1 = closest_pairs[w].first;
+                            id2 = closest_pairs[w].second;
+                            currJobs.push_back(
+                                    new MergeJob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]));
+                            i++;
+                        }
+                        continue;
+                    }
+
+                    int tag = j * num_threads + k;
+                    if (i < job_ids.size()) {
+                        w = job_ids[i].first;
+                        id1 = closest_pairs[w].first;
+                        id2 = closest_pairs[w].second;
+                        MergeJob mergejob(id1, id2, gene_sets[id1], gene_sets[id2], lenvec[id1], lenvec[id2]);
+                        syncChkPoint.sendMergeJobToWorker(mergejob, j, tag);
+                        i++;
+                    } else {
+                        MergeJob mergejob;
+                        syncChkPoint.sendMergeJobToWorker(mergejob, j, tag); // send the empty job to the worker
+                    }
                 }
             }
         }
