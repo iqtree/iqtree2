@@ -113,11 +113,15 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
-string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed) {
+string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed, int bootstrap_rep) {
     string intree = "";
     string output;
     try {
         input_options* in_options = NULL;
+        if (bootstrap_rep > 0) {
+            in_options = new input_options();
+            in_options->insert("-bb", convertIntToString(bootstrap_rep));
+        }
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options);
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
@@ -576,6 +580,13 @@ void input_options::set_params(Params& params) {
         else if (flags[i] == "-mrate") {
             params.ratehet_set = values[i];
             cout << "params.ratehet_set = " << params.ratehet_set << endl;
+        }
+        else if (flags[i] == "-bb") {
+            params.gbo_replicates = atoi(values[i].c_str());
+            if (params.gbo_replicates < 1000)
+                outError("#replicates must be >= 1000");
+            params.consensus_type = CT_CONSENSUS_TREE;
+            params.stop_condition = SC_BOOTSTRAP_CORRELATION;
         }
     }
 }
