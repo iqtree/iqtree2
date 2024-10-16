@@ -3138,6 +3138,27 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     if (iqtree->isSuperTree()) {
         // compute mAIC/mBIC/mAICc if it is a partition model
         // @Huaiyan you may add your code to compute the mAIC/mBIC/mAICc score.
+        int model_df, ntrees, mix_df;
+        double nsites, mix_lh, mAIC, mAICc, mBIC;
+
+        mix_lh = iqtree->getModelFactory()->computeMixLh();
+        cout << "m-log-Likelihood : " << mix_lh << endl;
+
+        /*
+        model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
+        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
+        ntrees = stree->size();
+        mix_df = model_df + ntrees - 1;
+        nsites = iqtree->getAlnNSite();
+
+
+        mAIC = -2 * mix_lh + 2 * mix_df;
+        mAICc = mAIC + 2.0 * mix_df * (mix_df + 1) / max(nsites - mix_df - 1, 1);
+        mBIC = -2 * mix_lh + mix_df * log(nsites);
+
+
+        cout << "mAIC: " << mAIC << ", mAICc: " << mAICc << ", mBIC: " << mBIC;
+         */
     }
 
     if (params.pll)

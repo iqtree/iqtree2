@@ -1947,39 +1947,57 @@ string CandidateModel::evaluate(Params &params,
 
         iqtree->ensureNumberOfThreadsIsSet(nullptr);
         iqtree->initializeAllPartialLh();
-        
 
-        if (init_first_mix) {
+        CandidateModel prev_info;
+        bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
 
-            // now switch to the input checkpoint
+        if (!prev_rate_present){
             iqtree->getModelFactory()->setCheckpoint(&in_model_info);
-            iqtree->setCheckpoint(&in_model_info);
+            //iqtree->setCheckpoint(&in_model_info);
+            bool init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
 
-            // get the model mixture object
-            ModelMixture* modelmix = dynamic_cast<ModelMixture*> (iqtree->getModelFactory()->model);
-            ASSERT(modelmix);
-            double init_weight = 1.0 / modelmix->getNMixtures();
-            
-            // obtain the likelihood value from the (k-1)-class mixture model
-            string criteria_str = criterionName(params.model_test_criterion);
-            string best_model = in_model_info["best_model_" + criteria_str];
-            string best_model_logl_df = in_model_info[best_model];
-            stringstream ss (best_model_logl_df);
-            double pre_logl;
-            ss >> pre_logl;
-            
-            for (int step = 0; step < 10; step++) {
-                
-                // initialize the parameters from the (k-1)-class mixture model
-                modelmix->initFromClassMinusOne(init_weight);
-                
+            if (!init_success && iqtree->getModel()->isMixture()) {
+                double init_weight = 1.0 / iqtree->getModel()->getNMixtures();
+
+                // obtain the likelihood value from the (k-1)-class mixture model
+                string criteria_str = criterionName(params.model_test_criterion);
+                string best_model = in_model_info["best_model_" + criteria_str];
+                string best_model_logl_df = in_model_info[best_model];
+                stringstream ss (best_model_logl_df);
+                double pre_logl;
+                ss >> pre_logl;
+
+                for (int step = 0; step < 5; step++) {
+                    if (step > 0) {
+                        init_weight *= 0.5;
+
+                        if (step == 4 || init_weight <= 0.01)
+                            init_weight = 1e-10; //set the weight to 0 at last time
+
+                        if (step == 1) { // the weight of last class is too small, this model should not be restored by next model
+                            in_model_info.startStruct("OptModel");
+                            in_model_info.putBool(getName()+".UnreliableParam",true);
+                            in_model_info.endStruct();
+                        }
+                        cout << getName() << " reinitialized from " + best_model + " with initial weight: " << init_weight << endl;
+                    }
+
+                    // initialize the parameters from the (k-1)-class mixture model
+                    iqtree->getModelFactory()->initFromClassMinusOne(init_weight);
+
+                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+                                                                             params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+
+                    // check if new logl is worse than logl from the (k-1)-class mixture model
+                    if (pre_logl < new_logl + params.modelfinder_eps) break;
+                }
+                if (new_logl < pre_logl - params.modelfinder_eps*10.0) {
+                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                               getName() + " worse than " + best_model + " " + convertDoubleToString(pre_logl));
+                }
+            } else {
                 new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
                                                                          params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
-                
-                // check if new logl is worse than logl from the (k-1)-class mixture model
-                if (pre_logl < new_logl + params.modelfinder_eps) break;
-                init_weight *= 0.5;
-                cout << getName() << " reinitialized from the previous (k-1)-class mixture model with initial weight: " << init_weight << endl;
             }
             tree_len = iqtree->treeLength();
 
@@ -1989,58 +2007,34 @@ string CandidateModel::evaluate(Params &params,
 
             iqtree->getModelFactory()->saveCheckpoint();
             iqtree->saveCheckpoint();
-            if (new_logl < pre_logl - params.modelfinder_eps*10.0) {
-                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                           getName() + " worse than the previous (k-1)-class mixture model " + convertDoubleToString(pre_logl));
-            }
         } else {
-            CandidateModel prev_info;
-            bool prev_rate_present = prev_info.restoreCheckpointRminus1(&in_model_info, this);
-
-            if (!prev_rate_present){
-                iqtree->getModelFactory()->setCheckpoint(&in_model_info);
-                iqtree->getModelFactory()->initFromNestedModel(nest_network);
-
+            // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
+            double weight_rescale = 1.0;
+            if (!rate_restored) {
+                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                if (verbose_mode >= VB_MED)
+                    cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
+            }
+            for (int step = 0; step < 5; step++) {
                 new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                                                                         params.modelfinder_eps, TOL_GRADIENT_MODELTEST);
+                                                                         params.modelfinder_eps,
+                                                                         TOL_GRADIENT_MODELTEST);
                 tree_len = iqtree->treeLength();
-
-                // now switch to the output checkpoint
-                iqtree->getModelFactory()->setCheckpoint(&out_model_info);
-                iqtree->setCheckpoint(&out_model_info);
-
                 iqtree->getModelFactory()->saveCheckpoint();
                 iqtree->saveCheckpoint();
 
-            } else {
-                // try to initialise +R[k+1] from +R[k] if not restored from checkpoint
-                double weight_rescale = 1.0;
-                if (!rate_restored) {
-                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                    if (verbose_mode >= VB_MED)
-                        cout << iqtree->getRate()->name << " initialized from " << prev_info.rate_name << endl;
-                }
-                for (int step = 0; step < 5; step++) {
-                    new_logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
-                                                                             params.modelfinder_eps,
-                                                                             TOL_GRADIENT_MODELTEST);
-                    tree_len = iqtree->treeLength();
-                    iqtree->getModelFactory()->saveCheckpoint();
-                    iqtree->saveCheckpoint();
-
-                    // check if logl(+R[k]) is worse than logl(+R[k-1])
-                    // if (!prev_rate_present) break;
-                    if (prev_info.logl < new_logl + params.modelfinder_eps) break;
-                    weight_rescale *= 0.5;
-                    iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
-                    cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
-                         << " with factor " << weight_rescale << endl;
-                }
-                if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
-                    outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
-                               getName() + " worse than " + prev_info.getName() + " " +
-                               convertDoubleToString(prev_info.logl));
-                }
+                // check if logl(+R[k]) is worse than logl(+R[k-1])
+                // if (!prev_rate_present) break;
+                if (prev_info.logl < new_logl + params.modelfinder_eps) break;
+                weight_rescale *= 0.5;
+                iqtree->getRate()->initFromCatMinusOne(in_model_info, weight_rescale);
+                cout << iqtree->getRate()->name << " reinitialized from " << prev_info.rate_name
+                     << " with factor " << weight_rescale << endl;
+            }
+            if (prev_rate_present && new_logl < prev_info.logl - params.modelfinder_eps * 10.0) {
+                outWarning("Log-likelihood " + convertDoubleToString(new_logl) + " of " +
+                           getName() + " worse than " + prev_info.getName() + " " +
+                           convertDoubleToString(prev_info.logl));
             }
         }
     }
@@ -6155,7 +6149,7 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     CandidateModel best_model;
     string multi_class_str;
     string single_class_str;
-    int max_cats;
+    int max_cats, n_class;
     string set_name = "";
     string in_model_name = "";
     bool merge_phase = false;
@@ -6203,9 +6197,10 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     }
     
     max_cats = getClassNum(model_str) * params.max_rate_cats;
+    n_class = getClassNum(model_str) + 1;
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
-    cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
+    cout << "NOTE: MixtureFinder " << n_class << "-class models requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
     if (mem_size >= getMemorySize()) {
         outError("Memory required exceeds your computer RAM size!");
     }
@@ -6358,9 +6353,9 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
 
         skip_all_when_drop = false;
 
-        if (candidate_models.size() > 0) {
-            candidate_models.at(0).init_first_mix = true;
-        }
+        //if (candidate_models.size() > 0) {
+            //candidate_models.at(0).init_first_mix = true;
+        //}
     }
     // model selection
     candidate_models.under_mix_finder = true;
@@ -6402,8 +6397,8 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     real_time = getRealTime() - real_time;
     cout << endl;
     cout << "All model information printed to " << model_info.getFileName() << endl;
-    cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
-    cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
+    cout << "CPU time for MixtureFinder " << n_class << "-class models: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
+    cout << "Wall-clock time for MixtureFinder " << n_class << "-class models: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
     
     return best_model;
 }
@@ -6422,6 +6417,8 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     CandidateModel best_model;
     string best_model_AIC, best_model_AICc, best_model_BIC;
     double best_score_AIC, best_score_AICc, best_score_BIC;
+    // Store the information of (k-1)-class models. Once (k-1)-class is better then k-class, the (k-1)-class models will be printed out as the global best.
+    string best_model_pre_AIC, best_model_pre_AICc, best_model_pre_BIC, best_model_pre_list;
     Checkpoint *checkpoint;
     int ssize;
     int curr_df;
@@ -6468,8 +6465,6 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
-
-    string best_model_pre_AIC, best_model_pre_AICc, best_model_pre_BIC, best_model_pre_list;
 
     model_info.getString("best_model_AIC", best_model_pre_AIC);
     model_info.getString("best_model_AICc", best_model_pre_AICc);
@@ -6602,7 +6597,6 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
     }
     new_iqtree->setParams(&params);
     new_iqtree->copyPhyloTree(iqtree, false);
-    
     delete(iqtree);
     iqtree = new_iqtree;
     
@@ -6622,6 +6616,9 @@ int findModelIndex(const string& model, const char* model_set[], size_t size) {
             return i;
         }
     }
+    if (model == "K2P") {
+
+    }
     return -1;
 }
 
@@ -6635,8 +6632,8 @@ struct sort_by_ind {
     bool operator() (const model_index& a, const model_index& b) const {return a.index < b.index;}
 };
 
-// every model_record consists of three items: model+freq name, model name and freq name.
-// For example, for JC model:
+// every model_record consists of four items: model+freq name, model name, freq name and substitution rate code.
+// For example, for JC model: {JC, JC, FQ, 000000}; for GTR+FQ model: {GTR, GTR, FQ, 012345}; for GTR+FO model: {GTR+FO, GTR, FO, 012345}
 struct model_record {
     string model_freq;
     string model;
@@ -6692,18 +6689,18 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
 
     for (i = 0; i < model_names.size(); i++) {
         string new_model_name = getDNAModelInfo(model_names[i], full_name, rate_type, freq);
-        // the resulting freq1 will be either FREQ_EQUAL or FREQ_ESTIMATE
-        if (model_names[i] != new_model_name)
-            model_names[i] = new_model_name;
+        // the resulting freq will be either FREQ_EQUAL or FREQ_ESTIMATE
+        //if (model_names[i] != new_model_name)
+        //    model_names[i] = new_model_name;
 
         if (freq == FREQ_EQUAL) {
-            model_freq_names.push_back(model_record(model_names[i],model_names[i],"+FQ", rate_type));
+            model_freq_names.push_back(model_record(new_model_name,model_names[i],"+FQ", rate_type));
         } else {
             for (j = 0; j < freq_names.size(); j++) {
                 if (freq_names[j] == "+FQ") {
-                    model_freq_names.push_back(model_record(model_names[i],model_names[i],freq_names[j], rate_type));
+                    model_freq_names.push_back(model_record(new_model_name,model_names[i],freq_names[j], rate_type));
                 } else {
-                    model_freq_names.push_back(model_record(model_names[i]+freq_names[j],model_names[i],freq_names[j], rate_type));
+                    model_freq_names.push_back(model_record(new_model_name+freq_names[j],model_names[i],freq_names[j], rate_type));
                 }
             }
         }
@@ -6713,7 +6710,7 @@ map<string, vector<string> > generateNestNetwork(StrVector model_names, StrVecto
     for (i = 0; i < model_freq_names.size(); i++) {
         vector<string> nested_models, nested_models_all;
         if (i > 0 && findModelIndex(model_freq_names[i].model, dna_model_names, nitem) != -1) {
-            // examine the relationship bewteen this model and every model that has been inside the net work from complex to simple
+            // examine the relationship bewteen this model and every model that has been inside the network from complex to simple
             for (j = nest_network.size()-1; j >= 0; j--) {
                 if (model_freq_names[i].freq == "+FO" || model_freq_names[j].freq == model_freq_names[i].freq) {
                     if (isRateTypeNested(model_freq_names[i].rate_type, model_freq_names[j].rate_type)) {

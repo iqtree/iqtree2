@@ -2257,7 +2257,7 @@ string IQTreeMix::optimizeModelParameters(bool printInfo, double logl_epsilon) {
     optimizeTreesSeparately(printInfo, logl_epsilon, gradient_epsilon);
     prev_ptn_invar = ptn_invar;
     ptn_invar = at(0)->ptn_invar;
-    
+
     if (params->fixed_branch_length != BRLEN_FIX) {
         // set all the branches of the same group to their weighted average for initialization of the branch lengths
         checkBranchGrp();
