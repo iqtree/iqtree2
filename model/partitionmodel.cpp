@@ -331,6 +331,7 @@ double PartitionModel::targetFunk(double x[]) {
     return res;
 }
 
+/*
 double PartitionModel::computeMixLh() {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int ntrees = tree->size();
@@ -411,6 +412,7 @@ double PartitionModel::computeMixLh() {
 
     return mix_lh;
 }
+*/
 
 void PartitionModel::setVariables(double *variables) {
     model->setVariables(variables);

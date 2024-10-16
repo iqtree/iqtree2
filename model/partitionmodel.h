@@ -127,7 +127,7 @@ public:
     /**
      compute the mixture-based log-likelihood for mAIC, mAICc, mBIC calculation.
      */
-    double computeMixLh();
+    // double computeMixLh();
 
     /**
      rescale the state frequencies
