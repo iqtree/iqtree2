@@ -2754,6 +2754,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     double all_tree_lh(0.0);
     double all_prob_const(0.0);
 
+    double* all_lh = new double[num_packets];
+    memset(all_lh, 0, num_packets * sizeof(double));
+    double* all_prob = NULL;
+    if (ASC_Lewis) {
+        all_prob = new double[num_packets];
+        memset(all_prob, 0, num_packets * sizeof(double));
+    }
+
     vector<size_t> limits;
     computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
 
@@ -2813,7 +2821,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         // cout << "num_threads = " << num_threads << endl;
         // cout << "nptn = " << nptn << endl;
 #ifdef _OPENMP
-#pragma omp parallel for  schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+#pragma omp parallel for  schedule(dynamic,1) num_threads(num_threads) // reduction(+:all_tree_lh,all_prob_const)
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             // cout << "packet_id = " << packet_id << " ptn_lower = " << limits[packet_id] << " ptn_upper = " << limits[packet_id+1] << endl;
@@ -2960,6 +2968,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                         vc_prob_const += lh_ptn;
                 }
             } // FOR PTN
+            /*
             {
                 //These additions are not in a critical section, because the
                 //all_tree_lh and all_prob_const variables are mentioned in
@@ -2968,13 +2977,18 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 if (ASC_Lewis) {
                     all_prob_const += horizontal_add(vc_prob_const);
                 }
-            }
+            }*/
+
+            all_lh[packet_id] = horizontal_add(vc_tree_lh);
+            if (ASC_Lewis)
+                all_prob[packet_id] = horizontal_add(vc_prob_const);
+
         } // FOR packet
     } else {
         //ASSERT(0 && "Don't compute tree log-likelihood from internal branch!");
     	//-------- both dad and node are internal nodes -----------/
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) // reduction(+:all_tree_lh,all_prob_const)
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             size_t ptn_lower = limits[packet_id];
@@ -3098,6 +3112,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                         vc_prob_const += lh_ptn;
                 }
             } // FOR LOOP ptn
+            /*
             {
                 //These additions don't need to be in a critical section,
                 //because of the reduction(+:all_tree_lh,all_prob_const)
@@ -3106,9 +3121,24 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 if (ASC_Lewis) {
                     all_prob_const += horizontal_add(vc_prob_const);
                 }
-            }
+            }*/
+            all_lh[packet_id] = horizontal_add(vc_tree_lh);
+            if (ASC_Lewis)
+                all_prob[packet_id] = horizontal_add(vc_prob_const);
+
         } // FOR thread
     } // else
+
+    // compute the sum according the same order even using openmp
+    for (int k = 0; k < num_packets; k++)
+        all_tree_lh += all_lh[k];
+    delete[] all_lh;
+
+    if (all_prob != NULL) {
+        for (int k = 0; k < num_packets; k++)
+            all_prob_const += all_prob[k];
+        delete[] all_prob;
+    }
 
     tree_lh += all_tree_lh;
     /*
@@ -3314,9 +3344,17 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     }
 
     double all_tree_lh(0.0), all_prob_const(0.0);
+    int nsize = nptn / VectorClass::size() + 1;
+    double* all_lh = new double[nsize];
+    memset(all_lh, 0, nsize * sizeof(double));
+    double* all_prob = NULL;
+    if (ASC_Lewis) {
+        all_prob = new double[nsize];
+        memset(all_prob, 0, nsize * sizeof(double));
+    }
 
     #ifdef _OPENMP
-    #pragma omp parallel for num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+    #pragma omp parallel for num_threads(num_threads)
     #endif
     for (size_t ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
         VectorClass lh_ptn(0.0);
@@ -3365,16 +3403,23 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
                 vc_prob_const += lh_ptn;
             }
         }
-        {
-            //Don't need a critical section here, because of the
-            //reduction(+:all_tree_lh,all_prob_const) clause on
-            //the omp parallel for.
-            all_tree_lh += horizontal_add(vc_tree_lh);
-            if (ASC_Lewis)
-                all_prob_const += horizontal_add(vc_prob_const);
-        }
+        int k = ptn / VectorClass::size();
+        all_lh[k] = horizontal_add(vc_tree_lh);
+        if (ASC_Lewis)
+            all_prob[k] = horizontal_add(vc_prob_const);
     }
+    
+    // compute the sum according the same order even using openmp
+    for (int k = 0; k < nsize; k++)
+        all_tree_lh += all_lh[k];
+    delete[] all_lh;
 
+    if (all_prob != NULL) {
+        for (int k = 0; k < nsize; k++)
+            all_prob_const += all_prob[k];
+        delete[] all_prob;
+    }
+    
     double tree_lh = all_tree_lh;
     if (!safe_numeric && !std::isfinite(tree_lh))
         outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
