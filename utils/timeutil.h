@@ -60,29 +60,33 @@
  ********************************************/
 #ifndef HAVE_GETTIMEOFDAY
 	#if defined WIN32 || defined _WIN32 || defined __WIN32__
-	#include <sys/timeb.h>
-	#include <sys/types.h>
-	#include <winsock.h>
+		#include <sys/timeb.h>
+		#include <sys/types.h>
+		#include <winsock.h>
 
-	struct timezone {
-		char dummy;
-	};
+		#ifndef __MINGW32__
+			struct timezone {
+				char dummy;
+			};
 
-	__inline void gettimeofday(struct timeval* t, void* timezone)
-	{       
-		struct _timeb timebuffer;
-		_ftime( &timebuffer );
-		t->tv_sec=timebuffer.time;
-		t->tv_usec=1000*timebuffer.millitm;
-	}
+			__inline void gettimeofday(struct timeval* t, void* timezone)
+			{       
+				struct _timeb timebuffer;
+				_ftime( &timebuffer );
+				t->tv_sec=timebuffer.time;
+				t->tv_usec=1000*timebuffer.millitm;
+			}
+		#endif /* __MINGW32__ */
 	#else /* UNIX */
-	#include <sys/time.h>
-	__inline void gettimeofday(struct timeval* t, void* timezone) {
-		time_t cur_time;
-		time(&cur_time);
-		t->tv_sec = cur_time;
-		t->tv_usec = 0;
-	}
+		#include <sys/time.h>
+		#ifndef __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
+			__inline void gettimeofday(struct timeval* t, void* timezone) {
+				time_t cur_time;
+				time(&cur_time);
+				t->tv_sec = cur_time;
+				t->tv_usec = 0;
+			}
+		#endif
 	#endif
 #endif /* HAVE_GETTIMEOFDAY */
 
