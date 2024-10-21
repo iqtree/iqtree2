@@ -5074,6 +5074,16 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
                 }
             }
         }
+        else if (params -> order_by_threads){
+            while (k < n && k < job_ids.size()) { // old scheduling method
+                assignJobs[k] = job_ids[k].first;
+                k++;
+            }
+            if (k < n) {
+                for (int i = k; i < n; i++)
+                    assignJobs[i] = -1;
+            }
+        }
         else {
             // new scheduling method
             int k_prime = 0; // track the threads and process  position in the list
@@ -5322,6 +5332,34 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
                     syncChkPoint.sendMergeJobToWorker(mergejob, j, tag); // send the empty job to the worker
                 }
 
+            }
+        }
+        else if (params -> order_by_threads){
+            while (i<num_threads && i<job_ids.size()) {
+                w = job_ids[i].first;
+                id1 = closest_pairs[w].first;
+                id2 = closest_pairs[w].second;
+                currJobs.push_back(new MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]));
+                i++;
+            }
+            // MASTER: send one job to every thread of the processors
+            SyncChkPoint syncChkPoint(this, 0);
+            for (j=1; j<num_processes; j++) {
+                for (k=0; k<num_threads; k++) {
+                    int n = 0;
+                    int tag = j * num_threads + k;
+                    if (i < job_ids.size()) {
+                        w = job_ids[i].first;
+                        id1 = closest_pairs[w].first;
+                        id2 = closest_pairs[w].second;
+                        MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
+                        syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
+                        i++;
+                    } else {
+                        MergeJob mergejob;
+                        syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
+                    }
+                }
             }
         }
         else {

@@ -1261,6 +1261,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     params.parallel_over_sites = false;
+    params.order_by_threads = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
     params.keep_zero_freq = true;
@@ -3431,6 +3432,15 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.parallel_over_sites = true;
                 continue;
             }
+
+            // parallelization ordered by threads
+            if (strcmp(argv[cnt], "-parallel-order-thread") == 0 || strcmp(argv[cnt], "--parallel-order-thread") == 0) {
+                params.order_by_threads = true;
+                continue;
+            }
+
+
+
 //			if (strcmp(argv[cnt], "-mh") == 0) {
 //				params.mvh_site_rate = true;
 //				params.discard_saturated_site = false;
