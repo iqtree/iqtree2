@@ -2607,7 +2607,9 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
     ctl << "seed = -1" << endl
         << "seqfile = " << (string) iqtree->params->out_prefix + ".dummyAln.txt" << endl
         << "treefile = " << ((string) Params::getInstance().out_prefix + ".rooted.mcmctree.tree") << endl
-        << "outfile = " << "out" << endl << endl
+        << "mcmcfile = " << "mcmc.txt" << endl
+        << "outfile = " << "out.txt" << endl << endl
+        << "checkpoint = 1 * 0: nothing; 1 : save; 2: resume" << endl
 
         << "ndata = " << ndata << endl
         << "seqtype = 0    * 0: No Alignment datatype required" << endl

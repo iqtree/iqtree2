@@ -691,7 +691,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         ofstream outfile(outFileName);
 
         stringstream treeStr;
-        this->printTree(treeStr, WT_SORT_TAXA + WT_BR_LEN);
+        this->printTree(treeStr, WT_SORT_TAXA );
         outfile << this->aln->getNSeq() << ' ' << 1 << endl;
         outfile << treeStr.str() << endl;
         outfile.close();
