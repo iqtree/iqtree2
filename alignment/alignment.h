@@ -992,6 +992,38 @@ public:
      * @return TRUE if alignment needs to be changed, FALSE otherwise
 	 */
 	bool readSiteStateFreq(const char* site_freq_file);
+
+    // added by TD
+    /**
+     * Compute pairwise summary statistics between two sequences, resulting in 26 values:
+     * - 4 nucleotide frequencies for sequence 1
+     * - 4 nucleotide frequencies for sequence 2
+     * - 1 count for total number transitions between sequence 1 and sequence 2
+     * - 1 count for total number of transversions between sequence 1 and sequence 2
+     * - 16 transition/transversion counts between sequence 1 and sequence 2
+     * @param seq1_idx
+     * @param seq2_idx
+     * @return
+     */
+    vector<float> computeSummaryStats(int seq1_idx, int seq2_idx);
+
+    // added by TD
+    /**
+     * Replaces ambiguous characters (W, S, M, K, R, Y, B, D, H, V; N is treated like a gap). For each
+     * ambiguous character, we randomly choose one of A, C, G, T while respecting the constraints of
+     * the characters (i.e. for R we choose either A or G.
+     * @return modified (new) alignment
+     */
+    Alignment* replaceAmbiguousChars();
+
+    // added by TD
+    /**
+     * Removes sites of alignments where >70% are gaps. With >0 but <=70% gaps, gaps are replaced by
+     * the most frequent base. This strategy is used for the model selection and alpha inference via
+     * the neural network.
+     * @return modified (new) alignment
+     */
+    Alignment* removeAndFillUpGappySites();
     
     /**
      * special initialization for codon sequences, e.g., setting #states, genetic_code

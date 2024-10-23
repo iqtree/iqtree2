@@ -27,6 +27,7 @@ PartitionModel::PartitionModel()
 {
 	linked_alpha = -1.0;
     opt_gamma_invar = false;
+    partLike = NULL;
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
@@ -43,6 +44,9 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
 	model = new ModelSubst(tree->aln->num_states);
 	site_rate = new RateHeterogeneity();
 	site_rate->setTree(tree);
+    
+    // create an array to store the log-likelihood for each partition
+    partLike = new double[tree->size()];
 
 //    string model_name = params.model_name;
     PhyloSuperTree::iterator it;
@@ -292,22 +296,123 @@ double PartitionModel::targetFunk(double x[]) {
     double res = 0;
     int ntrees = tree->size();
     if (tree->part_order.empty()) tree->computePartitionOrder();
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+: res) schedule(dynamic) if(tree->num_threads > 1)
-#endif
+    string modelname = model->getName();
+    
+    // reset the array to store the log-likelihoods for each partition
+    memset(partLike, 0, sizeof(double) * ntrees);
+    
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic) if(tree->num_threads > 1)
+    #endif
     for (int j = 0; j < ntrees; j++) {
+        
         int i = tree->part_order[j];
         ModelSubst *part_model = tree->at(i)->getModel();
-        if (part_model->getName() != model->getName())
+
+        if (part_model->getName() != modelname)
             continue;
+
         bool fixed = part_model->fixParameters(false);
-        res += part_model->targetFunk(x);
+        double ans = part_model->targetFunk(x);
         part_model->fixParameters(fixed);
+        partLike[j] = ans;
     }
+    
+    // calculate the sum
+    // different order of the computation due to
+    // openmp will not affect the value
+    res = 0.0;
+    for (int j = 0; j < ntrees; j++) {
+        res += partLike[j];
+    }
+    
     if (res == 0.0)
         outError("No partition has model ", model->getName());
     return res;
 }
+
+/*
+double PartitionModel::computeMixLh() {
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    int ntrees = tree->size();
+
+    // go through the number of sites of each partition to compute the class weights
+    vector<double> weight_array;
+    double sum_sites = 0.0;
+
+    //if (tree->part_order.empty()) tree->computePartitionOrder();
+    for (int j = 0; j < ntrees; j++) {
+        //int i = tree->part_order[j];
+        int part_sites = tree->at(j)->getAlnNSite();
+        weight_array.push_back(part_sites);
+        sum_sites += part_sites;
+    }
+    for (int j = 0; j < ntrees; j++) {
+        weight_array[j] /= sum_sites;
+    }
+
+    // compute the mixture-based log-likelihood
+    double mix_lh = 0.0;
+    vector<Alignment*> aln_array;
+    for (int j = 0; j < ntrees; j++) {
+        aln_array.push_back(tree->at(j)->aln); //get the partitioned alignment
+    }
+
+    for (int j = 0; j < ntrees; j++) {
+        //int i = tree->part_order[j];
+        Alignment *part_aln = aln_array[j];
+        int part_nptn = part_aln->getNPattern();
+
+        // get the site-log-likelihood the the partition under each tree and the corresponding model
+        double *lh_array = new double [ntrees*part_nptn];
+        tree->deleteAllPartialLh();
+        for (int k = 0; k < ntrees; k++) {
+            PhyloTree *t = tree->at(k);
+            t->setAlignment(part_aln);
+            t->initializeAllPartialLh();
+
+            double *sub_lh_array = lh_array + k*part_nptn;
+            t->computeLikelihood(sub_lh_array);
+        }
+
+        // compute
+        double mix_lh_partition = 0.0;
+        for (int l = 0; l < part_nptn; l++) {
+            double weighted_lh, max_lh, mix_lh_site;
+
+            int ptn_freq = part_aln->at(l).frequency;
+
+            for (int k = 0; k < ntrees; k++) {
+                weighted_lh = log(weight_array[k])+lh_array[part_nptn*k+l];
+                if (k == 0) {
+                    max_lh = weighted_lh;
+                } else if (weighted_lh > max_lh) {
+                    max_lh = weighted_lh;
+                }
+            }
+
+            double mix_lh_site_original = 0.0;
+            for (int k = 0; k < ntrees; k++) {
+                mix_lh_site_original += exp(log(weight_array[k])+lh_array[part_nptn*k+l]-max_lh);
+            }
+            mix_lh_site = max_lh + log(mix_lh_site_original);
+            mix_lh_partition += mix_lh_site*ptn_freq;
+        }
+        mix_lh += mix_lh_partition;
+        delete[] lh_array; //release array memery
+    }
+
+    // set the alignments back
+    tree->deleteAllPartialLh();
+    for (int k = 0; k < ntrees; k++) {
+        PhyloTree *t = tree->at(k);
+        t->setAlignment(aln_array[k]);
+        t->initializeAllPartialLh();
+    }
+
+    return mix_lh;
+}
+*/
 
 void PartitionModel::setVariables(double *variables) {
     model->setVariables(variables);
@@ -409,9 +514,11 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     delete [] variables2;
     delete [] variables;
     
+    /*
     if (write_info) {
         cout << "Linked-model log-likelihood: " << score << endl;
     }
+    */
 
     return score;
 }
@@ -465,20 +572,20 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
     for (int step = 0; step < Params::getInstance().model_opt_steps; step++) {
         tree_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
-        #ifdef _OPENMP
-        #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
-        #endif
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
+#endif
         for (int i = 0; i < ntrees; i++) {
             int part = tree->part_order[i];
             double score;
             if (opt_gamma_invar)
                 score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
-                    write_info && verbose_mode >= VB_MED,
-                    logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+                                                                                        write_info && verbose_mode >= VB_MED,
+                                                                                        logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
             else
                 score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
-                    write_info && verbose_mode >= VB_MED,
-                    logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+                                                                              write_info && verbose_mode >= VB_MED,
+                                                                              logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
             tree_lh += score;
             if (write_info)
 #ifdef _OPENMP
@@ -486,19 +593,20 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
 #endif
             {
                 cout << "Partition " << tree->at(part)->aln->name
-                     << " / Model: " << tree->at(part)->getModelName()
-                     << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
+                << " / Model: " << tree->at(part)->getModelName()
+                << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
                 << " / LogL: " << score << endl;
             }
         }
         //return ModelFactory::optimizeParameters(fixed_len, write_info);
-
+        
         if (!isLinkedModel())
             break;
 
         if (verbose_mode >= VB_MED || write_info)
             cout << step+1 << ". Log-likelihood: " << tree_lh << endl;
 
+        // optimize linked alpha
         if (tree->params->link_alpha) {
             tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
         }
@@ -510,6 +618,9 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
             tree_lh = new_tree_lh;
         }
         
+        if (verbose_mode >= VB_MED || write_info)
+            cout << step+1 << ". Log-likelihood: " << tree_lh << endl;
+
         if (tree_lh-logl_epsilon*10 < prev_tree_lh)
             break;
         prev_tree_lh = tree_lh;
@@ -536,6 +647,8 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
 
 PartitionModel::~PartitionModel()
 {
+    if (partLike != NULL)
+        delete[] partLike;
 }
 
 bool PartitionModel::isUnstableParameters() {

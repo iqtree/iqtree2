@@ -4312,7 +4312,6 @@ void IQTree::printPhylolibTree(const char* suffix) {
     FILE *phylolib_tree = fopen(phylolibTree, "w");
     fprintf(phylolib_tree, "%s", pllInst->tree_string);
     cout << "Tree optimized by Phylolib was written to " << phylolibTree << endl;
-    fclose(phylolib_tree);
 }
 
 void IQTree::printIntermediateTree(int brtype) {

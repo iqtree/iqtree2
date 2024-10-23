@@ -172,14 +172,13 @@ void progress_display::reportProgress(double time, double cpu, bool newline) {
     }
 }
 
-progress_display& progress_display::done(bool display) {
+progress_display& progress_display::done() {
     #if _OPENMP
     #pragma omp critical (io)
     #endif
     workDone = totalWorkToDo;
     isDone = true;
-    if (display)
-        reportProgress(getRealTime(), getCPUTime(), true);
+    reportProgress(getRealTime(), getCPUTime(), true);
     return *this;
 }
 

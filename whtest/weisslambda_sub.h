@@ -36,7 +36,7 @@ extern char *ausgabe_data;
 
 /*********************************/
 
-void ReadDataSize ( char *datafile );
+void ReadDataSize( char *datafile );
 
 void AllocateMemory();
 

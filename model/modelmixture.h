@@ -77,6 +77,11 @@ public:
     virtual void saveCheckpoint();
 
     /**
+        initial the parameters from the (K-1)-class mixture model
+     */
+    void initFromClassMinusOne(double init_weight);
+    
+    /**
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
@@ -135,7 +140,7 @@ public:
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
-    
+
     // estimate the initial frequence vector for the class
 
     // method 1: given a set of classes in the mixture model, randomly assign each alignment position to one of the classes.
@@ -145,7 +150,7 @@ public:
     // Method 2: evenly divide the alignment into K partitions where K = number of classes in the mixture
     // The nucleotide frequency array of i-th class is initialized according to the nucleotide frequencies in the i-th partition
     void estimateInitFreq2();
-    
+
 	/**
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
@@ -177,6 +182,8 @@ public:
 	virtual void computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
+    virtual void adaptStateFrequency(double* freq);
+    
 	/**
 		@return the number of dimensions
 	*/
@@ -272,6 +279,11 @@ public:
 	 */
 	virtual string getNameParams(bool show_fixed_params = false);
 
+    // For codon mixture, rescale total_num_subst specifically
+    // so that the global rate is 1
+    // return true if the values of total_num_subst have been updated
+    bool rescale_codon_mix();
+    
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes

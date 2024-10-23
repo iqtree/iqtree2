@@ -975,7 +975,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         rescaleRates(rates, getNumRateEntries());
         num_params = 0;
     } else if (name_upper == "GTR20") {
-        if (!Params::getInstance().link_model && !Params::getInstance().optimize_linked_gtr) { //suppress this warning -JD
+        if (!Params::getInstance().link_model) {
             outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
             outWarning("Please only use GTR20 with very large data and always test for model fit!");
         }

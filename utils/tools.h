@@ -91,14 +91,8 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
     #elif defined(__clang__)
         // libc++ detected:     _LIBCPP_VERSION
         // libstdc++ detected:  __GLIBCXX__
-        #if __has_include(<unordered_map>) // defines _LIBCPP_VERSION
-            #include <unordered_map>
-            #include <unordered_set>
-        #else
-            #include <tr1/unordered_map>
-            #include <tr1/unordered_set>
-            using namespace std::tr1;    
-        #endif
+        #include <unordered_map>
+        #include <unordered_set>
 	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -343,7 +337,9 @@ typedef unsigned int UINT;
 /**
         run mode of program
  */
-enum RunMode {
+// adapted by TD; using scoped enumerations due to redeclaration error with onnxruntime
+// https://en.cppreference.com/w/cpp/language/enum#Scoped_enumerations
+enum class RunMode {
     DETECTED, GREEDY, PRUNING, BOTH_ALG, EXHAUSTIVE, DYNAMIC_PROGRAMMING,
     CALC_DIST, PD_USER_SET, PRINT_TAXA, PRINT_AREA, SCALE_BRANCH_LEN,
     SCALE_NODE_NAME, PD_DISTRIBUTION, LINEAR_PROGRAMMING, STATS //, GBO, MPRO
@@ -382,9 +378,12 @@ const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
 const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for branch lengths
 const int WT_BR_ATTR = 4096; // print branch attributes
+const double ONE_THIRD = 1.0 / 3.0;
+
+#if ! (defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64)
 const int TRUE = 1;
 const int FALSE = 0;
-const double ONE_THIRD = 1.0 / 3.0;
+#endif
 
 /**
  *  Specify different ways of doing an NNI.
@@ -1586,6 +1585,9 @@ public:
      */
     string model_name;
 
+    /** contain non-reversible model */
+    bool contain_nonrev;
+
     /** model name to initialize GTR20 or NONREV protein model */
     char* model_name_init;
 
@@ -1628,6 +1630,9 @@ public:
 
     /** true to fist test equal rate model, then test rate heterogeneity (default: false) */
     bool model_test_separate_rate;
+
+    /** force to parallelisation over sites */
+    bool parallel_over_sites;
 
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
@@ -2366,7 +2371,7 @@ public:
     bool link_model;
 
     /** name of the joint model across partitions */
-    char* model_joint;
+    string model_joint;
     
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
@@ -2498,7 +2503,16 @@ public:
 
     /** supress notes about duplicate sequences */
     double suppress_duplicate_sequence_warnings;
-    
+
+    /** flag for using neural network for model selection */
+    bool use_nn_model; // added by TD
+
+    /** neural network file that determines substitution model (onnx format) */
+    string nn_path_model; // added by TD
+
+    /** neural network file that determines alpha rate (onnx format) */
+    string nn_path_rates; // added by TD
+
     /**
     *  TRUE to execute alisim
     */

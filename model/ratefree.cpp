@@ -555,7 +555,7 @@ double RateFree::optimizeWithEM() {
                 cout << "Partition " << phylo_tree->aln->name << endl;
                 cout << "score: " << score << "  old_score: " << old_score << endl;
             }
-            ASSERT(score > old_score-0.3); // 0.1 -> 0.3
+            ASSERT(score > old_score-0.1);
         }
         old_score = score;
         

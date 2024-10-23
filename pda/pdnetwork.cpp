@@ -455,24 +455,24 @@ void PDNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> &
 		rem_splits.push_back(i);
 	IntList::iterator rem_it = rem_splits.end();
 
-	params.detected_mode = EXHAUSTIVE;
+	params.detected_mode = RunMode::EXHAUSTIVE;
 
 
 	if (isPDArea()) {
-		params.detected_mode = LINEAR_PROGRAMMING;
+		params.detected_mode = RunMode::LINEAR_PROGRAMMING;
 		printLPVersion(params.gurobi_format);
 		cout << "Optimizing PD over " << sets->getNSets() << " areas..." << endl;
 		cout << "Linear programming on general split network..." << endl;
 		findPDArea_LP(params, taxa_set);
-	} else if (params.run_mode == GREEDY) {	
+	} else if (params.run_mode == RunMode::GREEDY) {
 		// greedy search, not ensure to give the optimal sets!
 		cout << "Start greedy search..." << endl;
 		greedyPD(params.sub_size, curset, taxa_order);
 		localSearchPD(params.sub_size, curset, taxa_order);
 		taxa_set.resize(1);
 		taxa_set[0].push_back(new Split(curset));
-	} else if (params.run_mode != EXHAUSTIVE) {
-		params.detected_mode = LINEAR_PROGRAMMING;
+	} else if (params.run_mode != RunMode::EXHAUSTIVE) {
+		params.detected_mode = RunMode::LINEAR_PROGRAMMING;
 		printLPVersion(params.gurobi_format);
 		cout << "Linear programming on general split network..." << endl;
 		findPD_LP(params, taxa_set);
@@ -1059,7 +1059,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 	ofstream scoreout;
 	ofstream out;
 	if (params.nr_output == 1) {
-		if (params.run_mode == PD_USER_SET || !isPDArea()) {
+		if (params.run_mode == RunMode::PD_USER_SET || !isPDArea()) {
 			snprintf(filename, 300, "%s.pdtaxa", params.out_prefix);
 			cout << "All taxa list(s) printed to " << filename << endl;
 		} else { 
@@ -1103,7 +1103,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 			//c_old = count;
 			if (params.nr_output > 10) {
 				out.open(filename);
-				if (params.run_mode == PD_USER_SET || !isPDArea()) {
+				if (params.run_mode == RunMode::PD_USER_SET || !isPDArea()) {
 					for (i = 0; i < getNTaxa(); i++) 
 						if (this_set->containTaxon(i))
 							out << getTaxa()->GetTaxonLabel(i) << endl;
@@ -1120,7 +1120,7 @@ void PDNetwork::printOutputSetScore(Params &params, vector<SplitSet> &pd_set) {
 					calcCost(*this_set) << " " << computeBoundary(*this_set) << " " <<
 					params.boundary_modifier << endl;
 
-				if (params.run_mode == PD_USER_SET || !isPDArea()) {
+				if (params.run_mode == RunMode::PD_USER_SET || !isPDArea()) {
 					for (i = 0; i < getNTaxa(); i++) 
 						if (this_set->containTaxon(i))
 							out << getTaxa()->GetTaxonLabel(i) << endl;

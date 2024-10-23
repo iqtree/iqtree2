@@ -26,6 +26,7 @@
 #include "nclextra/modelsblock.h"
 #include "utils/checkpoint.h"
 #include "alignment/alignment.h"
+#include "main/phylotesting.h"
 
 const double MIN_BRLEN_SCALE = 0.01;
 const double MAX_BRLEN_SCALE = 100.0;
@@ -101,6 +102,18 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
+
+    /**
+        restore object from the nested k-class model in checkpoint
+        return false if the k-class model can't initialise from k-class model or the weight of last class of the nested model is close to 0
+    */
+    virtual bool initFromNestedModel(map<string, vector<string> > nest_network);
+
+    /**
+        initialize the parameters from the (k-1)-class mixture model
+        return false if the k-class model can't initialise from (k-1)-class model
+    */
+    virtual void initFromClassMinusOne(double init_weight);
 
 	/**
 		get the name of the model
@@ -277,6 +290,15 @@ public:
 
     double optimizeAllParameters(double gradient_epsilon);
 
+    /**
+     Synchronization of check point for MPI
+     */
+    SyncChkPoint* syncChkPoint;
+
+    /**
+     compute the mixture-based log-likelihood for mAIC, mAICc, mBIC calculation.
+     */
+    // virtual double computeMixLh() {return 0.0;}
 
 protected:
 
@@ -297,6 +319,7 @@ protected:
 
     vector<double> optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
                                        double initPInv, double initAlpha, DoubleVector &lenvec, Checkpoint *model_ckp);
+    
 };
 
 #endif

@@ -135,6 +135,7 @@ ModelFactory::ModelFactory() : CheckpointFactory() {
     joint_optimize = false;
     fused_mix_rate = false;
     ASC_type = ASC_NONE;
+    syncChkPoint = nullptr;
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
@@ -154,6 +155,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     joint_optimize = params.optimize_model_rate_joint;
     fused_mix_rate = false;
     ASC_type = ASC_NONE;
+    syncChkPoint = nullptr;
     string model_str = model_name;
     string rate_str;
 
@@ -168,7 +170,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
         else model_str = "JC";
-        if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        // if (tree->aln->seq_type != SEQ_POMO && !params.model_joint)
+        if (tree->aln->seq_type != SEQ_POMO && params.model_joint.empty())
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
     }
     // handle continuous gamma model => remove 'C' from model_name to make sure it doesn't cause error when parsing model
@@ -201,11 +204,27 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     model_str = new_model_str;
 
-    //    nxsmodel = models_block->findModel(model_str);
-    //    if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-    //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-    //        model_str = nxsmodel->description;
-    //    }
+    // for model_joint if set
+    if (!Params::getInstance().model_joint.empty()) {
+        string curr_model_str = Params::getInstance().model_joint;
+        new_model_str = "";
+        for (mix_pos = 0; mix_pos < curr_model_str.length(); mix_pos++) {
+            size_t next_mix_pos = curr_model_str.find_first_of("+*", mix_pos);
+            string sub_model_str = curr_model_str.substr(mix_pos, next_mix_pos-mix_pos);
+            // cout << "mix_pos =  "<< mix_pos << "; sub_model_str = " << sub_model_str << endl;
+            nxsmodel = models_block->findMixModel(sub_model_str);
+            if (nxsmodel) sub_model_str = nxsmodel->description;
+            new_model_str += sub_model_str;
+            if (next_mix_pos != string::npos)
+                new_model_str += curr_model_str[next_mix_pos];
+            else
+                break;
+            mix_pos = next_mix_pos;
+        }
+        if (new_model_str != curr_model_str)
+            cout << "Model " << curr_model_str << " is alias for " << new_model_str << endl;
+        Params::getInstance().model_joint = new_model_str;
+    }
 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
@@ -247,17 +266,45 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     // set to model_joint if set
-    if (Params::getInstance().model_joint) {
+    // if (Params::getInstance().model_joint) {
+    if (!Params::getInstance().model_joint.empty()) {
         model_str = Params::getInstance().model_joint;
         freq_str = "";
-        while ((spec_pos = model_str.find("+F")) != string::npos) {
-            size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
-            if (end_pos == string::npos) {
-                freq_str += model_str.substr(spec_pos);
-                model_str = model_str.substr(0, spec_pos);
-            } else {
-                freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
-                model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+        size_t fmix_pos = model_str.find("+FMIX{");
+        if (fmix_pos != string::npos) {
+            // for frequency mixture model
+            size_t fmix_end_pos = model_str.find_last_of("}");
+            size_t model_end_pos = model_str.find_first_of("+");
+            if (fmix_end_pos != string::npos && model_end_pos != string::npos) {
+                freq_str = model_str.substr(fmix_pos, fmix_end_pos - fmix_pos + 1);
+                model_str = model_str.substr(0, model_end_pos);
+            }
+        } else if (model_str.find("MIX{") != string::npos) {
+            // for model mixture
+            size_t mx_start_pos = model_str.find("MIX{");
+            size_t mx_end_pos = model_str.find_last_of("}");
+            if (mx_end_pos != string::npos) {
+                string models_str = model_str.substr(mx_start_pos + 4, mx_end_pos - mx_start_pos - 4);
+                size_t end_pos = 0;
+                while ((spec_pos = models_str.find("+F", end_pos)) != string::npos) {
+                    end_pos = models_str.find_first_of("+,", spec_pos+1);
+                    if (end_pos == string::npos) {
+                        freq_str += models_str.substr(spec_pos);
+                    } else {
+                        freq_str += models_str.substr(spec_pos, end_pos - spec_pos);
+                    }
+                }
+            }
+        } else {
+            while ((spec_pos = model_str.find("+F")) != string::npos) {
+                size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
+                if (end_pos == string::npos) {
+                    freq_str += model_str.substr(spec_pos);
+                    model_str = model_str.substr(0, spec_pos);
+                } else {
+                    freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
+                    model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+                }
             }
         }
     }
@@ -568,15 +615,16 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     /******************** initialize model ****************************/
 
     if (tree->aln->site_state_freq.empty()) {
-        if (model_str.length() >= 4 && model_str.substr(0, 4) == "MIX{") {
+        if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
             string model_list;
-            if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
-                outError("Close bracket not found at the end of ", model_str);
-            model_list = model_str.substr(4, model_str.length()-5);
-            model_str = model_str.substr(0, 3);
-            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
-        } else if (freq_type == FREQ_MIXTURE) {
-            string model_list;
+            if (model_str.substr(0, 3) == "MIX") {
+                if (model_str[3] != OPEN_BRACKET)
+                    outError("Mixture model name must start with 'MIX{'");
+                if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
+                    outError("Close bracket not found at the end of ", model_str);
+                model_list = model_str.substr(4, model_str.length()-5);
+                model_str = model_str.substr(0, 3);
+            }
             model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         } else {
             //            string model_desc;
@@ -1028,6 +1076,165 @@ void ModelFactory::restoreCheckpoint() {
     endCheckpoint();
 }
 
+string getLastQ(string model_name) {
+    size_t last_comma_pos = model_name.find_last_of(',');
+    size_t right_brace_pos = model_name.find('}', last_comma_pos);
+    if (last_comma_pos == string::npos || right_brace_pos == string::npos)
+        return model_name;
+
+    return model_name.substr(last_comma_pos + 1, right_brace_pos - last_comma_pos - 1);
+}
+
+string replaceLastQ(string model_name, string nested_q_name) {
+    size_t last_comma_pos = model_name.find_last_of(',');
+    size_t right_brace_pos = model_name.find('}', last_comma_pos);
+    if (last_comma_pos == string::npos || right_brace_pos == string::npos)
+        return nested_q_name;
+
+    string nested_mix_model = model_name.substr(0, last_comma_pos + 1) + nested_q_name + model_name.substr(right_brace_pos);
+    return nested_mix_model;
+}
+
+bool ModelFactory::initFromNestedModel(map<string, vector<string> > nest_network) {
+    string model_name, last_q_name, rate_name, nested_full_name, best_nested_model_name;
+    vector<string> nested_models;
+    int nmix, i;
+    double max_logl, cur_logl;
+    map<string, vector<string> >::iterator itr;
+
+    nmix = model->getNMixtures();
+    model_name = model->getName();
+    rate_name = site_rate->name;
+
+    if (nmix == 1){
+        itr = nest_network.find(model_name);
+        if (itr == nest_network.end() || itr->second.size() == 0)
+            return false;
+
+        nested_models = itr->second;
+
+        /*
+        cout << "nested models of " << model_name + rate_name << ": ";
+        for (auto nested_model_name: nested_models) {
+            cout << nested_model_name + rate_name << " ";
+        }
+        cout << endl;
+        */
+
+        for (i = 0; i < nested_models.size(); i++) {
+            map<string, string>::iterator itr = checkpoint->find(nested_models[i] + rate_name);
+            ASSERT(itr != checkpoint->end());
+
+            string best_model_logl_df = itr->second;
+            stringstream ss(best_model_logl_df);
+            ss >> cur_logl;
+
+            //cout << " lnL of " << nested_models[i] + rate_name << ": " << cur_logl << endl;
+
+            if (i == 0) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_models[i];
+            } else if (cur_logl > max_logl) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_models[i];
+            }
+        }
+        nested_full_name = best_nested_model_name + rate_name;
+
+        checkpoint->startStruct("OptModel");
+        checkpoint->startStruct(nested_full_name);
+
+        model->restoreCheckpoint();
+        site_rate->restoreCheckpoint();
+
+        checkpoint->endStruct();
+        checkpoint->endStruct();
+
+        //cout << "best full name: " << nested_full_name << endl;
+        //cout << "[init model] " << model->getNameParams(true) << endl;
+        //cout << "[init model] " << site_rate->getNameParams() << endl;
+    } else if (nmix>1) {
+        last_q_name = getLastQ(model_name);
+        itr = nest_network.find(last_q_name);
+        if (itr == nest_network.end() || itr->second.size() == 0)
+            return false;
+
+        nested_models = itr->second;
+
+        string nested_mix_model;
+
+        /*
+            cout << "nested model of " << model_name + rate_name << ": ";
+            for (auto nested_model_name: nested_models) {
+                nested_mix_model = replaceLastQ(model_name, nested_model_name);
+                cout << nested_mix_model + rate_name << " ";
+            }
+            cout << endl;
+        */
+
+        for (i = 0; i < nested_models.size(); i++) {
+            nested_mix_model = replaceLastQ(model_name, nested_models[i]);
+            map<string, string>::iterator itr = checkpoint->find(nested_mix_model + rate_name);
+            ASSERT(itr != checkpoint->end());
+
+            string best_model_logl_df = itr->second;
+            stringstream ss(best_model_logl_df);
+            ss >> cur_logl;
+
+            //cout << " lnL of " << nested_mix_model + rate_name << ": " << cur_logl << endl;
+
+            if (i == 0) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_mix_model;
+            } else if (cur_logl > max_logl) {
+                max_logl = cur_logl;
+                best_nested_model_name = nested_mix_model;
+            }
+        }
+        nested_full_name = best_nested_model_name + rate_name;
+
+        checkpoint->startStruct("OptModel");
+        bool unreliable_param = checkpoint->getBool(nested_full_name + ".UnreliableParam");
+        if (unreliable_param) {
+            checkpoint->endStruct();
+            return false;
+        }
+
+        checkpoint->startStruct(nested_full_name);
+
+        model->restoreCheckpoint();
+        site_rate->restoreCheckpoint();
+
+        checkpoint->endStruct();
+        checkpoint->endStruct();
+        //cout << "best full name: " << nested_full_name << endl;
+        //cout << "[init model] " << model->getNameParams(true) << endl;
+        //cout << "[init model] " << site_rate->getNameParams() << endl;
+
+    }
+    return true;
+}
+
+/**
+    initialize the parameters from the (k-1)-class best mixture model
+*/
+void ModelFactory::initFromClassMinusOne(double init_weight) {
+    int nmix = model->getNMixtures();
+    if (nmix > 1) {
+        model->initFromClassMinusOne(init_weight);
+        checkpoint->startStruct("BestOfTheKClass");
+        if (nmix > 2) {
+            checkpoint->startStruct("ModelMixture" + convertIntToString(nmix-1));
+        }
+        site_rate->restoreCheckpoint();
+        site_rate->phylo_tree->restoreCheckpoint();
+        if (nmix > 2) {
+            checkpoint->endStruct();
+        }
+        checkpoint->endStruct();
+    }
+}
+
 int ModelFactory::getNParameters(int brlen_type) {
     int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
         site_rate->getTree()->getNBranchParameters(brlen_type);
@@ -1063,11 +1270,24 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         } else {
             steps = 1;
         }
+#ifdef _IQTREE_MPI
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+#endif
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
             double model_lh = 0.0;
             // only optimized if model is not linked
             model_lh = model->optimizeParameters(gradient_epsilon);
+
+#ifdef _IQTREE_MPI
+            // synchronize the checkpoints of the other processors
+            if (syncChkPoint != nullptr) {
+                syncChkPoint->masterSyncOtherChkpts();
+            }
+#endif
 
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 
@@ -1078,6 +1298,13 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
             if (logl <= prev_logl + gradient_epsilon)
                 break;
             prev_logl = logl;
+
+#ifdef _IQTREE_MPI
+            // synchronize the checkpoints of the other processors
+            if (syncChkPoint != nullptr) {
+                syncChkPoint->masterSyncOtherChkpts();
+            }
+#endif
         }
     } else {
         /* Optimize substitution and heterogeneity rates jointly using BFGS */
@@ -1338,7 +1565,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     ASSERT(tree);
 
     stopStoringTransMatrix();
-    // modified by Thomas Wong on Sept 11, 15
+
     // no optimization of branch length in the first round
     double optimizeStartTime = getRealTime();
     cur_lh = tree->computeLikelihood();
@@ -1383,11 +1610,18 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         tree->params->num_param_iterations = model->getNMixtures() * 100;
         // cout << "tree->params->num_param_iterations has increased to " << tree->params->num_param_iterations << endl;
     }
-
+    
+#ifdef _IQTREE_MPI
+    // synchronize the checkpoints of the other processors
+    if (syncChkPoint != nullptr) {
+        syncChkPoint->masterSyncOtherChkpts();
+    }
+#endif
+    
     for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
-        // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+        // changed to opimise edge length first, and then Q,W,R inside the loop
         if (fixed_len == BRLEN_OPTIMIZE)
             new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
         else if (fixed_len == BRLEN_SCALE) {
@@ -1396,8 +1630,20 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         } else
             new_lh = cur_lh;
 
+#ifdef _IQTREE_MPI
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+#endif
         new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
 
+#ifdef _IQTREE_MPI
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+#endif
         if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE)
                 cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
@@ -1407,6 +1653,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             }
             break;
         }
+
+#ifdef _IQTREE_MPI
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+#endif
         if (verbose_mode >= VB_MED) {
             model->writeInfo(cout);
             site_rate->writeInfo(cout);
@@ -1434,6 +1687,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             }
             break;
         }
+
+#ifdef _IQTREE_MPI
+        // synchronize the checkpoints of the other processors
+        if (syncChkPoint != nullptr) {
+            syncChkPoint->masterSyncOtherChkpts();
+        }
+#endif
     }
 
     // normalize rates s.t. branch lengths are #subst per site
@@ -1448,6 +1708,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
     }
 
+#ifdef _IQTREE_MPI
+    // synchronize the checkpoints of the other processors
+    if (syncChkPoint != nullptr) {
+        syncChkPoint->masterSyncOtherChkpts();
+    }
+#endif
+    
     if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
         cur_lh = tree->optimizeRootPosition(Params::getInstance().root_move_dist, write_info, logl_epsilon);
         if (verbose_mode >= VB_MED || write_info)
@@ -1478,6 +1745,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // ---------------------------
 
     tree->setCurScore(cur_lh);
+
     return cur_lh;
 }
 

@@ -22,6 +22,10 @@ if (USE_LSD2)
     target_link_libraries(main lsd2)
 endif()
 
+if (USE_NN OR USE_OLD_NN)
+    target_link_libraries(main nn)
+endif()
+
 target_link_libraries(main pda whtest vectorclass terrace)
 
 if (USE_CMAPLE)
@@ -53,4 +57,3 @@ if (USE_CMAPLE)
     
     target_link_libraries(main-aa pda whtest vectorclass terrace maple-aa)
 endif()
-

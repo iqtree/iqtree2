@@ -48,7 +48,8 @@
 	#include <sys/resource.h>
 #else 
 	#if (defined _WIN32 || defined __WIN32__ || defined WIN64) && ! defined __CYGWIN__
-	# include <windows.h>
+    #define WIN32_LEAN_AND_MEAN
+    # include <windows.h>
 	#else
 	# include <sys/times.h>
 	# include <unistd.h>
@@ -197,6 +198,7 @@ inline uint64_t getTotalSystemMemory()
  */
 
 #if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
 #elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))

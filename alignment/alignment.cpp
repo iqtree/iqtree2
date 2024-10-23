@@ -480,6 +480,242 @@ bool Alignment::isGapOnlySeq(size_t seq_id) {
     return true;
 }
 
+// added by TD
+vector<float> Alignment::computeSummaryStats(int seq1_idx, int seq2_idx) {
+    ASSERT(seq1_idx < getNSeq());
+    ASSERT(seq2_idx < getNSeq());
+
+    vector<float> stats(26);
+    //vector<size_t> freqs_seq1(4);
+    //vector<size_t> freqs_seq2(4);
+    //vector<size_t> titv_rates(16);
+
+    map<size_t, size_t> bitshift_map = {{0, 1}, {1, 3}, {2, 5}, {3, 7}};
+
+    for (iterator it = begin(); it != end(); it++) {
+        // check if contains gaps, if yes discard position
+        /*if ((*it)[seq1_idx] == 18 || (*it)[seq2_idx] == 18) { // 18 stands for a gap
+            continue;
+        }*/
+        // count nucleotides for sequence 1
+        switch ((*it)[seq1_idx]) {
+            case 0: stats[4]++;
+                break;
+            case 1: stats[5]++;
+                break;
+            case 2: stats[6]++;
+                break;
+            case 3: stats[7]++;
+                break;
+            default:
+                throw "Sequence contains other characters than A, C, G, T";
+        }
+        // count nucleotides for sequence 2
+        switch ((*it)[seq2_idx]) {
+            case 0: stats[8]++;
+                break;
+            case 1: stats[9]++;
+                break;
+            case 2: stats[10]++;
+                break;
+            case 3: stats[11]++;
+                break;
+            default:
+                throw "Sequence contains other characters than A, C, G, T";
+        }
+        // todo: make it clear what happens here with the bitshifting
+        // count transitions and transversions
+        switch(bitshift_map[(*it)[seq1_idx]] << bitshift_map[(*it)[seq2_idx]]) {
+            case 2: stats[0]++; // AA
+                break;
+            case 8: stats[14]++; // AC
+                break;
+            case 32: stats[15]++; // AG
+                break;
+            case 128: stats[16]++; // AT
+                break;
+            case 6: stats[20]++; // CA
+                break;
+            case 24: stats[1]++; // CC
+                break;
+            case 96: stats[18]++; // CG
+                break;
+            case 384: stats[17]++; // CT
+                break;
+            case 10: stats[21]++; // GA
+                break;
+            case 40: stats[24]++; // GC
+                break;
+            case 160: stats[2]++; // GG
+                break;
+            case 640: stats[19]++; // GT
+                break;
+            case 14: stats[22]++; // TA
+                break;
+            case 56: stats[23]++; // TC
+                break;
+            case 224: stats[25]++; // TG
+                break;
+            case 896: stats[3]++; // TT
+                break;
+            default:
+                throw "Bitshift result not known!";
+        }
+    }
+    stats[12] = stats[14] + stats[16] + stats[24] + stats[19] +
+                stats[25] + stats[22] + stats[18] + stats[20]; // transversion counts
+    stats[13] = stats[15] + stats[21] + stats[17] + stats[23]; // transition counts
+
+    size_t n_sites = getNSite();
+    // todo: check how to make it work with transform
+    //std::transform(stats.begin(), stats.end(), stats.begin(), [n_sites](int &c){return c/n_sites;});
+
+    for (size_t i = 0; i < 26; i++) {
+       stats[i] /= n_sites;
+    }
+    return stats;
+}
+
+Alignment *Alignment::replaceAmbiguousChars() {
+
+    IntVector patterns;
+    
+    for (size_t idx = 0; idx < getNPattern(); idx++) {
+        patterns.push_back(idx);
+    }
+
+    Alignment *aln = new Alignment;
+    aln->extractPatterns(this, patterns);
+
+    for (size_t idx = 0; idx < aln->size(); idx++) {
+        for (size_t i = 0; i < getNSeq(); i++) {
+            if (aln->at(idx)[i] > 3) {
+                uint32_t base;
+                //mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+                switch(aln->at(idx)[i]) {
+                    case 6: { // M: A or C
+                        base = random_int(2); // todo: here input pointer to random number stream
+                        //std::uniform_int_distribution<size_t> dist(0, 1);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = (StateType) base;
+                    }
+                        break;
+                    case 8: { // R: A or G
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(0, 1);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) base: (StateType) 2;
+                    }
+                        break;
+                    case 9: { // S: C or G
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(1, 2);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? 2 : base;
+                    }
+                        break;
+                    case 10: { // V: A or C or G
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(0, 2);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base;
+                    }
+                        break;
+                    case 12: { // W: A or T
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(0, 1);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) base: (StateType) 3;
+                    }
+                        break;
+                    case 13: { // Y: C or T
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(1, 2);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 1 ? (StateType) base: (StateType) 3;
+                    }
+                        break;
+                    case 14: { // H: A or C or T
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(0, 2);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 2 ? (StateType) 3 : (StateType) base;
+                    }
+                        break;
+                    case 15: { // K: G or T
+                        base = random_int(2);
+                        //std::uniform_int_distribution<size_t> dist(2, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) 2 : (StateType) 3;
+                    }
+                        break;
+                    case 16: { // D: A or G or T
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(1, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 1 ? (StateType) 3 : (StateType) base;
+                    }
+                        break;
+                    case 17: { // B: C or G or T
+                        base = random_int(3);
+                        //std::uniform_int_distribution<size_t> dist(1, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = base == 0 ? (StateType) 3 : (StateType) base;
+                    }
+                    case 18: { // N
+                        base = random_int(4);
+                        //std::uniform_int_distribution<size_t> dist(0, 3);
+                        //base = dist(rng);
+                        aln->at(idx)[i] = (StateType) base;
+                    }
+                        break;
+                    default:
+                        throw "Ambiguous character not known!";
+                }
+            }
+        }
+    }
+    return aln;
+
+}
+
+// added by TD
+// todo: make 0.7 a parameter for the user to change
+Alignment *Alignment::removeAndFillUpGappySites() {
+
+    IntVector keep_patterns;
+
+    // remove all sites with > 70% gaps
+    for (size_t idx = 0; idx < getNPattern(); idx++) {
+        size_t count_gaps = 0;
+        Pattern pattern = getPattern(idx);
+        for (size_t i = 0; i < getNSeq(); i++) {
+            if (pattern[i] == STATE_UNKNOWN)
+                count_gaps++;
+        }
+        if (count_gaps / getNSeq() <= 0.7) {
+            keep_patterns.push_back(idx);
+        }
+    }
+
+    Alignment *aln = new Alignment;
+    aln->extractPatterns(this, keep_patterns);
+
+    for (size_t idx = 0; idx < aln->size(); idx++) {
+        vector<size_t> freqs = aln->at(idx).freqs;
+        uint32_t most_frequent_base = std::max_element(freqs.begin(), freqs.end()) - freqs.begin();
+        for (size_t i = 0; i < getNSeq(); i++) {
+            if (aln->at(idx)[i] == STATE_UNKNOWN) {
+                // fill up gap with most frequent base
+                aln->at(idx)[i] = (StateType)most_frequent_base;
+            }
+        }
+    }
+
+    return aln;
+
+}
+
 Alignment *Alignment::removeGappySeq() {
 	IntVector keep_seqs;
 	size_t nseq = getNSeq();
@@ -964,6 +1200,10 @@ void Alignment::computeConst(Pattern &pat) {
             count++;
         }
     }
+
+    // added by TD
+    vector<size_t> vec(num_app, num_app + num_states);
+    pat.freqs = vec;
 
     // at least 2 states, each appearing at least twice
     is_informative = (count >= 2);
@@ -1770,6 +2010,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
 
     /* now check data type */
     seq_type = detectSequenceType(sequences);
+
     switch (seq_type) {
     case SEQ_BINARY:
         num_states = 2;
@@ -1833,6 +2074,11 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
             outWarning("Your specified sequence type is different from the detected one");
         seq_type = user_seq_type;
+    }
+
+    // added by TD
+    if (Params::getInstance().use_nn_model && seq_type != SEQ_DNA) {
+        throw "Can't combine neural network model selection with non DNA/RNA alignments!";
     }
 
     //initStateSpace(seq_type);

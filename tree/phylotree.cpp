@@ -2779,7 +2779,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
                 showProgress();
             }
-            ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+            // ASSERT(fabs(new_tree_lh-tree_lh) < max_delta_lh);
+            ASSERT(tree_lh-new_tree_lh < max_delta_lh);
             return new_tree_lh;
         }
 
@@ -6021,13 +6022,11 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
         mem_slots.update(dad_branch);
     }
 
-    /*
     if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
         int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
         node->name = convertIntToString(slot_id);
         //cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
     }
-    */
 
     if (params->lh_mem_save == LM_MEM_SAVE) {
         for (it = neivec.begin(); it != neivec.end(); it++) {

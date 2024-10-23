@@ -1039,7 +1039,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     // default_random_engine for generating a random number from a discrete distribution
     default_random_engine generator;
     generator.seed(params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + params->alignment_id);
-    
+
     // Bug fix: in some cases the ids of leaves are not continuous -> in IM algorithm with multiple threads, we use the leaf id to jump to the current position to output the simulated sequences -> we need to build a vector of continuous ids
     if (num_threads > 1)
         buildContinousIdsForTree();
@@ -1752,7 +1752,9 @@ void AliSimulator::mergeAndWriteSeqIndelFunDi(int thread_id, ostream &out, int s
             (*it)->node->sequence->num_threads_done_simulation++;
             
             // make sure only one thread is selected to write the output
+            #ifdef _OPENMP
             if ((*it)->node->sequence->num_threads_done_simulation == omp_get_num_threads())
+            #endif
                 this_thread_write_output = true;
         }
         

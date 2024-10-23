@@ -44,6 +44,7 @@ Pattern::Pattern(const Pattern &pat)
     flag = pat.flag;
     const_char = pat.const_char;
     num_chars = pat.num_chars;
+    freqs = pat.freqs; // added by TD
 }
 
 Pattern::~Pattern()

@@ -720,66 +720,29 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 #undef TOLX
 
 
-const int MAX_ITER = 3; 
+const int MAX_ITER = 3;
 extern double random_double(int *rstream);
 
-/*  changed this method to accomodate GTR20 optimization; -JD
-	- added new procedure called 'const' that multiplies every value by a constant value if a restart is needed
-	- added new option called --reset-method that determines if we do the above (const) or the old way (rand) for restarting params
-	- added fix to force ndim=189 on this method for GTR20 ... for some reason it likes to give 192 which makes it restart every time
-	- made it so if we hit the lower bound, we multiply all values up, and we multiply down if we hit the upper bound
-		- if both bounds are hit we go back to the old (rand) method for restarting the parameters
-*/
 bool Optimization::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
     int i;
-    int restart = 0;
-	bool aa = (ndim > 100); //lazily check if we're optimizing GTR20, which should have >100 params 
-	if(aa) { ndim = 189; } //lazy fix -- ndim 192 -> 189 to prevent wrongful restarts 
+    bool restart = false;
     if (iteration <= MAX_ITER) {
         for (i = 1; i <= ndim; i++) {
 	    if (bound_check[i]) {
-			if (fabs(guess[i]-lower[i]) < 1e-4) { 
-				// set restart to 1 (hit lower) or 3 (both) if already hit upper
-				if (restart == 0) { restart = 1; } else if (restart == 2) { restart = 3; }
-				if (restart == 3) { break; }
-			}
-			if (fabs(guess[i]-upper[i]) < 1e-4) {
-				// set restart to 2 (hit upper) or 3 (both) if already hit lower
-				if (restart == 0) { restart = 2; } else if (restart == 1) { restart = 3; }
-				if (restart == 3) { break; }
-			}
+	        if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+		     restart = true;
+	             break;
+		} // if (fabs...
 	    } // if bound_check
 	} // for
     } // if iteration
-    if (restart > 0) {
+    if (restart) {
       // TODO: Dominik observed that this warning is printed even during model
       // testing. A quieter solution might be preferred.
-		cout << "Restart estimation at the boundary... ";
-
-		// add clarification to the message printed out to console (change this if the above TODO is addressed)
-		bool const_mult = Params::getInstance().reset_method == "const";
-		if(restart == 1 && const_mult) { cout << "multiplying all values up" << endl; }
-		else if(restart == 2 && const_mult) { cout << "multiplying all values down" << endl; } 
-		else { cout << "multiplying all values by random double" << endl; }
-
+	cout << "Restart estimation at the boundary... " << std::endl;
         for (i = 1; i <= ndim; i++) {
-			// multiply by guess_multiplier if reset_method=="const" AND restart = 1 or 2 (hit upper or lower bound but not both)
-			// guess_multiplier is assumed to be <1
-			if(Params::getInstance().reset_method == "const" && restart < 3){
-				double val;
-				if(restart == 1) { // hit lower bound, multiply up
-					val = guess[i] * (1.0 / Params::getInstance().guess_multiplier);
-					if (val >= lower[i]) { guess[i] = val; } 
-				}
-				if(restart == 2) { // hit upper bound, multiply down
-					val = guess[i] * Params::getInstance().guess_multiplier;
-					if (val <= upper[i]) { guess[i] = val; }
-				}
-			// use the old method if reset_method=="rand" OR restart = 3 (hit both upper and lower bounds)
-			} else { 
-				guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
-			}
-		}
+	    guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
+	}
     }	
     return (restart);
 }
