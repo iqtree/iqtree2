@@ -726,14 +726,14 @@ void AliSimulator::updateRootSeq4PredefinedMut(std::vector<bool>& site_needs_upd
 {
     NeighborVec::iterator it;
     FOR_NEIGHBOR(node, dad, it) {
-        
+
         // parse the list of predefined mutations (if any)
         auto atb_it = (*it)->attributes.find(MTree::ANTT_MUT);
         if (atb_it != (*it)->attributes.end())
         {
             // parse the list of mutations
             Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln, site_needs_updating.size());
-            
+
             // Browse mutations one by one
             for (Substitution& mutation : pre_mutations)
             {
@@ -746,15 +746,15 @@ void AliSimulator::updateRootSeq4PredefinedMut(std::vector<bool>& site_needs_upd
                     {
                         // update the state at the root sequence
                         tree->root->sequence->sequence_chunks[0][pos] = mutation.getOldState();
-                        
+
                         // mark the corresponding site updated
                         site_needs_updating[pos] = false;
                     }
                 }
             }
-            
+
         }
-        
+
         // traverse deeper
         updateRootSeq4PredefinedMut(site_needs_updating, (*it)->node, node);
     }
@@ -898,6 +898,11 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
                     starting_pos = single_output->tellp();
                 else
                     starting_pos = first_line.length();
+
+                // for Windows only, the line break is \r\n instead of only \n
+                #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+                ++starting_pos;
+                #endif
             }
             
             // dummy variables
@@ -1035,6 +1040,10 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     default_random_engine generator;
     generator.seed(params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + params->alignment_id);
     
+    // Bug fix: in some cases the ids of leaves are not continuous -> in IM algorithm with multiple threads, we use the leaf id to jump to the current position to output the simulated sequences -> we need to build a vector of continuous ids
+    if (num_threads > 1)
+        buildContinousIdsForTree();
+
     // init the output stream
     initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
     
@@ -1288,14 +1297,14 @@ void AliSimulator::initVariables(int sequence_length, string output_filepath, ve
     if (params->include_pre_mutations && site_locked_vec)
     {
         // show info
-        if (params->alisim_ancestral_sequence_aln_filepath)
+        if (params->root_ref_seq_aln.length())
             outWarning("Update states at the root sequence according to predefined mutations");
-        
+
         // clone site_locked_vec
         std::vector<bool> site_needs_updating = *site_locked_vec;
         updateRootSeq4PredefinedMut(site_needs_updating, tree->root, NULL);
     }
-    
+
     // check whether we could temporarily write sequences at tips to tmp_data file => a special case: with Indels without FunDi/ASC/Partitions
     write_sequences_to_tmp_data = params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0 && params->alisim_fundi_taxon_set.size() == 0 && length_ratio <= 1 && !params->partition_file;
     
@@ -1411,6 +1420,11 @@ void AliSimulator::initOutputFile(ostream *&out, int thread_id, int actual_segme
                 starting_pos = out->tellp();
             else
                 starting_pos = first_line.length();
+
+            // for Windows only, the line break is \r\n instead of only \n
+            #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
+            ++starting_pos;
+            #endif
         }
     }
 }
@@ -1477,7 +1491,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
             || (*it)->attributes.find("model") != (*it)->attributes.end())
         {
             simulation_method = TRANS_PROB_MATRIX;
-            
+
             // if predefined mutations are specified -> use Rate Matrix
             if (tree->params->include_pre_mutations)
             {
@@ -1492,7 +1506,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                     simulation_method = RATE_MATRIX;
             }
         }
-        
+
         // if branch_length is too short (less than 1 substitution is expected to occur) -> clone the sequence from the parent's node
         if ((*it)->length == 0)
         {
@@ -1535,7 +1549,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 int predefined_mutation_count = 0;
                 if (tree->params->include_pre_mutations)
                     handlePreMutations(it, predefined_mutation_count, segment_start, segment_length, sequence_length, node_seq_chunk);
-                
+
                 // Each thread simulate a chunk of sequence using the Gillespie algorithm
                 simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, predefined_mutation_count, rstream, generator);
             }
@@ -1584,32 +1598,32 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
     if (atb_it != (*it)->attributes.end())
     {
         Substitutions pre_mutations = Substitutions(atb_it->second, tree->aln, seq_length);
-        
+
         // Apply the predefined mutations
         for (auto mut_it = pre_mutations.begin(); mut_it != pre_mutations.end(); ++mut_it)
         {
             // compute the relative position of the mutation regarding segment_start
             const int relative_pos = mut_it->getPosition() - segment_start;
-            
+
             // only handle mutations occur in the current segment
             if (relative_pos >= 0 && relative_pos < segment_length)
             {
                 // show infor
                 if (verbose_mode >= VB_MED)
                     std::cout << "Apply a predefined mutation " << tree->aln->convertStateBackStr(mut_it->getOldState()) << convertIntToString(mut_it->getPosition() * num_sites_per_state + params->site_starting_index) << tree->aln->convertStateBackStr(mut_it->getNewState()) << std::endl;
-                
+
                 // if the old state is different from the one observed at the specified position -> show a warning
                 if ((*node_seq_chunk)[relative_pos] != mut_it->getOldState())
                 {
                     outWarning("State " + tree->aln->convertStateBackStr(mut_it->getOldState()) + " is not observed at position/site " + convertIntToString(mut_it->getPosition() * num_sites_per_state + params->site_starting_index) + ", we observe state " + tree->aln->convertStateBackStr((*node_seq_chunk)[relative_pos]) + " instead.");
                 }
-                
+
                 // apply the substitution
                 (*node_seq_chunk)[relative_pos] = mut_it->getNewState();
-                
+
                 // count the number of mutations occur in this segment
                 ++predefined_mutation_count;
-                
+
                 // write log - for debugging only
                 /*ofstream myfile;
                  myfile.open ("thread_" + convertIntToString(omp_get_thread_num()) + ".txt", std::ostream::app);
@@ -1651,7 +1665,7 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
         // manual implementation of barrier
         waitAtBarrier(1, (*it)->node);
     }
-    
+
     // manual implementation of barrier
     waitAtBarrier(2, (*it)->node);
             
@@ -1942,7 +1956,7 @@ void AliSimulator::outputOneSequence(Node* node, string &output, int thread_id, 
         //  cache output into the writing queue
         if (num_threads != 1)
         {
-            int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
+            int64_t pos = ((int64_t)node_continuous_id[node->id]) * ((int64_t)output_line_length);
             pos += starting_pos + (num_sites_per_state == 1 ? segment_start : (segment_start * num_sites_per_state)) + (thread_id == 0 ? 0 : seq_name_length);
             cacheSeqChunkStr(pos, output, thread_id);
         }
@@ -2140,7 +2154,7 @@ void AliSimulator::validataSeqLengthCodon()
 {
     if (tree->aln->seq_type == SEQ_CODON && (!params->partition_file && params->alisim_sequence_length%3))
     {
-        if (params->aln_file || params->alisim_ancestral_sequence_aln_filepath || params->original_params.find("--length") != std::string::npos)
+        if (params->aln_file || params->root_ref_seq_aln.length() || params->original_params.find("--length") != std::string::npos)
             outError("Sequence length of Codon must be divisible by 3. Please check & try again!");
         else
             params->alisim_sequence_length = 999;
@@ -3207,7 +3221,7 @@ void AliSimulator::handleSubs(int segment_start, double &total_sub_rate, vector<
     for (int i = 0; i < indel_sequence.size(); i++)
     {
         pos = random_discrete_dis(generator);
-        
+
         // a valid site must NOT be locked
         if (!site_locked_vec || !site_locked_vec->at(segment_start + pos))
             break;
@@ -3759,4 +3773,61 @@ void AliSimulator::mergeChunksAllNodes(Node* node, Node* dad)
         // browse 1-step deeper to the neighbor node
         mergeChunksAllNodes((*it)->node, node);
     }
+}
+
+
+void AliSimulator::buildContinousIdsForLeave(Node* node, Node* dad)
+{
+    // start from root
+    if (!node) {
+        node = tree->root;
+        tree->leafNum = 0;
+    }
+
+    // reset the leaf's id
+    if (node->isLeaf() && node->name != ROOT_NAME)
+        node_continuous_id[node->id] = tree->leafNum++;
+
+    // traverse further
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        buildContinousIdsForLeave((*it)->node, node);
+    }
+}
+
+void AliSimulator::buildContinousIdsForInternals(Node* node, Node* dad)
+{
+    // start from root
+    if (!node) {
+        node = tree->root;
+        tree->nodeNum = tree->leafNum;
+    }
+
+    // reset the id of internal nodes
+    if (!node->isLeaf())
+        node_continuous_id[node->id] = tree->nodeNum++;
+
+    // traverse further
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        buildContinousIdsForInternals((*it)->node, node);
+    }
+}
+
+void AliSimulator::buildContinousIdsForTree()
+{
+    // backup the number of leaves and nodes
+    int leafNum = tree->leafNum;
+    int nodeNum = tree->nodeNum;
+
+    // init the array to store the continuous ids
+    node_continuous_id.resize(nodeNum + 1);
+
+    // build the continuous ids for leaves
+    buildContinousIdsForLeave();
+
+    // build the continuous ids for internal nodes
+    buildContinousIdsForInternals();
+
+    // restore the number of leaves and nodes
+    tree->leafNum = leafNum;
+    tree->nodeNum = nodeNum;
 }

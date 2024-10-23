@@ -50,7 +50,7 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
 	ModelMarkov::init(freq);
 }
 
-void ModelMorphology::readRates(istream &in) throw(const char*, string) {
+void ModelMorphology::readRates(istream &in) noexcept(false) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
 	// since states for protein is stored in lower-triangle, special treatment is needed

@@ -41,7 +41,7 @@ Node::Node(int aid) {
 Node::Node(int aid, int aname) {
     id = aid;
     char str[20];
-    sprintf(str, "%d", aname);
+    snprintf(str, 20, "%d", aname);
     name = str;
     height = -1;
     sequence = NULL;

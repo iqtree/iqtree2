@@ -30,6 +30,10 @@
 #include "tree/upperbounds.h" // Olga: functions for Upper Bounds analysis
 #include "utils/pllnni.h"
 
+#if defined(USE_CMAPLE)
+    #include "cmaple/maple/cmaple.h"
+#endif
+
 class PhyloTree;
 class IQTree;
 
@@ -44,6 +48,12 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
     @param params program parameters
 */
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Alignment *&aln);
+
+/*! \brief Run CMaple algorithm for phylogenetic inference (if suitable)
+ *  @param params program parameters
+ *  @return TRUE if CMaple algorithm is applicable for the input alignment
+ */
+bool runCMaple(Params &params);
 
 /**
     Perform separate tree inference across partitions

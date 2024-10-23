@@ -404,7 +404,7 @@ void fbp(Tree *ref_tree, char **alt_tree_strings,char** taxname_lookup_table, in
       if(ref_tree->a_edges[i]->right->name) free(ref_tree->a_edges[i]->right->name); /* clear name if existing */
       ref_tree->a_edges[i]->right->name = (char*) malloc(16 * sizeof(char));
       support   = (double) nb_found[i] * 1.0 / num_trees;
-      sprintf(ref_tree->a_edges[i]->right->name, "%.6f", support);
+      snprintf(ref_tree->a_edges[i]->right->name, 16, "%.6f", support);
       ref_tree->a_edges[i]->branch_support = support;
     }
   }
@@ -539,7 +539,7 @@ void tbe(Tree *ref_tree, Tree *ref_raw_tree, char **alt_tree_strings,char** taxn
       if(stat_file != NULL)
 	fprintf(stat_file,"%d\t%d\t%f\n", i, (ref_tree->a_edges[i]->topo_depth), avg_dist);
 
-      sprintf(ref_tree->a_edges[i]->right->name, "%.6f", bootstrap_val);
+      snprintf(ref_tree->a_edges[i]->right->name, 16, "%.6f", bootstrap_val);
 
       ref_tree->a_edges[i]->branch_support = bootstrap_val;
       
@@ -548,7 +548,7 @@ void tbe(Tree *ref_tree, Tree *ref_raw_tree, char **alt_tree_strings,char** taxn
 	if(ref_raw_tree->a_edges[i]->right->name) free(ref_raw_tree->a_edges[i]->right->name); /* clear name if existing */
 	ref_raw_tree->a_edges[i]->right->name = (char*) malloc(16 * sizeof(char));
 	avg_dist      = (double) dist_accu[i] * 1.0 / num_trees;
-	sprintf(ref_raw_tree->a_edges[i]->right->name, "%d|%.6f|%d", ref_raw_tree->a_edges[i]->id, avg_dist,ref_tree->a_edges[i]->topo_depth);
+	snprintf(ref_raw_tree->a_edges[i]->right->name, 16, "%d|%.6f|%d", ref_raw_tree->a_edges[i]->id, avg_dist,ref_tree->a_edges[i]->topo_depth);
       }
     }
 

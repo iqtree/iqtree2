@@ -1,0 +1,181 @@
+name: Build
+
+on:
+  push: 
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+# If a Second Commit is Pushed After, and Build is Not Complete, Cancel
+# Extremely Important with the High Computation Time and Power Required of Arm Linux Builds
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux-x86-64:
+    name: Linux x86-64 gcc-${{ matrix.gcc-version }} cmake-${{ matrix.cmake-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Oldest supported gcc and cmake versions
+          - gcc-version: 9
+            cmake-version: 3.10.2
+          # Latest supported gcc and cmake versions
+          - gcc-version: 12
+            cmake-version: latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: "recursive"
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -q -y
+        sudo apt-get install -q -y gcc-${{ matrix.gcc-version }} g++-${{ matrix.gcc-version}} libeigen3-dev libboost-dev
+    
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: ${{ matrix.cmake-version }}
+
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
+        make -j
+        file iqtree2 | grep x86-64
+
+  build-linux-aarch64:
+    name: Linux aarch64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: Build on Linux ARM64
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: aarch64
+          distro: ubuntu_latest
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            --volume "${PWD}:/iqtree2"
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y cmake gcc g++ file libeigen3-dev libboost-dev
+          run: |
+            cd /iqtree2
+            mkdir build
+            cd build
+            cmake ..
+            make -j
+            file iqtree2 | grep aarch64
+
+  build-macos-x86_64:
+    name: Mac OS x86-64
+    runs-on: macos-13 # Mac OS 14 Does Not Support x86-64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+  
+      - name: Install dependencies
+        run: brew install make eigen boost libomp
+  
+      - name: Build
+        run: |
+          set -x
+          mkdir build
+          cd build
+          export LDFLAGS="-L/usr/local/opt/libomp/lib"
+          export CPPFLAGS="-I/usr/local/opt/libomp/include"
+          export CXXFLAGS="-I/usr/local/opt/libomp/include"
+          cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          gmake -j
+          file iqtree2 | grep x86_64
+
+  build-macos-arm:
+    name: Mac OS ARM64
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+  
+      - name: Install dependencies
+        run: brew install make eigen boost libomp
+
+      - name: Build
+        run: |
+          set -x
+          mkdir build
+          cd build
+          export LDFLAGS="-L/opt/homebrew/opt/libomp/lib"
+          export CPPFLAGS="-I/opt/homebrew/opt/libomp/include"
+          export CXXFLAGS="-I/opt/homebrew/opt/libomp/include"
+          cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          gmake -j
+          file iqtree2 | grep arm64
+
+  build-windows-x86-64:
+    name: Windows x86-64
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+
+      - name: Install LLVM v14
+        shell: cmd
+        run: choco install llvm --version=14.0.6 --allow-downgrade
+              
+      - name: Install Boost
+        uses: MarkusJx/install-boost@v2.4.5
+        id: install-boost
+        with:
+            boost_version: 1.84.0
+            platform_version: 2022
+            toolset: mingw
+
+      - name: Install Eigen3
+        shell: cmd
+        run: choco install eigen
+
+      - name: Compile
+        shell: cmd
+        run: |
+          if exist build rd /s /q build
+          mkdir build
+          cd build
+          cmake -G "MinGW Makefiles" ^
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ^
+            -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu ^
+            -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu ^
+            -DCMAKE_MAKE_PROGRAM=mingw32-make ^
+            -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include ^
+            -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib ^
+            -DIQTREE_FLAGS="cpp14" ..
+          make -j
+        env:
+          BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+
+      - name: Check File Arch
+        shell: bash
+        run: |
+          cd build
+          file iqtree2.exe | grep x86-64

@@ -298,6 +298,113 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     out << endl;
 }
 
+void reportNexusFile(ostream &out, ModelSubst *m) {
+    double full_mat[400];
+    int i,j,k;
+    double *rate_mat = new double[m->num_states * m->num_states];
+    m->getRateMatrix(rate_mat);
+    out << "#nexus" << endl;
+    out << "begin models;" << endl;
+    out << "model GTRPMIX =" << endl;
+    out.precision(6);
+    if (m->isReversible()) {
+        for (i = 0, k = 0; i < m->num_states - 1; i++)
+            for (j = i + 1; j < m->num_states; j++, k++) {
+                full_mat[i*m->num_states+j] = rate_mat[k];
+            }
+        for (i = 1; i < m->num_states; i++) {
+            for (j = 0; j < i; j++)
+                out << " " << full_mat[j*m->num_states+i];
+            out << endl;
+        }
+    } else {
+        // non-reversible model
+        m->getQMatrix(full_mat);
+        for (i = 0; i < m->num_states; i++) {
+            for (j = 0; j < m->num_states; j++)
+                out << " " << full_mat[i*m->num_states+j];
+            out << endl;
+        }
+    }
+    // print out the frequencies with same rate
+    double f = 1.0 / m->num_states;
+    for (i = 0; i < m->num_states; i++)
+        out << " " << f;
+    out << ";" << endl;
+    out.precision(4);
+    out << "end;" << endl;
+}
+
+void reportLinkSubstMatrix(ostream &out, Alignment *aln, ModelSubst *m) {
+    int i, j, k;
+    double *rate_mat = new double[m->num_states * m->num_states];
+    if (!m->isSiteSpecificModel())
+        m->getRateMatrix(rate_mat);
+    else
+        ((ModelSet*)m)->front()->getRateMatrix(rate_mat);
+
+    if (m->num_states <= 4) {
+        out << "Linked rate parameter R:" << endl << endl;
+
+        if (m->isReversible()) {
+            for (i = 0, k = 0; i < m->num_states - 1; i++)
+                for (j = i + 1; j < m->num_states; j++, k++) {
+                    out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j) << ": "
+                            << rate_mat[k];
+                    if (m->num_states <= 4)
+                        out << endl;
+                    else if (k % 5 == 4)
+                        out << endl;
+                }
+
+        } else { // non-reversible model
+            for (i = 0, k = 0; i < m->num_states; i++)
+                for (j = 0; j < m->num_states; j++)
+                    if (i != j) {
+                        out << "  " << aln->convertStateBackStr(i) << "-" << aln->convertStateBackStr(j)
+                                << ": " << rate_mat[k];
+                        if (m->num_states <= 4)
+                            out << endl;
+                        else if (k % 5 == 4)
+                            out << endl;
+                        k++;
+                    }
+
+        }
+        out << endl << endl;
+        out.unsetf(ios_base::fixed);
+    } else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+        ASSERT(m->num_states == 20);
+        double full_mat[400];
+
+        out.precision(6);
+
+        if (m->isReversible()) {
+            for (i = 0, k = 0; i < m->num_states - 1; i++)
+                for (j = i + 1; j < m->num_states; j++, k++) {
+                    full_mat[i*m->num_states+j] = rate_mat[k];
+                }
+            out << "Linked substitution parameters (lower-diagonal):" << endl << endl;
+            for (i = 1; i < m->num_states; i++) {
+                for (j = 0; j < i; j++)
+                    out << " " << full_mat[j*m->num_states+i];
+                out << endl;
+            }
+        } else {
+            // non-reversible model
+            m->getQMatrix(full_mat);
+            out << "Linked full Q matrix:" << endl << endl;
+            for (i = 0; i < m->num_states; i++) {
+                for (j = 0; j < m->num_states; j++)
+                    out << " " << full_mat[i*m->num_states+j];
+                out << endl;
+            }
+        }
+        out << endl;
+        out.precision(4);
+    }
+}
+
 void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     int i, j, k;
     ASSERT(aln->num_states == m->num_states);
@@ -310,8 +417,6 @@ void reportModel(ostream &out, Alignment *aln, ModelSubst *m) {
     if (m->num_states <= 4) {
         out << "Rate parameter R:" << endl << endl;
 
-        if (m->num_states > 4)
-            out << fixed;
         if (m->isReversible()) {
             for (i = 0, k = 0; i < m->num_states - 1; i++)
                 for (j = i + 1; j < m->num_states; j++, k++) {
@@ -506,6 +611,11 @@ void reportModel(ostream &out, PhyloTree &tree) {
             reportModel(out, tree.aln, m);
         }
         out << endl;
+        if (Params::getInstance().optimize_linked_gtr) {
+            // linked substitution matrix
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+            reportLinkSubstMatrix(out, tree.aln, m);
+        }
     } else {
         // Update rate name if continuous gamma is used.
         if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)
@@ -598,6 +708,35 @@ void reportRate(ostream &out, PhyloTree &tree) {
                 " of the portion of the Gamma distribution falling in the category." << endl;
         }
     }
+    /*
+    //output ratemat to iqtree file -JD
+    if(Params::getInstance().optimize_linked_gtr) {
+        string fname = Params::getInstance().out_prefix;
+        fname += ".ratemat";
+        ifstream f(fname.c_str());
+        if(f.good()) {
+            out << endl << "Rate matrix:" << endl;
+            cout << endl << "Rate matrix:" << endl;
+            string data;
+            getline(f,data);
+            size_t last = 0;
+            size_t next = 0;
+            while ((next = data.find(" ", last)) != string::npos) {
+                string outline = data.substr(last, next-last) + " ";
+                out << outline;
+                cout << outline;
+                last = next + 1;
+            }
+            out << data.substr(last) << endl;
+            cout << data.substr(last) << endl;
+            if(!Params::getInstance().rates_file) { //delete ratemat files if not using flag to keep them
+                remove(fname.c_str());
+                remove((fname+"_init").c_str());
+            }
+        }
+        f.close();
+    }
+    */
     out << endl;
 }
 
@@ -1021,6 +1160,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "                                 " << params.out_prefix << ".pp.hmm" << endl;
     }
 
+    if (params.optimize_linked_gtr) {
+        cout << "  GTRPMIX nex file:              " << params.out_prefix << ".GTRPMIX.nex" << endl;
+    }
     cout << endl;
 
 }
@@ -1130,7 +1272,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         out.exceptions(ios::failbit | ios::badbit);
         out.open(outfile.c_str());
         out << "IQ-TREE " << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR
-            << iqtree_VERSION_PATCH << " COVID-edition built " << __DATE__ << endl
+            << iqtree_VERSION_PATCH << " built " << __DATE__ << endl
                 << endl;
         if (params.partition_file)
             out << "Partition file name: " << params.partition_file << endl;
@@ -1697,6 +1839,20 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
         //reportCredits(out); // not needed, now in the manual
         out.close();
 
+        // for link-exchange-rates option
+        // output the nexus file
+        if (params.optimize_linked_gtr) {
+            ModelSubst *mmodel = tree.getModel();
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(0);
+            string outnexfile = params.out_prefix;
+            outnexfile += ".GTRPMIX.nex";
+            ofstream outnex;
+            outnex.exceptions(ios::failbit | ios::badbit);
+            outnex.open(outnexfile.c_str());
+            reportNexusFile(outnex, m);
+            outnex.close();
+        }
+
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, outfile);
     }
@@ -1761,7 +1917,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     // if using partitions -> specify a partition file
     if (params.partition_file)
     {
-        string partition_file(params.partition_file);
+        string partition_file(params.out_prefix);
         partition_file += ".best_model.nex";
         switch (params.partition_type)
         {
@@ -2271,7 +2427,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             printMarginalProb(mp_file.c_str(), &iqtree);
         }
     }
-    
+
     if (params.print_partition_lh && !iqtree.isSuperTree()) {
         outWarning("-wpl does not work with non-partition model");
         params.print_partition_lh = false;
@@ -2831,7 +2987,13 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
        // FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
 
-    runModelFinder(params, *iqtree, model_info);
+    params.startCPUTime = getCPUTime();
+    params.start_real_time = getRealTime();
+
+    string best_subst_name, best_rate_name;
+    runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
+
+    optimiseQMixModel(params, iqtree, model_info);
 }
         
 /**
@@ -2878,8 +3040,8 @@ int getTreeMixNum(Params& params) {
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     //    string dist_file;
-    params.startCPUTime = getCPUTime();
-    params.start_real_time = getRealTime();
+    // params.startCPUTime = getCPUTime();
+    // params.start_real_time = getRealTime();
     
     int absent_states = 0;
     if (iqtree->isSuperTree()) {
@@ -4290,16 +4452,28 @@ int checkCharInFile(char* infile, char c) {
 }
 
 IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
-    int i;
+    int i, k;
     vector<IQTree*> trees;
     
-    // check how many trees inside the user input file
-    if (numTree == 0)
-        numTree = checkCharInFile(params.user_file, ';');
-    cout << "Number of input trees: " << numTree << endl;
-    if (numTree <= 1) {
-        outError("For using the tree mixture model, there must be at least 2 trees inside the tree file: " + string(params.user_file) + ", and each tree must be followed by the character ';'.");
+    if (numTree == 1) {
+        outError("The number after +T has to be greater than 1");
     }
+
+    // check how many trees inside the user input file
+    k = checkCharInFile(params.user_file, ';');
+    if (k <= 1) {
+        outError("Tree mixture model only supports at least 2 trees inside the tree file: " + string(params.user_file) + ". Each tree must be followed by the character ';'.");
+    }
+
+    if (numTree == 0) {
+        numTree = k;
+        cout << "Number of input trees: " << numTree << endl;
+    } else if (numTree < k) {
+        cout << "Note: Only " << numTree << " trees are considered, although there are more than " << numTree << " trees in the tree file: " << params.user_file << endl;
+    } else if (numTree > k) {
+        outError("The number of trees inside the tree file '" + string(params.user_file) + "' is less than " + convertIntToString(numTree));
+    }
+
     for (i=0; i<numTree; i++) {
         trees.push_back(newIQTree(params,alignment));
     }
@@ -4595,14 +4769,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     }
 
     if (isTreeMix) {
-        // TreeMix cannot be used for MCMCTree gradients and Hessian calculation
-        if(params.dating_method=="mcmctree"){
-            outError("Approximate likelihood techniques for MCMCTree cannot be used with tree mixture models.");
-        }
         if (params.optimize_params_use_hmm)
             cout << "HMMSTER ";
         // tree-mixture model
         cout << "Tree-mixture model" << endl;
+
+        if (params.compute_ml_tree_only) {
+            outError("option compute_ml_tree_only cannot be set for tree-mixture model");
+        }
 
         // the minimum gamma shape should be greater than MIN_GAMMA_SHAPE_TREEMIX for tree mixture model
         if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
@@ -4612,19 +4786,17 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         }
 
         if (params.user_file == NULL) {
-            // get the number after "+T" for tree-mixture model
-            int treeNum = getTreeMixNum(params);
-            if (treeNum == 0) {
-                outError("Specify the number of trees in the model or input the tree file using the option '-te' for tree-mixture model");
-            }
-            tree = newIQTreeMix(params, alignment, treeNum); // tree mixture model
-        } else {
+            outError("To use tree-mixture model, use an option: -te <newick file with multiple trees>");
+        }
+
+        // get the number after "+T" for tree-mixture model
+        int treeNum = getTreeMixNum(params);
+        if (treeNum == 0) {
             tree = newIQTreeMix(params, alignment); // tree mixture model
+        } else {
+            tree = newIQTreeMix(params, alignment, treeNum); // tree mixture model
         }
-        if (params.compute_ml_tree_only) {
-            outError("option compute_ml_tree_only cannot be set for tree-mixture model");
-        }
-        tree = newIQTreeMix(params, alignment); // tree mixture model
+
     } else {
         tree = newIQTree(params, alignment);
     }
@@ -4780,18 +4952,195 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
 }
 
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
-    IQTree *tree;
-    Alignment *alignment;
-    
-    runPhyloAnalysis(params, checkpoint, tree, alignment);
+    bool runCMapleAlg = false;
+    // check and run CMaple algorithm (if users want to do so)
+    if (params.inference_alg != ALG_IQ_TREE)
+        runCMapleAlg = runCMaple(params);
 
-    // 2015-09-22: bug fix, move this line to before deleting tree
-    alignment = tree->aln;
-    delete tree;
-    // BUG FIX: alignment can be changed, should delete tree->aln instead
-    // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
-//    alignment = tree->aln;
-    delete alignment;
+    // run IQ-TREE algorithm, by default
+    if (!runCMapleAlg)
+    {
+        IQTree *tree;
+        Alignment *alignment;
+
+        runPhyloAnalysis(params, checkpoint, tree, alignment);
+
+        // 2015-09-22: bug fix, move this line to before deleting tree
+        alignment = tree->aln;
+        delete tree;
+        // BUG FIX: alignment can be changed, should delete tree->aln instead
+        // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
+        //    alignment = tree->aln;
+        delete alignment;
+    }
+}
+
+bool runCMaple(Params &params)
+{
+#if !defined(USE_CMAPLE)
+    outWarning("This version was not compiled with CMAPLE integrated. Running IQ-TREE algorithm...");
+    return false;
+#else
+    // Validate the input aln
+    if (!params.aln_file) outError("Please supply an input alignment via '-s <alignment_file>");
+
+    try
+    {
+        // record the start time
+        auto start = getRealTime();
+
+        // Dummy variables
+        std::string aln_path(params.aln_file);
+        const std::string prefix(params.out_prefix ? params.out_prefix : aln_path);
+        const std::string output_treefile = prefix + ".treefile";
+        const cmaple::Tree::TreeType tree_format = cmaple::Tree::parseTreeType(params.tree_format_str);
+
+        // Check whether output file is already exists
+        if (!params.ignore_checkpoint && fileExists(output_treefile))
+            outError("File " + output_treefile + " already exists. Use `-redo` to redo the inference.\n");
+
+        // Parse the sequence type (if specified)
+        const cmaple::SeqRegion::SeqType seq_type = params.sequence_type ? cmaple::SeqRegion::parseSeqType(std::string(params.sequence_type)) : cmaple::SeqRegion::SEQ_AUTO;
+        // Validate the seq_type
+        if (seq_type == cmaple::SeqRegion::SEQ_UNKNOWN)
+            throw std::invalid_argument("Unknown/Unsupported SeqType " + std::string(params.sequence_type));
+
+        // Initialize an Alignment
+        // Retrieve the reference genome (if specified) from an alignment -> this feature has not yet exposed to APIs -> should be refactoring later
+        std::string ref_seq = "";
+        if (params.root_ref_seq_aln.length() && params.root_ref_seq_name.length())
+        {
+            cmaple::Alignment aln_tmp;
+            ref_seq = aln_tmp.readRefSeq(params.root_ref_seq_aln, params.root_ref_seq_name);
+        }
+        const cmaple::Alignment::InputType aln_format = cmaple::Alignment::parseAlnFormat(params.in_aln_format_str);
+        // Validate the aln_format
+        if (aln_format == cmaple::Alignment::IN_UNKNOWN)
+            throw std::invalid_argument("Unknown alignment format " + params.in_aln_format_str);
+        cmaple::Alignment aln(aln_path, ref_seq, aln_format, seq_type);
+
+        // check if CMaple is suitable for the input alignment
+        if (!cmaple::isEffective(aln))
+        {
+            std::cout << "The input alignment is too divergent, which is inappropriate for [C]Maple algorithm." <<std::endl;
+
+            // if users force running CMAPLE -> show a warning
+            if (params.inference_alg == ALG_CMAPLE)
+            {
+                std::cout << "We highly recommend to use the IQ-TREE inference algorithm for this analysis."
+                << " Please stop and re-run WITHOUT `--pathogen-force`!" << std::endl;
+            }
+            // otherwise, users allow us to choose the inference algorithm -> choose IQ-TREE
+            else
+            {
+                params.inference_alg = ALG_IQ_TREE;
+                std::cout << "Running IQ-TREE algorithm..." << std::endl;
+                return false;
+            }
+        }
+        // otherwise, it's suitable to run CMAPLE algorithm here
+        else
+            params.inference_alg = ALG_CMAPLE;
+
+        // run CMAPLE algorithm
+        if (params.inference_alg == ALG_CMAPLE)
+        {
+            std::cout << "Running [C]MAPLE algorithm..." << std::endl;
+
+            // If running multi-processes -> only the master works
+            if (MPIHelper::getInstance().getNumProcesses() > 1 && MPIHelper::getInstance().getProcessID() > 0)
+                return true;
+
+            // Initialize a Model
+            cmaple::ModelBase::SubModel sub_model = params.model_name.length() ? cmaple::ModelBase::parseModel(params.model_name) : cmaple::ModelBase::DEFAULT;
+            // Validate the sub_model
+            if (sub_model == cmaple::ModelBase::UNKNOWN)
+            {
+                std::cout << "Unknown/Unsupported model '" + params.model_name + "'. Using the default model instead (i.e., GTR for DNA and LG for Protein data)" << std::endl;
+                sub_model = cmaple::ModelBase::DEFAULT;
+            }
+            cmaple::Model model(sub_model, aln.getSeqType());
+
+            // Initialize a Tree
+            const std::string input_treefile(params.user_file ? params.user_file : "");
+            cmaple::Tree tree(&aln, &model, input_treefile, (params.fixed_branch_length == BRLEN_FIX), cmaple::ParamsBuilder().build());
+
+            // Infer a phylogenetic tree
+            const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
+            std::ostream null_stream(0);
+            std::ostream& out_stream = cmaple::verbose_mode >= cmaple::VB_MED ? std::cout : null_stream;
+            tree.infer(tree_search_type, params.shallow_tree_search, out_stream);
+
+            // Compute branch supports (if users want to do so)
+            if (params.aLRT_replicates)
+            {
+                // if users don't input a tree file, always allow CMaple to replace the ML tree by a higher-likelihood tree (if found)
+                bool allow_replacing_ML_tree = true;
+                // if users input a tree -> depend on the setting in params (false ~ don't allow replacing (by default)
+                if (input_treefile.length())
+                    allow_replacing_ML_tree = params.allow_replace_input_tree;
+
+                tree.computeBranchSupport(params.num_threads, params.aLRT_replicates, 0.1, allow_replacing_ML_tree, out_stream);
+
+                // write the tree file with branch supports
+                /*ofstream out_tree_branch_supports = ofstream(prefix + ".aLRT_SH.treefile");
+                out_tree_branch_supports << tree.exportNewick(tree_format, true);
+                out_tree_branch_supports.close();*/
+            }
+
+            // If needed, apply some minor changes (collapsing zero-branch leaves into less-info sequences, re-estimating model parameters) to make the processes of outputting then re-inputting a tree result in a consistent tree
+            if (params.make_consistent)
+                tree.makeTreeInOutConsistent();
+
+            // output log-likelihood of the tree
+            if (cmaple::verbose_mode > cmaple::VB_QUIET)
+                std::cout << std::setprecision(10) << "Tree log likelihood: " << tree.computeLh() << std::endl;
+
+            // Write the normal tree file
+            ofstream out = ofstream(output_treefile);
+            out << tree.exportNewick(tree_format);
+            out.close();
+
+            // Show model parameters
+            if (cmaple::verbose_mode > cmaple::VB_QUIET)
+            {
+                cmaple::Model::ModelParams model_params = model.getParams();
+                std::cout << "\nMODEL: " + model_params.model_name + "\n";
+                std::cout << "\nROOT FREQUENCIES\n";
+                std::cout << model_params.state_freqs;
+                std::cout << "\nMUTATION MATRIX\n";
+                std::cout << model_params.mut_rates << std::endl;
+            }
+
+            // Show information about output files
+            std::cout << "Analysis results written to:" << std::endl;
+            std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
+            /*if (params.aLRT_replicates)
+                std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;*/
+            std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
+
+            // show runtime
+            auto end = getRealTime();
+            if (cmaple::verbose_mode > cmaple::VB_QUIET)
+                cout << "CMAPLE Runtime: " << end - start << "s" << endl;
+        }
+    }
+    catch (std::invalid_argument e)
+    {
+        outError(e.what());
+    }
+    catch (std::logic_error e)
+    {
+        outError(e.what());
+    }
+    catch (ios::failure e)
+    {
+        outError(e.what());
+    }
+
+    // return true, by default
+    return true;
+#endif
 }
 
 /**

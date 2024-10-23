@@ -88,6 +88,31 @@ inline void separator(ostream &out, int type = 0) {
 
 
 void printCopyright(ostream &out) {
+    string osname, pre, post;
+    osname = getOSName();
+
+    size_t osx_pos = osname.find("Mac OS X");
+    size_t linux_pos = osname.find("Linux");
+    if (osx_pos != string::npos) {
+        // change the "Mac OS X" to "MacOS ARM" or "MacOS Intel"
+        pre = osname.substr(0,osx_pos);
+        post = osname.substr(osx_pos+8);
+        #if defined(__ARM_NEON)
+            osname = pre + "MacOS ARM" + post;
+        #else
+            osname = pre + "MacOS Intel" + post;
+        #endif
+    } else if (linux_pos != string::npos) {
+        // change the "Linux" to "Linux ARM" or "Linux x86"
+        pre = osname.substr(0,linux_pos);
+        post = osname.substr(linux_pos+5);
+        #if defined(__ARM_NEON)
+            osname = pre + "Linux ARM" + post;
+        #else
+            osname = pre + "Linux x86" + post;
+        #endif
+    }
+    
 #ifdef IQ_TREE
      out << "IQ-TREE";
     #ifdef _IQTREE_MPI
@@ -103,16 +128,16 @@ void printCopyright(ostream &out) {
 #else
      out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH << " COVID-edition";
-    out << " for " << getOSName();
+    out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH; // << " COVID-edition";
+    out << " for " << osname;
     out << " built " << __DATE__;
 #if defined DEBUG 
     out << " - debug mode";
 #endif
 
 #ifdef IQ_TREE
-    out << endl << "Developed by Bui Quang Minh, James Barbetti, Nguyen Lam Tung,"
-        << endl << "Olga Chernomor, Heiko Schmidt, Dominik Schrempf, Michael Woodhams, Ly Trong Nhan." << endl << endl;
+    out << endl << "Developed by Bui Quang Minh, Nguyen Lam Tung, Olga Chernomor, Heiko Schmidt,"
+        << endl << "Dominik Schrempf, Michael Woodhams, Ly Trong Nhan, Thomas Wong" << endl << endl;
 #else
     out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
@@ -2420,7 +2445,8 @@ int main(int argc, char *argv[]) {
         cout << endl;
         outError("You have specified more threads than CPU cores available");
     }
-    omp_set_nested(false); // don't allow nested OpenMP parallelism
+    // omp_set_nested(false); // don't allow nested OpenMP parallelism
+    omp_set_max_active_levels(1);
 #else
     if (Params::getInstance().num_threads != 1) {
         cout << endl << endl;

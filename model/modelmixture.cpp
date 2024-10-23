@@ -976,6 +976,58 @@ frequency C60pi59 = 0.3865149348 0.0037579334 0.0030420497 0.0022366810 0.021892
 frequency C60pi60 = 0.0146570745 0.0028841333 0.0012998335 0.0005210575 0.0024317913 0.0049362750 0.0014874369 0.0020953252 0.0010181940 0.1913901476 0.4432797758 0.0022898369 0.2217427062 0.0091637503 0.0007685153 0.0027251487 0.0170997497 0.0008779380 0.0014756028 0.0778557075;
 model C60 = POISSON+G+FMIX{C60pi1:1:0.0169698865,C60pi2:1:0.0211683374,C60pi3:1:0.0276589079,C60pi4:1:0.0065675964,C60pi5:1:0.0141221416,C60pi6:1:0.0068774834,C60pi7:1:0.0146909701,C60pi8:1:0.0067225777,C60pi9:1:0.0018396660,C60pi10:1:0.0102547197,C60pi11:1:0.0230896163,C60pi12:1:0.0057941033,C60pi13:1:0.0125394534,C60pi14:1:0.0204526478,C60pi15:1:0.0070629602,C60pi16:1:0.0117982741,C60pi17:1:0.0068334668,C60pi18:1:0.0433775839,C60pi19:1:0.0318278731,C60pi20:1:0.0222546108,C60pi21:1:0.0102264969,C60pi22:1:0.0150545891,C60pi23:1:0.0134159878,C60pi24:1:0.0148552065,C60pi25:1:0.0239111516,C60pi26:1:0.0128776278,C60pi27:1:0.0222318842,C60pi28:1:0.0247444742,C60pi29:1:0.0214274810,C60pi30:1:0.0115001882,C60pi31:1:0.0076017389,C60pi32:1:0.0130258568,C60pi33:1:0.0093701965,C60pi34:1:0.0467194264,C60pi35:1:0.0441940314,C60pi36:1:0.0322263154,C60pi37:1:0.0402999891,C60pi38:1:0.0150234227,C60pi39:1:0.0104589903,C60pi40:1:0.0214742395,C60pi41:1:0.0154957836,C60pi42:1:0.0101789953,C60pi43:1:0.0227980379,C60pi44:1:0.0123204539,C60pi45:1:0.0066777583,C60pi46:1:0.0004150083,C60pi47:1:0.0344385130,C60pi48:1:0.0113663379,C60pi49:1:0.0127143049,C60pi50:1:0.0124323741,C60pi51:1:0.0262124415,C60pi52:1:0.0064994957,C60pi53:1:0.0103203293,C60pi54:1:0.0142463512,C60pi55:1:0.0215600067,C60pi56:1:0.0199150700,C60pi57:1:0.0038964200,C60pi58:1:0.0113448855,C60pi59:1:0.0128595846,C60pi60:1:0.0117656776};
 
+
+[ ---------------------------------------------------------
+    GTRpmix : A linked general-time reversible model for profile mixture models by Banos et al (2024)
+ --------------------------------------------------------- ]
+
+model EAL =
+0.5139370
+0.7807780  2.2110100
+0.3985550  0.5385500  3.8694500
+5.5831300  0.5559990  1.3028100  0.4944880
+0.9362480  1.6762700  1.8301000  0.6558470  0.5471660
+0.6223140  1.1289600  1.4756000  5.0208000  0.1667620  1.8216600
+3.7051400  1.2115100  1.2700500  0.9099490  2.5239900  0.6990140  1.1097900
+0.4444860  1.6996900  2.7993900  0.9025050  1.0918600  2.5400300  0.3961960  0.5475320
+2.4907200  1.2686800  1.1841900  1.0829100  1.8004300  0.6217850  1.6785100  1.0725800  0.7655320
+1.9324900  0.8592640  1.0372200  0.6249040  2.1220600  0.8769700  1.0677400  1.1364400  0.8066080  9.1427200
+0.7555430  8.9405200  2.5649600  0.9172800  0.0826583  1.2688900  2.9719700  1.2370500  0.9748910  2.3652900  1.5178000
+2.7127800  1.5707200  2.0882500  1.3973200  1.6249600  3.9075200  1.5973400  1.7729700  1.1108400  6.9121800  7.5832200  2.2458000
+2.0314600  0.9821260  1.3882800  0.6327030  1.8262700  0.4818130  1.0207400  1.9136300  1.8327200  5.4506000  6.1859700  1.1400100  5.2475600
+1.1713300  0.9537300  1.3000600  0.9659520  0.8262060  0.8171450  1.2575000  1.2522000  1.0361500  1.6158100  1.0717700  1.8290200  0.7093520  1.7532800
+8.0914800  2.3764400  4.7629400  2.5900800  4.0817000  2.3677500  2.1567700  3.9314300  1.6875400  1.3852600  1.2670800  2.5542300  3.0932800  1.2163600  3.0917500
+2.3023200  1.2133700  2.9003000  1.2187000  3.9718400  1.1817500  1.1487300  1.2098600  0.9706650  2.4967300  1.7704400  1.5498200  3.0841500  1.2742700  1.1643700  8.5283000
+0.4911340  1.3526400  0.7412770  0.5771560  0.3220440  0.9613600  1.6970400  1.6389000  0.8426650  1.6891000  1.6070900  1.2321800  2.0918900  5.5276300  0.5448390  1.2929200  1.0004200
+1.4211900  1.5403500  1.6551800  0.8709190  1.8602800  1.0214500  1.4422300  1.2306100  4.7502400  3.7698200  2.5010600  2.2594600  2.3096100 17.6854000  1.2494000  1.7617800  1.4416900  6.0125900
+5.0733200  0.7400000  1.5209800  0.4532060  5.8701800  0.7119930  1.2315800  1.2114900  0.7947730 14.3103000  3.2848000  1.5964400  2.7493500  2.6470500  1.7743800  2.1992200  4.3692100  0.7982800  1.0000000
+
+0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000;
+
+
+model ELM =
+0.715629
+1.508850  1.161630
+0.726973  0.286720  2.398750
+8.885660  2.420420  3.725230  1.256800
+2.005920  1.660300  2.310150  0.664903 1.807890
+1.454500  0.402780  0.620396  3.994270  0.563876  2.659760
+3.296750  0.693326  1.410850  0.718783  2.906000  0.970269  0.709861
+1.177100  1.943510  4.046790  0.944493  2.036010  4.057630  0.594082  0.739869
+1.226810  0.614885  1.391670  0.350519  3.388670  0.794346 0.591678  0.622542  0.684236
+1.442400  0.957143  1.243020  0.404098  3.795890  2.009610  0.812062  0.659230  1.459320  7.175270
+1.522220 6.019520  1.958980  0.549932  0.805462  2.116630  1.059890  0.868270  1.046510  0.673004  1.030980
+2.594450  1.282120  2.302210  0.685795 3.947350  4.718320  0.991296  1.310790  1.444100  9.184980 10.658400  1.806190
+1.321440  0.637156  1.254780  0.277047  3.626440  0.719102 0.502816  1.001800  3.361500  2.936780  3.692410  0.698696  4.922400
+2.260180  0.750571  0.850661  0.638748  1.646420  1.424490  0.847877 0.806691  1.293480  0.620409  0.733803  1.122450  0.631146  0.642565
+7.098000  1.314360  4.124020  1.474770  7.478990  2.566870  0.979055 3.328040  1.916990  0.764763  1.006860  1.485070  2.131750  1.337140  1.638470
+2.569250  1.028650  3.180980  0.977685  6.677990  2.015830 1.220300  0.978011  1.492980  2.952550  1.619930  1.945970  4.283060  1.112990  1.282440  7.091040
+0.526827  0.865586  0.467618  0.286157 2.120440  0.473558  0.398477  0.539925  0.992776  0.928090  0.947389  0.328019  1.204560  4.953660  0.400354  0.958659  0.444776
+0.814941 0.651825  1.258290  0.451721  3.035280  0.768014  0.453336  0.340569  5.019630  1.263840  1.667850  0.533863  1.671970 15.842500  0.608587 1.105020  1.079470  4.907340
+4.017660  0.790208  1.278070  0.496290 10.802500  1.447170  1.664840  0.664753  1.108450 15.168600  4.802210 1.448330  4.696670  2.395620  1.325620  1.052170  4.685250  0.728445  1.000000
+
+0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000 0.050000;
+
 end;
 )";
 
@@ -1139,7 +1191,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block,
 ModelMixture::ModelMixture(PhyloTree *tree) : ModelMarkov(tree) {
 	prop = NULL;
 	fix_prop = true;
-	optimizing_submodels = false;
+    optimizing_gtr = false;
 }
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
@@ -1148,7 +1200,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 {
 	prop = NULL;
 	fix_prop = true;
-	optimizing_submodels = false;
+    optimizing_gtr = false;
     optimize_steps = 0;
 	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
@@ -1187,7 +1239,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	DoubleVector freq_rates;
 	DoubleVector freq_weights;
 	fix_prop = false;
-	optimizing_submodels = false;
+    optimizing_gtr = false;
 
 	if (freq == FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
@@ -1368,31 +1420,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
                     nxsmodel_freq_name = freq_mod->name;
                 }
                 this_name = this_name.substr(0, fpos);
-            } else if (phylo_tree->aln->seq_type == SEQ_DNA) {
-                switch(model_freq) {
-                    case FREQ_USER_DEFINED:
-                        if (freq_params.length() > 0) {
-                            cout << "Model " << this_name << " => " << this_name << "+F{" << freq_params << "}" << endl;
-                        } else {
-                            outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
-                        }
-                        break;
-                    case FREQ_EQUAL:
-                        cout << "Model " << this_name << " => " << this_name << "+FQ" << endl;
-                        break;
-                    case FREQ_EMPIRICAL:
-                        cout << "Model " << this_name << " => " << this_name << "+F" << endl;
-                        break;
-                    case FREQ_ESTIMATE:
-                        cout << "Model " << this_name << " => " << this_name << "+FO" << endl;
-                        break;
-                    case FREQ_UNKNOWN:
-                        outError("For mixture model, you need to specify +F/+FO/+F{}/+FQ for every model\nFor example: MIX{GTR+FO,GTR+F}");
-                        break;
-                    default:
-                        cout << "Model " << this_name << endl;
-                        break;
-                }
             }
             
 			model = (ModelMarkov*)createModel(this_name, models_block, model_freq, freq_params, tree);
@@ -1427,7 +1454,6 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			sum += prop[i];
 		}
 	} else {
-		// initialize rates as increasing
 		for (i = 0, sum = 0.0; i < nmixtures; i++) {
 //			prop[i] = random_double();
             prop[i] = 1.0/nmixtures;
@@ -1441,6 +1467,13 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
     }
+    
+    // initialize vary frequency vectors
+    if (Params::getInstance().estimate_init_freq==1)
+        estimateInitFreq1();
+    else if (Params::getInstance().estimate_init_freq==2)
+        estimateInitFreq2();
+
 	// rescale total_num_subst such that the global rate is 1
     for (i = 0, sum = 0.0; i < nmixtures; i++) {
         sum += prop[i] * at(i)->total_num_subst;
@@ -1563,6 +1596,7 @@ void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
 
 void ModelMixture::startCheckpoint() {
     checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()));
+    // checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()) + "_" + getName());
 }
 
 void ModelMixture::saveCheckpoint() {
@@ -1634,6 +1668,121 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     // cout << endl;
 }
 
+// estimate the initial frequency vectors
+// method 1: given a set of classes in the mixture model, randomly assign each alignment position to one of the classes.
+// Then the nucleotide frequency array of each class is initialized according to the nucleotide frequencies among the positions assigned to the class.
+void ModelMixture::estimateInitFreq1() {
+    if (verbose_mode >= VB_DEBUG) {
+        cout << endl << "Estimate the initial frequency vectors (method 1)" << endl;
+    }
+    int nseqs = phylo_tree->aln->getNSeq();
+    int nsites = phylo_tree->aln->getNSite();
+    int nclass = size();
+    int whichclass[nsites];
+    double state_freq[num_states];
+    Pattern ptn;
+    int ptnidx;
+    int i,j,k,n;
+    
+    double min_freq = 0.0001;
+    
+    for (i=0; i<nsites; i++) {
+        whichclass[i] = random_int(nclass);
+    }
+    
+    for (i=0; i<nclass; i++) {
+        if (at(i)->freq_type != FREQ_ESTIMATE)
+            continue;
+
+        memset(state_freq, 0, sizeof(double)*num_states);
+        n=0;
+        for (j=0; j<nsites; j++) {
+            if (whichclass[j] == i) {
+                ptnidx = phylo_tree->aln->getPatternID(j);
+                ptn = phylo_tree->aln->at(ptnidx);
+                for (k = 0; k < nseqs; k++)
+                    state_freq[ptn[k]]+=1.0;
+                n += nseqs;
+            }
+        }
+        if (n > 0) {
+            for (j=0; j<num_states; j++)
+                state_freq[j] = state_freq[j] / (double) n;
+        }
+        for (j=0; j<num_states; j++)
+            if (state_freq[j] < min_freq)
+                state_freq[j] = min_freq;
+
+        if (verbose_mode >= VB_DEBUG) {
+            // show the initialised frequency vectors
+            cout << "[" << i << "] Freq:";
+            for (j = 0; j < num_states; j++)
+                cout << " " << state_freq[j];
+            cout << endl;
+        }
+
+        // update the frequency vectors
+        at(i)->setStateFrequency(state_freq);
+    }
+}
+
+// estimate the initial frequency vectors
+// Method 2: evenly divide the alignment into K partitions where K = number of classes in the mixture
+// The nucleotide frequency array of i-th class is initialized according to the nucleotide frequencies in the i-th partition
+void ModelMixture::estimateInitFreq2() {
+    if (verbose_mode >= VB_DEBUG) {
+        cout << endl << "Estimate the initial frequency vectors (method 2)" << endl;
+    }
+    int nseqs = phylo_tree->aln->getNSeq();
+    int nsites = phylo_tree->aln->getNSite();
+    int avgCSize = nsites / size();
+    int i, j, k, posStart, posEnd, ptnidx;
+    double state_freq[num_states];
+    double sum;
+    Pattern ptn;
+
+    double min_freq = 0.0001;
+
+    for (i = 0; i < size(); i++) {
+        
+        if (at(i)->freq_type != FREQ_ESTIMATE)
+            continue;
+                
+        int pos_start = i * avgCSize;
+        int pos_end = pos_start + avgCSize;
+        if (pos_end > nsites) {
+            pos_end = nsites;
+        }
+        
+        memset(state_freq, 0, sizeof(double)*num_states);
+        
+        for (j = pos_start; j < pos_end; j++) {
+            ptnidx = phylo_tree->aln->getPatternID(j);
+            ptn = phylo_tree->aln->at(ptnidx);
+            for (k = 0; k < nseqs; k++)
+                state_freq[ptn[k]]+=1.0;
+        }
+        sum = (pos_end - pos_start) * nseqs;
+        for (j = 0; j < num_states; j++)
+            state_freq[j] = state_freq[j] / sum;
+
+        for (j=0; j<num_states; j++)
+            if (state_freq[j] < min_freq)
+                state_freq[j] = min_freq;
+
+        if (verbose_mode >= VB_DEBUG) {
+            // show the initialised frequency vectors
+            cout << "[" << i << "] Freq:";
+            for (j = 0; j < num_states; j++)
+                cout << " " << state_freq[j];
+            cout << endl;
+        }
+        
+        // update the frequency vectors
+        at(i)->setStateFrequency(state_freq);
+    }
+}
+
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture, int selected_row) {
     ASSERT(mixture < getNMixtures());
     at(mixture)->computeTransMatrix(time, trans_matrix, 0, selected_row);
@@ -1651,15 +1800,33 @@ void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
+// added case for gtr optimization -JD
 int ModelMixture::getNDim() {
-	int dim = (fix_prop) ? 0: (size()-1);
-//    int dim = 0;
-    if (!optimizing_submodels && !fix_prop) {
-        dim = size() - 1;
+    int dim = (fix_prop) ? 0: (size()-1);
+    int dim_linked_subst = 0;
+    
+    if (Params::getInstance().optimize_linked_gtr) {
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type = FREQ_USER_DEFINED;
+        dim_linked_subst = (*it)->getNDim();
+        (*it)->freq_type = freq;
     }
+    
+    if (optimizing_gtr) {
+        // report the number of variables while optimizing the linked substitution model
+        return dim_linked_subst;
+    }
+
     for (iterator it = begin(); it != end(); it++) {
         dim += (*it)->getNDim();
     }
+
+    if (Params::getInstance().optimize_linked_gtr) {
+        // for linked substitution model
+        dim -= dim_linked_subst * (size() - 1);
+    }
+
 	return dim;
 }
 
@@ -1694,20 +1861,29 @@ int ModelMixture::getNDimFreq() {
 	return dim;
 }
 
+// changed to work for GTR optimization -JD
 double ModelMixture::targetFunk(double x[]) {
+    if (verbose_mode >= VB_DEBUG) {
+        int ndim = getNDim();
+        for(int i=1; i<=ndim; i++){ cout << x[i] << "; "; }
+        cout << endl;
+    }
 	getVariables(x);
-//	decomposeRateMatrix();
-	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		if ((*it)->getNDim() > 0)
-			(*it)->decomposeRateMatrix();
-		dim += ((*it)->getNDim());
-	}
-	ASSERT(phylo_tree);
-	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
-		phylo_tree->clearAllPartialLH();
-//	if (prop[size()-1] < 0.0) return 1.0e+12;
-	return -phylo_tree->computeLikelihood();
+    
+ 
+    //	decomposeRateMatrix();
+    	int dim = 0;
+    	for (iterator it = begin(); it != end(); it++) {
+    		if ((*it)->getNDim() > 0)
+    			(*it)->decomposeRateMatrix();
+    		dim += ((*it)->getNDim());
+    	}
+    	ASSERT(phylo_tree);
+    	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
+    		phylo_tree->clearAllPartialLH();
+    //	if (prop[size()-1] < 0.0) return 1.0e+12;
+    	return -phylo_tree->computeLikelihood();
+    
 }
 
 double ModelMixture::optimizeWeights() {
@@ -1834,8 +2010,9 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-//            double lk_ptn = phylo_tree->ptn_invar[ptn];
             double lk_ptn = 0.0;
+            if (Params::getInstance().optimize_linked_gtr)
+                lk_ptn = phylo_tree->ptn_invar[ptn];
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1897,7 +2074,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
 
-            if (c>0) {
+            if (c>0 && !Params::getInstance().optimize_linked_gtr) {
                 // compute _pattern_lh_cat
                 phylo_tree->computePatternLhCat(WSL_MIXTURE);
                 // update the posterior probabilities of each category
@@ -1935,11 +2112,11 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
-            phylo_tree->clearAllPartialLH();
+            // phylo_tree->clearAllPartialLH();
 
         }
 
-        // phylo_tree->clearAllPartialLH();
+        phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
 
@@ -1988,19 +2165,48 @@ bool ModelMixture::isMixtureSameQ() {
 }
 
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
-	optimizing_submodels = true;
-
+    
     int dim = getNDim();
     double score = 0.0;
+    IntVector params;
+    int i, j, ncategory = size();
+    if (dim != 0) {
+        score = 1.0;
+    }
 
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty()) {
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
     }
     // Fused model can use EM algorithm
-    // Non-Fused model can only use BFGS algorithm
-    if (isFused()) {
+    // Non-Fused model can only use BFGS algorithm unless optimize_alg_qmix = "EM"
+    if (isFused() || Params::getInstance().optimize_linked_gtr || Params::getInstance().optimize_alg_qmix == "EM") {
 		if (dim > 0) {
+			// set num_params to 0 when linking exchange rates
+			if (Params::getInstance().optimize_linked_gtr) { // added routine for GTR optimization -JD
+				for (iterator it = begin(); it != end(); it++) {
+					params.push_back((*it)->num_params);
+					(*it)->num_params = 0;
+				}
+				//divide all values in intial matrix by the last value
+				int nrate = getNumRateEntries();
+				double *matrix = new double[nrate];
+				at(0)->getRateMatrix(matrix);
+				double div = matrix[nrate-1];
+				for(int i=0; i<nrate; i++){
+					matrix[i] = matrix[i] / div;
+				}
+				for (iterator it = begin(); it != end(); it++) {
+					(*it)->setRateMatrix(matrix);
+				}
+			}
 			score = optimizeWithEM(gradient_epsilon);
+			// restore num_params
+			if (Params::getInstance().optimize_linked_gtr) {
+				int i = 0;
+				for (iterator it = begin(); it != end(); it++, i++) {
+					(*it)->num_params = params[i];
+				}
+			}
 		}
 		else if (!fix_prop) {
 			score = optimizeWeights();
@@ -2008,19 +2214,39 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	} else {
 		score = ModelMarkov::optimizeParameters(gradient_epsilon);
 	}
-	optimizing_submodels = false;
+
+//  optimize a gtr matrix if specified (enters main routine) -JD
+    if (Params::getInstance().optimize_linked_gtr) {
+        score = optimizeLinkedSubst(gradient_epsilon);
+    }
+
+//	double score = ModelGTR::optimizeParameters(gradient_epsilon);
+
     if (getNDim() == 0) {
         return score;
     }
 
-    // normalize state freq
-    int i, ncategory = size();
-    for (i = 0; i < ncategory; i++) {
-        if (at(i)->is_reversible && at(i)->freq_type == FREQ_ESTIMATE) {
-            at(i)->scaleStateFreq(true);
-        }
+	if (!Params::getInstance().optimize_linked_gtr) {
+		// normalize state freq
+		for (i = 0; i < ncategory; i++) {
+			if (at(i)->is_reversible && at(i)->freq_type == FREQ_ESTIMATE) {
+				at(i)->scaleStateFreq(true);
+			}
+		}
+		
+		if (verbose_mode >= VB_DEBUG) {
+			// show the frequency vectors
+			double state_freq[num_states];
+			for (i = 0; i < ncategory; i++) {
+				at(i)->getStateFrequency(state_freq);
+				cout << "Class " << i+1 << "'s freq:";
+				for (j = 0; j < num_states; j++)
+					cout << " " << state_freq[j];
+				cout << endl;
+			}
+		}
     }
-    
+
     // now rescale Q matrices to have proper interpretation of branch lengths
 
 	double sum;
@@ -2045,6 +2271,82 @@ void ModelMixture::computeTipLikelihood(PML::StateType state, double *state_lk) 
     }
 }
 
+// new method added for optimizing GTR matrix -JD
+double ModelMixture::optimizeLinkedSubst(double gradient_epsilon) {
+
+    if (fixed_parameters) {
+        return 0.0;
+    }
+    
+    // flag that tells other methods (notably getNDim) that we're in the middle of optimizing GTR
+    optimizing_gtr = true;
+    
+	int ndim = getNDim();
+	
+	// return if nothing to be optimized
+    if (ndim == 0) {
+        optimizing_gtr = false;
+        return 0.0;
+    }
+
+	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	double score;
+
+    //int nval = (num_states * (num_states - 1))/2 - 1; //number of values per class (5 for DNA)
+
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] > state_freq[highest_freq_state]) {
+            highest_freq_state = i;
+        }
+    }
+
+	// by BFGS algorithm
+	setVariables(variables);
+	setBounds(lower_bound, upper_bound, bound_check);
+
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+
+    bool changed = getVariables(variables);
+
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
+        scaleStateFreq(true);
+        changed = true;
+    }
+    if (changed) {
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
+    }
+	
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+    optimizing_gtr = false;
+    
+    /*
+    //write matrix contents to file (later parsed and outputted into console log)
+    string fname = Params::getInstance().out_prefix;
+    fname += ".ratemat";
+    ofstream writer(fname);
+    int nrate = getNumRateEntries();
+    double *matrix = new double[nrate];
+    at(0)->getRateMatrix(matrix);
+    writer << matrix[0];
+    for(int i=1; i<nrate; i++){
+        writer << " " << matrix[i];
+    }
+    writer << endl;
+    writer.close();
+    */
+    
+	return score;
+}
+
 bool ModelMixture::isUnstableParameters() {
     int c, ncategory = size();
     for (c = 0; c < ncategory; c++)
@@ -2062,92 +2364,95 @@ void ModelMixture::decomposeRateMatrix() {
 		(*it)->decomposeRateMatrix();
 }
 
+// added case for gtr optimization -JD
 void ModelMixture::setVariables(double *variables) {
 	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
+    if (optimizing_gtr) {       
+        // only need to get the variable from the first class
+        // because all classes are sharing the same substitution matrix
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type = FREQ_USER_DEFINED;
 		(*it)->setVariables(&variables[dim]);
-		dim += (*it)->getNDim();
-	}
-	if (fix_prop) return;
-	int i, ncategory = size();
-
-//	variables[dim+1] = prop[0]*at(0)->total_num_subst;
-//	for (i = 2; i < ncategory; i++)
-//		variables[dim+i] = variables[dim+i-1] + prop[i-1]*at(i-1)->total_num_subst;
-
-//	variables[dim+1] = prop[0];
-//	for (i = 2; i < ncategory; i++)
-//		variables[dim+i] = variables[dim+i-1] + prop[i-1];
-
-    // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
-	for (i = 0; i < ncategory-1; i++) {
-		variables[dim+i+1] = prop[i] / prop[ncategory-1];
-//        if (variables[dim+i+1] < MIN_MIXTURE_PROP*0.9 || variables[dim+i+1] > MAX_MIXTURE_PROP) {
-//            outWarning("For component " + convertIntToString(i+1) + ", mixture weight " + convertDoubleToString(variables[dim+i+1]) + " is out of bound and may cause numerical instability");
-//        }
+        (*it)->freq_type = freq;
+    } else {
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->setVariables(&variables[dim]);
+            dim += (*it)->getNDim();
+        }
+        if (fix_prop) return;
+        int i, ncategory = size();
+        for (i = 0; i < ncategory-1; i++) {
+            variables[dim+i+1] = prop[i] / prop[ncategory-1];
+        }
     }
-
 }
 
+//added case for gtr optimization -JD
 bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
     bool changed = false;
-	for (iterator it = begin(); it != end(); it++) {
-		changed |= (*it)->getVariables(&variables[dim]);
-		dim += (*it)->getNDim();
+    if (optimizing_gtr) {
+        for (iterator it = begin(); it != end(); it++) {
+            // assign exchange rates of each mixture component from variables
+            auto freq = (*it)->freq_type;
+            (*it)->freq_type = FREQ_USER_DEFINED;
+            changed |= (*it)->getVariables(&variables[dim]);
+            (*it)->freq_type = freq;
+        }
+    } else {
+		for (iterator it = begin(); it != end(); it++) {
+			changed |= (*it)->getVariables(&variables[dim]);
+			dim += (*it)->getNDim();
+		}
+		if (fix_prop) return changed;
+		int i, ncategory = size();
+		double value, sum = 1.0;
+		for (i = 0; i < ncategory-1; i++) {
+			sum += variables[dim+i+1];
+		}
+		for (i = 0; i < ncategory-1; i++) {
+			value = variables[dim+i+1] / sum;
+			changed |= (prop[i] != value);
+			prop[i] = value;
+		}
+		prop[ncategory-1] = 1.0 / sum;
 	}
-	if (fix_prop) return changed;
-	int i, ncategory = size();
-
-//	double *y = new double[ncategory+1];
-//	y[0] = 0; y[ncategory] = 1.0;
-//	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
-//	std::sort(y+1, y+ncategory);
-//	double sum = 0.0;
-//	for (i = 0; i < ncategory; i++) {
-//		prop[i] = (y[i+1]-y[i]);
-//	}
-
-    // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
-	double value, sum = 1.0;
-	for (i = 0; i < ncategory-1; i++) {
-		sum += variables[dim+i+1];
-	}
-	for (i = 0; i < ncategory-1; i++) {
-        value = variables[dim+i+1] / sum;
-        changed |= (prop[i] != value);
-		prop[i] = value;
-	}
-	prop[ncategory-1] = 1.0 / sum;
-
-
-//	for (i = 0, sum = 0.0; i < ncategory; i++)
-//		sum += prop[i]*at(i)->total_num_subst;
-//	for (i = 0; i < ncategory; i++)
-//		at(i)->total_num_subst /= sum;
-
-//	if (verbose_mode >= VB_MAX) {
-//		for (i = 0; i < ncategory; i++)
-//			cout << "Component " << i << " prop=" << prop[i] << endl;
-//	}
-//	delete [] y;
 
     return changed;
 }
 
+//added case for gtr optimization -JD
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int dim = 0;
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
-		dim += (*it)->getNDim();
-	}
-	if (fix_prop) return;
-	int i, ncategory = size();
-	for (i = 1; i < ncategory; i++) {
-		lower_bound[dim+i] = MIN_MIXTURE_PROP;
-		upper_bound[dim+i] = MAX_MIXTURE_PROP;
-		bound_check[dim+i] = false;
-	}
+    if(optimizing_gtr) {
+        // only consider the first class as this is a linked substitution matrix
+        iterator it = begin();
+        auto freq = (*it)->freq_type;
+        (*it)->freq_type=FREQ_USER_DEFINED;
+        int ndim = (*it)->getNDim();
+        (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+        (*it)->freq_type=freq;
+        //manually set these params for the restartParameters method; TODO: properly fix this -JD
+        if(phylo_tree->aln->seq_type == SEQ_PROTEIN){
+            for(int i=1; i<=ndim; i++){
+                bound_check[i] = true;
+                upper_bound[i] = 100;
+            }
+        }
+    } else {
+        for (iterator it = begin(); it != end(); it++) {
+            (*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
+            dim += (*it)->getNDim();
+        }
+		if (fix_prop) return;
+		int i, ncategory = size();
+		for (i = 1; i < ncategory; i++) {
+			lower_bound[dim+i] = MIN_MIXTURE_PROP;
+			upper_bound[dim+i] = MAX_MIXTURE_PROP;
+			bound_check[dim+i] = false;
+		}
+    }
 }
 
 void ModelMixture::writeInfo(ostream &out) {

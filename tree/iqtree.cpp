@@ -2770,7 +2770,10 @@ void IQTree::refineBootTrees() {
             boot_tree->constraintTree.readConstraint(constraintTree);
         }
 
+        // set likelihood kernel
         boot_tree->setParams(params);
+        boot_tree->setLikelihoodKernel(sse);
+        boot_tree->setNumThreads(num_threads);
 
         // 2019-06-03: bug fix setting part_info properly
         if (boot_tree->isSuperTree())
@@ -2784,11 +2787,6 @@ void IQTree::refineBootTrees() {
             ((PartitionModel*)boot_tree->getModelFactory())->PartitionModel::restoreCheckpoint();
         else
             boot_tree->getModelFactory()->restoreCheckpoint();
-
-        // set likelihood kernel
-        boot_tree->setParams(params);
-        boot_tree->setLikelihoodKernel(sse);
-        boot_tree->setNumThreads(num_threads);
 
         // load the current ufboot tree
         // 2019-02-06: fix crash with -sp and -bnni
@@ -4314,6 +4312,7 @@ void IQTree::printPhylolibTree(const char* suffix) {
     FILE *phylolib_tree = fopen(phylolibTree, "w");
     fprintf(phylolib_tree, "%s", pllInst->tree_string);
     cout << "Tree optimized by Phylolib was written to " << phylolibTree << endl;
+    fclose(phylolib_tree);
 }
 
 void IQTree::printIntermediateTree(int brtype) {

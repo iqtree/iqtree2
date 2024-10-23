@@ -973,9 +973,7 @@ void PhyloTree::deleteAllPartialLh() {
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
     aligned_free(_site_lh);
-    aligned_free(G_matrix);
-    aligned_free(gradient_vector);
-    aligned_free(hessian_diagonal);
+    aligned_free(_pattern_scaling);
     aligned_free(_pattern_scaling);
     aligned_free(G_matrix);
     aligned_free(gradient_vector);
@@ -3737,7 +3735,8 @@ void PhyloTree::computeBioNJ(Params &params) {
             ( params.start_tree_subtype_name);
     bool wasDoneInMemory = false;
 #ifdef _OPENMP
-    omp_set_nested(true);
+    // omp_set_nested(true);
+    omp_set_max_active_levels(2);
     #pragma omp parallel num_threads(2)
     {
         int thread = omp_get_thread_num();
@@ -3775,7 +3774,8 @@ void PhyloTree::computeBioNJ(Params &params) {
     }
     #ifdef _OPENMP
         #pragma omp barrier
-        omp_set_nested(false);
+        // omp_set_nested(false);
+        omp_set_max_active_levels(1);
     #endif
         
     if (!wasDoneInMemory) {
@@ -6021,11 +6021,13 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
         mem_slots.update(dad_branch);
     }
 
+    /*
     if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
         int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
         node->name = convertIntToString(slot_id);
         //cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
     }
+    */
 
     if (params->lh_mem_save == LM_MEM_SAVE) {
         for (it = neivec.begin(); it != neivec.end(); it++) {
