@@ -19,6 +19,8 @@
 
 using namespace std;
 
+#define CKP_PRECISION 10
+
 // several useful declaration to save to or restore from a checkpoint
 #define CKP_SAVE(var) checkpoint->put(#var, var)
 #define CKP_ARRAY_SAVE(num, arr) checkpoint->putArray(#arr, num, arr)
@@ -323,7 +325,7 @@ public:
         else
             key = struct_name + key;
         CkpStream ss;
-        ss.precision(10);
+        ss.precision(CKP_PRECISION);
         ss << value;
         (*this)[key] = ss.str();
     }
@@ -347,7 +349,7 @@ public:
         else
             key = struct_name + key;
         CkpStream ss;
-        ss.precision(10);
+        ss.precision(CKP_PRECISION);
         for (int i = 0; i < num; i++) {
             if (i > 0) ss << ", ";
             ss << value[i];
@@ -368,7 +370,7 @@ public:
         else
             key = struct_name + key;
         CkpStream ss;
-        ss.precision(10);
+        ss.precision(CKP_PRECISION);
         for (int i = 0; i < value.size(); i++) {
             if (i > 0) ss << ", ";
             ss << value[i];

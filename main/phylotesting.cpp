@@ -4545,13 +4545,8 @@ void PartitionFinder::consolidPartitionResults() {
             double treeLen;
             
             ASSERT(model_info->getString(info_key, info));
-            size_t pos1 = info.find_first_of(" ");
-            ASSERT (pos1 != string::npos && pos1 > 0);
-            size_t pos2 = info.find_first_of(" ", pos1+1);
-            ASSERT (pos2 != string::npos && pos2 > pos1+1);
-            logL = atof(info.substr(0,pos1).c_str());
-            df = atoi(info.substr(pos1+1,pos2-pos1-1).c_str());
-            treeLen = atof(info.substr(pos2+1).c_str());
+            stringstream ss(info);
+            ss >> logL >> df >> treeLen;
             
             this_tree->aln->model_name = bestModel;
             lhsum += (lhvec[i] = logL);
@@ -5223,7 +5218,7 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
     for (j = 0; j < num_threads; j++) {
         string str = string(recvbuf, k, joblens[j]);
         MergeJob* mjob = new MergeJob();
-        mjob->loadFrString(str);
+        mjob->loadString(str);
         currJobs.push_back(mjob);
         k += joblens[j];
     }
@@ -5828,7 +5823,7 @@ void SyncChkPoint::recMergeJobFrMaster(MergeJob& mergeJob, int tag) {
     string str;
     int src = 0;
     MPIHelper::getInstance().recvString(str, src, tag);
-    mergeJob.loadFrString(str);
+    mergeJob.loadString(str);
 }
 
 int* SyncChkPoint::toIntArr(vector<set<int> >& gene_sets, int& buffsize) {
@@ -6008,90 +6003,60 @@ void MergeJob::setEmpty() {
 
 void MergeJob::toString(string& str) {
     set<int>::iterator itr;
-    str.clear();
-    str.append(convertIntToString(id1) + ";");
-    str.append(convertIntToString(id2) + ";");
-    str.append(convertDoubleToString(treelen1)+";");
-    str.append(convertDoubleToString(treelen2)+";");
-    for (itr=geneset1.begin(); itr!=geneset1.end(); itr++) {
-        if (itr!=geneset1.begin())
-            str.append(",");
-        str.append(convertIntToString(*itr));
-    }
-    str.append(";");
-    for (itr=geneset2.begin(); itr!=geneset2.end(); itr++) {
-        if (itr!=geneset2.begin())
-            str.append(",");
-        str.append(convertIntToString(*itr));
-    }
-    str.append(";");
+
+    stringstream ss;
+    ss.precision(CKP_PRECISION);
+    
+    // format: id1 id2 treelen1 treelen2 #
+    //         geneset1.size() geneset1[0] geneset1[1] ... #
+    //         geneset2.size() geneset2[0] geneset2[1] ... #
+    
+    ss << id1 << " " << id2 << " " << treelen1 << " " << treelen2 << " # ";
+    
+    ss << geneset1.size() << " ";
+    for (itr=geneset1.begin(); itr!=geneset1.end(); itr++)
+        ss << (*itr) << " ";
+    ss << "# ";
+
+    ss << geneset2.size() << " ";
+    for (itr=geneset2.begin(); itr!=geneset2.end(); itr++)
+        ss << (*itr) << " ";
+    ss << "#";
+
+    str = ss.str();
 }
 
-void MergeJob::loadFrString(string& str) {
+void MergeJob::loadString(string& str) {
     
-    int start_pos = 0;
-    int pos = 0;
+    string s0,s1,s2;
+    int n1,n2;
+    int i,k;
     
     // reset all variables
     setEmpty();
     
-    // read id1
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        id1 = atoi(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
-    
-    // read id2
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        id2 = atoi(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
-    
-    // read treelen1
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        treelen1 = atof(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
+    stringstream ss(str);
+    // read: id1 id2 treelen1 treelen2 #
+    ss >> id1 >> id2 >> treelen1 >> treelen2 >> s0;
+    ASSERT(s0 == "#");
 
-    // read treelen2
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        treelen2 = atof(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
-    
-    // read geneset1
-    while (pos < str.length() && str[pos] != ';') {
-        if (str[pos] == ',') {
-            if (start_pos < pos && start_pos < str.length())
-                geneset1.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
-            start_pos = pos+1;
-        }
-        pos++;
+    // read: geneset1.size() geneset1[0] geneset1[1] ... #
+    ss >> n1;
+    for (i = 0; i < n1; i++) {
+        ss >> k;
+        geneset1.insert(k);
     }
-    if (start_pos < pos && start_pos < str.length())
-        geneset1.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
-    pos++;
-    start_pos = pos;
+    ss >> s1;
+    ASSERT(s1 == "#");
 
-    // read geneset2
-    while (pos < str.length() && str[pos] != ';') {
-        if (str[pos] == ',') {
-            if (start_pos < pos && start_pos < str.length())
-                geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
-            start_pos = pos+1;
-        }
-        pos++;
+    // read: geneset2.size() geneset2[0] geneset2[1] ... #
+    ss >> n2;
+    for (i = 0; i < n2; i++) {
+        ss >> k;
+        geneset2.insert(k);
     }
-    if (start_pos < pos && start_pos < str.length())
-        geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
+    ss >> s2;
+    ASSERT(s2 == "#");
 }
 
 #endif // _IQTREE_MPI
