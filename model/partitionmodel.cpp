@@ -343,6 +343,7 @@ double PartitionModel::computeMixLh() {
     vector<double> weight_array;
     double sum_sites = 0.0;
 
+    // compute "class weights"
     //if (tree->part_order.empty()) tree->computePartitionOrder();
     for (int j = 0; j < ntrees; j++) {
         //int i = tree->part_order[j];
@@ -354,39 +355,128 @@ double PartitionModel::computeMixLh() {
         weight_array[j] /= sum_sites;
     }
 
-    // compute the mixture-based log-likelihood
+    // save partition alignments
     double mix_lh = 0.0;
     vector<Alignment*> aln_array;
     for (int j = 0; j < ntrees; j++) {
         aln_array.push_back(tree->at(j)->aln); //get the partitioned alignment
     }
 
+    // compute the mixture-based log-likelihood
     for (int j = 0; j < ntrees; j++) {
         //int i = tree->part_order[j];
         Alignment *part_aln = aln_array[j];
-        int part_nptn = part_aln->getNPattern();
+        int part_nsite = part_aln->getNSite();
+        StrVector part_seqs = part_aln->getSeqNames();
 
         // get the site-log-likelihood the the partition under each tree and the corresponding model
-        double *lh_array = new double [ntrees*part_nptn];
-        tree->deleteAllPartialLh();
+        double *lh_array = new double [ntrees*part_nsite];
+        //tree->deleteAllPartialLh();
         for (int k = 0; k < ntrees; k++) {
             PhyloTree *t = tree->at(k);
-            t->setAlignment(part_aln);
-            t->initializeAllPartialLh();
 
-            double *sub_lh_array = lh_array + k*part_nptn;
-            t->computeLikelihood(sub_lh_array);
+            // get the intersection of part_aln and t.
+            StrVector t_seqs, inter_seqs, missing_seqs;
+            IntVector inter_seqs_id, missing_seqs_id;
+            t->getTaxaName(t_seqs);
+            for (string seq_name : part_seqs) {
+                int seq_id = part_aln->getSeqID(seq_name);
+                if (std::find(t_seqs.begin(), t_seqs.end(), seq_name) != t_seqs.end()) {
+                    inter_seqs.push_back(seq_name);
+                    inter_seqs_id.push_back(seq_id);
+                } else {
+                    missing_seqs.push_back(seq_name);
+                    missing_seqs_id.push_back(seq_id);
+                }
+            }
+
+            // subset part_aln
+            Alignment *sub_part_aln = NULL; //new Alignment();
+            if (part_seqs.size() != inter_seqs.size()) {
+                sub_part_aln = new Alignment();
+                sub_part_aln->extractSubAlignment(part_aln, inter_seqs_id, 0);
+            } else {
+                sub_part_aln = part_aln;
+            }
+
+            // subset t
+            PhyloTree *sub_t = NULL;
+            string inter_seqs_set (t_seqs.size(), 0);
+            for (int l = 0; l < t_seqs.size(); l++) {
+                if (std::find(inter_seqs.begin(), inter_seqs.end(), t_seqs[l]) != inter_seqs.end()) {
+                    inter_seqs_set[l] = 1;
+                }
+            }
+            sub_t = new PhyloTree();
+            if (t_seqs.size() != inter_seqs.size()) {
+                sub_t->copyTree(t, inter_seqs_set);
+            } else {
+                sub_t->copyTree(t);
+            }
+            sub_t->setAlignment(sub_part_aln);
+            sub_t->setRootNode(t->params->root);
+            sub_t->setModelFactory(t->getModelFactory());
+            //sub_t->setModel(t->getModel());
+            //sub_t->setRate(t->getRate());
+            sub_t->setParams(t->params);
+            sub_t->optimize_by_newton = t->params->optimize_by_newton;
+            sub_t->setLikelihoodKernel(t->params->SSE);
+            sub_t->setNumThreads(t->num_threads);
+            sub_t->ensureNumberOfThreadsIsSet(nullptr);
+            /*
+            } else {
+                sub_t = t;
+                sub_t->setAlignment(sub_part_aln);
+            }
+            */
+            sub_t->initializeAllPartialLh();
+
+            //double *site_lh_array = lh_array + k*part_nsite;
+            int nptn = sub_part_aln->getNPattern();
+            double *ptn_lh_array = new double [nptn];
+            sub_t->computeLikelihood(ptn_lh_array);
+
+            double *state_freq = new double[sub_t->getModel()->num_states];
+            sub_t->getModel()->getStateFrequency(state_freq);
+
+            for (int l = 0; l < part_nsite; l++) {
+                int ptn_id = sub_part_aln->getPatternID(l);
+                if (part_seqs.size() != inter_seqs.size()) {
+                    double site_lh = ptn_lh_array[ptn_id];
+                    Pattern p = part_aln->at(part_aln->getPatternID(l));
+                    //Pattern p = sub_part_aln->at(ptn_id);
+
+                    for (int missing_id : missing_seqs_id) {
+                        int char_id = p[missing_id];
+                        site_lh += log(state_freq[char_id]);
+                    }
+                    lh_array[part_nsite*k+l] = site_lh;
+                } else {
+                    double site_lh = ptn_lh_array[ptn_id]; // for checking
+                    lh_array[part_nsite*k+l] = ptn_lh_array[ptn_id];
+                }
+            }
+            if (part_seqs.size() != inter_seqs.size()) {
+                delete sub_part_aln;
+            }
+            //if (t_seqs.size() != inter_seqs.size()) {
+            sub_t->setModelFactory(NULL);
+            sub_t->aln = NULL;
+            delete sub_t;
+            //}
+            delete[] ptn_lh_array;
+            delete[] state_freq;
         }
 
         // compute
         double mix_lh_partition = 0.0;
-        for (int l = 0; l < part_nptn; l++) {
+        for (int l = 0; l < part_nsite; l++) {
             double weighted_lh, max_lh, mix_lh_site;
 
-            int ptn_freq = part_aln->at(l).frequency;
+            //int ptn_freq = part_aln->at(l).frequency;
 
             for (int k = 0; k < ntrees; k++) {
-                weighted_lh = log(weight_array[k])+lh_array[part_nptn*k+l];
+                weighted_lh = log(weight_array[k])+lh_array[part_nsite*k+l];
                 if (k == 0) {
                     max_lh = weighted_lh;
                 } else if (weighted_lh > max_lh) {
@@ -396,23 +486,24 @@ double PartitionModel::computeMixLh() {
 
             double mix_lh_site_original = 0.0;
             for (int k = 0; k < ntrees; k++) {
-                mix_lh_site_original += exp(log(weight_array[k])+lh_array[part_nptn*k+l]-max_lh);
+                mix_lh_site_original += exp(log(weight_array[k])+lh_array[part_nsite*k+l]-max_lh);
             }
             mix_lh_site = max_lh + log(mix_lh_site_original);
-            mix_lh_partition += mix_lh_site*ptn_freq;
+            mix_lh_partition += mix_lh_site;//*ptn_freq;
         }
         mix_lh += mix_lh_partition;
         delete[] lh_array; //release array memery
     }
 
     // set the alignments back
-    tree->deleteAllPartialLh();
+    //tree->deleteAllPartialLh();
+    /*
     for (int k = 0; k < ntrees; k++) {
         PhyloTree *t = tree->at(k);
         t->setAlignment(aln_array[k]);
         t->initializeAllPartialLh();
     }
-
+    */
     return mix_lh;
 }
 
