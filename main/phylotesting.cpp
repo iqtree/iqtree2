@@ -4525,14 +4525,15 @@ void PartitionFinder::getBestModel(int job_type) {
  * Consolidate the partition results (for MPI)
  */
 void PartitionFinder::consolidPartitionResults() {
+    string criterion_name = criterionName(params->model_test_criterion);
     if (MPIHelper::getInstance().isMaster()) {
         int i;
         for (i = 0; i < in_tree->size(); i++) {
             PhyloTree *this_tree = in_tree->at(i);
             
-            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterionName(params->model_test_criterion);
+            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             string bestModel;
-            string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterionName(params->model_test_criterion);
+            string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterion_name;
             double bestScore;
             
             ASSERT(model_info->getString(bestModel_key, bestModel));
@@ -4566,6 +4567,35 @@ void PartitionFinder::consolidPartitionResults() {
     }
     MPI_Bcast(&lhsum, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
     MPI_Bcast(&dfsum, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    
+    // transfer the best tree and relevant RHAS models of each partition from Master to Workers
+    Checkpoint mfchkpt;
+    if (MPIHelper::getInstance().isMaster()) {
+        // transfer the tree and relevant RHAS models from model_info to mfchkpt
+        SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
+        for (auto aln : super_aln->partitions) {
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "PhyloTree" + CKP_SEP + "newick");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateGamma" + CKP_SEP + "gamma_shape");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "gamma_shape");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "p_invar");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateInvar" + CKP_SEP + "p_invar");
+        }
+    }
+    MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+    if (MPIHelper::getInstance().isWorker()) {
+        // transfer from mfchkpt to model_info
+        string partial_key = "";
+        model_info->putSubCheckpoint(&mfchkpt, partial_key);
+        // update the best model for each tree
+        for (int i = 0; i < in_tree->size(); i++) {
+            PhyloTree *this_tree = in_tree->at(i);
+            string bestTree_key = this_tree->aln->name + CKP_SEP + "best_tree_" + criterion_name;
+            string bestTree;
+            ASSERT(model_info->getString(bestTree_key, bestTree));
+            this_tree->readTreeString(bestTree);
+        }
+    }
 }
 
 /*
@@ -4714,19 +4744,20 @@ void PartitionFinder::test_PartitionModel() {
     cout << "Full partition model " << criterionName(params->model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
+    string criterion_name = criterionName(params->model_test_criterion);
+
     if (!test_merge) {
 
 		#ifdef _IQTREE_MPI
     	// transfer relevant checkpoint records from Master to Workers
     	Checkpoint mfchkpt;
-    	string criterion_name = criterionName(params->model_test_criterion);
     	if (MPIHelper::getInstance().isMaster()) {
         	// transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
         	SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
         	for (auto aln : super_aln->partitions) {
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
-            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            	// model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
@@ -4813,6 +4844,8 @@ void PartitionFinder::test_PartitionModel() {
 
         if (is_pairs_empty) break;
         
+        Checkpoint mfchkpt;
+        
         if (MPIHelper::getInstance().isMaster()) {
 
             ModelPairSet compatible_pairs;
@@ -4860,6 +4893,16 @@ void PartitionFinder::test_PartitionModel() {
                     if (next_pair->second.part2 > opt_pair.part2)
                         next_pair->second.part2--;
                 }
+                
+#ifdef _IQTREE_MPI
+                // transfer the tree and relevant RHAS models from model_info to mfchkpt
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "best_tree_" + criterion_name);
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "PhyloTree" + CKP_SEP + "newick");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGamma" + CKP_SEP + "gamma_shape");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "gamma_shape");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "p_invar");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateInvar" + CKP_SEP + "p_invar");
+#endif
             }
             
             // proceed to the next iteration if gene_sets.size() >= 2
@@ -4867,6 +4910,14 @@ void PartitionFinder::test_PartitionModel() {
         }
 #ifdef _IQTREE_MPI
         MPI_Bcast(&proceed_stepwise_merge, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
+        if (proceed_stepwise_merge) {
+            MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+            if (MPIHelper::getInstance().isWorker()) {
+                // transfer from mfchkpt to model_info
+                string partial_key = "";
+                model_info->putSubCheckpoint(&mfchkpt, partial_key);
+            }
+        }
 #endif
     }
 
@@ -4958,14 +5009,13 @@ void PartitionFinder::test_PartitionModel() {
 
     // transfer relevant checkpoint records from Master to Workers
     Checkpoint mfchkpt;
-    string criterion_name = criterionName(params->model_test_criterion);
     if (MPIHelper::getInstance().isMaster()) {
         // transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
         SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
         for (auto aln : super_aln->partitions) {
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
-            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            // model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
