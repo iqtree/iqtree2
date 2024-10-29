@@ -453,7 +453,7 @@ public:
     void copyFrom(MergeJob* anotherMergeJob);
     void setEmpty();
     void toString(string& str);
-    void loadFrString(string& str);
+    void loadString(string& str);
 };
 
 #endif

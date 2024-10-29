@@ -1634,6 +1634,9 @@ public:
     /** force to parallelisation over sites */
     bool parallel_over_sites;
 
+    /** force to parall over partition and order by threads(fill the scheduling by threads) **/
+    bool order_by_threads;
+
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 

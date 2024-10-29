@@ -4519,14 +4519,15 @@ void PartitionFinder::getBestModel(int job_type) {
  * Consolidate the partition results (for MPI)
  */
 void PartitionFinder::consolidPartitionResults() {
+    string criterion_name = criterionName(params->model_test_criterion);
     if (MPIHelper::getInstance().isMaster()) {
         int i;
         for (i = 0; i < in_tree->size(); i++) {
             PhyloTree *this_tree = in_tree->at(i);
             
-            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterionName(params->model_test_criterion);
+            string bestModel_key = this_tree->aln->name + CKP_SEP + "best_model_" + criterion_name;
             string bestModel;
-            string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterionName(params->model_test_criterion);
+            string bestScore_key = this_tree->aln->name + CKP_SEP + "best_score_" + criterion_name;
             double bestScore;
             
             ASSERT(model_info->getString(bestModel_key, bestModel));
@@ -4539,13 +4540,8 @@ void PartitionFinder::consolidPartitionResults() {
             double treeLen;
             
             ASSERT(model_info->getString(info_key, info));
-            size_t pos1 = info.find_first_of(" ");
-            ASSERT (pos1 != string::npos && pos1 > 0);
-            size_t pos2 = info.find_first_of(" ", pos1+1);
-            ASSERT (pos2 != string::npos && pos2 > pos1+1);
-            logL = atof(info.substr(0,pos1).c_str());
-            df = atoi(info.substr(pos1+1,pos2-pos1-1).c_str());
-            treeLen = atof(info.substr(pos2+1).c_str());
+            stringstream ss(info);
+            ss >> logL >> df >> treeLen;
             
             this_tree->aln->model_name = bestModel;
             lhsum += (lhvec[i] = logL);
@@ -4565,6 +4561,35 @@ void PartitionFinder::consolidPartitionResults() {
     }
     MPI_Bcast(&lhsum, 1, MPI_DOUBLE, PROC_MASTER, MPI_COMM_WORLD);
     MPI_Bcast(&dfsum, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+    
+    // transfer the best tree and relevant RHAS models of each partition from Master to Workers
+    Checkpoint mfchkpt;
+    if (MPIHelper::getInstance().isMaster()) {
+        // transfer the tree and relevant RHAS models from model_info to mfchkpt
+        SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
+        for (auto aln : super_aln->partitions) {
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "PhyloTree" + CKP_SEP + "newick");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateGamma" + CKP_SEP + "gamma_shape");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "gamma_shape");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "p_invar");
+            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "RateInvar" + CKP_SEP + "p_invar");
+        }
+    }
+    MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+    if (MPIHelper::getInstance().isWorker()) {
+        // transfer from mfchkpt to model_info
+        string partial_key = "";
+        model_info->putSubCheckpoint(&mfchkpt, partial_key);
+        // update the best model for each tree
+        for (int i = 0; i < in_tree->size(); i++) {
+            PhyloTree *this_tree = in_tree->at(i);
+            string bestTree_key = this_tree->aln->name + CKP_SEP + "best_tree_" + criterion_name;
+            string bestTree;
+            ASSERT(model_info->getString(bestTree_key, bestTree));
+            this_tree->readTreeString(bestTree);
+        }
+    }
 }
 
 /*
@@ -4713,19 +4738,20 @@ void PartitionFinder::test_PartitionModel() {
     cout << "Full partition model " << criterionName(params->model_test_criterion)
          << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
+    string criterion_name = criterionName(params->model_test_criterion);
+
     if (!test_merge) {
 
 		#ifdef _IQTREE_MPI
     	// transfer relevant checkpoint records from Master to Workers
     	Checkpoint mfchkpt;
-    	string criterion_name = criterionName(params->model_test_criterion);
     	if (MPIHelper::getInstance().isMaster()) {
         	// transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
         	SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
         	for (auto aln : super_aln->partitions) {
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
-            	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            	// model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
             	model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
@@ -4812,6 +4838,8 @@ void PartitionFinder::test_PartitionModel() {
 
         if (is_pairs_empty) break;
         
+        Checkpoint mfchkpt;
+        
         if (MPIHelper::getInstance().isMaster()) {
 
             ModelPairSet compatible_pairs;
@@ -4859,6 +4887,16 @@ void PartitionFinder::test_PartitionModel() {
                     if (next_pair->second.part2 > opt_pair.part2)
                         next_pair->second.part2--;
                 }
+                
+#ifdef _IQTREE_MPI
+                // transfer the tree and relevant RHAS models from model_info to mfchkpt
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "best_tree_" + criterion_name);
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "PhyloTree" + CKP_SEP + "newick");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGamma" + CKP_SEP + "gamma_shape");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "gamma_shape");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateGammaInvar" + CKP_SEP + "p_invar");
+                model_info->transferSubCheckpoint(&mfchkpt, opt_pair.set_name + CKP_SEP + "RateInvar" + CKP_SEP + "p_invar");
+#endif
             }
             
             // proceed to the next iteration if gene_sets.size() >= 2
@@ -4866,6 +4904,14 @@ void PartitionFinder::test_PartitionModel() {
         }
 #ifdef _IQTREE_MPI
         MPI_Bcast(&proceed_stepwise_merge, 1, MPI_CXX_BOOL,PROC_MASTER, MPI_COMM_WORLD);
+        if (proceed_stepwise_merge) {
+            MPIHelper::getInstance().broadcastCheckpoint(&mfchkpt);
+            if (MPIHelper::getInstance().isWorker()) {
+                // transfer from mfchkpt to model_info
+                string partial_key = "";
+                model_info->putSubCheckpoint(&mfchkpt, partial_key);
+            }
+        }
 #endif
     }
 
@@ -4957,14 +5003,13 @@ void PartitionFinder::test_PartitionModel() {
 
     // transfer relevant checkpoint records from Master to Workers
     Checkpoint mfchkpt;
-    string criterion_name = criterionName(params->model_test_criterion);
     if (MPIHelper::getInstance().isMaster()) {
         // transfer the substitution model, site-rate parameters and tree from model_info to mfchkpt
         SuperAlignment *super_aln = (SuperAlignment*)in_tree->aln;
         for (auto aln : super_aln->partitions) {
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_model_" + criterion_name);
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_score_" + criterion_name);
-            model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
+            // model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "best_tree_" + criterion_name);
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Model");
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + "Rate");
             model_info->transferSubCheckpoint(&mfchkpt, aln->name + CKP_SEP + aln->model_name);
@@ -5066,6 +5111,16 @@ int PartitionFinder::partjobAssignment(vector<pair<int,double> > &job_ids, vecto
                     k_prime = n_processor * num_threads + n_thread;
                     assignJobs[k_prime] = -1;
                 }
+            }
+        }
+        else if (params -> order_by_threads){
+            while (k < n && k < job_ids.size()) { // old scheduling method
+                assignJobs[k] = job_ids[k].first;
+                k++;
+            }
+            if (k < n) {
+                for (int i = k; i < n; i++)
+                    assignJobs[i] = -1;
             }
         }
         else {
@@ -5207,7 +5262,7 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
     for (j = 0; j < num_threads; j++) {
         string str = string(recvbuf, k, joblens[j]);
         MergeJob* mjob = new MergeJob();
-        mjob->loadFrString(str);
+        mjob->loadString(str);
         currJobs.push_back(mjob);
         k += joblens[j];
     }
@@ -5316,6 +5371,34 @@ int PartitionFinder::mergejobAssignment(vector<pair<int,double> > &job_ids, vect
                     syncChkPoint.sendMergeJobToWorker(mergejob, j, tag); // send the empty job to the worker
                 }
 
+            }
+        }
+        else if (params -> order_by_threads){
+            while (i<num_threads && i<job_ids.size()) {
+                w = job_ids[i].first;
+                id1 = closest_pairs[w].first;
+                id2 = closest_pairs[w].second;
+                currJobs.push_back(new MergeJob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]));
+                i++;
+            }
+            // MASTER: send one job to every thread of the processors
+            SyncChkPoint syncChkPoint(this, 0);
+            for (j=1; j<num_processes; j++) {
+                for (k=0; k<num_threads; k++) {
+                    int n = 0;
+                    int tag = j * num_threads + k;
+                    if (i < job_ids.size()) {
+                        w = job_ids[i].first;
+                        id1 = closest_pairs[w].first;
+                        id2 = closest_pairs[w].second;
+                        MergeJob mergejob(id1,id2,gene_sets[id1],gene_sets[id2],lenvec[id1],lenvec[id2]);
+                        syncChkPoint.sendMergeJobToWorker(mergejob,j,tag);
+                        i++;
+                    } else {
+                        MergeJob mergejob;
+                        syncChkPoint.sendMergeJobToWorker(mergejob,j,tag); // send the empty job to the worker
+                    }
+                }
             }
         }
         else {
@@ -5784,7 +5867,7 @@ void SyncChkPoint::recMergeJobFrMaster(MergeJob& mergeJob, int tag) {
     string str;
     int src = 0;
     MPIHelper::getInstance().recvString(str, src, tag);
-    mergeJob.loadFrString(str);
+    mergeJob.loadString(str);
 }
 
 int* SyncChkPoint::toIntArr(vector<set<int> >& gene_sets, int& buffsize) {
@@ -5964,90 +6047,60 @@ void MergeJob::setEmpty() {
 
 void MergeJob::toString(string& str) {
     set<int>::iterator itr;
-    str.clear();
-    str.append(convertIntToString(id1) + ";");
-    str.append(convertIntToString(id2) + ";");
-    str.append(convertDoubleToString(treelen1)+";");
-    str.append(convertDoubleToString(treelen2)+";");
-    for (itr=geneset1.begin(); itr!=geneset1.end(); itr++) {
-        if (itr!=geneset1.begin())
-            str.append(",");
-        str.append(convertIntToString(*itr));
-    }
-    str.append(";");
-    for (itr=geneset2.begin(); itr!=geneset2.end(); itr++) {
-        if (itr!=geneset2.begin())
-            str.append(",");
-        str.append(convertIntToString(*itr));
-    }
-    str.append(";");
+
+    stringstream ss;
+    ss.precision(CKP_PRECISION);
+    
+    // format: id1 id2 treelen1 treelen2 #
+    //         geneset1.size() geneset1[0] geneset1[1] ... #
+    //         geneset2.size() geneset2[0] geneset2[1] ... #
+    
+    ss << id1 << " " << id2 << " " << treelen1 << " " << treelen2 << " # ";
+    
+    ss << geneset1.size() << " ";
+    for (itr=geneset1.begin(); itr!=geneset1.end(); itr++)
+        ss << (*itr) << " ";
+    ss << "# ";
+
+    ss << geneset2.size() << " ";
+    for (itr=geneset2.begin(); itr!=geneset2.end(); itr++)
+        ss << (*itr) << " ";
+    ss << "#";
+
+    str = ss.str();
 }
 
-void MergeJob::loadFrString(string& str) {
+void MergeJob::loadString(string& str) {
     
-    int start_pos = 0;
-    int pos = 0;
+    string s0,s1,s2;
+    int n1,n2;
+    int i,k;
     
     // reset all variables
     setEmpty();
     
-    // read id1
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        id1 = atoi(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
-    
-    // read id2
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        id2 = atoi(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
-    
-    // read treelen1
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        treelen1 = atof(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
+    stringstream ss(str);
+    // read: id1 id2 treelen1 treelen2 #
+    ss >> id1 >> id2 >> treelen1 >> treelen2 >> s0;
+    ASSERT(s0 == "#");
 
-    // read treelen2
-    while (pos < str.length() && str[pos] != ';')
-        pos++;
-    if (start_pos < pos && start_pos < str.length())
-        treelen2 = atof(str.substr(start_pos, pos - start_pos).c_str());
-    pos++;
-    start_pos = pos;
-    
-    // read geneset1
-    while (pos < str.length() && str[pos] != ';') {
-        if (str[pos] == ',') {
-            if (start_pos < pos && start_pos < str.length())
-                geneset1.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
-            start_pos = pos+1;
-        }
-        pos++;
+    // read: geneset1.size() geneset1[0] geneset1[1] ... #
+    ss >> n1;
+    for (i = 0; i < n1; i++) {
+        ss >> k;
+        geneset1.insert(k);
     }
-    if (start_pos < pos && start_pos < str.length())
-        geneset1.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
-    pos++;
-    start_pos = pos;
+    ss >> s1;
+    ASSERT(s1 == "#");
 
-    // read geneset2
-    while (pos < str.length() && str[pos] != ';') {
-        if (str[pos] == ',') {
-            if (start_pos < pos && start_pos < str.length())
-                geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
-            start_pos = pos+1;
-        }
-        pos++;
+    // read: geneset2.size() geneset2[0] geneset2[1] ... #
+    ss >> n2;
+    for (i = 0; i < n2; i++) {
+        ss >> k;
+        geneset2.insert(k);
     }
-    if (start_pos < pos && start_pos < str.length())
-        geneset2.insert(atoi(str.substr(start_pos, pos - start_pos).c_str()));
+    ss >> s2;
+    ASSERT(s2 == "#");
 }
 
 #endif // _IQTREE_MPI
