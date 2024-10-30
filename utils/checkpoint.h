@@ -19,7 +19,7 @@
 
 using namespace std;
 
-#define CKP_PRECISION 12
+#define CKP_PRECISION 10
 
 // several useful declaration to save to or restore from a checkpoint
 #define CKP_SAVE(var) checkpoint->put(#var, var)
