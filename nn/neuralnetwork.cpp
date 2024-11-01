@@ -299,7 +299,7 @@ int num_gpus = 0;
 
     DoubleVector model_probabilities = DoubleVector(floatarr, floatarr + 6);
 
-    // print values for JC,K2P,F81,HKY,Tn,GTR
+    // print values for JC,K80,F81,HKY,Tn,GTR
     float max_val = 0.0;
     size_t chosen_model;
 
@@ -321,7 +321,7 @@ int num_gpus = 0;
     // return chosen model
     switch(chosen_model) {
         case 0: return "JC";
-        case 1: return "K2P";
+        case 1: return "K80";
         case 2: return "F81";
         case 3: return "HKY";
         case 4: return "TN";
@@ -336,7 +336,7 @@ void NeuralNetwork::getModelsAboveThreshold(StrVector *model_names, DoubleVector
 
     map<int,string> model_index_map = {
             {0, "JC"},
-            {1, "K2P"},
+            {1, "K80"},
             {2, "F81"},
             {3, "HKY"},
             {4, "TN"},
