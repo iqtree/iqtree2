@@ -361,17 +361,13 @@ double PartitionModel::computeMixLh() {
     //get sets of taxa for each partition tree in advance
     vector<StrVector> t_seqs_vec_array;
     vector<set<string> > t_seqs_set_array;
+    t_seqs_vec_array.resize(ntrees);
+    t_seqs_set_array.resize(ntrees);
+
     for (int j = 0; j < ntrees; j++) {
-        StrVector t_seqs_vec;
-        set<string> t_seqs_set;
-
         PhyloTree *t = tree->at(j);
-        t->getTaxaName(t_seqs_vec);
-
-        t_seqs_set.insert(t_seqs_vec.begin(), t_seqs_vec.end());
-
-        t_seqs_vec_array.push_back(t_seqs_vec);
-        t_seqs_set_array.push_back(t_seqs_set);
+        t->getTaxaName(t_seqs_vec_array[j]);
+        t_seqs_set_array[j].insert(t_seqs_vec_array[j].begin(), t_seqs_vec_array[j].end());
     }
 
     // compute the mixture-based log-likelihood
@@ -401,6 +397,12 @@ double PartitionModel::computeMixLh() {
                 } else {
                     missing_seqs_id.push_back(seq_id);
                 }
+            }
+
+            // if the subset has less than 3 sequences, don't compute m-log-likelihood
+            if (inter_seqs_id.size() < 3) {
+                delete[] lh_array;
+                return 1.0;
             }
 
             // subset tree1_aln
