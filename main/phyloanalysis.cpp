@@ -770,6 +770,32 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
     out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
 
+    // mAIC report
+    if (tree.isSuperTree()) {
+        // compute mAIC/mBIC/mAICc if it is a partition model
+        int ntrees, mix_df;
+        double mix_lh;
+
+        mix_lh = tree.getModelFactory()->computeMixLh();
+        if (mix_lh < 0) {
+            PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+            ntrees = stree->size();
+            mix_df = df + ntrees - 1;
+            //nsites = tree.getAlnNSite();
+
+            double mAIC, mAICc, mBIC;
+            computeInformationScores(mix_lh, mix_df, ssize, mAIC, mAICc, mBIC);
+
+            out << endl;
+            out << "Mixture-based log-likelihood of the tree: " << mix_lh << endl;
+            out << "Mixture-based Akaike information criterion (mAIC) score: " << mAIC << endl;
+            out << "Mixture-based corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
+            out << "Mixture-based Bayesian information criterion (mBIC) score: " << mBIC << endl;
+        } else {
+            cout << "Note: m-log-Likelihood calculation is not supported, because some partitions don't have enough intersection sequences: " << endl;
+        }
+    }
+
     if (ssize <= df && main_tree) {
 
         out << endl
@@ -3133,36 +3159,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     if (params.write_candidate_trees) {
         printTrees(iqtree->getBestTrees(), params, ".imd_trees");
-    }
-    
-    if (iqtree->isSuperTree()) {
-        // compute mAIC/mBIC/mAICc if it is a partition model
-        int model_df, ntrees, mix_df;
-        double nsites, mix_lh, mAIC, mAICc, mBIC;
-
-        mix_lh = iqtree->getModelFactory()->computeMixLh();
-        if (mix_lh < 0) {
-            cout << "m-log-Likelihood : " << mix_lh << endl;
-        } else {
-            cout << "m-log-Likelihood calculation is not supported, because some partitions don't have enough intersection sequences: " << endl;
-        }
-
-
-        /*
-        model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
-        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
-        ntrees = stree->size();
-        mix_df = model_df + ntrees - 1;
-        nsites = iqtree->getAlnNSite();
-
-
-        mAIC = -2 * mix_lh + 2 * mix_df;
-        mAICc = mAIC + 2.0 * mix_df * (mix_df + 1) / max(nsites - mix_df - 1, 1);
-        mBIC = -2 * mix_lh + mix_df * log(nsites);
-
-
-        cout << "mAIC: " << mAIC << ", mAICc: " << mAICc << ", mBIC: " << mBIC;
-         */
     }
 
     if (params.pll)
