@@ -776,7 +776,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         int ntrees, mix_df;
         double mix_lh;
 
-        mix_lh = tree.getModelFactory()->computeMixLh();
+        string maic_warning;
+        mix_lh = tree.getModelFactory()->computeMixLh(maic_warning);
         if (mix_lh < 0) {
             PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
             ntrees = stree->size();
@@ -792,7 +793,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             out << "Mixture-based corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
             out << "Mixture-based Bayesian information criterion (mBIC) score: " << mBIC << endl;
         } else {
-            cout << "Note: m-log-Likelihood calculation is not supported, because some partitions don't have enough intersection sequences: " << endl;
+            out << endl;
+            out << maic_warning << endl;
         }
     }
 

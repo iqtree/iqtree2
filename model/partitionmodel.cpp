@@ -335,7 +335,7 @@ double PartitionModel::targetFunk(double x[]) {
     return res;
 }
 
-double PartitionModel::computeMixLh() {
+double PartitionModel::computeMixLh(string &warning) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int ntrees = tree->size();
 
@@ -401,6 +401,11 @@ double PartitionModel::computeMixLh() {
 
             // if the subset has less than 3 sequences, don't compute m-log-likelihood
             if (inter_seqs_id.size() < 3) {
+                string tree1_name = tree1_aln->name;
+                string tree2_name = tree2->aln->name;
+                int ntaxa = tree->getNumTaxa();
+                warning = "NOTE: Mixture-based log-likelihood conversion is skipped due to too much missing data: at least one of the partitions " +
+                        tree1_name + " and " + tree2_name + " show missing data in " + to_string(ntaxa - inter_seqs_id.size()) + " sequences.";
                 delete[] lh_array;
                 return 1.0;
             }

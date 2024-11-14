@@ -297,8 +297,9 @@ public:
 
     /**
      compute the mixture-based log-likelihood for mAIC, mAICc, mBIC calculation.
+     @param warning the warning message when mixture-based log-likelihood calculation is skipped.
      */
-    virtual double computeMixLh() {return 0.0;}
+    virtual double computeMixLh(string &warning) {return 0.0;}
 
 protected:
 
