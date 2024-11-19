@@ -2640,10 +2640,32 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
-double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
+double PhyloTree::computeLikelihoodBranchFakeLeafSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
-double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value)
+double PhyloTree::computeLikelihoodBranchFakeLeafGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
+#endif
+}
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
+double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA, SITE_MODEL>(dad_branch, dad, false, save_log_value);
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
+double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, false, save_log_value);
+#endif
+}
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
+double PhyloTree::implComputingLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value)
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
+double PhyloTree::implComputingLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value)
 #endif
 {
     // cout << "PhyloTree::computeLikelihoodBrachGenericSIMD enter" << endl << flush;
@@ -2864,6 +2886,11 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                         } else {
                             state = aln->STATE_UNKNOWN;
                         }
+                        
+                        // if fake leaf, set the state as unknown
+                        if (fake_leaf)
+                            state = aln->STATE_UNKNOWN;
+                        
                         double *lh_tip = partial_lh_node + block*state;
                         double *this_vec_tip = vec_tip+i;
                         for (size_t c = 0; c < block; c++) {

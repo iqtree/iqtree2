@@ -102,6 +102,13 @@ void printSiteStateFreq(const char* filename, Alignment *aln);
 void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqType ast);
 
 /**
+    print extant sequences
+    @param filename output file name
+    @param tree phylogenetic tree
+*/
+void printExtantSequences(const string& filename, PhyloTree* tree);
+
+/**
  * Evaluate user-trees with possibility of tree topology tests
  * @param params program parameters
  * @param tree current tree

@@ -1270,6 +1270,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
     params.min_ancestral_prob = 0.0;
+    params.print_extant_seqs = false;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -4042,6 +4043,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_prob = WSL_MIXTURE_RATECAT;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-esr") == 0 || strcmp(argv[cnt], "--extant") == 0) {
+                params.print_extant_seqs = true;
+                params.ignore_identical_seqs = false;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-asr") == 0 || strcmp(argv[cnt], "--ancestral") == 0) {
 				params.print_ancestral_sequence = AST_MARGINAL;

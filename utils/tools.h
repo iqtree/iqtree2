@@ -2007,6 +2007,9 @@ public:
 
     /** minimum probability to assign an ancestral state */
     double min_ancestral_prob;
+    
+    /** TRUE to print extant ancestral sequences */
+    bool print_extant_seqs;
 
     /**
         0: print nothing

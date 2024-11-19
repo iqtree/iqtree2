@@ -128,6 +128,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     if (!aln) {
 #if INSTRSET < 2
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH>;
+        computeLikelihoodBranchFakeLeafPointer = &PhyloTree::computeLikelihoodBranchFakeLeafGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
@@ -135,6 +136,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         sse = LK_386;
 #else
         computeLikelihoodBranchPointer = NULL;
+        computeLikelihoodBranchFakeLeafPointer = NULL;
         computeLikelihoodDervPointer = NULL;
         computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = NULL;
@@ -177,6 +179,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //--- naive kernel for site-specific model ---
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH, false, true>;
+        computeLikelihoodBranchFakeLeafPointer = &PhyloTree::computeLikelihoodBranchFakeLeafGenericSIMD<Vec1d, SAFE_LH, false, true>;
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH, false, true>;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH, false, true>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH, false, true>;
@@ -185,12 +188,14 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
     //--- naive (no SIMD) kernel ---
     computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH>;
+    computeLikelihoodBranchFakeLeafPointer = &PhyloTree::computeLikelihoodBranchFakeLeafGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
 #else
     computeLikelihoodBranchPointer = NULL;
+    computeLikelihoodBranchFakeLeafPointer = NULL;
     computeLikelihoodDervPointer = NULL;
     computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = NULL;
@@ -216,6 +221,10 @@ void PhyloTree::computePartialLikelihood(TraversalInfo &info, size_t ptn_left, s
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
 	return (this->*computeLikelihoodBranchPointer)(dad_branch, dad, save_log_value);
 
+}
+
+double PhyloTree::computeLikelihoodBranchFakeLeaf(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    return (this->*computeLikelihoodBranchFakeLeafPointer)(dad_branch, dad, save_log_value);
 }
 
 void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
@@ -1457,15 +1466,34 @@ void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonre
 
 void PhyloTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+
+    // compute _pattern_lh_cat_state using NONREV kernel
+    computeLikelihoodBranch(dad_branch, dad);
+
+    // compute the Ancestral state probability from the branch's likelihood
+    computeMarginalState(dad_branch, dad,
+                         ptn_ancestral_prob, ptn_ancestral_seq);
+}
+
+void PhyloTree::computeMarginalExtantState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+
+    // compute _pattern_lh_cat_state using NONREV kernel
+    computeLikelihoodBranchFakeLeaf(dad_branch, dad);
+
+    // compute the Extant state probability from the branch's likelihood
+    computeMarginalState(dad_branch, dad,
+                         ptn_ancestral_prob, ptn_ancestral_seq);
+}
+
+void PhyloTree::computeMarginalState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
     size_t nptn = getAlnNPattern();
     size_t nstates = model->num_states;
     size_t nstates_vector = nstates * vector_size;
     size_t ncat_mix = (model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures();
     double state_freq[nstates];
     model->getStateFrequency(state_freq);
-
-    // compute _pattern_lh_cat_state using NONREV kernel
-    computeLikelihoodBranch(dad_branch, dad);
 
     double *lh_state = _pattern_lh_cat_state;
     memset(ptn_ancestral_prob, 0, sizeof(double)*nptn*nstates);

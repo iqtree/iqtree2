@@ -1053,13 +1053,35 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         *df = *ddf = 0.0;
     }
 }
-
+  
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+double PhyloTree::computeNonrevLikelihoodBranchFakeLeafSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, true, save_log_value);
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::computeNonrevLikelihoodBranchFakeLeafGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, true, save_log_value);
+#endif
+}
+    
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, false, save_log_value);
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, false, save_log_value);
+#endif
+}
+
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+double PhyloTree::implComputingNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value) {
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value) {
 #endif
 
 //    assert(rooted);
@@ -1141,6 +1163,8 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     double all_tree_lh(0.0);
     double all_prob_const(0.0);
 
+    ASSERT((!fake_leaf)
+           || (fake_leaf && dad->isLeaf()));
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
 //    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
@@ -1220,6 +1244,11 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                     } else {
                         dadState = unknown;
                     }
+                    
+                    // if fake leaf, set the state unknown
+                    if (fake_leaf)
+                        dadState = unknown;
+                    
                     double *lh_tip = partial_lh_node + block * dadState;
                     double *this_vec_tip = vec_tip+i;
                     for (size_t c = 0; c < block; c++) {

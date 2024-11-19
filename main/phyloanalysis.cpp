@@ -1104,6 +1104,10 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
         cout << "  Ancestral state:               " << params.out_prefix << ".state" << endl;
 //        cout << "  Ancestral sequences:           " << params.out_prefix << ".aseq" << endl;
     }
+    
+    if (params.print_extant_seqs) {
+        cout << "  Extant state:                  " << params.out_prefix << ".extant.state" << endl;
+    }
 
     if (params.write_intermediate_trees)
         cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
@@ -2413,6 +2417,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     
     if (params.print_ancestral_sequence) {
         printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
+    }
+    
+    if (params.print_extant_seqs) {
+        printExtantSequences((string)params.out_prefix + ".extant", &iqtree);
     }
     
     if (params.print_site_state_freq != WSF_NONE && !params.site_freq_file && !params.tree_freq_file) {
