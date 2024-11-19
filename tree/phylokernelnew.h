@@ -2641,12 +2641,13 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodBranchFakeLeafSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    implComputingLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
+    // implComputingLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodBranchFakeLeafGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    implComputingLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
+    // implComputingLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
 #endif
+    outError("To reconstruct extant sequences, we must use the Non-reversible implementations!");
 }
 
 #ifdef KERNEL_FIX_STATES
@@ -2886,10 +2887,6 @@ double PhyloTree::implComputingLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                         } else {
                             state = aln->STATE_UNKNOWN;
                         }
-                        
-                        // if fake leaf, set the state as unknown
-                        if (fake_leaf)
-                            state = aln->STATE_UNKNOWN;
                         
                         double *lh_tip = partial_lh_node + block*state;
                         double *this_vec_tip = vec_tip+i;
