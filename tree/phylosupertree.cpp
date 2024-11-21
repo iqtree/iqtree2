@@ -1365,6 +1365,21 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
 void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
 
+    computeMarginalState(true, dad_branch, dad,
+                         ptn_ancestral_prob, ptn_ancestral_seq);
+}
+
+void PhyloSuperTree::computeMarginalExtantState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+
+    computeMarginalState(false, dad_branch, dad,
+                         ptn_ancestral_prob, ptn_ancestral_seq);
+}
+
+
+void PhyloSuperTree::computeMarginalState(bool compute_ancestral, PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                  double *ptn_ancestral_prob, int *ptn_ancestral_seq)
+{
     SuperNeighbor *snei = (SuperNeighbor*)dad_branch;
     SuperNeighbor *snei_back = (SuperNeighbor*)dad_branch->node->findNeighbor(dad);
     int part = 0;
@@ -1372,8 +1387,20 @@ void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, Ph
         size_t nptn = (*it)->getAlnNPattern();
         size_t nstates = (*it)->model->num_states;
         if (snei->link_neighbors[part]) {
-            (*it)->computeMarginalAncestralState(snei->link_neighbors[part], (PhyloNode*)snei_back->link_neighbors[part]->node,
-                ptn_ancestral_prob, ptn_ancestral_seq);
+            // compute an ancestral sequence
+            if (compute_ancestral)
+            {
+                (*it)->computeMarginalAncestralState(snei->link_neighbors[part],
+                                                     (PhyloNode*)snei_back->link_neighbors[part]->node,
+                                                     ptn_ancestral_prob, ptn_ancestral_seq);
+            }
+            // otherwise, compute an extant sequence
+            else
+            {
+                (*it)->computeMarginalExtantState(snei->link_neighbors[part],
+                                                  (PhyloNode*)snei_back->link_neighbors[part]->node,
+                                                  ptn_ancestral_prob, ptn_ancestral_seq);
+            }
         } else {
             // branch does not exist in partition tree
             double eqprob = 1.0/nstates;

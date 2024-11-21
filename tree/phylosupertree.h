@@ -423,6 +423,28 @@ public:
     */
     virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+    
+    /**
+        compute extant sequence probability for a leaf node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+        @param[out] ptn_ancestral_seq vector of state with highest probability
+    */
+    virtual void computeMarginalExtantState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+    
+    /**
+        compute sequence probability for an internal/extant node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
+        @param[in] compute_ancestral TRUE to compute an ancestral sequence, otherwise, compute an extant sequence
+        @param dad_branch branch leading to an internal/leaf node where to obtain ancestral/extant sequence
+        @param dad dad of the target internal/leaf node
+        @param[out] ptn_ancestral_prob pattern ancestral/extant probability vector of dad_branch->node
+    */
+    virtual void computeMarginalState(bool compute_ancestral, PhyloNeighbor *dad_branch, PhyloNode *dad,
+                                      double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     /**
         compute ancestral sequence probability for an internal node by partial_lh of that subtree
