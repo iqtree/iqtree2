@@ -220,6 +220,18 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 }
 
 void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralSeqType ast) {
+    printAncestralOrExtantSequences(true, out_prefix, tree, ast);
+}
+
+void printExtantSequences(const char *out_prefix, PhyloTree* tree)
+{
+    printAncestralOrExtantSequences(false, out_prefix, tree, AST_NONE);
+}
+
+void printAncestralOrExtantSequences(const bool is_ancestral, const char *out_prefix, PhyloTree *tree, AncestralSeqType ast)
+{
+    // init dummy variables
+    const string reconstructed_seq_type = is_ancestral ? "Ancestral" : "Extant";
     
     //    int *joint_ancestral = NULL;
     //
@@ -243,7 +255,11 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         //        outseq.open(filenameseq.c_str());
         
         NodeVector nodes;
-        tree->getInternalNodes(nodes);
+        // get internal or external nodes
+        if (is_ancestral)
+            tree->getInternalNodes(nodes);
+        else
+            tree->getTaxa(nodes);
         
         double *marginal_ancestral_prob;
         int *marginal_ancestral_seq;
@@ -255,7 +271,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         //
         //        int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
         
-        out << "# Ancestral state reconstruction for all nodes in " << tree->params->out_prefix << ".treefile" << endl
+        out << "# " + reconstructed_seq_type + " state reconstruction for all nodes in " << tree->params->out_prefix << ".treefile" << endl
         << "# This file can be read in MS Excel or in R with command:" << endl
         << "#   tab=read.table('" <<  tree->params->out_prefix << ".state',header=TRUE)" << endl
         << "# Columns are tab-separated with following meaning:" << endl
@@ -290,8 +306,18 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             PhyloNode *node = (PhyloNode*)(*it);
             PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
             
-            tree->computeMarginalAncestralState((PhyloNeighbor*)dad->findNeighbor(node), dad,
-                                                marginal_ancestral_prob, marginal_ancestral_seq);
+            // evoke the corresponding function according to the type of sequences
+            // we want to reconstruct
+            if (is_ancestral)
+            {
+                tree->computeMarginalAncestralState((PhyloNeighbor*)dad->findNeighbor(node), dad,
+                                                    marginal_ancestral_prob, marginal_ancestral_seq);
+            }
+            else
+            {
+                tree->computeMarginalExtantState((PhyloNeighbor*)dad->findNeighbor(node), dad,
+                                                    marginal_ancestral_prob, marginal_ancestral_seq);
+            }
             
             //            int *joint_ancestral_node = joint_ancestral + (node->id - tree->leafNum)*nptn;
             
@@ -323,7 +349,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         
         out.close();
         //        outseq.close();
-        cout << "Ancestral state probabilities printed to " << filename << endl;
+        cout << reconstructed_seq_type + " state probabilities printed to " << filename << endl;
         //        cout << "Ancestral sequences printed to " << filenameseq << endl;
         
     } catch (ios::failure) {
@@ -333,80 +359,6 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
     //    if (joint_ancestral)
     //        delete[] joint_ancestral;
     
-}
-
-void printExtantSequences(const string& out_prefix, PhyloTree* tree)
-{
-    const string filename = out_prefix + ".state";
-    
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(filename.c_str());
-        out.setf(ios::fixed, ios::floatfield);
-        out.precision(5);
-        
-        NodeVector nodes;
-        tree->getTaxa(nodes);
-        
-        double *marginal_extant_prob;
-        int *marginal_extant_seq;
-        
-        out << "# Extant state reconstruction for all leaf nodes in " << tree->params->out_prefix << ".treefile" << endl
-        << "# This file can be read in MS Excel or in R with command:" << endl
-        << "#   tab=read.table('" <<  out_prefix << ".state',header=TRUE)" << endl
-        << "# Columns are tab-separated with following meaning:" << endl
-        << "#   Node:  Node name in the tree" << endl;
-        if (tree->isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)tree;
-            out << "#   Part:  Partition ID (1=" << stree->at(0)->aln->name << ", etc)" << endl
-            << "#   Site:  Site ID within partition (starting from 1 for each partition)" << endl;
-        } else
-            out << "#   Site:  Alignment site ID" << endl;
-        
-        out << "#   State: Most likely state assignment" << endl
-        << "#   p_X:   Posterior probability for state X (empirical Bayesian method)" << endl;
-        
-        if (tree->isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)tree;
-            out << "Node\tPart\tSite\tState";
-            for (size_t i = 0; i < stree->front()->aln->num_states; i++)
-                out << "\tp_" << stree->front()->aln->convertStateBackStr(i);
-        } else {
-            out << "Node\tSite\tState";
-            for (size_t i = 0; i < tree->aln->num_states; i++)
-                out << "\tp_" << tree->aln->convertStateBackStr(i);
-        }
-        out << endl;
-        
-        
-        bool orig_kernel_nonrev;
-        tree->initMarginalAncestralState(out, orig_kernel_nonrev, marginal_extant_prob, marginal_extant_seq);
-        
-        for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
-            PhyloNode *node = (PhyloNode*)(*it);
-            PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
-            
-            tree->computeMarginalExtantState((PhyloNeighbor*)dad->findNeighbor(node), dad,
-                                                marginal_extant_prob, marginal_extant_seq);
-            
-            // set node name if neccessary
-            if (node->name.empty() || !isalpha(node->name[0])) {
-                node->name = "Node" + convertIntToString(node->id-tree->leafNum+1);
-            }
-            
-            // print ancestral state probabilities
-            tree->writeMarginalAncestralState(out, node, marginal_extant_prob, marginal_extant_seq);
-        }
-        
-        tree->endMarginalAncestralState(orig_kernel_nonrev, marginal_extant_prob, marginal_extant_seq);
-        
-        out.close();
-        cout << "Extant state probabilities printed to " << filename << endl;
-        
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, filename);
-    }
 }
 
 void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {

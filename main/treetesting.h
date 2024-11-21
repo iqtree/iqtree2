@@ -106,7 +106,16 @@ void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqT
     @param filename output file name
     @param tree phylogenetic tree
 */
-void printExtantSequences(const string& filename, PhyloTree* tree);
+void printExtantSequences(const char*filename, PhyloTree* tree);
+
+/**
+    print ancestral or extant sequences
+    @param is_ancestral TRUE to print ancestral sequences. Otherwise, print extant sequences
+    @param filename output file name
+    @param tree phylogenetic tree
+    @param ast either AST_MARGINAL or AST_JOINT
+*/
+void printAncestralOrExtantSequences(const bool is_ancestral, const char*filename, PhyloTree *tree, AncestralSeqType ast);
 
 /**
  * Evaluate user-trees with possibility of tree topology tests
