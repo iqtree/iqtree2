@@ -789,9 +789,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 
             out << endl;
             out << "Mixture-based log-likelihood of the tree: " << mix_lh << endl;
-            out << "Mixture-based Akaike information criterion (mAIC) score: " << mAIC << endl;
-            out << "Mixture-based corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
-            out << "Mixture-based Bayesian information criterion (mBIC) score: " << mBIC << endl;
+            out << "Marginal Akaike information criterion (mAIC) score: " << mAIC << endl;
+            //out << "Marginal corrected Akaike information criterion (mAICc) score: " << mAICc << endl;
+            //out << "Marginal Bayesian information criterion (mBIC) score: " << mBIC << endl;
         } else {
             out << endl;
             out << maic_warning << endl;

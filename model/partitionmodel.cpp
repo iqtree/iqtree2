@@ -372,6 +372,11 @@ double PartitionModel::computeMixLh(string &warning) {
 
     // compute the mixture-based log-likelihood
     double mix_lh = 0.0;
+    //bool too_much_missing = false;
+
+//#ifdef _OPENMP
+//#pragma omp parallel for reduction(+: mix_lh) if(tree->num_threads > 1)
+//#endif
     for (int j = 0; j < ntrees; j++) {
         //int i = tree->part_order[j];
         Alignment *tree1_aln = tree->at(j)->aln;
@@ -533,6 +538,7 @@ double PartitionModel::computeMixLh(string &warning) {
         mix_lh += mix_lh_partition;
         delete[] lh_array; //release array memery
     }
+
     return mix_lh;
 }
 
