@@ -372,11 +372,11 @@ double PartitionModel::computeMixLh(string &warning) {
 
     // compute the mixture-based log-likelihood
     double mix_lh = 0.0;
-    //bool too_much_missing = false;
+    bool too_much_missing = false;
 
-//#ifdef _OPENMP
-//#pragma omp parallel for reduction(+: mix_lh) if(tree->num_threads > 1)
-//#endif
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: mix_lh) if(tree->num_threads > 1)
+#endif
     for (int j = 0; j < ntrees; j++) {
         //int i = tree->part_order[j];
         Alignment *tree1_aln = tree->at(j)->aln;
@@ -406,13 +406,22 @@ double PartitionModel::computeMixLh(string &warning) {
 
             // if the subset has less than 3 sequences, don't compute m-log-likelihood
             if (inter_seqs_id.size() < 3) {
-                string tree1_name = tree1_aln->name;
-                string tree2_name = tree2->aln->name;
-                int ntaxa = tree->getNumTaxa();
-                warning = "NOTE: Mixture-based log-likelihood conversion is skipped due to too much missing data: at least one of the partitions " +
-                        tree1_name + " and " + tree2_name + " show missing data in " + to_string(ntaxa - inter_seqs_id.size()) + " sequences.";
+
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+                {
+                    too_much_missing = true;
+                    string tree1_name = tree1_aln->name;
+                    string tree2_name = tree2->aln->name;
+                    int ntaxa = tree->getNumTaxa();
+                    warning =
+                            "NOTE: Mixture-based log-likelihood conversion is skipped due to too much missing data: at least one of the partitions " +
+                            tree1_name + " and " + tree2_name + " show missing data in " +
+                            to_string(ntaxa - inter_seqs_id.size()) + " sequences.";
+                }
                 delete[] lh_array;
-                return 1.0;
+                break;
             }
 
             // subset tree1_aln
@@ -539,7 +548,11 @@ double PartitionModel::computeMixLh(string &warning) {
         delete[] lh_array; //release array memery
     }
 
-    return mix_lh;
+    if (too_much_missing){
+        return 1.0;
+    } else {
+        return mix_lh;
+    }
 }
 
 void PartitionModel::setVariables(double *variables) {
