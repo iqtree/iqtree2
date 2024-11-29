@@ -113,16 +113,22 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
-string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed, int bootstrap_rep) {
+// num_thres -- number of cpu threads to be used, default: 1
+string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed, int bootstrap_rep, int num_thres) {
     string intree = "";
     string output;
     try {
         input_options* in_options = NULL;
-        if (bootstrap_rep > 0) {
+        if (bootstrap_rep > 0 || num_thres > 1) {
             in_options = new input_options();
-            in_options->insert("-bb", convertIntToString(bootstrap_rep));
+            if (bootstrap_rep > 0)
+                in_options->insert("-bb", convertIntToString(bootstrap_rep));
+            if (num_thres > 1)
+                in_options->insert("-nt", convertIntToString(num_thres));
         }
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options);
+        if (in_options != NULL)
+            delete in_options;
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
         funcExit();
@@ -133,11 +139,18 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With restriction to the input toplogy
-string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed) {
+// num_thres -- number of cpu threads to be used, default: 1
+string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, int num_thres) {
     string output;
     try {
         input_options* in_options = NULL;
+        if (num_thres > 1) {
+            in_options = new input_options();
+            in_options->insert("-nt", convertIntToString(num_thres));
+        }
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree", in_options);
+        if (in_options != NULL)
+            delete in_options;
     } catch (std::runtime_error& e) {
         // reset the output and error buffers
         funcExit();
@@ -151,7 +164,8 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
 // model_set -- a set of models to consider
 // freq_set -- a set of frequency types
 // rate_set -- a set of RHAS models
-string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, string model_set, string freq_set, string rate_set) {
+// num_thres -- number of cpu threads to be used, default: 1
+string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, string model_set, string freq_set, string rate_set, int num_thres) {
     
     input_options* in_options = NULL;
     string output;
@@ -168,7 +182,9 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
             in_options->insert("-mfreq", freq_set);
         if (!rate_set.empty())
             in_options->insert("-mrate", rate_set);
-        
+        if (num_thres > 1)
+            in_options->insert("-nt", convertIntToString(num_thres));
+
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "modelfinder", in_options);
         
         delete in_options;
@@ -587,6 +603,9 @@ void input_options::set_params(Params& params) {
                 outError("#replicates must be >= 1000");
             params.consensus_type = CT_CONSENSUS_TREE;
             params.stop_condition = SC_BOOTSTRAP_CORRELATION;
+        }
+        else if (flags[0] == "-nt") {
+            params.num_threads = atoi(values[i].c_str());
         }
     }
 }

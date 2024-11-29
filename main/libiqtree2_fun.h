@@ -27,16 +27,18 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 /*
  * Perform phylogenetic analysis on the input alignment
  * With estimation of the best topology
+ * num_thres -- number of cpu threads to be used, default: 1
  * output: results in YAML format with the tree and the details of parameters
  */
-string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed = 0, int bootstrap_rep = 0);
+string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed = 0, int bootstrap_rep = 0, int num_thres = 1);
 
 /*
  * Perform phylogenetic analysis on the input alignment
  * With restriction to the input toplogy
+ * num_thres -- number of cpu threads to be used, default: 1
  * output: results in YAML format with the details of parameters
  */
-string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed = 0);
+string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed = 0, int num_thres = 1);
 
 /*
  * Perform phylogenetic analysis with ModelFinder
@@ -45,10 +47,11 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
  * freq_set -- a set of frequency types
  * rate_set -- a set of RHAS models
  * rand_seed -- random seed, if 0, then will generate a new random seed
+ * num_thres -- number of cpu threads to be used, default: 1
  * output: modelfinder results in YAML format
  */
 string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 0,
-                   string model_set = "", string freq_set = "", string rate_set = "");
+                   string model_set = "", string freq_set = "", string rate_set = "", int num_thres = 1);
 
 /*
  * Build pairwise JC distance matrix
