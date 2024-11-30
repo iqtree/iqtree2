@@ -27,7 +27,7 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 /*
  * Perform phylogenetic analysis on the input alignment
  * With estimation of the best topology
- * num_thres -- number of cpu threads to be used, default: 1
+ * num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
  * output: results in YAML format with the tree and the details of parameters
  */
 string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed = 0, int bootstrap_rep = 0, int num_thres = 1);
@@ -35,7 +35,7 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
 /*
  * Perform phylogenetic analysis on the input alignment
  * With restriction to the input toplogy
- * num_thres -- number of cpu threads to be used, default: 1
+ * num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
  * output: results in YAML format with the details of parameters
  */
 string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed = 0, int num_thres = 1);
@@ -47,7 +47,7 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
  * freq_set -- a set of frequency types
  * rate_set -- a set of RHAS models
  * rand_seed -- random seed, if 0, then will generate a new random seed
- * num_thres -- number of cpu threads to be used, default: 1
+ * num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
  * output: modelfinder results in YAML format
  */
 string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 0,
@@ -58,7 +58,7 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 
  * output: set of distances
  * (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
  * where n is the number of sequences
- * num_thres -- number of cpu threads to be used, default: 1
+ * num_thres -- number of cpu threads to be used, default: 1; 0 - use all available cpu threads on the machine
  */
 vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int num_thres = 1);
 

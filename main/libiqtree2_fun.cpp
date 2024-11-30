@@ -113,17 +113,17 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
-// num_thres -- number of cpu threads to be used, default: 1
+// num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
 string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed, int bootstrap_rep, int num_thres) {
     string intree = "";
     string output;
     try {
         input_options* in_options = NULL;
-        if (bootstrap_rep > 0 || num_thres > 1) {
+        if (bootstrap_rep > 0 || num_thres >= 0) {
             in_options = new input_options();
             if (bootstrap_rep > 0)
                 in_options->insert("-bb", convertIntToString(bootstrap_rep));
-            if (num_thres > 1)
+            if (num_thres >= 0)
                 in_options->insert("-nt", convertIntToString(num_thres));
         }
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options);
@@ -139,12 +139,12 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With restriction to the input toplogy
-// num_thres -- number of cpu threads to be used, default: 1
+// num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
 string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, int num_thres) {
     string output;
     try {
         input_options* in_options = NULL;
-        if (num_thres > 1) {
+        if (num_thres >= 0) {
             in_options = new input_options();
             in_options->insert("-nt", convertIntToString(num_thres));
         }
@@ -164,7 +164,7 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
 // model_set -- a set of models to consider
 // freq_set -- a set of frequency types
 // rate_set -- a set of RHAS models
-// num_thres -- number of cpu threads to be used, default: 1
+// num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
 string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, string model_set, string freq_set, string rate_set, int num_thres) {
     
     input_options* in_options = NULL;
@@ -182,7 +182,7 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
             in_options->insert("-mfreq", freq_set);
         if (!rate_set.empty())
             in_options->insert("-mrate", rate_set);
-        if (num_thres > 1)
+        if (num_thres >= 0)
             in_options->insert("-nt", convertIntToString(num_thres));
 
         output = build_phylogenetic(names, seqs, model, intree, rand_seed, "modelfinder", in_options);
@@ -200,7 +200,7 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
 // output: set of distances
 // (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
 // where n is the number of sequences
-// num_thres -- number of cpu threads to be used, default: 1
+// num_thres -- number of cpu threads to be used, default: 1; 0 - use all available cpu threads on the machine
 vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int num_thres) {
     vector<double> output;
     string prog = "build_matrix";
@@ -232,6 +232,9 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int
             if (num_thres > 0) {
                 Params::getInstance().num_threads = num_thres;
                 omp_set_num_threads(num_thres);
+            } else if (num_thres == 0) {
+                Params::getInstance().num_threads = max_procs;
+                omp_set_num_threads(max_procs);
             }
          #endif
             
@@ -335,7 +338,7 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
     // verbose_mode = VB_MIN;
     verbose_mode = VB_QUIET; // (quiet mode)
     Params::getInstance().setDefault();
-    Params::getInstance().num_threads = 1; // only allow single thread at this moment
+    Params::getInstance().num_threads = 1; // default
     Params::getInstance().aln_file = (char*) "";
     Params::getInstance().model_name = model;
     
