@@ -200,7 +200,8 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
 // output: set of distances
 // (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
 // where n is the number of sequences
-vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs) {
+// num_thres -- number of cpu threads to be used, default: 1
+vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int num_thres) {
     vector<double> output;
     string prog = "build_matrix";
     
@@ -224,10 +225,23 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs) {
             bool append_log = false;
             startLogFile(append_log);
 
+        #ifdef _OPENMP
+            int max_procs = countPhysicalCPUCores();
+            if (num_thres > max_procs)
+                num_thres = max_procs;
+            if (num_thres > 0) {
+                Params::getInstance().num_threads = num_thres;
+                omp_set_num_threads(num_thres);
+            }
+         #endif
+            
             PhyloTree ptree;
             ptree.aln = new Alignment(names, seqs, params.sequence_type, params.model_name);
             
             // compute the matrix
+            #ifdef _OPENMP
+            #pragma omp parallel for
+            #endif
             for (int i = 0; i < n; i++) {
                 double* dmat = &output[i * n];
                 // j = i

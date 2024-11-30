@@ -58,8 +58,9 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed = 
  * output: set of distances
  * (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
  * where n is the number of sequences
+ * num_thres -- number of cpu threads to be used, default: 1
  */
-vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs);
+vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int num_thres = 1);
 
 /*
  * Using Rapid-NJ to build tree from a distance matrix
