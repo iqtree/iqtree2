@@ -241,18 +241,21 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int
             PhyloTree ptree;
             ptree.aln = new Alignment(names, seqs, params.sequence_type, params.model_name);
             
+            
             // compute the matrix
             #ifdef _OPENMP
-            #pragma omp parallel for
+            omp_set_max_active_levels(2);
+            #pragma omp parallel for collapse(2)
             #endif
             for (int i = 0; i < n; i++) {
-                double* dmat = &output[i * n];
-                // j = i
-                dmat[i] = 0.0;
-                // j != i
-                for (int j = i+1; j < n; j++) {
-                    dmat[j] = ptree.aln->computeJCDist(i, j);
-                    output[j * n + i] = dmat[j];
+                for (int j = i; j < n; j++) {
+                    double* dmat = &output[i * n];
+                    if (j == i) {
+                        dmat[j] = 0.0;
+                    } else {
+                        dmat[j] = ptree.aln->computeJCDist(i, j);
+                        output[j * n + i] = dmat[j];
+                    }
                 }
             }
             
