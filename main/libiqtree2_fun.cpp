@@ -244,18 +244,14 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int
             
             // compute the matrix
             #ifdef _OPENMP
-            omp_set_max_active_levels(2);
-            #pragma omp parallel for collapse(2)
+            #pragma omp parallel for schedule(dynamic, 1)
             #endif
             for (int i = 0; i < n; i++) {
-                for (int j = i; j < n; j++) {
-                    double* dmat = &output[i * n];
-                    if (j == i) {
-                        dmat[j] = 0.0;
-                    } else {
-                        dmat[j] = ptree.aln->computeJCDist(i, j);
-                        output[j * n + i] = dmat[j];
-                    }
+                double* dmat = &output[i * n];
+                dmat[i] = 0.0;
+                for (int j = i+1; j < n; j++) {
+                    dmat[j] = ptree.aln->computeJCDist(i, j);
+                    output[j * n + i] = dmat[j];
                 }
             }
             
