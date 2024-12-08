@@ -273,7 +273,7 @@ void printAncestralOrExtantSequences(const bool is_ancestral, const char *out_pr
         
         out << "# " + reconstructed_seq_type + " state reconstruction for all nodes in " << tree->params->out_prefix << ".treefile" << endl
         << "# This file can be read in MS Excel or in R with command:" << endl
-        << "#   tab=read.table('" <<  tree->params->out_prefix << ".state',header=TRUE)" << endl
+        << "#   tab=read.table('" <<  out_prefix << ".state',header=TRUE)" << endl
         << "# Columns are tab-separated with following meaning:" << endl
         << "#   Node:  Node name in the tree" << endl;
         if (tree->isSuperTree()) {
