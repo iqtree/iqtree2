@@ -374,10 +374,7 @@ double PartitionModel::computeMixLh(string &warning) {
     double mix_lh = 0.0;
     bool too_much_missing = false;
 
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+: mix_lh) if(tree->num_threads > 1)
-#endif
-    for (int j = 0; j < ntrees; j++) {
+    for (int j = 0; j < ntrees && (!too_much_missing); j++) {
         //int i = tree->part_order[j];
         Alignment *tree1_aln = tree->at(j)->aln;
         int tree1_nsite = tree1_aln->getNSite();
@@ -385,7 +382,11 @@ double PartitionModel::computeMixLh(string &warning) {
 
         // get the site-log-likelihood the the partition under each tree and the corresponding model
         double *lh_array = new double [ntrees*tree1_nsite];
-        for (int k = 0; k < ntrees; k++) {
+
+#ifdef _OPENMP
+#pragma omp parallel for if(tree->num_threads > 1)
+#endif
+        for (int k = 0; k < ntrees ; k++) {
             PhyloTree *tree2 = tree->at(k);
 
             // get the intersection of tree1_aln and tree2.
@@ -420,131 +421,133 @@ double PartitionModel::computeMixLh(string &warning) {
                             tree1_name + " and " + tree2_name + " show missing data in " +
                             to_string(ntaxa - inter_seqs_id.size()) + " sequences.";
                 }
-                delete[] lh_array;
-                break;
-            }
 
-            // subset tree1_aln
-            Alignment *sub_tree1_aln = NULL;
-            if (tree1_seqs.size() != inter_seqs_id.size()) {
-                sub_tree1_aln = new Alignment();
-                sub_tree1_aln->extractSubAlignment(tree1_aln, inter_seqs_id, 0);
             } else {
-                sub_tree1_aln = tree1_aln;
-            }
-
-            // subset tree2
-            PhyloTree *sub_tree2 = NULL;
-            string inter_seqs_set (tree2_seqs.size(), 0);
-            for (int l = 0; l < tree2_seqs.size(); l++) {
-                if (inter_seqs.find(tree2_seqs[l]) != inter_seqs.end()) {
-                    inter_seqs_set[l] = 1;
+                // subset tree1_aln
+                Alignment *sub_tree1_aln = NULL;
+                if (tree1_seqs.size() != inter_seqs_id.size()) {
+                    sub_tree1_aln = new Alignment();
+                    sub_tree1_aln->extractSubAlignment(tree1_aln, inter_seqs_id, 0);
+                } else {
+                    sub_tree1_aln = tree1_aln;
                 }
-            }
 
-            sub_tree2 = new PhyloTree();
-            if (tree2_seqs.size() != inter_seqs_id.size()) {
-                sub_tree2->copyTree(tree2, inter_seqs_set);
-            } else {
-                sub_tree2->copyTree(tree2);
-            }
-
-            // link sub_tree2 and sub_tree1_aln
-            sub_tree2->setAlignment(sub_tree1_aln);
-            sub_tree2->setRootNode(tree2->params->root);
-            sub_tree2->setModelFactory(tree2->getModelFactory());
-            //sub_tree2->setModel(tree2->getModel());
-            //sub_tree2->setRate(tree2->getRate());
-            sub_tree2->setParams(tree2->params);
-            sub_tree2->optimize_by_newton = tree2->params->optimize_by_newton;
-            sub_tree2->setLikelihoodKernel(tree2->params->SSE);
-            sub_tree2->setNumThreads(tree2->num_threads);
-            sub_tree2->ensureNumberOfThreadsIsSet(nullptr);
-
-            sub_tree2->initializeAllPartialLh();
-
-            //compute pattern log-likelihood
-            int nptn = sub_tree1_aln->getNPattern();
-            double *ptn_lh_array = new double [nptn];
-            sub_tree2->computeLikelihood(ptn_lh_array);
-
-            //compute log state frequencies
-            int n_states = sub_tree2->getModel()->num_states;
-            double *state_freq = new double[n_states];
-            sub_tree2->getModel()->getStateFrequency(state_freq);
-
-            vector<double> log_state_freq(n_states);
-            for (int n = 0; n < n_states; n++) {
-                log_state_freq[n] = log(state_freq[n]);
-            }
-
-            //compute site log-likelihood
-            if (tree1_seqs.size() != inter_seqs_id.size()) { //for sequences only appears in tree1, calculate the state frequencies based on the model in tree2
-                for (int l = 0; l < tree1_nsite; l++) {
-                    int ptn_id = sub_tree1_aln->getPatternID(l);
-                    double site_lh = ptn_lh_array[ptn_id];
-                    Pattern p = tree1_aln->at(tree1_aln->getPatternID(l));
-
-                    for (int missing_id: missing_seqs_id) {
-                        int char_id = p[missing_id];
-                        if (char_id  < n_states) {
-                            site_lh += log_state_freq[char_id];
-                        } else {
-                            // compute ambiguous frequencies
-                            int cstate = char_id-n_states+1;
-                            double amb_freq = 0;
-                            for (int m = 0; m < n_states; m++) {
-                                if ((cstate) & (1 << m)) {
-                                    amb_freq += state_freq[m];
-                                }
-                            }
-                            site_lh += log(amb_freq);
-                        }
+                // subset tree2
+                PhyloTree *sub_tree2 = NULL;
+                string inter_seqs_set (tree2_seqs.size(), 0);
+                for (int l = 0; l < tree2_seqs.size(); l++) {
+                    if (inter_seqs.find(tree2_seqs[l]) != inter_seqs.end()) {
+                        inter_seqs_set[l] = 1;
                     }
-                    lh_array[tree1_nsite * k + l] = site_lh;
                 }
-            } else {
-                for (int l = 0; l < tree1_nsite; l++) {
-                    int ptn_id = sub_tree1_aln->getPatternID(l);
-                    lh_array[tree1_nsite * k + l] = ptn_lh_array[ptn_id];
+
+                sub_tree2 = new PhyloTree();
+                if (tree2_seqs.size() != inter_seqs_id.size()) {
+                    sub_tree2->copyTree(tree2, inter_seqs_set);
+                } else {
+                    sub_tree2->copyTree(tree2);
                 }
+
+                // link sub_tree2 and sub_tree1_aln
+                sub_tree2->setAlignment(sub_tree1_aln);
+                sub_tree2->setRootNode(tree2->params->root);
+                sub_tree2->setModelFactory(tree2->getModelFactory());
+                //sub_tree2->setModel(tree2->getModel());
+                //sub_tree2->setRate(tree2->getRate());
+                sub_tree2->setParams(tree2->params);
+                sub_tree2->optimize_by_newton = tree2->params->optimize_by_newton;
+                sub_tree2->setLikelihoodKernel(tree2->params->SSE);
+                sub_tree2->setNumThreads(tree2->num_threads);
+                sub_tree2->ensureNumberOfThreadsIsSet(nullptr);
+
+                sub_tree2->initializeAllPartialLh();
+
+                //compute pattern log-likelihood
+                int nptn = sub_tree1_aln->getNPattern();
+                double *ptn_lh_array = new double [nptn];
+                sub_tree2->computeLikelihood(ptn_lh_array);
+
+                //compute log state frequencies
+                int n_states = sub_tree2->getModel()->num_states;
+                double *state_freq = new double[n_states];
+                sub_tree2->getModel()->getStateFrequency(state_freq);
+
+                vector<double> log_state_freq(n_states);
+                for (int n = 0; n < n_states; n++) {
+                    log_state_freq[n] = log(state_freq[n]);
+                }
+
+                //compute site log-likelihood
+                if (tree1_seqs.size() != inter_seqs_id.size()) { //for sequences only appears in tree1, calculate the state frequencies based on the model in tree2
+                    for (int l = 0; l < tree1_nsite; l++) {
+                        int ptn_id = sub_tree1_aln->getPatternID(l);
+                        double site_lh = ptn_lh_array[ptn_id];
+                        Pattern p = tree1_aln->at(tree1_aln->getPatternID(l));
+
+                        for (int missing_id: missing_seqs_id) {
+                            int char_id = p[missing_id];
+                            if (char_id  < n_states) {
+                                site_lh += log_state_freq[char_id];
+                            } else {
+                                // compute ambiguous frequencies
+                                int cstate = char_id-n_states+1;
+                                double amb_freq = 0;
+                                for (int m = 0; m < n_states; m++) {
+                                    if ((cstate) & (1 << m)) {
+                                        amb_freq += state_freq[m];
+                                    }
+                                }
+                                site_lh += log(amb_freq);
+                            }
+                        }
+                        lh_array[tree1_nsite * k + l] = site_lh;
+                    }
+                } else {
+                    for (int l = 0; l < tree1_nsite; l++) {
+                        int ptn_id = sub_tree1_aln->getPatternID(l);
+                        lh_array[tree1_nsite * k + l] = ptn_lh_array[ptn_id];
+                    }
+                }
+
+                //release memory
+                if (tree1_seqs.size() != inter_seqs_id.size()) {
+                    delete sub_tree1_aln;
+                }
+                sub_tree2->setModelFactory(NULL);
+                sub_tree2->aln = NULL;
+                delete sub_tree2;
+                delete[] ptn_lh_array;
+                delete[] state_freq;
             }
 
-            //release memory
-            if (tree1_seqs.size() != inter_seqs_id.size()) {
-                delete sub_tree1_aln;
-            }
-            sub_tree2->setModelFactory(NULL);
-            sub_tree2->aln = NULL;
-            delete sub_tree2;
-            delete[] ptn_lh_array;
-            delete[] state_freq;
         }
 
         // compute partition log-likelihood from sites
-        double mix_lh_partition = 0.0;
-        for (int l = 0; l < tree1_nsite; l++) {
-            double weighted_lh, max_lh, mix_lh_site;
+        if (!too_much_missing){
+            double mix_lh_partition = 0.0;
+            for (int l = 0; l < tree1_nsite; l++) {
+                double weighted_lh, max_lh, mix_lh_site;
 
-            //int ptn_freq = tree1_aln->at(l).frequency;
+                //int ptn_freq = tree1_aln->at(l).frequency;
 
-            for (int k = 0; k < ntrees; k++) {
-                weighted_lh = log_weight_array[k]+lh_array[tree1_nsite*k+l];
-                if (k == 0) {
-                    max_lh = weighted_lh;
-                } else if (weighted_lh > max_lh) {
-                    max_lh = weighted_lh;
+                for (int k = 0; k < ntrees; k++) {
+                    weighted_lh = log_weight_array[k]+lh_array[tree1_nsite*k+l];
+                    if (k == 0) {
+                        max_lh = weighted_lh;
+                    } else if (weighted_lh > max_lh) {
+                        max_lh = weighted_lh;
+                    }
                 }
-            }
 
-            double mix_lh_site_original = 0.0;
-            for (int k = 0; k < ntrees; k++) {
-                mix_lh_site_original += exp(log_weight_array[k]+lh_array[tree1_nsite*k+l]-max_lh);
+                double mix_lh_site_original = 0.0;
+                for (int k = 0; k < ntrees; k++) {
+                    mix_lh_site_original += exp(log_weight_array[k]+lh_array[tree1_nsite*k+l]-max_lh);
+                }
+                mix_lh_site = max_lh + log(mix_lh_site_original);
+                mix_lh_partition += mix_lh_site;
             }
-            mix_lh_site = max_lh + log(mix_lh_site_original);
-            mix_lh_partition += mix_lh_site;
+            mix_lh += mix_lh_partition;
         }
-        mix_lh += mix_lh_partition;
         delete[] lh_array; //release array memery
     }
 
