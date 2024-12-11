@@ -68,4 +68,9 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int
  */
 string build_njtree(vector<string>& names, vector<double>& distances);
 
+/*
+ * verion number
+ */
+string version();
+
 #endif /* LIBIQTREE2_FUN */

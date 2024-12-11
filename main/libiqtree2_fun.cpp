@@ -586,6 +586,13 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
     return ss.str();
 }
 
+// verion number
+string version() {
+    stringstream ss;
+    ss << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
+    return ss.str();
+}
+
 // --------------------------------------------------
 // Handle the input options of PiQTREE
 // --------------------------------------------------
@@ -625,3 +632,4 @@ void input_options::set_params(Params& params) {
         }
     }
 }
+
