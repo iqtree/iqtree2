@@ -977,15 +977,15 @@ public:
     
     /** Implementations of likelihood compuation at branch*/
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
-    double implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value = true);
+    double implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool computing_esr, bool save_log_value = true);
     template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
-    double implComputingNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value = true);
+    double implComputingNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool computing_esr, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
-    double implComputingLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value = true);
+    double implComputingLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool computing_esr, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
-    double implComputingLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool fake_leaf, bool save_log_value = true);
+    double implComputingLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool computing_esr, bool save_log_value = true);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -1008,21 +1008,21 @@ public:
             @param dad its dad, used to direct the tranversal
             @return tree likelihood
      */
-    virtual double computeLikelihoodBranchFakeLeaf(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+    virtual double computeLikelihoodBranchESR(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
-    typedef double (PhyloTree::*ComputeLikelihoodBranchFakeLeafType)(PhyloNeighbor*, PhyloNode*, bool);
-    ComputeLikelihoodBranchFakeLeafType computeLikelihoodBranchFakeLeafPointer;
+    typedef double (PhyloTree::*ComputeLikelihoodBranchESRType)(PhyloNeighbor*, PhyloNode*, bool);
+    ComputeLikelihoodBranchESRType computeLikelihoodBranchESRPointer;
 
     template<class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
-    double computeNonrevLikelihoodBranchFakeLeafGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+    double computeNonrevLikelihoodBranchESRGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
     template<class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
-    double computeNonrevLikelihoodBranchFakeLeafSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+    double computeNonrevLikelihoodBranchESRSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
-    double computeLikelihoodBranchFakeLeafSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+    double computeLikelihoodBranchESRSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
-    double computeLikelihoodBranchFakeLeafGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
+    double computeLikelihoodBranchESRGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value = true);
 
     /****************************************************************************
             computing likelihood on a branch using buffer

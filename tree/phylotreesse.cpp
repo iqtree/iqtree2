@@ -136,7 +136,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         sse = LK_386;
 #else
         computeLikelihoodBranchPointer = NULL;
-        computeLikelihoodBranchFakeLeafPointer = NULL;
+        computeLikelihoodBranchESRPointer = NULL;
         computeLikelihoodDervPointer = NULL;
         computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = NULL;
@@ -195,7 +195,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
 #else
     computeLikelihoodBranchPointer = NULL;
-    computeLikelihoodBranchFakeLeafPointer = NULL;
+    computeLikelihoodBranchESRPointer = NULL;
     computeLikelihoodDervPointer = NULL;
     computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = NULL;
@@ -223,8 +223,8 @@ double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *
 
 }
 
-double PhyloTree::computeLikelihoodBranchFakeLeaf(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    return (this->*computeLikelihoodBranchFakeLeafPointer)(dad_branch, dad, save_log_value);
+double PhyloTree::computeLikelihoodBranchESR(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
+    return (this->*computeLikelihoodBranchESRPointer)(dad_branch, dad, save_log_value);
 }
 
 void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
@@ -1479,7 +1479,7 @@ void PhyloTree::computeMarginalExtantState(PhyloNeighbor *dad_branch, PhyloNode 
     double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
 
     // compute _pattern_lh_cat_state using NONREV kernel
-    computeLikelihoodBranchFakeLeaf(dad_branch, dad);
+    computeLikelihoodBranchESR(dad_branch, dad);
 
     // compute the Extant state probability from the branch's likelihood
     computeMarginalState(dad_branch, dad,
