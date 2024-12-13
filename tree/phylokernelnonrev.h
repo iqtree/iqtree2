@@ -1154,18 +1154,20 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
 		double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
         double *this_trans_mat = &trans_mat[c*nstatesqr];
         model->computeTransMatrix(len, this_trans_mat, m);
-        for (size_t i = 0; i < nstatesqr; i++) {
-			this_trans_mat[i] *= prop;
-        }
         
         // if computing ESR, extract the transposed transition matrix
         // before the transition matrix is combined with the state freqs
         if (computing_esr)
         {
             for (size_t i = 0; i < nstates; i++) {
-                for (size_t x = 0; x < nstates; x++, ++transposed_trans_mat_ptr)
-                    transposed_trans_mat_ptr[0] = this_trans_mat[x * nstates + i];
+                size_t this_trans_mat_index = i;
+                for (size_t x = 0; x < nstates; x++, ++transposed_trans_mat_ptr, this_trans_mat_index += nstates)
+                    transposed_trans_mat_ptr[0] = this_trans_mat[this_trans_mat_index];
             }
+        }
+        
+        for (size_t i = 0; i < nstatesqr; i++) {
+            this_trans_mat[i] *= prop;
         }
         
         if (!rooted) {
