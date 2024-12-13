@@ -1057,22 +1057,22 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchESRSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, true, save_log_value);
+    return implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, true, save_log_value);
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchESRGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, true, save_log_value);
+    return implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, true, save_log_value);
 #endif
 }
     
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, false, save_log_value);
+    return implComputingNonrevLikelihoodBranchSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA>(dad_branch, dad, false, save_log_value);
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
 double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, bool save_log_value) {
-    implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, false, save_log_value);
+    return implComputingNonrevLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA>(dad_branch, dad, false, save_log_value);
 #endif
 }
 
