@@ -2568,22 +2568,22 @@ string IQTreeMix::getTreeString() {
     return tree_stream.str();
 }
 
-// return the average of the tree lengths
+// return the weighted sum of the tree lengths over all trees
 double IQTreeMix::treeLength(Node *node, Node *dad) {
     double len = 0.0;
     size_t i;
     for (i=0; i<size(); i++)
-        len += at(i)->treeLength();
-    return len / size();
+        len += at(i)->treeLength() * weights[i];
+    return len;
 }
 
-// return the average length of all internal branches
+// return the weighted sum of the lengths of all internal branches over all trees
 double IQTreeMix::treeLengthInternal( double epsilon, Node *node, Node *dad) {
     double len = 0.0;
     size_t i;
     for (i = 0; i < size(); i++)
-        len += at(i)->treeLengthInternal(epsilon);
-    return len / size();
+        len += at(i)->treeLengthInternal(epsilon) * weights[i];
+    return len;
 }
 
 int IQTreeMix::getNParameters() {

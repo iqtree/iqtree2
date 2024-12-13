@@ -214,14 +214,14 @@ public:
     virtual string getTreeString();
     
     /**
-     @return the average of the tree lengths
+     @return the weighted sum of the tree lengths
      @param node the starting node, NULL to start from the root
      @param dad dad of the node, used to direct the search
      */
     virtual double treeLength(Node *node = NULL, Node *dad = NULL);
     
     /**
-     @return the average length of all internal branches
+     @return the weighted sum of the lengths of all internal branches
      @param node the starting node, NULL to start from the root
      @param dad dad of the node, used to direct the search
      */
