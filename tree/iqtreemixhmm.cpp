@@ -32,55 +32,12 @@ IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &tree
 
 IQTreeMixHmm::~IQTreeMixHmm() {
     delete[] objAlgo;
-    if (siteTypes != NULL)
-        delete[] siteTypes;
 }
 
 // initialize the model
 void IQTreeMixHmm::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
     IQTreeMix::initializeModel(params, model_name, models_block);
     size_t i;
-    
-    // for all the unlinked substitution models,
-    // set all trees to this tree
-    // if (!isLinkModel) {
-    //    for (i=0; i<models.size(); i++) {
-    //        models[i]->setTree(this);
-    //    }
-    // }
-    
-    // handle the linked or unlinked site rate(s)
-    /*
-    site_rates.clear();
-    site_rate_trees.clear();
-    if (anySiteRate) {
-        if (isLinkSiteRate) {
-            // for linked site rate model, set all site rates to site_rates[0]
-            site_rates.push_back(at(0)->getModelFactory()->site_rate);
-            for (i=1; i<ntree; i++) {
-                at(i)->getModelFactory()->site_rate = site_rates[0];
-                at(i)->setRate(site_rates[0]);
-            }
-            // for linked site rate model, set their trees to this tree
-            for (i=0; i<site_rates.size(); i++) {
-                site_rates[i]->setTree(this);
-            }
-            for (i=0; i<ntree; i++) {
-                site_rate_trees.push_back(this);
-            }
-        } else {
-            for (i=0; i<ntree; i++) {
-                site_rates.push_back(at(i)->getModelFactory()->site_rate);
-            }
-            // for unlinked site rate models, set their trees to its own tree
-            for (i=0; i<site_rates.size(); i++) {
-                site_rates[i]->setTree(at(i));
-            }
-            for (i=0; i<ntree; i++) {
-                site_rate_trees.push_back(at(i));
-            }
-        }
-    }*/
     
     // build the branch ID
     if (branch_group.size() == 0) {
@@ -116,8 +73,8 @@ void IQTreeMixHmm::initializeTransitModel(Params &params) {
     modelHmm->initialize_transitLog();
     
     // show the transition model
-    if (params.treemix_optimize_methods != "mast")
-        cout << "HMM transition model: " << modelHmm->getFullName() << " (" << modelHmm->getName() << ")"<< endl;
+    // if (params.treemix_optimize_methods != "mast")
+    //    cout << "HMM transition model: " << modelHmm->getFullName() << " (" << modelHmm->getName() << ")"<< endl;
 
     // set the associated PhyloHmm of modelHmm to this
     modelHmm->setPhyloHmm(this);
@@ -446,7 +403,8 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     // change the objective function to backlikelihood
     objFun = 0;
 
-    cout << setprecision(5) << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
+    if (printInfo)
+        cout << setprecision(5) << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
     
     // minimum value of edge length
     if (verbose_mode >= VB_MED) {
@@ -454,13 +412,14 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     }
 
     // minimum value of HMM same-category transition probability
-    if (Params::getInstance().HMM_min_stran > 1e-10) {
+    if (printInfo && Params::getInstance().HMM_min_stran > 1e-10) {
         cout << "Minimum value of HMM same-category transition probability is set to: " << Params::getInstance().HMM_min_stran << endl;
     }
 
     score = computeLikelihood();
 
-    cout << "1. Initial HMM log-likelihood: " << score << endl;
+    if (printInfo)
+        cout << "1. Initial HMM log-likelihood: " << score << endl;
 
     // first optimize prob array
     score = optimizeProbEM();
@@ -502,7 +461,8 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
         if (verbose_mode >= VB_MED)
             cout << "after optimizing transition matrix and prob array, HMM likelihood = " << score << endl;
 
-        cout << step+2 << ". Current HMM log-likelihood: " << score << endl;
+        if (printInfo)
+            cout << step+2 << ". Current HMM log-likelihood: " << score << endl;
 
         if (score < prev_score + logl_epsilon)
             // converged
@@ -529,6 +489,9 @@ string IQTreeMixHmm::optimizeModelParamHMM(bool printInfo, double logl_epsilon) 
     // compute the corresponding score according to the tree mixture formula
     objFun = 1;
     score = computeLikelihood();
+    
+    if (printInfo)
+        cout << "Converted tree mixture likelihood = " << score << endl;
 
     setCurScore(score);
     stop_rule.setCurIt(step);

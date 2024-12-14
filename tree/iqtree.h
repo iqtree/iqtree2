@@ -720,7 +720,7 @@ public:
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */
-    void computeInitialTree(LikelihoodKernel kernel, istream* in = NULL);
+    virtual void computeInitialTree(LikelihoodKernel kernel, istream* in = NULL);
 
     /**
      *  @brief: optimize model parameters on the current tree

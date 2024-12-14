@@ -21,6 +21,7 @@
 #define PARTITIONMODEL_H
 
 #include "tree/phylosupertree.h"
+#include "tree/phylosuperhmm.h"
 #include "modelfactory.h"
 
 /**

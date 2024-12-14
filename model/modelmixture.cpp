@@ -2618,16 +2618,16 @@ string ModelMixture::getName() {
 }
 
 string ModelMixture::getNameParams(bool show_fixed_params) {
-    if (full_name != "")
-        return full_name;
+    // if (full_name != "")
+    //    return full_name;
     string retname = "MIX";
     retname += OPEN_BRACKET;
-    // int i = 0;
+    int i = 0;
     for (iterator it = begin(); it != end(); it++) {
         if (it != begin()) retname += ",";
         retname += (*it)->getNameParams(show_fixed_params);
-        // retname += ":1:" + convertDoubleToString(prop[i]);
-        // i++;
+        retname += ":1:" + convertDoubleToString(prop[i]);
+        i++;
     }
     retname += CLOSE_BRACKET;
     return retname;

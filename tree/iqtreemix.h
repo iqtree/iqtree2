@@ -239,8 +239,15 @@ public:
      @param brtype type of branch to print
      @return ID of the taxon with smallest ID
      */
-    virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
+    // virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
     
+    /**
+            print the tree to the output file in newick format
+            @param out the output stream.
+            @param brtype type of branch to print
+     */
+    virtual void printTree(ostream & out, int brtype = WT_BR_LEN);
+
     /**
      *  Return best tree string from the candidate set
      *
@@ -278,7 +285,12 @@ public:
      get the name of the model
      */
     virtual string getModelName();
-    
+
+    /**
+     get the name of the model
+     */
+    virtual string getModelNameParams(bool show_fixed_params = false);
+
     // compute parsimony scores for each tree along the patterns
     // results are stored in the array patn_parsimony
     void computeParsimony();

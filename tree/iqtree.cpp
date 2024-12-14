@@ -564,16 +564,20 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         
         // start the search with user-defined tree
         bool myrooted = params->is_rooted;
+        bool mesgExist = false;
         if (in != NULL) {
             readTree(*in, myrooted);
         } else {
             cout << "Reading input tree file " << params->user_file << " ...";
             readTree(params->user_file, myrooted);
+            mesgExist = true;
         }
         if (myrooted && !isSuperTreeUnlinked()) {
             cout << " rooted tree";
+            mesgExist = true;
         }
-        cout << endl;
+        if (mesgExist)
+            cout << endl;
         setAlignment(aln);
         if (isSuperTree())
             wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
@@ -653,9 +657,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
     if (!constraintTree.isCompatible(this))
         outError("Initial tree is not compatible with constraint tree");
 
+    /*
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
     }
+    */
 
     if (params->root) {
         StrVector outgroup_names;

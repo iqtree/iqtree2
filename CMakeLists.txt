@@ -100,7 +100,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH ".6.8.mf")
+set (iqtree_VERSION_PATCH ".6.9.mf")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 

@@ -144,6 +144,10 @@ IQTreeMix::~IQTreeMix() {
         at(i)->setRate(initial_site_rates[i]);
         at(i)->getRate()->setTree(at(i));
     }
+
+    model_factory = NULL;
+    model = NULL;
+    site_rate = NULL;
     
     for (i=0; i<size(); i++) {
         delete (at(i));
@@ -457,32 +461,44 @@ void IQTreeMix::separateModel(string modelName) {
     // build the branch ID
     computeBranchID();
     
-    // show summary
-    cout << endl;
+    // check whether it is linked or unlinked model or rate
     if (model_names.size() == 1) {
-        cout << "Linked substitution model:" << endl;
         isLinkModel = true;
     } else {
-        cout << "Unlinked substitution models:" << endl;
         isLinkModel = false;
+    }
+    if (anySiteRate) {
+        if (siterate_names.size() == 1) {
+            isLinkSiteRate = true;
+        } else {
+            isLinkSiteRate = false;
+        }
+    }
+
+    /*
+    // show summary
+    cout << endl;
+    if (isLinkModel) {
+        cout << "Linked substitution model:" << endl;
+    } else {
+        cout << "Unlinked substitution models:" << endl;
     }
     for (i = 0; i < model_names.size(); i++) {
         cout << "   " << model_names[i] << endl;
     }
     cout << endl;
     if (anySiteRate) {
-        if (siterate_names.size() == 1) {
+        if (isLinkSiteRate) {
             cout << "Linked RHS model:" << endl;
-            isLinkSiteRate = true;
         } else {
             cout << "Unlinked RHS models:" << endl;
-            isLinkSiteRate = false;
         }
         for (i = 0; i < siterate_names.size(); i++) {
             cout << "   " << siterate_names[i] << endl;
         }
     }
     cout << endl;
+    */
 }
 
 void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *models_block) {
@@ -544,35 +560,22 @@ void IQTreeMix::initializeModel(Params &params, string model_name, ModelsBlock *
     
     // handle the linked or unlinked site rate(s)
     if (anySiteRate) {
-//        if (isLinkSiteRate) {
-//            site_rates.push_back(at(0)->getModelFactory()->site_rate);
-//            for (i=1; i<ntree; i++) {
-//                at(i)->getModelFactory()->site_rate = site_rates[0];
-//                at(i)->setRate(site_rates[0]);
-//            }
-//            // for linked site rate model, set its tree to this tree
-//            site_rates[0]->setTree(this);
-//            for (i=0; i<ntree; i++) {
-//                site_rate_trees.push_back(this);
-//            }
-//        } else {
+        for (i=0; i<ntree; i++) {
+            site_rates.push_back(at(i)->getModelFactory()->site_rate);
+        }
+        if (isLinkSiteRate) {
+            // for linked site rate model, set their trees to this tree
             for (i=0; i<ntree; i++) {
-                site_rates.push_back(at(i)->getModelFactory()->site_rate);
+                site_rates[i]->setTree(this);
+                site_rate_trees.push_back(at(i));
             }
-            if (isLinkSiteRate) {
-                // for linked site rate model, set their trees to this tree
-                for (i=0; i<ntree; i++) {
-                    site_rates[i]->setTree(this);
-                    site_rate_trees.push_back(at(i));
-                }
-            } else {
-                // for unlinked site rate model, set their trees to corresponding trees
-                for (i=0; i<ntree; i++) {
-                    site_rates[i]->setTree(at(i));
-                    site_rate_trees.push_back(at(i));
-                }
+        } else {
+            // for unlinked site rate model, set their trees to corresponding trees
+            for (i=0; i<ntree; i++) {
+                site_rates[i]->setTree(at(i));
+                site_rate_trees.push_back(at(i));
             }
-//        }
+        }
     }
 }
 
@@ -2660,16 +2663,26 @@ void IQTreeMix::drawTree(ostream &out, int brtype, double zero_epsilon) {
         @param brtype type of branch to print
         @return ID of the taxon with smallest ID
  */
+void IQTreeMix::printTree(ostream & out, int brtype) {
+    for (int i=0; i<size(); i++) {
+        at(i)->printTree(out, brtype);
+    }
+}
+    
+/*
 int IQTreeMix::printTree(ostream &out, int brtype, Node *node, Node *dad) {
     size_t i;
     int value = 0;
     for (i=0; i<size(); i++) {
-        out << "Tree " << i+1 << ":" << endl;
+        // out << "Tree " << i+1 << ":" << endl;
         value = at(i)->printTree(out, brtype, node, dad);
+        if (i<size()-1)
+            out << ";" << endl;
     }
     return value;
 }
-
+*/
+    
 /**
  *  Return best tree string from the candidate set
  *
@@ -3088,6 +3101,68 @@ string IQTreeMix::getModelName() {
     return model;
 }
 
+/**
+        get the name of the model
+ */
+string IQTreeMix::getModelNameParams(bool show_fixed_params) {
+    size_t i;
+    string model = "";
+
+    if (isLinkModel) {
+        // for linked model
+        model += at(0)->getModel()->getNameParams(show_fixed_params);
+        
+        if (anySiteRate) {
+            if (isLinkSiteRate) {
+                // for linked site rate
+                model += at(0)->getRate()->getNameParams();
+            } else {
+                // for unlinked site rate
+                model += "+TMIX{";
+                for (i=0; i<size(); i++) {
+                    if (i>0)
+                        model += ",";
+                    string ratenameparam = at(i)->getRate()->getNameParams();
+                    if (ratenameparam.length() > 0 && ratenameparam[0] == '+') {
+                        ratenameparam = ratenameparam.substr(1);
+                    }
+                    model += ratenameparam;
+                }
+                model += "}";
+            }
+        }
+    } else {
+        // for unlinked model
+        model += "TMIX{";
+        if (anySiteRate && !isLinkSiteRate) {
+            // show both unlinked model and unlinked site rate
+            for (i=0; i<size(); i++) {
+                if (i>0)
+                    model += ",";
+                model += at(i)->getModel()->getNameParams(show_fixed_params)
+                            + at(i)->getRate()->getNameParams();
+            }
+        } else {
+            // show unlinked model only
+            for (i=0; i<size(); i++) {
+                if (i>0)
+                    model += ",";
+                model += at(i)->getModel()->getNameParams(show_fixed_params);
+            }
+        }
+        model += "}";
+        if (anySiteRate && isLinkSiteRate) {
+            // for linked site rate
+            model += at(0)->getRate()->getNameParams();
+        }
+    }
+    if (isEdgeLenRestrict)
+        model += "+TR";
+    else if (model.find("TMIX") == string::npos)
+        model += "+T";
+    return model;
+}
+    
 struct classcomp {
   bool operator() (const Pattern& lhs, const Pattern& rhs) const {
       for (size_t i=0; i<lhs.size() && i<rhs.size(); i++) {

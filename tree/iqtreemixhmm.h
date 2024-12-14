@@ -26,7 +26,7 @@ public:
     IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees);
     
     /**
-    default destructor
+     destructor
      */
     ~IQTreeMixHmm();
     

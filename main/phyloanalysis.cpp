@@ -28,6 +28,7 @@
 #include "tree/phylosupertree.h"
 #include "tree/phylosupertreeplen.h"
 #include "tree/phylosupertreeunlinked.h"
+#include "tree/phylosuperhmm.h"
 #include "phyloanalysis.h"
 #include "alignment/alignment.h"
 #include "alignment/superalignment.h"
@@ -729,6 +730,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
 }
 
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
+    cout << "enter [reportTree]" << endl;
     size_t ssize = tree.getAlnNSite();
     double epsilon = 1.0 / ssize;
     double totalLen;
@@ -737,7 +739,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     size_t i;
     IQTreeMix* treemix = NULL;
 
-    if (tree.isTreeMix()) {
+    if (tree.isTreeMix() && !tree.isSuperTree()) {
         treemix = (IQTreeMix*) &tree;
         df = treemix->getNParameters();
         for (i=0; i<treemix->size(); i++) {
@@ -746,6 +748,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     } else {
         df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
         totalLen = tree.treeLength();
+        cout << "inside [reportTree] condition B; df = " << df << " totalLen = " << totalLen << endl;
     }
 
     double AIC_score, AICc_score, BIC_score;
@@ -1144,8 +1147,8 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
      cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 
     if (params.optimize_params_use_hmm) {
-        cout << "  HMM result file:               " << params.out_prefix << ".hmm" << endl;
-        cout << "                                 " << params.out_prefix << ".pp.hmm" << endl;
+        cout << "  HMM result file(s):            " << params.out_prefix << ".*.hmm" << endl;
+        // cout << "                                 " << params.out_prefix << ".*.pp.hmm" << endl;
     }
     
     if (params.optimize_linked_gtr) {
@@ -2202,10 +2205,7 @@ void initializeParams(Params &params, IQTree &iqtree)
     {
         // compute initial tree
         if (!params.compute_ml_tree_only) {
-            if (iqtree.isTreeMix())
-                ((IQTreeMix*) &iqtree)->computeInitialTree(params.SSE);
-            else
-                iqtree.computeInitialTree(params.SSE);
+            iqtree.computeInitialTree(params.SSE);
         }
     }
     ASSERT(iqtree.aln);
@@ -2408,16 +2408,21 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     }
     
     if (params.optimize_params_use_hmm){
-        string hmm_file = string(params.out_prefix) + ".hmm";
+        string file_prefix = string(params.out_prefix);
+        string file_ext = ".hmm";
         int cat_assign_method = 0;
         // the categories along sites is assigned according to the path with maximum probability (default)
-        printHMMResult(hmm_file.c_str(), &iqtree, cat_assign_method);
+        // extension: "op" stands for Optimal Path
+        printHMMResult(file_prefix, file_ext, &iqtree, cat_assign_method);
 
-        hmm_file = string(params.out_prefix) + ".pp.hmm";
+        /*
+        file_ext = ".pp.hmm";
         cat_assign_method = 1;
         // the categories along sites is assigned according to the max posterior probability
-        printHMMResult(hmm_file.c_str(), &iqtree, cat_assign_method);
-
+        // extension: "pp" stands for max Posterior Prob.
+        printHMMResult(file_prefix, file_ext, &iqtree, cat_assign_method);
+        */
+        
         if (params.print_marginal_prob) {
             string mp_file = params.out_prefix;
             mp_file += ".mprob";
@@ -2574,12 +2579,14 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time, double search_real_time) {
     
     if (iqtree.isTreeMix()) {
-        cout << "Total tree lengths:";
-        IQTreeMix* treemix = (IQTreeMix*) &iqtree;
-        for (size_t i = 0; i < treemix->size(); i++) {
-            cout << " " << treemix->at(i)->treeLength();
+        if (!iqtree.isSuperTree()) {
+            cout << "Total tree lengths:";
+            IQTreeMix* treemix = (IQTreeMix*) &iqtree;
+            for (size_t i = 0; i < treemix->size(); i++) {
+                cout << " " << treemix->at(i)->treeLength();
+            }
+            cout << endl;
         }
-        cout << endl;
     } else {
         cout << "Total tree length: " << iqtree.treeLength() << endl;
     }
@@ -2707,7 +2714,24 @@ bool isTreeMixture(Params& params) {
     return (params.model_name.find("+T") != string::npos);
 }
 
-// get the number after "+T" for tree-mixture model
+// return how many char c inside the infile
+int checkCharInFile(char* infile, char c) {
+    ifstream fin;
+    string aline;
+    size_t i,k;
+    k=0;
+    fin.open(infile);
+    while (getline(fin,aline)) {
+        for (i=0; i<aline.length(); i++) {
+            if (aline[i] == c)
+                k++;
+        }
+    }
+    fin.close();
+    return k;
+}
+
+// get the number of trees for the tree-mixture model
 int getTreeMixNum(Params& params) {
     int n = 0;
     size_t p = params.model_name.find("+T");
@@ -2716,8 +2740,25 @@ int getTreeMixNum(Params& params) {
         str_n = params.model_name.substr(p+2);
         n = atoi(str_n.c_str());
     }
+    if (n == 1) {
+        outError("The number after +T has to be greater than 1");
+    }
+    // check how many trees inside the user input file
+    int k = checkCharInFile(params.user_file, ';');
+    if (k <= 1) {
+        outError("Tree mixture model only supports at least 2 trees inside the tree file: " + string(params.user_file) + ". Each tree must be followed by the character ';'.");
+    }
+    if (n == 0) {
+        n = k;
+        cout << "Number of input trees: " << n << endl;
+    } else if (n < k) {
+        cout << "Note: Only " << n << " trees are considered, although there are more than " << n << " trees in the tree file: " << params.user_file << endl;
+    } else if (n > k) {
+        outError("The number of trees inside the tree file '" + string(params.user_file) + "' is less than " + convertIntToString(n));
+    }
     return n;
 }
+
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
@@ -2916,7 +2957,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         // Optimize model parameters and branch lengths using ML for the initial tree
         iqtree->clearAllPartialLH();
         initTree = iqtree->ensureModelParametersAreSet(initEpsilon);
-        
+
         if (params.lmap_num_quartets >= 0) {
             cout << endl << "Performing likelihood mapping with ";
             if (params.lmap_num_quartets > 0)
@@ -4055,18 +4096,66 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
  * TOP-LEVEL FUNCTION
  ***********************************************************/
 
+IQTree *newIQTreeMix(Params &params, Alignment *alignment) {
+    int i, k;
+    vector<IQTree*> trees;
+
+    if (params.optimize_params_use_hmm)
+        cout << "HMMSTER ";
+    // tree-mixture model
+    cout << "Tree-mixture model" << endl;
+    
+    if (params.compute_ml_tree_only) {
+        outError("option compute_ml_tree_only cannot be set for tree-mixture model");
+    }
+
+    // the minimum gamma shape should be greater than MIN_GAMMA_SHAPE_TREEMIX for tree mixture model
+    if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
+        if (params.min_gamma_shape != MIN_GAMMA_SHAPE)
+            cout << "The minimum value for Gamma shape is changed to " << MIN_GAMMA_SHAPE_TREEMIX << endl;
+        params.min_gamma_shape = MIN_GAMMA_SHAPE_TREEMIX;
+    }
+
+    if (params.user_file == NULL) {
+        outError("To use tree-mixture model, use an option: -te <newick file with multiple trees>");
+    }
+
+    // get the number of trees for tree-mixture model
+    int numTree = getTreeMixNum(params);
+    
+    for (i=0; i<numTree; i++) {
+        trees.push_back(new IQTree(alignment));
+    }
+    
+    return new IQTreeMixHmm(params, alignment, trees);
+}
+
 IQTree *newIQTree(Params &params, Alignment *alignment) {
     IQTree *tree;
-    
+
+    // check whether it is a tree mixture model
+    bool isTreeMix = isTreeMixture(params);
+
     if (alignment->isSuperAlignment()) {
         if (params.partition_type == TOPO_UNLINKED) {
+            
+            if (isTreeMix)
+                outError("Error! The topology-unlinked option is not supported for multitree mixture model");
             tree = new PhyloSuperTreeUnlinked((SuperAlignment*)alignment);
         } else if(params.partition_type != BRLEN_OPTIMIZE){
+            if (isTreeMix)
+                outError("Error! The proportional edge option is not supported for multitree mixture model");
             // initialize supertree - Proportional Edges case
             tree = new PhyloSuperTreePlen((SuperAlignment*)alignment, params.partition_type);
         } else {
-            // initialize supertree stuff if user specifies partition file with -sp option
-            tree = new PhyloSuperTree((SuperAlignment*)alignment);
+            if (isTreeMix) {
+                // get the number of trees for tree-mixture model
+                int numTree = getTreeMixNum(params);
+                tree = new PhyloSuperHmm((SuperAlignment*)alignment, params, numTree);
+            } else {
+                // initialize supertree stuff if user specifies partition file with -sp option
+                tree = new PhyloSuperTree((SuperAlignment*)alignment);
+            }
         }
         // this alignment will actually be of type SuperAlignment
         //        alignment = tree->aln;
@@ -4076,65 +4165,18 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
     } else {
         // allocate heterotachy tree if neccessary
         int pos = posRateHeterotachy(alignment->model_name);
-        
+
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
         } else if (pos != string::npos) {
             tree = new PhyloTreeMixlen(alignment, 0);
+        } else if (isTreeMix) {
+            tree = newIQTreeMix(params, alignment);
         } else
             tree = new IQTree(alignment);
     }
 
     return tree;
-}
-
-// return how many char c inside the infile
-int checkCharInFile(char* infile, char c) {
-    ifstream fin;
-    string aline;
-    size_t i,k;
-    k=0;
-    fin.open(infile);
-    while (getline(fin,aline)) {
-        for (i=0; i<aline.length(); i++) {
-            if (aline[i] == c)
-                k++;
-        }
-    }
-    fin.close();
-    return k;
-}
-
-IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
-    int i, k;
-    vector<IQTree*> trees;
-    
-    if (numTree == 1) {
-        outError("The number after +T has to be greater than 1");
-    }
-
-    // check how many trees inside the user input file
-    k = checkCharInFile(params.user_file, ';');
-    if (k <= 1) {
-        outError("Tree mixture model only supports at least 2 trees inside the tree file: " + string(params.user_file) + ". Each tree must be followed by the character ';'.");
-    }
-    
-    if (numTree == 0) {
-        numTree = k;
-        cout << "Number of input trees: " << numTree << endl;
-    } else if (numTree < k) {
-        cout << "Note: Only " << numTree << " trees are considered, although there are more than " << numTree << " trees in the tree file: " << params.user_file << endl;
-    } else if (numTree > k) {
-        outError("The number of trees inside the tree file '" + string(params.user_file) + "' is less than " + convertIntToString(numTree));
-    }
-    
-    for (i=0; i<numTree; i++) {
-        trees.push_back(newIQTree(params,alignment));
-    }
-    // if (params.optimize_params_use_hmm)
-        return new IQTreeMixHmm(params, alignment, trees);
-    // else
-    //    return new IQTreeMix(params, alignment, trees);
 }
 
 /** get ID of bad or good symtest results */
@@ -4416,47 +4458,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     }
 
     /*************** initialize tree ********************/
-    bool isTreeMix = isTreeMixture(params);
-    
-    if (params.optimize_params_use_hmm && !isTreeMix) {
-        outError("option '-hmmster' is only available for tree mixture model");
-    }
-    
-    if (isTreeMix) {
-        if (params.optimize_params_use_hmm)
-            cout << "HMMSTER ";
-        // tree-mixture model
-        cout << "Tree-mixture model" << endl;
-
-        if (params.compute_ml_tree_only) {
-            outError("option compute_ml_tree_only cannot be set for tree-mixture model");
-        }
-
-        // the minimum gamma shape should be greater than MIN_GAMMA_SHAPE_TREEMIX for tree mixture model
-        if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
-            if (params.min_gamma_shape != MIN_GAMMA_SHAPE)
-                cout << "The minimum value for Gamma shape is changed to " << MIN_GAMMA_SHAPE_TREEMIX << endl;
-            params.min_gamma_shape = MIN_GAMMA_SHAPE_TREEMIX;
-        }
-
-        if (params.user_file == NULL) {
-            outError("To use tree-mixture model, use an option: -te <newick file with multiple trees>");
-        }
-        
-        // get the number after "+T" for tree-mixture model
-        int treeNum = getTreeMixNum(params);
-        if (treeNum == 0) {
-            tree = newIQTreeMix(params, alignment); // tree mixture model
-        } else {
-            tree = newIQTreeMix(params, alignment, treeNum); // tree mixture model
-        }
-
-    } else {
-        tree = newIQTree(params, alignment);
-    }
+    tree = newIQTree(params, alignment);
 
     tree->setCheckpoint(checkpoint);
-    if (isTreeMix) {
+    if (tree->isTreeMix()) {
         ((IQTreeMix*) tree)->setMinBranchLen(params);
     } else if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
@@ -4475,6 +4480,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
             cout.precision(3);
         }
     }
+    // Increase the minimum branch length if PoMo is used.
+    if (alignment->seq_type == SEQ_POMO) {
+        params.max_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
+        cout.precision(1);
+        cout << "NOTE: maximal branch length is increased to " << params.max_branch_length << " because PoMo infers number of mutations and frequency shifts" << endl;
+        cout.precision(3);
+    }
+
 
     if (params.concatenate_aln) {
         Alignment aln(params.concatenate_aln, params.sequence_type, params.intype, params.model_name);
@@ -4483,7 +4496,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     }
 
     if (params.constraint_tree_file) {
-        if (isTreeMix) {
+        if (tree->isTreeMix()) {
             outError("Constraint tree does not work with tree-mixture model");
         }
         cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
@@ -4497,7 +4510,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
     }
 
     if (params.compute_seq_identity_along_tree) {
-        if (isTreeMix) {
+        if (tree->isTreeMix()) {
             outError("Computing sequence identity does not work with tree-mixture model");
         }
         if (!params.user_file)
@@ -4516,7 +4529,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         tree->printTree(out_tree.c_str());
         cout << "Tree with sequence identity printed to " << out_tree << endl;
     } else if (params.aln_output) {
-        if (isTreeMix) {
+        if (tree->isTreeMix()) {
             outError("Coverting alignment feature does not work with tree-mixture model");
         }
         /************ convert alignment to other format and write to output file *************/

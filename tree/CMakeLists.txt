@@ -32,6 +32,8 @@ phylonode.cpp
 phylonode.h
 phylonodemixlen.cpp
 phylonodemixlen.h
+phylosuperhmm.cpp
+phylosuperhmm.h
 phylosupertree.cpp
 phylosupertree.h
 phylosupertreeplen.cpp

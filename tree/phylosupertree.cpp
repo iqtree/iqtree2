@@ -32,7 +32,7 @@ PhyloSuperTree::PhyloSuperTree()
 	// Initialize the counter for evaluated NNIs on subtrees. FOR THIS CASE IT WON'T BE initialized.
 }
 
-PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQTree(alignment) {
+PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree, bool create_tree) :  IQTree(alignment) {
     totalNNIs = evalNNIs = 0;
 
     rescale_codon_brlen = false;
@@ -51,12 +51,14 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQ
 
     StrVector model_names;
     for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++, part++) {
-        PhyloTree *tree;
-        if (new_iqtree)
-            tree = new IQTree(*it);
-        else
-            tree = new PhyloTree(*it);
-        push_back(tree);
+        if (create_tree) {
+            PhyloTree *tree;
+            if (new_iqtree)
+                tree = new IQTree(*it);
+            else
+                tree = new PhyloTree(*it);
+            push_back(tree);
+        }
         PartitionInfo info;
         info.cur_ptnlh = NULL;
         info.nniMoves[0].ptnlh = NULL;
@@ -248,8 +250,11 @@ void PhyloSuperTree::printResultTree(string suffix) {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(tree_file_name);
-        for (iterator it = begin(); it != end(); it++)
+        for (iterator it = begin(); it != end(); it++) {
+            if ((*it)->isTreeMix() && it != begin())
+                out << endl;
             (*it)->printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        }
         out.close();
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, tree_file_name);

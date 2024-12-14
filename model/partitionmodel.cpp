@@ -65,21 +65,25 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         string model_name = (*it)->aln->model_name;
         if (model_name == "") // if empty, take model name from command option
         	model_name = params.model_name;
-        (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
-        (*it)->setModel((*it)->getModelFactory()->model);
-        (*it)->setRate((*it)->getModelFactory()->site_rate);
-
-        // link models between partitions
-        if (params.link_model) {
-            (*it)->getModel()->fixParameters(true);
-            if (linked_models.find((*it)->getModel()->getName()) == linked_models.end()) {
-                linked_models[(*it)->getModel()->getName()] = (*it)->getModel();
+        if ((*it)->isTreeMix()) {
+            ((IQTreeMixHmm*)(*it))->initializeModel(params, model_name, models_block);
+        } else {
+            (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
+            (*it)->setModel((*it)->getModelFactory()->model);
+            (*it)->setRate((*it)->getModelFactory()->site_rate);
+            
+            // link models between partitions
+            if (params.link_model) {
+                (*it)->getModel()->fixParameters(true);
+                if (linked_models.find((*it)->getModel()->getName()) == linked_models.end()) {
+                    linked_models[(*it)->getModel()->getName()] = (*it)->getModel();
+                }
+            } else if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && params.partition_type != TOPO_UNLINKED &&
+                       (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
+                // modify state_freq to account for empty sequences
+                (*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
+                (*it)->getModel()->decomposeRateMatrix();
             }
-        } else if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && params.partition_type != TOPO_UNLINKED &&
-            (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
-        	// modify state_freq to account for empty sequences
-        	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
-        	(*it)->getModel()->decomposeRateMatrix();
         }
         
         //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
@@ -578,14 +582,19 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         for (int i = 0; i < ntrees; i++) {
             int part = tree->part_order[i];
             double score;
-            if (opt_gamma_invar)
-                score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
-                                                                                        write_info && verbose_mode >= VB_MED,
-                                                                                        logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
-            else
-                score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
-                                                                              write_info && verbose_mode >= VB_MED,
-                                                                              logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            if (tree->at(part)->isTreeMix()) {
+                ((IQTreeMixHmm*)tree->at(part))->optimizeModelParameters(write_info && verbose_mode >= VB_MED, logl_epsilon);
+                score = ((IQTreeMixHmm*)tree->at(part))->getCurScore();
+            } else {
+                if (opt_gamma_invar)
+                    score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
+                                                                                            write_info && verbose_mode >= VB_MED,
+                                                                                            logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+                else
+                    score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
+                                                                                  write_info && verbose_mode >= VB_MED,
+                                                                                  logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            }
             tree_lh += score;
             if (write_info)
 #ifdef _OPENMP

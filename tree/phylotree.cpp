@@ -237,11 +237,14 @@ PhyloTree::~PhyloTree() {
     aligned_free(central_partial_pars);
     aligned_free(cost_matrix);
 
-    delete model_factory;
+    if (model_factory != NULL)
+        delete model_factory;
     model_factory = NULL;
-    delete model;
+    if (model != NULL)
+        delete model;
     model = NULL;
-    delete site_rate;
+    if (site_rate != NULL)
+        delete site_rate;
     site_rate = NULL;
     aligned_free(_pattern_lh_cat);
     aligned_free(_pattern_lh);
