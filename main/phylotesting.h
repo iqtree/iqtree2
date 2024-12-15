@@ -51,6 +51,7 @@ public:
         this->flag = flag;
         syncChkPoint = nullptr;
         //init_first_mix = false;
+        model_selection_action = 0;
     }
     
     CandidateModel(string subst_name, string rate_name, Alignment *aln, int flag = 0) : CandidateModel(flag) {
@@ -59,6 +60,7 @@ public:
         this->aln = aln;
         syncChkPoint = nullptr;
         //init_first_mix = false;
+        model_selection_action = 0;
     }
     
     CandidateModel(Alignment *aln, int flag = 0) : CandidateModel(flag) {
@@ -66,6 +68,7 @@ public:
         getUsualModel(aln);
         syncChkPoint = nullptr;
         //init_first_mix = false;
+        model_selection_action = 0;
     }
     
     string getName() {
@@ -187,6 +190,9 @@ public:
 
     /** the nest relationships of all candidate Q matrices */
     map<string, vector<string> > nest_network;
+
+    /** the value of the action in function runModelSelection*/
+    int model_selection_action;
 
     Alignment *aln; // associated alignment
 
