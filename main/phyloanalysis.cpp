@@ -773,7 +773,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     // mAIC report
     if (tree.isSuperTree()) {
         // compute mAIC/mBIC/mAICc if it is a partition model
-        int ntrees, mix_df;
+        int ntrees; //mix_df;
         double mix_lh;
 
         string maic_warning;
@@ -781,11 +781,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         if (mix_lh < 0) {
             PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
             ntrees = stree->size();
-            mix_df = df + ntrees - 1;
+            //mix_df = df + ntrees - 1;  // Ed Susko: The weights are fixed by the partition length, so there are no extra degrees of freedom
             //nsites = tree.getAlnNSite();
 
             double mAIC, mAICc, mBIC;
-            computeInformationScores(mix_lh, mix_df, ssize, mAIC, mAICc, mBIC);
+            computeInformationScores(mix_lh, df, ssize, mAIC, mAICc, mBIC);
 
             out << endl;
             out << "Mixture-based log-likelihood of the tree: " << mix_lh << endl;
