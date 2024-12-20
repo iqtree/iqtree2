@@ -811,7 +811,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
     {
         thread_id = omp_get_thread_num();
         // init random generators
-        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
+        int ran_seed = params->ran_seed + 1+ MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
         init_random(ran_seed, false, &rstream);
         generator.seed(ran_seed);
 
@@ -1050,7 +1050,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     {
         thread_id = omp_get_thread_num();
         // init random generators
-        int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
+        int ran_seed = params->ran_seed + 1+  MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
         init_random(ran_seed, false, &rstream);
         generator.seed(ran_seed);
             
