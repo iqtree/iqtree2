@@ -6595,7 +6595,9 @@ int *randstream;
  **/
 vector<int*> rstream_vec;
 /**
-   vector of generators for using continuous Gamma models with multiple threads
+   vector of generators for multimodal discrete distributions and continuous Gamma distributions
+   Note that multimodal discrete distributions were used to randomly select a site
+   when handling Indel/Sub events with the Gillespie algorithm.
  **/
 vector<default_random_engine> generator_vec;
 
