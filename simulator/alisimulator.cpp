@@ -797,7 +797,6 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
 {
     ostream *single_output = NULL;
     ostream *out = NULL;
-    int *rstream = NULL;
     vector<vector<short int>> sequence_cache;
     int actual_segment_length = sequence_length;
     
@@ -807,12 +806,11 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
     
     // simulate Sequences
     #ifdef _OPENMP
-    #pragma omp parallel private(rstream, out, thread_id, sequence_cache, actual_segment_length) firstprivate(generator)
+    #pragma omp parallel private(out, thread_id, sequence_cache, actual_segment_length) firstprivate(generator)
     {
         thread_id = omp_get_thread_num();
         // init random generators
         int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
-        init_random(ran_seed, false, &rstream);
         generator.seed(ran_seed);
 
         actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
@@ -833,7 +831,7 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         
         // initialize trans_matrix
         double *trans_matrix = new double[max_num_states * max_num_states];
-        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, site_locked_vec, rstream, generator);
+        simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, site_locked_vec, generator);
         
         // delete trans_matrix array
         delete[] trans_matrix;
@@ -845,9 +843,6 @@ void AliSimulator::executeEM(int thread_id, int &sequence_length, int default_se
         // release sequence cache
         if (store_seq_at_cache)
             vector<vector<short int>>().swap(sequence_cache);
-        
-        // release mem for rstream
-        finish_random(rstream);
         
         // merge output files into a single file if using multithreading
         #ifdef _OPENMP
@@ -1034,7 +1029,6 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
 {
     int actual_segment_length = sequence_length;
     ostream *out = NULL;
-    int *rstream = NULL;
     vector<vector<short int>> sequence_cache;
     // default_random_engine for generating a random number from a discrete distribution
     default_random_engine generator;
@@ -1049,12 +1043,11 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     
     // simulate Sequences
     #ifdef _OPENMP
-    #pragma omp parallel private(rstream, thread_id, sequence_cache, actual_segment_length) firstprivate(generator)
+    #pragma omp parallel private(thread_id, sequence_cache, actual_segment_length) firstprivate(generator)
     {
         thread_id = omp_get_thread_num();
         // init random generators
         int ran_seed = params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + thread_id + params->alignment_id;
-        init_random(ran_seed, false, &rstream);
         generator.seed(ran_seed);
             
         actual_segment_length = thread_id < num_simulating_threads - 1 ? default_segment_length : sequence_length - (num_simulating_threads - 1) * default_segment_length;
@@ -1112,7 +1105,7 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         {
             // initialize trans_matrix
             double *trans_matrix = new double[max_num_states * max_num_states];
-            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, site_locked_vec, rstream, generator);
+            simulateSeqs(thread_id, thread_id * default_segment_length, actual_segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, tree->MTree::root, tree->MTree::root, *out, state_mapping, input_msa, site_locked_vec, generator);
             
             // delete trans_matrix array
             delete[] trans_matrix;
@@ -1127,9 +1120,6 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
         // release sequence cache
         if (store_seq_at_cache)
             vector<vector<short int>>().swap(sequence_cache);
-        
-        // release mem for rstream
-        finish_random(rstream);
             
     #ifdef _OPENMP
     }
@@ -1461,7 +1451,7 @@ void AliSimulator::closeOutputStream(ostream *&out, bool force_uncompression)
 *  simulate sequences for all nodes in the tree by DFS
 *
 */
-void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, int* rstream, default_random_engine& generator)
+void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string,string> input_msa, std::vector<bool>* const site_locked_vec, default_random_engine& generator)
 {
     // process its neighbors/children
     NeighborVec::iterator it;
@@ -1525,18 +1515,18 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 // if a model is specify for the current branch -> simulate the sequence based on that branch-specific model
                 if ((*it)->attributes.find("model") != (*it)->attributes.end())
                 {
-                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it, rstream, generator);
+                    branchSpecificEvolution(thread_id, sequence_length, *dad_seq_chunk, *node_seq_chunk, store_seq_at_cache, trans_matrix, node, it, generator);
                 }
                 // otherwise, simulate the sequence based on the common model
                 else
                 {
                     // simulate the sequence chunk
-                    simulateASequenceFromBranchAfterInitVariables(segment_start, model, trans_matrix, *dad_seq_chunk, *node_seq_chunk , node, it, rstream);
+                    simulateASequenceFromBranchAfterInitVariables(segment_start, model, trans_matrix, *dad_seq_chunk, *node_seq_chunk , node, it, rstream_vec[thread_id]);
                 }
                 
                 // handle indels
                 if (params->alisim_insertion_ratio + params->alisim_deletion_ratio > 0)
-                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, 0, rstream, generator);
+                    simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, 0, rstream_vec[thread_id], generator);
             }
             // otherwise (Rate_matrix is used as the simulation method) + also handle Indels (if any).
             else
@@ -1551,7 +1541,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                     handlePreMutations(it, predefined_mutation_count, segment_start, segment_length, sequence_length, node_seq_chunk);
                 
                 // Each thread simulate a chunk of sequence using the Gillespie algorithm
-                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, predefined_mutation_count, rstream, generator);
+                simulateSeqByGillespie(segment_start, segment_length, model, *node_seq_chunk, sequence_length, it, simulation_method, site_locked_vec, predefined_mutation_count, rstream_vec[thread_id], generator);
             }
         }
         
@@ -1572,11 +1562,11 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
                 if (model->isMixture())
                 {
                     for (int i = 0; i < model->getNMixtures(); i++)
-                    handleDNAerr(segment_start, model->getDNAErrProb(i), *node_seq_chunk, rstream, i);
+                    handleDNAerr(segment_start, model->getDNAErrProb(i), *node_seq_chunk, rstream_vec[thread_id], i);
                 }
                 // otherwise, handle the DNA model
                 else
-                    handleDNAerr(segment_start, model->getDNAErrProb(), *node_seq_chunk, rstream);
+                    handleDNAerr(segment_start, model->getDNAErrProb(), *node_seq_chunk, rstream_vec[thread_id]);
             }
         }
         
@@ -1587,7 +1577,7 @@ void AliSimulator::simulateSeqs(int thread_id, int segment_start, int &segment_l
         mergeAndWriteSeqIndelFunDi(thread_id, out, sequence_length, state_mapping, input_msa, it, node);
         
         // browse 1-step deeper to the neighbor node
-        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, site_locked_vec, rstream, generator);
+        simulateSeqs(thread_id, segment_start, segment_length, sequence_length, model, trans_matrix, sequence_cache, store_seq_at_cache, (*it)->node, node, out, state_mapping, input_msa, site_locked_vec, generator);
     }
 }
 
@@ -1637,7 +1627,7 @@ void AliSimulator::handlePreMutations(const NeighborVec::iterator& it, int& pred
 /**
     branch-specific evolution by multi threads
 */
-void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator)
+void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, default_random_engine& generator)
 {
     unsigned short int num_threads_reach_barrier = 0;
     
@@ -1671,7 +1661,7 @@ void AliSimulator::branchSpecificEvolution(int thread_id, int sequence_length, v
             
     // only the first thread simulate the sequence
     if (thread_id == 0)
-        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it, rstream, generator);
+        branchSpecificEvolutionMasterThread(sequence_length, trans_matrix, node, it, rstream_vec[thread_id], generator);
     
     // manual implementation of barrier
     waitAtBarrier(3, (*it)->node);
