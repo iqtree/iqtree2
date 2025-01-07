@@ -1473,6 +1473,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     params.original_params = "";
     params.alisim_active = false;
+    params.multi_rstreams_used = false;
     params.alisim_inference_mode = false;
     params.alisim_no_copy_gaps = false;
     params.alisim_sequence_length = 1000;
@@ -5478,6 +5479,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
+                params.multi_rstreams_used = true;
                 
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
@@ -6588,6 +6590,14 @@ int finish_random() {
 /******************/
 
 int *randstream;
+/**
+   vector of random streams for multiple threads
+ **/
+vector<int*> rstream_vec;
+/**
+   vector of generators for using continuous Gamma models with multiple threads
+ **/
+vector<default_random_engine> generator_vec;
 
 int init_random(int seed, bool write_info, int** rstream) {
     //    srand((unsigned) time(NULL));
@@ -6627,6 +6637,62 @@ int finish_random(int *rstream) {
         return free_sprng(rstream);
     else
         return free_sprng(randstream);
+}
+
+int init_multi_rstreams()
+{
+#if RAN_TYPE == RAN_SPRNG
+    #ifdef _OPENMP
+    // get the number of threads
+    const int num_threads = countPhysicalCPUCores();
+    
+    // initialize a vector of random seeds
+    size_t ran_seed_vec_size = num_threads + num_threads;
+    vector<int> ran_seed_vec(ran_seed_vec_size);
+    
+    // generate a vector of random seeds
+    const int MAX_INT32 = 2147483647;
+    for (size_t i = 0; i < ran_seed_vec_size; ++i)
+        ran_seed_vec[i] = random_int(MAX_INT32);
+    
+    // print the random seeds for debugging purposes if needed
+    if (verbose_mode >= VB_DEBUG)
+    {
+        std::cout << "- Random seeds used:";
+        for (size_t i = 0; i < ran_seed_vec_size; ++i)
+            std::cout << " " << ran_seed_vec[i];
+        std::cout << std::endl;
+    }
+        
+    // initialize the vector of random streams
+    rstream_vec.resize(num_threads);
+    int* ran_seed_vec_ptr = &ran_seed_vec.front();
+    for (size_t i = 0; i < num_threads; ++i, ++ran_seed_vec_ptr)
+        init_random(ran_seed_vec_ptr[0], false, &rstream_vec[i]);
+        
+    // initialize the continuous Gamma generators
+    generator_vec.resize(num_threads);
+    for (size_t i = 0; i < num_threads; ++i, ++ran_seed_vec_ptr)
+        generator_vec[i].seed(ran_seed_vec_ptr[0]);
+    
+    #endif
+#else
+    outError("Oops! Only SPRNG is now supported for the parallel version.")
+#endif
+    
+    return rstream_vec.size();
+}
+
+int finish_multi_rstreams()
+{
+    // finish the random streams one by one
+    for (size_t i = 0; i < rstream_vec.size(); ++i)
+        finish_random(rstream_vec[i]);
+    
+    // clear the vector of random streams
+    rstream_vec.clear();
+    
+    return rstream_vec.size();
 }
 
 #endif /* USE_SPRNG */
