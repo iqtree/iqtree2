@@ -2393,6 +2393,9 @@ int main(int argc, char *argv[]) {
     checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
     cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
     init_random(Params::getInstance().ran_seed + MPIHelper::getInstance().getProcessID(), true);
+    // initialize multiple random streams if needed
+    if (Params::getInstance().multi_rstreams_used)
+        init_multi_rstreams();
 
     time(&start_time);
     cout << "Time:    " << ctime(&start_time);
@@ -2652,6 +2655,9 @@ int main(int argc, char *argv[]) {
     }catch(int err_num){}
 
     finish_random();
+    // finish multiple random streams if used
+    if (Params::getInstance().multi_rstreams_used)
+        finish_multi_rstreams();
     
     return EXIT_SUCCESS;
 }
