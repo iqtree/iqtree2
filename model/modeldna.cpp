@@ -202,8 +202,9 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	if (model_params != "") {
 	  readRates(model_params);
 	}
-	
-	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
+	if (def_freq == FREQ_EQUAL && phylo_tree->aln->isSSF())
+		outError("DNA models with equal state frequencies are not suitable for site-specific frequencies");
+	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
 	ModelMarkov::init(freq);
 //    model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
 //    setVariables(model_parameters);

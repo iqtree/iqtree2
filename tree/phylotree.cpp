@@ -1404,12 +1404,10 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     double *ptn_freq = ptn_state_freq;
     size_t nstates = aln->num_states;
 //    ModelMixture *models = (ModelMixture*)model;
-    
-    if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
-        cout << "Computing posterior mean site frequencies...." << endl;
+    if (params->site_state_freq_type == WSF_POSTERIOR_MEAN) {
+        cout << "Computing posterior mean site frequencies..." << endl;
         // loop over all site-patterns
         for (size_t ptn = 0; ptn < nptn; ++ptn) {
-        
             // first compute posterior for each mixture component
             double sum_lh = 0.0;
             for (size_t m = 0; m < nmixture; ++m) {
@@ -1419,7 +1417,6 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
             for (size_t m = 0; m < nmixture; ++m) {
                 lh_cat[m] *= sum_lh;
             }
-            
             // now compute state frequencies
             for (size_t state = 0; state < nstates; ++state) {
                 double freq = 0;
@@ -1427,13 +1424,12 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                     freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
                 ptn_freq[state] = freq;
             }
-            
             // increase the pointers
             lh_cat += nmixture;
             ptn_freq += nstates;
         }
-    } else if (params->print_site_state_freq == WSF_POSTERIOR_MAX) {
-        cout << "Computing posterior max site frequencies...." << endl;
+    } else if (params->site_state_freq_type == WSF_POSTERIOR_MAX) {
+        cout << "Computing posterior max site frequencies..." << endl;
         // loop over all site-patterns
         for (size_t ptn = 0; ptn < nptn; ++ptn) {
             // first compute posterior for each mixture component
@@ -1442,10 +1438,8 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                 if (lh_cat[m] > lh_cat[max_comp]) {
                     max_comp = m;
                 }
-            
             // now compute state frequencies
             memcpy(ptn_freq, model->getMixtureClass(max_comp)->state_freq, nstates*sizeof(double));
-            
             // increase the pointers
             lh_cat += nmixture;
             ptn_freq += nstates;
@@ -1453,7 +1447,15 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     }
 }
 
-
+void PhyloTree::computePatternRate(DoubleVector &ptn_rate) {
+    ASSERT(getRate()->getNRate() > 1);
+    if (params->site_rate_type == WSR_POSTERIOR_MEAN) {
+        cout << "Computing posterior mean site rates..." << endl;
+        int ncat;
+        IntVector ptn_cat;
+        ncat = site_rate->computePatternRates(ptn_rate, ptn_cat);
+    }
+}
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
     /*    if (!dad_branch) {

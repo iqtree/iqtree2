@@ -203,16 +203,14 @@ void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
     if (!ptn_state_freq)
     {
         ptn_state_freq = new double[nptn * max_num_states];
-        
-        SiteFreqType tmp_site_freq_type = tree->params->print_site_state_freq;
-        tree->params->print_site_state_freq = WSF_POSTERIOR_MEAN;
+        SiteFreqType tmp_site_freq_type = tree->params->site_state_freq_type;
+        tree->params->site_state_freq_type = WSF_POSTERIOR_MEAN;
         tree->computePatternStateFreq(ptn_state_freq);
         // get pattern-specific posterior model probability
         int nptn_times_nmixture = nptn * nmixture;
         ptn_model_dis = new double[nptn_times_nmixture];
         memcpy(ptn_model_dis, tree->getPatternLhCatPointer(), nptn_times_nmixture * sizeof(double));
-        tree->params->print_site_state_freq = tmp_site_freq_type;
-        
+        tree->params->site_state_freq_type = tmp_site_freq_type;
         // convert ptn_model_dis to accummulated matrix
         convertProMatrixIntoAccumulatedProMatrix(ptn_model_dis, nptn, nmixture);
     }

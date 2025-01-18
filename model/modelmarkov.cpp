@@ -1138,29 +1138,32 @@ bool ModelMarkov::isUnstableParameters() {
 
 void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 //    ASSERT(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
-
-    int i, ndim = getNDim();
-
-    for (i = 1; i <= ndim; i++) {
-	//cout << variables[i] << endl;
-	lower_bound[i] = MIN_RATE;
-	upper_bound[i] = MAX_RATE;
-	bound_check[i] = false;
-    }
-
+	int ndim = getNDim();
+	for (int i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = MIN_RATE;
+		upper_bound[i] = MAX_RATE;
+		bound_check[i] = false;
+	}
 	if (is_reversible && freq_type == FREQ_ESTIMATE) {
-		for (i = num_params+1; i <= num_params+num_states-1; i++) {
-//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+		// find the highest state freq
+		for (int i = 0; i < num_states; i++) {
+			if (state_freq[i] > state_freq[highest_freq_state]) {
+				highest_freq_state = i;
+			}
+		}
+		for (int i = num_params + 1; i <= num_params + num_states - 1; i++) {
+//			lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
-            lower_bound[i]  = Params::getInstance().min_state_freq;
-//            upper_bound[i] = 100.0;
-            upper_bound[i] = 1.0;
-            bound_check[i] = false;
-        }
+			lower_bound[i]  = Params::getInstance().min_state_freq;
+//			upper_bound[i] = 100.0;
+			upper_bound[i] = 1.0;
+			bound_check[i] = false;
+		}
 	} else if (phylo_tree->aln->seq_type == SEQ_DNA) {
-        setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
-            &bound_check[num_params+1], Params::getInstance().min_state_freq, freq_type);
-    }
+		setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
+			&bound_check[num_params+1], Params::getInstance().min_state_freq, freq_type);
+	}
 }
 
 double ModelMarkov::optimizeParameters(double gradient_epsilon) {
@@ -1185,11 +1188,12 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 	bool *bound_check = new bool[ndim+1];
 	double score;
 
-    for (int i = 0; i < num_states; i++) {
-        if (state_freq[i] > state_freq[highest_freq_state]) {
-            highest_freq_state = i;
-        }
-    }
+// Transferred to ModelMarkov::setBounds for ModelSet compatibility
+//    for (int i = 0; i < num_states; i++) {
+//        if (state_freq[i] > state_freq[highest_freq_state]) {
+//            highest_freq_state = i;
+//        }
+//    }
 
 	// by BFGS algorithm
 	setVariables(variables);
@@ -1737,37 +1741,33 @@ void ModelMarkov::readRates(string str) noexcept(false) {
 }
 
 void ModelMarkov::readStateFreq(istream &in) noexcept(false) {
-	int i;
-	for (i = 0; i < num_states; i++) {
-        string tmp_value;
-        in >> tmp_value;
-        if (tmp_value.length() == 0)
-            throw "State frequencies could not be read";
-        state_freq[i] = convert_double_with_distribution(tmp_value.c_str(), true);
+	for (int i = 0; i < num_states; i++) {
+		string tmp_value;
+		in >> tmp_value;
+		if (tmp_value.length() == 0)
+			throw "State frequencies could not be read";
+		state_freq[i] = convert_double_with_distribution(tmp_value.c_str(), true);
 		if (state_freq[i] < 0.0)
 			throw "Negative state frequencies found";
 	}
 	double sum = 0.0;
-	for (i = 0; i < num_states; i++) sum += state_freq[i];
-	if (fabs(sum-1.0) >= 1e-7)
-    {
-		outWarning("Normalizing state frequencies so that sum of them equals to 1");
-        sum = 1.0/sum;
-        for (i = 0; i < num_states; i++)
-            state_freq[i] *= sum;
-    }
+	for (int i = 0; i < num_states; i++) sum += state_freq[i];
+	if (fabs(sum) <= 1e-5)
+		outError("Sum of all state frequencies must be greater than zero!");
+	if (fabs(sum-1.0) >= 1e-7) {
+		if (verbose_mode >= VB_MIN)
+			outWarning("Normalizing state frequencies so that sum of them equals to 1");
+		for (int i = 0; i < num_states; i++) state_freq[i] /= sum;
+	}
 }
 
 void ModelMarkov::readStateFreq(string str) noexcept(false) {
 	int i;
 	int end_pos = 0;
-    
-    // detect the seperator
-    char separator = ',';
-    if (str.find('/') != std::string::npos)
-        separator = '/';
-    
-	for (i = 0; i < num_states; i++) {
+	// detect the seperator
+	char separator = ',';
+	if (str.find('/') != std::string::npos) separator = '/';
+	for (int i = 0; i < num_states; i++) {
 		int new_end_pos;
 		state_freq[i] = convert_double_with_distribution(str.substr(end_pos).c_str(), new_end_pos, true, separator);
 		end_pos += new_end_pos;
@@ -1779,27 +1779,26 @@ void ModelMarkov::readStateFreq(string str) noexcept(false) {
 		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ' && str[end_pos] != '/')
 			outError("Comma/Space/Forward slash to separate state frequencies not found in ", str);
 		end_pos++;
-        if (i < num_states - 1 && end_pos >= str.length())
-            outError("The number of frequencies ("+convertIntToString(i+1)+") is less than the number of states ("+convertIntToString(num_states)+"). Please check and try again.");
+		if (i < num_states - 1 && end_pos >= str.length())
+			outError("The number of frequencies ("+convertIntToString(i+1)+") is less than the number of states ("+convertIntToString(num_states)+"). Please check and try again.");
 	}
 	double sum = 0.0;
-	for (i = 0; i < num_states; i++) sum += state_freq[i];
-    if (fabs(sum) <= 1e-5)
-        outError("Sum of all state frequencies must be greater than zero!");
-	if (fabs(sum-1.0) >= 1e-7)
-    {
-        outWarning("Normalizing State frequencies so that sum of them equals to 1");
-        sum = 1.0/sum;
-        for (i = 0; i < num_states; i++)
-            state_freq[i] *= sum;
-    }
+	for (int i = 0; i < num_states; i++) sum += state_freq[i];
+	if (fabs(sum) <= 1e-5)
+		outError("Sum of all state frequencies must be greater than zero!");
+	if (fabs(sum-1.0) >= 1e-7) {
+		if (verbose_mode >= VB_MIN)
+			outWarning("Normalizing state frequencies so that sum of them equals to 1");
+		for (int i = 0; i < num_states; i++) state_freq[i] /= sum;
+	}
 }
 
 void ModelMarkov::readParameters(const char *file_name, bool adapt_tree) {
     if (!fileExists(file_name))
         outError("File not found ", file_name);
 
-    cout << "Reading model parameters from file " << file_name << endl;
+    if (verbose_mode >= VB_MIN)
+        cout << "Reading model parameters from file " << file_name << endl;
 
     // if detect if reading full matrix or half matrix by the first entry
 	try {

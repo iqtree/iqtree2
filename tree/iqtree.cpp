@@ -2734,7 +2734,10 @@ void IQTree::refineBootTrees() {
 
         // copy model
         // BQM 2019-05-31: bug fix with -bsam option
+        VerboseMode saved_mode = verbose_mode;
+        if (verbose_mode < VB_MAX) verbose_mode = VB_QUIET;
         boot_tree->initializeModel(*params, aln->model_name, models_block);
+        verbose_mode = saved_mode;
         boot_tree->getModelFactory()->setCheckpoint(getCheckpoint());
         if (isSuperTree())
             ((PartitionModel*)boot_tree->getModelFactory())->PartitionModel::restoreCheckpoint();

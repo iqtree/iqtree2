@@ -1,7 +1,7 @@
 //
 // C++ Interface: alignment
 //
-// Description: 
+// Description:
 //
 //
 // Author: BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>, (C) 2008
@@ -319,21 +319,20 @@ public:
     virtual void orderPatternByNumChars(int pat_type);
 
     /**
-     * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
+     * un-group site-patterns, i.e. making #sites = #patterns and pattern frequency = 1 for all patterns
      */
     void ungroupSitePattern();
 
-
     /**
-     * re-group site-patterns
+     * re-group site-patterns so that sites within each pattern fall into the same group
      * @param groups number of groups
      * @param site_group group ID (0, 1, ...ngroups-1; must be continuous) of all sites
      */
-    void regroupSitePattern(int groups, IntVector &site_group);
+    void regroupSitePattern(int groups, const IntVector &site_group);
 
 
     /****************************************************************************
-            output alignment 
+            output alignment
      ****************************************************************************/
     SeqType detectSequenceType(StrVector &sequences);
 
@@ -535,9 +534,11 @@ public:
      */
     bool isGapOnlySeq(size_t seq_id);
 
-    virtual bool isSuperAlignment() {
-        return false;
-    }
+    bool isSSF() { return !ptn_state_freq.empty(); }
+
+    bool isSSR() { return !ptn_rate_scaler.empty(); }
+
+    virtual bool isSuperAlignment() { return false; }
 
     /****************************************************************************
             alignment general processing
@@ -917,12 +918,12 @@ public:
   IntIntMap pomo_sampled_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
     /* for site-specific state frequency model with Huaichun, Edward, Andrew */
-    
-    /* site to model ID map */
-    IntVector site_model;
-    
-    /** site to state frequency vector */
-    vector<double*> site_state_freq;
+
+    /** pattern index to state frequency vector map */
+    vector<double*> ptn_state_freq;
+
+    /** pattern index to rate scaler map */
+    vector<double> ptn_rate_scaler;
 
     /**
      * @return true if data type is SEQ_CODON and state is a stop codon
@@ -985,14 +986,14 @@ public:
     void getAppearance(StateType state, StateBitset &state_app);
 
 	/**
-	 * read site specific state frequency vectors from a file to create corresponding model
-     * update site_model and site_state_freq variables for this class
-	 * @param aln input alignment
-	 * @param site_freq_file file name
-     * @return TRUE if alignment needs to be changed, FALSE otherwise
+	 * read site-specific state frequency vectors or site-specific rate (branch length) scalers
+	 * from a file to create a site-specific model
+	 * @param site_param_file input file name
+	 * @param param_type should be set to "freq" or "rate"
+	 * @return TRUE if alignment patterns need to be changed, FALSE otherwise
 	 */
-	bool readSiteStateFreq(const char* site_freq_file);
-    
+	bool readSiteParamFile(const char* site_param_file, const string &param_type);
+
     /**
      * special initialization for codon sequences, e.g., setting #states, genetic_code
      * @param sequence_type user-defined sequence type
@@ -1011,32 +1012,23 @@ public:
     void extractMapleFile(const std::string& aln_name, const InputType& format);
 
 protected:
+	/** sequence names */
+	vector<string> seq_names;
 
+	/** expected num_sites */
+	int expected_num_sites = -1;
 
-    /**
-            sequence names
-     */
-    vector<string> seq_names;
-    
-    /**
-            expected num_sites
-     */
-    int expected_num_sites = -1;
+	/** site to pattern index map */
+	IntVector site_pattern;
 
-    /**
-            Site to pattern index
-     */
-    IntVector site_pattern;
+	/** pattern index to first pattern site map */
+	IntVector pattern_first_site;
 
-    /**
-            hash map from pattern to index in the vector of patterns (the alignment)
-     */
-    PatternIntMap pattern_index;
-    
-    /**
-            alisim: caching ntfreq if it has already randomly initialized
-     */
-    double* cache_ntfreq = NULL;
+	/** hash map from pattern to index in the vector of patterns (the alignment) */
+	PatternIntMap pattern_index;
+
+	/** alisim: caching ntfreq if it has already randomly initialized */
+	double* cache_ntfreq = NULL;
 
 private:
     /**

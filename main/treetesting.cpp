@@ -405,69 +405,111 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
     
 }
 
-
-void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs) {
-    size_t nsites = tree->getAlnNSite();
-    size_t nstates = tree->aln->num_states;
-    double *ptn_state_freq;
-    if (state_freqs) {
-        ptn_state_freq = state_freqs;
-    } else {
-        ptn_state_freq = new double[((size_t)tree->getAlnNPattern()) * nstates];
-        tree->computePatternStateFreq(ptn_state_freq);
-    }
-    
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(filename);
-        IntVector pattern_index;
-        tree->aln->getSitePatternIndex(pattern_index);
-        for (size_t i = 0; i < nsites; ++i) {
-            out.width(6);
-            out << left << i+1 << " ";
-            double *state_freq = &ptn_state_freq[pattern_index[i]*nstates];
-            for (size_t j = 0; j < nstates; ++j) {
-                out.width(15);
-                out << state_freq[j] << " ";
-            }
-            out << endl;
-        }
-        out.close();
-        cout << "Site state frequency vectors printed to " << filename << endl;
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, filename);
-    }
-    if (!state_freqs)
-        delete [] ptn_state_freq;
+void printSiteStateFreq(const char *filename, PhyloTree *tree) {
+	if (!tree->getModel()->isMixture())
+		outError("No frequency mixture model was specified!");
+	size_t nsites = tree->getAlnNSite();
+	size_t nstates = tree->aln->num_states;
+	double *all_ptn_state_freq;
+	all_ptn_state_freq = new double[((size_t)tree->getAlnNPattern()) * nstates];
+	tree->computePatternStateFreq(all_ptn_state_freq);
+	try {
+	ofstream out;
+	out.exceptions(ios::failbit | ios::badbit);
+	out.open(filename);
+	IntVector site_pattern;
+	tree->aln->getSitePatternIndex(site_pattern);
+	for (size_t site = 0; site < nsites; ++site) {
+		out.width(6);
+		out << left << site + 1 << " ";
+		double *state_freqs = &all_ptn_state_freq[site_pattern[site]*nstates];
+		for (size_t x = 0; x < nstates; ++x) {
+			out.width(15);
+			out << state_freqs[x] << " ";
+		}
+		out << endl;
+	}
+	out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+	delete [] all_ptn_state_freq;
+	cout << "Site state frequencies printed to " << filename << endl;
 }
 
-void printSiteStateFreq(const char* filename, Alignment *aln) {
-    if (aln->site_state_freq.empty())
-        return;
-    size_t nsites  = aln->getNSite();
-    int    nstates = aln->num_states;
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(filename);
-        IntVector pattern_index;
-        aln->getSitePatternIndex(pattern_index);
-        for (size_t i = 0; i < nsites; ++i) {
-            out.width(6);
-            out << left << i+1 << " ";
-            double *state_freq = aln->site_state_freq[pattern_index[i]];
-            for (size_t j = 0; j < nstates; ++j) {
-                out.width(15);
-                out << state_freq[j] << " ";
-            }
-            out << endl;
-        }
-        out.close();
-        cout << "Site state frequency vectors printed to " << filename << endl;
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, filename);
-    }
+void printSiteRate(const char *filename, PhyloTree *tree, bool bayes) {
+	if (tree->getRate()->getNRate() == 1 && !tree->isSuperTree())
+		outError("No rate mixture model or partition model was specified!");
+	try {
+	ofstream out;
+	out.exceptions(ios::failbit | ios::badbit);
+	out.open(filename);
+	// write the comment header
+	string msg = (bayes) ? "empirical Bayesian method" : "maximum likelihood";
+	out << "# Site-specific subtitution rates determined by " << msg << endl;
+	out << "# This file can be read in MS Excel or in R with command:" << endl
+		<< "#   tab=read.table('" << filename << "',header=TRUE)" << endl
+		<< "# Columns are tab-separated with following meaning:" << endl;
+	if (tree->isSuperTree())
+		out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->front()->aln->name << ", etc)" << endl
+			<< "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+	else
+		out << "#   Site:   Alignment site ID" << endl;
+	if (bayes)
+		out << "#   Rate:   Posterior mean site rate weighted by posterior probability" << endl
+			<< "#   Cat:    Category with highest posterior (0=invariable, 1=slow, etc)" << endl
+			<< "#   C_Rate: Corresponding rate of highest category" << endl;
+	else
+		out << "#   Rate:   Site rate estimated by maximum likelihood" << endl;
+	// write the main header
+	msg = "";
+	if (tree->isSuperTree()) msg +=  "Part\t";
+	msg += "Site\tRate";
+	if (bayes) msg += "\tCat\tC_Rate";
+	out << msg << endl;
+	// infer and write the site rates
+	tree->writeSiteRates(out, bayes);
+	out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+	cout << "Site rates printed to " << filename << endl;
+}
+
+void printSiteParam(const char* filename, Alignment *aln, const string &param_type) {
+	ASSERT(param_type == "freq" || param_type == "rate");
+	if (param_type == "freq" && !aln->isSSF()) return;
+	if (param_type == "rate" && !aln->isSSR()) return;
+	size_t nsites = aln->getNSite();
+	int nstates = aln->num_states;
+	try {
+	ofstream out;
+	out.exceptions(ios::failbit | ios::badbit);
+	out.open(filename);
+	IntVector site_pattern;
+	aln->getSitePatternIndex(site_pattern);
+	for (size_t site = 0; site < nsites; ++site) {
+		out.width(6);
+		out << left << site + 1 << " ";
+		if (param_type == "freq") {
+			double *state_freqs = aln->ptn_state_freq[site_pattern[site]];
+			for (size_t x = 0; x < nstates; ++x) {
+				out.width(15);
+				out << state_freqs[x] << " ";
+			}
+		} else {
+			double rate = aln->ptn_rate_scaler[site_pattern[site]];
+			out.width(15);
+			out << rate << " ";
+		}
+		out << endl;
+	}
+	out.close();
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+	string msg = (param_type == "freq") ? "state frequency vectors" : "rate scalers";
+	cout << "Site " << msg << " printed to " << filename << endl;
 }
 
 int countDistinctTrees(istream &in, bool rooted, IQTree *tree, IntVector &distinct_ids, bool exclude_duplicate) {

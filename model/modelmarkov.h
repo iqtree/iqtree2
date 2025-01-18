@@ -263,7 +263,7 @@ public:
 		rescale the state frequencies
 		@param sum_one TRUE to make frequencies sum to 1, FALSE to make last entry equal to 1
 	*/
-	void scaleStateFreq(bool sum_one);
+	virtual void scaleStateFreq(bool sum_one);
 
 	/**
 		get frequency type
