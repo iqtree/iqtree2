@@ -840,6 +840,9 @@ public:
     /** number of packets used for likelihood kernel (typically more) */
     int num_packets;
 
+    /** flag to identify partition-trees with missing root for MCMCTree branch traversal order*/
+    bool leftSingleRoot;
+
     /****************************************************************************
             helper functions for computing tree traversal
      ****************************************************************************/

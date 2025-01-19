@@ -2699,21 +2699,12 @@ void saveTreeMCMCTree(DoubleVector branchLengths, RowVectorXd &branch_lengths_ve
                       stringstream &tree_stream) {
     Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
     branch_lengths_vector = branch_lengths_vector_mapped;
-    // tree->root = static_cast<Node*>(tree->traversal_starting_node);
-    //
-    // NeighborVec neivec = tree->root->neighbors;
-    // tree->root->neighbors.clear();
-    // tree->root->neighbors[0] = neivec[1];
-    // tree->root->neighbors[1] = neivec[2];
-    // tree->root->neighbors[2] = neivec[0];
-    // tree->clearBranchDirection();
-    // tree->computeBranchDirection();
     tree->printTree(tree_stream, WT_BR_LEN);
 }
 
 void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_stream,
                          RowVectorXd &branch_lengths_vector, RowVectorXd &gradient_vector_eigen,
-                         PhyloSuperTree *superTree = nullptr, int part_id = 0) {
+                         PhyloSuperTree *superTree = nullptr, int part_id = 0, const bool leftSingle=false) {
 
     size_t orig_nptn = tree->aln->size();
     size_t max_orig_nptn = get_safe_upper_limit(orig_nptn);
@@ -2729,13 +2720,49 @@ void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_
         vector<pair<int, int>> partBrMmap;
         BranchVector streeBranches;
         superTree->getBranches(streeBranches);
-
+        bool leftSingleRoot = false;
+        int counter = 0;
         for (Branch branch: streeBranches) {
             auto nei = (SuperNeighbor *) branch.first->findNeighbor(branch.second);
             auto nei1 = (SuperNeighbor *) branch.second->findNeighbor(branch.first);
             if (nei->link_neighbors[part_id] && nei1->link_neighbors[part_id]) {
                 partBrMmap.emplace_back(nei->id, nei->link_neighbors[part_id]->id);
+                counter++;
             }
+            // here we check whether the first child of the partition tree is a leaf in the case of missing taxa.
+            if (leftSingle && counter==1 && (nei->link_neighbors[part_id]->node->neighbors.size()==1 || nei1->link_neighbors[part_id]->node->neighbors.size()==1))
+            {
+                leftSingleRoot = true;
+                counter++;
+            }
+        }
+        // Note: if we get an unrooted tree with left child is a leaf, we need to push it to back as the last branch
+        // This is a special case in MCMCTree
+        if (leftSingleRoot)
+        {
+            auto partBrM = partBrMmap.front();
+            vector<pair<int, int>> partBrMapleftSingle;
+            vector<pair<int, int>> partBrMmap2;
+            int leftSinglePartId = partBrM.second;
+
+            for (auto it : partBrMmap)
+            {
+                if (it.second != leftSinglePartId)
+                {
+                    partBrMmap2.emplace_back(it.first, it.second);
+                }
+                else
+                {
+                    partBrMapleftSingle.emplace_back(it.first, it.second);
+                }
+            }
+
+            for (auto it : partBrMapleftSingle)
+            {
+                partBrMmap2.emplace_back(it.first, it.second);
+            }
+
+            partBrMmap = partBrMmap2;
         }
         int numStates = tree->getModel()->num_states;
         size_t mem_size = get_safe_upper_limit(tree->getAlnNSite()) + max(get_safe_upper_limit(numStates),
@@ -2769,6 +2796,7 @@ void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_
             DoubleVector branchLengths2;
             int branchCounter = 0;
             std::unordered_map<int, int> brVisitedMap;
+            // visit all the branches in the order of super tree
             for (auto mapping: partBrMmap) {
                 int part_branch_id = mapping.second;
                 if (brVisitedMap[part_branch_id]) {
@@ -2902,6 +2930,11 @@ void printHessian(IQTree *iqtree, int partition_type) {
             stree->root = (Node *) stree->traversal_starting_node;
 
         // sort the internal nodes according to their smallest taxon id
+        // Note: if you sort taxa in stree, it will change the ordering for the partition trees.
+        // This is due to the taxon id in super tree and partition tree is different (missing taxa has effect on this)
+        // if the 1st partition does not have the 1st taxon, the second taxon has id 0 in super trees while the second
+        // partition(if it has all taxa) has taxon id 0 for taxon 1. This makes the sortTaxa() operation different for
+        // superTree and partition trees.
         // stree->sortTaxa();
         stree->clearBranchDirection();
         stree->initializeTree();
@@ -2916,8 +2949,42 @@ void printHessian(IQTree *iqtree, int partition_type) {
             RowVectorXd partition_branch_lengths_vector;
             RowVectorXd partition_gradient_vector_eigen;
 
+            if (it->traversal_starting_node)
+            {
+                auto part_traversal_starting_nei = (Neighbor*)(((Node*)it->traversal_starting_node)->neighbors[0]->node)
+                ->findNeighbor((Node*)it->traversal_starting_node);
+                it->root = part_traversal_starting_nei->node;
+
+                // This is special case in MCMCtree: if the fist son of root has only one taxa, then select the next neighbour.
+                // if (part_traversal_starting_nei->node->neighbors.size() == 1 && it->leftSingleRoot)
+                // {
+                //     // leftSingle = true;
+                //     part_traversal_starting_nei = (PhyloNeighbor*)((part_traversal_starting_nei->node)->
+                //         findNeighbor((part_traversal_starting_nei->node->neighbors[0]->node)));
+                //     it->root = part_traversal_starting_nei->node;
+                //
+                //     NeighborVec neighbors = part_traversal_starting_nei->node->neighbors;
+                //     auto nei1 = part_traversal_starting_nei->node->neighbors[0];
+                //     auto nei2 = part_traversal_starting_nei->node->neighbors[1];
+                //     auto nei3 = part_traversal_starting_nei->node->neighbors[2];
+                //     if (part_traversal_starting_nei->node->neighbors[0]->node == it->traversal_starting_node)
+                //     {
+                //         part_traversal_starting_nei->node->neighbors[0] = nei2;
+                //         part_traversal_starting_nei->node->neighbors[1] = nei3;
+                //         part_traversal_starting_nei->node->neighbors[2] = nei1;
+                //     }
+                //     else if (part_traversal_starting_nei->node->neighbors[1]->node == it->traversal_starting_node)
+                //     {
+                //         part_traversal_starting_nei->node->neighbors[0] = nei1;
+                //         part_traversal_starting_nei->node->neighbors[1] = nei3;
+                //         part_traversal_starting_nei->node->neighbors[2] = nei2;
+                //     }
+                //
+                // }
+            }
+
             printMCMCFileFormat(it, partition_hessian, partition_tree_stream, partition_branch_lengths_vector,
-                                partition_gradient_vector_eigen, stree, part_id);
+                                partition_gradient_vector_eigen, stree, part_id, it->leftSingleRoot);
 
             if (partition_type != BRLEN_OPTIMIZE) {
                 if (partition_type == BRLEN_SCALE) {
@@ -2966,6 +3033,34 @@ void printHessian(IQTree *iqtree, int partition_type) {
         size_t nPtn = max_orig_nptn + iqtree->getModelFactory()->unobserved_ptns.size();
         size_t nBranches = iqtree->branchNum;
 
+        // iqtree->sortTaxa();
+
+        if (iqtree->traversal_starting_node)
+        {
+            auto traversal_starting_nei = (Neighbor*)(((Node*)iqtree->traversal_starting_node)->neighbors[0]->node)
+                ->findNeighbor((Node*)iqtree->traversal_starting_node);
+            iqtree->root = traversal_starting_nei->node;
+            iqtree->sortTaxa();
+            iqtree->initializeTree();
+
+            // This is special case in MCMCtree: if the fist son of root has only one taxa, then select the next neighbour.
+            if (traversal_starting_nei->node->neighbors.size() == 1)
+            {
+                traversal_starting_nei = (PhyloNeighbor*)((traversal_starting_nei->node)->findNeighbor(
+                    (traversal_starting_nei->node->neighbors[0]->node)));
+                iqtree->root = traversal_starting_nei->node;
+                iqtree->sortTaxa();
+                // iqtree->initializeTree();
+                NeighborVec neighbors = traversal_starting_nei->node->neighbors;
+                auto nei1 = traversal_starting_nei->node->neighbors[0];
+                auto nei2 = traversal_starting_nei->node->neighbors[1];
+                auto nei3 = traversal_starting_nei->node->neighbors[2];
+                traversal_starting_nei->node->neighbors[0] = nei2;
+                traversal_starting_nei->node->neighbors[1] = nei3;
+                traversal_starting_nei->node->neighbors[2] = nei1;
+            }
+        }
+
         printMCMCFileFormat(iqtree, hessian, tree_stream, branch_lengths_vector, gradient_vector_eigen);
 
         outfile << endl << iqtree->aln->getNSeq() << endl << endl;
@@ -2988,18 +3083,71 @@ void printHessian(IQTree *iqtree, int partition_type) {
 }
 
 // method to check the existence of traversal starting node of species-tree on a gene-tree for hessian calculation
-SuperNeighbor* findRootedNeighbour(SuperNeighbor* super_root, int part_id){
-    if(super_root->link_neighbors[part_id]){
+// SuperNeighbor* findRootedNeighbour(SuperNeighbor* super_root, int part_id){
+//     if(super_root && super_root->link_neighbors[part_id]){
+//         return super_root;
+//     }
+//     for(auto nei: super_root->node->neighbors){
+//         auto super_nei  = dynamic_cast<SuperNeighbor*>(nei);
+//         if (!super_nei)
+//         {
+//             continue;
+//         }
+//         // std::cout << part_id << " " << super_nei->link_neighbors[part_id] << std::endl;
+//         if(super_nei->link_neighbors[part_id]){
+//             return super_nei;
+//         }
+//         if(auto linkedRoot = findRootedNeighbour(super_nei, part_id))
+//         {
+//             return linkedRoot;
+//         }
+//
+//         //// findRootedNeighbour(super_nei, part_id);
+//     }
+//
+//     return nullptr;
+// };
+
+SuperNeighbor* findRootedNeighbour(SuperNeighbor* super_root, int part_id) {
+    // Validate the input
+    if (!super_root) {
+        return nullptr;
+    }
+
+    // Check if the root itself satisfies the condition
+    if (super_root->link_neighbors[part_id]) {
         return super_root;
     }
-    for(auto nei: super_root->node->neighbors){
-        auto super_nei  = (SuperNeighbor*)nei;
-        if(super_nei->link_neighbors[part_id]){
-            return super_nei;
+
+    // Use a queue for level-order traversal
+    std::queue<SuperNeighbor*> q;
+    q.push(super_root);
+
+    // Perform the breadth-first search
+    while (!q.empty()) {
+        auto current = q.front();
+        q.pop();
+
+        // Iterate over the current node's neighbors
+        for (auto nei : current->node->neighbors) {
+            auto super_nei = dynamic_cast<SuperNeighbor*>(nei);
+            if (!super_nei) {
+                continue; // Skip invalid neighbors
+            }
+
+            // Check if this neighbor satisfies the condition
+            if (super_nei->link_neighbors[part_id]) {
+                return super_nei;
+            }
+
+            // Add the neighbor to the queue for further exploration
+            q.push(super_nei);
         }
-        findRootedNeighbour(super_nei, part_id);
     }
-};
+
+    // Return nullptr if no valid node is found
+    return nullptr;
+}
 
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
@@ -3645,9 +3793,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
     }
-    //check for dating with mcmctree
+    //check for dating with MCMCTree
     if (params.dating_method == "mcmctree")
     {
+
         cout << endl << "--- Generating the gradients and the Hessian for MCMCTree ---" << endl;
         if (iqtree->isSuperTree())
         {
@@ -3656,30 +3805,30 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
             for (auto& it : *stree)
             {
                 auto* partition_tree = (PhyloTree*)it;
+                bool leftSingleRoot = false;
 
                 // If we memorized the traversal starting node -> find the corresponding traversal starting node for the current partition
                 if (stree->traversal_starting_node)
                 {
+                    // it->sortTaxa();
                     auto nei = (SuperNeighbor*)(((Node*)stree->traversal_starting_node)->neighbors[0]->node)->
-                        findNeighbor(
-                            (Node*)stree->traversal_starting_node);
+                        findNeighbor((Node*)stree->traversal_starting_node);
                     auto linked_super_nei = findRootedNeighbour(nei, part_id);
-                    auto part_traversal_starting_nei = linked_super_nei->link_neighbors[part_id];
 
-                    // This is special case in MCMCtree: if the fist son of root has only one taxa, then select the next neighbour.
-                    if (part_traversal_starting_nei->node->neighbors.size() == 1)
-                    {
-                        part_traversal_starting_nei = (PhyloNeighbor*)((part_traversal_starting_nei->node)->
-                            findNeighbor(
-                                (part_traversal_starting_nei->node->neighbors[0]->node)));
+                    // identify whether there is missing taxa at the root. This is needed if we have a clade of 2 taxa at
+                    // the root in the rooted tree. When unrooted, they become two children for root which is are leaves.
+                    // if leftSingleRoot == true, that means the leaves at the root are not from a 2 leaves clade.
+                    for(auto linkedNei: nei->node->neighbors){
+                        auto superLinkedNei = (SuperNeighbor*)linkedNei;
+                        if(!superLinkedNei->link_neighbors[part_id]){
+                            leftSingleRoot = true;
+                        }
                     }
-
-                    // change the partition tree so that its traversal starting node matches that of the super tree -> temporarily set the root at the first taxon in the alignment
-                    partition_tree->root = partition_tree->findNodeID(0);
-                    partition_tree->initializeTree();
+                    auto part_traversal_starting_nei = linked_super_nei->link_neighbors[part_id];
 
                     // set the traversal starting node for the current partition tree
                     partition_tree->traversal_starting_node = (part_traversal_starting_nei->node);
+                    partition_tree->leftSingleRoot = leftSingleRoot;
                     part_id++;
                 }
                 doTimeTree(partition_tree);
@@ -3687,21 +3836,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         }
         else
         {
-            if (iqtree->traversal_starting_node)
-            {
-                auto traversal_starting_nei = (Neighbor*)(((Node*)iqtree->traversal_starting_node)->neighbors[0]->node)
-                    ->findNeighbor(
-                        (Node*)iqtree->traversal_starting_node);
-                // This is special case in MCMCtree: if the fist son of root has only one taxa, then select the next neighbour.
-                if (traversal_starting_nei->node->neighbors.size() == 1)
-                {
-                    traversal_starting_nei = (PhyloNeighbor*)((traversal_starting_nei->node)->findNeighbor(
-                        (traversal_starting_nei->node->neighbors[0]->node)));
-                    iqtree->root = iqtree->findNodeID(0);
-                    iqtree->initializeTree();
-                    iqtree->traversal_starting_node = traversal_starting_nei->node;
-                }
-            }
             doTimeTree(iqtree);
         }
         cout << "--- Completed the gradients and the Hessian generation ---" << endl;
