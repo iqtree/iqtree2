@@ -3049,7 +3049,7 @@ void printHessian(IQTree *iqtree, int partition_type) {
                 traversal_starting_nei = (PhyloNeighbor*)((traversal_starting_nei->node)->findNeighbor(
                     (traversal_starting_nei->node->neighbors[0]->node)));
                 iqtree->root = traversal_starting_nei->node;
-                iqtree->sortTaxa();
+                // iqtree->sortTaxa();
                 // iqtree->initializeTree();
                 NeighborVec neighbors = traversal_starting_nei->node->neighbors;
                 auto nei1 = traversal_starting_nei->node->neighbors[0];
@@ -3058,6 +3058,8 @@ void printHessian(IQTree *iqtree, int partition_type) {
                 traversal_starting_nei->node->neighbors[0] = nei2;
                 traversal_starting_nei->node->neighbors[1] = nei3;
                 traversal_starting_nei->node->neighbors[2] = nei1;
+                // iqtree->sortTaxa();
+                iqtree->initializeTree();
             }
         }
 
@@ -3823,6 +3825,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                         if(!superLinkedNei->link_neighbors[part_id]){
                             leftSingleRoot = true;
                         }
+                    }
+
+                    // this is the other case where we don't miss any nodes at the root but a leaf at the root
+                    if (!leftSingleRoot && linked_super_nei->node->neighbors.size() == 1)
+                    {
+                        leftSingleRoot = true;
                     }
                     auto part_traversal_starting_nei = linked_super_nei->link_neighbors[part_id];
 
