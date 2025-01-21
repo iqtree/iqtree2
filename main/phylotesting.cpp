@@ -1927,7 +1927,7 @@ string CandidateModel::evaluate(Params &params,
             iqtree->getModelFactory()->setCheckpoint(&in_model_info);
             //iqtree->setCheckpoint(&in_model_info);
             bool init_success;
-            if (model_selection_action != 1) {
+            if (model_selection_action != 1 && iqtree->aln->seq_type == SEQ_DNA) {
                 init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
             } else {
                 //reestimating RHAS model
