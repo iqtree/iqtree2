@@ -1232,7 +1232,7 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
 
     	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const)
+#pragma omp parallel for schedule(dynamic,1) num_threads(num_threads) reduction(+:all_tree_lh,all_prob_const) private(transposed_trans_mat_ptr)
 #endif
         for (int packet_id = 0; packet_id < num_packets; packet_id++) {
             VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
