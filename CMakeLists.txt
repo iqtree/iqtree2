@@ -100,7 +100,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 4)
-set (iqtree_VERSION_PATCH ".0.esr")
+set (iqtree_VERSION_PATCH ".0.esr.1")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
