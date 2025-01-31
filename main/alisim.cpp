@@ -499,6 +499,10 @@ void executeSimulation(Params& params, IQTree *&tree)
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
     
+    // show log file
+    if (!(params.suppress_output_flags & OUT_LOG))
+        cout << "Screen log file: " << params.out_prefix << ".log" << endl;
+    
     // delete alisimulator
     if (alisimulator->tree) delete alisimulator->tree;
     if (alisimulator->first_insertion) delete alisimulator->first_insertion;
@@ -1013,7 +1017,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 
                 // show the output file name
                 if (proc_ID == 0)
-                    cout << "The simulated alignment has been converted into Maple format: "<< getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) <<endl;
+                    cout << "The simulated alignment has been converted into Maple format: "<< getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) << endl << endl;
             }
         }
         // otherwise print the output file name
