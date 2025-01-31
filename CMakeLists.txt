@@ -73,7 +73,7 @@
 #
 #
 
-cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR) # Lowest version tested in CI (on linux x86_64)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR) # Lowest version tested in CI (on linux x86_64)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 set(GCC_MIN_VERSION "9") # minimum GCC version that is tested in CI
@@ -99,8 +99,8 @@ endif()
 
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
-set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH ".6")
+set (iqtree_VERSION_MINOR 4)
+set (iqtree_VERSION_PATCH ".0")
 
 option(BUILD_SHARED_LIBS "Build Shared Libraries" OFF)
 
