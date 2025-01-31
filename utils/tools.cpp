@@ -6645,37 +6645,40 @@ int init_multi_rstreams()
 {
 #if RAN_TYPE == RAN_SPRNG
     #ifdef _OPENMP
-    // get the number of threads
+    // get the number of all threads (not just physical)
     const int num_threads = countPhysicalCPUCores();
     
     // initialize a vector of random seeds
-    size_t ran_seed_vec_size = num_threads + num_threads;
-    vector<int> ran_seed_vec(ran_seed_vec_size);
+    size_t ran_seed_vec_size = 2*num_threads;
+    size_t i;
+    vector<int64_t> ran_seed_vec(ran_seed_vec_size);
     
     // generate a vector of random seeds
-    const int MAX_INT32 = 2147483647;
-    for (size_t i = 0; i < ran_seed_vec_size; ++i)
-        ran_seed_vec[i] = random_int(MAX_INT32);
-    
+//    const int MAX_INT32 = 2147483647;
+//    for (i = 0; i < ran_seed_vec_size; ++i)
+//        ran_seed_vec[i] = random_int(MAX_INT32);
+      for (i = 0; i < ran_seed_vec_size; ++i)
+          ran_seed_vec[i] = Params::getInstance().ran_seed + (int64_t)MPIHelper::getInstance().getProcessID()*1000 + i+1;
+
     // print the random seeds for debugging purposes if needed
     if (verbose_mode >= VB_DEBUG)
     {
         std::cout << "- Random seeds used:";
-        for (size_t i = 0; i < ran_seed_vec_size; ++i)
+        for (i = 0; i < ran_seed_vec_size; ++i)
             std::cout << " " << ran_seed_vec[i];
         std::cout << std::endl;
     }
         
     // initialize the vector of random streams
     rstream_vec.resize(num_threads);
-    int* ran_seed_vec_ptr = &ran_seed_vec.front();
-    for (size_t i = 0; i < num_threads; ++i, ++ran_seed_vec_ptr)
-        init_random(ran_seed_vec_ptr[0], false, &rstream_vec[i]);
+    for (i = 0; i < num_threads; ++i) {
+        init_random(ran_seed_vec[i], false, &rstream_vec[i]);
+    }
         
     // initialize the continuous Gamma generators
     generator_vec.resize(num_threads);
-    for (size_t i = 0; i < num_threads; ++i, ++ran_seed_vec_ptr)
-        generator_vec[i].seed(ran_seed_vec_ptr[0]);
+    for (i = 0; i < num_threads; ++i)
+        generator_vec[i].seed(ran_seed_vec[i+num_threads]);
     
     #endif
 #else
