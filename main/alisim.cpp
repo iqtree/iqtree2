@@ -733,9 +733,12 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     {
         super_alisimulator->params->num_threads = countPhysicalCPUCores();
         
-        // show info
-        cout << "Number of threads: " << super_alisimulator->params->num_threads << endl;
+        // manually set number of threads
+        omp_set_num_threads(super_alisimulator->params->num_threads);
     }
+    
+    // show info
+    cout << "Number of threads: " << super_alisimulator->params->num_threads << endl;
 #endif
     
     // reset number of OpenMP threads to 1 in simulations with Indels
