@@ -1001,15 +1001,6 @@ void AliSimulator::mergeOutputFiles(ostream *&single_output, int thread_id, stri
             // delete file
             remove(tmp_output_filepath.c_str());
         }
-        
-        // show the output file name
-        #ifdef _OPENMP
-        #pragma omp single
-        #endif
-        {
-            string single_output_filepath = getOutputNameWithExt(params->aln_output_format, output_filepath);
-            cout << "An alignment has just been exported to " << single_output_filepath << endl;
-        }
     }
 }
 
