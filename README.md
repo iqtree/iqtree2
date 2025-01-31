@@ -4,7 +4,8 @@ IQ-TREE
 [![Github IQ-TREE 1 Releases](https://img.shields.io/github/downloads/Cibiv/IQ-TREE/total.svg?style=social&logo=github&label=iqtree1%20download)](https://github.com/Cibiv/IQ-TREE/releases)
 [![Github IQ-TREE 2 Releases](https://img.shields.io/github/downloads/iqtree/iqtree2/total.svg?style=social&logo=github&label=iqtree2%20download)](https://github.com/iqtree/iqtree2/releases)
 [![BioConda downloads](https://img.shields.io/conda/dn/bioconda/iqtree.svg?style=flag&label=BioConda%20install)](https://anaconda.org/bioconda/iqtree)
-[![Build Status](https://travis-ci.org/bqminh/IQ-TREE.svg?branch=master)](https://travis-ci.org/bqminh/IQ-TREE)
+[![BioConda platforms](https://img.shields.io/conda/pn/bioconda/iqtree?style=flag)](https://github.com/bioconda/bioconda-recipes/tree/master/recipes/iqtree)
+[![Build Status](https://github.com/iqtree/iqtree2/workflows/Build/badge.svg)](https://github.com/iqtree/iqtree2/actions)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 
 Efficient and versatile phylogenomic software by maximum likelihood <http://www.iqtree.org>
@@ -22,7 +23,10 @@ Key features of IQ-TREE
 
 * __Efficient search algorithm__: Fast and effective stochastic algorithm to reconstruct phylogenetic trees by maximum likelihood. IQ-TREE compares favorably to RAxML and PhyML in terms of likelihood while requiring similar amount of computing time ([Nguyen et al., 2015]).
 * __Ultrafast bootstrap__: An ultrafast bootstrap approximation (UFBoot) to assess branch supports. UFBoot is 10 to 40 times faster than RAxML rapid bootstrap and obtains less biased support values ([Minh et al., 2013]).
-* __Ultrafast model selection__: An ultrafast and automatic model selection (ModelFinder) which is 10 to 100 times faster than jModelTest and ProtTest. ModelFinder also finds best-fit partitioning scheme like PartitionFinder ([Kalyaanamoorthy et al., 2017]).
+* __Accurate model selection__: An ultrafast and automatic model selection (ModelFinder) which is 10 to 100 times faster than jModelTest and ProtTest. ModelFinder also finds best-fit partitioning scheme like PartitionFinder ([Kalyaanamoorthy et al., 2017]).
+* __Alignment simulation__: A flexible simulator (AliSim) which
+    allows to simulate sequence alignments under more realistic models than
+    Seq-Gen and INDELible ([Ly-Trong et al., 2023]).
 * __Phylogenetic testing__: Several fast branch tests like SH-aLRT and aBayes test ([Anisimova et al., 2011]) and tree topology tests like the approximately unbiased (AU) test ([Shimodaira, 2002]).
 
 
@@ -83,9 +87,9 @@ When computing concordance factors please cite:
 
 When using AliSim to simulate alignments please cite:
 
-* N. Ly-Trong, S. Naser-Khdour, R. Lanfear, B.Q. Minh (2022)
-  AliSim: A Fast and Versatile Phylogenetic Sequence Simulator for the Genomic Era.
-  *Mol. Biol. Evol.*, 39:msac092. <https://doi.org/10.1093/molbev/msac092>
+* N. Ly-Trong, G.M.J. Barca, B.Q. Minh (2023)
+  AliSim-HPC: parallel sequence simulator for phylogenetics.
+  *Bioinformatics*, 39:btad540. <https://doi.org/10.1093/bioinformatics/btad540>
 
 When estimating amino-acid Q matrix please cite:
 
@@ -167,6 +171,8 @@ and [Australian Research Council](https://www.arc.gov.au).
 [Anisimova et al., 2011]: http://dx.doi.org/10.1093/sysbio/syr041
 [Guindon et al., 2010]: http://dx.doi.org/10.1093/sysbio/syq010
 [Kalyaanamoorthy et al., 2017]: https://doi.org/10.1038/nmeth.4285
+[Ly-Trong et al., 2023]: https://doi.org/10.1093/bioinformatics/btad540
 [Minh et al., 2013]: http://dx.doi.org/10.1093/molbev/mst024
 [Nguyen et al., 2015]: http://dx.doi.org/10.1093/molbev/msu300
 [Shimodaira, 2002]: http://dx.doi.org/10.1080/10635150290069913
+
