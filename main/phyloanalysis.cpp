@@ -4143,23 +4143,6 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
     return tree;
 }
 
-// return how many char c inside the infile
-int checkCharInFile(char* infile, char c) {
-    ifstream fin;
-    string aline;
-    size_t i,k;
-    k=0;
-    fin.open(infile);
-    while (getline(fin,aline)) {
-        for (i=0; i<aline.length(); i++) {
-            if (aline[i] == c)
-                k++;
-        }
-    }
-    fin.close();
-    return k;
-}
-
 IQTree *newIQTreeMix(Params &params, Alignment *alignment, int numTree = 0) {
     int i, k;
     vector<IQTree*> trees;

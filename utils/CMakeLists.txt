@@ -28,11 +28,11 @@ target_link_libraries(utils lbfgsb sprng)
 ##################################################################
 option(BUILD_DECENTTREE "build decenttree" ON)
 
-if(BUILD_DECENTTREE)
-    add_executable(decentTree
-        decenttree.cpp
-        starttree.cpp bionj.cpp bionj2.cpp
-        gzstream.cpp progress.cpp operatingsystem.cpp)
+#if(BUILD_DECENTTREE)
+#    add_executable(decentTree
+#        decenttree.cpp
+#        starttree.cpp bionj.cpp bionj2.cpp
+#        gzstream.cpp progress.cpp operatingsystem.cpp)
 
 
 if(CLANG AND WIN32)
