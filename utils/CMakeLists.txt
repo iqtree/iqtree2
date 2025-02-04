@@ -34,6 +34,10 @@ if(BUILD_DECENTTREE)
         starttree.cpp bionj.cpp bionj2.cpp
         gzstream.cpp progress.cpp operatingsystem.cpp)
 
+
+if(CLANG AND WIN32)
+    target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+
     if(ZLIB_FOUND)
       target_link_libraries(decentTree ${ZLIB_LIBRARIES})
     else(ZLIB_FOUND)
@@ -41,6 +45,10 @@ if(BUILD_DECENTTREE)
     endif(ZLIB_FOUND)
 
     if(CLANG AND WIN32)
-        target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+        if (BINARY32)
+            target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
+        else()
+            target_link_libraries(decentTree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
+        endif()
     endif()
 endif()

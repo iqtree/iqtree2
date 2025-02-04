@@ -77,7 +77,8 @@ public:
     virtual void saveCheckpoint();
 
     /**
-        initial the parameters from the (K-1)-class mixture model
+        If init_weight > 0,initial the parameters from the (K-1)-class mixture model, and modify the weights
+        else, initial the parameters from the K-class mixture model, don't modify the weights
      */
     void initFromClassMinusOne(double init_weight);
     

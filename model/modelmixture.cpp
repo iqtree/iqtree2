@@ -1628,47 +1628,62 @@ void ModelMixture::saveCheckpoint() {
 //    ModelMarkov::saveCheckpoint();
 }
 
-// initial the parameters from the (K-1)-class mixture model
+// If init_weight > 0,initial the parameters from the (K-1)-class mixture model, and modify the weights
+// else, initial the parameters from the K-class mixture model, don't modify the weights
 void ModelMixture::initFromClassMinusOne(double init_weight) {
     if (getNMixtures() <= 1)
         return;
     
     int nmix = getNMixtures();
     checkpoint->startStruct("BestOfTheKClass");
-    if (nmix > 2) {
-        checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()-1));
+    if (init_weight > 0) {
+        if (nmix > 2) {
+            checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()-1));
+            if (!fix_prop) {
+                CKP_ARRAY_RESTORE(nmix-1, prop);
+            }
+            int part = 1;
+            for (iterator it = begin(); it != end() && part < nmix; it++, part++) {
+                checkpoint->startStruct("Component" + convertIntToString(part));
+                (*it)->restoreCheckpoint();
+                checkpoint->endStruct();
+            }
+            endCheckpoint();
+            // update all the class weights by multiplying ( 1 - init_weight )
+            for (int i = 0 ; i < nmix - 1; i++)
+                prop[i] = prop[i] * (1.0 - init_weight);
+        } else {
+            // for 2-class mixture model
+            at(0)->restoreCheckpoint();
+            prop[0] = 1.0 - init_weight;
+        }
+        prop[nmix - 1] = init_weight;
+
+        // change the freq to even freq
+        if (at(nmix - 1)->freq_type == FREQ_ESTIMATE) {
+            int nstate = at(nmix - 1)->num_states;
+            double state_freq[nstate];
+            double f = 1.0 / (double) nstate;
+            for (int i = 0; i < nstate; i++)
+                state_freq[i] = f;
+            at(nmix - 1)->setStateFrequency(state_freq);
+        }
+
+        //cout << "[init] " << getNameParams(false) << endl;
+    } else {
+        checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()));
         if (!fix_prop) {
-            CKP_ARRAY_RESTORE(nmix-1, prop);
+            CKP_ARRAY_RESTORE(nmix, prop);
         }
         int part = 1;
-        for (iterator it = begin(); it != end() && part < nmix; it++, part++) {
+        for (iterator it = begin(); it != end() && part < nmix+1; it++, part++) {
             checkpoint->startStruct("Component" + convertIntToString(part));
             (*it)->restoreCheckpoint();
             checkpoint->endStruct();
         }
         endCheckpoint();
-        // update all the class weights by multiplying ( 1 - init_weight )
-        for (int i = 0 ; i < nmix - 1; i++)
-            prop[i] = prop[i] * (1.0 - init_weight);
-    } else {
-        // for 2-class mixture model
-        at(0)->restoreCheckpoint();
-        prop[0] = 1.0 - init_weight;
     }
-    prop[nmix - 1] = init_weight;
     checkpoint->endStruct();
-
-    // change the freq to even freq
-    if (at(nmix - 1)->freq_type == FREQ_ESTIMATE) {
-        int nstate = at(nmix - 1)->num_states;
-        double state_freq[nstate];
-        double f = 1.0 / (double) nstate;
-        for (int i = 0; i < nstate; i++)
-            state_freq[i] = f;
-        at(nmix - 1)->setStateFrequency(state_freq);
-    }
-
-    //cout << "[init] " << getNameParams(false) << endl;
 
     decomposeRateMatrix();
     if (phylo_tree)

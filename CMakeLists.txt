@@ -73,7 +73,7 @@
 #
 #
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR) # Lowest version tested in CI (on linux x86_64)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 set(GCC_MIN_VERSION "9") # minimum GCC version that is tested in CI
@@ -392,6 +392,10 @@ if (__ARM_NEON AND APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Dthread_local=")
 endif()
 
+##################################################################
+# detect 32 or 64 bit binary
+##################################################################
+set (BINARY32 "FALSE")
 if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
     error("32-bit compilation is not supported")
 else()
@@ -956,7 +960,7 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 # SSE, AVX etc. libraries
-if (NOT IQTREE_FLAGS MATCHES "novx")
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree2 pllavx kernelavx kernelfma)
     if (USE_CMAPLE STREQUAL "ON")
     	target_link_libraries(iqtree2-aa pllavx kernelavx kernelfma)

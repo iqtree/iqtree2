@@ -1954,7 +1954,14 @@ string CandidateModel::evaluate(Params &params,
         if (!prev_rate_present){
             iqtree->getModelFactory()->setCheckpoint(&in_model_info);
             //iqtree->setCheckpoint(&in_model_info);
-            bool init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
+            bool init_success;
+            if (model_selection_action != 1 && iqtree->aln->seq_type == SEQ_DNA) {
+                init_success = iqtree->getModelFactory()->initFromNestedModel(nest_network);
+            } else {
+                //reestimating RHAS model
+                init_success = true;
+                iqtree->getModelFactory()->initFromClassMinusOne(-1);
+            }
 
             if (!init_success && iqtree->getModel()->isMixture()) {
                 double init_weight = 1.0 / iqtree->getModel()->getNMixtures();
@@ -6250,7 +6257,11 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
     }
     
     max_cats = getClassNum(model_str) * params.max_rate_cats;
-    n_class = getClassNum(model_str) + 1;
+    if (action != 1) {
+        n_class = getClassNum(model_str) + 1;
+    } else {
+        n_class = getClassNum(model_str);
+    }
     
     uint64_t mem_size = iqtree.getMemoryRequiredThreaded(max_cats);
     cout << "NOTE: MixtureFinder " << n_class << "-class models requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
@@ -6410,6 +6421,12 @@ CandidateModel runModelSelection(Params &params, IQTree &iqtree, ModelCheckpoint
             //candidate_models.at(0).init_first_mix = true;
         //}
     }
+    if (candidate_models.size() > 0) {
+        for (int i = 0; i < candidate_models.size(); i++) {
+            candidate_models.at(i).model_selection_action = action;
+        }
+    }
+
     // model selection
     candidate_models.under_mix_finder = true;
     best_model = candidate_models.test(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE,
@@ -6560,24 +6577,30 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
 
         }
     } while (better_model && getClassNum(best_subst_name)+1 <= params.max_mix_cats);
-    
-    best_subst_name = model_str;
-    
-    if (params.opt_rhas_again) {
-        // Step 4: estimate the RHAS model again
-        action = 1; // estimating the RHAS model
-        do_init_tree = false;
-        model_str = best_subst_name;
-        best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
-        curr_df = best_model.df;
-        curr_loglike = best_model.logl;
-        curr_score = best_model.getScore();
-    }
 
     model_info.put("best_model_list_" + criteria_str, best_model_pre_list);
     model_info.put("best_model_AIC", best_model_pre_AIC);
     model_info.put("best_model_AICc", best_model_pre_AICc);
     model_info.put("best_model_BIC", best_model_pre_BIC);
+
+    best_subst_name = model_str;
+    int n_class = getClassNum(model_str);
+    if (params.opt_rhas_again) {
+        if (n_class == 1) {
+            cout << endl;
+            cout << "The optimal RHAS models with 1-class substitution models have already been estimated." << endl;
+            cout << endl;
+        } else {
+            // Step 4: estimate the RHAS model again
+            action = 1; // estimating the RHAS model
+            do_init_tree = false;
+            model_str = best_subst_name;
+            best_model = runModelSelection(params, *iqtree, model_info, action, do_init_tree, model_str, best_subst_name, best_rate_name, nest_network);
+            curr_df = best_model.df;
+            curr_loglike = best_model.logl;
+            curr_score = best_model.getScore();
+        }
+    }
 
     model_str = best_subst_name+best_rate_name;
 }

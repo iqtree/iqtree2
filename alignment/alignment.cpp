@@ -1575,7 +1575,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
     }
     if (((double)num_nuc) / num_ungap > 0.9)
         return SEQ_DNA;
-    if (((double)num_bin) / num_ungap > 0.9)
+    if (num_bin == num_ungap) // For binary data, only 0, 1, ?, -, . can occur
         return SEQ_BINARY;
     if (((double)num_alpha + num_nuc) / num_ungap > 0.9)
         return SEQ_PROTEIN;
