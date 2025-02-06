@@ -236,6 +236,7 @@ elseif (APPLE)
     	else()
             # supports the first version changed from OS X to macOS
         	add_definitions("--target=x86_64-apple-macos10.12")
+            set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
         	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --target=x86_64-apple-macos10.12")
     	endif()
 	endif()
