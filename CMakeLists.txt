@@ -701,7 +701,7 @@ endif()
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 
-if (NOT IQTREE_FLAGS MATCHES "nozlib")
+if (NOT IQTREE_FLAGS MATCHES "nozlib" AND NOT IQTREE_FLAGS MATCHES "static")
     find_package(ZLIB)
 endif()
 
