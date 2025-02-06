@@ -197,6 +197,9 @@ if (USE_CMAPLE STREQUAL "ON")
 	message("Integrate CMAPLE: ON")
     add_definitions(-DUSE_CMAPLE)
     set(TARGET_CMAPLE "maple")
+    if (IQTREE_FLAGS MATCHES static)
+        set(CMAPLE_FLAGS "${CMAPLE_FLAGS} static")
+    endif()
 else()
 	message("Integrate CMAPLE: OFF")
 	set(TARGET_CMAPLE "")
@@ -210,7 +213,6 @@ if (USE_CMAPLE_AA STREQUAL "ON")
 else()
     message("Integrate CMAPLE_AA: OFF")
 endif()
-
 
 ##################################################################
 # Detect target platforms
