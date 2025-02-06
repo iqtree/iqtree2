@@ -191,7 +191,7 @@ endif()
 ##################################################################
 # Include the CMAPLE library
 ##################################################################
-option(USE_CMAPLE "Integrate CMAPLE" OFF)
+option(USE_CMAPLE "Integrate CMAPLE" ON)
 
 if (USE_CMAPLE STREQUAL "ON")
 	message("Integrate CMAPLE: ON")
