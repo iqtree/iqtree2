@@ -54,7 +54,7 @@
 #include <stdint.h>
 #ifdef __SSE3
 #if defined(__ARM_NEON)
-#include "sse2neon.h"
+#include "utils/sse2neon.h"
 #else
 #include <xmmintrin.h>
 #include <pmmintrin.h>

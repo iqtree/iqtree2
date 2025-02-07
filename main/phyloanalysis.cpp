@@ -323,7 +323,7 @@ void reportNexusFile(ostream &out, ModelSubst *m) {
     double f = 1.0 / m->num_states;
     for (i = 0; i < m->num_states; i++)
         out << " " << f;
-    out << endl;
+    out << ";" << endl;
     out.precision(4);
     out << "end;" << endl;
 }

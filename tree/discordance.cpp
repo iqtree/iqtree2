@@ -725,8 +725,13 @@ void PhyloTree::computeGeneConcordance(MTreeSet &trees, map<string,string> &mean
         // create the map from taxa between 2 trees
         Split taxa_mask(leafNum);
         for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-            if (name_map.find(*it) == name_map.end())
+            if (name_map.find(*it) == name_map.end()) {
+                if (*it == "__root__") {
+                    cout << "WARNING : By default, trees without a multifurcation at the root are treated as rooted." << endl;
+                    cout << "          You may need to change your tree structure." << endl;
+                }
                 outError("Taxon not found in full tree: ", *it);
+            }
             taxa_mask.addTaxon(name_map[*it]);
         }
         // make the taxa ordering right before converting to split system

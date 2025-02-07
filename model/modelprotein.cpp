@@ -995,7 +995,9 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         } else {
             // initialize rate matrix with a model (default: POISSON) -JD
             nxs_model = models_block->findModel(Params::getInstance().gtr20_model);
-            ASSERT(nxs_model);
+            if (nxs_model == nullptr) {
+                outError("Unknown init model: " + Params::getInstance().gtr20_model);
+            }
             readParametersString(nxs_model->description, false);
             rescaleRates(rates, getNumRateEntries());
         }

@@ -118,7 +118,7 @@ protected:
     *  simulate sequences for all nodes in the tree by DFS
     *
     */
-    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, std::vector<bool>* const site_locked_vec, int* rstream, default_random_engine& generator);
+    void simulateSeqs(int thread_id, int segment_start, int &segment_length, int &sequence_length, ModelSubst *model, double *trans_matrix, vector<vector<short int>> &sequence_cache, bool store_seq_at_cache, Node *node, Node *dad, ostream &out, vector<string> &state_mapping, map<string, string> input_msa, std::vector<bool>* const site_locked_vec);
     
     /**
     *  reset tree (by reset some variables of nodes)
@@ -195,7 +195,7 @@ protected:
     /**
         branch-specific evolution by multi threads
     */
-    void branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it, int* rstream, default_random_engine& generator);
+    void branchSpecificEvolution(int thread_id, int sequence_length, vector<short int> &dad_seq_chunk, vector<short int> &node_seq_chunk, bool store_seq_at_cache, double *trans_matrix, Node *node, NeighborVec::iterator it);
     
     
     /**
@@ -216,7 +216,7 @@ protected:
     /**
         initialize variables
     */
-    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, std::vector<bool>* const site_locked_vec, default_random_engine& generator);
+    void initVariables(int sequence_length, string output_filepath, vector<string> &state_mapping, ModelSubst *model, int &default_segment_length, int &max_depth, bool &write_sequences_to_tmp_data, bool &store_seq_at_cache, std::vector<bool>* const site_locked_vec);
     
     /**
         process after simulating sequences
