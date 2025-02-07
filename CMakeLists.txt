@@ -191,7 +191,10 @@ endif()
 ##################################################################
 # Include the CMAPLE library
 ##################################################################
-option(USE_CMAPLE "Integrate CMAPLE" ON)
+if (NOT WIN32)
+    # temporarily disable cmaple for Windows, next to fix for next release
+    option(USE_CMAPLE "Integrate CMAPLE" ON)
+endif()
 
 if (USE_CMAPLE STREQUAL "ON")
 	message("Integrate CMAPLE: ON")
