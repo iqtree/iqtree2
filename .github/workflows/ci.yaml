@@ -156,6 +156,32 @@ jobs:
           path: build/iqtree2
           if-no-files-found: error
 
+  compile-mac-universal:
+    name: Mac OS Universal
+    runs-on: macos-14
+    needs:
+      - build-macos-x86_64
+      - build-macos-arm
+    
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Mac *
+
+      - name: Combine Artifacts
+        run: lipo -create -output iqtree2 "Mac x86_64/iqtree2" "Mac Arm/iqtree2"
+
+      - name: Check Architectures
+        run: lipo -archs iqtree2
+
+      - name: Upload Built Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac Universal
+          path: iqtree2
+          if-no-files-found: error
+
   build-windows-x86-64:
     name: Windows x86-64
     runs-on: windows-2022
