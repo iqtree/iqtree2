@@ -77,7 +77,7 @@ jobs:
             mkdir build
             cd build
             cmake ..
-            make -j
+            make -j 4
             file iqtree2 | grep aarch64
 
   build-macos-x86_64:
