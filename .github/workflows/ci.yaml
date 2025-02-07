@@ -170,7 +170,7 @@ jobs:
           pattern: Mac *
 
       - name: Combine Artifacts
-        run: lipo -create -output iqtree2 "Mac x86_64/iqtree2" "Mac Arm/iqtree2"
+        run: lipo -create -output iqtree2 "Mac x86-64/iqtree2" "Mac Arm/iqtree2"
 
       - name: Check Architectures
         run: lipo -archs iqtree2
