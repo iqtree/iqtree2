@@ -49,7 +49,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
+        cmake .. -DIQTREE_FLAGS=static -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
         make -j
         file iqtree2 | grep x86-64
 
@@ -81,7 +81,7 @@ jobs:
          run: |
            mkdir build
            cd build
-           cmake ..
+           cmake .. -DIQTREE_FLAGS=static
            make -j
            file iqtree2 | grep aarch64
 
