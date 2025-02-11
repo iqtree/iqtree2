@@ -35,19 +35,40 @@ public:
 	virtual ~ModelSet();
 
 	/**
+		set checkpoint object
+		@param checkpoint
+	*/
+	virtual void setCheckpoint(Checkpoint *checkpoint);
+
+	/**
+		start structure for checkpointing
+	*/
+	virtual void startCheckpoint();
+
+	/**
+		save object into the checkpoint
+	*/
+	virtual void saveCheckpoint();
+
+	/**
+		restore object from the checkpoint
+	*/
+	virtual void restoreCheckpoint();
+
+	/**
 	 * @return TRUE if this is a site-specific model, FALSE otherwise
 	 */
 	virtual bool isSiteSpecificModel() { return true; }
 
-        /**
-         * @return TRUE if the model has site-specific frequencies, FALSE otherwise
-         */
-        virtual bool isSSF() { return phylo_tree->aln->isSSF(); }
+	/**
+	 * @return TRUE if the model has site-specific frequencies, FALSE otherwise
+	 */
+	virtual bool isSSF() { return phylo_tree->aln->isSSF(); }
 
-        /**
-         * @return TRUE if the model has site-specific rates, FALSE otherwise
-         */
-        virtual bool isSSR() { return phylo_tree->aln->isSSR(); }
+	/**
+	 * @return TRUE if the model has site-specific rates, FALSE otherwise
+	 */
+	virtual bool isSSR() { return phylo_tree->aln->isSSR(); }
 
 	/**
 	 * get the size of transition matrix, default is num_states*num_states.
@@ -78,18 +99,18 @@ public:
 	*/
 	virtual void getRateMatrix(double *rate_mat);
 
-        /**
+	/**
 		compute the state frequency vector. One should override this function when defining new model.
 		The default is equal state sequency, valid for all kind of data.
 		@param mixture (optional) class for mixture model
 		@param[out] state_freqs state frequency vector. Assume state_freqs has size of num_states
-        */
+	*/
 	virtual void getStateFrequency(double *state_freqs, int mixture = 0);
 
 	/**
- 		compute Q matrix
- 		@param q_mat (OUT) Q matrix, assuming of size num_states * num_states
-         */
+		compute Q matrix
+		@param q_mat (OUT) Q matrix, assuming of size num_states * num_states
+	*/
 	virtual void getQMatrix(double *q_mat, int mixture = 0);
 
 	/**

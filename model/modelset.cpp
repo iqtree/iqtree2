@@ -25,7 +25,7 @@ ModelSet::ModelSet(const string model_name, ModelsBlock *models_block,
 	: ModelMarkov(tree)
 {
 	name = full_name = model_name;
-	full_name += "+site-specific state-frequency or rate model (unpublished)";
+	full_name += "+site-specific state frequency or rate model (unpublished)";
 	// init the wrapper model to use its eigen
 	ModelMarkov::init(FREQ_EMPIRICAL); // +F is used here to calculate +I under SSF
 	ModelMarkov::fixParameters(true); // yet otherwise the wrapper model parameters remain unused
@@ -77,6 +77,51 @@ ModelSet::~ModelSet()
 		(*rit)->inv_eigenvectors_transposed = nullptr;
 		delete (*rit);
 	}
+}
+
+void ModelSet::setCheckpoint(Checkpoint *checkpoint)
+{
+	CheckpointFactory::setCheckpoint(checkpoint);
+	front()->setCheckpoint(checkpoint);
+}
+
+void ModelSet::startCheckpoint()
+{
+	checkpoint->startStruct("ModelSet");
+}
+
+void ModelSet::saveCheckpoint()
+{
+	startCheckpoint();
+	checkpoint->startStruct("frontModel");
+	front()->saveCheckpoint();
+	checkpoint->endStruct();
+	endCheckpoint();
+}
+
+void ModelSet::restoreCheckpoint()
+{
+	startCheckpoint();
+	checkpoint->startStruct("frontModel");
+	front()->restoreCheckpoint();
+	checkpoint->endStruct();
+	endCheckpoint();
+	if (getNDim() > 0) {
+		double *state_freqs = new double[num_states];
+		double *rate_mat = new double[getNumRateEntries()];
+		getStateFrequency(state_freqs);
+		getRateMatrix(rate_mat);
+		for (iterator it = begin(); it != end(); it++) {
+			if (getFreqType() == FREQ_ESTIMATE)
+				(*it)->setStateFrequency(state_freqs);
+			(*it)->setRateMatrix(rate_mat);
+		}
+		delete [] state_freqs;
+		delete [] rate_mat;
+	}
+	decomposeRateMatrix();
+	if (phylo_tree)
+		phylo_tree->clearAllPartialLH();
 }
 
 string ModelSet::getName()
