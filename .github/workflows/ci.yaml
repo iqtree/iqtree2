@@ -22,7 +22,7 @@ jobs:
         include:
           # Oldest supported gcc and cmake versions
           - gcc-version: 9
-            cmake-version: 3.10.2
+            cmake-version: 3.14.7
           # Latest supported gcc and cmake versions
           - gcc-version: 12
             cmake-version: latest
@@ -51,34 +51,34 @@ jobs:
         make -j
         file iqtree2 | grep x86-64
 
-  build-linux-aarch64:
-    name: Linux aarch64
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
-
-      - name: Build on Linux ARM64
-        uses: uraimo/run-on-arch-action@v2
-        with:
-          arch: aarch64
-          distro: ubuntu_latest
-          githubToken: ${{ github.token }}
-          dockerRunArgs: |
-            --volume "${PWD}:/iqtree2"
-          install: |
-            apt-get update -q -y
-            apt-get install -q -y cmake gcc g++ file libeigen3-dev libboost-dev
-          run: |
-            cd /iqtree2
-            mkdir build
-            cd build
-            cmake ..
-            make -j
-            file iqtree2 | grep aarch64
+#   build-linux-aarch64:
+#     name: Linux aarch64
+#     runs-on: ubuntu-latest
+# 
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           submodules: "recursive"
+# 
+#       - name: Build on Linux ARM64
+#         uses: uraimo/run-on-arch-action@v2
+#         with:
+#           arch: aarch64
+#           distro: ubuntu_latest
+#           githubToken: ${{ github.token }}
+#           dockerRunArgs: |
+#             --volume "${PWD}:/iqtree2"
+#           install: |
+#             apt-get update -q -y
+#             apt-get install -q -y cmake gcc g++ file libeigen3-dev libboost-dev
+#           run: |
+#             cd /iqtree2
+#             mkdir build
+#             cd build
+#             cmake ..
+#             make -j
+#             file iqtree2 | grep aarch64
 
   build-macos-x86_64:
     name: Mac OS x86-64

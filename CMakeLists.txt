@@ -73,7 +73,7 @@
 #
 #
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR) # Lowest version tested in CI (on linux x86_64)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR) # Lowest version tested in CI (on linux x86_64)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 set(GCC_MIN_VERSION "9") # minimum GCC version that is tested in CI
@@ -191,12 +191,18 @@ endif()
 ##################################################################
 # Include the CMAPLE library
 ##################################################################
-option(USE_CMAPLE "Integrate CMAPLE" ON)
+if (NOT WIN32)
+    # temporarily disable cmaple for Windows, next to fix for next release
+    option(USE_CMAPLE "Integrate CMAPLE" ON)
+endif()
 
 if (USE_CMAPLE STREQUAL "ON")
 	message("Integrate CMAPLE: ON")
     add_definitions(-DUSE_CMAPLE)
     set(TARGET_CMAPLE "maple")
+    if (IQTREE_FLAGS MATCHES static)
+        set(CMAPLE_FLAGS "${CMAPLE_FLAGS} static")
+    endif()
 else()
 	message("Integrate CMAPLE: OFF")
 	set(TARGET_CMAPLE "")
@@ -210,7 +216,6 @@ if (USE_CMAPLE_AA STREQUAL "ON")
 else()
     message("Integrate CMAPLE_AA: OFF")
 endif()
-
 
 ##################################################################
 # Detect target platforms
@@ -701,7 +706,7 @@ endif()
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 
-if (NOT IQTREE_FLAGS MATCHES "nozlib")
+if (NOT IQTREE_FLAGS MATCHES "nozlib" AND NOT IQTREE_FLAGS MATCHES "static")
     find_package(ZLIB)
 endif()
 
