@@ -4609,6 +4609,7 @@ bool runCMaple(Params &params)
     {
         // record the start time
         auto start = getRealTime();
+        auto start_cpu = getCPUTime();
         
         // Dummy variables
         std::string aln_path(params.aln_file);
@@ -4686,6 +4687,15 @@ bool runCMaple(Params &params)
             const std::string input_treefile(params.user_file ? params.user_file : "");
             cmaple::Tree tree(&aln, &model, input_treefile, (params.fixed_branch_length == BRLEN_FIX), cmaple::ParamsBuilder().build());
             
+            // transfer SPRTA options if any
+            if (params.compute_SPRTA)
+            {
+                tree.params->compute_SPRTA = params.compute_SPRTA;
+                tree.params->compute_SPRTA_zero_length_branches = params.SPRTA_zero_branches;
+                tree.params->print_SPRTA_less_info_seqs = params.SPRTA_zero_branches;
+                tree.params->output_alternative_spr = params.out_alter_spr;
+            }
+            
             // Infer a phylogenetic tree
             const cmaple::Tree::TreeSearchType tree_search_type = cmaple::Tree::parseTreeSearchType(params.tree_search_type_str);
             std::ostream null_stream(0);
@@ -4721,7 +4731,23 @@ bool runCMaple(Params &params)
             ofstream out = ofstream(output_treefile);
             out << tree.exportNewick(tree_format);
             out.close();
-                
+            
+            // Write tree file in NEXUS format (if computing SPRTA)
+            if (params.compute_SPRTA)
+            {
+                ofstream out = ofstream(output_treefile + ".nexus");
+                out << tree.exportNexus(tree_format);
+                out.close();
+            }
+            
+            // export a TSV file if SPRTA is computed and we output alternative SPRs
+            if (params.compute_SPRTA && params.out_alter_spr)
+            {
+                ofstream out = ofstream(output_treefile + ".tsv");
+                out << tree.exportTSV();
+                out.close();
+            }
+
             // Show model parameters
             if (cmaple::verbose_mode > cmaple::VB_QUIET)
             {
@@ -4736,14 +4762,20 @@ bool runCMaple(Params &params)
             // Show information about output files
             std::cout << "Analysis results written to:" << std::endl;
             std::cout << "Maximum-likelihood tree:       " << output_treefile << std::endl;
-            /*if (params.aLRT_replicates)
-                std::cout << "Tree with aLRT-SH values:      " << prefix + ".aLRT_SH.treefile" << std::endl;*/
+            if (params.compute_SPRTA)
+                std::cout << "Tree in NEXUS format:          " << output_treefile + ".nexus" << std::endl;
+            if (params.compute_SPRTA && params.out_alter_spr)
+                std::cout << "Meta data in TSV format:       " << output_treefile + ".tsv" << std::endl;
             std::cout << "Screen log file:               " << prefix + ".log" << std::endl << std::endl;
             
             // show runtime
             auto end = getRealTime();
-            if (cmaple::verbose_mode > cmaple::VB_QUIET)
-                cout << "CMAPLE Runtime: " << end - start << "s" << endl;
+            auto end_cpu = getCPUTime();
+            cout << "Total CPU time used: " << fixed << end_cpu - start_cpu << " sec (" <<
+                convert_time(end_cpu-start_cpu) << ")" << endl;
+            cout << "Total wall-clock time used: " << fixed << end - start << " sec (" <<
+                convert_time(end-start) << ")" << endl;
+            cout << endl;
         }
     }
     catch (std::invalid_argument e)

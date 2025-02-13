@@ -1526,6 +1526,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mutation_file = "";
     params.site_starting_index = 0;
     
+    // ----------- SPRTA ----------
+    params.compute_SPRTA = false;
+    params.SPRTA_zero_branches = false;
+    params.out_alter_spr = false;
+    
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
         params.original_params = params.original_params + argv[cnt] + " ";
@@ -3122,6 +3127,24 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "-pathogen-force") == 0 || strcmp(argv[cnt], "--pathogen-force") == 0) {
                 params.inference_alg = ALG_CMAPLE;
                 continue;
+            }
+            if (strcmp(argv[cnt], "--sprta") == 0 ||
+                strcmp(argv[cnt], "-sprta") == 0) {
+              params.compute_SPRTA = true;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--zero-branch-supp") == 0 ||
+                strcmp(argv[cnt], "-zero-branch-supp") == 0) {
+              params.SPRTA_zero_branches = true;
+
+              continue;
+            }
+            if (strcmp(argv[cnt], "--out-alter-spr") == 0 ||
+                strcmp(argv[cnt], "-out-alter-spr") == 0) {
+              params.out_alter_spr = true;
+
+              continue;
             }
             if (strcmp(argv[cnt], "--out-csv") == 0) {
                 params.output_format = FORMAT_CSV;
