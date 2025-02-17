@@ -35,6 +35,52 @@ bool isRHS(string m) {
     return false;
 }
 
+// return how many char c inside the infile
+int checkCharInFile(char* infile, char c) {
+    ifstream fin;
+    string aline;
+    size_t i,k;
+    k=0;
+    fin.open(infile);
+    while (getline(fin,aline)) {
+        for (i=0; i<aline.length(); i++) {
+            if (aline[i] == c)
+                k++;
+        }
+    }
+    fin.close();
+    return k;
+}
+
+// get the number of trees for the tree-mixture model
+int getTreeMixNum(Params& params) {
+    int n = 0;
+    size_t p = params.model_name.find("+T");
+    string str_n;
+    if (p != string::npos && p < params.model_name.length()-2) {
+        str_n = params.model_name.substr(p+2);
+        n = atoi(str_n.c_str());
+    }
+    if (n == 1) {
+        outError("The number after +T has to be greater than 1");
+    }
+    // check how many trees inside the user input file
+    int k = checkCharInFile(params.user_file, ';');
+    if (k <= 1) {
+        outError("Tree mixture model only supports at least 2 trees inside the tree file: " + string(params.user_file) + ". Each tree must be followed by the character ';'.");
+    }
+    if (n == 0) {
+        n = k;
+        cout << "Number of input trees: " << n << endl;
+    } else if (n < k) {
+        cout << "Note: Only " << n << " trees are considered, although there are more than " << n << " trees in the tree file: " << params.user_file << endl;
+    } else if (n > k) {
+        outError("The number of trees inside the tree file '" + string(params.user_file) + "' is less than " + convertIntToString(n));
+    }
+    return n;
+}
+
+
 IQTreeMix::IQTreeMix() : IQTree() {
     ptn_freq = NULL; // double frequencies of each pattern (can be changed)
     patn_isconst = NULL;
@@ -57,21 +103,38 @@ IQTreeMix::IQTreeMix() : IQTree() {
     anySiteRate = false;
     isNestedOpenmp = false;
     rhas_var = NULL;
+    ntree = 0;
 }
 
-IQTreeMix::IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTree(aln) {
+IQTreeMix::IQTreeMix(Params &params, Alignment *aln) : IQTree(aln) {
     size_t i;
 
     clear();
     weights.clear();
     weight_logs.clear();
     
-    // store the trees and initialize tree-weights
-    ntree = trees.size();
+    // checking on params
+    if (params.compute_ml_tree_only) {
+        outError("option compute_ml_tree_only cannot be set for tree-mixture model");
+    }
+    // change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+    if (params.min_gamma_shape < MIN_GAMMA_SHAPE_TREEMIX) {
+        if (params.min_gamma_shape != MIN_GAMMA_SHAPE)
+            cout << "The minimum value for Gamma shape is changed to " << MIN_GAMMA_SHAPE_TREEMIX << endl;
+        params.min_gamma_shape = MIN_GAMMA_SHAPE_TREEMIX;
+    }
+    if (params.user_file == NULL) {
+        outError("To use tree-mixture model, use an option: -te <newick file with multiple trees>");
+    }
+
+    // get the number of trees for tree-mixture model
+    ntree = getTreeMixNum(params);
+    
+    // create the trees and initialize tree-weights
     double init_weight = 1.0 / (double) ntree;
     double init_weight_log = log(init_weight);
     for (i=0; i<ntree; i++) {
-        push_back(trees[i]);
+        push_back(new IQTree(aln));
         weights.push_back(init_weight);
         weight_logs.push_back(init_weight_log);
     }

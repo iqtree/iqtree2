@@ -15,21 +15,11 @@ PhyloSuperHmm::PhyloSuperHmm() : PhyloSuperTree() {
 /**
  constructor
  */
-PhyloSuperHmm::PhyloSuperHmm(SuperAlignment *alignment, Params &params, int numTree) : PhyloSuperTree(alignment,false,false) {
+PhyloSuperHmm::PhyloSuperHmm(SuperAlignment *alignment, Params &params) : PhyloSuperTree(alignment,false,false) {
     vector<Alignment*>::iterator it;
     for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
-        vector<IQTree*> trees;
-        for (int i=0; i<numTree; i++) {
-            trees.push_back(new IQTree(*it));
-        }
-        push_back(new IQTreeMixHmm(params, (*it), trees));
+        push_back(new IQTreeMixHmm(params, (*it)));
     }
-}
-
-/**
-    constructor
-*/
-PhyloSuperHmm::PhyloSuperHmm(SuperAlignment *alignment, PhyloSuperHmm *super_hmm) : PhyloSuperTree(alignment, super_hmm) {
 }
 
 /**
@@ -93,8 +83,31 @@ void PhyloSuperHmm::setRootNode(const char *my_root, bool multi_taxa) {
 //  0 - the categories along sites is assigned according to the path with maximum probability (default)
 //  1 - the categories along sites is assigned according to the max posterior probability
 void PhyloSuperHmm::printResults(string prefix, string ext, int cat_assign_method) {
+    if (size() == 0)
+        return;
+    
+    iterator it = begin();
+    int ntree = ((IQTreeMixHmm*)(*it))->size();
+    int* numSiteCat = new int[ntree];
+    int* numSiteCatTot = new int[ntree];
+    int numSiteSum = 0;
+    int k;
+    memset(numSiteCatTot, 0, sizeof(int)*ntree);
     for (iterator it = begin(); it != end(); it++) {
         string filename = prefix + "." + (*it)->aln->name + ext;
-        ((IQTreeMixHmm*)(*it))->printResults(filename.c_str(), cat_assign_method);
+        ((IQTreeMixHmm*)(*it))->printResults(filename.c_str(), cat_assign_method, numSiteCat);
+        for (k = 0; k < ntree; k++)
+            numSiteCatTot[k] += numSiteCat[k];
     }
+    for (k = 0; k < ntree; k++)
+        numSiteSum += numSiteCatTot[k];
+    
+    // print out overall percentage of sites over the trees
+    cout << "Overall percentage of sites over the trees:";
+    for (k = 0; k < ntree; k++)
+        cout << " " << (double) numSiteCatTot[k] / numSiteSum;
+    cout << endl;
+    
+    delete[] numSiteCat;
+    delete[] numSiteCatTot;
 }
