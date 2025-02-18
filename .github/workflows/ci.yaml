@@ -23,9 +23,11 @@ jobs:
           # Oldest supported gcc and cmake versions
           - gcc-version: 9
             cmake-version: 3.14.7
+            upload: false
           # Latest supported gcc and cmake versions
           - gcc-version: 12
             cmake-version: latest
+            upload: true
 
     steps:
     - name: Checkout
@@ -47,38 +49,48 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
+        cmake .. -DIQTREE_FLAGS=static -DCMAKE_C_COMPILER=$(which gcc-${{ matrix.gcc-version }}) -DCMAKE_CXX_COMPILER=$(which g++-${{ matrix.gcc-version }})
         make -j
         file iqtree2 | grep x86-64
 
-#   build-linux-aarch64:
-#     name: Linux aarch64
-#     runs-on: ubuntu-latest
-# 
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
-#         with:
-#           submodules: "recursive"
-# 
-#       - name: Build on Linux ARM64
-#         uses: uraimo/run-on-arch-action@v2
-#         with:
-#           arch: aarch64
-#           distro: ubuntu_latest
-#           githubToken: ${{ github.token }}
-#           dockerRunArgs: |
-#             --volume "${PWD}:/iqtree2"
-#           install: |
-#             apt-get update -q -y
-#             apt-get install -q -y cmake gcc g++ file libeigen3-dev libboost-dev
-#           run: |
-#             cd /iqtree2
-#             mkdir build
-#             cd build
-#             cmake ..
-#             make -j
-#             file iqtree2 | grep aarch64
+    - name: Upload Built Binary
+      # Only upload for one of the gcc & cmake tests
+      if: ${{ matrix.upload }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux x86-64
+        path: build/iqtree2
+        if-no-files-found: error
+
+  build-linux-aarch64:
+     name: Linux aarch64
+     runs-on: ubuntu-22.04-arm
+ 
+     steps:
+       - name: Checkout
+         uses: actions/checkout@v4
+         with:
+           submodules: "recursive"
+ 
+       - name: Install dependencies
+         run: |
+           sudo apt-get update -q -y
+           sudo apt-get install -q -y gcc g++ libeigen3-dev libboost-dev
+    
+       - name: Build
+         run: |
+           mkdir build
+           cd build
+           cmake .. -DIQTREE_FLAGS=static
+           make -j
+           file iqtree2 | grep aarch64
+
+       - name: Upload Built Binary
+         uses: actions/upload-artifact@v4
+         with:
+           name: Linux AArch64
+           path: build/iqtree2
+           if-no-files-found: error
 
   build-macos-x86_64:
     name: Mac OS x86-64
@@ -104,6 +116,13 @@ jobs:
           cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           gmake -j
           file iqtree2 | grep x86_64
+          
+      - name: Upload Built Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac x86-64
+          path: build/iqtree2
+          if-no-files-found: error
 
   build-macos-arm:
     name: Mac OS ARM64
@@ -129,6 +148,39 @@ jobs:
           cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
           gmake -j
           file iqtree2 | grep arm64
+
+      - name: Upload Built Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac Arm
+          path: build/iqtree2
+          if-no-files-found: error
+
+  compile-mac-universal:
+    name: Mac OS Universal
+    runs-on: macos-14
+    needs:
+      - build-macos-x86_64
+      - build-macos-arm
+    
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Mac *
+
+      - name: Combine Artifacts
+        run: lipo -create -output iqtree2 "Mac x86-64/iqtree2" "Mac Arm/iqtree2"
+
+      - name: Check Architectures
+        run: lipo -archs iqtree2
+
+      - name: Upload Built Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mac Universal
+          path: iqtree2
+          if-no-files-found: error
 
   build-windows-x86-64:
     name: Windows x86-64
@@ -179,3 +231,10 @@ jobs:
         run: |
           cd build
           file iqtree2.exe | grep x86-64
+
+      - name: Upload Built Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows x86-64
+          path: build/iqtree2.exe
+          if-no-files-found: error
