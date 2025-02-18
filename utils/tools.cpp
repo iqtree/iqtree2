@@ -5940,6 +5940,12 @@ void usage(char* argv[]) {
     cout << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl;
     cout << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl;
     cout << "                       of sequence divergence." << endl;
+    cout << "  --alrt <num_rep>     Specify number of replicates to compute SH-aLRT." << endl;
+    cout << "  --sprta              Compute SPRTA (DeMaio et al., 2024) branch supports." << endl;
+    cout << "  --zero-branch-supp   Compute SPRTA supports for zero-length branches." << endl;
+    cout << "  --out-alter-spr      Output alternative SPRs and their SPRTA supports." << endl;
+    cout << "  -T <num_thread>      Specify number of threads used for computing" << endl;
+    cout << "                       branch supports (SH-aLRT or SPRTA)." << endl;
     cout << endl;
     //cout << "HIDDEN OPTIONS: see the source code file pda.cpp::parseArg()" << endl;
 
@@ -6258,6 +6264,12 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl
     << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl
     << "                       of sequence divergence." << endl
+    << "  --alrt <num_rep>     Specify number of replicates to compute SH-aLRT." << endl
+    << "  --sprta              Compute SPRTA (DeMaio et al., 2024) branch supports." << endl
+    << "  --zero-branch-supp   Compute SPRTA supports for zero-length branches." << endl
+    << "  --out-alter-spr      Output alternative SPRs and their SPRTA supports." << endl
+    << "  -T <num_thread>      Specify number of threads used for computing" << endl
+    << "                       branch supports (SH-aLRT or SPRTA)." << endl
     
     
     
