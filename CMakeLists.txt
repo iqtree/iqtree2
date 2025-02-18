@@ -97,6 +97,22 @@ if(Boost_FOUND)
     add_definitions(-DUSE_BOOST)
 endif()
 
+# NOTE: After updating cmake_minimum_required to 3.5, 
+# if we call check_function_exists() after set(CMAKE_EXE_LINKER_FLAGS), it returns function not found
+# So, I moved this step upward to avoid the compilation errors due to not-found functions
+##################################################################
+# check existence of a few basic functions
+##################################################################
+include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
+check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
+check_function_exists (getrusage HAVE_GETRUSAGE)
+check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
+check_function_exists (strndup HAVE_STRNDUP)
+check_function_exists (strtok_r HAVE_STRTOK_R)
+include (CheckIncludeFile)
+CHECK_INCLUDE_FILE("unistd.h" HAVE_UNISTDH)
+find_package(Backtrace)
+
 # The version number.
 set (iqtree_VERSION_MAJOR 2)
 set (iqtree_VERSION_MINOR 4)
@@ -671,19 +687,6 @@ elseif (CLANG AND NOT CLANG_UNDER_VS)
     set(CMAKE_CXX_FLAGS_MEM "-g -O1")
     set(CMAKE_C_FLAGS_MEM "-g -O1")
 endif()
-
-##################################################################
-# check existence of a few basic functions
-##################################################################
-include (${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
-check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
-check_function_exists (getrusage HAVE_GETRUSAGE)
-check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
-check_function_exists (strndup HAVE_STRNDUP)
-check_function_exists (strtok_r HAVE_STRTOK_R)
-include (CheckIncludeFile)
-CHECK_INCLUDE_FILE("unistd.h" HAVE_UNISTDH)
-find_package(Backtrace)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
