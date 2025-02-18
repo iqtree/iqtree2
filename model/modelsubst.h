@@ -90,6 +90,16 @@ public:
 	 */
 	virtual bool isSiteSpecificModel() { return false; }
 
+        /**
+         * @return TRUE if the model has site-specific frequencies, FALSE otherwise
+         */
+        virtual bool isSSF() { return false; }
+
+        /**
+         * @return TRUE if the model has site-specific rates, FALSE otherwise
+         */
+        virtual bool isSSR() { return false; }
+
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise
 	 */
@@ -281,6 +291,11 @@ public:
 		@return frequency type
 	*/
 	virtual StateFreqType getFreqType() { return FREQ_EQUAL; }
+
+	/**
+		set frequency type
+	*/
+	virtual void setFreqType(StateFreqType freq) { freq_type = freq; }
 
     /**
         set the associated tree
