@@ -2648,6 +2648,9 @@ double PhyloTree::computeLikelihoodBranchESRGenericSIMD(PhyloNeighbor *dad_branc
     // return implComputingLikelihoodBranchGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, true, save_log_value);
 #endif
     outError("To reconstruct extant sequences, we must use the Non-reversible implementations!");
+    
+    // We'll never reach this line but we still need to return a number to avoid warnings from compilers
+    return 0;
 }
 
 #ifdef KERNEL_FIX_STATES
