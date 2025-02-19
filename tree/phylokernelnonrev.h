@@ -1124,7 +1124,7 @@ double PhyloTree::implComputingNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *
     computeBounds<VectorClass>(num_threads, num_packets, nptn, limits);
 
     double *trans_mat = buffer_partial_lh;
-    double *buffer_partial_lh_ptr = buffer_partial_lh + block*nstates;
+    double *buffer_partial_lh_ptr = buffer_partial_lh + get_safe_upper_limit(block*nstates);
     double *state_freq_fundi = nullptr;
     if (do_fundi) {
         state_freq_fundi = aligned_alloc<double>(block);
