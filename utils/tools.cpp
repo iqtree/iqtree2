@@ -5969,7 +5969,7 @@ void usage_alisim(){
     << "                            users should specify the seed number" << endl
     << "  -gz                       Enable output compression but taking longer running time" << endl
     << "  -af phy|fasta             Set the output format (default: phylip)" << endl
-    << "  User Manual is available at http://www.iqtree.org/doc/alisim" << endl;
+    << "  User Manual is available at http://www.iqtree.org/doc/AliSim" << endl;
 }
 
 void usage_iqtree(char* argv[], bool full_command) {
