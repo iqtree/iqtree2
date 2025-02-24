@@ -687,7 +687,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
     }
 
     if (params->dating_method == "mcmctree") {
-        string outFileName = ((string) Params::getInstance().out_prefix + ".rooted.mcmctree.tree");
+        string outFileName = ((string) Params::getInstance().out_prefix + ".rooted.nwk");
         ofstream outfile(outFileName);
 
         stringstream treeStr;

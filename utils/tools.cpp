@@ -1494,6 +1494,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_replicates = 0;
     params.clock_stddev = -1.0;
     params.date_outlier = -1.0;
+    params.dating_mf = false;
+    params.mcmc_clock = CORRELATED;
+    params.mcmc_bds = "1,1,0.5";
+    params.mcmc_iter = "20000, 100, 20000";
 
     // added by TD
     params.use_nn_model = false;
@@ -5566,6 +5570,52 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use --date-options <extra_options_for_dating_method>";
                 params.dating_options = argv[cnt];
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mcmc-clock") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mcmc-clock <EQUAL|IND|CORR>";
+                if (strcmp(argv[cnt], "EQUAL")==0)
+                {
+                    params.mcmc_clock = EQUAL_RATES;
+                }
+                else if (strcmp(argv[cnt], "IND")==0)
+                {
+                    params.mcmc_clock = INDEPENDENT;
+                }
+                else if (strcmp(argv[cnt], "CORR")==0)
+                {
+                    params.mcmc_clock = CORRELATED;
+                }else
+                {
+                    throw "Only equal rate, independent and correlated clock models are supported in MCMCtree";
+                }
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mcmc-bds") == 0) {
+                cnt++;
+                params.mcmc_bds = argv[cnt];
+                StrVector mcmc_bds_vec;
+                convert_string_vec(params.mcmc_bds.c_str(), mcmc_bds_vec, ',');
+                if (mcmc_bds_vec.size()!=3 || !strcmp(mcmc_bds_vec[2].c_str(), ""))
+                {
+                    throw "three parameters should be set for birth-death model of MCMCtree (birth-rate, death-rate and sampling-fraction)";
+                }
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mcmc-iter") == 0) {
+                cnt++;
+                params.mcmc_iter = argv[cnt];
+                StrVector mcmc_iter_vec;
+                convert_string_vec(params.mcmc_iter.c_str(), mcmc_iter_vec, ',');
+                if (mcmc_iter_vec.size()!=3  || !strcmp(mcmc_iter_vec[2].c_str(), ""))
+                {
+                    throw "three parameters should be set for MCMCtree dating (Burin, samplefreq and nsamples)";
+                }
                 continue;
             }
 

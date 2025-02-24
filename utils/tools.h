@@ -209,6 +209,12 @@ enum SEQ_CHUNK_STATUS {
     READING
 };
 
+enum MCMC_CLOCK{
+    EQUAL_RATES = 1,
+    INDEPENDENT = 2,
+    CORRELATED = 3
+};
+
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
     double param_1 = -1, param_2 = -1;
@@ -2467,6 +2473,18 @@ public:
 
     /** method for phylogenetic dating, currently LSD and MCMCTree approximate likelihood method are supported */
     string dating_method;
+
+    /** flag for phylogenetic dating with MCMCtree with modelFinder */
+    bool dating_mf;
+
+    /** the rate model for MCMCtree (Global/Equal, Independent and Correlated clock models are supported) */
+    int mcmc_clock;
+
+    /** Birth, death and sampling parameters for MCMCtree */
+    string mcmc_bds;
+
+    /** parameters for MCMC sampling under MCMCtree which includes burnin, samplefreq and nsample*/
+    string mcmc_iter;
 
     /** extra commands passed to the dating method */
     string dating_options;

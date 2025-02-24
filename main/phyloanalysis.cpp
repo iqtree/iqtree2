@@ -2699,7 +2699,7 @@ void saveTreeMCMCTree(DoubleVector branchLengths, RowVectorXd &branch_lengths_ve
                       stringstream &tree_stream) {
     Map<RowVectorXd> branch_lengths_vector_mapped(branchLengths.data(), branchLengths.size());
     branch_lengths_vector = branch_lengths_vector_mapped;
-    tree->printTree(tree_stream, WT_BR_LEN);
+    tree->printTree(tree_stream,  WT_BR_LEN + WT_SORT_TAXA);
 }
 
 void printMCMCFileFormat(PhyloTree *tree, MatrixXd &hessian, stringstream &tree_stream,
@@ -2850,41 +2850,54 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
     } else {
         ndata = 1;
     }
-    ctl << "seed = -1" << endl
-        << "seqfile = " << (string) iqtree->params->out_prefix + ".dummyAln.txt" << endl
-        << "treefile = " << ((string) Params::getInstance().out_prefix + ".rooted.mcmctree.tree") << endl
-        << "mcmcfile = " << "mcmc.txt" << endl
-        << "outfile = " << "out.txt" << endl << endl
-        << "checkpoint = 1 * 0: nothing; 1 : save; 2: resume" << endl
 
-        << "ndata = " << ndata << endl
-        << "seqtype = 0    * 0: No Alignment datatype required" << endl
-        << "usedata = 2    *  2:use in.BV" << endl
-        << "clock = 3      * 1: global clock; 2: independent rates; 3: correlated rates" << endl
+    StrVector mcmc_iter_vec;
+    convert_string_vec(Params::getInstance().mcmc_iter.c_str(), mcmc_iter_vec, ',');
+    ctl << "seed = -1" << endl
+        << "seqfile = " << (string) iqtree->params->out_prefix + ".dummy.phy" << "  * A dummy alignment only allow to run MCMCtree" << endl
+        << "treefile = " << ((string) Params::getInstance().out_prefix + ".rooted.nwk") << "  * Rooted newick tree with annotated fossil/tip dates"  << endl
+        << "mcmcfile = " << ((string) Params::getInstance().out_prefix + ".mcmctree.log") << "  * MCMC log of parameters that can be examined in Tracer"  << endl
+        << "outfile = " << ((string) Params::getInstance().out_prefix + ".mcmctree.out")  << "  * Output of the summerized results of MCMCtree" << endl
+        << "ckpfile = " << ((string) Params::getInstance().out_prefix + ".mcmctree.ckp")  << "  * Checkpoint file of MCMCtree" << endl
+        << "hessianfile = " << ((string) Params::getInstance().out_prefix + ".mcmctree.hessian")  << "  * File with gradient and hessian matrix" << endl << endl << endl
+
+
+        << "checkpoint = 1 * 0: nothing; 1 : save; 2: resume" << endl
+        << "ndata = " << ndata << " * number of partitions" << endl
+        << "seqtype = 0    * 0 : nucleotides; 1: codons; 2: AAs (not required if the approximate likelihood method is used)" << endl
+        << "usedata = 2    * 0: sampling from priors with no data; 1: exact slow likelihood; 2: approximate likelihood" << endl
+        << "clock = "  << Params::getInstance().mcmc_clock << "     * 1: global clock with equal rates; 2: independent rates; 3: correlated rates" << endl
         << "RootAge = <1.0  * safe constraint on root age, used if no fossil for root." << endl << endl
 
-        << "model = 0      * The model specification is not necessary for approximate likelihood method" << endl
-        << "alpha = 0      * The alpha value specification is not necessary for approximate likelihood method" << endl
-        << "ncatG = 0      * The No. categories in discrete gamma specification is not necessary for approximate likelihood method" << endl << endl
-
-        << "cleandata = 0  * remove sites with ambiguity data (1:yes, 0:no)?" << endl << endl
-
-        << "BDparas = 1 1 0.5      * birth, death, sampling" << endl
-        << "kappa_gamma = 6 2      * gamma prior for kappa" << endl
-        << "alpha_gamma = 1 1      * gamma prior for alpha" << endl << endl
-
-        << "rgene_gamma = 2 2      * gamma prior for overall rates for genes" << endl
-        << "sigma2_gamma = 1 10    * gamma prior for sigma^2     (for clock=2 or 3)" << endl << endl
-
+        << "BDparas = "  << Params::getInstance().mcmc_bds <<  "    * birth rate, death rate, sampling priors for sampling times" << endl
         << "finetune = 1: 0.1  0.1  0.1  0.01 .5  * auto (0 or 1) : times, musigma2, rates, mixing, paras, FossilErr"
-        << endl << endl
+        << "print = 1  * 1: normal output; 2: verbose output" << endl << endl
 
-        << "print = 1" << endl
-        << "burnin = 2000" << endl
-        << "sampfreq = 2" << endl
-        << "nsample = 20000" << endl << endl
 
-        << "*** Note: Make your window wider (100 columns) before running the program." << endl;
+        << "*** These parameters are used for multi-loci partitioned data (ndata > 1), see dos Reis et al .(2013)" <<  endl << endl
+
+        << "rgene_gamma = 2 2     * alpha and beta parameter of Dirichlet-gamma prior for mean rate across loci for clock=2 or 3" << endl
+        << "sigma2_gamma = 1 10   * alpha and beta parameter of Dirichlet-gamma prior for rate variance across loci for clock=2 or 3" << endl << endl
+
+        << "*** These parameters control the MCMC run" <<  endl << endl
+
+        << "burnin = " << mcmc_iter_vec[0] << endl
+        << "sampfreq = " << mcmc_iter_vec[1] << endl
+        << "nsample = " << mcmc_iter_vec[2] << endl << endl
+
+        << "***  Note: Total number of MCMC iterations will be burnin + (sampfreq * nsample)" <<  endl << endl
+
+        << "***  Following parameters only needed to run MCMCtree with exact likelihood (usedata = 1), no need to change anything for approximate likelihood (usedata = 2)" <<  endl << endl
+
+
+        << "model = 0      * The model specification is not necessary for approximate likelihood method" << endl
+        << "alpha = 0      * 0: No rate heterogeneity across sites; otherwise: fixed alpha parameter of the Gamma distribution" << endl
+        << "ncatG = 0      * Number of rate categories for the discrete Gamma distribution" << endl << endl
+        << "cleandata = 0  * remove sites with ambiguity data (1:yes, 0:no)?" << endl << endl
+        << "kappa_gamma = 6 2      * gamma prior for kappa of the HKY model" << endl
+        << "alpha_gamma = 1 1       * alpha and beta parameter of Gamma distribution for heterogeneous rates across sites" << endl << endl;
+
+
     // generating a dummy alignment for approximate likelihood method with MCMCTree
     if (iqtree->isSuperTree() && partition_type == BRLEN_OPTIMIZE) {
         auto *stree = (PhyloSuperTree *) iqtree;
@@ -2898,9 +2911,9 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
 
 void printHessian(IQTree *iqtree, int partition_type) {
 
-    string outFileName = ((string) iqtree->params->out_prefix + ".in.BV");
+    string outFileName = ((string) iqtree->params->out_prefix + ".mcmctree.hessian");
     string ctlFileName = ((string) iqtree->params->out_prefix + ".mcmctree.ctl");
-    string alnFileName = ((string) iqtree->params->out_prefix + ".dummyAln.txt");
+    string alnFileName = ((string) iqtree->params->out_prefix + ".dummy.phy");
     ofstream outfile(outFileName);
     ofstream ctlFile(ctlFileName);
     ofstream alnFile(alnFileName);
@@ -5142,6 +5155,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint, IQTree *&tree, Ali
         alignment = NULL; // from now on use tree->aln instead
 
         startTreeReconstruction(params, tree, *model_info);
+        if (params.dating_method == "mcmctree" && params.dating_mf)
+        {
+            cout << "Initializing rooted tree again from input tree file for MCMCtree dating ..." << endl;
+            tree->computeInitialTree(params.SSE);
+        }
         // call main tree reconstruction
         if (params.num_runs == 1) {
             runTreeReconstruction(params, tree);

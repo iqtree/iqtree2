@@ -1513,6 +1513,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
+        params.dating_mf = true;
     }
 }
 
@@ -6604,6 +6605,7 @@ void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_i
 
     if (test_only) {
         params.min_iterations = 0;
+        params.dating_mf = true;
     }
 }
 
