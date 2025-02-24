@@ -2890,8 +2890,8 @@ void printMCMCTreeCtlFile(IQTree *iqtree, ofstream &ctl, ofstream &dummyAlignmen
         << "***  Following parameters only needed to run MCMCtree with exact likelihood (usedata = 1), no need to change anything for approximate likelihood (usedata = 2)" <<  endl << endl
 
 
-        << "model = 0      * The model specification is not necessary for approximate likelihood method" << endl
-        << "alpha = 0      * 0: No rate heterogeneity across sites; otherwise: fixed alpha parameter of the Gamma distribution" << endl
+        << "model = 0      * 0:JC69, 1:K80, 2:F81, 3:F84, 4:HKY85" << endl
+        << "alpha = 0      * 0: No rate heterogeneity across sites; otherwise: initial alpha parameter of the Gamma distribution" << endl
         << "ncatG = 0      * Number of rate categories for the discrete Gamma distribution" << endl << endl
         << "cleandata = 0  * remove sites with ambiguity data (1:yes, 0:no)?" << endl << endl
         << "kappa_gamma = 6 2      * gamma prior for kappa of the HKY model" << endl
