@@ -23,7 +23,7 @@ public:
      */
     IQTreeMixHmm();
     
-    IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees);
+    IQTreeMixHmm(Params &params, Alignment *aln);
     
     /**
      destructor
@@ -91,7 +91,7 @@ public:
     virtual int getNParameters();
     
     // print out all the results to a file
-    void printResults(const char *filename, int cat_assign_method = 0);
+    void printResults(const char *filename, int cat_assign_method = 0, int* numSiteCat = NULL);
 
     // print out the marginal probabilities to a file
     void printMarginalProb(const char *filename);

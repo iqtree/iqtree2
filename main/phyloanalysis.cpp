@@ -2740,52 +2740,6 @@ bool isTreeMixture(Params& params) {
     return (params.model_name.find("+T") != string::npos);
 }
 
-// return how many char c inside the infile
-int checkCharInFile(char* infile, char c) {
-    ifstream fin;
-    string aline;
-    size_t i,k;
-    k=0;
-    fin.open(infile);
-    while (getline(fin,aline)) {
-        for (i=0; i<aline.length(); i++) {
-            if (aline[i] == c)
-                k++;
-        }
-    }
-    fin.close();
-    return k;
-}
-
-// get the number of trees for the tree-mixture model
-int getTreeMixNum(Params& params) {
-    int n = 0;
-    size_t p = params.model_name.find("+T");
-    string str_n;
-    if (p != string::npos && p < params.model_name.length()-2) {
-        str_n = params.model_name.substr(p+2);
-        n = atoi(str_n.c_str());
-    }
-    if (n == 1) {
-        outError("The number after +T has to be greater than 1");
-    }
-    // check how many trees inside the user input file
-    int k = checkCharInFile(params.user_file, ';');
-    if (k <= 1) {
-        outError("Tree mixture model only supports at least 2 trees inside the tree file: " + string(params.user_file) + ". Each tree must be followed by the character ';'.");
-    }
-    if (n == 0) {
-        n = k;
-        cout << "Number of input trees: " << n << endl;
-    } else if (n < k) {
-        cout << "Note: Only " << n << " trees are considered, although there are more than " << n << " trees in the tree file: " << params.user_file << endl;
-    } else if (n > k) {
-        outError("The number of trees inside the tree file '" + string(params.user_file) + "' is less than " + convertIntToString(n));
-    }
-    return n;
-}
-
-
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     //    string dist_file;
@@ -4120,8 +4074,12 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             // initialize supertree - Proportional Edges case
             tree = new PhyloSuperTreePlen((SuperAlignment*)alignment, params.partition_type);
         } else {
-            // initialize supertree stuff if user specifies partition file with -sp option
-            tree = new PhyloSuperTree((SuperAlignment*)alignment);
+            if (isTreeMix) {
+                tree = new PhyloSuperHmm((SuperAlignment*)alignment, params);
+            } else {
+                // initialize supertree stuff if user specifies partition file with -sp option
+                tree = new PhyloSuperTree((SuperAlignment*)alignment);
+            }
         }
         // this alignment will actually be of type SuperAlignment
         //        alignment = tree->aln;
@@ -4136,6 +4094,8 @@ IQTree *newIQTree(Params &params, Alignment *alignment) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
         } else if (pos != string::npos) {
             tree = new PhyloTreeMixlen(alignment, 0);
+        } else if (isTreeMix) {
+            tree = new IQTreeMixHmm(params, alignment);
         } else
             tree = new IQTree(alignment);
     }

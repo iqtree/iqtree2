@@ -287,7 +287,7 @@ double PhyloHmm::optimizeParameters(double gradient_epsilon) {
 // cat_assign_method:
 //  0 - the categories along sites is assigned according to the path with maximum probability (default)
 //  1 - the categories along sites is assigned according to the max posterior probability
-void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment, int cat_assign_method) {
+void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment, int cat_assign_method, int* numSiteCat) {
     int i,j;
     int* numSites; // number of sites for each category
     double* rateSites; // ratio of sites for each category
@@ -368,6 +368,10 @@ void PhyloHmm::showSiteCatMaxLike(ostream& out, bool show_assignment, int cat_as
         // show the max log likelihood
         out << "The path with maximum log likelihood: " << fixed << setprecision(5) << pathLogLike << endl;
     }
+    
+    // copy numSites to numSiteCat if numSiteCat is not NULL
+    if (numSiteCat)
+        memcpy(numSiteCat, numSites, sizeof(int) * ncat);
 
     delete[] numSites;
     delete[] rateSites;

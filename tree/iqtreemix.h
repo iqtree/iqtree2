@@ -29,6 +29,9 @@
 #define TINY_SCALE_DIFF 0.5
 #define ONE_LOG_SCALE_DIFF 178.0
 
+// change to 0.04 for tree mixture model as 0.02 and 0.03 cause numerical problems
+const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
+
 class IQTreeMix : public IQTree, public vector<IQTree*> {
 public:
     
@@ -37,7 +40,7 @@ public:
      */
     IQTreeMix();
     
-    IQTreeMix(Params &params, Alignment *aln, vector<IQTree*> &trees);
+    IQTreeMix(Params &params, Alignment *aln);
     
     /**
      destructor

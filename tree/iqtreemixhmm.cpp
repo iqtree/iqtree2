@@ -18,7 +18,7 @@ IQTreeMixHmm::IQTreeMixHmm() : IQTreeMix(), PhyloHmm() {
     siteTypes = NULL;
 }
 
-IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln, vector<IQTree*> &trees) : IQTreeMix(params, aln, trees), PhyloHmm(getAlnNSite(), trees.size()) {
+IQTreeMixHmm::IQTreeMixHmm(Params &params, Alignment *aln) : IQTreeMix(params, aln), PhyloHmm(getAlnNSite(), ntree) {
     optimTree = -1;
     optimBranchGrp = -1;
     objFun = 1; // default: MAST model
@@ -653,7 +653,7 @@ int IQTreeMixHmm::getNParameters() {
 // cat_assign_method:
 //  0 - the categories along sites is assigned according to the path with maximum probability (default)
 //  1 - the categories along sites is assigned according to the max posterior probability
-void IQTreeMixHmm::printResults(const char *filename, int cat_assign_method) {
+void IQTreeMixHmm::printResults(const char *filename, int cat_assign_method, int* numSiteCat) {
     
     size_t i, j;
     ofstream out;
@@ -664,7 +664,7 @@ void IQTreeMixHmm::printResults(const char *filename, int cat_assign_method) {
     out << endl;
     
     // show the assignment of the categories along the path with max likelihood
-    showSiteCatMaxLike(out, true, cat_assign_method);
+    showSiteCatMaxLike(out, true, cat_assign_method, numSiteCat);
     
     out.close();
 }

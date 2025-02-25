@@ -23,12 +23,7 @@ public:
     /**
      constructor
      */
-    PhyloSuperHmm(SuperAlignment *alignment, Params &params, int numTree);
-    
-    /**
-     constructor
-     */
-    PhyloSuperHmm(SuperAlignment *alignment, PhyloSuperHmm *super_hmm);
+    PhyloSuperHmm(SuperAlignment *alignment, Params &params);
     
     /**
      destructor

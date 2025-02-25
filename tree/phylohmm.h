@@ -84,7 +84,7 @@ public:
     // cat_assign_method:
     //  0 - the categories along sites is assigned according to the path with maximum probability (default)
     //  1 - the categories along sites is assigned according to the max posterior probability
-    void showSiteCatMaxLike(ostream& out, bool show_assignment = true, int cat_assign_method = 0);
+    void showSiteCatMaxLike(ostream& out, bool show_assignment = true, int cat_assign_method = 0, int* numSiteCat = NULL);
     
     // number of sites
     int nsite;
