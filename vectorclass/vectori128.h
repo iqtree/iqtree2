@@ -4003,7 +4003,7 @@ static inline Vec16c permute16c(Vec16c const & a) {
     // special case: rotate
     if (i0>0 && i0 < 16    && i1==((i0+1)&15) && i2 ==((i0+2 )&15) && i3 ==((i0+3 )&15) && i4 ==((i0+4 )&15) && i5 ==((i0+5 )&15) && i6 ==((i0+6 )&15) && i7 ==((i0+7 )&15) 
     && i8==((i0+8)&15) && i9==((i0+9)&15) && i10==((i0+10)&15) && i11==((i0+11)&15) && i12==((i0+12)&15) && i13==((i0+13)&15) && i14==((i0+14)&15) && i15==((i0+15)&15)) {
-        temp = _mm_alignr_epi8(a, a, i0 & 15);
+        temp = _mm_alignr_epi8(a, a, (i0 & 15));
         shortcut = -1;
     }
     if (shortcut == 0 || do_and_zero) {

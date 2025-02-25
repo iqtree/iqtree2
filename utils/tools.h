@@ -2532,6 +2532,11 @@ public:
     string nn_path_rates; // added by TD
 
     /**
+    *  TRUE if multiple random streams are used
+    */
+    bool multi_rstreams_used;
+    
+    /**
     *  TRUE to execute alisim
     */
     bool alisim_active;
@@ -3384,6 +3389,8 @@ double computePValueChiSquare(double x, int df);
 /*--------------------------------------------------------------*/
 
 extern int *randstream;
+extern vector<int*> rstream_vec;
+extern vector<default_random_engine> generator_vec;
 
 /**
  * initialize the random number generator
@@ -3396,6 +3403,17 @@ int init_random(int seed, bool write_info = false, int** rstream = NULL);
  * finalize random number generator (e.g. free memory
  */
 int finish_random(int *rstream = NULL);
+
+/**
+ * initialize multiple random streams
+ * @return the number of streams
+ */
+int init_multi_rstreams();
+
+/**
+ * finish multiple random streams
+ */
+int finish_multi_rstreams();
 
 /**
  * returns a random integer in the range [0; n - 1]
