@@ -1040,6 +1040,9 @@ void AliSimulator::executeIM(int thread_id, int &sequence_length, int default_se
     default_random_engine generator;
     generator.seed(params->ran_seed + MPIHelper::getInstance().getProcessID() * 1000 + params->alignment_id);
 
+    // Bug fix: in some cases the ids of leaves are not continuous -> in IM algorithm with multiple threads, we use the leaf id to jump to the current position to output the simulated sequences -> we need to build a vector of continuous ids
+    if (num_threads > 1)
+        buildContinousIdsForTree();
 
     // init the output stream
     initOutputFile(out, thread_id, actual_segment_length, output_filepath, open_mode, write_sequences_to_tmp_data);
@@ -1955,7 +1958,7 @@ void AliSimulator::outputOneSequence(Node* node, string &output, int thread_id, 
         //  cache output into the writing queue
         if (num_threads != 1)
         {
-            int64_t pos = ((int64_t)node->id) * ((int64_t)output_line_length);
+            int64_t pos = ((int64_t)node_continuous_id[node->id]) * ((int64_t)output_line_length);
             pos += starting_pos + (num_sites_per_state == 1 ? segment_start : (segment_start * num_sites_per_state)) + (thread_id == 0 ? 0 : seq_name_length);
             cacheSeqChunkStr(pos, output, thread_id);
         }
@@ -3774,3 +3777,59 @@ void AliSimulator::mergeChunksAllNodes(Node* node, Node* dad)
     }
 }
 
+
+void AliSimulator::buildContinousIdsForLeave(Node* node, Node* dad)
+{
+    // start from root
+    if (!node) {
+        node = tree->root;
+        tree->leafNum = 0;
+    }
+
+    // reset the leaf's id
+    if (node->isLeaf() && node->name != ROOT_NAME)
+        node_continuous_id[node->id] = tree->leafNum++;
+
+    // traverse further
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        buildContinousIdsForLeave((*it)->node, node);
+    }
+}
+
+void AliSimulator::buildContinousIdsForInternals(Node* node, Node* dad)
+{
+    // start from root
+    if (!node) {
+        node = tree->root;
+        tree->nodeNum = tree->leafNum;
+    }
+
+    // reset the id of internal nodes
+    if (!node->isLeaf())
+        node_continuous_id[node->id] = tree->nodeNum++;
+
+    // traverse further
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        buildContinousIdsForInternals((*it)->node, node);
+    }
+}
+
+void AliSimulator::buildContinousIdsForTree()
+{
+    // backup the number of leaves and nodes
+    int leafNum = tree->leafNum;
+    int nodeNum = tree->nodeNum;
+
+    // init the array to store the continuous ids
+    node_continuous_id.resize(nodeNum + 1);
+
+    // build the continuous ids for leaves
+    buildContinousIdsForLeave();
+
+    // build the continuous ids for internal nodes
+    buildContinousIdsForInternals();
+
+    // restore the number of leaves and nodes
+    tree->leafNum = leafNum;
+    tree->nodeNum = nodeNum;
+}
