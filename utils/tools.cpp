@@ -1552,6 +1552,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     params.original_params = "";
     params.alisim_active = false;
+    params.multi_rstreams_used = false;
     params.alisim_inference_mode = false;
     params.alisim_no_copy_gaps = false;
     params.alisim_sequence_length = 1000;
@@ -5605,6 +5606,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             
             if (strcmp(argv[cnt], "--alisim") == 0) {
                 params.alisim_active = true;
+                params.multi_rstreams_used = true;
                 
                 cnt++;
                 if (cnt >= argc || argv[cnt][0] == '-')
@@ -6726,6 +6728,16 @@ int finish_random() {
 /******************/
 
 int *randstream;
+/**
+   vector of random streams for multiple threads
+ **/
+vector<int*> rstream_vec;
+/**
+   vector of generators for multimodal discrete distributions and continuous Gamma distributions
+   Note that multimodal discrete distributions were used to randomly select a site
+   when handling Indel/Sub events with the Gillespie algorithm.
+ **/
+vector<default_random_engine> generator_vec;
 
 int init_random(int seed, bool write_info, int** rstream) {
     //    srand((unsigned) time(NULL));
@@ -6765,6 +6777,65 @@ int finish_random(int *rstream) {
         return free_sprng(rstream);
     else
         return free_sprng(randstream);
+}
+
+int init_multi_rstreams()
+{
+#if RAN_TYPE == RAN_SPRNG
+    #ifdef _OPENMP
+    // get the number of all threads (not just physical)
+    const int num_threads = countPhysicalCPUCores();
+    
+    // initialize a vector of random seeds
+    size_t ran_seed_vec_size = 2*num_threads;
+    size_t i;
+    vector<int64_t> ran_seed_vec(ran_seed_vec_size);
+    
+    // generate a vector of random seeds
+//    const int MAX_INT32 = 2147483647;
+//    for (i = 0; i < ran_seed_vec_size; ++i)
+//        ran_seed_vec[i] = random_int(MAX_INT32);
+      for (i = 0; i < ran_seed_vec_size; ++i)
+          ran_seed_vec[i] = Params::getInstance().ran_seed + (int64_t)MPIHelper::getInstance().getProcessID()*1000 + i+1;
+
+    // print the random seeds for debugging purposes if needed
+    if (verbose_mode >= VB_DEBUG)
+    {
+        std::cout << "- Random seeds used:";
+        for (i = 0; i < ran_seed_vec_size; ++i)
+            std::cout << " " << ran_seed_vec[i];
+        std::cout << std::endl;
+    }
+        
+    // initialize the vector of random streams
+    rstream_vec.resize(num_threads);
+    for (i = 0; i < num_threads; ++i) {
+        init_random(ran_seed_vec[i], false, &rstream_vec[i]);
+    }
+        
+    // initialize the continuous Gamma generators
+    generator_vec.resize(num_threads);
+    for (i = 0; i < num_threads; ++i)
+        generator_vec[i].seed(ran_seed_vec[i+num_threads]);
+    
+    #endif
+#else
+    outError("Oops! Only SPRNG is now supported for the parallel version.")
+#endif
+    
+    return rstream_vec.size();
+}
+
+int finish_multi_rstreams()
+{
+    // finish the random streams one by one
+    for (size_t i = 0; i < rstream_vec.size(); ++i)
+        finish_random(rstream_vec[i]);
+    
+    // clear the vector of random streams
+    rstream_vec.clear();
+    
+    return rstream_vec.size();
 }
 
 #endif /* USE_SPRNG */

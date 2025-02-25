@@ -59,7 +59,7 @@
 #elif defined(__AVX)
 
 #if defined(__ARM_NEON)
-#include "sse2neon.h"
+#include "utils/sse2neon.h"
 #else
 #include <xmmintrin.h>
 #include <immintrin.h>
@@ -84,7 +84,7 @@
 #elif (defined(__SSE3))
 
 #if defined(__ARM_NEON)
-#include "sse2neon.h"
+#include "utils/sse2neon.h"
 #else
 #include <xmmintrin.h>
 #include <pmmintrin.h>
@@ -117,7 +117,7 @@
 #if defined (_MSC_VER)
 #	if defined ( __SSE4_2__ ) || defined (__AVX__)
 #if defined(__ARM_NEON)
-#        include "sse2neon.h"
+#        include "utils/sse2neon.h"
 #else
 #include <nmmintrin.h>
 #endif

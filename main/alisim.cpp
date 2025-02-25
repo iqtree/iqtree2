@@ -11,6 +11,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
 {
     MPIHelper::getInstance().barrier();
     auto start = getRealTime();
+    auto start_cpu = getCPUTime();
     
     // Init variables
     IQTree *tree;
@@ -84,7 +85,12 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     // aln and tree are deleted in distructor of AliSimSimulator
     MPIHelper::getInstance().barrier();
     auto end = getRealTime();
-    cout << "Simulation time: " << fixed << end-start << "s" << endl;
+    auto end_cpu = getCPUTime();
+    cout << "Simulation CPU time: " << fixed << end_cpu - start_cpu << " sec (" <<
+        convert_time(end_cpu-start_cpu) << ")" << endl;
+    cout << "Simulation wall-clock time: " << fixed << end - start << " sec (" <<
+        convert_time(end-start) << ")" << endl;
+    cout << endl;
 }
 
 /**
@@ -499,6 +505,10 @@ void executeSimulation(Params& params, IQTree *&tree)
     // iteratively generate multiple/a single  alignment(s) for each tree
     generateMultipleAlignmentsFromSingleTree(alisimulator, input_msa);
     
+    // show log file
+    if (!(params.suppress_output_flags & OUT_LOG))
+        cout << "Screen log file: " << params.out_prefix << ".log" << endl;
+    
     // delete alisimulator
     if (alisimulator->tree) delete alisimulator->tree;
     if (alisimulator->first_insertion) delete alisimulator->first_insertion;
@@ -726,7 +736,20 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
 #ifdef _OPENMP
     // num_threads == 0 <=> auto
     if (!super_alisimulator->params->num_threads)
+    {
         super_alisimulator->params->num_threads = countPhysicalCPUCores();
+        
+        // manually set number of threads
+        omp_set_num_threads(super_alisimulator->params->num_threads);
+    }
+    
+    // show info
+    if (MPIHelper::getInstance().getNumProcesses() == 1)
+        cout << " - Number of threads: " << super_alisimulator->params->num_threads << endl;
+    else {
+        cout << " - Number of threads per MPI process: " << super_alisimulator->params->num_threads << endl;
+        cout << " - Number of threads for MPI processes: " << super_alisimulator->params->num_threads * MPIHelper::getInstance().getNumProcesses() << endl;
+    }
 #endif
     
     // reset number of OpenMP threads to 1 in simulations with Indels
@@ -757,9 +780,10 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         // otherwise, if using AliSim-OpenMP-EM -> show a warning in cases that we cannot skip merging
         else if (super_alisimulator->tree->isSuperTree()
                   || super_alisimulator->params->alisim_fundi_taxon_set.size() > 0
-                  || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE))
+                  || (super_alisimulator->tree->getModelFactory() && super_alisimulator->tree->getModelFactory()->getASC() != ASC_NONE)
+                  || super_alisimulator->params->aln_output_format == IN_MAPLE)
         {
-            outWarning("Cannot skip merging sequence chunks in simulations with FunDi, Partitions, or +ASC models. AliSim will concatenate sequence chunks from intermediate files into a single output file.");
+            outWarning("Cannot skip merging sequence chunks in simulations with FunDi, Partitions, +ASC models, or when outputting alignment in MAPLE format. AliSim will concatenate sequence chunks from intermediate files into a single output file.");
             
             Params::getInstance().no_merge = false;
             super_alisimulator->params->no_merge = false;
@@ -784,6 +808,13 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     if (super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->alisim_single_output && super_alisimulator->params->no_merge)
     {
         outWarning("Ignore --single-output option since it is not supported if using with --no-merge option.");
+        super_alisimulator->params->alisim_single_output = false;
+    }
+    
+    // don't allow --single-output when outputting MAPLE format
+    if (super_alisimulator->params->alisim_single_output && super_alisimulator->params->aln_output_format == IN_MAPLE)
+    {
+        outWarning("Ignore --single-output option since it is not supported when outputting MAPLE format.");
         super_alisimulator->params->alisim_single_output = false;
     }
         
@@ -844,12 +875,12 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     }
     
     // iteratively generate multiple datasets for each tree
-    for (int i = 0; i < super_alisimulator->params->alisim_dataset_num; i++)
+    int proc_ID = MPIHelper::getInstance().getProcessID();
+    int nprocs  = MPIHelper::getInstance().getNumProcesses();
+    for (int i = proc_ID; i < super_alisimulator->params->alisim_dataset_num; i+=nprocs)
     {
         // parallelize over MPI ranks statically
-        int proc_ID = MPIHelper::getInstance().getProcessID();
-        int nprocs  = MPIHelper::getInstance().getNumProcesses();
-        if (i%nprocs != proc_ID) continue;
+        //if (i%nprocs != proc_ID) continue;
         
         // If users want to output Maple format -> clear seqtypes and aln_names
         if (actual_output_format == IN_MAPLE)
@@ -1004,8 +1035,51 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
                 remove(getOutputNameWithExt(IN_PHYLIP, aln_names[aln_id]).c_str());
                 
                 // show the output file name
-                if (!(MPIHelper::getInstance().getNumProcesses() > 1 && super_alisimulator->params->alisim_dataset_num > 1))
-                    cout << "The simulated alignment has been converted into Maple format: "<< getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) <<endl;
+                cout << "An alignment written to " << getOutputNameWithExt(IN_MAPLE, aln_names[aln_id]) << endl;
+            }
+        }
+        // otherwise print the output file name
+        else
+        {
+            string output_filename = output_filepath;
+            
+            if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_openmp_alg == EM && super_alisimulator->params->no_merge)
+            {
+                cout << "An alignment has been written to files: "
+                << getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename + "_1")
+                << " - "
+                << getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename + "_" + convertIntToString(super_alisimulator->params->num_threads)) << endl << endl;
+            }
+            // each simulated alignment is outputted into a single file
+            else if (!super_alisimulator->params->alisim_single_output)
+            {
+                cout << "An alignment written to "
+                << getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename) << endl;
+                
+                // if using indels and outputting unaligned sequences
+                if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0
+                    && !super_alisimulator->params->alisim_no_export_sequence_wo_gaps)
+                {
+                    cout << "Unaligned sequences written to "
+                    << getOutputNameWithExt(IN_FASTA, output_filename + ".unaligned") << endl;
+                }
+                
+                // add an empty line
+                //cout << endl;
+            } else if (super_alisimulator->params->alisim_single_output
+                       && i == super_alisimulator->params->alisim_dataset_num - 1)
+            {
+                cout << super_alisimulator->params->alisim_dataset_num
+                << " alignments written to "
+                << getOutputNameWithExt(super_alisimulator->params->aln_output_format, output_filename) << endl;
+                
+                // if using indels and outputting unaligned sequences
+                if (super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0
+                    && !super_alisimulator->params->alisim_no_export_sequence_wo_gaps)
+                {
+                    cout << "Unaligned sequences written to "
+                    << getOutputNameWithExt(IN_FASTA, output_filename + ".unaligned") << endl;
+                }
             }
         }
         
@@ -1247,13 +1321,9 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 ((ofstream*)out)->close();
             delete out;
         
-            // show the output file name
-            if (!(MPIHelper::getInstance().getNumProcesses() > 1 && alisimulator->params->alisim_dataset_num > 1))
-                cout << "An alignment has just been exported to "<<file_path<<endl;
-        
             // show actual output sequence length in simulations with Indels
-            if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
-                cout << "Output sequence length: " << convertIntToString(sequence_length) << endl;
+//            if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
+//                cout << "Output sequence length of " << file_path << ": " << convertIntToString(sequence_length) << endl;
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, file_path);
         }
