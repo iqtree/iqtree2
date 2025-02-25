@@ -364,6 +364,21 @@ protected:
     void mergeChunksAllNodes(Node* node = NULL, Node* dad = NULL);
     
     /**
+        build a contious ids for leaves in the tree (in some cases, the ids of leaves are not continuous)
+    */
+    void buildContinousIdsForLeave(Node* node = NULL, Node* dad = NULL);
+    
+    /**
+        build a contious ids for internal nodes in the tree (in some cases, the ids of leaves are not continuous)
+    */
+    void buildContinousIdsForInternals(Node* node = NULL, Node* dad = NULL);
+    
+    /**
+        build a contious ids for all nodes in the tree (in some cases, the ids of leaves are not continuous)
+    */
+    void buildContinousIdsForTree();
+    
+    /**
         init the output file
     */
     void initOutputFile(ostream *&out, int thread_id, int actual_segment_length, string output_filepath, std::ios_base::openmode open_mode, bool write_sequences_to_tmp_data);
@@ -461,6 +476,7 @@ public:
     vector<int> cache_start_indexes;
     int cache_size_per_thread;
     bool force_output_PHYLIP = false;
+    vector<int> node_continuous_id;
     
     // variables using for posterior mean rates/state frequencies
     bool applyPosRateHeterogeneity = false;
