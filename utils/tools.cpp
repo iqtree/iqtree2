@@ -1007,11 +1007,11 @@ void readTaxaSets(char *filename, MSetsBlock *sets) {
 bool parseProfileMixModelStr(string& model_str) {
     if (model_str.length() == 0)
         return false;
-    
+
     string modelstr = model_str;
     // change to upper character
     transform(modelstr.begin(), modelstr.end(), modelstr.begin(), ::toupper);
-    
+
     int pos_mix = modelstr.find("MIX{");
     if (pos_mix != string::npos) {
         int pos_endBrac = modelstr.find_last_of('}');
@@ -1070,7 +1070,7 @@ void parseProfileMix(Params& params) {
     if (parseProfileMixModelStr(params.model_joint))
         params.optimize_linked_gtr = true;
 }
- 
+
 void get2RandNumb(const int size, int &first, int &second) {
     // pick a random element
     first = random_int(size);
@@ -1495,12 +1495,16 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.date_replicates = 0;
     params.clock_stddev = -1.0;
     params.date_outlier = -1.0;
+    params.dating_mf = false;
+    params.mcmc_clock = CORRELATED;
+    params.mcmc_bds = "1,1,0.5";
+    params.mcmc_iter = "20000, 100, 20000";
 
     // added by TD
     params.use_nn_model = false;
     params.nn_path_model = "resnet_modelfinder.onnx";
     params.nn_path_rates = "lanfear_alpha_lstm.onnx";
-    
+
     // ------------ Terrace variables ------------
     params.terrace_check = false;
     params.terrace_analysis = false;
@@ -1604,7 +1608,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.include_pre_mutations = false;
     params.mutation_file = "";
     params.site_starting_index = 0;
-    
+
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
         params.original_params = params.original_params + argv[cnt] + " ";
@@ -1780,7 +1784,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use --guess-multiplier <value>";
                 params.guess_multiplier = convert_double(argv[cnt]);
                 continue;
-            } 
+            }
 //            if (strcmp(argv[cnt], "--rates-file") == 0) {
 //                params.rates_file = true;
 //                continue;
@@ -1789,7 +1793,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --reset-method <const/random>";
-                if(strcmp(argv[cnt], "const") != 0 && strcmp(argv[cnt], "random") != 0) 
+                if(strcmp(argv[cnt], "const") != 0 && strcmp(argv[cnt], "random") != 0)
                     throw "Invalid option for --reset-method : use 'const' or 'random'";
                 params.reset_method = argv[cnt];
                 continue;
@@ -5098,10 +5102,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                             {
                                 // set the default model is yule harding
                                 params.tree_gen = YULE_HARDING;
-                                
+
                                 // set the number of taxa
                                 params.sub_size = convert_int(num_taxa_str.c_str());
-                                
+
                                 continue;
                             }
                             else
@@ -5471,11 +5475,15 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--dating") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --dating LSD";
+                    throw "Use --dating LSD or --dating mcmctree";
                 params.dating_method = argv[cnt];
-                if (params.dating_method != "LSD")
-                    throw "Currently only LSD (least-square dating) method is supported";
-                continue;
+                if (params.dating_method != "LSD"){
+                    if (params.dating_method != "mcmctree"){
+                        throw "Currently only LSD (least-square dating) method or MCMCTree method is supported";
+                        continue;
+                    }
+
+                }
             }
 
             if (strcmp(argv[cnt], "--date") == 0) {
@@ -5576,6 +5584,52 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+            if (strcmp(argv[cnt], "--mcmc-clock") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mcmc-clock <EQUAL|IND|CORR>";
+                if (strcmp(argv[cnt], "EQUAL")==0)
+                {
+                    params.mcmc_clock = EQUAL_RATES;
+                }
+                else if (strcmp(argv[cnt], "IND")==0)
+                {
+                    params.mcmc_clock = INDEPENDENT;
+                }
+                else if (strcmp(argv[cnt], "CORR")==0)
+                {
+                    params.mcmc_clock = CORRELATED;
+                }else
+                {
+                    throw "Only equal rate, independent and correlated clock models are supported in MCMCtree";
+                }
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mcmc-bds") == 0) {
+                cnt++;
+                params.mcmc_bds = argv[cnt];
+                StrVector mcmc_bds_vec;
+                convert_string_vec(params.mcmc_bds.c_str(), mcmc_bds_vec, ',');
+                if (mcmc_bds_vec.size()!=3 || !strcmp(mcmc_bds_vec[2].c_str(), ""))
+                {
+                    throw "three parameters should be set for birth-death model of MCMCtree (birth-rate, death-rate and sampling-fraction)";
+                }
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--mcmc-iter") == 0) {
+                cnt++;
+                params.mcmc_iter = argv[cnt];
+                StrVector mcmc_iter_vec;
+                convert_string_vec(params.mcmc_iter.c_str(), mcmc_iter_vec, ',');
+                if (mcmc_iter_vec.size()!=3  || !strcmp(mcmc_iter_vec[2].c_str(), ""))
+                {
+                    throw "three parameters should be set for MCMCtree dating (Burin, samplefreq and nsamples)";
+                }
+                continue;
+            }
+
             // added by TD
             // todo: give it a fancy name
             if (strcmp(argv[cnt], "--use-nn-model") == 0) {
@@ -5622,10 +5676,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 
                 continue;
             }
-            
+
             if (strcmp(argv[cnt], "--index-from-one") == 0) {
                 params.site_starting_index = 1;
-                
+
                 continue;
             }
             
@@ -5752,21 +5806,21 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     outError("Use -aln-format MAPLE, PHYLIP, FASTA, or AUTO");
                 params.in_aln_format_str = argv[cnt];
-                
+
                 continue;
             }
             if (strcmp(argv[cnt], "--tree-search") == 0 || strcmp(argv[cnt], "-tree-search") == 0) {
                 ++cnt;
                 if (cnt >= argc || argv[cnt][0] == '-')
                     outError("Use -tree-search <FAST|NORMAL|EXHAUSTIVE>");
-                
+
                 params.tree_search_type_str = argv[cnt];
                 continue;
             }
             if (strcmp(argv[cnt], "--shallow-tree-search") == 0 || strcmp(argv[cnt], "-shallow-search") == 0) {
-                
+
                 params.shallow_tree_search = true;
-                
+
             if (strcmp(argv[cnt], "--mutation") == 0 || strcmp(argv[cnt], "-mut") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -5783,7 +5837,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (strcmp(argv[cnt], "--output-multifurcating-tree") == 0 || strcmp(argv[cnt], "-out-mul-tree") == 0) {
-                
+
                 params.tree_format_str = "MUL";
 
                 continue;
@@ -5792,16 +5846,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.make_consistent = true;
                 continue;
             }
-            
+
             if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
                 err += "\" option.";
                 throw err;
             } else {
-                if (params.user_file == NULL)
-                    params.user_file = argv[cnt];
-                else
+//                if (params.user_file == NULL)
+//                    params.user_file = argv[cnt];
+//                else
                     params.out_file = argv[cnt];
             }
         }
@@ -5837,7 +5891,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     }
-    
+
     if (params.treemix_optimize_methods.find("hmm")!=string::npos &&
         params.model_name.find("+T") != string::npos) {
         params.optimize_params_use_hmm = true;
@@ -6373,8 +6427,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "                       divergence is low, otherwise, apply IQ-TREE algorithm." << endl
     << "  --pathogen-force     Apply CMAPLE tree search algorithm regardless" << endl
     << "                       of sequence divergence." << endl
-    
-    
+
+
     
 #ifdef USE_LSD2
     << endl << "TIME TREE RECONSTRUCTION:" << endl

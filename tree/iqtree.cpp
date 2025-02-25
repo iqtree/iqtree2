@@ -559,6 +559,30 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         aln->orderPatternByNumChars(PAT_VARIANT);
 
     setParsimonyKernel(kernel);
+    
+    // if users want to perform tree dating (with mcmc)
+    if (params->dating_method == "mcmctree")
+    {
+        // if they didn't supply a rooted tree, show a warning and ignore '--dating mcmctree' flag
+        if(!in && !params->user_file)
+        {
+            // show a warning
+            outWarning("Ignore '--dating mcmctree' flag since no rooted tree is provided. To perform tree dating with MCMC, please specify a rooted tree with '-te <tree_file>'");
+            
+            // turn off the dating flag
+            params->dating_method = "";
+        }
+        // otherwise, if they supply a tree but didn't fix the topology with '-te', show a warning and fix it
+        else if (params->min_iterations || params->stop_condition != SC_FIXED_ITERATION)
+        {
+            // show a warning
+            outWarning("Fix the tree topology to perform tree dating with MCMC");
+            
+            // fix the topology
+            params->min_iterations = 0;
+            params->stop_condition = SC_FIXED_ITERATION;
+        }
+    }
 
     if (in != NULL || params->user_file) {
         
@@ -578,6 +602,18 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         }
         if (mesgExist)
             cout << endl;
+        
+        // show a warning if users want to perform tree dating (with mcmc) but supply an unrooted tree
+        if (params->dating_method == "mcmctree"
+            && !(myrooted && !isSuperTreeUnlinked()))
+        {
+            // show a warning
+            outWarning("Ignore '--dating mcmctree' flag since the input tree is unrooted. To perform tree dating with MCMC, please specify a rooted tree with '-te <tree_file>'");
+            
+            // turn off the dating flag
+            params->dating_method = "";
+        }
+        
         setAlignment(aln);
         if (isSuperTree())
             wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
@@ -652,6 +688,18 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         CKP_SAVE(initTree);
         saveCheckpoint();
         checkpoint->dump();
+    }
+
+    if (params->dating_method == "mcmctree") {
+        string outFileName = ((string) Params::getInstance().out_prefix + ".rooted.nwk");
+        ofstream outfile(outFileName);
+
+        stringstream treeStr;
+        this->sortTaxa();
+        this->printTree(treeStr, NULL);
+        outfile << this->aln->getNSeq() << ' ' << 1 << endl;
+        outfile << treeStr.str() << endl;
+        outfile.close();
     }
 
     if (!constraintTree.isCompatible(this))

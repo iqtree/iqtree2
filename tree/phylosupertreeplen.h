@@ -271,7 +271,8 @@ public:
     virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
 
 protected:
-	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;
+	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size,
+    branch_block_size, g_matrix_block_size;
 
 };
 

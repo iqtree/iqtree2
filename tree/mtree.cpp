@@ -577,6 +577,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         	printBranchLength(out, brtype, !node->name.empty(), length_nei);
         }
     }
+    
     return smallest_taxid;
 }
 

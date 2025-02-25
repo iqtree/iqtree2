@@ -902,6 +902,8 @@ public:
     // constant variables for annotations on branches
     const static string ANTT_MUT;
 
+    /** a generic pointer to the expected starting node -> to make sure (after unrooting a rooted tree) we traverse the tree at the same starting node as BaseML*/
+    void* traversal_starting_node = NULL;
     /**
             release the nemory.
             @param node the starting node, NULL to start from the root

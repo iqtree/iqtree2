@@ -7,6 +7,11 @@
 
 #include "timetree.h"
 
+#include <Eigen/Eigenvalues>
+#include <unsupported/Eigen/MatrixFunctions>
+using namespace Eigen;
+using Eigen:: Map;
+
 #ifdef USE_LSD2
 #include "lsd2/src/lsd.h"
 #endif
@@ -357,15 +362,52 @@ void runLSD2(PhyloTree *tree) {
 }
 #endif
 
-void doTimeTree(PhyloTree *tree) {
+void computeHessian(PhyloTree *tree) {
+    // make sure we traverse the tree from the same starting node as BaseML
+    if (tree->traversal_starting_node && tree->root != tree->traversal_starting_node){
+        tree->root = (Node *) tree->traversal_starting_node;
+    }
 
-    cout << "--- Start phylogenetic dating ---" << endl;
+    // sort the internal nodes according to their smallest taxon id
+//    tree->sortTaxa();
+    tree->clearBranchDirection();
+    tree->initializeTree();
+    tree->computeBranchDirection();
+
+    BranchVector branches;
+    tree->getBranches(branches);
+    for (auto branch: branches) {
+        double df = 0.0;
+        double ddf = 0.0;
+        double lh = tree->getCurScore();
+        tree->theta_computed = false;
+        tree->computeLikelihoodDerv((PhyloNeighbor *) branch.first->findNeighbor(branch.second),
+                                    (PhyloNode *) branch.first, &df, &ddf);
+        if (verbose_mode >= VB_MED) {
+            cout << "------ recalculating derivatives form likelihood function ------" << endl;
+            cout << "lh: " << lh << " df: " << df << " ddf: " << ddf << endl;
+        }
+    }
+
+}
+
+void runMCMCTree(PhyloTree *tree) {
+    // only hessian calculation for now
+    computeHessian(tree);
+}
+
+void doTimeTree(PhyloTree *tree) {
     cout.unsetf(ios::fixed);
 
 #ifdef USE_LSD2
     if (Params::getInstance().dating_method == "LSD") {
+        cout << "--- Start phylogenetic dating ---" << endl;
         runLSD2(tree);
         cout << "--- End phylogenetic dating ---" << endl;
+        return;
+    }
+    else if (Params::getInstance().dating_method == "mcmctree") {
+        runMCMCTree(tree);
         return;
     }
 #endif

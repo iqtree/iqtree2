@@ -2253,6 +2253,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     	dad_branch = node_branch;
     	node_branch = tmp_nei;
     }
+    int branch_id = node_branch->id;
 
 #ifdef KERNEL_FIX_STATES
     computeTraversalInfo<VectorClass, nstates>(node, dad, false);
@@ -2270,7 +2271,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 //    size_t tip_block = nstates * model->getNMixtures();
     size_t orig_nptn = aln->size();
     size_t max_orig_nptn = roundUpToMultiple(orig_nptn, VectorClass::size());
-    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    size_t nptn = max_orig_nptn + model_factory->unobserved_ptns.size();
     ASCType ASC_type = model_factory->getASC();
     bool ASC_Holder = (ASC_type == ASC_VARIANT_MISSING || ASC_type == ASC_INFORMATIVE_MISSING);
     bool ASC_Lewis = (ASC_type == ASC_VARIANT || ASC_type == ASC_INFORMATIVE);
@@ -2462,13 +2463,14 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     all_ddfvec[i] += my_ddf[i];
             }
         } else {
+            // to access g-matrix elements to store derivatives
+            size_t g_index = branch_id * nptn;
             // normal joint branch length model
             for (size_t ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
                 VectorClass lh_ptn;
                 //lh_ptn.load_a(&ptn_invar[ptn]);
                 VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
                 VectorClass df_ptn, ddf_ptn;
-
                 if (SITE_MODEL) {
                     VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
                     lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
@@ -2506,6 +2508,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     VectorClass tmp2 = ddf_frac * freq;
                     my_df += tmp1;
                     my_ddf += nmul_add(tmp1, df_frac, tmp2);
+//                    hessian_ddf = nmul_add(df_frac, df_frac, ddf_frac);
+                    //todo: need to do further optimization with store_a in vector class
+                    df_frac.store_a(&G_matrix[g_index + ptn]);
+
                 } else {
                     // ascertainment bias correction
                     if (ptn+VectorClass::size() > nptn) {
@@ -2550,8 +2556,11 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     all_ddf_const  += horizontal_add(vc_ddf_const);
                 }
             }
+
         } // else isMixlen()
     } // FOR packet
+    gradient_vector[branch_id] = all_df;
+    hessian_diagonal[branch_id] = all_ddf;
 
     // mark buffer as computed
     theta_computed = true;

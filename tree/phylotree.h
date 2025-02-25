@@ -840,6 +840,9 @@ public:
     /** number of packets used for likelihood kernel (typically more) */
     int num_packets;
 
+    /** flag to identify partition-trees with missing root for MCMCTree branch traversal order*/
+    bool leftSingleRoot;
+
     /****************************************************************************
             helper functions for computing tree traversal
      ****************************************************************************/
@@ -1564,6 +1567,24 @@ public:
     double *ptn_invar;
 
     vector<TraversalInfo> traversal_info;
+
+    /**
+     gradients array for first order derivatives to be used in MCMCTree
+      */
+
+    double *gradient_vector;
+
+    /**
+     G matrix for second order derivatives (Hessian) calculation to be used in MCMCTree
+     * */
+
+    double *G_matrix;
+
+
+    /**
+     hessian diagonal array for storing diagonal elements of hessian
+     * */
+    double *hessian_diagonal;
 
 
     /****************************************************************************

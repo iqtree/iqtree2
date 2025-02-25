@@ -556,7 +556,9 @@ void PhyloSuperTree::mapTrees() {
 		string taxa_set;
         Pattern taxa_pat = aln->getPattern(part);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
+
 		(*it)->copyTree(this, taxa_set);
+
         if ((*it)->getModel()) {
 			(*it)->initializeAllPartialLh();
         }

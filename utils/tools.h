@@ -209,6 +209,12 @@ enum SEQ_CHUNK_STATUS {
     READING
 };
 
+enum MCMC_CLOCK{
+    EQUAL_RATES = 1,
+    INDEPENDENT = 2,
+    CORRELATED = 3
+};
+
 struct IndelDistribution {
     INDEL_DIS_TYPE indel_dis_type;
     double param_1 = -1, param_2 = -1;
@@ -1582,7 +1588,7 @@ public:
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */
     string model_name;
-    
+
     /** contain non-reversible model */
     bool contain_nonrev;
 
@@ -1628,7 +1634,7 @@ public:
 
     /** true to fist test equal rate model, then test rate heterogeneity (default: false) */
     bool model_test_separate_rate;
-    
+
     /** force to parallelisation over sites */
     bool parallel_over_sites;
 
@@ -1685,7 +1691,7 @@ public:
             maximum number of classes in mixture model
      */
     int max_mix_cats;
-    
+
     /**
             the starting model (i.e. substitution model + freq) for each class of Q-mixture model
      */
@@ -1697,11 +1703,30 @@ public:
     bool opt_rhas_again;
 
     /**
+            The method to optimize (and estimating the number of classes in) the Q-mixture model
+            Method 1 (Old method)
+                a. Estimate the RHAS model with the GTR+FO model.
+                b. Do a tree search for this single-class model.
+                c. Estimate the optimal number of classes inside the model mixture.
+                d. Estimate the RHAS model again with the optimal number of classes.
+                e. Estimate the optimal combination of substitution matrices in Q-Mixture model
+                f. Do a final tree search for this Q-mixture model with the optimal combination.
+            Method 2 (Default method)
+                a. Use modelfinder (for single class) to find the best Q1 + RHAS + Tree. Set k = 1
+                b. Fixing RHAS, Tree and the models Q1, Q2, ..., Qk, then find the best Qk+1 to add
+                c. If the mixture with k+1 classes pass the likelihood ratio test or better AIC/BIC value (depending on opt_qmix_criteria),
+                  then k=k+1 and repeat the step c. Otherwise the mixture with k classes is the best model.
+                d. Re-estimate the RHAS model again for the k-class Q-mixture model .
+                e. Do a final tree search.
+     */
+    int opt_qmix_method;
+
+    /**
             The criteria to identify the best number of classes in the Q-mixture model.
             1: likelihood-ratio test (default); 2: information criteria, like AIC, BIC, etc.
      */
     int opt_qmix_criteria;
-    
+
     /**
         The p-value threshold used to optimize the Q-Mixture model when likelihood-ratio test is applied (i.e. opt_qmix_criteria = 1). Default = 0.05
      */
@@ -1760,7 +1785,7 @@ public:
      *  Optimization algorithm for q-mixture model
      */
     string optimize_alg_qmix;
-    
+
     /**
      * non-zero if want to estimate the initial frequency vectors for q-mixture model
      */
@@ -1798,7 +1823,7 @@ public:
 
     /** maximum branch length for optimization, default 100 */
     double max_branch_length;
-    
+
     /** optimize the parameters according to the HMM model (HMMSTER) */
     bool optimize_params_use_hmm;
 
@@ -1819,7 +1844,7 @@ public:
 
     /** minimum value allowed for HMM transition probability between the same tree (category) */
     double HMM_min_stran;
-    
+
     /** optimization methods: hmm / hmm2mast / mast2hmm / mast */
     string treemix_optimize_methods;
 
@@ -1972,7 +1997,7 @@ public:
 
     /** TRUE to print partition log-likelihood, default: FALSE */
     bool print_partition_lh;
-    
+
     /** TRUE to print the marginal probability for HMM model, default: FALSE */
     bool print_marginal_prob;
 
@@ -2447,8 +2472,20 @@ public:
 	bool ufboot2corr; // to turn on the correction mode for UFBoot under model violations, enable by "-bb <nrep> -correct
 	bool u2c_nni5; // to use NNI5 during Refinement Step of UFBoot2-Corr
 
-    /** method for phylogenetic dating, currently only LSD is supported */
+    /** method for phylogenetic dating, currently LSD and MCMCTree approximate likelihood method are supported */
     string dating_method;
+
+    /** flag for phylogenetic dating with MCMCtree with modelFinder */
+    bool dating_mf;
+
+    /** the rate model for MCMCtree (Global/Equal, Independent and Correlated clock models are supported) */
+    int mcmc_clock;
+
+    /** Birth, death and sampling parameters for MCMCtree */
+    string mcmc_bds;
+
+    /** parameters for MCMC sampling under MCMCtree which includes burnin, samplefreq and nsample*/
+    string mcmc_iter;
 
     /** extra commands passed to the dating method */
     string dating_options;
@@ -2494,7 +2531,7 @@ public:
 
     /** neural network file that determines alpha rate (onnx format) */
     string nn_path_rates; // added by TD
-    
+
     /**
     *  TRUE if multiple random streams are used
     */
@@ -2727,46 +2764,46 @@ public:
     *  TRUE to include predefined mutations
     */
     bool include_pre_mutations;
-    
+
     /**
     *  Alignment index, which was used to generate different random seed for each alignment when simulating multiple alignments
     */
     int alignment_id;
-    
+
     /**
     *  The inference algorithm
     */
     INFERENCE_ALG inference_alg;
-    
+
     /**
     *  Format of the input alignment
     */
     std::string in_aln_format_str;;
-    
+
     /**
      @private
     *  type of tree search (for CMaple)
     */
     std::string tree_search_type_str;
-    
+
     /**
      @private
     *  TRUE to run an additional short range search for tree topology improvement (for CMaple)
     */
     bool shallow_tree_search;
-    
+
     /**
      @private
     *  TRUE to allow replace the input tree by its NNI neighbor (with a higher lh) when computing aLRT-SH
     */
     bool allow_replace_input_tree;
-    
+
     /**
      @private
     *  format of the output tree
     */
     std::string tree_format_str;
-    
+
     /**
      * @private
      * TRUE to make the processes of outputting->re-inputting a tree consistent
@@ -2777,7 +2814,7 @@ public:
     *  Mutation file that specifies pre-defined mutations occurs at nodes
     */
     std::string mutation_file;
-    
+
     /**
     *  site starting index (for predefined mutations in AliSim)
     */

@@ -34,7 +34,7 @@ const double MIN_GAMMA_SHAPE_TREEMIX = 0.04;
 
 class IQTreeMix : public IQTree, public vector<IQTree*> {
 public:
-    
+
     /**
      default constructor
      */
@@ -46,31 +46,31 @@ public:
      destructor
      */
     virtual ~IQTreeMix();
-    
+
     /**
      initialization
      */
     // void init(Alignment* aln, Params* params, Checkpoint* chkpt);
     
     virtual void initializeModel(Params &params, string model_name, ModelsBlock *models_block);
-    
+
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
      */
     virtual int getNumLhCat(SiteLoglType wsl);
-    
+
     // compute the overall likelihood value by combining all the existing likelihood values of the trees
     double computeLikelihood_combine(double *pattern_lh = NULL, bool save_log_value = true);
-    
+
     // compute the log-likelihood values for every site and tree
     // updated array: _ptn_like_cat
     // update_which_tree: only that tree has been updated
     void computeSiteTreeLogLike(int update_which_tree);
-    
+
     virtual double computeLikelihood(double *pattern_lh = NULL, bool save_log_value = true);
-    
+
     virtual double computePatternLhCat(SiteLoglType wsl);
-    
+
     /**
      compute pattern likelihoods only if the accumulated scaling factor is non-zero.
      Otherwise, copy the pattern_lh attribute
@@ -81,11 +81,11 @@ public:
      */
     virtual void computePatternLikelihood(double *pattern_lh = NULL, double *cur_logl = NULL,
                                           double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
-    
+
     virtual void initializeAllPartialLh();
-    
+
     virtual void deleteAllPartialLh();
-    
+
     virtual void clearAllPartialLH(bool make_null = false);
 
     /**
@@ -94,7 +94,7 @@ public:
             @param wsl either WSL_RATECAT, WSL_MIXTURE or WSL_MIXTURE_RATECAT
      */
     virtual void computePatternProbabilityCategory(double *pattern_prob_cat, SiteLoglType wsl);
-    
+
     /**
      optimize all branch lengths of one tree
      @param iterations number of iterations to loop through all branches
@@ -107,21 +107,21 @@ public:
      @return the likelihood of the tree
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
-    
+
     /**
      compute the updated tree weights according to the likelihood values along each site
      prerequisite: computeLikelihood() has been invoked
-     
+
      */
     double optimizeTreeWeightsByEM(double* pattern_mix_lh, double logl_epsilon, int max_steps, bool& tree_weight_converge);
     double optimizeTreeWeightsByBFGS(double gradient_epsilon);
-    
+
     double optimizeBranchLensByBFGS(double gradient_epsilon);
-    
+
     // save branch lengths of all trees
     // node and dad are always NULL
     void getBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
-    
+
     // restore branch lengths of all trees
     // node and dad are always NULL
     void setBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
@@ -138,59 +138,59 @@ public:
      @return true if this is a mixture of trees, default: false
      */
     virtual bool isTreeMix() { return true; }
-    
+
     /**
      set checkpoint object
      @param checkpoint
      */
     virtual void setCheckpoint(Checkpoint *checkpoint);
-    
+
     virtual void startCheckpoint();
-    
+
     void saveCheckpoint();
     
     void restoreCheckpoint();
     
     void setMinBranchLen(Params& params);
-    
+
     /** set pointer of params variable */
     virtual void setParams(Params* params);
-    
+
     /*
      * Generate the branch IDs
      * Branches of different trees with the same partition share the same ID
      */
     void computeBranchID();
-    
+
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      */
     void computeInitialTree(LikelihoodKernel kernel, istream* in = NULL);
-    
+
     /**
      * setup all necessary parameters
      */
     virtual void initSettings(Params& params);
-    
+
     /**
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
-    
+
     /**
      * compute the memory size for top partitions required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequiredThreaded(size_t ncategory = 1, bool full_mem = false);
-    
+
     virtual void setNumThreads(int num_threads);
-    
+
     /**
      test the best number of threads
      */
     virtual int testNumThreads();
-    
+
     /**
      Initialize the tree weights using parsimony scores
      Idea:
@@ -201,39 +201,39 @@ public:
      */
     void initializeTreeWeights();
     void initializeTreeWeights2();
-    
+
     virtual string optimizeModelParameters(bool printInfo, double logl_epsilon);
-    
+
     /**
      print tree to .treefile
      @param params program parameters, field root is taken
      */
     virtual void printResultTree(string suffix = "");
-    
+
     /**
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
     virtual string getTreeString();
-    
+
     /**
      @return the weighted sum of the tree lengths
      @param node the starting node, NULL to start from the root
      @param dad dad of the node, used to direct the search
      */
     virtual double treeLength(Node *node = NULL, Node *dad = NULL);
-    
+
     /**
      @return the weighted sum of the lengths of all internal branches
      @param node the starting node, NULL to start from the root
      @param dad dad of the node, used to direct the search
      */
     virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
-    
+
     virtual int getNParameters();
-    
+
     virtual void drawTree(ostream &out, int brtype = WT_BR_SCALE + WT_INT_NODE, double zero_epsilon = 2e-6);
-    
+
     /**
      print the tree to the output file in newick format
      @param out the output file.
@@ -243,7 +243,6 @@ public:
      @return ID of the taxon with smallest ID
      */
     // virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
-    
     /**
             print the tree to the output file in newick format
             @param out the output stream.
@@ -267,11 +266,11 @@ public:
      @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeString(const string &tree_string);
-    
+
     virtual ModelFactory *getModelFactory() {
         return at(0)->getModelFactory();
     }
-    
+
     /**
      get rate heterogeneity
      @return associated rate heterogeneity class
@@ -279,11 +278,11 @@ public:
     virtual RateHeterogeneity *getRate() {
         return at(0)->getRate();
     }
-    
+
     virtual ModelSubst *getModel() {
         return at(0)->getModel();
     }
-    
+
     /**
      get the name of the model
      */
@@ -297,24 +296,24 @@ public:
     // compute parsimony scores for each tree along the patterns
     // results are stored in the array patn_parsimony
     void computeParsimony();
-    
+
     /**
      whether pattern is constant
      */
     int* patn_isconst;
-    
+
     /**
      parsimony scores for each tree along the patterns
      */
     int* patn_parsimony;
-    
+
     /**
      weights of trees
      */
     vector<double> weights;
     vector<double> tmp_weights; // for optimization
     vector<double> weight_logs; // logarithm of weights
-    
+
     /**
      ratios of parsimony informative sites with max posterior probability for each tree
      */
@@ -324,7 +323,7 @@ public:
      ratios of parsimony informative sites with max high-enought likelihood for each tree
      */
     vector<double> max_like_ratio;
-    
+
     /**
      pattern likelihoods for all trees
      */
@@ -339,12 +338,12 @@ public:
      log-likelihoods of each tree for each pattern
      */
     double* single_ptn_tree_like;
-    
+
     /**
      log-likelihoods for each pattern
      */
     double* ptn_like;
-    
+
     /**
      models
      */
@@ -354,12 +353,12 @@ public:
      site rates
      */
     vector<RateHeterogeneity*> site_rates;
-    
+
     /**
      trees assigned for the site rates
      */
     vector<PhyloTree*> site_rate_trees;
-    
+
     /**
      members of each weight group
      */
@@ -369,7 +368,7 @@ public:
      does weight group exist
      */
     bool weightGrpExist;
-    
+
     /**
      branch ID
      branches of different trees with the same partition are assigned to the same ID
@@ -391,7 +390,7 @@ public:
      parsimony scores are computed for each tree along the patterns
      */
     bool parsi_computed;
-    
+
     /**
      whether the submodels are linked
      */
@@ -401,20 +400,20 @@ public:
      whether the site rates are linked, if exists
      */
     bool isLinkSiteRate;
-    
+
     /**
      the estimated average branch length for each tree
      */
     vector<double> estAvgBrlen;
 
 protected:
-    
+
     // to separate the submodel names and the site rate names from the full model name
     void separateModel(string modelName);
     
     // reset the ptn_freq array to the original frequencies of the patterns
     void resetPtnOrigFreq();
-    
+
     /**
      get posterior probabilities along each site for each tree
      */
@@ -422,7 +421,7 @@ protected:
 
     /**
      update the ptn_freq array according to the posterior probabilities along each site for each tree
-     
+
      */
     void computeFreqArray(double* pattern_mix_lh, bool need_computeLike = true, int update_which_tree = -1);
     
@@ -435,13 +434,13 @@ protected:
      optimize each tree separately
      */
     void optimizeTreesSeparately(bool printInfo, double logl_epsilon, double gradient_epsilon);
-    
+
     /**
      If there are multiple tree weights belonging to the same group
      set all the tree weights of the same group to their average
      */
     void checkWeightGrp();
-    
+
     /**
      If there are multiple branches belonging to the same group
      set all the branches of the same group to their average
@@ -460,15 +459,15 @@ protected:
     // -------------------------------------
     // for BFGS optimzation on tree weights
     // -------------------------------------
-    
+
     double targetFunk(double x[]);
-    
+
     // read the tree weights and write into "variables"
     void setVariables(double *variables);
-    
+
     // read the "variables" and write into tree weights
     void getVariables(double *variables);
-    
+
     // set the bounds
     void setBounds(double *lower_bound, double *upper_bound, bool* bound_check);
     
@@ -484,7 +483,7 @@ protected:
      immediate array for pattern likelihoods during computation
      */
     double* _ptn_like_cat;
-    
+
     /**
      number of optimization steps, default: number of Trees * 2
      */
@@ -509,22 +508,22 @@ protected:
      whether there is any site rate
      */
     bool anySiteRate;
-    
+
     /**
      whether it is a edge-len-restricted model in which the edges of different trees having the same partition have the same lengths
      */
     bool isEdgeLenRestrict;
-    
+
     /**
      number of trees
      */
     size_t ntree;
-    
+
     /**
      number of tips
      */
     size_t ntip;
-    
+
     /**
      number of patterns
      */
@@ -539,7 +538,7 @@ protected:
      number of branches of each tree
      */
     size_t nbranch;
-    
+
     /**
      initial models
      */
@@ -554,12 +553,12 @@ protected:
      is the tree weights fixed
      */
     bool isTreeWeightFixed;
-    
+
     /**
      is nested openmp
      */
     bool isNestedOpenmp;
-    
+
     /**
      variables for the shared RHAS model
      */

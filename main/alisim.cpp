@@ -71,7 +71,7 @@ void runAliSim(Params &params, Checkpoint *checkpoint)
     if (inference_mode)
     {
         inferInputParameters(params, checkpoint, tree, aln);
-        
+
         if (params.include_pre_mutations)
         {
             outWarning("Ignore predefined mutations in the input tree since it is not supported in simulations to mimick an input alignment.");
@@ -343,7 +343,7 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
 {
     // init a vector of node mutations
     std::vector<std::pair<std::string,std::string>> node_mutations;
-    
+
     // open file, read line by line
     try
     {
@@ -352,13 +352,13 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             outError("File not found: " + mutation_file);
         std::ifstream file(mutation_file);
         std::string line;
-        
+
         // read line by line
         while (std::getline(file, line))
         {
             // ignore empty line
             if (!line.length()) continue;
-            
+
             // remove spaces at the begining of the line
             auto pos = line.find_first_not_of(" ");
             // find the first non-space character
@@ -371,7 +371,7 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             // if not found -> all characters are spaces -> invalid
             else
                 outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
-            
+
             // remove spaces at the ending of the line
             pos = line.find_last_not_of(" ");
             // find the last non-space character
@@ -384,27 +384,27 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
             // if not found -> all characters are spaces -> invalid
             else
                 outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
-            
+
             // validate the input format <node_name><spaces><list_of_mutations>
             if (line.length() < 5)
                 outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
-            
+
             // replace \t by a space
             line = regex_replace(line, std::regex("\t"), " ");
-            
+
             // get the node name
             std::string node_name = "";
             pos = line.find(" ");
             if (pos != std::string::npos)
             {
                 node_name = line.substr(0, pos);
-                
+
                 // convert node_name to uppercase
                 transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
             }
             else
                 outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
-            
+
             // get mutation list at that node
             std::string mutation_str = "";
             // find the first non-space character after the position
@@ -415,11 +415,11 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
                 mutation_str = line.substr(pos, line.length() - pos);
             else
                 outError("Invalid format '" + line + "'. Expected format should be <node_name><spaces><list_of_mutations>");
-            
+
             // record the mutations at that node
             node_mutations.push_back(std::pair<std::string,std::string>(node_name, mutation_str));
         }
-        
+
         // close file
         file.close();
     }
@@ -427,7 +427,7 @@ std::vector<std::pair<std::string,std::string>> readMutations(const std::string&
     {
         outError("File not found or invalid format " + mutation_file);
     }
-    
+
     // return result
     return node_mutations;
 }
@@ -566,10 +566,10 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
     aln->extractSequences(aln_filepath, sequence_type, sequences, nseq, nsite);
     StrVector seq_names = aln->getSeqNames();
     delete[] aln_filepath;
-    
+
     // delete aln
     delete aln;
-        
+
     string sequence_str = "";
     for (int i = 0; i < seq_names.size(); i++)
         if (!sequence_name.compare(seq_names[i]))
@@ -587,7 +587,7 @@ void retrieveAncestralSequenceFromInputFile(AliSimulator *super_alisimulator, ve
         outWarning("Sequence length is now set equally to the length of ancestral sequence.");
         super_alisimulator->refreshExpectedNumSites();
     }
-    
+
     // get Max number of states
     int max_num_states = src_tree->aln->getMaxNumStates();
     
@@ -643,16 +643,16 @@ void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const 
         {
             // sequence length
             const int seq_length = site_locked_vec->size();
-            
+
             // parse a list of mutations
             Substitutions pre_mutations = Substitutions(atb_it->second, aln, seq_length);
-            
+
             // mark those sites locked
             for (auto mut_it = pre_mutations.begin(); mut_it != pre_mutations.end(); ++mut_it)
             {
                 // extract position
                 const int pos = mut_it->getPosition();
-                
+
                 // vailidate position
                 if (pos >= seq_length)
                 {
@@ -663,7 +663,7 @@ void getLockedSites(Node* const node, Node* const dad, std::vector<bool>* const 
                     site_locked_vec->at(pos) = true;
             }
         }
-        
+
         // browse 1-step deeper to the neighbor node
         getLockedSites((*it)->node, node, site_locked_vec, aln);
     }
@@ -677,7 +677,7 @@ void createNodeMapping(std::map<std::string, std::pair<Node*, Node*>>& node_mapp
         std::string node_name = node->name;
         // convert to uppercase
         transform(node_name.begin(), node_name.end(), node_name.begin(), ::toupper);
-        
+
         node_mapping.insert(std::pair<std::string, std::pair<Node*, Node*>>(node_name, std::pair<Node*, Node*>(dad, node)));
     }
     // process its neighbors/children
@@ -692,11 +692,11 @@ void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& n
 {
     // validate input
     ASSERT(tree && tree->root);
-    
+
     // create a mapping between each node name and a pair of pointers <dad_node, node>
     std::map<std::string, std::pair<Node*, Node*>> node_mapping;
     createNodeMapping(node_mapping, tree->root, NULL);
-    
+
     // browse the list of node_mutations to add mutations of each node to the corresponding node in the tree
     for (const std::pair<std::string, std::string>& mutations : node_mutations)
     {
@@ -707,7 +707,7 @@ void addMutations2Tree(const std::vector<std::pair<std::string, std::string>>& n
             // Extract the corresponding pair of nodes
             Node* dad = (it->second).first;
             Node* node = (it->second).second;
-            
+
             // add attribute (mutations,<mutations_list> to the corresponding branch
             dad->findNeighbor(node)->putAttr(MTree::ANTT_MUT, "{" + mutations.second + "}");
             node->findNeighbor(dad)->putAttr(MTree::ANTT_MUT, "{" + mutations.second + "}");
@@ -751,7 +751,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         cout << " - Number of threads for MPI processes: " << super_alisimulator->params->num_threads * MPIHelper::getInstance().getNumProcesses() << endl;
     }
 #endif
-    
+
     // reset number of OpenMP threads to 1 in simulations with Indels
     if (super_alisimulator->params->num_threads != 1 && super_alisimulator->params->alisim_insertion_ratio + super_alisimulator->params->alisim_deletion_ratio > 0)
     {
@@ -841,28 +841,28 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
         else
         {
             ASSERT(super_alisimulator->tree && super_alisimulator->tree->root && super_alisimulator->tree->aln);
-            
+
             // show info
             std::cout << "Predefined mutations detected" << std::endl;
-            
+
             // load predefined mutations from a file (if specified)
             if (super_alisimulator->params->mutation_file.length())
             {
                 std::vector<std::pair<std::string, std::string>> node_mutations = readMutations(super_alisimulator->params->mutation_file);
-                
+
                 // add mutations to tree
                 if (node_mutations.size())
                     addMutations2Tree(node_mutations, super_alisimulator->tree);
             }
-            
+
             // init site_locked_vec
             site_locked_vec = new std::vector<bool>(super_alisimulator->expected_num_sites, false);
-            
+
             // browse the tree to mark all locked sites
             getLockedSites(super_alisimulator->tree->root, NULL, site_locked_vec, super_alisimulator->tree->aln);
         }
     }
-    
+
     // the output format of the simulated alignment
     InputType actual_output_format = super_alisimulator->params->aln_output_format;
     vector<SeqType> seqtypes;
@@ -1109,7 +1109,7 @@ void generateMultipleAlignmentsFromSingleTree(AliSimulator *super_alisimulator, 
     // output full tree (with internal node names) if outputting internal sequences
     if (super_alisimulator->params->alisim_write_internal_sequences)
         outputTreeWithInternalNames(super_alisimulator);
-    
+
     // delete site_locked_vec (if necessary)
     if (site_locked_vec)
         delete site_locked_vec;
@@ -1217,12 +1217,12 @@ void generatePartitionAlignmentFromSingleSimulator(AliSimulator *&alisimulator, 
     if ((!rate_name.empty()) || is_mixture_model)
     {
         delete tmp_alisimulator;
-        
+
         // bug fixes: avoid accessing to deallocated pointer
         if (alisimulator->params->alisim_insertion_ratio + alisimulator->params->alisim_deletion_ratio > 0)
             alisimulator->first_insertion = nullptr;
     }
-    
+
 }
 
 /**
@@ -1265,15 +1265,15 @@ void writeSequencesToFile(string file_path, Alignment *aln, int sequence_length,
                 // get the position to write output
                 start_pos = first_line.length();
             }
-            
+
             if (!alisimulator->params->do_compression)
                 start_pos = out->tellp();
-        
+
             // for Windows only, the line break is \r\n instead of only \n
             #if defined WIN32 || defined _WIN32 || defined __WIN32__ || defined WIN64
             ++start_pos;
             #endif
-        
+
             uint64_t output_line_length = seq_length_times_num_sites_per_state + 1 + alisimulator->max_length_taxa_name + (alisimulator->params->aln_output_format == IN_FASTA ? 1 : 0);
         
             // for Windows only, the line break is \r\n instead of only \n

@@ -758,7 +758,7 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
         // Store the RHAS variables of tree 0 to the array rhas_var
         storeTree0RHAS();
     }
-    
+
     #ifdef _OPENMP
     if (isNestedOpenmp) {
         // omp_set_nested(1);
@@ -792,7 +792,7 @@ double IQTreeMix::computeLikelihood(double *pattern_lh, bool save_log_value) {
         // set back the prevoius site rate's tree
         at(t)->getRate()->setTree(ptree);
     }
-    
+
     #ifdef _OPENMP
     if (isNestedOpenmp) {
         // omp_set_nested(0);
