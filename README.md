@@ -32,9 +32,9 @@ Key features of IQ-TREE
 
 The strength of IQ-TREE is the availability of a wide variety of phylogenetic models:
 
-* __Common models__: All [common substitution models](http://www.iqtree.org/doc/Substitution-Models) for DNA, protein, codon, binary and morphological data with [rate heterogeneity among sites](http://www.iqtree.org/doc/Substitution-Models/#rate-heterogeneity-across-sites) and [ascertainment bias correction](http://www.iqtree.org/doc/Substitution-Models/#ascertainment-bias-correction) for e.g. SNP data.
+* __Common models__: All [common substitution models](http://www.iqtree.org/doc/Substitution-Models) for DNA, protein, codon, binary and morphological data with [rate heterogeneity among sites](http://www.iqtree.org/doc/Substitution-Models#rate-heterogeneity-across-sites) and [ascertainment bias correction](http://www.iqtree.org/doc/Substitution-Models#ascertainment-bias-correction) for e.g. SNP data.
 * __[Partition models](http://www.iqtree.org/doc/Complex-Models/#partition-models)__: Allowing individual models for different genomic loci (e.g. genes or codon positions), mixed data types, mixed rate heterogeneity types, linked or unlinked branch lengths between partitions.
-* __Mixture Models__: [fully customizable mixture models](http://www.iqtree.org/doc/Complex-Models/#mixture-models) and [empirical protein mixture models](http://www.iqtree.org/doc/Substitution-Models/#protein-models) and.
+* __Mixture Models__: [fully customizable mixture models](http://www.iqtree.org/doc/Complex-Models#mixture-models) and [empirical protein mixture models](http://www.iqtree.org/doc/Substitution-Models#protein-models) and.
 * __Polymorphism-aware models (PoMo)__: <http://www.iqtree.org/doc/Polymorphism-Aware-Models>
 
 
