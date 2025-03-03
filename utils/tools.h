@@ -560,10 +560,14 @@ enum SiteFreqType {
     WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
 };
 
-enum MatrixExpTechnique { 
-    MET_SCALING_SQUARING, 
+enum SiteRateType {
+    WSR_NONE, WSR_POSTERIOR_MEAN
+};
+
+enum MatrixExpTechnique {
+    MET_SCALING_SQUARING,
     MET_EIGEN3LIB_DECOMPOSITION,
-    MET_EIGEN_DECOMPOSITION, 
+    MET_EIGEN_DECOMPOSITION,
     MET_LIE_MARKOV_DECOMPOSITION
 };
 
@@ -2010,16 +2014,20 @@ public:
 
     /**
         0: print nothing
-        1: print site state frequency vectors
+        1: print site-specific state frequency vectors
     */
-    SiteFreqType print_site_state_freq;
+    int print_site_state_freq;
 
     /**
-     0 (default): do not print .rate file
-     1: print site-specific rates by empirical Bayes
-     2: site-specific rates by maximum-likelihood
+        0: do not print .rate or .mlrate files
+        1: print site-specific rates by empirical Bayes
+        2: site-specific rates by maximum-likelihood
      */
     int print_site_rate;
+
+    SiteFreqType site_state_freq_type;
+
+    SiteRateType site_rate_type;
 
     /* 1: print site posterior probability for many trees during tree search */
     int print_trees_site_posterior;
@@ -2309,24 +2317,32 @@ public:
     /** precision when printing out for floating-point number */
     int numeric_precision;
 
-    /** file containing state-frequencies per site for site-specific state frequency model
-     * each line has n+1 entries (n=number of states):
+    /** file containing state frequencies per site for site-specific state frequency model
+     * each line has n+1 entries (n = number of states):
      * site_ID state1_freq state2_freq ... staten_freq
-     * where site_ID is from 1 to m (m=number of sites)
+     * where site_ID is from 1 to m (m = number of sites)
      */
     char *site_freq_file;
 
-    /**
-        user tree file used to estimate site-specific state frequency model 
-    */
+    /** file containing rate scalers per site for site-specific rate model
+     * each line has 1+1 entries:
+     * site_ID rate_scaler
+     * where site_ID is from 1 to m (m = number of sites)
+     */
+    char *site_rate_file;
+
+    /** user tree file used to estimate site-specific state frequency model */
     char *tree_freq_file;
+
+    /** user tree file used to estimate site-specific rate model */
+    char *tree_rate_file;
 
     /** number of threads for OpenMP version     */
     int num_threads;
-    
+
     /** maximum number of threads, default: #CPU scores  */
     int num_threads_max;
-    
+
     /** true to parallel ModelFinder by models instead of sites */
     bool openmp_by_model;
 
@@ -2347,8 +2363,11 @@ public:
 	 */
 	bool print_bootaln;
 
-    /** TRUE to print bootstrapped site frequency for e.g. PMSF */
+    /** TRUE to print bootstrapped site frequency for PMSF */
     bool print_boot_site_freq;
+
+    /** TRUE to print bootstrapped site rate for PMSR */
+    bool print_boot_site_rate;
 
 	/** true to print sub alignments of super alignment, default: false */
 	bool print_subaln;

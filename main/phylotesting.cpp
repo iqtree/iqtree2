@@ -781,6 +781,7 @@ void transferModelFinderParameters(IQTree *iqtree, Checkpoint *target) {
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, string &best_subst_name, string &best_rate_name)
 {
+/*
     if (params.model_name.find("+T") != string::npos) {
         // tree mixture
         return;
@@ -808,6 +809,39 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     // Model already specifed, nothing to do here
     if (!empty_model_found && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF")
         return;
+*/
+	if (params.model_name == "MIX+MFP" || params.model_name == "MIX+MF") return;
+	bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
+	if (params.model_name.empty() && iqtree.isSuperTree()) {
+		// check whether any partition has empty model_name
+		PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+		for (auto it = stree->begin(); it != stree->end(); it++) {
+			if ((*it)->aln->model_name.empty()) {
+				empty_model_found = true;
+				break;
+			}
+		}
+	}
+	if (params.model_joint) {
+		empty_model_found = false;
+	}
+	bool test = empty_model_found ||
+		(params.model_name == "TEST") || (params.model_name == "TESTONLY") ||
+		(params.model_name == "MFP") || (params.model_name == "MF");
+	bool testmerge = (params.model_name == "TESTMERGE") || (params.model_name == "TESTMERGEONLY") ||
+		(params.model_name == "MFP+MERGE") || (params.model_name == "MF+MERGE");
+	if (testmerge && !iqtree.isSuperTree())
+		outError("No partition file specified along with the option -m " + params.model_name);
+	bool test_only = (params.model_name == "TESTONLY") || (params.model_name == "MF") ||
+		(params.model_name == "TESTMERGEONLY") || (params.model_name == "MF+MERGE");
+	cout << endl;
+	if (!test && !testmerge) {
+		cout << "Skip ModelFinder, model specified: " << params.model_name << endl;
+		return;
+	}
+	cout << "Running ModelFinder:" << endl;
+	if (params.site_freq_file || params.site_rate_file)
+		outError("ModelFinder does not work with site-specific models");
     if (MPIHelper::getInstance().getNumProcesses() > 1)
         outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     // TODO: check if necessary
@@ -823,7 +857,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
         ok_model_file = model_info.load();
     }
     
-    cout << endl;
+    //cout << endl;
     
     ok_model_file &= model_info.size() > 0;
     if (ok_model_file)
@@ -925,14 +959,14 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     }
 
     delete models_block;
-    
+
     // force to dump all checkpointing information
     model_info.dump(true);
-    
+
     // transfer models parameters
     transferModelFinderParameters(&iqtree, orig_checkpoint);
     iqtree.setCheckpoint(orig_checkpoint);
-    
+
     params.startCPUTime = cpu_time;
     params.start_real_time = real_time;
     cpu_time = getCPUTime() - cpu_time;
@@ -941,7 +975,9 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
     cout << "All model information printed to " << model_info.getFileName() << endl;
     cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
     cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
-    
+
+    cout << endl;
+    cout << "ModelFinder finished, model selected: " << iqtree.aln->model_name << endl;
     //        alignment = iqtree.aln;
     if (test_only) {
         params.min_iterations = 0;
@@ -3699,28 +3735,27 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
 // Optimisation of Q-Mixture model, including estimation of best number of classes in the mixture
 void optimiseQMixModel(Params &params, IQTree* &iqtree, ModelCheckpoint &model_info) {
 
-    IQTree* new_iqtree;
-    string model_str;
-
-    if (params.model_name.substr(0,6) != "MIX+MF")
-        return;
-    
+    bool test = (params.model_name == "MIX+MFP") || (params.model_name == "MIX+MF");
     bool test_only = (params.model_name == "MIX+MF");
-    params.model_name = "";
-    
+    if (!test) {
+        return;
+    }
     if (MPIHelper::getInstance().getNumProcesses() > 1)
         outError("Error! The option -m '" + params.model_name + "' does not support MPI parallelization");
-    
     if (iqtree->isSuperTree())
         outError("Error! The option -m '" + params.model_name + "' cannot work on data set with partitions");
-    
     if (iqtree->aln->seq_type != SEQ_DNA)
         outError("Error! The option -m '" + params.model_name + "' can only work on DNA data set");
 
+    cout << endl;
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|                Optimizing Q-mixture model                        |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
 
+    IQTree* new_iqtree;
+    string model_str;
+
+    params.model_name = "";
     // disable the bootstrapping
     int orig_gbo_replicates = params.gbo_replicates;
     ConsensusType orig_consensus_type = params.consensus_type;
