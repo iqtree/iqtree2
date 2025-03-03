@@ -390,5 +390,12 @@ string convertSeqTypeToSeqTypeName(SeqType seq_type);
 
 string detectSeqTypeName(string model_name);
 
+/**
+ * get string name from a SeqType object
+ * @param seq_type input sequence type
+ * @return name
+ */
+string getSeqTypeName(SeqType seq_type);
+
 
 #endif /* PHYLOTESTING_H_ */
