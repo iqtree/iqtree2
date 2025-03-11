@@ -1045,7 +1045,9 @@ if (BUILD_LIB STREQUAL "ON")
     elseif(WIN32)
         add_custom_command(
             TARGET iqtree2 POST_BUILD
-            COMMAND ar rcs libiqtree2.a ${STATIC_LIBS}
+            COMMAND ${PROJECT_SOURCE_DIR}/test_scripts/unify-static-libs.bat ${STATIC_LIBS}
+            COMMAND ${CMAKE_COMMAND} -E rm -f libiqtree2.a
+            COMMAND ${CMAKE_COMMAND} -E rename libiqtree2full.a libiqtree2.a
             VERBATIM)
     endif()
 endif()
