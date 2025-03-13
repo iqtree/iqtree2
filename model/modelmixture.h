@@ -8,27 +8,11 @@
 #ifndef MODELMIXTURE_H_
 #define MODELMIXTURE_H_
 
-#include "tree/phylotree.h"
-#include "modelsubst.h"
 #include "modelmarkov.h"
 #include "nclextra/modelsblock.h"
-
+#include "tree/phylotree.h"
 
 extern const char* builtin_mixmodels_definition;
-
-/**
- * create a substitution model
- * @param model_str model nme
- * @param freq_type state frequency type
- * @param freq_params frequency parameters
- * @param seqerr sequencing error model
- * @param tree associated phylo tree
- * @param count_rates TRUE to assign rates counted from alignment, FALSE to not initialize rates
- * @return substitution model created
- */
-ModelSubst *createModel(string model_str, ModelsBlock *models_block,
-                        StateFreqType freq_type, string freq_params,
-                        PhyloTree *tree);
 
 
 /**
@@ -36,7 +20,6 @@ ModelSubst *createModel(string model_str, ModelsBlock *models_block,
  */
 class ModelMixture: virtual public ModelMarkov, public vector<ModelMarkov*> {
 public:
-    
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
