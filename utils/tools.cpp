@@ -1525,6 +1525,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.include_pre_mutations = false;
     params.mutation_file = "";
     params.site_starting_index = 0;
+    params.mr_bayes_output = false;
     
     // store original params
     for (cnt = 1; cnt < argc; cnt++) {
@@ -5665,7 +5666,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.make_consistent = true;
                 continue;
             }
-            
+            if (strcmp(argv[cnt], "-mrbayes") == 0) {
+                params.mr_bayes_output = true;
+                continue;
+            }
             if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -5803,6 +5807,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
         if (params.partition_merge == MERGE_NONE)
             params.partition_merge = MERGE_RCLUSTERF;
+
+    // Set MrBayes Block Output if -mset mrbayes
+    if (params.model_set == "mrbayes")
+        params.mr_bayes_output = true;
     
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
@@ -6017,7 +6025,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
     << "  --ninit NUM          Number of initial parsimony trees (default: 100)" << endl
     << "  --ntop NUM           Number of top initial trees (default: 20)" << endl
-    << "  --nbest NUM          Number of best trees retained during search (defaut: 5)" << endl
+    << "  --nbest NUM          Number of best trees retained during search (default: 5)" << endl
     << "  -n NUM               Fix number of iterations to stop (default: OFF)" << endl
     << "  --nstop NUM          Number of unsuccessful iterations to stop (default: 100)" << endl
     << "  --perturb NUM        Perturbation strength for randomized NNI (default: 0.5)" << endl
@@ -6074,6 +6082,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+LMSS          Additionally test strand-symmetric models" << endl
     << "  --mset STRING        Restrict search to models supported by other programs" << endl
     << "                       (raxml, phyml, mrbayes, beast1 or beast2)" << endl
+    << "                       If 'mrbayes' is selected, will output a MrBayes" << endl
+    << "                       Block File if Data Type is supported." << endl
     << "  --mset STR,...       Comma-separated model list (e.g. -mset WAG,LG,JTT)" << endl
     << "  --msub STRING        Amino-acid model source" << endl
     << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
@@ -6307,8 +6317,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
     //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
     //			<< "  -comp <treefile>     Compare tree with each in the input trees" << endl;
-
-
+        << "  -mrbayes             Outputs a Mr Bayes block file, to use as a template for future analysis" << endl
+        << "                       Will not output if incompatible data types are used" << endl
+        << "                       (MrBayes only supports DNA, Codon, Protein, Binary and Morphological data)" << endl
+        << "                       There will be no substitution model data output for Lie Markov and Mixture models!" << endl
         << endl;
 
     if (full_command) {
@@ -7970,4 +7982,45 @@ string getOutputNameWithExt(const InputType& format, const string& output_filepa
         default:
             return output_filepath + ".phy";
     }
+}
+
+void warnLogStream(string warn, ofstream &out, string indentation) {
+    outWarning(warn);
+    out << indentation << "[" << warn << "]" << endl;
+}
+
+double minValueCheckMrBayes(double origValue) {
+     if (origValue < 0.01) {
+         outWarning("MrBayes does not support values < 0.01! Using 0.01 instead...");
+         return 0.01;
+     }
+     return origValue;
+}
+
+const unordered_map<string, string> iqTreeToMrBayesAAModels = {
+        {"Poisson", "poisson"},
+        {"JTT", "jones"},
+        {"Dayhoff", "dayhoff"},
+        {"mtREV", "mtrev"},
+        {"mtMAM", "mtmam"},
+        {"WAG", "wag"},
+        {"rtREV", "rtrev"},
+        {"cpREV", "cprev"},
+        {"VT", "vt"},
+        {"Blosum62", "blosum"},
+        {"LG", "lg"},
+};
+
+// Anything outside of index 10 (Code No. 11) is invalid, leave that as empty string
+const string indexedMrBayesGeneticCodes[25] = {"universal", "vertmt", "yeast", "mycoplasma", "invermt",
+                                               "ciliate", "", "", "echinoderm", "euplotid", "universal"};
+
+unordered_map<string, string> getIqTreeToMrBayesAAModels() {
+    return iqTreeToMrBayesAAModels;
+}
+
+string getMrBayesGeneticCode(int geneticCodeId) {
+    if (geneticCodeId == 0) return "";
+
+    return indexedMrBayesGeneticCodes[geneticCodeId - 1];
 }
