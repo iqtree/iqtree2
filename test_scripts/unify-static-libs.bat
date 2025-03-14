@@ -3,6 +3,7 @@ setlocal enabledelayedexpansion
 
 :: Set the output library name
 set OUTPUT_LIB=libiqtree2full.a
+set OUTPUT_LIB2=libiqtree2full.lib
 
 :: Define the temporary folder
 set TEMP_DIR=temp_objs
@@ -52,6 +53,7 @@ cd %TEMP_DIR%
 )) > filelist.txt
 
 ar rcs ../%OUTPUT_LIB% @filelist.txt
+lib /out:../%OUTPUT_LIB2% @filelist.txt
 
 cd ..
 
