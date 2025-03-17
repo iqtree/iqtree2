@@ -15,7 +15,7 @@ using namespace std;
 /*
  * Calculates the robinson fould distance between two trees
  */
-int robinson_fould(const string& tree1, const string& tree2);
+extern "C" int robinson_fould(const char* ctree1, const char* ctree2);
 
 /*
  * Generates a set of random phylogenetic trees
@@ -71,6 +71,6 @@ string build_njtree(vector<string>& names, vector<double>& distances);
 /*
  * verion number
  */
-string version();
+extern "C" const char* version();
 
 #endif /* LIBIQTREE2_FUN */

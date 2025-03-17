@@ -31,11 +31,15 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
                           int rand_seed, string prog, input_options* in_options);
 
 // Calculates the robinson fould distance between two trees
-int robinson_fould(const string& tree1, const string& tree2) {
+extern "C" int robinson_fould(const char* ctree1, const char* ctree2) {
 
     int output;
 
     try {
+
+	string tree1 = string(ctree1);
+	string tree2 = string(ctree2);
+
         MTree first_tree;
         bool is_rooted = false;
         std::vector<double> rfdist;
@@ -587,10 +591,10 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
 }
 
 // verion number
-string version() {
+extern "C" const char* version() {
     stringstream ss;
     ss << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
-    return ss.str();
+    return ss.str().c_str();
 }
 
 // --------------------------------------------------

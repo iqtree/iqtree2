@@ -5,7 +5,7 @@
 /*
  * Calculates the robinson fould distance between two trees
  */
-int robinson_fould(const std::string& tree1, const std::string& tree2);
+extern "C" int robinson_fould(const char* tree1, const char* tree2);
 
 /*
  * Generates a set of random phylogenetic trees
@@ -61,11 +61,11 @@ std::string build_njtree(std::vector<std::string>& names, std::vector<double>& d
 /*
  * verion number
  */
-std::string version();
+extern "C" const char* version();
 
 int main() {
-  std::string tree1 = "(a,b,(c,(d,e)));";
-  std::string tree2 = "(e,b,(c,(d,a)));";
+  const char* tree1 = "(a,b,(c,(d,e)));";
+  const char* tree2 = "(e,b,(c,(d,a)));";
 
   std::cout << robinson_fould(tree1, tree2) << std::endl;
   return 0;
