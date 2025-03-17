@@ -53,7 +53,6 @@ cd %TEMP_DIR%
 )) > filelist.txt
 
 ar rcs ../%OUTPUT_LIB% @filelist.txt
-lib /out:../%OUTPUT_LIB2% @filelist.txt
 
 cd ..
 

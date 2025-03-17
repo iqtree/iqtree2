@@ -1048,7 +1048,7 @@ if (BUILD_LIB STREQUAL "ON")
             COMMAND ${PROJECT_SOURCE_DIR}/test_scripts/unify-static-libs.bat ${STATIC_LIBS}
             COMMAND ${CMAKE_COMMAND} -E rm -f libiqtree2.a
             COMMAND ${CMAKE_COMMAND} -E rename libiqtree2full.a libiqtree2.a
-            COMMAND ${CMAKE_COMMAND} -E rename libiqtree2full.lib libiqtree2.lib
+            COMMAND ${PROJECT_SOURCE_DIR}/test_scripts/make-dll-lib.bat ${PROJECT_SOURCE_DIR}/test_scripts/bridge.cpp
             VERBATIM)
     endif()
 endif()
