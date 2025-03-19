@@ -27,8 +27,19 @@ void cleanup(Params& params) {
     }
 }
 
-string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree,
-                          int rand_seed, string prog, input_options* in_options);
+void convertToVectorStr(StringArray& names, StringArray& seqs, vector<string>& names_vec, vector<string>& seqs_vec) {
+	names_vec.clear();
+	seqs_vec.clear();
+	if (names.length != seqs.length)
+	    outError("The number of names must equal to the number of sequences");
+	for (int i = 0; i < names.length; i++) {
+		names_vec.push_back(string(names.strings[i]));
+		seqs_vec.push_back(string(seqs.strings[i]));
+	}
+}
+
+char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
+                          int rand_seed, string& prog, input_options* in_options);
 
 // Calculates the robinson fould distance between two trees
 extern "C" int robinson_fould(const char* ctree1, const char* ctree2) {
@@ -67,8 +78,9 @@ extern "C" int robinson_fould(const char* ctree1, const char* ctree2) {
 
 // Generates a set of random phylogenetic trees
 // tree_gen_mode allows:"YULE_HARDING", "UNIFORM", "CATERPILLAR", "BALANCED", "BIRTH_DEATH", "STAR_TREE"
-string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_seed) {
+extern "C" char* random_tree(int num_taxa, const char* tree_gen_mode, int num_trees, int rand_seed) {
     string output;
+    ostringstream ostring;
     
     try {
         PhyloTree ptree;
@@ -79,20 +91,20 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
         init_random(seed);
         
         TreeGenType tree_mode;
-        if (tree_gen_mode == "YULE_HARDING") {
+        if (strcmp(tree_gen_mode, "YULE_HARDING")==0) {
             tree_mode = YULE_HARDING;
-        } else if (tree_gen_mode == "UNIFORM") {
+        } else if (strcmp(tree_gen_mode, "UNIFORM")==0) {
             tree_mode = UNIFORM;
-        } else if (tree_gen_mode == "CATERPILLAR") {
+        } else if (strcmp(tree_gen_mode, "CATERPILLAR")==0) {
             tree_mode = CATERPILLAR;
-        } else if (tree_gen_mode == "BALANCED") {
+        } else if (strcmp(tree_gen_mode, "BALANCED")==0) {
             tree_mode = BALANCED;
-        } else if (tree_gen_mode == "BIRTH_DEATH") {
+        } else if (strcmp(tree_gen_mode, "BIRTH_DEATH")==0) {
             tree_mode = BIRTH_DEATH;
-        } else if (tree_gen_mode == "STAR_TREE") {
+        } else if (strcmp(tree_gen_mode, "STAR_TREE")==0) {
             tree_mode = STAR_TREE;
         } else {
-            outError("Unknown mode: " + tree_gen_mode);
+            outError("Unknown mode: " + string(tree_gen_mode));
         }
         
         Params params = Params::getInstance();
@@ -103,7 +115,6 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
         params.ignore_checkpoint = true; // overrid the output file if exists
         params.user_file = (char*) "";
         
-        ostringstream ostring;
         generateRandomTree(params, ostring);
         output = ostring.str();
     } catch (std::runtime_error& e) {
@@ -111,16 +122,22 @@ string random_tree(int num_taxa, string tree_gen_mode, int num_trees, int rand_s
         funcExit();
         throw e;
     }
-
-    return output;
+    if (output.length() > 0) {
+    	char* out_cstr = new char[output.length()+1];
+    	strcpy(out_cstr, output.c_str());
+    	return out_cstr;
+    } else {
+        static char empty[] = "";
+        return empty;
+    }
 }
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With estimation of the best topology
 // num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
-string build_tree(vector<string>& names, vector<string>& seqs, string model, int rand_seed, int bootstrap_rep, int num_thres) {
-    string intree = "";
-    string output;
+extern "C" char* build_tree(StringArray& names, StringArray& seqs, const char* model, int rand_seed, int bootstrap_rep, int num_thres) {
+    const char* intree = "";
+    char* output;
     try {
         input_options* in_options = NULL;
         if (bootstrap_rep > 0 || num_thres >= 0) {
@@ -130,7 +147,8 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
             if (num_thres >= 0)
                 in_options->insert("-nt", convertIntToString(num_thres));
         }
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "build_tree", in_options);
+        string prog = "build_tree";
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options);
         if (in_options != NULL)
             delete in_options;
     } catch (std::runtime_error& e) {
@@ -144,15 +162,16 @@ string build_tree(vector<string>& names, vector<string>& seqs, string model, int
 // Perform phylogenetic analysis on the input alignment (in string format)
 // With restriction to the input toplogy
 // num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
-string fit_tree(vector<string>& names, vector<string>& seqs, string model, string intree, int rand_seed, int num_thres) {
-    string output;
+extern "C" char* fit_tree(StringArray& names, StringArray& seqs, const char* model, const char* intree, int rand_seed, int num_thres) {
+    char* output;
     try {
         input_options* in_options = NULL;
         if (num_thres >= 0) {
             in_options = new input_options();
             in_options->insert("-nt", convertIntToString(num_thres));
         }
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "fit_tree", in_options);
+        string prog = "fit_tree";
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options);
         if (in_options != NULL)
             delete in_options;
     } catch (std::runtime_error& e) {
@@ -169,27 +188,27 @@ string fit_tree(vector<string>& names, vector<string>& seqs, string model, strin
 // freq_set -- a set of frequency types
 // rate_set -- a set of RHAS models
 // num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
-string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, string model_set, string freq_set, string rate_set, int num_thres) {
+extern "C" char* modelfinder(StringArray& names, StringArray& seqs, int rand_seed, const char* model_set, const char* freq_set, const char* rate_set, int num_thres) {
     
     input_options* in_options = NULL;
-    string output;
-    string intree = "";
-    string model = "MF"; // modelfinder
+    char* output;
+    const char* intree = "";
+    const char* model = "MF"; // modelfinder
     int i;
 
     try {
         in_options = new input_options();
         // handle model_set, freq_set, rate_set
-        if (!model_set.empty())
-            in_options->insert("-mset", model_set);
-        if (!freq_set.empty())
-            in_options->insert("-mfreq", freq_set);
-        if (!rate_set.empty())
-            in_options->insert("-mrate", rate_set);
+        if (strlen(model_set) > 0)
+            in_options->insert("-mset", string(model_set));
+        if (strlen(freq_set) > 0)
+            in_options->insert("-mfreq", string(freq_set));
+        if (strlen(rate_set) > 0)
+            in_options->insert("-mrate", string(rate_set));
         if (num_thres >= 0)
             in_options->insert("-nt", convertIntToString(num_thres));
-
-        output = build_phylogenetic(names, seqs, model, intree, rand_seed, "modelfinder", in_options);
+		string prog = "modelfinder";
+        output = build_phylogenetic(names, seqs, model, intree, rand_seed, prog, in_options);
         
         delete in_options;
     } catch (std::runtime_error& e) {
@@ -205,19 +224,26 @@ string modelfinder(vector<string>& names, vector<string>& seqs, int rand_seed, s
 // (n * i + j)-th element of the list represents the distance between i-th and j-th sequence,
 // where n is the number of sequences
 // num_thres -- number of cpu threads to be used, default: 1; 0 - use all available cpu threads on the machine
-vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int num_thres) {
-    vector<double> output;
+extern "C" DoubleArray build_distmatrix(StringArray& cnames, StringArray& cseqs, int num_thres) {
     string prog = "build_matrix";
+    DoubleArray output;
+    output.length = 0;
+    output.doubles = NULL;
     
     try {
+    	vector<string> names;
+    	vector<string> seqs;
+    	convertToVectorStr(cnames, cseqs, names, seqs);
         int n = names.size();
         int n_sq = n * n;
-        output.clear();
+        if (n_sq >= 1) {
+            output.length = n_sq;
+            output.doubles = new double[n_sq];
+        }
         if (n == 1) {
-            output.push_back(0.0);
-        } else {
-            output.resize(n_sq);
-            extern VerboseMode verbose_mode;
+            output.doubles[0] = 0.0;
+        } else if (n > 1) {
+            // extern VerboseMode verbose_mode;
             progress_display::setProgressDisplay(false);
             verbose_mode = VB_QUIET; // (quiet mode)
             Params params = Params::getInstance();
@@ -251,11 +277,11 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int
             #pragma omp parallel for schedule(dynamic, 1)
             #endif
             for (int i = 0; i < n; i++) {
-                double* dmat = &output[i * n];
+                double* dmat = &output.doubles[i * n];
                 dmat[i] = 0.0;
                 for (int j = i+1; j < n; j++) {
                     dmat[j] = ptree.aln->computeJCDist(i, j);
-                    output[j * n + i] = dmat[j];
+                    output.doubles[j * n + i] = dmat[j];
                 }
             }
             
@@ -271,20 +297,25 @@ vector<double> build_distmatrix(vector<string>& names, vector<string>& seqs, int
 }
 
 // Using Rapid-NJ to build tree from a distance matrix
-string build_njtree(vector<string>& names, vector<double>& distances) {
+extern "C" char* build_njtree(StringArray& cnames, DoubleArray& distances) {
     string output;
 
     try {
+    	// convert to vector
+    	vector<string> names;
+		for (int i = 0; i < cnames.length; i++) {
+			names.push_back(string(cnames.strings[i]));
+		}
         // check the size of names and distances
         if (names.size() < 3)
             outError("The size of names must be at least 3");
         size_t n = names.size();
         size_t sq_n = n * n;
-        if (distances.size() != sq_n)
+        if (distances.length != sq_n)
             outError("The size of distances must equal to the square of the size of names");
         
         string prog = "build_njtree";
-        extern VerboseMode verbose_mode;
+        // extern VerboseMode verbose_mode;
         progress_display::setProgressDisplay(false);
         verbose_mode = VB_QUIET; // (quiet mode)
         Params params = Params::getInstance();
@@ -299,8 +330,7 @@ string build_njtree(vector<string>& names, vector<double>& distances) {
         string algn_name = "NJ-R"; // Rapid NJ
         StartTree::BuilderInterface* algorithm = StartTree::Factory::getTreeBuilderByName(algn_name);
         stringstream stree;
-        double* distMatrix = &distances[0];
-        if (!algorithm->constructTreeInMemory2(names, distMatrix, stree)) {
+        if (!algorithm->constructTreeInMemory2(names, distances.doubles, stree)) {
             outError("Tree construction failed.");
         }
         output = stree.str();
@@ -310,7 +340,14 @@ string build_njtree(vector<string>& names, vector<double>& distances) {
         funcExit();
         throw e;
     }
-    return output;
+    if (output.length() > 0) {
+    	char* out_cstr = new char[output.length()+1];
+    	strcpy(out_cstr, output.c_str());
+    	return out_cstr;
+    } else {
+        static char empty[] = "";
+        return empty;
+    }
 }
 
 // ----------------------------------------------
@@ -319,12 +356,18 @@ string build_njtree(vector<string>& names, vector<double>& distances) {
 
 // Perform phylogenetic analysis on the input alignment (in string format)
 // if intree exists, then the topology will be restricted to the intree
-string build_phylogenetic(vector<string>& names, vector<string>& seqs, string model, string intree,
-                          int rand_seed, string prog, input_options* in_options) {
+char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cmodel, const char* cintree,
+                          int rand_seed, string& prog, input_options* in_options) {
     // perform phylogenetic analysis on the input sequences
     // all sequences have to be the same length
 
     int instruction_set;
+    
+    vector<string> names, seqs;
+    
+    convertToVectorStr(cnames, cseqs, names, seqs);
+    string model = string(cmodel);
+    string intree = string(cintree);
     
     // checking whether all seqs are in the same length
     if (seqs.size() > 0) {
@@ -586,15 +629,31 @@ string build_phylogenetic(vector<string>& names, vector<string>& seqs, string mo
 
     finish_random();
     funcExit();
-    
-    return ss.str();
+
+	string output = ss.str();
+    if (output.length() > 0) {
+    	char* out_cstr = new char[output.length()+1];
+    	strcpy(out_cstr, output.c_str());
+    	return out_cstr;
+    } else {
+        static char empty[] = "";
+        return empty;
+    }
 }
 
 // verion number
-extern "C" const char* version() {
+extern "C" char* version() {
     stringstream ss;
     ss << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
-    return ss.str().c_str();
+    string output = ss.str();
+    if (output.length() > 0) {
+    	char* out_cstr = new char[output.length()+1];
+    	strcpy(out_cstr, output.c_str());
+    	return out_cstr;
+    } else {
+        static char empty[] = "";
+        return empty;
+    }
 }
 
 // --------------------------------------------------
