@@ -438,8 +438,8 @@ void printSiteStateFreq(const char *filename, PhyloTree *tree) {
 }
 
 void printSiteRate(const char *filename, PhyloTree *tree, bool bayes) {
-	if (tree->getRate()->getNRate() == 1 && !tree->isSuperTree())
-		outError("No rate mixture model or partition model was specified!");
+	if (bayes && tree->getRate()->getNRate() == 1)
+		outError("No rate mixture model was specified!");
 	try {
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);
