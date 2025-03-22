@@ -917,7 +917,7 @@ public:
   vector<uint32_t> pomo_sampled_states;
   IntIntMap pomo_sampled_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
-    /* for site-specific state frequency model with Huaichun, Edward, Andrew */
+    /* for site-specific models with Huaichun, Edward, Andrew */
 
     /** pattern index to state frequency vector map */
     vector<double*> ptn_state_freq;
@@ -993,6 +993,12 @@ public:
 	 * @return TRUE if alignment patterns need to be changed, FALSE otherwise
 	 */
 	bool readSiteParamFile(const char* site_param_file, const string &param_type);
+
+	/**
+	 * normalize site-specific rates by their mean value
+	 * @return mean rate before normalization
+	 */
+	double normalizePtnRateScaler();
 
     /**
      * special initialization for codon sequences, e.g., setting #states, genetic_code

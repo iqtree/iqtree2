@@ -63,6 +63,14 @@ ModelSet::ModelSet(const string model_name, ModelsBlock *models_block,
 	}
 	delete [] state_freqs;
 	delete [] rate_mat;
+	// normalize site-specific rates (if any) and rescale the tree
+	if (isSSR()) {
+		double mean_rate = phylo_tree->aln->normalizePtnRateScaler();
+		if (mean_rate != 1.0) {
+			phylo_tree->scaleLength(mean_rate);
+			phylo_tree->clearAllPartialLH();
+		}
+	}
 	// generate the site-specific eigen of the wrapper model
 	joinEigenMemory();
 	decomposeRateMatrix();

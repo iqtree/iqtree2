@@ -3947,8 +3947,6 @@ void computeSiteSpecificModel(Params &params, Alignment *alignment, const string
 	ModelsBlock *models_block = readModelsDefinition(params);
 	tree->setModelFactory(new ModelFactory(params, alignment->model_name, tree, models_block));
 	delete models_block;
-	tree->setModel(tree->getModelFactory()->model);
-	tree->setRate(tree->getModelFactory()->site_rate);
 	if (!tree->getModel()->isReversible())
 		outError("Non-reversible models are incompatible with site-specific models");
 	if (tree->getModel()->isMixture() && !tree->getModel()->isMixtureSameQ())
@@ -3983,16 +3981,19 @@ void computeSiteSpecificModel(Params &params, Alignment *alignment, const string
 		for (size_t ptn = 0; ptn < nptn; ptn++) {
 			double *state_freqs = new double[nstates];
 			memcpy(state_freqs, all_ptn_state_freq + ptn*nstates, sizeof(double)*nstates);
+			alignment->convfreq(state_freqs); // regularize freqs
 			alignment->ptn_state_freq.push_back(state_freqs);
 		}
-		ASSERT(alignment->ptn_state_freq.size() == nptn);
 		delete [] all_ptn_state_freq;
+		ASSERT(alignment->ptn_state_freq.size() == nptn);
 		params.site_state_freq_type = WSF_NONE;
 	} else {
 		DoubleVector ptn_rate;
 		tree->computePatternRate(ptn_rate);
 		for (size_t ptn = 0; ptn < nptn; ptn++) {
-			alignment->ptn_rate_scaler.push_back(ptn_rate[ptn]);
+			double rate = ptn_rate[ptn];
+			rate = min(max(rate, MIN_SITE_RATE), MAX_SITE_RATE); // regularize rate
+			alignment->ptn_rate_scaler.push_back(rate);
 		}
 		ASSERT(alignment->ptn_rate_scaler.size() == nptn);
 		params.site_rate_type = WSR_NONE;
