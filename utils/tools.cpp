@@ -71,13 +71,16 @@ void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
         print_stacktrace(cerr);
 	}
-	cerr << error << endl;
-    if (quit)
 #ifndef BUILD_LIB
-    	exit(2);
+	cerr << error << endl;
+#endif
+    if (quit) {
+#ifndef BUILD_LIB
+        exit(2);
 #else
         throw runtime_error(error);
 #endif
+    }
 }
 
 /**

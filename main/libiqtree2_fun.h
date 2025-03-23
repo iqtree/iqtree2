@@ -29,6 +29,22 @@ typedef struct {
   size_t length;
 } DoubleArray;
 
+typedef struct {
+  int value;
+  char* errorStr;
+} IntegerResult;
+
+typedef struct {
+  char* value;
+  char* errorStr;
+} StringResult;
+
+typedef struct {
+  double* value;
+  size_t length;
+  char* errorStr;
+} DoubleArrayResult;
+
 #ifdef _MSC_VER
 #pragma pack(pop)
 #else
@@ -38,14 +54,14 @@ typedef struct {
 /*
  * Calculates the robinson fould distance between two trees
  */
-extern "C" int robinson_fould(const char* ctree1, const char* ctree2);
+extern "C" IntegerResult robinson_fould(const char* ctree1, const char* ctree2);
 
 /*
  * Generates a set of random phylogenetic trees
  * tree_gen_mode allows:"YULE_HARDING", "UNIFORM", "CATERPILLAR", "BALANCED", "BIRTH_DEATH", "STAR_TREE"
  * output: a newick tree (in string format)
  */
-extern "C" char* random_tree(int num_taxa, const char* tree_gen_mode, int num_trees, int rand_seed = 0);
+extern "C" StringResult random_tree(int num_taxa, const char* tree_gen_mode, int num_trees, int rand_seed = 0);
 
 /*
  * Perform phylogenetic analysis on the input alignment
@@ -53,7 +69,7 @@ extern "C" char* random_tree(int num_taxa, const char* tree_gen_mode, int num_tr
  * num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
  * output: results in YAML format with the tree and the details of parameters
  */
-extern "C" char* build_tree(StringArray& names, StringArray& seqs, const char* model, int rand_seed = 0, int bootstrap_rep = 0, int num_thres = 1);
+extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const char* model, int rand_seed = 0, int bootstrap_rep = 0, int num_thres = 1);
 
 /*
  * Perform phylogenetic analysis on the input alignment
@@ -61,7 +77,7 @@ extern "C" char* build_tree(StringArray& names, StringArray& seqs, const char* m
  * num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
  * output: results in YAML format with the details of parameters
  */
-extern "C" char* fit_tree(StringArray& names, StringArray& seqs, const char* model, const char* intree, int rand_seed = 0, int num_thres = 1);
+extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const char* model, const char* intree, int rand_seed = 0, int num_thres = 1);
 
 /*
  * Perform phylogenetic analysis with ModelFinder
@@ -73,7 +89,7 @@ extern "C" char* fit_tree(StringArray& names, StringArray& seqs, const char* mod
  * num_thres -- number of cpu threads to be used, default: 1; 0 - auto detection of the optimal number of cpu threads
  * output: modelfinder results in YAML format
  */
-extern "C" char* modelfinder(StringArray& names, StringArray& seqs, int rand_seed = 0,
+extern "C" StringResult modelfinder(StringArray& names, StringArray& seqs, int rand_seed = 0,
                    const char* model_set = "", const char* freq_set = "", const char* rate_set = "", int num_thres = 1);
 
 /*
@@ -83,17 +99,17 @@ extern "C" char* modelfinder(StringArray& names, StringArray& seqs, int rand_see
  * where n is the number of sequences
  * num_thres -- number of cpu threads to be used, default: 1; 0 - use all available cpu threads on the machine
  */
-extern "C" DoubleArray build_distmatrix(StringArray& names, StringArray& seqs, int num_thres = 1);
+extern "C" DoubleArrayResult build_distmatrix(StringArray& names, StringArray& seqs, int num_thres = 1);
 
 /*
  * Using Rapid-NJ to build tree from a distance matrix
  * output: a newick tree (in string format)
  */
-extern "C" char* build_njtree(StringArray& names, DoubleArray& distances);
+extern "C" StringResult build_njtree(StringArray& names, DoubleArray& distances);
 
 /*
  * verion number
  */
-extern "C" char* version();
+extern "C" StringResult version();
 
 #endif /* LIBIQTREE2_FUN */

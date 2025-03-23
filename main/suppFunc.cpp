@@ -1669,6 +1669,7 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
+    /*
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(WIN64) && !defined(__CYGWIN__)
     print_stacktrace(cerr);
 #endif
@@ -1686,6 +1687,7 @@ extern "C" void funcAbort(int signal_number)
     cerr << endl;
     cerr << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
     cerr << endl << "***    Alignment files (if possible)" << endl;
+    */
     funcExit();
     signal(signal_number, SIG_DFL);
 }
