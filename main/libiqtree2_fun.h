@@ -22,11 +22,13 @@ using namespace std;
 typedef struct {
   const char** strings;
   size_t length;
+  bool freeAfterUse; // 0: retain the memory; 1 : free its memory after use
 } StringArray;
 
 typedef struct {
   double* doubles;
   size_t length;
+  bool freeAfterUse; // 0: retain the memory; 1 : free its memory after use
 } DoubleArray;
 
 typedef struct {
