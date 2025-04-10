@@ -2943,29 +2943,34 @@ CandidateModel CandidateModelSet::test(Params &params, PhyloTree* in_tree, Model
 }
 
 int64_t CandidateModelSet::getNextModel() {
-    int64_t next_model;
-#pragma omp critical
+    uint64_t return_value;
+
+    #pragma omp critical
     {
-    if (size() == 0)
-        next_model = -1;
-    else if (current_model == -1)
-        next_model = 0;
-    else {
-        for (next_model = current_model+1; next_model != current_model; next_model++) {
-            if (next_model == size())
-                next_model = 0;
-            if (!at(next_model).hasFlag(MF_IGNORED + MF_WAITING + MF_RUNNING)) {
-                break;
+        int64_t next_model;
+
+        if (empty()) {
+            next_model = -1;
+        } else {
+            for (next_model = current_model+1; next_model != current_model; next_model++) {
+                if (next_model == size())
+                    next_model = 0;
+                if (!at(next_model).hasFlag(MF_IGNORED + MF_WAITING + MF_RUNNING)) {
+                    break;
+                }
             }
         }
+
+        if (next_model != current_model) {
+            at(next_model).setFlag(MF_RUNNING);
+            current_model = next_model;
+            return_value = next_model;
+        } else {
+            return_value =  -1;
+        }
     }
-    }
-    if (next_model != current_model) {
-        current_model = next_model;
-        at(next_model).setFlag(MF_RUNNING);
-        return next_model;
-    } else
-        return -1;
+
+    return return_value;
 }
 
 CandidateModel CandidateModelSet::evaluateAll(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
