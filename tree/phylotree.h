@@ -1059,11 +1059,17 @@ public:
     virtual double computePatternLhCat(SiteLoglType wsl);
 
     /**
-        compute state frequency for each pattern (for Huaichun)
-        @param[out] ptn_state_freq state frequency vector per pattern, 
-            should be pre-allocated with size of num_patterns * num_states
+        compute state frequencies for each pattern (for site-specific models)
+        @param[out] ptn_state_freq state frequencies per pattern,
+            should be pre-allocated with the size of num_patterns * num_states
     */
     void computePatternStateFreq(double *ptn_state_freq);
+
+    /**
+        compute rates for each pattern (for site-specific models)
+        @param[out] ptn_rate rate scaler per pattern
+    */
+    void computePatternRate(DoubleVector &ptn_rate);
 
     /****************************************************************************
             ancestral sequence reconstruction

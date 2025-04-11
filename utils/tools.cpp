@@ -1265,8 +1265,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_partition_lh = false;
     params.print_marginal_prob = false;
     params.print_site_prob = WSL_NONE;
-    params.print_site_state_freq = WSF_NONE;
+    params.print_site_state_freq = 0;
     params.print_site_rate = 0;
+    params.site_state_freq_type = WSF_NONE;
+    params.site_rate_type = WSR_NONE;
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
     params.min_ancestral_prob = 0.0;
@@ -1366,7 +1368,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
+    params.site_rate_file = NULL;
     params.tree_freq_file = NULL;
+    params.tree_rate_file = NULL;
     params.num_threads = 1;
     params.num_threads_max = 10000;
     params.openmp_by_model = false;
@@ -1376,6 +1380,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.root_state = NULL;
     params.print_bootaln = false;
     params.print_boot_site_freq = false;
+    params.print_boot_site_rate = false;
 	params.print_subaln = false;
 	params.print_partition_info = false;
 	params.print_conaln = false;
@@ -1864,14 +1869,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = YULE_HARDING;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rs") == 0) {
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -rs <alignment_file>";
-				params.tree_gen = YULE_HARDING;
-				params.aln_file = argv[cnt];
-				continue;
-			}
+			// OBSOLETE: alignment should be passed with the -s option
+			//if (strcmp(argv[cnt], "-rs") == 0) {
+			//	cnt++;
+			//	if (cnt >= argc)
+			//		throw "Use -rs <alignment_file>";
+			//	params.tree_gen = YULE_HARDING;
+			//	params.aln_file = argv[cnt];
+			//	continue;
+			//}
 			if (strcmp(argv[cnt], "-rstar") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2868,15 +2874,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "<SCALE> must be positive!";
                 continue;
             }
-            if (strcmp(argv[cnt], "--site-rate") == 0) {
+            if (params.alisim_active && strcmp(argv[cnt], "--site-rate") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --site-rate MEAN/SAMPLING/MODEL";
-
                 // convert option to uppercase
                 string option = argv[cnt];
                 transform(option.begin(), option.end(), option.begin(), ::toupper);
-                
                 if (option.compare("MEAN") == 0)
                     params.alisim_rate_heterogeneity = POSTERIOR_MEAN;
                 else if (option.compare("SAMPLING") == 0)
@@ -2887,15 +2891,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Use --site-rate MEAN/SAMPLING/MODEL";
                 continue;
             }
-            if (strcmp(argv[cnt], "--site-freq") == 0) {
+            if (params.alisim_active && strcmp(argv[cnt], "--site-freq") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --site-freq MEAN/SAMPLING/MODEL";
-
                 // convert option to uppercase
                 string option = argv[cnt];
                 transform(option.begin(), option.end(), option.begin(), ::toupper);
-                
                 if (option.compare("MEAN") == 0)
                     params.alisim_stationarity_heterogeneity = POSTERIOR_MEAN;
                 else if (option.compare("SAMPLING") == 0)
@@ -3478,27 +3480,66 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-			if (strcmp(argv[cnt], "-fs") == 0 || strcmp(argv[cnt], "--site-freq") == 0) {
-                if (params.tree_freq_file)
-                    throw "Specifying both -fs and -ft not allowed";
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -fs <site_freq_file>";
-				params.site_freq_file = argv[cnt];
-//				params.SSE = LK_EIGEN;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-ft") == 0 || strcmp(argv[cnt], "--tree-freq") == 0) {
-                if (params.site_freq_file)
-                    throw "Specifying both -fs and -ft not allowed";
-                cnt++;
-				if (cnt >= argc)
-					throw "Use -ft <treefile_to_infer_site_frequency_model>";
-                params.tree_freq_file = argv[cnt];
-                if (params.print_site_state_freq == WSF_NONE)
-                    params.print_site_state_freq = WSF_POSTERIOR_MEAN;
-                continue;
-            }
+	if (strcmp(argv[cnt], "-fs") == 0 || strcmp(argv[cnt], "--site-freq") == 0) {
+		if (params.tree_freq_file)
+			throw "Specifying both -fs and -ft or -frt not allowed";
+		cnt++;
+		if (cnt >= argc)
+			throw "Use -fs <site_freq_file>";
+		params.site_freq_file = argv[cnt];
+//		params.SSE = LK_EIGEN;
+		continue;
+	}
+	if (strcmp(argv[cnt], "-rs") == 0 || strcmp(argv[cnt], "--site-rate") == 0) {
+		if (params.tree_rate_file || params.tree_freq_file)
+			throw "Specifying both -rs and -rt or -ft or -frt not allowed";
+		cnt++;
+		if (cnt >= argc)
+			throw "Use -rs <site_rate_file>";
+		params.site_rate_file = argv[cnt];
+		continue;
+	}
+	if (strcmp(argv[cnt], "-ft") == 0 || strcmp(argv[cnt], "--tree-freq") == 0) {
+		if (params.site_freq_file)
+			throw "Specifying both -fs and -ft not allowed";
+		if (params.tree_rate_file)
+			throw "Specifying both -ft and -rt not allowed, try using -frt option";
+		cnt++;
+		if (cnt >= argc)
+			throw "Use -ft <treefile_to_infer_site_frequency_model>";
+		params.tree_freq_file = argv[cnt];
+		if (params.site_state_freq_type == WSF_NONE)
+			params.site_state_freq_type = WSF_POSTERIOR_MEAN;
+		continue;
+	}
+	if (strcmp(argv[cnt], "-rt") == 0 || strcmp(argv[cnt], "--tree-rate") == 0) {
+		if (params.site_rate_file)
+			throw "Specifying both -rs and -rt not allowed";
+		if (params.tree_freq_file)
+			throw "Specifying both -ft and -rt not allowed, try using -frt option";
+		cnt++;
+		if (cnt >= argc)
+			throw "Use -rt <treefile_to_infer_site_rate_model>";
+		params.tree_rate_file = argv[cnt];
+		if (params.site_rate_type == WSR_NONE)
+			params.site_rate_type = WSR_POSTERIOR_MEAN;
+		continue;
+	}
+	if (strcmp(argv[cnt], "-frt") == 0 || strcmp(argv[cnt], "--tree-freq-rate") == 0) {
+		if (params.site_freq_file || params.site_rate_file)
+			throw "Specifying both -fs or -rs and -frt not allowed";
+		if (params.tree_freq_file || params.tree_rate_file)
+			throw "Specifying both -ft or -rt and -frt not allowed";
+		cnt++;
+		if (cnt >= argc)
+			throw "Use -frt <treefile_to_infer_site_frequency_and_rate_model>";
+		params.tree_freq_file = params.tree_rate_file = argv[cnt];
+		if (params.site_state_freq_type == WSF_NONE)
+			params.site_state_freq_type = WSF_POSTERIOR_MEAN;
+		if (params.site_rate_type == WSR_NONE)
+			params.site_rate_type = WSR_POSTERIOR_MEAN;
+		continue;
+	}
 
 			if (strcmp(argv[cnt], "-fconst") == 0) {
 				cnt++;
@@ -4063,7 +4104,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 			if (strcmp(argv[cnt], "-asr-joint") == 0) {
 				params.print_ancestral_sequence = AST_JOINT;
-                params.ignore_identical_seqs = false;
+				params.ignore_identical_seqs = false;
 				continue;
 			}
 
@@ -4072,21 +4113,23 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "--mlrate") == 0) {
-                params.print_site_rate |= 2;
-                continue;
-            }
+			if (strcmp(argv[cnt], "--mlrate") == 0) {
+				params.print_site_rate |= 2;
+				continue;
+			}
 
             if (strcmp(argv[cnt], "-wsptrees") == 0) {
 				params.print_trees_site_posterior = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsf") == 0) {
-				params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+				params.print_site_state_freq = 1;
+				if (params.site_state_freq_type == WSF_NONE)
+					params.site_state_freq_type = WSF_POSTERIOR_MEAN;
 				continue;
 			}
 			if (strcmp(argv[cnt], "--freq-max") == 0 || strcmp(argv[cnt], "-fmax") == 0) {
-				params.print_site_state_freq = WSF_POSTERIOR_MAX;
+				params.site_state_freq_type = WSF_POSTERIOR_MAX;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
@@ -4095,6 +4138,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wbsf") == 0) {
 				params.print_boot_site_freq = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbsr") == 0) {
+				params.print_boot_site_rate = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsa") == 0) {
@@ -5806,11 +5853,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.alisim_active && !params.aln_file && !params.user_file && !params.partition_file && params.tree_gen == NONE)
         outError("A tree filepath is a mandatory input to execute AliSim when neither Inference mode nor Random mode (generating a random tree) is inactive. Use -t <TREE_FILEPATH> ; or Activate the inference mode by -s <ALIGNMENT_FILE> ; or Activate Random mode by -t RANDOM{<MODEL>,<NUM_TAXA>} where <MODEL> is yh, u, cat, bal, bd{<birth_rate>,<death_rate>} stands for Yule-Harding, Uniform, Caterpillar, Balanced, Birth-Death model respectively.");
-    // terminate if using AliSim with -ft or -fs site-specific model (ModelSet)
+    // terminate if using AliSim with site-specific model (ModelSet)
     // computeTransMatix has not yet implemented for ModelSet
     if (params.alisim_active && (params.tree_freq_file || params.site_freq_file))
-        outError("Sorry! `-ft` (--site-freq) and `-fs` (--tree-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
-    
+        outError("Sorry! `-ft` (--tree-freq) and `-fs` (--site-freq) options are not fully supported in AliSim. However, AliSim can estimate posterior mean frequencies from the alignment. Please try again without `-ft` and `-fs` options!");
+    if (params.alisim_active && (params.tree_rate_file || params.site_rate_file))
+        outError("Sorry! `-rt` (--tree-rate) and `-rs` (--site-rate) options are not fully supported in AliSim. However, AliSim can estimate posterior mean rates from the alignment. Please try again without `-rt` and `-rs` options!");
     // set default filename for the random tree if AliSim is running in Random mode
     if (params.alisim_active && !params.user_file && params.tree_gen != NONE)
     {
@@ -6170,13 +6218,16 @@ void usage_iqtree(char* argv[], bool full_command) {
 // TODO DS: Maybe change default to +WH.
 
     << endl << "COMPLEX MODELS:" << endl
-    << "  -m \"MIX{m1,...,mK}\"  Mixture model with K components" << endl
-    << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
-    << "  --mix-opt            Optimize mixture weights (default: detect)" << endl
-    << "  -m ...+ASC           Ascertainment bias correction" << endl
-    << "  --tree-freq FILE     Input tree to infer site frequency model" << endl
-    << "  --site-freq FILE     Input site frequency model file" << endl
-    << "  --freq-max           Posterior maximum instead of mean approximation" << endl
+    << "  -m \"MIX{m1,...,mK}\"    Mixture model with K components" << endl
+    << "  -m \"FMIX{f1,...fK}\"    Frequency mixture model with K components" << endl
+    << "  --mix-opt              Optimize mixture weights (default: detect)" << endl
+    << "  -m ...+ASC             Ascertainment bias correction" << endl
+    << "  --tree-freq FILE       Input tree to infer site frequency model" << endl
+    << "  --tree-rate FILE       Input tree to infer site rate model" << endl
+    << "  --tree-freq-rate FILE  Input tree to infer site frequency and rate model" << endl
+    << "  --freq-max             Posterior maximum instead of mean approximation" << endl
+    << "  --site-freq FILE       Input site frequency model file" << endl
+    << "  --site-rate FILE       Input site rate model file" << endl
 
     << endl << "TREE TOPOLOGY TEST:" << endl
     << "  --trees FILE         Set of trees to evaluate log-likelihoods" << endl

@@ -25,12 +25,12 @@ struct TreeInfo {
 	double wkh_pvalue; // p-value by weighted Kishino-Hasegawa test
 	double elw_value; // ELW - expected likelihood weights test
 	bool elw_confident; // to represent confidence set of ELW test
-    double au_pvalue; // p-value by approximately unbiased (AU) test
+	double au_pvalue; // p-value by approximately unbiased (AU) test
 };
 
 
 /**
- * print site log likelihoods to a fileExists
+ * print site log likelihoods to a file
  * @param filename output file name
  * @param tree phylogenetic tree
  * @param ptn_lh pattern log-likelihoods, will be computed if NULL
@@ -41,14 +41,14 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
 		bool append = false, const char *linename = NULL);
 
 /**
- * print HMM results to a fileExists
+ * print HMM results to a file
  * @param filename output file name
  * @param tree IQTreeMixHmm
  */
 void printHMMResult(const char*filename, PhyloTree *tree, int cat_assign_method = 0);
 
 /**
- * print marginal probabilities to a fileExists
+ * print marginal probabilities to a file
  * @param filename output file name
  * @param tree IQTreeMixHmm
  */
@@ -80,18 +80,27 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl);
 
 /**
- * print site state frequency vectors (for Huaichun)
+ * print site state frequency vectors (for -wsf option)
  * @param filename output file name
  * @param tree phylogenetic tree
-*/
-void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
+ */
+void printSiteStateFreq(const char*filename, PhyloTree *tree);
 
 /**
- * print site state frequency vectors (for Huaichun)
+ * print site rates (for -wsr and --mlrate options)
+ * @param filename output file name
+ * @param tree phylogenetic tree
+ * @param bayes print mean posterior or ML rates
+ */
+void printSiteRate(const char *filename, PhyloTree *tree, bool bayes);
+
+/**
+ * print site state frequency vectors or rate scalers (for site-specific models)
  * @param filename output file name
  * @param aln alignment
-*/
-void printSiteStateFreq(const char* filename, Alignment *aln);
+ * @param param_type should be set to "freq" or "rate"
+ */
+void printSiteParam(const char* filename, Alignment *aln, const string &param_type);
 
 /**
     print ancestral sequences
