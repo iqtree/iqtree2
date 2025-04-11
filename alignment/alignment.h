@@ -1010,6 +1010,12 @@ public:
      */
     void extractMapleFile(const std::string& aln_name, const InputType& format);
 
+    /**
+     * Get the numerical id of the genetic code
+     * @return id the genetic code id, or 0 if not a codon type
+     */
+    int getGeneticCodeId();
+
 protected:
 
 

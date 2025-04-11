@@ -150,3 +150,56 @@ void ModelMorphology::writeInfo(ostream &out) {
         out << endl;
     }
 }
+
+void ModelMorphology::printMrBayesModelText(ofstream& out, string partition, string charset, bool isSuperTree, bool inclParams) {
+    warnLogStream("MrBayes only supports Morphological Data with states from {0-9}!", out);
+    warnLogStream("Morphological Data with states {A-Z} may cause errors!", out);
+    warnLogStream("Use Morphological Models in MrBayes with Caution!", out);
+
+    RateHeterogeneity* rate = phylo_tree->getRate();
+
+    // MrBayes does not support Invariable Modifier for Morph data
+    if (rate->isFreeRate() || rate->getPInvar() > 0.0) {
+        warnLogStream("MrBayes does not support Invariable Sites with Morphological Data! +I has been ignored!", out);
+    }
+    // MrBayes does not support State Frequency for Morph data
+    if (freq_type != FREQ_EQUAL) {
+        warnLogStream("MrBayes does not support non-equal frequencies for Morphological Data! Frequencies are left as the default! (All equal)", out);
+    }
+
+    // Lset Parameters
+    out << "  lset applyto=(" << partition << ") rates=";
+
+    // Free Rate should be substituted by +G (+I not supported)
+    bool hasGamma = rate->getGammaShape() != 0.0 || rate->isFreeRate();
+    if (hasGamma) {
+        // Rate Categories + Gamma
+        out << "gamma ngammacat=" << rate->getNRate();
+    } else
+        out << "equal";
+
+    out << ";" << endl;
+
+    // ctype (ordered or not)
+    if (strcmp(name.c_str(), "ORDERED") == 0)
+        out << "  ctype ordered: " << charset << ";" << endl;
+
+    // Since morphological doesn't have state frequencies, if there are no parameters to prset, return
+    if (!inclParams || !rate->isFreeRate() && rate->getGammaShape() <= 0.0) return;
+
+    // Prset Parameters
+    out << "  prset applyto=(" << partition << ")";
+
+    // Freerate (+R)
+    // Get replacement Gamma Shape
+    if (rate->isFreeRate()) {
+        printMrBayesFreeRateReplacement(rate, charset, out, false);
+    }
+
+    // Gamma Distribution (+G/+R)
+    // Dirichlet is not available here, use fixed
+    if (rate->getGammaShape() > 0.0)
+        out << " shapepr=fixed(" << minValueCheckMrBayes(rate->getGammaShape()) << ")";
+
+    out << ";" << endl;
+}
