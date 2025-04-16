@@ -27,20 +27,6 @@ void cleanup(Params& params) {
     }
 }
 
-void freeArr(StringArray& str_arr) {
-	if (str_arr.length > 0) {
-		free(str_arr.strings);
-		str_arr.length = 0;
-	}
-}
-
-void freeArr(DoubleArray& dbl_arr) {
-	if (dbl_arr.length > 0) {
-		free(dbl_arr.doubles);
-		dbl_arr.length = 0;
-	}
-}
-
 void convertToVectorStr(StringArray& names, StringArray& seqs, vector<string>& names_vec, vector<string>& seqs_vec) {
 	names_vec.clear();
 	seqs_vec.clear();
@@ -180,18 +166,6 @@ extern "C" StringResult build_tree(StringArray& names, StringArray& seqs, const 
         // reset the output and error buffers
         funcExit();
     }
-    // free the memory of names and seqs if necessary
-    try {
-        if (names.freeAfterUse) {
-            freeArr(names);
-        }
-        if (seqs.freeAfterUse) {
-            freeArr(seqs);
-        }
-    } catch (const exception& e) {
-        // ignore the error
-    }
-    
     return output;
 }
 
@@ -219,17 +193,6 @@ extern "C" StringResult fit_tree(StringArray& names, StringArray& seqs, const ch
     	}
         // reset the output and error buffers
         funcExit();
-    }
-    // free the memory of names and seqs if necessary
-    try {
-        if (names.freeAfterUse) {
-            freeArr(names);
-        }
-        if (seqs.freeAfterUse) {
-            freeArr(seqs);
-        }
-    } catch (const exception& e) {
-        // ignore the error
     }
     return output;
 }
@@ -270,17 +233,6 @@ extern "C" StringResult modelfinder(StringArray& names, StringArray& seqs, int r
     	}
         // reset the output and error buffers
         funcExit();
-    }
-    // free the memory of names and seqs if necessary
-    try {
-        if (names.freeAfterUse) {
-            freeArr(names);
-        }
-        if (seqs.freeAfterUse) {
-            freeArr(seqs);
-        }
-    } catch (const exception& e) {
-        // ignore the error
     }
     return output;
 }
@@ -363,17 +315,6 @@ extern "C" DoubleArrayResult build_distmatrix(StringArray& cnames, StringArray& 
         // reset the output and error buffers
         funcExit();
     }
-    // free the memory of cnames and cseqs if necessary
-    try {
-        if (cnames.freeAfterUse) {
-            freeArr(cnames);
-        }
-        if (cseqs.freeAfterUse) {
-            freeArr(cseqs);
-        }
-    } catch (const exception& e) {
-        // ignore the error
-    }
     return output;
 }
 
@@ -428,17 +369,6 @@ extern "C" StringResult build_njtree(StringArray& cnames, DoubleArray& distances
     	}
         // reset the output and error buffers
         funcExit();
-    }
-    // free the memory of cnames and distances if necessary
-    try {
-        if (cnames.freeAfterUse) {
-            freeArr(cnames);
-        }
-        if (distances.freeAfterUse) {
-            freeArr(distances);
-        }
-    } catch (const exception& e) {
-        // ignore the error
     }
     return output;
 }
