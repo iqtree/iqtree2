@@ -431,6 +431,7 @@ char* build_phylogenetic(StringArray& cnames, StringArray& cseqs, const char* cm
     Params::getInstance().num_threads = 1; // default
     Params::getInstance().aln_file = (char*) "";
     Params::getInstance().model_name = model;
+    Params::getInstance().ignore_identical_seqs = false; // keep the identical seqs
     
     if (intree != "") {
         // tree exists, then the resulting phylogenetic tree will be restricted to the input topology
