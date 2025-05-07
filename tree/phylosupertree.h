@@ -439,17 +439,27 @@ public:
         end computing ancestral sequence probability for an internal node by marginal reconstruction
     */
     virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
-    
+
 	/**
-		write site-rates to a file in the following format:
-		1  rate_1
-		2  rate_2
-		....
-		This function will call computePatternRates()
-		@param out output stream to write rates
-        @param bayes TRUE to use empirical Bayesian, false for ML method
-     */
-    virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
+	 write site state frequencies to a file in the following format:
+	 1      freq(A)_1       freq(R)_1       ...
+	 2      freq(A)_2       freq(R)_2       ...
+	 ...
+	 This function should be used by -wsf option
+	 @param out output stream to write freqs
+	*/
+	virtual void writeSiteFreqs(ostream &out, int partid = -1);
+
+	/**
+	 write site rates to a file in the following format:
+	 1      rate_1
+	 2      rate_2
+	 ...
+	 This function should be used by -wsr option
+	 @param out output stream to write rates
+	 @param bayes TRUE to use empirical Bayesian, false for ML method
+	*/
+	virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
 
     /**
         write site log likelihood to a output stream

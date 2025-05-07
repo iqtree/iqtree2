@@ -193,24 +193,25 @@ vector<short int> AliSimulatorHeterogeneity::regenerateSequenceMixtureModel(int 
 }
 
 /**
-    extract pattern- posterior mean state frequencies and posterior model probability
+    extract pattern-specific posterior mean state frequencies and posterior model probability
 */
 void AliSimulatorHeterogeneity::extractPatternPosteriorFreqsAndModelProb()
 {
-    // get pattern-specific state frequencies (ptn_state_freq)
     int nptn = tree->aln->getNPattern();
     int nmixture = tree->getModel()->getNMixtures();
     if (!ptn_state_freq)
     {
-        ptn_state_freq = new double[nptn * max_num_states];
+        // get pattern-specific state frequencies (ptn_state_freq)
         SiteFreqType tmp_site_freq_type = tree->params->site_state_freq_type;
         tree->params->site_state_freq_type = WSF_POSTERIOR_MEAN;
+        ptn_state_freq = nullptr;
         tree->computePatternStateFreq(ptn_state_freq);
+        ASSERT(ptn_state_freq);
+        tree->params->site_state_freq_type = tmp_site_freq_type;
         // get pattern-specific posterior model probability
         int nptn_times_nmixture = nptn * nmixture;
         ptn_model_dis = new double[nptn_times_nmixture];
         memcpy(ptn_model_dis, tree->getPatternLhCatPointer(), nptn_times_nmixture * sizeof(double));
-        tree->params->site_state_freq_type = tmp_site_freq_type;
         // convert ptn_model_dis to accummulated matrix
         convertProMatrixIntoAccumulatedProMatrix(ptn_model_dis, nptn, nmixture);
     }
@@ -456,12 +457,14 @@ void AliSimulatorHeterogeneity::getSiteSpecificPosteriorRateHeterogeneity(vector
 {
     int num_rates = rate_heterogeneity->getNDiscreteRate();
     
-    // get pattern-specific rate (ptn_rate)
     if (pattern_rates.size() == 0)
     {
-        IntVector pattern_cat;
-        tree->getRate()->computePatternRates(pattern_rates, pattern_cat);
-        
+        // get pattern-specific rate (ptn_rate)
+        SiteRateType tmp_site_rate_type = tree->params->site_rate_type;
+        tree->params->site_rate_type = WSR_POSTERIOR_MEAN;
+        tree->computePatternRate(pattern_rates);
+        ASSERT(pattern_rates.size());
+        tree->params->site_rate_type = tmp_site_rate_type;
         // extract pattern rate distribution if the user wants to sample a rate for each site from posterior distribution
         if (tree->params->alisim_rate_heterogeneity == POSTERIOR_DIS)
         {

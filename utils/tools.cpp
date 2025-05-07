@@ -3479,6 +3479,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+	/** Precomputed site-specific model */
 	if (strcmp(argv[cnt], "-fs") == 0 || strcmp(argv[cnt], "--site-freq") == 0) {
 		if (params.tree_freq_file)
 			throw "Specifying both -fs and -ft or -frt not allowed";
@@ -3498,6 +3499,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 		params.site_rate_file = argv[cnt];
 		continue;
 	}
+
+	/** Compute new site-specific model */
 	if (strcmp(argv[cnt], "-ft") == 0 || strcmp(argv[cnt], "--tree-freq") == 0) {
 		if (params.site_freq_file || params.site_rate_file)
 			throw "Specifying both -fs or -rs and -ft not allowed";
@@ -3539,6 +3542,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			params.site_rate_type = WSR_POSTERIOR_MEAN;
 		continue;
 	}
+
 
 			if (strcmp(argv[cnt], "-fconst") == 0 || strcmp(argv[cnt], "--fconst") == 0) {
 				cnt++;
@@ -3942,20 +3946,23 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_tree_lh = true;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-wit") == 0) {
+				params.write_init_tree = true;
+				continue;
+			}
+
+			/** write branch lengths */
+			// general BL
 			if (strcmp(argv[cnt], "-wbl") == 0) {
 				params.print_branch_lengths = true;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-wit") == 0) {
-                params.write_init_tree = true;
-                continue;
-            }
-            
-            if (strcmp(argv[cnt], "--write-branches") == 0) {
-                params.write_branches = true;
-                continue;
-            }
-            
+			// partition-specific BL
+			if (strcmp(argv[cnt], "-wpbl") == 0 || strcmp(argv[cnt], "--write-branches") == 0) {
+				params.write_branches = true;
+				continue;
+			}
+
 //			if (strcmp(argv[cnt], "-nodup") == 0) {
 //				params.avoid_duplicated_trees = true;
 //				continue;
@@ -4056,11 +4063,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
+			/** Mixture model site LL */
 			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
 				params.print_site_lh = WSL_RATECAT;
 				continue;
 			}
-
 			if (strcmp(argv[cnt], "-wslm") == 0) {
 				params.print_site_lh = WSL_MIXTURE;
 				continue;
@@ -4070,11 +4077,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			/** Mixture model site probas */
 			if (strcmp(argv[cnt], "-wspr") == 0) {
 				params.print_site_prob = WSL_RATECAT;
 				continue;
 			}
-
 			if (strcmp(argv[cnt], "-wspm") == 0) {
 				params.print_site_prob = WSL_MIXTURE;
 				continue;
@@ -4084,53 +4091,56 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-asr") == 0 || strcmp(argv[cnt], "--ancestral") == 0) {
-				params.print_ancestral_sequence = AST_MARGINAL;
-                params.ignore_identical_seqs = false;
+			if (strcmp(argv[cnt], "-wsptrees") == 0) {
+				params.print_trees_site_posterior = 1;
 				continue;
 			}
 
+			/** Ancestral sequence reconstruction */
+			if (strcmp(argv[cnt], "-asr") == 0 || strcmp(argv[cnt], "--ancestral") == 0) {
+				params.print_ancestral_sequence = AST_MARGINAL;
+				params.ignore_identical_seqs = false;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-asr-min") == 0 || strcmp(argv[cnt], "--asr-min") == 0) {
-                cnt++;
+				cnt++;
 				if (cnt >= argc)
 					throw "Use -asr-min <probability>";
-                
-                params.min_ancestral_prob = convert_double(argv[cnt]);
-                if (params.min_ancestral_prob < 0 || params.min_ancestral_prob > 1)
-                    throw "Minimum ancestral probability [-asr-min] must be between 0 and 1.0";
-                continue;
-            }
-
+				params.min_ancestral_prob = convert_double(argv[cnt]);
+				if (params.min_ancestral_prob < 0 || params.min_ancestral_prob > 1)
+					throw "Minimum ancestral probability [-asr-min] must be between 0 and 1.0";
+				continue;
+			}
 			if (strcmp(argv[cnt], "-asr-joint") == 0) {
 				params.print_ancestral_sequence = AST_JOINT;
 				params.ignore_identical_seqs = false;
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wsr") == 0 || strcmp(argv[cnt], "--rate") == 0) {
-				params.print_site_rate |= 1;
-				continue;
-			}
-
-			if (strcmp(argv[cnt], "--mlrate") == 0) {
-				params.print_site_rate |= 2;
-				continue;
-			}
-
-            if (strcmp(argv[cnt], "-wsptrees") == 0) {
-				params.print_trees_site_posterior = 1;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-wsf") == 0) {
+			/** Mixture model site state freqs */
+			if (strcmp(argv[cnt], "-wsf") == 0 || strcmp(argv[cnt], "--freq") == 0) {
 				params.print_site_state_freq = 1;
 				if (params.site_state_freq_type == WSF_NONE)
 					params.site_state_freq_type = WSF_POSTERIOR_MEAN;
 				continue;
 			}
-			if (strcmp(argv[cnt], "--freq-max") == 0 || strcmp(argv[cnt], "-fmax") == 0) {
+			if (strcmp(argv[cnt], "-fmax") == 0 || strcmp(argv[cnt], "--freq-max") == 0) {
 				params.site_state_freq_type = WSF_POSTERIOR_MAX;
 				continue;
 			}
+
+			/** Mixture model site rates */
+			if (strcmp(argv[cnt], "-wsr") == 0 || strcmp(argv[cnt], "--rate") == 0) {
+				params.print_site_rate |= 1;
+				if (params.site_rate_type == WSR_NONE)
+					params.site_rate_type = WSR_POSTERIOR_MEAN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--mlrate") == 0) {
+				params.print_site_rate |= 2;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-wba") == 0) {
 				params.print_bootaln = true;
 				continue;
@@ -6196,6 +6206,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+FU            Amino-acid frequencies given protein matrix" << endl
     << "  -m ...+F1x4          Equal NT frequencies over three codon positions" << endl
     << "  -m ...+F3x4          Unequal NT frequencies over three codon positions" << endl
+    << "  --freq               Write empirical Bayesian site state frequencies to .freq file" << endl
 
     << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
     << "  -m ...+I             A proportion of invariable sites" << endl

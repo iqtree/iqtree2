@@ -137,20 +137,25 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
         delete[] pattern_lh;
 }
 
-void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
-    
+void printSiteLhCategory(const char *filename, PhyloTree *tree, SiteLoglType wsl) {
+    // error check
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
+    // tree mixture model
     if (tree->isTreeMix()) {
-        wsl = WSL_TMIXTURE; // tree mixture model
-    } else if (!tree->getModel()->isMixture()) {
-        if (wsl != WSL_RATECAT) {
-            wsl = WSL_RATECAT;
-        }
-    } else {
-        // mixture model
+        outWarning("Switching to tree categories, as it is the only option for tree mixture model");
+        wsl = WSL_TMIXTURE;
+    // mixture model
+    } else if (tree->getModel()->isMixture()) {
         if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            outWarning("Switching to -wslm, as -wslmr is not suitable for fused mixture model");
             wsl = WSL_MIXTURE;
+        }
+    // non-mixture model
+    } else {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switching to -wslr, as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
         }
     }
     int ncat = tree->getNumLhCat(wsl);
@@ -163,8 +168,6 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
         }
     }
     int i;
-    
-    
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -178,12 +181,10 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
             << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
         } else
             out << "#   Site:   Alignment site ID" << endl;
-        
         out << "#   LnL:    Logarithm of site likelihood" << endl
         << "#           Thus, sum of LnL is equal to tree log-likelihood" << endl
         << "#   LnLW_k: Logarithm of (category-k site likelihood times category-k weight)" << endl
         << "#           Thus, sum of exp(LnLW_k) is equal to exp(LnL)" << endl;
-        
         if (tree->isSuperTree()) {
             out << "Part\tSite\tLnL";
         } else
@@ -193,9 +194,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
         out << endl;
         out.precision(4);
         out.setf(ios::fixed);
-        
         tree->writeSiteLh(out, wsl);
-        
         out.close();
         cout << "Site log-likelihoods per category printed to " << filename << endl;
         /*
@@ -216,11 +215,80 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
     } catch (ios::failure) {
         outError(ERR_WRITE_OUTPUT, filename);
     }
-    
+}
+
+void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
+    // error check
+    if (wsl == WSL_NONE || wsl == WSL_SITE)
+        return;
+    // tree mixture model
+    if (tree->isTreeMix()) {
+        outWarning("Switching to tree categories, as it is the only option for tree mixture model");
+        wsl = WSL_TMIXTURE;
+    // mixture model
+    } else if (tree->getModel()->isMixture()) {
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            outWarning("Switching to -wspm, as -wspmr is not suitable for fused mixture model");
+            wsl = WSL_MIXTURE;
+        }
+    // non-mixture model
+    } else {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switching to -wspr, as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    }
+    size_t cat, ncat = tree->getNumLhCat(wsl);
+    double *ptn_prob_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
+    tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        if (tree->isSuperTree())
+            out << "Set\t";
+        out << "Site";
+        for (cat = 0; cat < ncat; cat++)
+            out << "\tp" << cat+1;
+        out << endl;
+        IntVector pattern_index;
+        if (tree->isSuperTree()) {
+            PhyloSuperTree *super_tree = (PhyloSuperTree*)tree;
+            size_t offset = 0;
+            for (PhyloSuperTree::iterator it = super_tree->begin(); it != super_tree->end(); it++) {
+                size_t part_ncat = (*it)->getNumLhCat(wsl);
+                (*it)->aln->getSitePatternIndex(pattern_index);
+                size_t nsite = (*it)->aln->getNSite();
+                for (size_t site = 0; site < nsite; ++site) {
+                    out << (it-super_tree->begin())+1 << "\t" << site+1;
+                    double *prob_cat = ptn_prob_cat + (offset+pattern_index[site]*part_ncat);
+                    for (cat = 0; cat < part_ncat; cat++)
+                        out << "\t" << prob_cat[cat];
+                    out << endl;
+                }
+                offset += (*it)->aln->getNPattern()*(*it)->getNumLhCat(wsl);
+            }
+        } else {
+            tree->aln->getSitePatternIndex(pattern_index);
+            size_t nsite = tree->getAlnNSite();
+            for (size_t site = 0; site < nsite; ++site) {
+                out << site+1;
+                double *prob_cat = ptn_prob_cat + pattern_index[site]*ncat;
+                for (cat = 0; cat < ncat; cat++) {
+                    out << "\t" << prob_cat[cat];
+                }
+                out << endl;
+            }
+        }
+        out.close();
+        cout << "Site probabilities per category printed to " << filename << endl;
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
 }
 
 void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralSeqType ast) {
-    
+    cout << endl << "Infer ancestral site states" << endl;
     //    int *joint_ancestral = NULL;
     //
     //    if (tree->params->print_ancestral_sequence == AST_JOINT) {
@@ -335,118 +403,61 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
     
 }
 
-void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
-    
-    if (wsl == WSL_NONE || wsl == WSL_SITE)
-        return;
-    // error checking
-    if (tree->isTreeMix())
-        wsl = WSL_TMIXTURE; // tree mixture model
-    else if (!tree->getModel()->isMixture()) {
-        if (wsl != WSL_RATECAT) {
-            outWarning("Switch now to '-wspr' as it is the only option for non-mixture model");
-            wsl = WSL_RATECAT;
-        }
-    } else {
-        // mixture model
-        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
-            outWarning("-wspmr is not suitable for fused mixture model, switch now to -wspm");
-            wsl = WSL_MIXTURE;
-        }
-    }
-    size_t cat, ncat = tree->getNumLhCat(wsl);
-    double *ptn_prob_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
-    tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
-    
-    try {
-        ofstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(filename);
-        if (tree->isSuperTree())
-            out << "Set\t";
-        out << "Site";
-        for (cat = 0; cat < ncat; cat++)
-            out << "\tp" << cat+1;
-        out << endl;
-        IntVector pattern_index;
-        if (tree->isSuperTree()) {
-            PhyloSuperTree *super_tree = (PhyloSuperTree*)tree;
-            size_t offset = 0;
-            for (PhyloSuperTree::iterator it = super_tree->begin(); it != super_tree->end(); it++) {
-                size_t part_ncat = (*it)->getNumLhCat(wsl);
-                (*it)->aln->getSitePatternIndex(pattern_index);
-                size_t nsite = (*it)->aln->getNSite();
-                for (size_t site = 0; site < nsite; ++site) {
-                    out << (it-super_tree->begin())+1 << "\t" << site+1;
-                    double *prob_cat = ptn_prob_cat + (offset+pattern_index[site]*part_ncat);
-                    for (cat = 0; cat < part_ncat; cat++)
-                        out << "\t" << prob_cat[cat];
-                    out << endl;
-                }
-                offset += (*it)->aln->getNPattern()*(*it)->getNumLhCat(wsl);
-            }
-        } else {
-            tree->aln->getSitePatternIndex(pattern_index);
-            size_t nsite = tree->getAlnNSite();
-            for (size_t site = 0; site < nsite; ++site) {
-                out << site+1;
-                double *prob_cat = ptn_prob_cat + pattern_index[site]*ncat;
-                for (cat = 0; cat < ncat; cat++) {
-                    out << "\t" << prob_cat[cat];
-                }
-                out << endl;
-            }
-        }
-        out.close();
-        cout << "Site probabilities per category printed to " << filename << endl;
-    } catch (ios::failure) {
-        outError(ERR_WRITE_OUTPUT, filename);
-    }
-    
-}
-
 void printSiteStateFreq(const char *filename, PhyloTree *tree) {
-	if (!tree->getModel()->isMixture())
-		outError("No frequency mixture model was specified!");
-	size_t nsites = tree->getAlnNSite();
-	size_t nstates = tree->aln->num_states;
-	double *all_ptn_state_freq;
-	all_ptn_state_freq = new double[((size_t)tree->getAlnNPattern()) * nstates];
-	tree->computePatternStateFreq(all_ptn_state_freq);
+	cout << endl << "Infer site state frequencies" << endl;
 	try {
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);
 	out.open(filename);
-	IntVector site_pattern;
-	tree->aln->getSitePatternIndex(site_pattern);
-	for (size_t site = 0; site < nsites; ++site) {
-		out.width(6);
-		out << left << site + 1 << " ";
-		double *state_freqs = &all_ptn_state_freq[site_pattern[site]*nstates];
-		for (size_t x = 0; x < nstates; ++x) {
-			out.width(15);
-			out << state_freqs[x] << " ";
-		}
-		out << endl;
+	string msg;
+	// write the comment header
+	out << "# Site-specific state frequencies determined by empirical Bayesian method" << endl;
+	out << "# This file can be read in MS Excel or in R with command:" << endl
+		<< "#   tab=read.table('" << filename << "',header=TRUE,fill=TRUE)" << endl
+		<< "# Columns are tab-separated with following meaning:" << endl;
+	if (tree->isSuperTree())
+		out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->front()->aln->name << ", etc)" << endl
+			<< "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+	else
+		out << "#   Site:   Alignment site ID" << endl;
+	msg = (tree->params->site_state_freq_type == WSF_POSTERIOR_MEAN) ? "mean" : "max";
+	out << "#   pi_X:   Posterior " << msg << " site frequency of state X" << endl
+		<< "#   Cat:    Category with the highest posterior weight" << endl;
+	// write the main header
+	msg = "";
+	size_t nstates;
+	if (tree->isSuperTree()) {
+		msg += "Part\tSite";
+		nstates = ((SuperAlignment*)tree->aln)->max_num_states;
+		for (size_t x = 0; x < nstates; ++x)
+			msg += "\tpi_" + convertIntToString(x);
+	} else {
+		msg += "Site";
+		nstates = tree->aln->num_states;
+		for (size_t x = 0; x < nstates; ++x)
+			msg += "\tpi_" + tree->aln->convertStateBackStr(x);
 	}
+	msg += "\tCat";
+	out << msg << endl;
+	// infer and write the site freqs
+	tree->writeSiteFreqs(out);
 	out.close();
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
-	delete [] all_ptn_state_freq;
 	cout << "Site state frequencies printed to " << filename << endl;
 }
 
 void printSiteRate(const char *filename, PhyloTree *tree, bool bayes) {
-	if (bayes && tree->getRate()->getNRate() == 1)
-		outError("No rate mixture model was specified!");
+	cout << endl << "Infer site rates" << endl;
 	try {
 	ofstream out;
 	out.exceptions(ios::failbit | ios::badbit);
 	out.open(filename);
+	string msg;
 	// write the comment header
-	string msg = (bayes) ? "empirical Bayesian method" : "maximum likelihood";
-	out << "# Site-specific subtitution rates determined by " << msg << endl;
+	msg = (bayes) ? "empirical Bayesian method" : "maximum likelihood";
+	out << "# Site-specific substitution rates determined by " << msg << endl;
 	out << "# This file can be read in MS Excel or in R with command:" << endl
 		<< "#   tab=read.table('" << filename << "',header=TRUE)" << endl
 		<< "# Columns are tab-separated with following meaning:" << endl;
@@ -456,14 +467,14 @@ void printSiteRate(const char *filename, PhyloTree *tree, bool bayes) {
 	else
 		out << "#   Site:   Alignment site ID" << endl;
 	if (bayes)
-		out << "#   Rate:   Posterior mean site rate weighted by posterior probability" << endl
-			<< "#   Cat:    Category with highest posterior (0=invariable, 1=slow, etc)" << endl
-			<< "#   C_Rate: Corresponding rate of highest category" << endl;
+		out << "#   Rate:   Posterior mean site rate" << endl
+			<< "#   Cat:    Category with the highest posterior weight (0=invariable, 1=slow, etc)" << endl
+			<< "#   C_Rate: Corresponding rate of the highest weight category" << endl;
 	else
 		out << "#   Rate:   Site rate estimated by maximum likelihood" << endl;
 	// write the main header
 	msg = "";
-	if (tree->isSuperTree()) msg +=  "Part\t";
+	if (tree->isSuperTree()) msg += "Part\t";
 	msg += "Site\tRate";
 	if (bayes) msg += "\tCat\tC_Rate";
 	out << msg << endl;

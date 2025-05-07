@@ -1458,16 +1458,23 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
 }
 
 void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
-    int part = 1;
-    for (auto it = begin(); it != end(); ++it, ++part)
-        (*it)->writeSiteLh(out, wsl, part);
+    ASSERT(partid == -1); partid = 1;
+    for (iterator it = begin(); it != end(); ++it, ++partid) {
+        (*it)->writeSiteLh(out, wsl, partid);
+    }
+}
+
+void PhyloSuperTree::writeSiteFreqs(ostream &out, int partid) {
+    ASSERT(partid == -1); partid = 1;
+    for (iterator it = begin(); it != end(); ++it, ++partid) {
+        (*it)->writeSiteFreqs(out, partid);
+    }
 }
 
 void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
-
-    int part = 1;
-    for (iterator it = begin(); it != end(); ++it, ++part) {
-        (*it)->writeSiteRates(out, bayes, part);
+    ASSERT(partid == -1); partid = 1;
+    for (iterator it = begin(); it != end(); ++it, ++partid) {
+        (*it)->writeSiteRates(out, bayes, partid);
     }
 }
 
