@@ -45,13 +45,13 @@ class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
 	friend class ModelPoMoMixture;
-    friend class IQTreeMix;
+	friend class IQTreeMix;
 
 public:
 	/**
 		constructor
 	*/
-    RateHeterogeneity();
+	RateHeterogeneity(PhyloTree *tree = NULL);
 
 	/**
 		destructor
@@ -84,6 +84,11 @@ public:
 		@param tree associated phyogenetic tree
 	*/
 	PhyloTree *getTree() { return phylo_tree; }
+
+	/**
+		@return TRUE if this is a rate mixture model
+	*/
+	bool isMixture() { return !isHeterotachy() && getNRate() > 1; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
@@ -304,7 +309,15 @@ public:
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) { return 1; }
+	//virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) { return 1; }
+
+	/*
+		Get site-specific rates precomputed by the model of Meyer & von Haeseler (2003)
+		@param ptn_rate (OUT) rates per pattern
+		@param ptn_category (OUT) rate categories per pattern if the model is discrete
+		@return number of categories if the model is discrete
+	*/
+	virtual int getPatternRates(DoubleVector &ptn_rate, IntVector &ptn_category) { return 1; }
 
 	/**
 		name of the rate heterogeneity type

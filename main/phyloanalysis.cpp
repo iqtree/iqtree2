@@ -604,11 +604,6 @@ void reportModel(ostream &out, PhyloTree &tree) {
             reportLinkSubstMatrix(out, tree.aln, m);
         }
     } else {
-	// Update rate name if site-specific rates are used
-	if (tree.getModel()->isSSR()) {
-		tree.getRate()->name = "+SSR";
-		tree.getRate()->full_name = "(site-specific rates)";
-	}
         // Update rate name if continuous gamma is used.
         if (tree.getModelFactory() && tree.getModelFactory()->is_continuous_gamma)
         {
@@ -1871,25 +1866,30 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
         || !(tree.aln->seq_type == SEQ_DNA || tree.aln->seq_type == SEQ_CODON || tree.aln->seq_type == SEQ_PROTEIN || tree.aln->seq_type == SEQ_BINARY || tree.aln->seq_type == SEQ_MORPH)
         || tree.isTreeMix())
         return;
-    
+
     out << "ALISIM COMMAND" << endl;
-    out << "--------------" << endl;
-    
-    string more_info = "For more information on using AliSim, please visit: www.iqtree.org/doc/AliSim";
-    
-    // skip unsupported models
+    out << "--------------" << endl << endl;
+
+    string more_info = "For more information on using AliSim, please visit: http://www.iqtree.org/doc/AliSim";
+
+    /** unsupported model message */
     if (tree.getModel()->isSiteSpecificModel() || tree.getModel()->isMixture() || tree.getModel()->isLieMarkov() || tree.getRate()->isHeterotachy() || tree.aln->seq_type == SEQ_CODON)
     {
-        out << "Currently, we only support exporting AliSim commands automatically from the analysis for common models of DNA, Protein, Binary and Morphological data. To simulate data from other models (mixture, lie-markov, etc), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
+        out << "Currently, we support exporting AliSim commands automatically from the analysis only for" << endl
+            << "common models of DNA, Protein, Binary and Morphological data." << endl
+            << "To simulate data with other models (mixture, Lie-Markov, etc.), please refer to the User Manual of AliSim. Thanks!" << endl << endl;
         out << more_info << endl << endl;
         return;
     }
-    
-    out << "To simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis, you can use the following command:" << endl << endl;
-    
+
+    /** message 1 */
+    out << "To simulate an alignment of the same length as the original alignment," << endl
+        << "using the tree and model parameters estimated from this analysis," << endl
+        << "you can use the following command:" << endl << endl;
+
     // init alisim command
-    string alisim_cmd = "--alisim simulated_MSA";
-    
+    string alisim_cmd = "iqtree --alisim simulated_MSA";
+
     // specify tree
     string tree_file(params.out_prefix);
     if (params.partition_file && params.partition_type == BRLEN_OPTIMIZE)
@@ -1897,7 +1897,7 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     else
         tree_file += ".treefile";
     alisim_cmd += " -t " + tree_file;
-    
+
     // specify model or a partition file
     // if using partitions -> specify a partition file
     if (params.partition_file)
@@ -1922,40 +1922,47 @@ void exportAliSimCMD(Params &params, IQTree &tree, ostream &out)
     {
         string model_tr = tree.getModelNameParams(true);
         alisim_cmd += " -m \"" + model_tr + "\"";
-        
+
         // specify num_states for morph data
         if (tree.aln->seq_type == SEQ_MORPH)
             alisim_cmd += " -st \"MORPH{" + convertIntToString(tree.aln->num_states) + "}\"";
     }
-    
+
     // specify the length of root sequence
     // skip specifying sequence length for partitions
     if (!params.partition_file)
     {
-        string root_length = "";
         int num_sites = tree.aln->getNSite() * (tree.aln->seq_type == SEQ_CODON ? 3 : 1);
-        root_length += " --length " + convertIntToString(num_sites);
+        string root_length = " --length " + convertIntToString(num_sites);
         alisim_cmd += root_length;
     }
-    
+
     // output alisim cmd
     out << alisim_cmd << endl << endl;
-    
-    out << "To mimic the alignment used to produce this analysis, i.e. simulate an alignment of the same length as the original alignment, using the tree and model parameters estimated from this analysis *and* copying the same gap positions as the original alignment, you can use the following command:" << endl << endl;
-    
+
+    /** message 2 */
+    out << "To mimic the alignment used to produce this analysis," << endl
+        << "i.e. to simulate an alignment of the same length as the original alignment," << endl
+        << "using the tree and model parameters estimated from this analysis *and*" << endl
+        << "copying the same gap positions as the original alignment," << endl
+        << "you can use the following command:" << endl << endl;
+
     if (params.aln_file)
         out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA" << endl << endl;
     else
         out << "iqtree -s <alignment.phy> --alisim mimicked_MSA" << endl << endl;
 
-
-    out << "To simulate any number of alignments in either of the two commandlines above, use the --num-alignments options, for example mimic 100 alignments you would use the command line:" << endl << endl;
+    /** message 3 */
+    out << "To simulate any number of alignments in either of the two commandlines above," << endl
+        << "use the --num-alignments options." << endl
+        << "For example, to mimic 100 alignments you would use the command line:" << endl << endl;
 
     if (params.aln_file)
         out << "iqtree -s " << params.aln_file << " --alisim mimicked_MSA --num-alignments 100" << endl << endl;
     else
         out << "iqtree -s <alignment.phy> --alisim mimicked_MSA --num-alignments 100" << endl << endl;
-    
+
+    /** more info message */
     out << more_info << endl << endl;
 }
 
@@ -2530,7 +2537,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             ofstream out;
             out.exceptions(ios::failbit | ios::badbit);
             out.open(mhrate_file.c_str());
-            iqtree.writeSiteRates(out, true);
+            iqtree.writeSiteRates(out, false);
             out.close();
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, mhrate_file);
@@ -3986,7 +3993,7 @@ void computeSiteSpecificModel(Params &params, Alignment *alignment, const string
 	// check for the starting mixture model
 	if (param_type == "freq" && !tree->getModel()->isMixture())
 		outError("No frequency mixture model was specified!");
-	if (param_type == "rate" && (tree->getRate()->isHeterotachy() || tree->getRate()->getNRate() == 1))
+	if (param_type == "rate" && !tree->getRate()->isMixture())
 		outError("No rate mixture model was specified!");
 	uint64_t mem_size = tree->getMemoryRequired();
 	uint64_t total_mem = getMemorySize();

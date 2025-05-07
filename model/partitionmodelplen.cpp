@@ -188,8 +188,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             it->second->writeInfo(cout);
     }
 
-    cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
-    
+    cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl;
+
     return tree_lh;
 }
 

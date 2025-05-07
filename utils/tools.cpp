@@ -3479,70 +3479,79 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-	/** Precomputed site-specific model */
-	if (strcmp(argv[cnt], "-fs") == 0 || strcmp(argv[cnt], "--site-freq") == 0) {
-		if (params.tree_freq_file)
-			throw "Specifying both -fs and -ft or -frt not allowed";
-		cnt++;
-		if (cnt >= argc)
-			throw "Use -fs <site_freq_file>";
-		params.site_freq_file = argv[cnt];
-//		params.SSE = LK_EIGEN;
-		continue;
-	}
-	if (strcmp(argv[cnt], "-rs") == 0 || strcmp(argv[cnt], "--site-rate") == 0) {
-		if (params.tree_freq_file || params.tree_rate_file)
-			throw "Specifying both -rs and -ft or -rt or -frt not allowed";
-		cnt++;
-		if (cnt >= argc)
-			throw "Use -rs <site_rate_file>";
-		params.site_rate_file = argv[cnt];
-		continue;
-	}
+			/** Specify precomputed site-specific model */
+			if (strcmp(argv[cnt], "-fs") == 0 || strcmp(argv[cnt], "--site-freq") == 0) {
+				if (params.tree_freq_file)
+					throw "Specifying both -fs and -ft or -frt not allowed";
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -fs <site_freq_file>";
+				params.site_freq_file = argv[cnt];
+				//params.SSE = LK_EIGEN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rs") == 0 || strcmp(argv[cnt], "--site-rate") == 0) {
+				if (params.tree_freq_file || params.tree_rate_file)
+					throw "Specifying both -rs and -ft or -rt or -frt not allowed";
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rs <site_rate_file>";
+				params.site_rate_file = argv[cnt];
+				continue;
+			}
 
-	/** Compute new site-specific model */
-	if (strcmp(argv[cnt], "-ft") == 0 || strcmp(argv[cnt], "--tree-freq") == 0) {
-		if (params.site_freq_file || params.site_rate_file)
-			throw "Specifying both -fs or -rs and -ft not allowed";
-		if (params.tree_rate_file)
-			throw "Specifying both -ft and -rt not allowed, try using -frt option";
-		cnt++;
-		if (cnt >= argc)
-			throw "Use -ft <treefile_to_infer_site_frequency_model>";
-		params.tree_freq_file = argv[cnt];
-		if (params.site_state_freq_type == WSF_NONE)
-			params.site_state_freq_type = WSF_POSTERIOR_MEAN;
-		continue;
-	}
-	if (strcmp(argv[cnt], "-rt") == 0 || strcmp(argv[cnt], "--tree-rate") == 0) {
-		if (params.site_rate_file)
-			throw "Specifying both -rs and -rt not allowed";
-		if (params.tree_freq_file)
-			throw "Specifying both -ft and -rt not allowed, try using -frt option";
-		cnt++;
-		if (cnt >= argc)
-			throw "Use -rt <treefile_to_infer_site_rate_model>";
-		params.tree_rate_file = argv[cnt];
-		if (params.site_rate_type == WSR_NONE)
-			params.site_rate_type = WSR_POSTERIOR_MEAN;
-		continue;
-	}
-	if (strcmp(argv[cnt], "-frt") == 0 || strcmp(argv[cnt], "--tree-freq-rate") == 0) {
-		if (params.site_freq_file || params.site_rate_file)
-			throw "Specifying both -fs or -rs and -frt not allowed";
-		if (params.tree_freq_file || params.tree_rate_file)
-			throw "Specifying both -ft or -rt and -frt not allowed";
-		cnt++;
-		if (cnt >= argc)
-			throw "Use -frt <treefile_to_infer_site_frequency_and_rate_model>";
-		params.tree_freq_file = params.tree_rate_file = argv[cnt];
-		if (params.site_state_freq_type == WSF_NONE)
-			params.site_state_freq_type = WSF_POSTERIOR_MEAN;
-		if (params.site_rate_type == WSR_NONE)
-			params.site_rate_type = WSR_POSTERIOR_MEAN;
-		continue;
-	}
-
+			/** Compute new site-specific model */
+			if (strcmp(argv[cnt], "-ft") == 0 || strcmp(argv[cnt], "--tree-freq") == 0) {
+				if (params.site_freq_file || params.site_rate_file)
+					throw "Specifying both -fs or -rs and -ft not allowed";
+				if (params.tree_rate_file)
+					throw "Specifying both -ft and -rt not allowed, try using -frt option";
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -ft <treefile_to_infer_site_frequency_model>";
+				params.tree_freq_file = argv[cnt];
+				if (params.site_state_freq_type == WSF_NONE)
+					params.site_state_freq_type = WSF_POSTERIOR_MEAN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rt") == 0 || strcmp(argv[cnt], "--tree-rate") == 0) {
+				if (params.site_rate_file)
+					throw "Specifying both -rs and -rt not allowed";
+				if (params.tree_freq_file)
+					throw "Specifying both -ft and -rt not allowed, try using -frt option";
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rt <treefile_to_infer_site_rate_model>";
+				params.tree_rate_file = argv[cnt];
+				if (params.site_rate_type == WSR_NONE)
+					params.site_rate_type = WSR_POSTERIOR_MEAN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-frt") == 0 || strcmp(argv[cnt], "--tree-freq-rate") == 0) {
+				if (params.site_freq_file || params.site_rate_file)
+					throw "Specifying both -fs or -rs and -frt not allowed";
+				if (params.tree_freq_file || params.tree_rate_file)
+					throw "Specifying both -ft or -rt and -frt not allowed";
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -frt <treefile_to_infer_site_frequency_and_rate_model>";
+				params.tree_freq_file = params.tree_rate_file = argv[cnt];
+				if (params.site_state_freq_type == WSF_NONE)
+					params.site_state_freq_type = WSF_POSTERIOR_MEAN;
+				if (params.site_rate_type == WSR_NONE)
+					params.site_rate_type = WSR_POSTERIOR_MEAN;
+				continue;
+			}
+			// use max instead of mean approximation for site-specific parameter computation,
+			// applies also to -wsf and -wsr options
+			if (strcmp(argv[cnt], "-fmax") == 0 || strcmp(argv[cnt], "--freq-max") == 0) {
+				params.site_state_freq_type = WSF_POSTERIOR_MAX;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-rmax") == 0 || strcmp(argv[cnt], "--rate-max") == 0) {
+				params.site_rate_type = WSR_POSTERIOR_MAX;
+				continue;
+			}
 
 			if (strcmp(argv[cnt], "-fconst") == 0 || strcmp(argv[cnt], "--fconst") == 0) {
 				cnt++;
@@ -4124,10 +4133,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.site_state_freq_type = WSF_POSTERIOR_MEAN;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-fmax") == 0 || strcmp(argv[cnt], "--freq-max") == 0) {
-				params.site_state_freq_type = WSF_POSTERIOR_MAX;
-				continue;
-			}
 
 			/** Mixture model site rates */
 			if (strcmp(argv[cnt], "-wsr") == 0 || strcmp(argv[cnt], "--rate") == 0) {
@@ -4136,6 +4141,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.site_rate_type = WSR_POSTERIOR_MEAN;
 				continue;
 			}
+
+			/** ML-optimized site rates */
 			if (strcmp(argv[cnt], "--mlrate") == 0) {
 				params.print_site_rate |= 2;
 				continue;
@@ -6207,6 +6214,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+F1x4          Equal NT frequencies over three codon positions" << endl
     << "  -m ...+F3x4          Unequal NT frequencies over three codon positions" << endl
     << "  --freq               Write empirical Bayesian site state frequencies to .freq file" << endl
+    << "                       when using a mixture model" << endl
 
     << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
     << "  -m ...+I             A proportion of invariable sites" << endl
@@ -6218,9 +6226,10 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  -m ...+I+R[n]        Invariable sites plus FreeRate model with n categories" << endl
     << "  -m ...+Hn            Heterotachy model with n classes" << endl
     << "  -m ...*Hn            Heterotachy model with n classes and unlinked parameters" << endl
-    << "  --alpha-min NUM      Min Gamma shape parameter for site rates (default: 0.02)" << endl
-    << "  --gamma-median       Median approximation for +G site rates (default: mean)" << endl
+    << "  --alpha-min NUM      Min Gamma shape parameter for +G model (default: 0.02)" << endl
+    << "  --gamma-median       Median approximation for +G rate categories (default: mean)" << endl
     << "  --rate               Write empirical Bayesian site rates to .rate file" << endl
+    << "                       when using a rate heterogeneity model" << endl
     << "  --mlrate             Write maximum likelihood site rates to .mlrate file" << endl
 //            << "  --mhrate             Computing site-specific rates to .mhrate file using" << endl
 //            << "                       Meyer & von Haeseler (2003) method" << endl
@@ -6244,7 +6253,8 @@ void usage_iqtree(char* argv[], bool full_command) {
     << "  --tree-freq FILE         Input tree to infer site frequency model" << endl
     << "  --tree-rate FILE         Input tree to infer site rate model" << endl
     << "  --tree-freq-rate FILE    Input tree to infer site frequency and rate model" << endl
-    << "  --freq-max               Posterior maximum instead of mean approximation" << endl
+    << "  --freq-max               Posterior max instead of posterior mean site frequencies" << endl
+    << "  --rate-max               Posterior max instead of posterior mean site rates" << endl
     << "  --site-freq FILE         Input site frequency model file" << endl
     << "  --site-rate FILE         Input site rate model file" << endl
 

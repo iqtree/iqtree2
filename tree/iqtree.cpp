@@ -545,6 +545,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
 }
 
 void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
+    cout << endl;
     double start = getRealTime();
     string initTree;
     string out_file = params->out_prefix;
@@ -561,7 +562,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
     setParsimonyKernel(kernel);
 
     if (in != NULL || params->user_file) {
-        
         // start the search with user-defined tree
         bool myrooted = params->is_rooted;
         if (in != NULL) {
@@ -589,7 +589,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
         saveCheckpoint();
     } else if (CKP_RESTORE(initTree)) {
         readTreeString(initTree);
-        cout << endl << "CHECKPOINT: Initial tree restored" << endl;
+        cout << "CHECKPOINT: Initial tree restored" << endl;
     } else {
         START_TREE_TYPE start_tree = params->start_tree;
         // only own parsimony kernel supports constraint tree
@@ -611,7 +611,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel, istream* in) {
             break;
         case STT_RANDOM_TREE:
         case STT_PLL_PARSIMONY:
-            cout << endl;
             cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
             pllInst->randomNumberSeed = params->ran_seed + MPIHelper::getInstance().getProcessID();
             pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
@@ -803,7 +802,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.clear();
 
     if (init_size < initTreeStrings.size())
-        cout << "Computing log-likelihood of " << initTreeStrings.size() - init_size << " initial trees ... ";
+        cout << "Computing log-likelihood of " << initTreeStrings.size() - init_size << " initial trees... ";
     startTime = getRealTime();
 
     for (vector<string>::iterator it = initTreeStrings.begin(); it != initTreeStrings.end(); ++it) {

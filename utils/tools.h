@@ -561,7 +561,7 @@ enum SiteFreqType {
 };
 
 enum SiteRateType {
-    WSR_NONE, WSR_POSTERIOR_MEAN
+    WSR_NONE, WSR_POSTERIOR_MEAN, WSR_POSTERIOR_MAX
 };
 
 enum MatrixExpTechnique {

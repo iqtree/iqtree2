@@ -836,7 +836,10 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
 		(params.model_name == "TESTMERGEONLY") || (params.model_name == "MF+MERGE");
 	cout << endl;
 	if (!test && !testmerge) {
-		cout << "Skip ModelFinder, model specified: " << params.model_name << endl;
+		string model_name = (params.partition_file) ? string(params.partition_file) : params.model_name;
+		if (params.partition_file && params.model_name.size())
+			model_name += " and " + params.model_name + " (for missing models)";
+		cout << "Skip ModelFinder, model specified: " << model_name << endl;
 		return;
 	}
 	cout << "Running ModelFinder:" << endl;

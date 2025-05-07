@@ -717,6 +717,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
     /******************** initialize model ****************************/
 
+    if (tree->aln->isSSR() && params.fixed_branch_length == BRLEN_FIX)
+        outError("-blfix option is incompatible with site-specific rates");
+
     if (!tree->aln->isSSF() && !tree->aln->isSSR()) {
         // simple or mixture model
         if (model_str.substr(0, 4) == "MIX{") {
@@ -1097,7 +1100,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 //            model_str = model_str.substr(0, model_str.find('*'));
     } else {
         if (rate_mixture && !params.tree_rate_file)
-            outError("Rate mixture models are incompatible with site-specific rates");
+            outError("Rate or branch mixture models are incompatible with site-specific rates");
         if (params.tree_rate_file) {
             if (verbose_mode >= VB_MIN)
                 cout << "NOTE: Switching rate mixture model to SSR model" << endl;
@@ -1105,13 +1108,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             if (verbose_mode >= VB_MIN)
                 cout << "NOTE: Using SSR model" << endl;
         }
-        site_rate = new RateHeterogeneity();
-        site_rate->setTree(tree);
+        site_rate = new RateHeterogeneity(tree);
     }
 
     if (fused_mix_rate) {
         if (tree->aln->isSSF())
-            outError("Unlinked rate mixture models are incompatible with site-specific frequencies");
+            outError("Unlinked rate or branch mixture models are incompatible with site-specific frequencies");
         if (!model->isMixture()) {
             if (verbose_mode >= VB_MED)
                 cout << endl << "NOTE: Using mixture model with unlinked " << model_str << " parameters" << endl;

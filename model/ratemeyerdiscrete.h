@@ -77,7 +77,15 @@ public:
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories        
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	//virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+
+	/*
+		Get site-specific rates precomputed by the model of Meyer & von Haeseler (2003)
+		@param ptn_rate (OUT) rates per pattern
+		@param ptn_category (OUT) rate categories per pattern if the model is discrete
+		@return number of categories if the model is discrete
+	*/
+	virtual int getPatternRates(DoubleVector &ptn_rate, IntVector &ptn_category);
 
 	virtual bool isSiteSpecificRate();
 

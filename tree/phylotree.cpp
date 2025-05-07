@@ -1395,7 +1395,7 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     return score;
 }
 
-void PhyloTree::computePatternStateFreq(double* &all_ptn_state_freq, IntVector *ptn_cat, int *ncat) {
+void PhyloTree::computePatternStateFreq(double* &all_ptn_state_freq, IntVector *ptn_cat, DoubleVector *ptn_pp, int *ncat) {
 	if (!getModel()->isMixture()) return;
 	string type;
 	if (params->site_state_freq_type == WSF_POSTERIOR_MEAN) type = "mean";
@@ -1405,6 +1405,7 @@ void PhyloTree::computePatternStateFreq(double* &all_ptn_state_freq, IntVector *
 	size_t nmixture = getModel()->getNMixtures();
 	if (ncat) *ncat = nmixture;
 	if (ptn_cat) ptn_cat->clear();
+	if (ptn_pp) ptn_pp->clear();
 	size_t nptn = getAlnNPattern();
 	size_t nstates = aln->num_states;
 	ASSERT(!all_ptn_state_freq);
@@ -1418,13 +1419,19 @@ void PhyloTree::computePatternStateFreq(double* &all_ptn_state_freq, IntVector *
 	for (size_t ptn = 0; ptn < nptn; ++ptn) {
 		// find max weight category and compute posterior normalization sum
 		size_t max_cat = 0;
+		double max_lh = 0.0;
 		double sum_lh = 0.0;
 		for (size_t m = 0; m < nmixture; ++m) {
-			if (lh_cat[m] > lh_cat[max_cat]) max_cat = m;
+			if (lh_cat[m] > max_lh ||
+			(lh_cat[m] == max_lh && random_double() < 0.5)) { // break the tie randomly
+				max_cat = m;
+				max_lh = lh_cat[m];
+			}
 			sum_lh += lh_cat[m];
 		}
-		// fill ptn_cat and state_freqs
+		// fill ptn_cat, ptn_pp and state_freqs
 		if (ptn_cat) ptn_cat->push_back(max_cat);
+		if (ptn_pp) ptn_pp->push_back(max_lh / sum_lh);
 		if (type == "mean")
 			for (size_t x = 0; x < nstates; ++x) {
 				double freq = 0.0;
@@ -1440,20 +1447,51 @@ void PhyloTree::computePatternStateFreq(double* &all_ptn_state_freq, IntVector *
 	}
 }
 
-void PhyloTree::computePatternRate(DoubleVector &ptn_rate, IntVector *ptn_cat, int *ncat) {
-	if (getRate()->isHeterotachy() || getRate()->getNRate() == 1) return;
+void PhyloTree::computePatternRate(DoubleVector &ptn_rate, IntVector *ptn_cat, DoubleVector *ptn_pp, int *ncat) {
+	if (!getRate()->isMixture()) return;
 	string type;
 	if (params->site_rate_type == WSR_POSTERIOR_MEAN) type = "mean";
+	else if (params->site_rate_type == WSR_POSTERIOR_MAX) type = "max";
 	else ASSERT(false);
 	// prepare variables
-	int buffer_int;
-	IntVector buffer_vec;
-	if (!ncat) ncat = &buffer_int;
-	if (ptn_cat) ptn_cat->clear(); else ptn_cat = &buffer_vec;
+	size_t ncategory = getRate()->getNRate();
+	size_t nextra = (getRate()->getPInvar()) ? 1 : 0;
+	if (ncat) *ncat = ncategory + nextra;
+	if (ptn_cat) ptn_cat->clear();
+	if (ptn_pp) ptn_pp->clear();
+	size_t nptn = getAlnNPattern();
 	ASSERT(ptn_rate.empty());
+	ptn_rate.resize(nptn);
 	// start computation
 	cout << "Computing posterior " << type << " site rates..." << endl;
-	*ncat = site_rate->computePatternRates(ptn_rate, *ptn_cat);
+	computePatternLhCat(WSL_RATECAT);
+	double *lh_cat = _pattern_lh_cat;
+	// loop over all alignment patterns
+	for (size_t ptn = 0; ptn < nptn; ++ptn) {
+		// find max weight category and compute posterior normalization sum
+		size_t max_cat = 0; // if pinvar: 0=invar, 1=slow, etc.; else: 0=slow, etc.
+		double max_rate = 0.0, max_lh = ptn_invar[ptn];
+		double mean_rate = 0.0, sum_lh = ptn_invar[ptn];
+		for (size_t c = 0; c < ncategory; ++c) {
+			if (lh_cat[c] > max_lh ||
+			(lh_cat[c] == max_lh && random_double() < 0.5)) { // break the tie randomly
+				max_cat = c + nextra;
+				max_rate = getRate()->getRate(c);
+				max_lh = lh_cat[c];
+			}
+			mean_rate += getRate()->getRate(c) * lh_cat[c];
+			sum_lh += lh_cat[c];
+		}
+		// fill ptn_cat, ptn_pp and ptn_rate
+		if (ptn_cat) ptn_cat->push_back(max_cat);
+		if (ptn_pp) ptn_pp->push_back(max_lh / sum_lh);
+		if (type == "mean")
+			ptn_rate[ptn] = mean_rate / sum_lh;
+		else
+			ptn_rate[ptn] = max_rate;
+		// increase the pointers
+		lh_cat += ncategory;
+	}
 }
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
@@ -6070,9 +6108,10 @@ void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
 void PhyloTree::writeSiteFreqs(ostream &out, int partid) {
 	double *ptn_state_freqs = nullptr;
 	IntVector ptn_cat;
+	DoubleVector ptn_pp;
 	int ncat = 1;
 	// try to compute ptn_state_freqs
-	computePatternStateFreq(ptn_state_freqs, &ptn_cat, &ncat);
+	computePatternStateFreq(ptn_state_freqs, &ptn_cat, &ptn_pp, &ncat);
 	if (!ptn_state_freqs) {
 		if (partid >= 0)
 			cout << "Part " << partid << ": ";
@@ -6099,6 +6138,8 @@ void PhyloTree::writeSiteFreqs(ostream &out, int partid) {
 			string site_cat;
 			site_cat = getModel()->getMixtureClass(ptn_cat[ptn])->name;
 			out << "\t" << site_cat;
+			if (!ptn_pp.empty())
+				out << "\t" << ptn_pp[ptn];
 			cat_cnt[ptn_cat[ptn]] ++;
 		}
 		out << endl;
@@ -6116,9 +6157,13 @@ void PhyloTree::writeSiteFreqs(ostream &out, int partid) {
 void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 	DoubleVector ptn_rates;
 	IntVector ptn_cat;
+	DoubleVector ptn_pp;
 	int ncat = 1;
+	// get precomputed ptn_rates of Meyer & von Haeseler (2003)
+	if (getRate()->isSiteSpecificRate() || getRate()->getPtnCat(0) != -1)
+		ncat = getRate()->getPatternRates(ptn_rates, ptn_cat);
 	// try to compute ptn_rates
-	if (bayes) computePatternRate(ptn_rates, &ptn_cat, &ncat);
+	else if (bayes) computePatternRate(ptn_rates, &ptn_cat, &ptn_pp, &ncat);
 	else optimizePatternRates(ptn_rates);
 	if (ptn_rates.empty()) {
 		if (partid >= 0)
@@ -6139,17 +6184,14 @@ void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 		out << site + 1 << "\t";
 		if (ptn_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << ptn_rates[ptn];
 		if (!ptn_cat.empty()) {
-			int site_cat;
+			int site_cat; // always: 0=invar, 1=slow, etc.
 			double cat_rate;
-			if (site_rate->getPInvar() == 0.0) {
-				site_cat = ptn_cat[ptn] + 1;
-				cat_rate = site_rate->getRate(ptn_cat[ptn]);
-			} else {
-				site_cat = ptn_cat[ptn];
-				if (site_cat == 0) cat_rate = 0.0;
-				else cat_rate = site_rate->getRate(ptn_cat[ptn] - 1);
-			}
+			site_cat = (getRate()->getPInvar()) ? ptn_cat[ptn] : ptn_cat[ptn] + 1;
+			if (site_cat == 0) cat_rate = 0.0;
+			else cat_rate = getRate()->getRate(site_cat - 1);
 			out << "\t" << site_cat << "\t" << cat_rate;
+			if (!ptn_pp.empty())
+				out << "\t" << ptn_pp[ptn];
 			cat_cnt[ptn_cat[ptn]] ++;
 		}
 		out << endl;

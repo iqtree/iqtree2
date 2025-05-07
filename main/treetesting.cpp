@@ -416,13 +416,14 @@ void printSiteStateFreq(const char *filename, PhyloTree *tree) {
 		<< "#   tab=read.table('" << filename << "',header=TRUE,fill=TRUE)" << endl
 		<< "# Columns are tab-separated with following meaning:" << endl;
 	if (tree->isSuperTree())
-		out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->front()->aln->name << ", etc)" << endl
-			<< "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+		out << "#   Part:    Partition ID (1=" << ((PhyloSuperTree*)tree)->front()->aln->name << ", etc)" << endl
+			<< "#   Site:    Site ID within partition (starting from 1 for each partition)" << endl;
 	else
-		out << "#   Site:   Alignment site ID" << endl;
+		out << "#   Site:    Alignment site ID" << endl;
 	msg = (tree->params->site_state_freq_type == WSF_POSTERIOR_MEAN) ? "mean" : "max";
-	out << "#   pi_X:   Posterior " << msg << " site frequency of state X" << endl
-		<< "#   Cat:    Category with the highest posterior weight" << endl;
+	out << "#   pi_X:    Posterior " << msg << " site frequency of state X" << endl
+		<< "#   Cat:     Category with the highest posterior weight" << endl
+		<< "#   CatPP:   Posterior probability of the highest weight category" << endl;
 	// write the main header
 	msg = "";
 	size_t nstates;
@@ -437,7 +438,7 @@ void printSiteStateFreq(const char *filename, PhyloTree *tree) {
 		for (size_t x = 0; x < nstates; ++x)
 			msg += "\tpi_" + tree->aln->convertStateBackStr(x);
 	}
-	msg += "\tCat";
+	msg += "\tCat\tCatPP";
 	out << msg << endl;
 	// infer and write the site freqs
 	tree->writeSiteFreqs(out);
@@ -459,24 +460,25 @@ void printSiteRate(const char *filename, PhyloTree *tree, bool bayes) {
 	msg = (bayes) ? "empirical Bayesian method" : "maximum likelihood";
 	out << "# Site-specific substitution rates determined by " << msg << endl;
 	out << "# This file can be read in MS Excel or in R with command:" << endl
-		<< "#   tab=read.table('" << filename << "',header=TRUE)" << endl
+		<< "#   tab=read.table('" << filename << "',header=TRUE,fill=TRUE)" << endl
 		<< "# Columns are tab-separated with following meaning:" << endl;
 	if (tree->isSuperTree())
-		out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->front()->aln->name << ", etc)" << endl
-			<< "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+		out << "#   Part:    Partition ID (1=" << ((PhyloSuperTree*)tree)->front()->aln->name << ", etc)" << endl
+			<< "#   Site:    Site ID within partition (starting from 1 for each partition)" << endl;
 	else
-		out << "#   Site:   Alignment site ID" << endl;
+		out << "#   Site:    Alignment site ID" << endl;
 	if (bayes)
-		out << "#   Rate:   Posterior mean site rate" << endl
-			<< "#   Cat:    Category with the highest posterior weight (0=invariable, 1=slow, etc)" << endl
-			<< "#   C_Rate: Corresponding rate of the highest weight category" << endl;
+		out << "#   Rate:    Posterior mean site rate" << endl
+			<< "#   Cat:     Category with the highest posterior weight (0=invariable, 1=slow, etc)" << endl
+			<< "#   CatRate: Rate of the highest weight category" << endl
+			<< "#   CatPP:   Posterior probability of the highest weight category" << endl;
 	else
-		out << "#   Rate:   Site rate estimated by maximum likelihood" << endl;
+		out << "#   Rate:    Site rate estimated by maximum likelihood" << endl;
 	// write the main header
 	msg = "";
 	if (tree->isSuperTree()) msg += "Part\t";
 	msg += "Site\tRate";
-	if (bayes) msg += "\tCat\tC_Rate";
+	if (bayes) msg += "\tCat\tCatRate\tCatPP";
 	out << msg << endl;
 	// infer and write the site rates
 	tree->writeSiteRates(out, bayes);

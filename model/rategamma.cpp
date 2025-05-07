@@ -255,6 +255,7 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
+/*
 int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
@@ -289,7 +290,7 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patte
 //				pattern_cat[i] = j;
 //	delete [] ptn_rates;
 }
-
+*/
 
 /*NUMERICAL SUBROUTINES
 **************************************************************************************

@@ -139,7 +139,7 @@ public:
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
         @return total number of categories
 	*/
-	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	//virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
 
 	/**
 	 * setup the bounds for joint optimization with BFGS

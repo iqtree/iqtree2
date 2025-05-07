@@ -136,9 +136,16 @@ double RateMeyerHaeseler::getPtnRate(int ptn) {
 	return 1.0;
 }
 
+/*
 int RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	pattern_rates.insert(pattern_rates.begin(), begin(), end());
     return size();
+}
+*/
+
+int RateMeyerHaeseler::getPatternRates(DoubleVector &ptn_rate, IntVector &ptn_category) {
+	ptn_rate.insert(ptn_rate.begin(), begin(), end());
+	return 1;
 }
 
 void RateMeyerHaeseler::getRates(DoubleVector &rates) {
@@ -484,33 +491,31 @@ void RateMeyerHaeseler::runIterativeProc(Params &params, IQTree &tree) {
 	}
 	setTree(&tree);
 	RateHeterogeneity *backup_rate = tree.getRate();
-	if (backup_rate->getGammaShape() > 0 ) {
-		IntVector pattern_cat;
-		backup_rate->computePatternRates(*this, pattern_cat);
-		double sum    = 0.0;
-        size_t seqLen = size();
-        auto   freq   = phylo_tree->getConvertedSequenceFrequencies();
-        if (freq!=nullptr && seqLen == phylo_tree->getConvertedSequenceLength()) {
-            #ifdef _OPENMP
-            #pragma omp parallel for reduction(+:sum)
-            #endif
-            for (size_t i = 0; i < seqLen ; ++i) {
-                sum += at(i) * freq[i];
-            }
-        } else {
-            for (size_t i = 0; i < seqLen; ++i) {
-                sum += at(i) * phylo_tree->aln->at(i).frequency;
-            }
-        }
-		sum /=  phylo_tree->aln->getNSite();
+	if (backup_rate->isMixture()) {
+		tree.computePatternRate(*this);
+		double sum = 0.0;
+		size_t seqLen = size();
+		auto freq = phylo_tree->getConvertedSequenceFrequencies();
+		if (freq!=nullptr && seqLen == phylo_tree->getConvertedSequenceLength()) {
+			#ifdef _OPENMP
+			#pragma omp parallel for reduction(+:sum)
+			#endif
+			for (size_t i = 0; i < seqLen ; ++i) {
+				sum += at(i) * freq[i];
+			}
+		} else {
+			for (size_t i = 0; i < seqLen; ++i) {
+				sum += at(i) * phylo_tree->aln->at(i).frequency;
+			}
+		}
+		sum /= phylo_tree->aln->getNSite();
 		if (fabs(sum - 1.0) > 0.0001) {
-            if (verbose_mode >= VB_MED) {
-                cout << "Normalizing Gamma rates (" << sum << ")" << endl;
-            }
-            for (size_t i = 0; i < size(); ++i) {
-                at(i) /= sum;
-            }
-        }
+			if (verbose_mode >= VB_MED)
+				cout << "Normalizing site rates (mean: " << sum << ")" << endl;
+			for (size_t i = 0; i < size(); ++i) {
+				at(i) /= sum;
+			}
+		}
 	}
 	tree.getModelFactory()->site_rate = this;
 	tree.setRate(this);

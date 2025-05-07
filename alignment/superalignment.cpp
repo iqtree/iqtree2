@@ -51,13 +51,13 @@ SuperAlignment::SuperAlignment() : Alignment() {
 SuperAlignment::SuperAlignment(Params &params) : Alignment()
 {
     readFromParams(params);
-    
+
     init();
-    
+
     // only show Degree of missing data if AliSim is inactive or an input alignment is supplied
     if (!(Params::getInstance().alisim_active && !Params::getInstance().alisim_inference_mode))
         cout << "Degree of missing data: " << computeMissingData() << endl;
-    
+
 #ifdef _OPENMP
     if (params.num_threads > partitions.size()) {
         cout << "Info: multi-threading strategy over alignment sites" << endl;
@@ -65,8 +65,6 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
         cout << "Info: multi-threading strategy over partitions" << endl;
     }
 #endif
-    cout << endl;
-
 }
 
 void SuperAlignment::readFromParams(Params &params) {
@@ -298,9 +296,9 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
                 input_aln->sequence_type = params.sequence_type;
             ((SuperAlignment*) input_aln)->init();
         }
-        
-        cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
-        
+
+        cout << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
+
         size_t pos = params.model_name.find_first_of("+*");
         string rate_type = "";
         if (pos != string::npos) rate_type = params.model_name.substr(pos);
@@ -499,9 +497,9 @@ void SuperAlignment::readPartitionNexus(Params &params) {
     if (empty_partition) {
         cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
     }
-    
-    cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
-    
+
+    cout << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
+
     for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
         if (empty_partition || (*it)->char_partition != "") {
             if ((*it)->model_name == "")

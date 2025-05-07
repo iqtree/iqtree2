@@ -96,6 +96,7 @@ double RateKategory::optimizeParameters(double gradient_epsilon)
 	return score;
 }
 
+/*
 int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat)
 {
 	cout << "Computing site rates by empirical Bayes..." << endl;
@@ -136,6 +137,7 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 //				pattern_cat[i] = j;
 //	delete [] ptn_rates;
 }
+*/
 
 bool RateKategory::getVariables(double* variables)
 {

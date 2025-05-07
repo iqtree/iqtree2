@@ -186,7 +186,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
     }
 }
 
-
+/*
 int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
@@ -215,6 +215,7 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 	}
     return ncategory+1;
 }
+*/
 
 double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     double curlh = phylo_tree->computeLikelihood();
