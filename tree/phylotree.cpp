@@ -1539,7 +1539,10 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         double *lh_cat = _pattern_lh_cat;
         double *out_lh_cat = ptn_lh_cat;
         UBYTE *nei2_scale = nei2->scale_num;
-        if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
+        // NOTE: must match the kernel's per-category vs per-pattern scaling choice
+        // (PhyloTree::safe_numeric, set in setLikelihoodKernel), otherwise scale_num
+        // is mis-indexed and the per-category log-likelihoods are off by a scale step.
+        if (safe_numeric) {
             // per-category scaling
             for (ptn = 0; ptn < nptn; ptn++) {
                 for (i = 0; i < ncat; i++) {
@@ -1565,7 +1568,10 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         double *out_lh_cat = ptn_lh_cat;
         UBYTE *nei1_scale = nei1->scale_num;
         UBYTE *nei2_scale = nei2->scale_num;
-        if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
+        // NOTE: must match the kernel's per-category vs per-pattern scaling choice
+        // (PhyloTree::safe_numeric, set in setLikelihoodKernel), otherwise scale_num
+        // is mis-indexed and the per-category log-likelihoods are off by a scale step.
+        if (safe_numeric) {
             // per-category scaling
             for (ptn = 0; ptn < nptn; ptn++) {
                 for (i = 0; i < ncat; i++) {
