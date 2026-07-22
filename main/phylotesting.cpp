@@ -3646,14 +3646,33 @@ void optimiseQMixModel_method_update(Params &params, IQTree* &iqtree, ModelCheck
     params.model_name = "";
     runModelFinder(params, *iqtree, model_info, best_subst_name, best_rate_name);
 
-    // Step 2: do tree search for this single-class model
-    runTreeReconstruction(params, iqtree);
-    curr_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
-    curr_loglike = iqtree->getCurScore();
-    curr_score = computeInformationScore(curr_loglike, curr_df, ssize, params.model_test_criterion);
+    // (cancel) Step 2: do tree search for this single-class model
+    // The log-likelihood and df of the best single-class model were already
+    // computed by ModelFinder in Step 1; retrieve them from the checkpoint
+    // instead of performing a redundant extra tree search.
+    string best_model_logl_df;
+    if (!model_info.getString(best_subst_name+best_rate_name, best_model_logl_df))
+        outError("Cannot restore the log-likelihood of the single-class model from the checkpoint");
+    stringstream ss(best_model_logl_df);
+    ss >> curr_loglike >> curr_df;
+    string best_score;
+    if (!model_info.getString("best_score_" + criteria_str, best_score))
+        outError("Cannot restore the best score from the checkpoint");
+    curr_score = convert_double(best_score.c_str());
 
     cout << endl << "Model: " << best_subst_name << best_rate_name << "; df: " << curr_df << "; loglike: " << curr_loglike << "; " << criteria_str << " score: " << curr_score << endl;
-    
+
+    // Initialize the model/thread state for the best single-class model so that
+    // the subsequent mixture-class search has valid state. This replaces the
+    // redundant tree search cancelled above: runModelSelection needs the number
+    // of threads set (initSettings) and iqtree->getModelFactory()->site_rate to
+    // build the mixture candidates (initializeModel), but not a new tree search.
+    iqtree->setParams(&params);
+    iqtree->initSettings(params);
+    if (!iqtree->getModelFactory()) {
+        iqtree->initializeModel(params, best_subst_name+best_rate_name, models_block);
+    }
+
     // Step 3: keep adding a new class until no further improvement
     if (params.opt_qmix_criteria == 1) {
         cout << endl << "Keep adding an additional class until the p-value from the likelihood ratio test > " << params.opt_qmix_pthres << endl;

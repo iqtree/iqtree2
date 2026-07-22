@@ -1199,7 +1199,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.start_subst = "GTR+FO";
     params.opt_rhas_again = true;
     params.opt_qmix_method = 2;
-    params.opt_qmix_criteria = 1; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
+    params.opt_qmix_criteria = 2; // 1 : likelihood-ratio test; 2 : information criteria, like AIC, BIC
     params.opt_qmix_pthres = 0.05;
     params.check_combin_q_mat = true;
     params.gamma_shape = -1.0;
@@ -3570,10 +3570,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (cnt >= argc)
                     throw "Use -lrt <p-value threshold>";
                 params.opt_qmix_pthres = convert_double(argv[cnt]);
-                if (params.opt_qmix_pthres < 0.0 || params.opt_qmix_pthres > 1.0)
+                if (params.opt_qmix_pthres <= 0.0 || params.opt_qmix_pthres > 1.0)
                     throw "Wrong p-value threshold for -opt_qmix_pthres. Must be between 0.0 and 1.0";
-                if (params.opt_qmix_pthres == 0)
-                    params.opt_qmix_criteria = 2; // using information critera instead of likelihood-ratio test for estimation of number of classes for Q-Mixture model
+                // explicitly requesting -lrt switches from the default information
+                // criterion (BIC) to the likelihood-ratio test for choosing the
+                // number of mixture classes
+                params.opt_qmix_criteria = 1;
                 continue;
             }
 			if (strcmp(argv[cnt], "-a") == 0) {
