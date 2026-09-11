@@ -3155,7 +3155,9 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         cout << "NOTE: Input tree is already NNI-optimal" << endl;
     }
 
-    if (numSteps == MAXSTEPS) {
+    if (numSteps > MAXSTEPS) {
+        cout << "WARNING: NNI search did not converge after " << MAXSTEPS << " steps!" << endl;
+    } else if (numSteps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << numSteps << ") to converge!" << endl;
     }
 
